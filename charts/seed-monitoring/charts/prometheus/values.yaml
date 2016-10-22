@@ -148,6 +148,9 @@ seed:
   region: antarctica-1
   profile: penguin
 
+shoot:
+  apiserver: https://api.foo.bar
+
 rules:
   optional:
     cluster-autoscaler:

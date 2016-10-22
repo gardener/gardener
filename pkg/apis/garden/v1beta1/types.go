@@ -1597,6 +1597,10 @@ const (
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+	// ShootAlertsInactive is a constant for a condition type indicating the Shoot cluster alert states.
+	ShootAlertsInactive ConditionType = "AlertsInactive"
+	// ShootAPIServerAvailable is a constant for a condition type indicating that the Shoot clusters API server is available.
+	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
 
 	// ConditionCheckError is a constant for indicating that a condition could not be checked.
 	ConditionCheckError = "ConditionCheckError"

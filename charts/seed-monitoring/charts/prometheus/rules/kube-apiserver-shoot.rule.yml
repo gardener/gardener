@@ -1,0 +1,17 @@
+groups:
+- name: http.rules
+  rules:
+  - alert: ApiServerDown
+    expr: probe_success{job="blackbox-apiserver"} == 0
+    for: 2m
+    labels:
+      service: http
+      severity: critical
+      type: general
+      duration_seconds: |
+        {{ with printf "probe_duration_seconds{instance='%s'}" .Labels.instance | query }} {{ . | first | value | humanize1024 }} {{ end }}
+      status_code: |
+        {{ with printf "probe_http_status_code{instance='%s'}" .Labels.instance | query }} {{ . | first | value }} {{ end }}
+    annotations:
+      description: HTTP connection for API Server {{ $labels.instance }} is down.
+      summary: HTTP connection down

@@ -302,6 +302,9 @@ func (b *Botanist) DeploySeedMonitoring() error {
 					},
 				},
 			},
+			"shoot": map[string]interface{}{
+				"apiserver": b.K8sShootClient.GetConfig().Host,
+			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),

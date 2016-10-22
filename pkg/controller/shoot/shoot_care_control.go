@@ -18,9 +18,6 @@ import (
 	"fmt"
 	"sync"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/client-go/util/retry"
-
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -30,9 +27,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/retry"
 )
 
 func (c *Controller) shootCareAdd(obj interface{}) {
@@ -118,21 +117,25 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	// Initialize conditions based on the current status.
 	var (
-		newConditions                    = helper.NewConditions(shoot.Status.Conditions, gardenv1beta1.ShootControlPlaneHealthy, gardenv1beta1.ShootEveryNodeReady, gardenv1beta1.ShootSystemComponentsHealthy)
-		conditionControlPlaneHealthy     = newConditions[0]
-		conditionEveryNodeReady          = newConditions[1]
-		conditionSystemComponentsHealthy = newConditions[2]
+		newConditions                    = helper.NewConditions(shoot.Status.Conditions, gardenv1beta1.ShootAPIServerAvailable, gardenv1beta1.ShootControlPlaneHealthy, gardenv1beta1.ShootEveryNodeReady, gardenv1beta1.ShootSystemComponentsHealthy, gardenv1beta1.ShootAlertsInactive)
+		conditionAPIServerAvailable      = newConditions[0]
+		conditionControlPlaneHealthy     = newConditions[1]
+		conditionEveryNodeReady          = newConditions[2]
+		conditionSystemComponentsHealthy = newConditions[3]
+		conditionAlertsInactive          = newConditions[4]
 	)
 
 	botanist, err := botanistpkg.New(operation)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a botanist object to perform the care operations (%s).", err.Error())
+		conditionAPIServerAvailable = helper.UpdatedConditionUnknownErrorMessage(conditionAPIServerAvailable, message)
 		conditionControlPlaneHealthy = helper.UpdatedConditionUnknownErrorMessage(conditionControlPlaneHealthy, message)
 		conditionEveryNodeReady = helper.UpdatedConditionUnknownErrorMessage(conditionEveryNodeReady, message)
 		conditionSystemComponentsHealthy = helper.UpdatedConditionUnknownErrorMessage(conditionSystemComponentsHealthy, message)
+		conditionAlertsInactive = helper.UpdatedConditionUnknownErrorMessage(conditionAlertsInactive, message)
 		operation.Logger.Error(message)
 
-		c.updateShootConditions(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
+		c.updateShootConditions(shoot, *conditionAPIServerAvailable, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy, *conditionAlertsInactive)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
@@ -142,22 +145,26 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	go garbageCollection(initializeShootClients, botanist)
 
 	// Trigger health check
-	conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
+	conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
 		initializeShootClients,
+		conditionAPIServerAvailable,
 		conditionControlPlaneHealthy,
 		conditionEveryNodeReady,
 		conditionSystemComponentsHealthy,
 	)
 
+	// Trigger monitoring health check
+	conditionAlertsInactive = botanist.MonitoringHealthChecks(conditionAlertsInactive)
+
 	// Update Shoot status
-	shoot, err = c.updateShootConditions(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
+	shoot, err = c.updateShootConditions(shoot, *conditionAPIServerAvailable, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy, *conditionAlertsInactive)
 	if err != nil {
 		botanist.Logger.Errorf("Could not update Shoot conditions: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	// Mark Shoot as healthy/unhealthy
-	kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta, shootHealthyLabelTransform(shootIsHealthy(shoot, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)))
+	kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta, shootHealthyLabelTransform(shootIsHealthy(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)))
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 

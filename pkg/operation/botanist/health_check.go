@@ -15,8 +15,12 @@
 package botanist
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"strings"
 	"sync"
+	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -26,7 +30,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-
+	prometheusmodel "github.com/prometheus/common/model"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -277,6 +281,102 @@ func CheckSystemComponents(
 		return exitCondition, nil
 	}
 	return nil, nil
+}
+
+// checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
+func (b *Botanist) checkAPIServerAvailability(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	// Try to reach the Shoot API server and measure the response time.
+	now := time.Now()
+	response, err := b.K8sShootClient.Curl("/healthz")
+	responseDurationText := fmt.Sprintf("[response_time:%dms]", time.Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
+	if err != nil {
+		message := fmt.Sprintf("Request to Shoot API server failed. %s (%s)", responseDurationText, err.Error())
+		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "RequestFailed", message)
+	}
+
+	// Determine the status code of the response.
+	var statusCode int
+	response.StatusCode(&statusCode)
+
+	if statusCode != http.StatusOK {
+		var body string
+		bodyRaw, err := response.Raw()
+		if err != nil {
+			body = fmt.Sprintf("Could not parse response body: %s", err.Error())
+		} else {
+			body = string(bodyRaw)
+		}
+		message := fmt.Sprintf("Shoot API server health check returned a non ok status code %d. %s (%s)", statusCode, responseDurationText, body)
+		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "ResponseCodeError", message)
+	}
+
+	message := fmt.Sprintf("Shoot API server responded with success status code. %s", responseDurationText)
+	return helper.UpdatedCondition(condition, corev1.ConditionTrue, "ResponseCodeOK", message)
+}
+
+const (
+	alertStatusFiring  = "firing"
+	alertStatusPending = "pending"
+	alertNameLabel     = "alertname"
+	alertStateLabel    = "alertstate"
+)
+
+// checkAlerts checks whether firing or pending alerts exists by querying the Shoot Prometheus.
+func (b *Botanist) checkAlerts(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	// Fetch firing and pending alerts from the Shoot cluster Prometheus.
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	alertResultSet, err := b.MonitoringClient.Query(ctx, "ALERTS{alertstate=~'firing|pending'}", time.Now())
+	if err != nil {
+		return helper.UpdatedConditionUnknownErrorMessage(condition, fmt.Sprintf("Alerts can't be queried from Shoot Prometheus (%s).", err.Error()))
+	}
+
+	var (
+		firingAlerts  []string
+		pendingAlerts []string
+	)
+
+	switch alertResultSet.Type() {
+	case prometheusmodel.ValVector:
+		resultVector := alertResultSet.(prometheusmodel.Vector)
+		for _, v := range resultVector {
+			switch v.Metric[alertStateLabel] {
+			case alertStatusFiring:
+				firingAlerts = append(firingAlerts, string(v.Metric[alertNameLabel]))
+			case alertStatusPending:
+				pendingAlerts = append(pendingAlerts, string(v.Metric[alertNameLabel]))
+			}
+		}
+	default:
+		return helper.UpdatedConditionUnknownErrorMessage(condition, "Unexpected metrics format. Can't determine alerts.")
+	}
+
+	// Validate the alert results and update the conditions accordingly.
+	var (
+		message strings.Builder
+		reason  string
+		status  corev1.ConditionStatus
+	)
+
+	if len(firingAlerts) > 0 {
+		reason = "FiringAlertsActive"
+		status = corev1.ConditionFalse
+		message.WriteString(fmt.Sprintf("The following alerts are active: %v", strings.Join(firingAlerts, ", ")))
+		if len(pendingAlerts) > 0 {
+			reason = "FiringAndPendingAlertsActive"
+		}
+	} else {
+		reason = "NoAlertsActive"
+		status = corev1.ConditionTrue
+		message.WriteString("No active alerts")
+		if len(pendingAlerts) > 0 {
+			reason = "PendingAlertsActive"
+		}
+	}
+	if len(pendingAlerts) > 0 {
+		message.WriteString(fmt.Sprintf(". The following alerts might trigger soon: %v", strings.Join(pendingAlerts, ", ")))
+	}
+	return helper.UpdatedCondition(condition, status, reason, message.String())
 }
 
 // CheckClusterNodes checks whether cluster nodes in the given listers are complete and healthy.
@@ -666,9 +766,9 @@ var (
 )
 
 // HealthChecks conducts the health checks on all the given conditions.
-func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlane, nodes, systemComponents *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
+func (b *Botanist) HealthChecks(initializeShootClients func() error, apiserverAvailability, controlPlane, nodes, systemComponents *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
 	if b.Shoot.IsHibernated {
-		return shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
+		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 
 	var (
@@ -680,12 +780,13 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
+		apiserverAvailability = helper.UpdatedConditionUnknownErrorMessage(apiserverAvailability, message)
 		nodes = helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
 		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
-		return controlPlane, nodes, systemComponents
+		return apiserverAvailability, controlPlane, nodes, systemComponents
 	}
 
 	var (
@@ -698,7 +799,11 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 		shootNodeLister       = makeNodeLister(b.K8sShootClient.Clientset(), shootNodeListOptions)
 	)
 
-	wg.Add(3)
+	wg.Add(4)
+	go func() {
+		defer wg.Done()
+		apiserverAvailability = b.checkAPIServerAvailability(apiserverAvailability)
+	}()
 	go func() {
 		defer wg.Done()
 		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
@@ -716,5 +821,20 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	}()
 	wg.Wait()
 
-	return controlPlane, nodes, systemComponents
+	return apiserverAvailability, controlPlane, systemComponents, nodes
+}
+
+// MonitoringHealthChecks performs the monitoring releated health checks.
+func (b *Botanist) MonitoringHealthChecks(inactiveAlerts *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	if b.Shoot.IsHibernated {
+		return shootHibernatedCondition(inactiveAlerts)
+	}
+
+	if err := b.InitializeMonitoringClient(); err != nil {
+		message := fmt.Sprintf("Could not initialize Shoot monitoring API client for health check: %+v", err)
+		b.Logger.Error(message)
+		return helper.UpdatedConditionUnknownErrorMessage(inactiveAlerts, message)
+	}
+
+	return b.checkAlerts(inactiveAlerts)
 }

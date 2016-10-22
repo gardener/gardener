@@ -168,6 +168,9 @@ spec:
         volumeMounts:
         - name: blackbox-exporter-config-prometheus
           mountPath: /vpn
+        - mountPath: /var/run/secrets/blackbox
+          name: kube-apiserver
+          readOnly: true
       terminationGracePeriodSeconds: 300
       volumes:
       - name: config
@@ -206,6 +209,10 @@ spec:
       - name: blackbox-exporter-config-prometheus
         configMap:
           name: blackbox-exporter-config-prometheus
+      - name: kube-apiserver
+        secret:
+          defaultMode: 420
+          secretName: kube-apiserver
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db

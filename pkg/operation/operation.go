@@ -15,9 +15,10 @@
 package operation
 
 import (
+	"crypto/x509"
+	"encoding/base64"
+	"errors"
 	"fmt"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/client-go/util/retry"
 	"path/filepath"
 	"strings"
 
@@ -33,9 +34,13 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	prometheusapi "github.com/prometheus/client_golang/api"
+	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 // New creates a new operation object with a Shoot resource object.
@@ -161,6 +166,51 @@ func (o *Operation) InitializeShootClients() error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// InitializeMonitoringClient will read the Prometheus ingress auth and tls
+// secrets from the Seed cluster, which are containing the cert to secure
+// the conntection and the credentials authenticate against the Shoot Prometheus.
+// With those certs and credentials, a Prometheus client API will be created
+// and attached to the existing Operation object.
+func (o *Operation) InitializeMonitoringClient() error {
+	if o.MonitoringClient != nil {
+		return nil
+	}
+
+	// Read the CA.
+	tlsSecret, err := o.K8sSeedClient.GetSecret(o.Shoot.SeedNamespace, "prometheus-tls")
+	if err != nil {
+		return err
+	}
+	if tlsSecret == nil {
+		return errors.New("Failed to read the 'prometheus-tls' secret")
+	}
+	ca := x509.NewCertPool()
+	ca.AppendCertsFromPEM(tlsSecret.Data["ca.crt"])
+
+	// Read the basic auth credentials.
+	credentials, err := o.K8sSeedClient.GetSecret(o.Shoot.SeedNamespace, "monitoring-ingress-credentials")
+	if err != nil {
+		return err
+	}
+	if credentials == nil {
+		return errors.New("Failed to read the 'monitoring-ingress-credentials' secret")
+	}
+
+	config := prometheusapi.Config{
+		Address: fmt.Sprintf("https://%s", o.Seed.GetIngressFQDN("p", o.Shoot.Info.Name, o.Garden.Project.Name)),
+		RoundTripper: &prometheusRoundTripper{
+			authHeader: fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", credentials.Data["username"], credentials.Data["password"])))),
+			ca:         ca,
+		},
+	}
+	client, err := prometheusapi.NewClient(config)
+	if err != nil {
+		return err
+	}
+	o.MonitoringClient = prometheusclient.NewAPI(client)
 	return nil
 }
 
