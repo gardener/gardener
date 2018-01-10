@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Grafana chart for Kubernetes
+name: grafana
+version: 0.1.0

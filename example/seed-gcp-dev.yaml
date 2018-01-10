@@ -1,0 +1,16 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Seed
+metadata:
+  name: gcp-dev
+spec:
+  cloud:
+    profile: gcp
+    region: europe-west1
+  secretRef:
+    name: seed-gcp-dev
+    namespace: garden
+  domain: dev.gcp.seed.example.com
+  networks:
+    nodes: 10.240.0.0/16
+    pods: 10.241.128.0/17
+    services: 10.241.0.0/17

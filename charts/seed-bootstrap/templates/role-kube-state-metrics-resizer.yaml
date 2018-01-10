@@ -1,0 +1,22 @@
+apiVersion: {{include "rbacversion" .}}
+kind: Role
+metadata:
+  namespace: kube-system
+  name: kube-state-metrics-resizer
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  resourceNames:
+  - kube-state-metrics
+  verbs:
+  - get
+  - update

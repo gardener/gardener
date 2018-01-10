@@ -1,0 +1,32 @@
+{{- define "kubenet-bootstrap" -}}
+{{- if eq .kubernetes.kubelet.networkPlugin "kubenet" -}}
+- name: kubenet-bootstrap.service
+  command: start
+  content: |
+    [Unit]
+    Description=Download required plugins for kubenet
+    Before=kubelet.service
+    [Service]
+    Restart=on-failure
+    RestartSec=10
+    ExecStartPre=/usr/bin/touch /tmp/bootstrap_success
+    ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
+    ExecStartPre=/bin/sh -c 'sudo mkdir -p /var/lib/kubelet'
+    ExecStartPre=/bin/sh -c 'sudo mkdir -p /opt/bin/kubernetes'
+    ExecStartPre=/bin/sh -c 'sudo mkdir -p /opt/cni/bin'
+    ExecStartPre=/bin/sh -c 'sudo wget -O /opt/cni/bin/bridge https://storage.googleapis.com/req-plugins/plugins/bridge'
+    ExecStartPre=/bin/sh -c 'sudo chmod +x /opt/cni/bin/bridge'
+    ExecStartPre=/bin/sh -c 'sudo wget -O /opt/cni/bin/host-local https://storage.googleapis.com/req-plugins/plugins/host-local'
+    ExecStartPre=/bin/sh -c 'sudo chmod +x /opt/cni/bin/host-local'
+    ExecStartPre=/bin/sh -c 'sudo wget -O /opt/cni/bin/loopback https://storage.googleapis.com/req-plugins/plugins/loopback'
+    ExecStartPre=/bin/sh -c 'sudo chmod +x /opt/cni/bin/loopback'
+    ExecStartPre=/bin/sh -c 'sudo brctl addbr cbr0'
+    ExecStartPre=/bin/sh -c 'sudo ip link set dev cbr0 up'
+    ExecStartPre=/bin/sh -c 'sudo systemctl stop docker'
+    ExecStartPre=/bin/sh -c 'sleep 3'
+    ExecStartPre=/bin/sh -c 'sudo systemctl start docker'
+    ExecStartPre=/bin/sh -c 'iptables -t nat -A POSTROUTING ! -d 10.0.0.0/8 -o eth0 -j MASQUERADE'
+    ExecStartPre=/bin/sh -c 'sysctl net.ipv4.ip_forward=1'
+    ExecStart=/usr/bin/rm -f /tmp/bootstrap_success
+{{- end -}}
+{{- end -}}

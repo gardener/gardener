@@ -1,0 +1,4 @@
+apiVersion: v1
+description: AWS chart for main k8s infrastructure
+name: aws-infra
+version: 0.1.0

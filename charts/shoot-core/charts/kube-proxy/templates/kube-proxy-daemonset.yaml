@@ -1,0 +1,63 @@
+---
+apiVersion: {{ include "daemonsetversion" . }}
+kind: DaemonSet
+metadata:
+  name: kube-proxy
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: proxy
+  template:
+    metadata:
+      labels:
+        app: kubernetes
+        role: proxy
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        checksum/secret-kube-proxy: {{ include (print $.Template.BasePath "/kube-proxy-secret.yaml") . | sha256sum }}
+    spec:
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      hostNetwork: true
+      containers:
+      - name: kube-proxy
+        image: k8s.gcr.io/hyperkube:{{ .Capabilities.KubeVersion }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /hyperkube
+        - proxy
+        - --cluster-cidr={{ .Values.global.PodNetwork }}
+        - --conntrack-max-per-core=131072
+        - --kubeconfig=/var/lib/kube-proxy/kubeconfig
+        {{- include "kube-proxy.featureGates" . | trimSuffix "," | indent 8 }}
+        - --v=2
+        securityContext:
+          privileged: true
+        resources:
+          requests:
+            cpu: 100m
+        volumeMounts:
+        - name: kubeconfig
+          mountPath: /var/lib/kube-proxy
+        - name: ssl-certs-hosts
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        - name: systembussocket
+          mountPath: /var/run/dbus/system_bus_socket
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: kube-proxy
+      - name: ssl-certs-hosts
+        hostPath:
+          path: /usr/share/ca-certificates
+      - name: systembussocket
+        hostPath:
+          path: /var/run/dbus/system_bus_socket

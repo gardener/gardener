@@ -1,0 +1,106 @@
+---
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  labels:
+    app: {{ template "fullname" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{ template "fullname" . }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ template "fullname" . }}
+      release: {{ .Release.Name }}
+{{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 6 }}
+{{- end }}
+  replicas: {{ .Values.replicaCount }}
+  template:
+    metadata:
+    {{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+    {{- end }}
+      labels:
+        app: {{ template "fullname" . }}
+        release: {{ .Release.Name }}
+      {{- if .Values.podLabels }}
+{{ toYaml .Values.podLabels | indent 8 }}
+      {{- end }}
+    spec:
+{{- if .Values.waitForKube2IAM}}
+      initContainers:
+      - name: init-cluster-autoscaler
+        image: k8s.gcr.io/hyperkube:{{.Capabilities.KubeVersion}}
+        command:
+        - /bin/bash
+        - "-c"
+        - |
+          trap 'exit' TERM SIGINT
+          until ( kubectl -n={{.Release.Namespace}} get daemonset {{.Release.Name}}-kube2iam -o jsonpath={.status.numberAvailable} 2> /dev/null | grep -v 0 );
+          do
+            echo "waiting for kube2iam";
+            sleep 2;
+          done
+          echo "Success - kube2iam is running"
+{{- end}}
+      containers:
+        - name: {{ template "fullname" . }}
+        {{- if eq .Values.cloudProvider "spotinst" }}
+          image: "{{ .Values.spotinst.image.repository }}:{{ .Values.spotinst.image.tag }}"
+          imagePullPolicy: "{{ .Values.spotinst.image.pullPolicy }}"
+        {{- else }}
+          image: "{{ .Values.image.repository }}:{{ include "imagetag" . }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        {{- end }}
+          command:
+            - ./cluster-autoscaler
+            - --cloud-provider={{ .Values.cloudProvider }}
+            - --namespace={{ .Release.Namespace }}
+          {{- range .Values.autoscalingGroups }}
+            - --nodes={{ .minSize }}:{{ .maxSize }}:{{ .name }}
+          {{- end }}
+          {{- range $key, $value := .Values.extraArgs }}
+            - --{{ $key }}={{ $value }}
+          {{- end }}
+          env:
+          {{- if eq .Values.cloudProvider "aws" }}
+            - name: AWS_REGION
+              value: "{{ .Values.awsRegion }}"
+          {{- else if eq .Values.cloudProvider "spotinst" }}
+            - name: SPOTINST_TOKEN
+              value: "{{ .Values.spotinst.token }}"
+            - name: SPOTINST_ACCOUNT
+              value: "{{ .Values.spotinst.account }}"
+          {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /health-check
+              port: 8085
+          ports:
+            - containerPort: 8085
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              readOnly: true
+    {{- if .Values.affinity }}
+      affinity:
+{{ toYaml .Values.affinity | indent 8 }}
+    {{- end }}
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
+      tolerations:
+{{ toYaml .Values.tolerations | indent 8 }}
+      volumes:
+        - name: ssl-certs
+          hostPath:
+            path: /etc/ssl/certs/ca-certificates.crt

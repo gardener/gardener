@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: grafana
+data:
+  prometheus-datasource.json: |-
+    {
+      "access": "proxy",
+      "basicAuth": false,
+      "name": "prometheus",
+      "type": "prometheus",
+      "url": "http://prometheus-web:8080",
+      "isDefault": true
+    }
+
+  {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
+  {{ base $name }}: |-
+    {
+      "dashboard":
+{{ toString $bytes | indent 10}}
+    ,
+      "inputs": [
+        {
+          "name": "DS_PROMETHEUS",
+          "pluginId": "prometheus",
+          "type": "datasource",
+          "value": "prometheus"
+        }
+      ],
+      "overwrite": true
+    }
+
+  {{ end }}

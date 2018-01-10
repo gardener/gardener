@@ -1,0 +1,73 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: CloudProfile
+metadata:
+  name: azure
+spec:
+  azure:
+    constraints:
+      dnsProviders:
+      - aws-route53
+      - unmanaged
+      kubernetes:
+        versions:
+        - 1.9.1
+        - 1.8.6
+      machineTypes:
+      - name: Standard_DS1_v2
+        cpus: 1
+        gpus: 0
+        memory: 3500Mi
+      - name: Standard_DS2_v2
+        cpus: 2
+        gpus: 0
+        memory: 7Gi
+      - name: Standard_DS3_v2
+        cpus: 4
+        gpus: 0
+        memory: 14Gi
+      - name: Standard_DS4_v2
+        cpus: 8
+        gpus: 0
+        memory: 28Gi
+      - name: Standard_DS5_v2
+        cpus: 16
+        gpus: 0
+        memory: 56Gi
+      - name: Standard_F1s
+        cpus: 1
+        gpus: 0
+        memory: 2Gi
+      - name: Standard_F2s
+        cpus: 2
+        gpus: 0
+        memory: 4Gi
+      - name: Standard_F4s
+        cpus: 4
+        gpus: 0
+        memory: 8Gi
+      - name: Standard_F8s
+        cpus: 8
+        gpus: 0
+        memory: 16Gi
+      - name: Standard_F16s
+        cpus: 16
+        gpus: 0
+        memory: 32Gi
+      volumeTypes:
+      - name: standard
+        class: standard
+      - name: premium
+        class: premium
+    countUpdateDomains:
+    - region: westeurope
+      count: 5
+    - region: eastus
+      count: 5
+    countFaultDomains:
+    - region: westeurope
+      count: 2
+    - region: eastus
+      count: 2
+    machineImage:
+      channel: Stable
+      version: 1576.5.0

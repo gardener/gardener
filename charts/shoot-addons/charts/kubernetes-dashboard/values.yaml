@@ -1,0 +1,56 @@
+# Default values for kubernetes-dashboard
+# This is a YAML-formatted file.
+# Declare name/value pairs to be passed into your templates.
+# name: value
+
+image: k8s.gcr.io/kubernetes-dashboard-amd64
+imageTag: "v1.8.0"
+imagePullPolicy: "IfNotPresent"
+
+nodeSelector: {}
+
+httpsPort: 443
+
+serviceType: ClusterIP
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 250Mi
+  requests:
+    cpu: 100m
+    memory: 50Mi
+
+ingress:
+  ## If true, Kubernetes Dashboard Ingress will be created.
+  ##
+  enabled: false
+
+  ## Kubernetes Dashboard Ingress annotations
+  ##
+  # annotations:
+  #   kubernetes.io/ingress.class: nginx
+  #   kubernetes.io/tls-acme: 'true'
+
+  ## Kubernetes Dashboard Ingress hostnames
+  ## Must be provided if Ingress is enabled
+  ##
+  # hosts:
+  #   - kubernetes-dashboard.domain.com
+
+  ## Kubernetes Dashboard Ingress TLS configuration
+  ## Secrets must be manually created in the namespace
+  ##
+  # tls:
+  #   - secretName: kubernetes-dashboard-tls
+  #     hosts:
+  #       - kubernetes-dashboard.domain.com
+
+rbac:
+  ## If true, create & use RBAC resources
+  #
+  create: true
+
+  ## Ignored if rbac.create is true
+  #
+  serviceAccountName: default

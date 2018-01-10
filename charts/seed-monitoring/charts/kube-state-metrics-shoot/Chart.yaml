@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Kube-state-metrics for Kubernetes that scrapes Shoot's API server
+name: kube-state-metrics-shoot
+version: 0.1.0

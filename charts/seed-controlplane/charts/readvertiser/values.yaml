@@ -1,0 +1,4 @@
+domain: cluster.local
+
+imagePullSecrets:
+- name: gcr-readonly

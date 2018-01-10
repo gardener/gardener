@@ -1,0 +1,67 @@
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:monitoring:auto-node-repair
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: auto-node-repair
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - endpoints
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+      - pods
+      - services
+      - replicationcontrollers
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods/eviction
+    verbs:
+      - watch
+      - list
+      - get
+      - create
+      - update
+      - delete
+      - patch
+  - apiGroups:
+      - extensions
+      - apps
+    resources:
+      - daemonsets
+      - deployments
+      - replicasets
+      - statefulsets
+    verbs:
+      - watch
+      - list
+      - get
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - watch
+      - list
+---
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:monitoring:auto-node-repair
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: auto-node-repair
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:monitoring:auto-node-repair
+subjects:
+- kind: User
+  name: garden.sapcloud.io:monitoring:auto-node-repair

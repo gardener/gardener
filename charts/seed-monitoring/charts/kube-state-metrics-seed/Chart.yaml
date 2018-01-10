@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Kube-state-metrics for Kubernetes in seed cluster
+name: kube-state-metrics-seed
+version: 0.1.0

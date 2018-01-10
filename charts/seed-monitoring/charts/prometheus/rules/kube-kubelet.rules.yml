@@ -1,0 +1,84 @@
+groups:
+- name: kube-kubelet.rules
+  rules:
+  - alert: NoWorkerNodes
+    expr: absent(up{job="kube-kubelet", type="shoot"}) or count(up{job="kube-kubelet", type="shoot"} == 0)
+    for: 5m
+    labels:
+      job: kube-kubelet
+      service: kube-kubelet
+      severity: blocker
+    annotations:
+      description: No kubelets are available in the shoot cluster, or all Kubelets
+        have disappeared from service discovery.
+      summary: Many Kubelets cannot be scraped
+  - alert: KubeKubeletNodeDown
+    expr: up{job="kube-kubelet", type="shoot"} == 0
+    for: 1h
+    labels:
+      job: kube-kubelet
+      service: kube-kubelet
+      severity: warning
+    annotations:
+      description: Prometheus could not scrape a {{ $labels.job }} for more than one
+        hour
+      summary: Kubelet cannot be scraped
+  - alert: KubeKubeletTooManyPods
+    expr: kubelet_running_pod_count > 100
+    labels:
+      service: kube-kubelet
+      severity: warning
+    annotations:
+      description: Kubelet {{$labels.instance}} is running {{$value}} pods, close
+        to the limit of 110
+      summary: Kubelet is close to pod limit
+  - alert: KubeKubeletContainerReboot
+    expr: increase(container_last_seen{container_label_io_kubernetes_container_hash!=""}[30s])
+      < 25
+    labels:
+      service: kube-kubelet
+      severity: warning
+    annotations:
+      description: '{{ $labels.container_label_io_kubernetes_pod_name }} has been
+        restarted {{ $labels.container_label_io_kubernetes_container_restartCount
+        }} times lately.'
+      summary: High container reboot count
+  - alert: KubeKubeletPodRestartingTooMuch
+    expr: rate(kube_pod_container_status_restarts{namespace=~"^(?:kube-system|monitoring)$"}[1m])
+      > 12
+    for: 30m
+    labels:
+      service: kube-kubelet
+      severity: warning
+    annotations:
+      description: '{{$labels.namespace}}/{{$label.pod}} is restarting too much.'
+      summary: pod is restarting too much.
+  - alert: KubeKubeletPodSlowToLaunch
+    expr: rate(kubelet_pod_start_latency_microseconds{quantile="0.99"}[1m]) > 5
+    for: 30m
+    labels:
+      service: kube-kubelet
+      severity: warning
+    annotations:
+      description: Pods are taking longer than 5 milliseconds to launch.
+      summary: Pods are slow to launch.
+  - alert: KubeTooManyOpenFiles
+    expr: 100 * process_open_fds{job=~"^(?:kube-kubelet)$"} / process_max_fds > 50
+    for: 10m
+    labels:
+      service: kube-kubelet
+      severity: warning
+    annotations:
+      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
+        descriptors.'
+      summary: '{{ $labels.job }} has too many open file descriptors'
+  - alert: KubeTooManyOpenFiles
+    expr: 100 * process_open_fds{job=~"^(?:kube-kubelet)$"} / process_max_fds > 80
+    for: 10m
+    labels:
+      service: kube-kubelet
+      severity: critical
+    annotations:
+      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
+        descriptors.'
+      summary: '{{ $labels.job }} has too many open file descriptors'

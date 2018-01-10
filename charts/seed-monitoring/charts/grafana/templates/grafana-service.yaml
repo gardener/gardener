@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: grafana
+spec:
+  type: ClusterIP
+  ports:
+  - name: web
+    port: 3000
+    protocol: TCP
+  selector:
+    component: grafana

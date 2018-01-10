@@ -1,0 +1,31 @@
+---
+apiVersion: {{include "rbacversion" .}}
+kind: Role
+metadata:
+  name: rbac-fix
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+  namespace: kube-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - "*"
+---
+apiVersion: {{include "rbacversion" .}}
+kind: RoleBinding
+metadata:
+  name: rbac-fix
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rbac-fix
+subjects:
+- kind: User
+  name: system:kube-controller-manager
+  namespace: kube-system

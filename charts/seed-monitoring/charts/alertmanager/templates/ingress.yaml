@@ -1,0 +1,24 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/auth-realm: Authentication Required
+    ingress.kubernetes.io/auth-secret: {{.Chart.Name}}-basic-auth
+    ingress.kubernetes.io/auth-type: basic
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{.Chart.Name}}
+  namespace: {{.Release.Namespace}}
+spec:
+  tls:
+  - secretName: {{.Chart.Name}}-tls
+    hosts:
+    - {{.Values.ingress.host}}
+  rules:
+  - host: {{.Values.ingress.host}}
+    http:
+      paths:
+      - backend:
+          serviceName: alertmanager-client
+          servicePort: 9093
+        path: /

@@ -1,0 +1,22 @@
+{{define "kubelet" -}}
+{{/* Do not remove the indentation, this is required because this template is imported by others */ -}}
+- name: kubelet.service
+  command: start
+  enable: true
+  content: |
+    [Unit]
+    Description=kubelet daemon
+    Documentation=https://kubernetes.io/docs/admin/kubelet
+    After=docker.service
+    Wants=docker.socket rpc-statd.service
+    [Install]
+    WantedBy=multi-user.target
+    [Service]
+    Restart=always
+    RestartSec=10
+    EnvironmentFile=/etc/environment
+    ExecStartPre=-/bin/docker rm -f kubelet
+    ExecReload=-/bin/docker restart kubelet
+    ExecStart=/opt/bin/kubelet \
+{{ include "kubelet-flags" . | indent 8 }}
+{{- end}}

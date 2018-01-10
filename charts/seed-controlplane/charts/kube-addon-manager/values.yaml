@@ -1,0 +1,5 @@
+CloudConfigContent: {}
+CoreAddonsContent: {}
+AdmissionControlsContent: {}
+OptionalAddonsContent: {}
+PodAnnotations: {}

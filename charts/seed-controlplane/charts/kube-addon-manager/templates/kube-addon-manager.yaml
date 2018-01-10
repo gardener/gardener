@@ -1,0 +1,78 @@
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: kube-addon-manager
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: kubernetes
+    role: addon-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: addon-manager
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        checksum/configmap-admission-controls: {{ include (print $.Template.BasePath "/admission-controls.yaml") . | sha256sum }}
+        checksum/secret-core-addons: {{ include (print $.Template.BasePath "/core-addons.yaml") . | sha256sum }}
+        checksum/secret-optional-addons: {{ include (print $.Template.BasePath "/optional-addons.yaml") . | sha256sum }}
+{{- if .Values.PodAnnotations }}
+{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: kubernetes
+        role: addon-manager
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: kube-addon-manager
+        image: k8s.gcr.io/kube-addon-manager:v6.5
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: ADDON_MANAGER_LEADER_ELECTION
+          value: "false"
+        - name: KUBECTL_OPTS
+          value: "--kubeconfig=/var/lib/kube-addon-manager/kubeconfig"
+          # addon-manager executes kubectl apply -f /etc/kubernetes/addons/, but because there are hidden ../data files,
+          # it applies every single file 2 times.
+        - name: ADDON_PATH
+          value: "/etc/kubernetes/addons/cloud-config/..data/.,/etc/kubernetes/addons/core/..data/.,/etc/kubernetes/addons/optional/..data/."
+        resources:
+          requests:
+            cpu: 5m
+            memory: 50Mi
+        volumeMounts:
+        - mountPath: /etc/kubernetes/addons/cloud-config
+          name: cloud-config
+          readOnly: true
+        - mountPath: /etc/kubernetes/addons/core
+          name: core-addons
+          readOnly: true
+        - mountPath: /etc/kubernetes/addons/optional
+          name: optional-addons
+          readOnly: true
+        - mountPath: /etc/kubernetes/admission-controls
+          name: admission-controls
+          readOnly: true
+        - mountPath: /var/lib/kube-addon-manager
+          name: kube-addon-manager
+          readOnly: true
+      volumes:
+      - name: kube-addon-manager
+        secret:
+          secretName: kube-addon-manager
+      - name: admission-controls
+        configMap:
+          name: kube-addon-manager-admission-controls
+      - name: cloud-config
+        secret:
+          secretName: kube-addon-manager-cloud-config
+      - name: core-addons
+        secret:
+          secretName: kube-addon-manager-core-addons
+      - name: optional-addons
+        secret:
+          secretName: kube-addon-manager-optional-addons

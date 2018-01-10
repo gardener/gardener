@@ -1,0 +1,4 @@
+apiVersion: v1
+description: RBAC for kube-state-metrics deployed in the shoot cluster
+name: kube-state-metrics-shoot
+version: 0.1.0

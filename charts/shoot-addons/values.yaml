@@ -1,0 +1,26 @@
+# global:
+#   PodNetwork: 100.96.0.0/11
+#   KubernetesVersion: 1.6.4
+# kube-proxy:
+#   secret: "dummy - add the data of a kubernetes secret"
+# kube-dns:
+#   ClusterDNS: 100.64.0.10
+# vpn-shoot:
+#   secret: "dummy base64 encoded authorized_keys"
+
+cluster-autoscaler:
+  enabled: false
+heapster:
+  enabled: false
+helm-tiller:
+  enabled: false
+kube-lego:
+  enabled: false
+kube2iam:
+  enabled: false
+kubernetes-dashboard:
+  enabled: false
+monocular:
+  enabled: false
+nginx-ingress:
+  enabled: false

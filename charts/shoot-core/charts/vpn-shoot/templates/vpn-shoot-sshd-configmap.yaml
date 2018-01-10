@@ -1,0 +1,18 @@
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: vpn-sshd-config
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+data:
+  sshd_config: |
+    Subsystem sftp /usr/lib/ssh/sftp-server
+    AuthorizedKeysFile .ssh/authorized_keys /etc/authorized_keys/%u
+    Port 22
+    UsePrivilegeSeparation sandbox
+    UseDNS no
+    PrintMotd no
+    PermitTunnel yes
+    PermitRootLogin without-password

@@ -1,0 +1,4 @@
+apiVersion: v1
+description: An umbrella chart for all shoot addons
+name: shoot-addons
+version: 0.1.0

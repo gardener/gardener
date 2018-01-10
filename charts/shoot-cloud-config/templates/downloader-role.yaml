@@ -1,0 +1,17 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: cloud-config-downloader
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  resourceNames:
+{{- range $key, $value := .Values.workers }}
+  - cloud-config-{{ $value }}
+{{- end }}

@@ -1,0 +1,5 @@
+KubernetesVersion: 1.9.1
+PodAnnotations: {}
+FeatureGates: {}
+  # CustomResourceValidation: true
+  # RotateKubeletServerCertificate: false

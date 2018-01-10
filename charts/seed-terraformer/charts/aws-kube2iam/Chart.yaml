@@ -1,0 +1,4 @@
+apiVersion: v1
+description: AWS chart for kube2iam roles
+name: aws-kube2iam
+version: 0.1.0

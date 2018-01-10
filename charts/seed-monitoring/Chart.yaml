@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Monitoring meta chart for seed-clusters
+name: seed-monitoring
+version: 0.1.0

@@ -1,0 +1,20 @@
+{{- define "update-ca-certs" -}}
+{{- if .caBundle -}}
+- name: updatecacerts.service
+  command: start
+  content: |
+    [Unit]
+    Description=Update CA bundle at /etc/ssl/certs/ca-certificates.crt
+    # Since other services depend on the certificate store run this early
+    DefaultDependencies=no
+    Wants=systemd-tmpfiles-setup.service clean-ca-certificates.service
+    After=systemd-tmpfiles-setup.service clean-ca-certificates.service
+    Before=sysinit.target
+    ConditionPathIsReadWrite=/etc/ssl/certs
+    ConditionPathExists=/etc/ssl/certs/ROOTcerts.pem
+    # Do nothing if update-ca-certificates has never been run before
+    [Service]
+    Type=oneshot
+    ExecStart=/usr/sbin/update-ca-certificates
+{{- end -}}
+{{- end -}}

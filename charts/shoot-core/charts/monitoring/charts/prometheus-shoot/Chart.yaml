@@ -1,0 +1,4 @@
+apiVersion: v1
+description: RBAC for prometheus deployed in the shoot cluster
+name: prometheus-shoot
+version: 0.1.0

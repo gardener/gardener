@@ -1,0 +1,41 @@
+{{- define "kubelet-flags" -}}
+--allow-privileged=true \
+--anonymous-auth=false \
+--client-ca-file=/var/lib/kubelet/ca.crt \
+--authentication-token-webhook \
+--authorization-mode=Webhook \
+--cgroup-root="/" \
+--cloud-provider={{ required "cloudProvider.name is required" .cloudProvider.name }} \
+{{- if .cloudProvider.config }}
+--cloud-config=/var/lib/kubelet/cloudprovider.conf \
+{{- end }}
+--cluster-dns="{{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}" \
+--cluster-domain=cluster.local \
+{{- if eq .kubernetes.kubelet.networkPlugin "cni" -}}
+--cni-bin-dir=/opt/cni/bin/ \
+--cni-conf-dir=/etc/cni/net.d/ \
+{{- end }}
+--enable-debugging-handlers=true \
+--eviction-hard="memory.available<100Mi,nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
+--eviction-soft="memory.available<200Mi,nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
+--eviction-soft-grace-period="memory.available=1m30s,nodefs.available=1m30s,nodefs.inodesFree=1m30s,imagefs.available=1m30s,imagefs.inodesFree=1m30s" \
+--eviction-max-pod-grace-period="90" \
+--eviction-pressure-transition-period="4m" \
+{{- if (include "kubelet.featureGates" .) }}
+{{- include "kubelet.featureGates" . | trimSuffix "," }} \
+{{- end }}
+--image-gc-high-threshold=50 \
+--image-gc-low-threshold=40 \
+--kubeconfig="/var/lib/kubelet/kubeconfig" \
+--kube-reserved=memory="1Gi" \
+--network-plugin="{{ required "kubernetes.kubelet.networkPlugin is required" .kubernetes.kubelet.networkPlugin }}" \
+--node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "worker is required" .worker }}" \
+{{- if semverCompare "< 1.7" (required "kubernetes.version is required" .kubernetes.version)}}
+--non-masquerade-cidr="{{ required "kubernetes.nonMasqueradeCIDR is required" .kubernetes.nonMasqueradeCIDR }}" \
+{{- end }}
+--require-kubeconfig=true \
+{{- range $index, $param := .kubernetes.kubelet.parameters }}
+{{$param}} \
+{{- end }}
+--v=2
+{{- end -}}

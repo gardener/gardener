@@ -1,0 +1,74 @@
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  labels:
+    app: {{ template "name" . }}
+    addonmanager.kubernetes.io/mode: EnsureExists
+  name: {{ template "name" . }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: {{ template "name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+    {{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+    {{- end }}
+      labels:
+        app: {{ template "name" . }}
+        release: {{ .Release.Name }}
+    spec:
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 6 }}
+{{- end }}
+      containers:
+        - name: {{ template "name" . }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          command:
+            - ./auto-node-repair
+            - --cloud-provider=aws
+          {{- range .Values.autoscalingGroups }}
+            - --nodes={{ .minSize }}:{{ .maxSize }}:{{ .name }}
+          {{- end }}
+          {{- range $key, $value := .Values.extraArgs }}
+            - --{{ $key }}={{ $value }}
+          {{- end }}
+            - --kubeconfig=/etc/kubeconfig/file
+          env:
+{{ toYaml .Values.environment | indent 10 }}
+          ports:
+            - containerPort: 8087
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+          volumeMounts:
+            - name: ssl-certs
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              readOnly: true
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kubeconfig
+    {{- if .Values.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.nodeSelector | indent 8 }}
+    {{- end }}
+      volumes:
+        - name: ssl-certs
+          hostPath:
+            path: /etc/ssl/certs/ca-certificates.crt
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: auto-node-repair
+            items:
+            - key: kubeconfig
+              path: file

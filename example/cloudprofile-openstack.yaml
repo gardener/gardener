@@ -1,0 +1,40 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: CloudProfile
+metadata:
+  name: openstack
+spec:
+  openstack:
+    constraints:
+      dnsProviders:
+      - aws-route53
+      - unmanaged
+      floatingPools:
+      - name: MY-FLOATING-POOL
+      kubernetes:
+        versions:
+        - 1.9.1
+        - 1.8.6
+      loadBalancerProviders:
+      - name: haproxy
+      machineTypes:
+      - name: medium_2_4
+        cpus: 2
+        gpus: 0
+        memory: 4Gi
+      - name: medium_4_8
+        cpus: 4
+        gpus: 0
+        memory: 8Gi
+      zones:
+      - region: europe-1
+        names:
+        - europe-1a
+        - europe-1b
+        - europe-1c
+    keystoneURL: https://url-to-keystone/v3/
+    machineImage:
+      name: coreos-1520.6.0
+    caBundle: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----

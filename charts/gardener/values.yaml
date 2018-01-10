@@ -1,0 +1,51 @@
+# Default values for gardener.
+apiserver:
+  enabled: true
+  replicaCount: 1
+  etcdServers: http://etcd:2379
+  groupPriorityMinimum: 10000
+  versionPriority: 20
+  serviceAccountName: garden-apiserver
+  image:
+    repository: rfranzke/garden-apiserver
+    tag: latest
+  caBundle: |
+    ---
+  tls:
+    crt: |
+      ---
+    key: |
+      ---
+
+controller:
+  enabled: true
+  replicaCount: 1
+  serviceAccountName: garden-controller-manager
+  image:
+    repository: rfranzke/garden-controller-manager
+    tag: latest
+  config:
+    clientConnection:
+      acceptContentTypes: application/json
+      contentType: application/json
+      qps: 100
+      burst: 130
+    controller:
+      healthCheckPeriod: 30s
+      reconciliation:
+        concurrentSyncs: 20
+        resyncPeriod: 10m
+        retryDuration: 1440m
+    gardenNamespace: garden
+    leaderElection:
+      leaderElect: true
+      leaseDuration: 15s
+      renewDeadline: 10s
+      retryPeriod: 2s
+      resourceLock: configmaps
+    logLevel: info
+    metrics:
+      interval: 30s
+    server:
+      bindAddress: 0.0.0.0
+      port: 2718

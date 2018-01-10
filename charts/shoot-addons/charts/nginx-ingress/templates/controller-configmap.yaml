@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    component: "{{ .Values.controller.name }}"
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{ template "controller.fullname" . }}
+data:
+  enable-vts-status: "{{ .Values.controller.stats.enabled }}"
+{{- if .Values.controller.config }}
+{{ toYaml .Values.controller.config | indent 2 }}
+{{- end }}

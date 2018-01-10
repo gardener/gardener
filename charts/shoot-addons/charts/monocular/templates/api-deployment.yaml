@@ -1,0 +1,61 @@
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: {{ template "fullname" . }}-api
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ template "fullname" . }}-api
+  template:
+    metadata:
+      labels:
+        app: {{ template "fullname" . }}-api
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/api-config.yaml") . | sha256sum }}
+    spec:
+      initContainers:
+      - name: init-monocular
+        image: busybox:1.27
+        command:
+        - sh
+        - -c
+        - 'until nslookup kubernetes.default.svc > /dev/null; do echo waiting for kube-dns; sleep 2; done'
+      containers:
+      - name: {{ .Chart.Name }}
+        image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+        imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+        env:
+        - name: MONOCULAR_HOME
+          value: /monocular
+        ports:
+        - containerPort: {{ .Values.api.service.internalPort }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.api.service.internalPort }}
+          initialDelaySeconds: {{ .Values.api.livenessProbe.initialDelaySeconds }}
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.api.service.internalPort }}
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        volumeMounts:
+          - name: cache
+            mountPath: /monocular
+          - name: config
+            mountPath: /monocular/config
+        resources:
+{{ toYaml .Values.api.resources | indent 12 }}
+      volumes:
+      - name: config
+        configMap:
+          name: {{ template "fullname" . }}-api-config
+      - name: cache
+        emptyDir: {}

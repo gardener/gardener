@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alertmanager-config
+  namespace: {{.Release.Namespace}}
+data:
+  alertmanager.yaml: {{ include "config" . | b64enc }}

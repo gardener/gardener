@@ -1,0 +1,55 @@
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:monitoring:kube-state-metrics
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: kube-state-metrics
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - pods
+  - services
+  - resourcequotas
+  - replicationcontrollers
+  - limitranges
+  - persistentvolumeclaims
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - apps
+  - extensions
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - cronjobs
+  - jobs
+  verbs:
+  - list
+  - watch
+---
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:monitoring:kube-state-metrics
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: kube-state-metrics
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:monitoring:kube-state-metrics
+subjects:
+- kind: User
+  name: garden.sapcloud.io:monitoring:kube-state-metrics

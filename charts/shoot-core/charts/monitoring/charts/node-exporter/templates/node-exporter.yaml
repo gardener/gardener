@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-exporter
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: node-exporter
+  annotations:
+    addonmanager.kubernetes.io/mode: Reconcile
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9100"
+    prometheus.io/name: node-exporter
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 9100
+    protocol: TCP
+  selector:
+    component: node-exporter
+---
+apiVersion: {{include "daemonsetversion" .}}
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: node-exporter
+spec:
+  selector:
+    matchLabels:
+      component: node-exporter
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        component: node-exporter
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+      - name: node-exporter
+        image: quay.io/prometheus/node-exporter:v0.14.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - /bin/node_exporter
+        - -collector.procfs=/host/proc
+        - -collector.sysfs=/host/sys
+        - -collector.filesystem.ignored-fs-types=^(tmpfs|cgroup|nsfs|fuse\.lxcfs|rpc_pipefs)$
+        - -collector.filesystem.ignored-mount-points=^/(rootfs/|host/)?(sys|proc|dev|host|etc|var/lib/docker)($|/)
+        - -web.listen-address=:9100
+        ports:
+        - containerPort: 9100
+          protocol: TCP
+          hostPort: 9100
+          name: scrape
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9100
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 9100
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+            limits:
+              cpu: 200m
+              memory: 50Mi
+            requests:
+              cpu: 100m
+              memory: 30Mi
+        volumeMounts:
+        - name: proc
+          readOnly:  true
+          mountPath: /host/proc
+        - name: sys
+          readOnly: true
+          mountPath: /host/sys
+        - name: rootfs
+          readOnly: true
+          mountPath: /rootfs
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/master
+      - key: CriticalAddonsOnly
+        operator: Exists
+      volumes:
+      - name: proc
+        hostPath:
+          path: /proc
+      - name: sys
+        hostPath:
+          path: /sys
+      - name: rootfs
+        hostPath:
+          path: /

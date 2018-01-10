@@ -1,0 +1,97 @@
+# Default values for monocular.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+api:
+  replicaCount: 1
+  image:
+    repository: bitnami/monocular-api
+    tag: v0.3.1
+    pullPolicy: Always
+  service:
+    name: monocular-api
+    type: NodePort
+    externalPort: 80
+    internalPort: 8081
+  resources:
+    limits:
+      cpu: 100m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  livenessProbe:
+    initialDelaySeconds: 180
+  config:
+    repos:
+      # Official repositories
+      - name: stable
+        url: https://kubernetes-charts.storage.googleapis.com
+        source: https://github.com/kubernetes/charts/tree/master/stable
+    cors:
+      allowed_origins:
+        - ""
+        # e.g. UI served on a different domain
+        # - http://monocular.local
+      allowed_headers:
+        - "content-type"
+        - "x-xsrf-token"
+    # Enable Helm deployment integration
+    releasesEnabled: true
+    # Cache refresh interval in sec.
+    cacheRefreshInterval: 3600
+ui:
+  replicaCount: 1
+  image:
+    repository: bitnami/monocular-ui
+    tag: v0.3.1
+    pullPolicy: Always
+  service:
+    name: monocular-ui
+    type: NodePort
+    externalPort: 80
+    internalPort: 80
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  # ui-config populate
+  googleAnalyticsId: UA-XXXXXX-X
+  appName: Monocular
+  # API served on same-domain at /api path using Nginx Ingress controller
+  backendHostname: /api
+  # e.g. API served on a different domain
+  # backendHostname: http://monocular-api.local
+
+prerender:
+  replicaCount: 1
+  image:
+    repository: migmartri/prerender
+    tag: latest
+    pullPolicy: Always
+  cacheEnabled: true
+  service:
+    name: prerender
+    type: NodePort
+    externalPort: 80
+    internalPort: 3000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+ingress:
+  enabled: true
+  hosts:
+  - monocular.local
+  basicAuthSecret: secret
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+    ingress.kubernetes.io/auth-type: basic
+    ingress.kubernetes.io/auth-secret: monocular-basic-auth
+    ingress.kubernetes.io/auth-realm: "Authentication Required"
+  tls:
+    secretName: monocular-tls

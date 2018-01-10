@@ -1,0 +1,147 @@
+groups:
+- name: kube-etcd3.rules
+  rules:
+
+  # alert if another failed peer will result in an unavailable cluster
+  - alert: KubeEtcd3InsufficientPeers
+    expr: absent(up{job="kube-etcd3",role="main"})
+      or absent(up{job="kube-etcd3",role="events"})
+      or count(up{job="kube-etcd3"} == 0) by(role) > (count(up{job="kube-etcd3"}) by (role) / 2 - 1)
+    for: 3m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+    annotations:
+      description: If one more etcd3 peer goes down the etc3 cluster {{ $labels.role }} will be unavailable
+      summary: etcd3 cluster small
+
+  # etcd leader alerts
+  - alert: KubeEtcd3NoLeader
+    expr: etcd_server_has_leader{job="kube-etcd3"} == 0
+    for: 1m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+    annotations:
+      description: etcd3 member {{ $labels.pod }} has no leader
+      summary: etcd3 member has no leader
+
+  # alert if there are lots of leader changes
+  - alert: KubeEtcd3HighNumberOfLeaderChanges
+    expr: increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[1h]) >
+      3
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: etcd3 pod {{ $labels.pod }} has seen {{ $value }} leader changes
+        within the last hour
+      summary: a high number of leader changes within the etcd3 cluster are happening
+
+  ### HTTP requests alerts ###
+  - record: etcd3:failed_client_requests_ratio:sum
+    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",grpc_type="unary",job="kube-etcd3"}[5m]))
+      BY (grpc_service) / sum(rate(grpc_server_started_total{grpc_type="unary",job="kube-etcd3"}[5m]))
+      BY (grpc_service)
+
+  # alert if more than 1% of requests to GRPC have failed
+  - alert: KubeEtcd3HighNumberOfFailedHTTPRequests
+    expr: etcd3:failed_client_requests_ratio:sum > 0.01
+    for: 10m
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: '{{ $value * 100 }}% of requests for {{ $labels.grpc_service }}
+        failed on etcd3 pod {{ $labels.pod }}'
+      summary: a high number of etcd3 GRPC requests are failing
+  # alert if more than 5% of requests to GRPC have failed
+  - alert: KubeEtcd3HighNumberOfFailedHTTPRequests
+    expr: etcd3:failed_client_requests_ratio:sum > 0.05
+    for: 5m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+    annotations:
+      description: '{{ $value * 100 }}% of requests for {{ $labels.method }} failed
+        on etcd3 pod {{ $labels.pod }}'
+      summary: a high number of etcd3 GRPC requests are failing
+
+  # alert if the 99th percentile of HTTP requests take more than 150ms
+  # etcd3 must be configured with --metrics="extensive" for histogram
+  - alert: KubeEtcd3HTTPRequestsSlow
+    expr: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{grpc_type="unary",job="kube-etcd3"}[5m]))
+      BY (grpc_service, le)) > 0.15
+    for: 10m
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: on ectd3 instance {{ $labels.instance }} HTTP requests to {{ $label.grpc_service
+        }} are slow
+      summary: slow HTTP requests
+
+  ### etcd proposal alerts ###
+
+  # alert if there are several failed proposals within an hour
+  - alert: KubeEtcd3HighNumberOfFailedProposals
+    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 5
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: etcd3 pod {{ $labels.pod }} has seen {{ $value }} proposal failures
+        within the last hour
+      summary: a high number of failed proposals within the etcd cluster are happening
+
+  ### etcd disk io latency alerts ###
+
+  # alert if 99th percentile of fsync durations is higher than 500ms
+  - alert: KubeEtcd3HighFsyncDurations
+    expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
+      > 0.5
+    for: 10m
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: ectd3 pod {{ $labels.pod }} fync durations are high
+      summary: high fsync durations
+
+  # alert if 99th percentile of commit durations is higher than 250ms
+  - alert: KubeEtcd3HighCommitDurations
+    expr: histogram_quantile(0.99, rate(etcd_disk_backend_commit_duration_seconds_bucket{job="kube-etcd3"}[5m]))
+      > 0.25
+    for: 10m
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: etcd3 pod {{ $labels.pod }} commit durations are high
+      summary: high commit durations
+
+  # etcd member communication alerts
+  # ================================
+
+  # alert if 99th percentile of round trips take 150ms
+  - alert: KubeEtcd3MemberCommunicationSlow
+    expr: histogram_quantile(0.99, rate(etcd_network_peer_round_trip_time_seconds_bucket{job="kube-etcd3"}[5m]))
+      > 0.15
+    for: 10m
+    labels:
+      service: etcd
+      severity: warning
+      type: seed
+    annotations:
+      description: etcd3 pod {{ $labels.pod }} member communication with {{ $label.To
+        }} is slow
+      summary: etcd member communication is slow

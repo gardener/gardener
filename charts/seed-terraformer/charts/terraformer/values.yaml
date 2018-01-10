@@ -1,0 +1,14 @@
+kind: Job
+script: apply
+imageTag: v0.10.8-4
+
+names:
+  configuration: shoot.tf-config
+  variables: shoot.tf-vars
+  state: shoot.tf-state
+  job: shoot.tf-job
+  pod: shoot.tf-pod
+
+terraformVariablesEnvironment: []
+# - name: TF_VAR_ACCESS_KEY_ID
+#   value: ABCDEABCDEABCDEABCDE

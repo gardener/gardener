@@ -1,0 +1,16 @@
+{{- if semverCompare ">= 1.9" .Values.KubernetesVersion }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-scheduler-config
+  namespace: {{.Release.Namespace}}
+data:
+  config.yaml: |-
+    ---
+    apiVersion: {{ include "componentconfigversion" . }}
+    kind: KubeSchedulerConfiguration
+    clientConnection:
+      kubeconfig: /var/lib/kube-scheduler/kubeconfig
+    leaderElection:
+      leaderElect: true
+{{- end }}

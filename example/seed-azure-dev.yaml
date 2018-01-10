@@ -1,0 +1,16 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Seed
+metadata:
+  name: azure-dev
+spec:
+  cloud:
+    profile: azure
+    region: westeurope
+  secretRef:
+    name: seed-azure-dev
+    namespace: garden
+  domain: dev.azure.seed.example.com
+  networks:
+    nodes: 10.240.0.0/16
+    pods: 10.241.128.0/17
+    services: 10.241.0.0/17

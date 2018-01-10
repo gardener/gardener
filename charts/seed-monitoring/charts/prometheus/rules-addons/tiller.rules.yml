@@ -1,0 +1,12 @@
+groups:
+- name: tiller.rules
+  rules:
+  - alert: TillerDown
+    expr: absent(up{job="tiller"} or up{job="tiller"} == 0)
+    for: 15m
+    labels:
+      service: k8s
+      severity: warning
+    annotations:
+      description: Prometheus could not scrape a {{ $labels.job }} for 15m.
+      summary: Helm's Tiller server cannot be scraped
