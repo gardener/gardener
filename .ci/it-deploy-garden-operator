@@ -1,0 +1,145 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import subprocess
+import os
+import kubernetes.client as kubeclient
+
+def parse_commandline_args():
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--image-tag', required=True)
+  parser.add_argument('--image-registry', required=True)
+  parser.add_argument('--operator-namespace', required=True)
+  parser.add_argument('--watch-namespace', required=True)
+  parser.add_argument('--garden-namespace', default='garden')
+  parser.add_argument('--secrets-namespace', default='garden-core')
+  parser.add_argument(
+    '--secret-name',
+    dest='secret_names',
+    action='append',
+    required=True
+  )
+  parser.add_argument('--gcr-secret-file', required=True)
+  parser.add_argument('--kubeconfig', required=True)
+  parser.add_argument('--ci-utils-dir', required=True)
+
+  return parser.parse_args()
+
+
+def import_kubeutil(ci_utils_dir: str):
+  sys.path.append(ci_utils_dir)
+  global kubeutil
+  import kubeutil
+
+def grant_service_user_admin_privileges(operator_namespace, kubeconfig: str):
+  clusterrolebinding_name="{namespace}-default-cluster-admin".format(namespace=operator_namespace.metadata.name)
+
+  # use kubectl for now
+  subprocess.run(
+    [
+      'kubectl',
+      '--kubeconfig', kubeconfig,
+      'create', 'clusterrolebinding',
+      clusterrolebinding_name,
+      '--serviceaccount', '{ns}:default'.format(ns=operator_namespace.metadata.name),
+      '--clusterrole', 'cluster-admin'
+    ],
+    check=True
+  )
+
+  # ensure the crb is automatically removed upon ns removal
+  rbac_api = kubeutil.ctx.create_rbac_api()
+  rolebinding_obj = rbac_api.read_cluster_role_binding(name=clusterrolebinding_name)
+  owner_reference = kubeclient.V1OwnerReference(
+    api_version='v1',
+    block_owner_deletion=True,
+    controller=True,
+    kind='Namespace',
+    name=operator_namespace.metadata.name,
+    uid=operator_namespace.metadata.uid
+  )
+  rolebinding_obj.metadata.owner_references = [owner_reference]
+  rbac_api.patch_cluster_role_binding(name=clusterrolebinding_name, body=rolebinding_obj)
+
+
+def create_image_pull_secret(namespace: str, gcr_secret_file: str):
+  kubeutil.create_gcr_secret(
+    namespace=namespace,
+    name='gcr-readonly',
+    secret_file=gcr_secret_file
+  )
+
+
+def create_gop_deploy_manifest(
+  manifest_creation_script: str,
+  operator_namespace: str,
+  watch_namespace: str,
+  garden_namespace: str,
+  image_registry: str,
+  image_tag: str
+):
+  deploy_manifest = subprocess.run(
+    [
+      manifest_creation_script,
+      operator_namespace,
+      watch_namespace,
+      garden_namespace,
+      image_registry,
+      image_tag
+    ],
+    stdout=subprocess.PIPE,
+    check=True
+  )
+  return deploy_manifest.stdout
+
+
+def apply_deploy_manifest(kubeconfig: str, manifest: str):
+  subprocess.run(
+    [
+      'kubectl',
+      '--kubeconfig', kubeconfig,
+      'apply',
+      '-f', '-'
+    ],
+    input=manifest,
+    check=True
+  )
+
+
+def main():
+  parsed = parse_commandline_args()
+
+  import_kubeutil(parsed.ci_utils_dir)
+  import kubeutil
+
+  gop_root_dir = os.path.dirname(os.path.realpath(__file__))
+  gop_root_dir = os.path.abspath(os.path.join(gop_root_dir, os.pardir))
+
+  # init kubeutil
+  kubeutil.ctx.kubeconfig = parsed.kubeconfig
+
+  operator_ns = kubeutil.create_namespace(parsed.operator_namespace)
+  kubeutil.copy_secrets(
+    from_ns=parsed.secrets_namespace,
+    to_ns=parsed.operator_namespace,
+    secret_names=parsed.secret_names
+  )
+
+  grant_service_user_admin_privileges(operator_namespace=operator_ns, kubeconfig=parsed.kubeconfig)
+  create_image_pull_secret(namespace=operator_ns.metadata.name, gcr_secret_file=parsed.gcr_secret_file)
+
+  deploy_manifest = create_gop_deploy_manifest(
+    manifest_creation_script=os.path.join(gop_root_dir, 'scripts', 'make-manifest'),
+    operator_namespace=parsed.operator_namespace,
+    watch_namespace=parsed.operator_namespace,
+    garden_namespace=parsed.garden_namespace,
+    image_registry=parsed.image_registry,
+    image_tag=parsed.image_tag
+  )
+
+  apply_deploy_manifest(kubeconfig=parsed.kubeconfig, manifest=deploy_manifest)
+
+
+if __name__ == '__main__':
+  main()
