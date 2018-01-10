@@ -1,0 +1,13 @@
+role: for-test
+
+# Either 'StatefulSet' or 'EtcdCluster'
+kind: StatefulSet
+
+# following block is only meaningful if Kind==EtcdCluster
+backup:
+  backupIntervalInSecond: 86400
+  maxBackups: 7
+  storageType: S3
+  s3:
+    s3Bucket: some-bucket
+    awsSecret: some-secret

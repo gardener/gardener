@@ -1,0 +1,11 @@
+{{- if eq .Values.kind "Pod" }}
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    job-name: {{.Values.names.job}}
+  name: {{.Values.names.pod}}
+  namespace: {{.Release.Namespace}}
+spec:
+{{include "terraformer.podSpec" . | indent 2}}
+{{- end }}

@@ -1,0 +1,49 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Shoot
+metadata:
+  name: johndoe-gcp
+  namespace: garden-core
+spec:
+  cloud:
+    profile: gcp
+    region: europe-west1
+    seed: gcp-dev
+    secretBindingRef:
+      kind: PrivateSecretBinding
+      name: core-gcp
+    gcp:
+      networks:
+        # vpc:
+        #   name: my-vpc
+        nodes: 10.250.0.0/19
+        pods: 100.96.0.0/11
+        services: 100.64.0.0/13
+        workers:
+        - 10.250.0.0/19
+      workers:
+      - name: cpu-worker
+        machineType: n1-standard-4
+        volumeType: pd-standard
+        volumeSize: 20Gi
+        autoScalerMin: 2
+        autoScalerMax: 2
+      zones:
+      - europe-west1-b
+  kubernetes:
+    version: 1.9.1
+  dns:
+    provider: aws-route53
+    domain: johndoe-gcp.johndoe.example.com
+  addons:
+    cluster-autoscaler:
+      enabled: true
+    heapster:
+      enabled: true
+    kube-lego: {}
+    kube2iam: {}
+    kubernetes-dashboard:
+      enabled: true
+    monocular:
+      enabled: false
+    nginx-ingress:
+      enabled: true

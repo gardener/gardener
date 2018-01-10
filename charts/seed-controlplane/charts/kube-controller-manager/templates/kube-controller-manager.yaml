@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-controller-manager
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: kubernetes
+    role: controller-manager
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "10252"
+    prometheus.io/name: kube-controller-manager
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 10252
+    protocol: TCP
+  selector:
+    app: kubernetes
+    role: controller-manager
+---
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: kube-controller-manager
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: kubernetes
+    role: controller-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: controller-manager
+  template:
+    metadata:
+{{- if .Values.PodAnnotations }}
+      annotations:
+{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: kubernetes
+        role: controller-manager
+    spec:
+      tolerations:
+      - effect: NoExecute
+        operator: Exists
+      containers:
+      - name: kube-controller-manager
+        image: k8s.gcr.io/hyperkube:v{{.Values.KubernetesVersion}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /hyperkube
+        - controller-manager
+        - --allocate-node-cidrs=true
+        - --attach-detach-reconcile-sync-period=1m0s
+        - --cloud-provider={{.Values.CloudProvider}}
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        - --cluster-cidr={{.Values.PodNetwork}}
+        - --cluster-name={{.Values.ClusterName}}
+        - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt
+        - --cluster-signing-key-file=/srv/kubernetes/ca/ca.key
+        - --configure-cloud-routes={{.Values.ConfigureRoutes}}
+        {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
+        - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
+        - --leader-elect=true
+        - --root-ca-file=/srv/kubernetes/ca/ca.crt
+        - --service-account-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
+        - --service-cluster-ip-range={{.Values.ServiceNetwork}}
+        - --use-service-account-credentials=true
+        - --v=2
+        {{- range $index, $param := $.Values.AdditionalParameters }}
+        - {{$param}}
+        {{- end }}
+        env:
+{{ toYaml .Values.Environment | indent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTP
+            port: 10252
+          successThreshold: 1
+          failureThreshold: 2
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 15
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        resources:
+          requests:
+            cpu: 100m
+        volumeMounts:
+        - name: ca
+          mountPath: /srv/kubernetes/ca
+        - name: kube-apiserver
+          mountPath: /srv/kubernetes/apiserver
+        - name: kube-controller-manager
+          mountPath: /var/lib/kube-controller-manager
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+        - name: cloudprovider
+          mountPath: /srv/cloudprovider
+        - name: etcssl
+          mountPath: /etc/ssl
+          readOnly: true
+        - name: ssl-certs-hosts
+          mountPath: /usr/share/ca-certificates
+          readOnly: true
+        {{- if ne .Values.CloudProvider "gce" }}
+        - name: usrsharessl
+          mountPath: /usr/share/ssl
+          readOnly: true
+        {{- end }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: ca
+        secret:
+          secretName: ca
+      - name: kube-apiserver
+        secret:
+          secretName: kube-apiserver
+      - name: kube-controller-manager
+        secret:
+          secretName: kube-controller-manager
+      - name: cloud-provider-config
+        configMap:
+          name: cloud-provider-config
+      - name: cloudprovider
+        secret:
+          secretName: cloudprovider
+      - name: etcssl
+        hostPath:
+          path: /etc/ssl
+      - name: ssl-certs-hosts
+        hostPath:
+          path: /usr/share/ca-certificates
+      {{- if ne .Values.CloudProvider "gce" }}
+      - name: usrsharessl
+        hostPath:
+          path: /usr/share/ssl
+      {{- end }}
+

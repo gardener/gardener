@@ -1,0 +1,72 @@
+{{- if le .Capabilities.KubeVersion.Minor "8" }}
+# Heapster requires those roles for cluster < 1.8
+apiVersion: {{include "rbacversion" .}}
+kind: Role
+metadata:
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app: {{ template "fullname" . }}
+    heritage: "{{ .Release.Service }}"
+    release: "{{ .Release.Name }}"
+    {{- range $key, $value := .Values.labels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+  name: {{ template "fullname" . }}-legacy
+rules:
+- apiGroups:
+  - extensions
+  - apps
+  resources:
+  - deployments
+  resourceNames:
+  - {{ template "fullname" . }}
+  verbs:
+  - get
+  - watch
+  - patch
+  - update
+---
+
+apiVersion: {{include "rbacversion" .}}
+kind: RoleBinding
+metadata:
+  name: {{ template "fullname" . }}-legacy
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app: {{ template "fullname" . }}
+    heritage: "{{ .Release.Service }}"
+    release: "{{ .Release.Name }}"
+    {{- range $key, $value := .Values.labels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ template "fullname" . }}-legacy
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "fullname" . }}
+    namespace: {{ .Release.Namespace }}
+---
+{{- end }}
+
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRoleBinding
+metadata:
+  name: {{ template "fullname" . }}
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    app: {{ template "fullname" . }}
+    heritage: "{{ .Release.Service }}"
+    release: "{{ .Release.Name }}"
+    {{- range $key, $value := .Values.labels }}
+    {{ $key }}: {{ $value }}
+    {{- end }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:heapster
+subjects:
+  - kind: ServiceAccount
+    name: {{ template "fullname" . }}
+    namespace: {{ .Release.Namespace }}

@@ -1,0 +1,74 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Shoot
+metadata:
+  name: johndoe-aws
+  namespace: garden-core
+spec:
+  cloud:
+    profile: aws
+    region: eu-west-1
+    secretBindingRef:
+      kind: CrossSecretBinding
+      name: default-my-aws-secret
+    aws:
+      networks:
+        vpc:
+          cidr: 10.250.0.0/16
+        internal:
+        - 10.250.112.0/22
+        public:
+        - 10.250.96.0/22
+        workers:
+        - 10.250.0.0/19
+      workers:
+      - name: cpu-worker
+        machineType: m4.large
+        volumeType: gp2
+        volumeSize: 20Gi
+        autoScalerMin: 2
+        autoScalerMax: 2
+      zones:
+      - eu-west-1a
+  kubernetes:
+    version: 1.9.1
+  dns:
+    provider: aws-route53
+    domain: johndoe-aws.johndoe.example.com
+  addons:
+    kube2iam:
+      enabled: true
+      roles:
+      - name: ecr
+        description: "Allow access to ECR repositories beginning with 'my-images/', and creation of new repositories"
+        policy: |
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Action": "ecr:*",
+                "Effect": "Allow",
+                "Resource": "arn:aws:ecr:eu-central-1:${account_id}:repository/my-images/*"
+              },
+              {
+                "Action": [
+                  "ecr:GetAuthorizationToken",
+                  "ecr:CreateRepository"
+                ],
+                "Effect": "Allow",
+                "Resource": "*"
+              }
+            ]
+          }
+    heapster:
+      enabled: true
+    kubernetes-dashboard:
+      enabled: true
+    cluster-autoscaler:
+      enabled: true
+    nginx-ingress:
+      enabled: true
+    kube-lego:
+      enabled: true
+      email: "john.doe@example.com"
+    monocular:
+      enabled: true

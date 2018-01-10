@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kube-state-metrics-seed
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: kube-state-metrics
+    type: seed
+
+---
+
+apiVersion: {{include "rbacversion" .}}
+kind: RoleBinding
+metadata:
+  name: kube-state-metrics-seed
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: kube-state-metrics
+    type: seed
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube-state-metrics
+subjects:
+- kind: ServiceAccount
+  name: kube-state-metrics-seed
+  namespace:  {{.Release.Namespace}}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics-seed
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: kube-state-metrics
+    type: seed
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    component: kube-state-metrics
+    type: seed
+
+---
+
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: kube-state-metrics-seed
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: kube-state-metrics
+    type: seed
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: kube-state-metrics
+      type: seed
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        component: kube-state-metrics
+        type: seed
+    spec:
+      serviceAccountName: kube-state-metrics-seed
+      containers:
+      - name: kube-state-metrics
+        image: quay.io/coreos/kube-state-metrics:v1.1.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - /kube-state-metrics
+        - --port=8080
+        - --namespace={{.Release.Namespace}}
+        - --collectors=cronjobs,daemonsets,deployments,jobs,limitranges,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+        resources:
+            limits:
+              cpu: 200m
+              memory: 200Mi

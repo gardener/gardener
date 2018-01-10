@@ -1,0 +1,24 @@
+# workers:
+# - cpu-worker
+# - cpu-worker2
+
+# cloudProvider:
+#   name: aws
+#   config: |
+#     Kubernetes cloud provider config
+
+# caBundle: |
+#   root certificates
+
+# kubernetes:
+#   caCert: abcd
+#   clusterDNS: 100.64.0.10
+#   kubelet:
+#     kubeconfig: hugo
+#     networkPlugin: cni
+#     parameters: []
+#     featureGates: {}
+#       #  CustomResourceValidation: true
+#       #  RotateKubeletServerCertificate: false
+#   nonMasqueradeCIDR: 100.64.0.0/10
+#   version: 1.8.4

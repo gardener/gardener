@@ -1,0 +1,114 @@
+{{- if eq .Values.kind "StatefulSet" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-{{.Values.role}}
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: etcd-statefulset
+    role: {{.Values.role}}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  selector:
+    app: etcd-statefulset
+    role: {{.Values.role}}
+  ports:
+  - name: discovery
+    protocol: TCP
+    port: 2380
+    targetPort: 2380
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd-{{.Values.role}}-client
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: etcd-statefulset
+    role: {{.Values.role}}
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "2379"
+    prometheus.io/name: kube-etcd3
+spec:
+  type: ClusterIP
+  clusterIP: None
+  sessionAffinity: None
+  selector:
+    app: etcd-statefulset
+    role: {{.Values.role}}
+  ports:
+  - name: client
+    protocol: TCP
+    port: 2379
+    targetPort: 2379
+---
+apiVersion: {{include "statefulsetversion" .}}
+kind: StatefulSet
+metadata:
+  name: etcd-{{.Values.role}}
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: etcd-statefulset
+    role: {{.Values.role}}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  serviceName: etcd-{{.Values.role}}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: etcd-statefulset
+      role: {{.Values.role}}
+  template:
+    metadata:
+      labels:
+        app: etcd-statefulset
+        role: {{.Values.role}}
+    spec:
+      containers:
+      - name: etcd-container
+        image: quay.io/coreos/etcd:v3.2
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/usr/local/bin/etcd"
+        - "--data-dir=/var/etcd/data"
+        - "--name=etcd-{{.Values.role}}"
+        - "--advertise-client-urls=http://etcd-{{.Values.role}}-0.etcd-{{.Values.role}}:2379"
+        - "--listen-peer-urls=http://0.0.0.0:2380"
+        - "--listen-client-urls=http://0.0.0.0:2379"
+        - "--initial-advertise-peer-urls=http://etcd-{{.Values.role}}-0.etcd-{{.Values.role}}:2380"
+        - "--initial-cluster=etcd-{{.Values.role}}=http://etcd-{{.Values.role}}-0.etcd-{{.Values.role}}:2380"
+        - "--initial-cluster-state=new"
+        - "--initial-cluster-token=new"
+        livenessProbe:
+          exec:
+            command:
+            - "/bin/sh"
+            - "-ec"
+            - "ETCDCTL_API=3 etcdctl get foo"
+          initialDelaySeconds: 15
+          timeoutSeconds: 15
+        ports:
+        - name: serverport
+          containerPort: 2380
+        - name: clientport
+          containerPort: 2379
+        resources:
+          requests:
+            cpu: 200m
+        volumeMounts:
+        - name: etcd-{{.Values.role}}
+          mountPath: /var/etcd/data
+  volumeClaimTemplates:
+  - metadata:
+      name: etcd-{{.Values.role}}
+    spec:
+      accessModes:
+      - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 10Gi
+{{- end }}

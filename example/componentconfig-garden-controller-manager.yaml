@@ -1,0 +1,26 @@
+apiVersion: componentconfig.sapcloud.io/v1alpha1
+kind: ControllerManagerConfiguration
+clientConnection:
+  acceptContentTypes: application/json
+  contentType: application/json
+  qps: 100
+  burst: 130
+controller:
+  healthCheckPeriod: 30s
+  reconciliation:
+    concurrentSyncs: 20
+    resyncPeriod: 10m
+    retryDuration: 1440m
+gardenNamespace: garden
+leaderElection:
+  leaderElect: true
+  leaseDuration: 15s
+  renewDeadline: 10s
+  retryPeriod: 2s
+  resourceLock: configmaps
+logLevel: info
+metrics:
+  interval: 30s
+server:
+  bindAddress: 0.0.0.0
+  port: 2718

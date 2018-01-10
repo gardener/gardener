@@ -1,0 +1,40 @@
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:monitoring:prometheus
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes
+  - services
+  - endpoints
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - nodes/metrics
+  verbs:
+  - get
+- nonResourceURLs:
+  - /metrics
+  verbs:
+  - get
+---
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:monitoring:prometheus
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:monitoring:prometheus
+subjects:
+- kind: User
+  name: garden.sapcloud.io:monitoring:prometheus

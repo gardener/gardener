@@ -1,0 +1,198 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: prometheus
+    role: monitoring
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-web
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: prometheus
+    role: monitoring
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9090"
+    prometheus.io/name: prometheus
+spec:
+  ports:
+  - name: web
+    port: 8080
+    protocol: TCP
+    targetPort: web
+  selector:
+    app: prometheus
+    role: monitoring
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: {{include "statefulsetversion" .}}
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: prometheus
+    role: monitoring
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  replicas: {{.Values.replicaCount}}
+  selector:
+    matchLabels:
+      app: prometheus
+      role: monitoring
+  serviceName: prometheus
+  template:
+    metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: prometheus
+        role: monitoring
+    spec:
+      # used to talk to Seed's API server.
+      serviceAccountName: prometheus
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 6 }}
+{{- end }}
+      containers:
+      - name: prometheus
+        image: quay.io/prometheus/prometheus:v2.0.0
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config.file=/etc/prometheus/config/prometheus.yaml
+        - --storage.tsdb.path=/var/prometheus/data
+        - --storage.tsdb.no-lockfile
+        - --storage.tsdb.retention=180h
+        - --web.route-prefix=/
+        - --web.enable-lifecycle
+        - --web.external-url=https://{{.Values.ingress.host}}
+        # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
+        # data volume needs to be mounted with the same permissions,
+        # otherwise we will have Permission denied problems
+        securityContext:
+          runAsUser: 0
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /status
+            port: web
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        ports:
+        - containerPort: 9090
+          name: web
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /status
+            port: web
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          limits:
+            memory: 2400Mi
+          requests:
+            memory: 500Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
+        - mountPath: /var/prometheus/data
+          name: prometheus-db
+          subPath: prometheus-
+        # we mount the Shoot cluster's CA and certs
+        - mountPath: /etc/prometheus/seed
+          name: prometheus-kubeconfig
+      - name: prometheus-config-reloader
+        image: quay.io/coreos/configmap-reload:v0.0.1
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:9090/-/reload
+        - -volume-dir=/etc/prometheus/config
+        - -volume-dir=/etc/prometheus/rules
+        resources:
+          limits:
+            cpu: 5m
+            memory: 10Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+      - name: vpn-seed
+        image: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/seed:v0.0.10
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: IDENTITY_FILE
+          value: /srv/ssh/id_rsa
+        - name: USER
+          value: root
+        - name: SERVICE_NETWORK
+          value: {{.Values.networks.services}}
+        - name: POD_NETWORK
+          value: {{.Values.networks.pods}}
+        - name: NODE_NETWORK
+          value: {{.Values.networks.nodes}}
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+          privileged: true
+        volumeMounts:
+        - mountPath: /srv/ssh
+          name: vpn-ssh-keypair
+        - mountPath: /srv/auth
+          name: kube-apiserver-basic-auth
+      terminationGracePeriodSeconds: 300
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: prometheus-config
+      - name: rules
+        configMap:
+          defaultMode: 420
+          name: prometheus-rules
+      - name: vpn-ssh-keypair
+        secret:
+          defaultMode: 420
+          secretName: vpn-ssh-keypair
+      - name: shoot-ca
+        secret:
+          defaultMode: 420
+          secretName: ca
+      - name: kube-apiserver-basic-auth
+        secret:
+          secretName: kube-apiserver-basic-auth
+      - name: prometheus-kubeconfig
+        secret:
+          secretName: prometheus
+  volumeClaimTemplates:
+  - metadata:
+      name: prometheus-db
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 20Gi

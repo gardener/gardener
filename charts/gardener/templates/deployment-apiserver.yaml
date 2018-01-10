@@ -1,0 +1,57 @@
+{{- if .Values.apiserver.enabled }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: garden-apiserver
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ .Values.apiserver.replicaCount }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: apiserver
+  template:
+    metadata:
+      labels:
+        app: gardener
+        role: apiserver
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+    spec:
+      serviceAccountName: {{ .Values.apiserver.serviceAccountName }}
+      containers:
+      - name: garden-apiserver
+        image: {{ .Values.apiserver.image.repository }}:{{ .Values.apiserver.image.tag }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /garden-apiserver
+        - --admission-control=ShootSeedFinder,ShootDNSHostedZone,ShootQuotaValidator
+        - --audit-log-path=/var/lib/audit.log
+        - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
+        - --audit-log-maxsize=100
+        - --audit-log-maxbackup=5
+        - --etcd-servers="{{ .Values.apiserver.etcdServers }}"
+        - --secure-port=443
+        - --tls-cert-file=/var/run/kubernetes/garden-apiserver.crt
+        - --tls-private-key-file=/var/run/kubernetes/garden-apiserver.key
+        - --v=2
+        volumeMounts:
+        - name: garden-apiserver-cert
+          mountPath: /var/run/kubernetes
+          readOnly: true
+        - name: garden-audit-policy-config
+          mountPath: /etc/garden/audit
+      volumes:
+      - name: garden-apiserver-cert
+        secret:
+          secretName: garden-apiserver-cert
+      - name: garden-audit-policy-config
+        configMap:
+          name: garden-audit-policy-config
+{{- end}}

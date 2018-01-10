@@ -1,0 +1,48 @@
+extraArgs:
+  base-role-arn: arn:aws:iam::0123456789:role/
+#   default-role: kube2iam-default
+#   api-server: ...
+#   api-token: ...
+
+host:
+  ip: $(HOST_IP)
+  iptables: true
+  interface: cali+
+
+image:
+  repository: jtblin/kube2iam
+  tag: 0.9.0
+  pullPolicy: IfNotPresent
+
+## Node labels for pod assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+
+## Annotations to be added to pods
+##
+podAnnotations: {}
+
+rbac:
+  ## If true, create & use RBAC resources
+  ##
+  create: true
+
+  ## Ignored if rbac.create is true
+  ##
+  serviceAccountName: default
+
+resources: {}
+  # limits:
+  #   cpu: 4m
+  #   memory: 16Mi
+  # requests:
+  #   cpu: 4m
+  #   memory: 16Mi
+
+## Strategy for DaemonSet updates (requires Kubernetes 1.6+)
+## Ref: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
+##
+updateStrategy: OnDelete
+
+verbose: false

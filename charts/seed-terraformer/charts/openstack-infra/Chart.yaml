@@ -1,0 +1,4 @@
+apiVersion: v1
+description: OpenStack chart for main k8s infrastructure
+name: openstack-infra
+version: 0.1.0

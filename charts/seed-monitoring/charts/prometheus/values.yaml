@@ -1,0 +1,20 @@
+# replicaCount: 1
+# networks:
+#   pods: 100.96.0.0/11
+#   services: 100.64.0.0/13
+#   nodes: 10.250.0.0/16
+# imagePullSecrets:
+# - name: secret
+# global:
+#   ShootKubeVersion:
+#     GitVersion: v1.6.4
+
+ingress:
+  host: p.seed-1.example.com
+  # admin : admin base64 encoded
+  basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
+
+namespace:
+  uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
+
+podAnnotations: {}

@@ -1,0 +1,215 @@
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: kube-apiserver
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: kubernetes
+    role: apiserver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: apiserver
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
+        checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
+{{- if .Values.PodAnnotations }}
+{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: kubernetes
+        role: apiserver
+    spec:
+      tolerations:
+      - effect: NoExecute
+        operator: Exists
+      containers:
+      - name: kube-apiserver
+        image: k8s.gcr.io/hyperkube:v{{.Values.KubernetesVersion}}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /hyperkube
+        - apiserver
+        - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,{{ if semverCompare "< 1.8" .Values.KubernetesVersion }}PersistentVolumeLabel,{{ end }}DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota
+        - --advertise-address={{.Values.AdvertiseAddress}}
+        - --allow-privileged=true
+        - --anonymous-auth=false
+        - --apiserver-count=1
+        {{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+        - --audit-log-path=/var/lib/audit.log
+        - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
+        - --audit-log-maxsize=100
+        - --audit-log-maxbackup=5
+        {{- end }}
+        - --authorization-mode=RBAC
+        - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
+        - --client-ca-file=/srv/kubernetes/ca/ca.crt
+        - --cloud-provider={{.Values.CloudProvider}}
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        - --enable-aggregator-routing=true
+        - --etcd-servers=http://etcd-main-client:2379
+        - --etcd-servers-overrides=/events#http://etcd-events-client:2379
+        {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
+        - --insecure-bind-address=127.0.0.1
+        - --insecure-port=8080
+        {{- if semverCompare "< 1.7" .Values.KubernetesVersion }}
+        - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP,LegacyHostIP
+        {{- else }}
+        - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
+        {{- end }}
+        # TODO: enable this once kubelet automatically generates its TLS with selfnodeserver
+        # https://kubernetes.io/docs/admin/kubelet-tls-bootstrapping/
+        # - "--kubelet-certificate-authority=/srv/kubernetes/apiserver-kubelet/ca.crt"
+        - --kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt
+        - --kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key
+        {{- include "kube-apiserver.oidcConfig" . | indent 8 }}
+        - --proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt
+        - --proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key
+        - --requestheader-client-ca-file=/srv/kubernetes/ca/ca.crt
+        - --requestheader-extra-headers-prefix=X-Remote-Extra-
+        - --requestheader-group-headers=X-Remote-Group
+        - --requestheader-username-headers=X-Remote-User
+        {{- include "kube-apiserver.runtimeConfig" . | trimSuffix "," | indent 8 }}
+        - --secure-port=443
+        - --service-cluster-ip-range={{.Values.ServiceNetwork}}
+        - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
+        - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
+        - --v=2
+{{- range $index, $param := $.Values.AdditionalParameters }}
+        - {{$param}}
+{{- end }}
+        env:
+{{ toYaml .Values.Environment | indent 10 }}
+        livenessProbe:
+          exec:
+            command:
+            - "/bin/sh"
+            - "-ec"
+            - "if ! which curl 1>/dev/null; then apt-get update; apt-get install -y curl; fi; curl http://127.0.0.1:8080/healthz"
+          successThreshold: 1
+          failureThreshold: 2
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 15
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        ports:
+        - name: https
+          containerPort: 443
+          protocol: TCP
+        - name: local
+          containerPort: 8080
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 200m
+        volumeMounts:
+        {{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+        - name: audit-policy-config
+          mountPath: /etc/kubernetes/audit
+        {{- end }}
+        - name: ca
+          mountPath: /srv/kubernetes/ca
+        - name: kube-apiserver
+          mountPath: /srv/kubernetes/apiserver
+        - name: kube-apiserver-basic-auth
+          mountPath: /srv/kubernetes/auth
+        - name: kube-apiserver-kubelet
+          mountPath: /srv/kubernetes/apiserver-kubelet
+        - name: kube-aggregator
+          mountPath: /srv/kubernetes/aggregator
+        {{- if .Values.OIDCConfig.caBundle }}
+        - name: kube-apiserver-oidc-cabundle
+          mountPath: /srv/kubernetes/oidc
+        {{- end }}
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+        - name: cloudprovider
+          mountPath: /srv/cloudprovider
+        - name: etcssl
+          mountPath: /etc/ssl
+          readOnly: true
+        - name: ssl-certs-hosts
+          mountPath: /usr/share/ca-certificates
+          readOnly: true
+        {{- if ne .Values.CloudProvider "gce" }}
+        - name: usrsharessl
+          mountPath: /usr/share/ssl
+          readOnly: true
+        {{- end }}
+      - name: vpn-seed
+        image: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/seed:v0.0.10
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: IDENTITY_FILE
+          value: /srv/ssh/id_rsa
+        - name: USER
+          value: root
+        - name: SERVICE_NETWORK
+          value: {{.Values.ServiceNetwork}}
+        - name: POD_NETWORK
+          value: {{.Values.PodNetwork}}
+        - name: NODE_NETWORK
+          value: {{.Values.NodeNetwork}}
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - "NET_ADMIN"
+        volumeMounts:
+        - name: vpn-ssh-keypair
+          mountPath: /srv/ssh
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      {{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+      - name: audit-policy-config
+        configMap:
+          name: audit-policy-config
+      {{- end }}
+      - name: ca
+        secret:
+          secretName: ca
+      - name: kube-apiserver
+        secret:
+          secretName: kube-apiserver
+      - name: kube-apiserver-basic-auth
+        secret:
+          secretName: kube-apiserver-basic-auth
+      - name: kube-apiserver-kubelet
+        secret:
+          secretName: kube-apiserver-kubelet
+      - name: kube-aggregator
+        secret:
+          secretName: kube-aggregator
+      {{- if .Values.OIDCConfig.caBundle }}
+      - name: kube-apiserver-oidc-cabundle
+        secret:
+          secretName: kube-apiserver-oidc-cabundle
+      {{- end }}
+      - name: vpn-ssh-keypair
+        secret:
+          secretName: vpn-ssh-keypair
+      - name: cloud-provider-config
+        configMap:
+          name: cloud-provider-config
+      - name: cloudprovider
+        secret:
+          secretName: cloudprovider
+      - name: etcssl
+        hostPath:
+          path: /etc/ssl
+      - name: ssl-certs-hosts
+        hostPath:
+          path: /usr/share/ca-certificates
+      {{- if ne .Values.CloudProvider "gce" }}
+      - name: usrsharessl
+        hostPath:
+          path: /usr/share/ssl
+      {{- end }}

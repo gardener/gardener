@@ -1,0 +1,81 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:admin
+rules:
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+{{- if .Values.apiserver.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: User
+  name: system:kube-aggregator
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:apiserver:auth-delegator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: "{{ .Values.apiserver.serviceAccountName }}"
+  namespace: "{{ .Release.Namespace }}"
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: garden.sapcloud.io:apiserver:auth-reader
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: "{{ .Values.apiserver.serviceAccountName }}"
+  namespace: "{{ .Release.Namespace }}"
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name:  garden.sapcloud.io:apiserver:admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: "{{ .Values.apiserver.serviceAccountName }}"
+  namespace: "{{ .Release.Namespace }}"
+{{- end}}
+{{- if .Values.controller.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name:  garden.sapcloud.io:controller-manager:admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: "{{ .Values.controller.serviceAccountName }}"
+  namespace: "{{ .Release.Namespace }}"
+{{- end}}

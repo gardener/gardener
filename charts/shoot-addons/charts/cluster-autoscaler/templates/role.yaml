@@ -1,0 +1,56 @@
+{{- if .Values.rbac.create}}
+---
+apiVersion: {{include "rbacversion" .}}
+kind: Role
+metadata:
+  labels:
+    app: {{ template "fullname" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{ template "fullname" . }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    resourceNames:
+      - cluster-autoscaler-status
+    verbs:
+      - delete
+      - get
+      - update
+
+{{- if .Values.waitForKube2IAM}}
+---
+apiVersion: {{include "rbacversion" .}}
+kind: Role
+metadata:
+  labels:
+    app: {{ template "fullname" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{ template "fullname" . }}-kube2iam
+rules:
+  - apiGroups:
+      - extensions
+      - apps
+    resources:
+      - daemonsets
+    resourceNames:
+      - {{.Release.Name}}-kube2iam
+    verbs:
+      - get
+{{- end}}
+{{- end}}

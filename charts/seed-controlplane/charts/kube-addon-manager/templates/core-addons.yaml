@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kube-addon-manager-core-addons
+  namespace: {{.Release.Namespace}}
+type: Opaque
+data:
+  {{- range $key, $val := .Values.CoreAddonsContent }}
+  {{ $key | replace "/" "_" }}: {{ $val | b64enc }}
+  {{- end}}

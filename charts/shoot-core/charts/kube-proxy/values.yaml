@@ -1,0 +1,4 @@
+Kubeconfig: dumy-b64-data-here
+FeatureGates: {}
+  # CustomResourceValidation: true
+  # RotateKubeletServerCertificate: false

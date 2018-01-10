@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kube-state-metrics
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: kube-state-metrics
+    type: shoot
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: metrics
+  selector:
+    component: kube-state-metrics
+    type: shoot
+---
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: kube-state-metrics
+  namespace: {{.Release.Namespace}}
+  labels:
+    component: kube-state-metrics
+    type: shoot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: kube-state-metrics
+      type: shoot
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        component: kube-state-metrics
+        type: shoot
+    spec:
+      containers:
+      - name: kube-state-metrics
+        image: quay.io/coreos/kube-state-metrics:v1.1.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - /kube-state-metrics
+        - --port=8080
+        - --in-cluster=false
+        - --kubeconfig=/etc/kube-state-metrics/config/kubeconfig
+        - --namespace=kube-system
+        - --collectors=daemonsets,deployments,jobs,limitranges,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
+        volumeMounts:
+        - name: kubeconfig
+          mountPath: /etc/kube-state-metrics/config
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+        resources:
+            limits:
+              cpu: 200m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+      volumes:
+      - name: kubeconfig
+        secret:
+          secretName: kube-state-metrics

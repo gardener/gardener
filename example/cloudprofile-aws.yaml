@@ -1,0 +1,74 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: CloudProfile
+metadata:
+  name: aws
+spec:
+  aws:
+    constraints:
+      dnsProviders:
+      - aws-route53
+      - unmanaged
+      kubernetes:
+        versions:
+        - 1.9.1
+        - 1.8.6
+        - 1.7.11
+        - 1.6.13
+      machineTypes:
+      - name: m4.large
+        cpus: 2
+        gpus: 0
+        memory: 8Gi
+      - name: m4.xlarge
+        cpus: 4
+        gpus: 0
+        memory: 16Gi
+      - name: m4.2xlarge
+        cpus: 8
+        gpus: 0
+        memory: 32Gi
+      - name: m4.4xlarge
+        cpus: 16
+        gpus: 0
+        memory: 64Gi
+      - name: m4.10xlarge
+        cpus: 40
+        gpus: 0
+        memory: 160Gi
+      - name: m4.16xlarge
+        cpus: 64
+        gpus: 0
+        memory: 256Gi
+      - name: p2.xlarge
+        cpus: 4
+        gpus: 1
+        memory: 61Gi
+      - name: p2.8xlarge
+        cpus: 32
+        gpus: 8
+        memory: 488Gi
+      - name: p2.16xlarge
+        cpus: 64
+        gpus: 16
+        memory: 732Gi
+      volumeTypes:
+      - name: gp2
+        class: standard
+      - name: io1
+        class: premium
+      zones:
+      - region: eu-west-1
+        names:
+        - eu-west-1a
+        - eu-west-1b
+        - eu-west-1c
+      - region: us-east-1
+        names:
+        - us-east-1a
+        - us-east-1b
+        - us-east-1c
+    machineImages:
+    - region: eu-west-1
+      ami: ami-32d1474b
+    - region: us-east-1
+      ami: ami-e582d29f

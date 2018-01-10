@@ -1,0 +1,21 @@
+{{- if .Values.controller.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: garden-controller-manager
+  labels:
+    app: gardener
+    role: controller-manager
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    app: gardener
+    role: controller-manager
+    release: {{ .Release.Name }}
+  ports:
+  - port: {{ .Values.controller.config.server.port }}
+    protocol: TCP
+    targetPort: {{ .Values.controller.config.server.port }}
+{{- end}}

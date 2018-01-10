@@ -1,0 +1,5 @@
+StorageClasses: []
+# - Name: default
+#   IsDefaultClass: false
+#   Provisioner: kubernetes.io/azure-disk
+#   Parameters: {}

@@ -1,0 +1,340 @@
+{{- if semverCompare ">= 1.7" .Capabilities.KubeVersion.GitVersion -}}
+# TODO: update to calico 3.0
+# Calico Version v2.6.5
+# https://docs.projectcalico.org/v2.6/releases#v2.6.5
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-node
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+
+---
+
+kind: ClusterRole
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: calico-node
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+  - apiGroups: [""]
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: [""]
+    resources:
+      - pods/status
+    verbs:
+      - update
+  - apiGroups: [""]
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: [""]
+    resources:
+      - nodes
+    verbs:
+      - get
+      - list
+      - update
+      - watch
+  - apiGroups: ["extensions"]
+    resources:
+      - networkpolicies
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["crd.projectcalico.org"]
+    resources:
+      - globalfelixconfigs
+      - bgppeers
+      - globalbgpconfigs
+      - ippools
+      - globalnetworkpolicies
+    verbs:
+      - create
+      - get
+      - list
+      - update
+      - watch
+
+---
+
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: calico-node
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: calico-node
+subjects:
+- kind: ServiceAccount
+  name: calico-node
+  namespace: kube-system
+
+---
+
+# This manifest installs the calico/node container, as well
+# as the Calico CNI plugins and network config on
+# each master and worker node in a Kubernetes cluster.
+apiVersion: {{ include "daemonsetversion" . }}
+kind: DaemonSet
+metadata:
+  name: calico-node
+  namespace: kube-system
+  labels:
+    k8s-app: calico-node
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-node
+  template:
+    metadata:
+      labels:
+        k8s-app: calico-node
+      annotations:
+        # This, along with the CriticalAddonsOnly toleration below,
+        # marks the pod as a critical add-on, ensuring it gets
+        # priority scheduling and that its resources are reserved
+        # if it ever gets evicted.
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        checksum/configmap-calico: {{ include (print $.Template.BasePath "/calico-config.yaml") . | sha256sum }}
+    spec:
+      hostNetwork: true
+      serviceAccountName: calico-node
+      tolerations:
+        # Allow the pod to run on the master.  This is required for
+        # the master to communicate with pods.
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: "CriticalAddonsOnly"
+          operator: "Exists"
+      # Minimize downtime during a rolling upgrade or deletion; tell Kubernetes to do a "force
+      # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
+      terminationGracePeriodSeconds: 0
+      containers:
+        # Runs calico/node container on each Kubernetes node.  This
+        # container programs network policy and routes on each
+        # host.
+        - name: calico-node
+          image: quay.io/calico/node:v2.6.5
+          env:
+            # Use Kubernetes API as the backing datastore.
+            - name: DATASTORE_TYPE
+              value: "kubernetes"
+            # Enable felix info logging.
+            - name: FELIX_LOGSEVERITYSCREEN
+              value: "info"
+            # Cluster type to identify the deployment type
+            - name: CLUSTER_TYPE
+              value: "k8s,bgp"
+            # Disable file logging so `kubectl logs` works.
+            - name: CALICO_DISABLE_FILE_LOGGING
+              value: "true"
+            # Set Felix endpoint to host default action to ACCEPT.
+            - name: FELIX_DEFAULTENDPOINTTOHOSTACTION
+              value: "ACCEPT"
+            # Disable IPV6 on Kubernetes.
+            - name: FELIX_IPV6SUPPORT
+              value: "false"
+            # Set MTU for tunnel device used if ipip is enabled
+            - name: FELIX_IPINIPMTU
+              value: "1440"
+            # Wait for the datastore.
+            - name: WAIT_FOR_DATASTORE
+              value: "true"
+            # The Calico IPv4 pool to use.  This should match `--cluster-cidr`
+            - name: CALICO_IPV4POOL_CIDR
+              value: "{{.Values.global.PodNetwork}}"
+            # Enable IPIP
+            - name: CALICO_IPV4POOL_IPIP
+              value: "always"
+            # Enable IP-in-IP within Felix.
+            {{- if ne .Values.CloudProvider "azure"}}
+            - name: FELIX_IPINIPENABLED
+              value: "true"
+            {{- else }}
+            - name: FELIX_IPINIPENABLED
+              value: "false"
+            - name: CALICO_NETWORKING_BACKEND
+              value: "none"
+            {{- end }}
+            # Set based on the k8s node name.
+            - name: NODENAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            # No IP address needed.
+            - name: IP
+              value: ""
+            - name: FELIX_HEALTHENABLED
+              value: "true"
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: 250m
+          livenessProbe:
+            httpGet:
+              path: /liveness
+              port: 9099
+            periodSeconds: 10
+            initialDelaySeconds: 10
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 9099
+            periodSeconds: 10
+          volumeMounts:
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
+            - mountPath: /var/run/calico
+              name: var-run-calico
+              readOnly: false
+        # This container installs the Calico CNI binaries
+        # and CNI network config file on each node.
+        - name: install-cni
+          image: quay.io/calico/cni:v1.11.2
+          command: ["/install-cni.sh"]
+          env:
+            # The CNI network config to install on each node.
+            - name: CNI_NETWORK_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: cni_network_config
+            # Set the hostname based on the k8s node name.
+            - name: KUBERNETES_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - mountPath: /host/opt/cni/bin
+              name: cni-bin-dir
+            - mountPath: /host/etc/cni/net.d
+              name: cni-net-dir
+      volumes:
+        # Used by calico/node.
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+        - name: var-run-calico
+          hostPath:
+            path: /var/run/calico
+        # Used to install CNI.
+        - name: cni-bin-dir
+          hostPath:
+            path: /opt/cni/bin
+        - name: cni-net-dir
+          hostPath:
+            path: /etc/cni/net.d
+
+# Create all the CustomResourceDefinitions needed for
+# Calico policy and networking mode.
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico Global Felix Configuration
+kind: CustomResourceDefinition
+metadata:
+   name: globalfelixconfigs.crd.projectcalico.org
+   labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: GlobalFelixConfig
+    plural: globalfelixconfigs
+    singular: globalfelixconfig
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico BGP Peers
+kind: CustomResourceDefinition
+metadata:
+  name: bgppeers.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: BGPPeer
+    plural: bgppeers
+    singular: bgppeer
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico Global BGP Configuration
+kind: CustomResourceDefinition
+metadata:
+  name: globalbgpconfigs.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: GlobalBGPConfig
+    plural: globalbgpconfigs
+    singular: globalbgpconfig
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico IP Pools
+kind: CustomResourceDefinition
+metadata:
+  name: ippools.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPPool
+    plural: ippools
+    singular: ippool
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico Global Network Policies
+kind: CustomResourceDefinition
+metadata:
+  name: globalnetworkpolicies.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: GlobalNetworkPolicy
+    plural: globalnetworkpolicies
+    singular: globalnetworkpolicy
+
+{{- end -}}

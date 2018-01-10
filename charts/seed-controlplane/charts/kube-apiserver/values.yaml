@@ -1,0 +1,25 @@
+CloudProvider: aws
+KubernetesVersion: 1.8.5
+AdvertiseAddress: 127.0.0.1
+ServiceNetwork: 10.0.0.0/24
+PodNetwork: 192.168.0.0/16
+NodeNetwork: 172.16.0.0/20
+Environment: []
+AdditionalParameters: []
+PodAnnotations: {}
+FeatureGates: {}
+  # CustomResourceValidation: true
+  # RotateKubeletServerCertificate: false
+RuntimeConfig: {}
+  # autoscaling/v2alpha1: true
+OIDCConfig: {}
+  # caBundle: |
+  #   -----BEGIN CERTIFICATE-----
+  #   ...
+  #   -----END CERTIFICATE-----
+  # clientID: clientid
+  # groupsClaim: groups
+  # groupsPrefix: prefix
+  # issuerURL: http://localhost
+  # usernameClaim: user
+  # usernamePrefix: prefix

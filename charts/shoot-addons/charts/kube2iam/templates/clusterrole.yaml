@@ -1,0 +1,22 @@
+{{- if .Values.rbac.create -}}
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRole
+metadata:
+  labels:
+    app: {{ template "name" . }}
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{ template "fullname" . }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - pods
+    verbs:
+      - list
+      - watch
+{{- end -}}

@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: garden-controller-manager-configmap
+data:
+  config.yaml: |
+    ---
+    apiVersion: componentconfig.sapcloud.io/v1alpha1
+    kind: ControllerManagerConfiguration
+    clientConnection:
+      acceptContentTypes: {{ .Values.controller.config.clientConnection.acceptContentTypes }}
+      contentType: {{ .Values.controller.config.clientConnection.contentType }}
+      qps: {{ .Values.controller.config.clientConnection.qps }}
+      burst: {{ .Values.controller.config.clientConnection.burst }}
+    controller:
+      healthCheckPeriod: {{ .Values.controller.config.controller.healthCheckPeriod }}
+      reconciliation:
+        concurrentSyncs: {{ .Values.controller.config.controller.reconciliation.concurrentSyncs }}
+        resyncPeriod: {{ .Values.controller.config.controller.reconciliation.resyncPeriod }}
+        retryDuration: {{ .Values.controller.config.controller.reconciliation.retryDuration }}
+    gardenNamespace: {{ .Values.controller.config.gardenNamespace }}
+    leaderElection:
+      leaderElect: {{ .Values.controller.config.leaderElection.leaderElect }}
+      leaseDuration: {{ .Values.controller.config.leaderElection.leaseDuration }}
+      renewDeadline: {{ .Values.controller.config.leaderElection.renewDeadline }}
+      retryPeriod: {{ .Values.controller.config.leaderElection.retryPeriod }}
+      resourceLock: {{ .Values.controller.config.leaderElection.resourceLock }}
+    logLevel: {{ .Values.controller.config.logLevel }}
+    metrics:
+      interval: {{ .Values.controller.config.metrics.interval }}
+    server:
+      bindAddress: {{ .Values.controller.config.server.bindAddress }}
+      port: {{ .Values.controller.config.server.port }}

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "fullname" . }}-ui-config
+  labels:
+    app: {{ template "fullname" . }}
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+    # TODO: use label values and contribute it back
+    addonmanager.kubernetes.io/mode: Reconcile
+data:
+  overrides.js: |-
+    window.monocular = {
+      overrides: {
+        googleAnalyticsId: '{{.Values.ui.googleAnalyticsId}}',
+        appName: '{{.Values.ui.appName}}',
+        {{- if .Values.ui.backendHostname }}
+        backendHostname: '{{ .Values.ui.backendHostname }}',
+        {{- end }}
+        releasesEnabled: {{.Values.api.config.releasesEnabled}}
+      }
+    };

@@ -1,0 +1,21 @@
+namespace: default
+
+imagePullSecrets:
+- name: gcr-readonly
+
+autoscalingGroups: []
+
+image:
+  repository: eu.gcr.io/sap-cloud-platform-dev1/auto-node-repair
+  tag: v4
+  pullPolicy: Always
+
+extraArgs:
+  stderrthreshold: info
+  initial-delay: 5m
+  repair-period: 5m
+
+nodeSelector: {}
+
+podAnnotations: {}
+replicaCount: 1

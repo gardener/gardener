@@ -1,0 +1,7 @@
+{{define "systemd-sysctl" -}}
+{{/* Do not remove the indentation, this is required because this template is imported by others */ -}}
+{{/* it needs to be reloaded, because the /etcd/sysctl.d/ files are not present, when this is started for a first time */ -}}
+- name: systemd-sysctl.service
+  command: restart
+  enable: true
+{{- end}}

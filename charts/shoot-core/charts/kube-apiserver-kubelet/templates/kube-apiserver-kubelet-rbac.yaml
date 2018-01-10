@@ -1,0 +1,55 @@
+apiVersion: {{ template "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:apiserver:kubelet
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups: [""]
+  resources:
+  - nodes/proxy
+  - nodes/stats
+  - nodes/log
+  - nodes/spec
+  - nodes/metrics
+  verbs:
+  - '*'
+- nonResourceURLs:
+  - '*'
+  verbs:
+  - '*'
+
+---
+apiVersion: {{ template "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: system:apiserver:kubelet
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:apiserver:kubelet
+subjects:
+- kind: User
+  name: system:kube-apiserver:kubelet
+
+{{- if semverCompare ">= 1.8" .Capabilities.KubeVersion.GitVersion }}
+---
+# This cluster role is gone in 1.8
+apiVersion: {{include "rbacversion" .}}
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: system:node
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:nodes
+
+{{- end }}

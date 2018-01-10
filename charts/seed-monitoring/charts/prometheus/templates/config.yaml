@@ -1,0 +1,147 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: {{.Release.Namespace}}
+data:
+  prometheus.yaml: |
+    # All services in the {{.Release.Namespace}} and shoot's kube-system that are annotated with
+    # * `prometheus.io/scrape`: Only scrape services that have a value of `true`
+    # * `prometheus.io/scheme`: If the metrics endpoint is secured then you will need to set this to `https` & most likely set the `tls_config` of the scrape config.
+    # * `prometheus.io/path`: If the metrics path is not `/metrics` override this.
+    # * `prometheus.io/port`: If the metrics are exposed on a different port to the service then set this appropriately. Use this when multiple ports are avaible by the pod.
+    # * `prometheus.io/name`: job name label to be applied to all metrics from that service.
+    # exceptions are:
+    # * kube-apiserver
+    # * kubelet (both in seed and shoot)
+    # * kube-state-metrics (both in seed and shoot)
+
+    global:
+      evaluation_interval: 30s
+      scrape_interval: 30s
+      external_labels:
+        cluster: {{.Release.Namespace}}
+    rule_files:
+    - /etc/prometheus/rules/*.yml
+
+    alerting:
+      alertmanagers:
+      - kubernetes_sd_configs:
+        - role: endpoints
+          namespaces:
+            names: [{{.Release.Namespace}}]
+
+        scheme: http
+        relabel_configs:
+        - source_labels: [__meta_kubernetes_service_label_component]
+          action: keep
+          regex: alertmanager
+        - source_labels: [__meta_kubernetes_service_label_role]
+          action: keep
+          regex: monitoring
+        - source_labels: [__meta_kubernetes_endpoint_port_name]
+          action: keep
+          regex: metrics
+
+    scrape_configs:
+    - job_name: 'kube-apiserver'
+      scheme: https
+
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{.Release.Namespace}}]
+
+      tls_config:
+        # This is needed because the api server's certificates are not are generated
+        # for a specific pod IP
+        insecure_skip_verify: true
+        cert_file: /etc/prometheus/seed/prometheus.crt
+        key_file: /etc/prometheus/seed/prometheus.key
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_name]
+        action: keep
+        regex: kube-apiserver
+      - source_labels: [__meta_kubernetes_endpoint_port_name]
+        action: keep
+        regex: kube-apiserver
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+
+    - job_name: 'kube-kubelet'
+{{- include "prometheus.kubelet-shoot" (dict "Path" "metrics" "Namespace" .Release.Namespace "JobName" "kube-kubelet") }}
+
+{{- if semverCompare ">= 1.7.3" .Values.global.ShootKubeVersion.GitVersion }}
+{{/* Check if the version of the Shoot's API server is > 1.7.3 */}}
+    # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
+    - job_name: 'cadvisor-shoot'
+{{- include "prometheus.kubelet-shoot" (dict "Path" "metrics/cadvisor" "Namespace" .Release.Namespace "JobName" "cadvisor") }}
+{{- end }}
+
+    # We fetch kubelet metrics from seed's nodes and filter only the metrics in
+    # shoot's namespace
+    - job_name: 'kube-kubelet-seed'
+{{- include "prometheus.kubelet-seed" (dict "Path" "metrics" "Namespace" .Release.Namespace "JobName" "kube-kubelet") }}
+
+{{- if semverCompare ">= 1.7.3" .Capabilities.KubeVersion.GitVersion }}
+{{/* Check if the version of the Seed's API server is > 1.7.3 */}}
+    # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
+    - job_name: 'cadvisor-seed'
+{{- include "prometheus.kubelet-seed" (dict "Path" "metrics/cadvisor" "Namespace" .Release.Namespace "JobName" "cadvisor") }}
+{{- end }}
+
+    - job_name: 'kube-state-metrics'
+      scheme: http
+      honor_labels: false
+
+      # Service is used, because we only care about metric from one kube-state-metrics instance
+      # and not multiple in HA setup
+      kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names: [{{.Release.Namespace}}]
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_label_component]
+        action: keep
+        regex: kube-state-metrics
+      - source_labels: [__meta_kubernetes_service_port_name]
+        action: keep
+      - source_labels: [__meta_kubernetes_service_label_type]
+        regex: (.+)
+        target_label: type
+        replacement: ${1}
+      - target_label: instance
+        replacement: kube-state-metrics
+      metric_relabel_configs:
+      # we make the shoot's pods in the shoot's namepsace to apear in as its in the kube-system
+      - target_label: namespace
+        replacement: kube-system
+
+    - job_name: 'annotated-seed-service-endpoints'
+      honor_labels: false
+
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{.Release.Namespace}}]
+
+      relabel_configs:
+{{- include "prometheus.service-endpoints.relabel-config" . }}
+
+    - job_name: 'annotated-shoot-service-endpoints'
+      honor_labels: false
+
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [kube-system]
+        api_server: kube-apiserver
+        tls_config:
+          ca_file: /etc/prometheus/seed/ca.crt
+          cert_file: /etc/prometheus/seed/prometheus.crt
+          key_file: /etc/prometheus/seed/prometheus.key
+
+      relabel_configs:
+{{- include "prometheus.service-endpoints.relabel-config" . }}

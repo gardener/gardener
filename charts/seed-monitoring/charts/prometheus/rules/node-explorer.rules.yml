@@ -1,0 +1,165 @@
+groups:
+- name: node-explorer.rules
+  rules:
+  - alert: NodeExporterDown
+    expr: absent(up{job="node-exporter"} == 1)
+    for: 15m
+    labels:
+      job: node-exporter
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      summary: Kubelet node_exporter cannot be scraped
+      description: Prometheus could not scrape a {{ $labels.job }} for more than one
+        hour.
+
+  - alert: K8SNodeOutOfDisk
+    expr: kube_node_status_condition{condition="OutOfDisk", status="true"} == 1
+    labels:
+      service: node-exporter
+      severity: critical
+      type: shoot
+    annotations:
+      summary: Kube Node ran out of disk space.
+      description: Node {{ $labels.node }} has run out of disk space.
+
+  - alert: K8SNodeMemoryPressure
+    expr: kube_node_status_condition{condition="MemoryPressure", status="true"} == 1
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      summary: Kube Node is under memory pressure.
+      description: Node {{ $labels.node }} is under memory pressure.
+
+  - alert: K8SNodeDiskPressure
+    expr: kube_node_status_condition{condition="DiskPressure", status="true"} == 1
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      summary: Kube Node is under disk pressure.
+      description: Node {{ $labels.node }} is under disk pressure.
+
+  # common metrics
+  - record: instance:swap_memory_usage:percent
+    expr: (1 - node_memory_SwapFree / node_memory_SwapTotal) * 100
+  - record: instance:conntrack_entries_usage:percent
+    expr: (node_nf_conntrack_entries / node_nf_conntrack_entries_limit) * 100
+  - record: instance:fd_utilization
+    expr: process_open_fds / process_max_fds
+
+  # alert if the root filesystem will be full in 4 hours
+  - alert: VMRootfsFullIn4Hours
+    expr: predict_linear(node_filesystem_free{mountpoint="/"}[1h], 4 * 3600) < 1024
+    for: 10m
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      description: Root filesystem's device on instance {{ $labels.instance }} will
+        fill in next 4 hours
+      summary: node's root fs is filling up
+
+  # alert if the root filesystem is full
+  - alert: VMRootfsFull
+    expr: node_filesystem_free{mountpoint="/"} < 1024
+    for: 5m
+    labels:
+      service: node-exporter
+      severity: critical
+      type: shoot
+    annotations:
+      description: Root filesystem's device on instance {{ $labels.instance }} is
+        full!
+      summary: node's root fs is full'
+  - alert: VMConntrackTableFull
+    expr: instance:conntrack_entries_usage:percent > 50
+    for: 10m
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      description: The nf_conntrack table is {{ $value }}% full.
+      summary: Number of tracked connections is near the limit
+  - alert: VMConntrackTableFull
+    expr: instance:conntrack_entries_usage:percent > 90
+    labels:
+      service: node-exporter
+      severity: critical
+      type: shoot
+    annotations:
+      description: The nf_conntrack table is {{ $value }}% full.
+      summary: Number of tracked connections is near the limit
+
+  # To catch the conntrack sysctl de-tuning when it happens
+  - alert: VMConntrackTuningMissing
+    expr: node_nf_conntrack_udp_timeout > 10
+    for: 10m
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      description: Nodes keep un-setting the correct tunings, investigate when it
+        happens.
+      summary: Node does not have the correct conntrack tunings
+
+  ### File descriptor alerts ###
+
+  # alert if file descriptors are likely to exhaust within the next 4 hours
+  - alert: VMFileDescriptorsExhaustionClose
+    expr: predict_linear(instance:fd_utilization[1h], 3600 * 4) > 1
+    for: 10m
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      description: '{{ $labels.job }} instance {{ $labels.instance }} will exhaust
+        in file descriptors soon'
+      summary: file descriptors soon exhausted
+
+  # alert if file descriptors are likely to exhaust within the next hour
+  - alert: VMFileDescriptorsExhaustionClose
+    expr: predict_linear(instance:fd_utilization[10m], 3600) > 1
+    for: 10m
+    labels:
+      service: node-exporter
+      severity: critical
+      type: shoot
+    annotations:
+      description: '{{ $labels.job }} instance {{ $labels.instance }} will exhaust
+        in file descriptors soon'
+      summary: file descriptors soon exhausted
+
+  # Alert for Swap Usage Warning
+  - alert: VMSwapUsage
+    expr: instance:swap_memory_usage:percent > 10
+    for: 15m
+    labels:
+      service: node-exporter
+      severity: warning
+      type: shoot
+    annotations:
+      description: instance {{ $labels.instance }} is currently using {{ $value }}%
+        of its swap memory
+      summary: swap usage
+
+  # Alert for Swap Usage Crtical
+  - alert: VMSwapAlmostExhaust
+    expr: instance:swap_memory_usage:percent > 80
+    for: 5m
+    labels:
+      service: node-exporter
+      severity: severe
+      type: shoot
+    annotations:
+      description: instance {{ $labels.instance }} has is using {{ value }}% of its
+        swap memory
+      summary: high swap usage

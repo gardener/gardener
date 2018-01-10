@@ -1,0 +1,13 @@
+groups:
+- name: cluster-autoscaler.rules
+  rules:
+  - alert: ClusterAutoScalerDown
+    expr: absent(up{job="cluster-autoscaler"}) or (count(up{job="cluster-autoscaler"}
+      == 0))
+    for: 15m
+    labels:
+      service: k8s
+      severity: warning
+    annotations:
+      description: Prometheus could not scrape {{ $labels.job }} for 15m.
+      summary: Cluster Autoscaler addon cannot be scraped

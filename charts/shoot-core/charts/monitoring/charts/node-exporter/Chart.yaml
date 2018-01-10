@@ -1,0 +1,4 @@
+apiVersion: v1
+description: node-exporter for k8s
+name: node-exporter
+version: 0.1.0

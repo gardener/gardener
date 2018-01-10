@@ -1,0 +1,25 @@
+{{- if .Values.apiserver.enabled }}
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1beta1.garden.sapcloud.io
+spec:
+  caBundle: {{ b64enc .Values.apiserver.caBundle }}
+  group: garden.sapcloud.io
+  version: v1beta1
+  groupPriorityMinimum: {{ .Values.apiserver.groupPriorityMinimum }}
+  versionPriority: {{ .Values.apiserver.versionPriority }}
+  service:
+    name: garden-apiserver
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: garden-apiserver-cert
+  namespace: garden
+type: Opaque
+data:
+  garden-apiserver.crt: {{ b64enc .Values.apiserver.tls.crt }}
+  garden-apiserver.key: {{ b64enc .Values.apiserver.tls.key }}
+{{- end}}

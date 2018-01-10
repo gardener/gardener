@@ -1,0 +1,16 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Seed
+metadata:
+  name: openstack-dev
+spec:
+  cloud:
+    profile: openstack
+    region: eu-de-1
+  secretRef:
+    name: seed-openstack-dev
+    namespace: garden
+  domain: dev.os.seed.example.com
+  networks:
+    nodes: 10.240.0.0/16
+    pods: 10.241.128.0/17
+    services: 10.241.0.0/17

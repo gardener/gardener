@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: readvertiser
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: readvertiser
+---
+apiVersion: {{include "rbacversion" .}}
+kind: RoleBinding
+metadata:
+  labels:
+    app: readvertiser
+  name: readvertiser
+  namespace: {{.Release.Namespace}}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: readvertiser
+subjects:
+- kind: ServiceAccount
+  name: readvertiser
+  namespace: {{.Release.Namespace}}
+---
+apiVersion: {{include "deploymentversion" .}}
+kind: Deployment
+metadata:
+  name: readvertiser
+  namespace: {{.Release.Namespace}}
+  labels:
+    app: readvertiser
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: readvertiser
+  template:
+    metadata:
+      labels:
+        app: readvertiser
+    spec:
+{{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 6 }}
+{{- end }}
+      serviceAccountName: readvertiser
+      tolerations:
+      - effect: NoExecute
+        operator: Exists
+      containers:
+      - name: readvertiser
+        image: eu.gcr.io/sap-cloud-platform-dev1/garden/garden-readvertiser:v0.0.2
+        imagePullPolicy: IfNotPresent
+        args:
+        - "--name=kube-apiserver"
+        - "--elb={{.Values.domain}}"
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace

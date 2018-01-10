@@ -1,0 +1,30 @@
+groups:
+- name: kube-state-metrics.rules
+  rules:
+  - alert: KubeStateMetricsDown
+    expr: absent(up{job="kube-state-metrics", type="shoot"} == 1)
+    for: 5m
+    labels:
+      job: kube-state-metrics
+      service: kube-state-metrics
+      severity: critical
+      type: shoot
+    annotations:
+      summary: kube-state-metrics is down in Shoot cluster
+      description: |
+        There are no running kube-state-metrics in Shoot cluster.
+        No K8S resource metrics can be collected.
+
+  - alert: KubeStateMetricsDown
+    expr: absent(up{job="kube-state-metrics", type="seed"} == 1)
+    for: 5m
+    labels:
+      job: kube-state-metrics
+      service: kube-state-metrics
+      severity: critical
+      type: seed
+    annotations:
+      summary: kube-state-metrics is down in Seed cluster
+      description: |
+        There are no running kube-state-metrics in Seed cluster.
+        No K8S resource metrics can be collected.

@@ -1,0 +1,31 @@
+{{- define "terraformer-common.terraform-config" -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.names.configuration }}
+  namespace: {{.Release.Namespace }}
+data:
+  main.tf: |-
+{{ include ( print .Chart.Name ".main" ) . | indent 4 }}
+  variables.tf: |-
+{{ include ( print .Chart.Name ".variables" ) . | indent 4 }}
+---
+{{- if .Values.initializeEmptyState }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.names.state }}
+  namespace: {{ .Release.Namespace }}
+data:
+  terraform.tfstate: ""
+---
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.names.variables }}
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  terraform.tfvars: {{ include ( print .Chart.Name ".terraform" ) . | b64enc }}
+{{- end -}}

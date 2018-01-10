@@ -1,0 +1,6 @@
+dependencies:
+- name: terraformer-common
+  repository: file://../terraformer-common
+  version: 0.1.0
+digest: sha256:2c805d08d6490541f5fab36948270a54f3fb9b64a1dc9ec3e835b317622aa6cd
+generated: 2017-11-24T09:58:38.33942+02:00
