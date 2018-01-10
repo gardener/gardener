@@ -165,7 +165,3 @@ test-cov:
 test-clean:
 	@find . -name "*.coverprofile" -type f -delete
 	@rm -f gardener.coverage.html
-
-.PHONY: check-go-version
-check-go-version:
-	@./hack/check-go-version
