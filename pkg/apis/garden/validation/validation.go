@@ -16,9 +16,11 @@ package validation
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -28,6 +30,10 @@ import (
 func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
 }
+
+////////////////////////////////////////////////////
+//                  CLOUD PROFILES                //
+////////////////////////////////////////////////////
 
 // ValidateCloudProfile validates a CloudProfile object.
 func ValidateCloudProfile(cloudProfile *garden.CloudProfile) field.ErrorList {
@@ -52,16 +58,252 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 
 	if _, err := helper.DetermineCloudProviderInProfile(*spec); err != nil {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/openstack"), "cloud profile must only contain exactly one field of aws/azure/gcp/openstack"))
+		return allErrs
+	}
+
+	if spec.AWS != nil {
+		allErrs = append(allErrs, validateDNSProviders(spec.AWS.Constraints.DNSProviders, fldPath.Child("aws", "constraints", "dnsProviders"))...)
+		allErrs = append(allErrs, validateKubernetesConstraints(spec.AWS.Constraints.Kubernetes, fldPath.Child("aws", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateMachineTypeConstraints(spec.AWS.Constraints.MachineTypes, fldPath.Child("aws", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.AWS.Constraints.VolumeTypes, fldPath.Child("aws", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateZones(spec.AWS.Constraints.Zones, fldPath.Child("aws", "constraints", "zones"))...)
+
+		if len(spec.AWS.MachineImages) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("aws", "machineImages"), "must provide at least one machine image"))
+		}
+		r, _ := regexp.Compile(`^ami-[a-z0-9]+$`)
+		for i, image := range spec.AWS.MachineImages {
+			idxPath := fldPath.Child("aws", "machineImages").Index(i)
+			regionPath := idxPath.Child("region")
+			amiPath := idxPath.Child("ami")
+			if len(image.Region) == 0 {
+				allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
+			}
+			if !r.MatchString(image.AMI) {
+				allErrs = append(allErrs, field.Invalid(amiPath, image.AMI, `ami's must match the regex ^ami-[a-z0-9]+$`))
+			}
+		}
+	}
+
+	if spec.Azure != nil {
+		allErrs = append(allErrs, validateDNSProviders(spec.Azure.Constraints.DNSProviders, fldPath.Child("azure", "constraints", "dnsProviders"))...)
+		allErrs = append(allErrs, validateKubernetesConstraints(spec.Azure.Constraints.Kubernetes, fldPath.Child("azure", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Azure.Constraints.MachineTypes, fldPath.Child("azure", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Azure.Constraints.VolumeTypes, fldPath.Child("azure", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountFaultDomains, fldPath.Child("azure", "countFaultDomains"))...)
+		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountUpdateDomains, fldPath.Child("azure", "countUpdateDomains"))...)
+
+		if len(spec.Azure.MachineImage.Channel) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("azure", "machineImage", "channel"), "must provide a channel"))
+		}
+		if len(spec.Azure.MachineImage.Version) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("azure", "machineImage", "version"), "must provide a version"))
+		}
+	}
+
+	if spec.GCP != nil {
+		allErrs = append(allErrs, validateDNSProviders(spec.GCP.Constraints.DNSProviders, fldPath.Child("gcp", "constraints", "dnsProviders"))...)
+		allErrs = append(allErrs, validateKubernetesConstraints(spec.GCP.Constraints.Kubernetes, fldPath.Child("gcp", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateMachineTypeConstraints(spec.GCP.Constraints.MachineTypes, fldPath.Child("gcp", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.GCP.Constraints.VolumeTypes, fldPath.Child("gcp", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateZones(spec.GCP.Constraints.Zones, fldPath.Child("gcp", "constraints", "zones"))...)
+
+		if len(spec.GCP.MachineImage.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("gcp", "machineImage", "name"), "must provide an image name"))
+		}
 	}
 
 	if spec.OpenStack != nil {
+		allErrs = append(allErrs, validateDNSProviders(spec.OpenStack.Constraints.DNSProviders, fldPath.Child("openstack", "constraints", "dnsProviders"))...)
+		allErrs = append(allErrs, validateKubernetesConstraints(spec.OpenStack.Constraints.Kubernetes, fldPath.Child("openstack", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateZones(spec.OpenStack.Constraints.Zones, fldPath.Child("openstack", "constraints", "zones"))...)
+
+		floatingPoolPath := fldPath.Child("openstack", "constraints", "floatingPools")
+		if len(spec.OpenStack.Constraints.FloatingPools) == 0 {
+			allErrs = append(allErrs, field.Required(floatingPoolPath, "must provide at least one floating pool"))
+		}
+		for i, pool := range spec.OpenStack.Constraints.FloatingPools {
+			idxPath := floatingPoolPath.Index(i)
+			namePath := idxPath.Child("name")
+			if len(pool.Name) == 0 {
+				allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+			}
+		}
+
+		loadBalancerProviderPath := fldPath.Child("openstack", "constraints", "loadBalancerProviders")
+		if len(spec.OpenStack.Constraints.LoadBalancerProviders) == 0 {
+			allErrs = append(allErrs, field.Required(loadBalancerProviderPath, "must provide at least one load balancer provider"))
+		}
+		for i, pool := range spec.OpenStack.Constraints.LoadBalancerProviders {
+			idxPath := loadBalancerProviderPath.Index(i)
+			namePath := idxPath.Child("name")
+			if len(pool.Name) == 0 {
+				allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+			}
+		}
+
+		if len(spec.OpenStack.MachineImage.Name) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "machineImage", "name"), "must provide an image name"))
+		}
+
 		if len(spec.OpenStack.KeyStoneURL) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keyStoneURL"), "must provide the URL to KeyStone"))
+		}
+
+		_, err := utils.DecodeCertificate([]byte(spec.OpenStack.CABundle))
+		if err != nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "caBundle"), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
 
 	return allErrs
 }
+
+func validateDNSProviders(providers []garden.DNSProviderConstraint, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(providers) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one DNS provider"))
+	}
+
+	for i, provider := range providers {
+		idxPath := fldPath.Index(i)
+		if provider.Name != garden.DNSUnmanaged && provider.Name != garden.DNSAWSRoute53 {
+			allErrs = append(allErrs, field.NotSupported(idxPath, provider.Name, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53)}))
+		}
+	}
+
+	return allErrs
+}
+
+func validateKubernetesConstraints(kubernetes garden.KubernetesConstraints, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(kubernetes.Versions) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("versions"), "must provide at least one Kubernetes version"))
+	}
+
+	r, _ := regexp.Compile(`^([0-9]+\.){2}[0-9]+$`)
+	for i, version := range kubernetes.Versions {
+		idxPath := fldPath.Child("versions").Index(i)
+		if !r.MatchString(version) {
+			allErrs = append(allErrs, field.Invalid(idxPath, version, `all Kubernetes versions must match the regex ^([0-9]+\.){2}[0-9]+$`))
+		}
+	}
+
+	return allErrs
+}
+
+func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(machineTypes) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
+	}
+
+	for i, machineType := range machineTypes {
+		idxPath := fldPath.Index(i)
+		namePath := idxPath.Child("name")
+		cpusPath := idxPath.Child("cpus")
+		gpusPath := idxPath.Child("gpus")
+		memoryPath := idxPath.Child("memoryPath")
+
+		if len(machineType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+		if machineType.CPUs < 0 {
+			allErrs = append(allErrs, field.Invalid(cpusPath, machineType.CPUs, "cpus cannot be negative"))
+		}
+		if machineType.GPUs < 0 {
+			allErrs = append(allErrs, field.Invalid(gpusPath, machineType.GPUs, "gpus cannot be negative"))
+		}
+		allErrs = append(allErrs, ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+	}
+
+	return allErrs
+}
+
+func validateVolumeTypeConstraints(volumeTypes []garden.VolumeType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(volumeTypes) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one volume type"))
+	}
+
+	for i, volumeType := range volumeTypes {
+		idxPath := fldPath.Index(i)
+		namePath := idxPath.Child("name")
+		classPath := idxPath.Child("class")
+
+		if len(volumeType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+		if len(volumeType.Class) == 0 {
+			allErrs = append(allErrs, field.Required(classPath, "must provide a class"))
+		}
+	}
+
+	return allErrs
+}
+
+func validateZones(zones []garden.Zone, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(zones) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one zone"))
+	}
+
+	for i, zone := range zones {
+		idxPath := fldPath.Index(i)
+		regionPath := idxPath.Child("region")
+		namesPath := idxPath.Child("names")
+
+		if len(zone.Region) == 0 {
+			allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
+		}
+
+		if len(zone.Names) == 0 {
+			allErrs = append(allErrs, field.Required(namesPath, "must provide at least one zone for this region"))
+		}
+
+		for j, name := range zone.Names {
+			namePath := namesPath.Index(j)
+			if len(name) == 0 {
+				allErrs = append(allErrs, field.Required(namePath, "zone name cannot be empty"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateAzureDomainCount(domainCount []garden.AzureDomainCount, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(domainCount) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one domain count"))
+	}
+
+	for i, count := range domainCount {
+		idxPath := fldPath.Index(i)
+		regionPath := idxPath.Child("region")
+		countPath := idxPath.Child("count")
+
+		if len(count.Region) == 0 {
+			allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
+		}
+		if count.Count < 0 {
+			allErrs = append(allErrs, field.Invalid(countPath, count.Count, "count must not be negative"))
+		}
+	}
+
+	return allErrs
+}
+
+////////////////////////////////////////////////////
+//                      SEEDS                     //
+////////////////////////////////////////////////////
 
 // ValidateSeed validates a Seed object.
 func ValidateSeed(seed *garden.Seed) field.ErrorList {
