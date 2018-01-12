@@ -760,6 +760,24 @@ const (
 	TASKSTATS_CMD_ATTR_DEREGISTER_CPUMASK = 0x4
 )
 
+type CGroupStats struct {
+	Sleeping        uint64
+	Running         uint64
+	Stopped         uint64
+	Uninterruptible uint64
+	Io_wait         uint64
+}
+
+const (
+	CGROUPSTATS_CMD_UNSPEC        = 0x3
+	CGROUPSTATS_CMD_GET           = 0x4
+	CGROUPSTATS_CMD_NEW           = 0x5
+	CGROUPSTATS_TYPE_UNSPEC       = 0x0
+	CGROUPSTATS_TYPE_CGROUP_STATS = 0x1
+	CGROUPSTATS_CMD_ATTR_UNSPEC   = 0x0
+	CGROUPSTATS_CMD_ATTR_FD       = 0x1
+)
+
 type Genlmsghdr struct {
 	Cmd      uint8
 	Version  uint8

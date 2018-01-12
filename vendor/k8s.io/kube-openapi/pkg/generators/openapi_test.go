@@ -299,6 +299,57 @@ type Blah struct {
 	}
 }
 
+func TestCustomDef(t *testing.T) {
+	err, assert, buffer := testOpenAPITypeWritter(t, `
+package foo
+
+import openapi "k8s.io/kube-openapi/pkg/common"
+
+type Blah struct {
+}
+
+func (_ Blah) OpenAPIDefinition() openapi.OpenAPIDefinition {
+	return openapi.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type:   []string{"string"},
+				Format: "date-time",
+			},
+		},
+	}
+}
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(`"base/foo.Blah": foo.Blah{}.OpenAPIDefinition(),
+`, buffer.String())
+}
+
+func TestCustomDefs(t *testing.T) {
+	err, assert, buffer := testOpenAPITypeWritter(t, `
+package foo
+
+type Blah struct {
+}
+
+func (_ Blah) OpenAPISchemaType() []string { return []string{"string"} }
+func (_ Blah) OpenAPISchemaFormat() string { return "date-time" }
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(`"base/foo.Blah": {
+Schema: spec.Schema{
+SchemaProps: spec.SchemaProps{
+Type:foo.Blah{}.OpenAPISchemaType(),
+Format:foo.Blah{}.OpenAPISchemaFormat(),
+},
+},
+},
+`, buffer.String())
+}
+
 func TestPointer(t *testing.T) {
 	err, assert, buffer := testOpenAPITypeWritter(t, `
 package foo

@@ -52,8 +52,8 @@
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/autoscaling","service/ec2","service/elb","service/sts"]
-  revision = "ce8d7a13a9e7f883d91c39eb98d4f72021eb48e2"
-  version = "v1.12.56"
+  revision = "726cba4d63d34a7055809986b7942c3eae6c4eb2"
+  version = "v1.12.60"
 
 [[projects]]
   branch = "master"
@@ -64,8 +64,8 @@
 [[projects]]
   name = "github.com/coreos/etcd"
   packages = ["auth/authpb","client","clientv3","etcdserver/api/v3rpc/rpctypes","etcdserver/etcdserverpb","mvcc/mvccpb","pkg/pathutil","pkg/srv","pkg/tlsutil","pkg/transport","pkg/types","version"]
-  revision = "95a726a27e09030f9ccbd9982a1508f5a6d25ada"
-  version = "v3.2.13"
+  revision = "fb5cd6f1c72c2b98e0c4453444cdfba306da867b"
+  version = "v3.2.14"
 
 [[projects]]
   name = "github.com/coreos/go-semver"
@@ -100,8 +100,8 @@
 [[projects]]
   name = "github.com/emicklei/go-restful"
   packages = [".","log"]
-  revision = "5741799b275a3c4a5a9623a993576d7545cf7b5c"
-  version = "v2.4.0"
+  revision = "2dd44038f0b95ae693b266c5f87593b5d2fdd78d"
+  version = "v2.5.0"
 
 [[projects]]
   name = "github.com/emicklei/go-restful-swagger12"
@@ -225,8 +225,8 @@
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "7fe0c75c13abdee74b09fcacef5ea1c6bba6a874"
-  version = "0.2.4"
+  revision = "f1ac5984e69fed03e0574a92f70c59f132616ea2"
+  version = "0.3.0"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -282,7 +282,7 @@
 
 [[projects]]
   name = "github.com/onsi/gomega"
-  packages = [".","format","internal/assertion","internal/asyncassertion","internal/oraclematcher","internal/testingtsupport","matchers","matchers/support/goraph/bipartitegraph","matchers/support/goraph/edge","matchers/support/goraph/node","matchers/support/goraph/util","types"]
+  packages = [".","format","gstruct","gstruct/errors","internal/assertion","internal/asyncassertion","internal/oraclematcher","internal/testingtsupport","matchers","matchers/support/goraph/bipartitegraph","matchers/support/goraph/edge","matchers/support/goraph/node","matchers/support/goraph/util","types"]
   revision = "003f63b7f4cff3fc95357005358af2de0f5fe152"
   version = "v1.3.0"
 
@@ -320,7 +320,7 @@
   branch = "master"
   name = "github.com/prometheus/common"
   packages = ["expfmt","internal/bitbucket.org/ww/goautoneg","model"]
-  revision = "2e54d0b93cba2fd133edc32211dcc32c06ef72ca"
+  revision = "89604d197083d4781071d3c65855d24ecfb0a563"
 
 [[projects]]
   branch = "master"
@@ -331,8 +331,8 @@
 [[projects]]
   name = "github.com/satori/go.uuid"
   packages = ["."]
-  revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
-  version = "v1.1.0"
+  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/sirupsen/logrus"
@@ -361,19 +361,19 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["curve25519","ed25519","ed25519/internal/edwards25519","pbkdf2","scrypt","ssh","ssh/terminal"]
-  revision = "0fcca4842a8d74bfddc2c96a073bd2a4d2a7a2e8"
+  revision = "5f55bce93ad2c89f411e009659bb1fd83da36e7b"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context","html","html/atom","html/charset","http2","http2/hpack","idna","internal/timeseries","lex/httplex","trace","websocket"]
-  revision = "42fe2e1c20de1054d3d30f82cc9fb5b41e2e3767"
+  revision = "5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "dd9ec17814d5b1de388ebe438ec013d57d8b3779"
+  revision = "810d7000345868fc619eb81f46307107118f4ae1"
 
 [[projects]]
   branch = "master"
@@ -385,7 +385,7 @@
   branch = "master"
   name = "golang.org/x/tools"
   packages = ["go/ast/astutil","imports"]
-  revision = "8cab8a1319f0be9798e7fe78b15da75e5f94b2e9"
+  revision = "fbec762f837dc349b73d1eaa820552e2ad177942"
 
 [[projects]]
   branch = "master"
@@ -396,8 +396,8 @@
 [[projects]]
   name = "google.golang.org/grpc"
   packages = [".","balancer","balancer/base","balancer/roundrobin","codes","connectivity","credentials","encoding","grpclb/grpc_lb_v1/messages","grpclog","health/grpc_health_v1","internal","keepalive","metadata","naming","peer","resolver","resolver/dns","resolver/passthrough","stats","status","tap","transport"]
-  revision = "f3955b8e9e244dd4dd4bc4f7b7a23a8445400a76"
-  version = "v1.9.0"
+  revision = "7cea4cc846bcf00cbb27595b07da5de875ef7de9"
+  version = "v1.9.1"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -415,7 +415,7 @@
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "0e4404da71227dcc02fb1deee803d93e86d08f72"
+  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
 
 [[projects]]
   name = "k8s.io/api"
@@ -423,10 +423,10 @@
   revision = "kubernetes-1.9.1"
 
 [[projects]]
-  branch = "release-1.9"
   name = "k8s.io/apiextensions-apiserver"
   packages = ["pkg/apis/apiextensions","pkg/apis/apiextensions/v1beta1"]
   revision = "097c49c1906b3527571b6876c7bf47c4487f6c61"
+  version = "kubernetes-1.9.1"
 
 [[projects]]
   branch = "release-1.9"
@@ -435,10 +435,10 @@
   revision = "68f9c3a1feb3140df59c67ced62d3a5df8e6c9c2"
 
 [[projects]]
-  branch = "release-1.9"
   name = "k8s.io/apiserver"
   packages = ["pkg/admission","pkg/admission/configuration","pkg/admission/initializer","pkg/admission/metrics","pkg/admission/plugin/initialization","pkg/admission/plugin/namespace/lifecycle","pkg/admission/plugin/webhook/config","pkg/admission/plugin/webhook/config/apis/webhookadmission","pkg/admission/plugin/webhook/config/apis/webhookadmission/v1alpha1","pkg/admission/plugin/webhook/errors","pkg/admission/plugin/webhook/mutating","pkg/admission/plugin/webhook/namespace","pkg/admission/plugin/webhook/request","pkg/admission/plugin/webhook/rules","pkg/admission/plugin/webhook/validating","pkg/admission/plugin/webhook/versioned","pkg/apis/apiserver","pkg/apis/apiserver/install","pkg/apis/apiserver/v1alpha1","pkg/apis/audit","pkg/apis/audit/install","pkg/apis/audit/v1alpha1","pkg/apis/audit/v1beta1","pkg/apis/audit/validation","pkg/audit","pkg/audit/policy","pkg/authentication/authenticator","pkg/authentication/authenticatorfactory","pkg/authentication/group","pkg/authentication/request/anonymous","pkg/authentication/request/bearertoken","pkg/authentication/request/headerrequest","pkg/authentication/request/union","pkg/authentication/request/websocket","pkg/authentication/request/x509","pkg/authentication/serviceaccount","pkg/authentication/token/tokenfile","pkg/authentication/user","pkg/authorization/authorizer","pkg/authorization/authorizerfactory","pkg/authorization/union","pkg/endpoints","pkg/endpoints/discovery","pkg/endpoints/filters","pkg/endpoints/handlers","pkg/endpoints/handlers/negotiation","pkg/endpoints/handlers/responsewriters","pkg/endpoints/metrics","pkg/endpoints/openapi","pkg/endpoints/request","pkg/features","pkg/registry/generic","pkg/registry/generic/registry","pkg/registry/rest","pkg/server","pkg/server/filters","pkg/server/healthz","pkg/server/httplog","pkg/server/mux","pkg/server/options","pkg/server/routes","pkg/server/routes/data/swagger","pkg/server/storage","pkg/storage","pkg/storage/errors","pkg/storage/etcd","pkg/storage/etcd/metrics","pkg/storage/etcd/util","pkg/storage/etcd3","pkg/storage/etcd3/preflight","pkg/storage/names","pkg/storage/storagebackend","pkg/storage/storagebackend/factory","pkg/storage/value","pkg/util/feature","pkg/util/flag","pkg/util/flushwriter","pkg/util/logs","pkg/util/trace","pkg/util/webhook","pkg/util/wsstream","plugin/pkg/audit/log","plugin/pkg/audit/webhook","plugin/pkg/authenticator/token/webhook","plugin/pkg/authorizer/webhook"]
   revision = "d0762227e2dd234c2db8efc3946c33ad2453c9e8"
+  version = "kubernetes-1.9.1"
 
 [[projects]]
   branch = "release-6.0"
@@ -452,6 +452,7 @@
   revision = "kubernetes-1.9.1"
 
 [[projects]]
+  branch = "master"
   name = "k8s.io/gengo"
   packages = ["args","examples/deepcopy-gen/generators","examples/defaulter-gen/generators","examples/set-gen/sets","generator","namer","parser","types"]
   revision = "1ef560bbde5195c01629039ad3b337ce63e7b321"
@@ -466,11 +467,11 @@
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = ["pkg/builder","pkg/common","pkg/generators","pkg/handler","pkg/util","pkg/util/proto"]
-  revision = "b16ebc07f5cad97831f961e4b5a9cc1caed33b7e"
+  revision = "a07b7bbb58e7fdc5144f8d7046331d29fc9ad3b3"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "cd53f52f8c78a580b40ee0c0920a28fca47a24ac9333860cb747550d43980a94"
+  inputs-digest = "6769d913b5ea3937fb8e39f39e157001fe981c132988a80703ae56d0fa30ed5f"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -353,7 +353,18 @@ func (g openAPITypeWriter) generate(t *types.Type) error {
 			return nil
 		}
 		if hasOpenAPIDefinitionMethods(t) {
-			g.Do("common.OpenAPIDefinition{\n"+
+			// Since this generated snippet is part of a map:
+			//
+			//		map[string]common.OpenAPIDefinition: {
+			//			"TYPE_NAME": {
+			//				Schema: spec.Schema{ ... },
+			//			},
+			//		}
+			//
+			// For compliance with gofmt -s it's important we elide the
+			// struct type. The type is implied by the map and will be
+			// removed otherwise.
+			g.Do("{\n"+
 				"Schema: spec.Schema{\n"+
 				"SchemaProps: spec.SchemaProps{\n"+
 				"Type:$.type|raw${}.OpenAPISchemaType(),\n"+

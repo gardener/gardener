@@ -64,11 +64,6 @@ ignored = [
   name = "github.com/Masterminds/semver"
   version = "~1.4.0"
 
-# https://github.com/kubernetes/gengo/pull/87
-[[override]]
-  name = "k8s.io/gengo"
-  revision = "1ef560bbde5195c01629039ad3b337ce63e7b321"
-
 # https://github.com/kubernetes/kubernetes/issues/17162
 # https://github.com/kubernetes-incubator/service-catalog/pull/1204
 [[override]]
