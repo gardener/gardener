@@ -6,8 +6,8 @@ spec:
   aws:
     constraints:
       dnsProviders:
-      - aws-route53
-      - unmanaged
+      - name: aws-route53
+      - name: unmanaged
       kubernetes:
         versions:
         - 1.9.1

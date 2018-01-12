@@ -6,8 +6,8 @@ spec:
   openstack:
     constraints:
       dnsProviders:
-      - aws-route53
-      - unmanaged
+      - name: aws-route53
+      - name: unmanaged
       floatingPools:
       - name: MY-FLOATING-POOL
       kubernetes:

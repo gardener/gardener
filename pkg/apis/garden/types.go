@@ -79,6 +79,8 @@ type AWSProfile struct {
 
 // AWSConstraints is an object containing constraints for certain values in the Shoot specification.
 type AWSConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
@@ -111,6 +113,8 @@ type AzureProfile struct {
 
 // AzureConstraints is an object containing constraints for certain values in the Shoot specification.
 type AzureConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
@@ -145,6 +149,8 @@ type GCPProfile struct {
 
 // GCPConstraints is an object containing constraints for certain values in the Shoot specification.
 type GCPConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
@@ -175,6 +181,8 @@ type OpenStackProfile struct {
 
 // OpenStackConstraints is an object containing constraints for certain values in the Shoot specification.
 type OpenStackConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint
 	// FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
 	FloatingPools []OpenStackFloatingPool
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
@@ -203,6 +211,12 @@ type OpenStackLoadBalancerProvider struct {
 type OpenStackMachineImage struct {
 	// Name is the name of the image.
 	Name string
+}
+
+// DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+type DNSProviderConstraint struct {
+	// Name is the name of the DNS provider.
+	Name DNSProvider
 }
 
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
