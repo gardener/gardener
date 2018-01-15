@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validation_test
+package helper_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestValidation(t *testing.T) {
+func TestHelper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Garden API Validation Suite")
+	RunSpecs(t, "Garden API Helper Suite")
 }
