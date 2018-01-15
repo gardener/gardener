@@ -16,6 +16,7 @@ package validation
 
 import (
 	"fmt"
+	"net"
 	"regexp"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -221,7 +222,7 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 		if machineType.GPUs < 0 {
 			allErrs = append(allErrs, field.Invalid(gpusPath, machineType.GPUs, "gpus cannot be negative"))
 		}
-		allErrs = append(allErrs, ValidateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 	}
 
 	return allErrs
@@ -320,8 +321,11 @@ func ValidateSeed(seed *garden.Seed) field.ErrorList {
 
 // ValidateSeedUpdate validates a Seed object before an update.
 func ValidateSeedUpdate(newSeed, oldSeed *garden.Seed) field.ErrorList {
-	allErrs := apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newSeed.ObjectMeta, &oldSeed.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
+
 	return allErrs
 }
 
@@ -329,13 +333,46 @@ func ValidateSeedUpdate(newSeed, oldSeed *garden.Seed) field.ErrorList {
 func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// seedFQDN := s.Info.Spec.Domain
-	// if len(seedFQDN) > 32 {
-	// 	return "", fmt.Errorf("Seed cluster's FQDN '%s' must not exceed 32 characters", seedFQDN)
-	// }
+	cloudPath := fldPath.Child("cloud")
+	if len(seedSpec.Cloud.Profile) == 0 {
+		allErrs = append(allErrs, field.Required(cloudPath.Child("profile"), "must provide a cloud profile name"))
+	}
+	if len(seedSpec.Cloud.Region) == 0 {
+		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a region"))
+	}
+
+	r, _ := regexp.Compile(`^(?:[a-zA-Z0-9\-]+\.)*[a-zA-Z0-9]+\.[a-zA-Z0-9]{2,6}$`)
+	if !r.MatchString(seedSpec.Domain) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("domain"), seedSpec.Domain, fmt.Sprintf("domain must match the regex %s", r)))
+	}
+	if len(seedSpec.Domain) > 32 {
+		allErrs = append(allErrs, field.TooLong(fldPath.Child("domain"), seedSpec.Domain, 32))
+	}
+
+	allErrs = append(allErrs, validateCrossReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
+
+	networksPath := fldPath.Child("networks")
+	allErrs = append(allErrs, validateCIDR(seedSpec.Networks.Nodes, networksPath.Child("nodes"))...)
+	allErrs = append(allErrs, validateCIDR(seedSpec.Networks.Pods, networksPath.Child("pods"))...)
+	allErrs = append(allErrs, validateCIDR(seedSpec.Networks.Services, networksPath.Child("services"))...)
 
 	return allErrs
 }
+
+func validateCIDR(cidr garden.CIDR, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	_, _, err := net.ParseCIDR(string(cidr))
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, cidr, err.Error()))
+	}
+
+	return allErrs
+}
+
+////////////////////////////////////////////////////
+//                     QUOTAS                     //
+////////////////////////////////////////////////////
 
 // ValidateQuota validates a Quota object.
 func ValidateQuota(quota *garden.Quota) field.ErrorList {
@@ -373,14 +410,14 @@ func ValidateQuotaSpec(quotaSpec *garden.QuotaSpec, fldPath *field.Path) field.E
 	metricsFldPath := fldPath.Child("metrics")
 	for k, v := range quotaSpec.Metrics {
 		keyPath := metricsFldPath.Key(string(k))
-		allErrs = append(allErrs, ValidateResourceQuantityValue(string(k), v, keyPath)...)
+		allErrs = append(allErrs, validateResourceQuantityValue(string(k), v, keyPath)...)
 	}
 
 	return allErrs
 }
 
-// ValidateResourceQuantityValue validates the value of a resource quantity.
-func ValidateResourceQuantityValue(key string, value resource.Quantity, fldPath *field.Path) field.ErrorList {
+// validateResourceQuantityValue validates the value of a resource quantity.
+func validateResourceQuantityValue(key string, value resource.Quantity, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if value.Cmp(resource.Quantity{}) < 0 {

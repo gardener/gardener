@@ -1021,6 +1021,111 @@ var _ = Describe("validation", func() {
 		})
 	})
 
+	Describe("#ValidateSeed", func() {
+		var seed *garden.Seed
+
+		BeforeEach(func() {
+			seed = &garden.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "seed-1",
+				},
+				Spec: garden.SeedSpec{
+					Cloud: garden.SeedCloud{
+						Profile: "aws",
+						Region:  "eu-west-1",
+					},
+					Domain: "my-seed-1.example.com",
+					SecretRef: garden.CrossReference{
+						Name:      "seed-aws",
+						Namespace: "garden",
+					},
+					Networks: garden.K8SNetworks{
+						Nodes:    garden.CIDR("10.250.0.0/16"),
+						Pods:     garden.CIDR("100.96.0.0/11"),
+						Services: garden.CIDR("100.64.0.0/13"),
+					},
+				},
+			}
+		})
+
+		It("should not return any errors", func() {
+			errorList := ValidateSeed(seed)
+
+			Expect(len(errorList)).To(Equal(0))
+		})
+
+		It("should forbid Seed resources with empty metadata", func() {
+			seed.ObjectMeta = metav1.ObjectMeta{}
+
+			errorList := ValidateSeed(seed)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.name"),
+			}))
+		})
+
+		It("should forbid cloud specification with empty or invalid keys", func() {
+			seed.Spec.Cloud = garden.SeedCloud{}
+			seed.Spec.Domain = "invalid-domain-name"
+			seed.Spec.SecretRef = garden.CrossReference{}
+			seed.Spec.Networks = garden.K8SNetworks{
+				Nodes:    garden.CIDR("invalid-cidr"),
+				Pods:     garden.CIDR("300.300.300.300/300"),
+				Services: garden.CIDR("invalid-cidr"),
+			}
+
+			errorList := ValidateSeed(seed)
+
+			Expect(len(errorList)).To(Equal(8))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.cloud.profile"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.cloud.region"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.domain"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.secretRef.name"),
+			}))
+			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.secretRef.namespace"),
+			}))
+			Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.networks.nodes"),
+			}))
+			Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.networks.pods"),
+			}))
+			Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.networks.services"),
+			}))
+		})
+
+		It("should forbid too long seed domain names", func() {
+			seed.Spec.Domain = "some.domain.name.which.is.too.long.to.be.valid.com"
+
+			errorList := ValidateSeed(seed)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeTooLong),
+				"Field": Equal("spec.domain"),
+			}))
+		})
+	})
+
 	Describe("#ValidatePrivateSecretBinding", func() {
 		var secretBinding *garden.PrivateSecretBinding
 
