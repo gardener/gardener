@@ -52,7 +52,7 @@ spec:
         - --in-cluster=false
         - --kubeconfig=/etc/kube-state-metrics/config/kubeconfig
         - --namespace=kube-system
-        - --collectors=daemonsets,deployments,jobs,limitranges,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
+        - --collectors=daemonsets,deployments,jobs,limitranges,nodes,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
         volumeMounts:
         - name: kubeconfig
           mountPath: /etc/kube-state-metrics/config
