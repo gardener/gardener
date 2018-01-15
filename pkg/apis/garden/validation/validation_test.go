@@ -1014,7 +1014,7 @@ var _ = Describe("validation", func() {
 
 					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
+						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.caBundle", fldPath)),
 					}))
 				})
@@ -1302,6 +1302,997 @@ var _ = Describe("validation", func() {
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("quotas[0].namespace"),
+			}))
+		})
+	})
+
+	Describe("#ValidateShoot", func() {
+		var (
+			shoot *garden.Shoot
+
+			hostedZoneID = "ABCDEF1234"
+			domain       = "my-cluster.example.com"
+
+			backup = &garden.Backup{
+				IntervalInSecond: 1,
+				Maximum:          2,
+			}
+			invalidBackup = &garden.Backup{
+				IntervalInSecond: 0,
+				Maximum:          0,
+			}
+			k8sNetworks = garden.K8SNetworks{
+				Nodes:    garden.CIDR("10.250.0.0/16"),
+				Pods:     garden.CIDR("100.96.0.0/11"),
+				Services: garden.CIDR("100.64.0.0/13"),
+			}
+			invalidK8sNetworks = garden.K8SNetworks{
+				Nodes:    garden.CIDR("invalid-cidr"),
+				Pods:     garden.CIDR("invalid-cidr"),
+				Services: garden.CIDR("invalid-cidr"),
+			}
+			worker = garden.Worker{
+				Name:          "worker-name",
+				MachineType:   "large",
+				AutoScalerMin: 1,
+				AutoScalerMax: 1,
+			}
+			invalidWorker = garden.Worker{
+				Name:          "",
+				MachineType:   "",
+				AutoScalerMin: -1,
+				AutoScalerMax: -2,
+			}
+
+			makeStringPointer = func(s string) *string {
+				ptr := s
+				return &ptr
+			}
+		)
+
+		BeforeEach(func() {
+			shoot = &garden.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot",
+					Namespace: "my-namespace",
+				},
+				Spec: garden.ShootSpec{
+					Addons: garden.Addons{
+						Kube2IAM: garden.Kube2IAM{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+							Roles: []garden.Kube2IAMRole{
+								{
+									Name:        "iam-role",
+									Description: "some-text",
+									Policy:      `{"some-valid": "json-document"}`,
+								},
+							},
+						},
+						KubernetesDashboard: garden.KubernetesDashboard{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+						},
+						ClusterAutoscaler: garden.ClusterAutoscaler{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+						},
+						NginxIngress: garden.NginxIngress{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+						},
+						Monocular: garden.Monocular{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+						},
+						KubeLego: garden.KubeLego{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+							Mail: "info@example.com",
+						},
+					},
+					Backup: backup,
+					Cloud: garden.Cloud{
+						Profile: "aws-profile",
+						Region:  "eu-west-1",
+						SecretBindingRef: corev1.ObjectReference{
+							Kind: "PrivateSecretBinding",
+							Name: "my-secret",
+						},
+						AWS: &garden.AWSCloud{
+							Networks: garden.AWSNetworks{
+								K8SNetworks: k8sNetworks,
+								Internal:    []garden.CIDR{"10.250.0.0/16"},
+								Public:      []garden.CIDR{"10.250.0.0/16"},
+								Workers:     []garden.CIDR{"10.250.0.0/16"},
+								VPC: garden.AWSVPC{
+									CIDR: garden.CIDR("10.250.0.0/16"),
+								},
+							},
+							Workers: []garden.AWSWorker{
+								{
+									Worker:     worker,
+									VolumeSize: "10Gi",
+									VolumeType: "default",
+								},
+							},
+							Zones: []string{"eu-west-1a"},
+						},
+					},
+					DNS: garden.DNS{
+						Provider:     garden.DNSAWSRoute53,
+						HostedZoneID: &hostedZoneID,
+						Domain:       &domain,
+					},
+					Kubernetes: garden.Kubernetes{
+						KubeAPIServer: garden.KubeAPIServerConfig{
+							OIDCConfig: &garden.OIDCConfig{
+								CABundle:       makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
+								ClientID:       makeStringPointer("client-id"),
+								GroupsClaim:    makeStringPointer("groups-claim"),
+								GroupsPrefix:   makeStringPointer("groups-prefix"),
+								IssuerURL:      makeStringPointer("https://some-endpoint.com"),
+								UsernameClaim:  makeStringPointer("user-claim"),
+								UsernamePrefix: makeStringPointer("user-prefix"),
+							},
+						},
+					},
+				},
+			}
+		})
+
+		It("should forbid empty Shoot resources", func() {
+			shoot := &garden.Shoot{
+				ObjectMeta: metav1.ObjectMeta{},
+				Spec:       garden.ShootSpec{},
+			}
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(3))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.name"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.namespace"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.cloud.aws/azure/gcp/openstack"),
+			}))
+		})
+
+		It("should forbid unsupported addon configuration", func() {
+			shoot.Spec.Addons.Kube2IAM.Roles = []garden.Kube2IAMRole{
+				{
+					Name:        "",
+					Description: "",
+					Policy:      "invalid-json",
+				},
+			}
+			shoot.Spec.Addons.KubeLego.Mail = "some-invalid-email"
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(4))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.addons.kube2iam.roles[0].name"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.addons.kube2iam.roles[0].description"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.addons.kube2iam.roles[0].policy"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.addons.kube-lego.mail"),
+			}))
+		})
+
+		It("should forbid unsupported cloud specification (provider independent)", func() {
+			shoot.Spec.Cloud.Profile = ""
+			shoot.Spec.Cloud.Region = ""
+			shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
+				Kind: "unsupported",
+				Name: "",
+			}
+			shoot.Spec.Cloud.Seed = makeStringPointer("")
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(5))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.cloud.profile"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.cloud.region"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.cloud.secretBindingRef.kind"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.cloud.secretBindingRef.name"),
+			}))
+			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.cloud.seed"),
+			}))
+		})
+
+		Context("AWS specific validation", func() {
+			var (
+				fldPath  = "aws"
+				awsCloud *garden.AWSCloud
+			)
+
+			BeforeEach(func() {
+				awsCloud = &garden.AWSCloud{
+					Networks: garden.AWSNetworks{
+						K8SNetworks: k8sNetworks,
+						Internal:    []garden.CIDR{"10.250.0.0/16"},
+						Public:      []garden.CIDR{"10.250.0.0/16"},
+						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						VPC: garden.AWSVPC{
+							CIDR: garden.CIDR("10.250.0.0/16"),
+						},
+					},
+					Workers: []garden.AWSWorker{
+						{
+							Worker:     worker,
+							VolumeSize: "10Gi",
+							VolumeType: "default",
+						},
+					},
+					Zones: []string{"eu-west-1a"},
+				}
+				shoot.Spec.Cloud.AWS = awsCloud
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid invalid backup configuration", func() {
+				shoot.Spec.Backup = invalidBackup
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.backup.intervalInSecond"),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.backup.maximum"),
+				}))
+			})
+
+			It("should forbid invalid network configuration", func() {
+				shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"one cidr", "another cidr"}
+				shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"invalid-cidr", "another cidr"}
+				shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
+				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = invalidK8sNetworks
+				shoot.Spec.Cloud.AWS.Networks.VPC = garden.AWSVPC{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(13))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.internal", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.internal[0]", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.internal[1]", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public", fldPath)),
+				}))
+				Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public[0]", fldPath)),
+				}))
+				Expect(*errorList[8]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public[1]", fldPath)),
+				}))
+				Expect(*errorList[9]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
+				}))
+				Expect(*errorList[10]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
+				}))
+				Expect(*errorList[11]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
+				}))
+				Expect(*errorList[12]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid VPC CIDRs", func() {
+				shoot.Spec.Cloud.AWS.Networks.VPC.CIDR = garden.CIDR("invalid")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.cidr", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker:     invalidWorker,
+						VolumeSize: "hugo",
+						VolumeType: "",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty zones list", func() {
+				shoot.Spec.Cloud.AWS.Zones = []string{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+		})
+
+		Context("Azure specific validation", func() {
+			var (
+				fldPath    = "azure"
+				azureCloud *garden.AzureCloud
+			)
+
+			BeforeEach(func() {
+				azureCloud = &garden.AzureCloud{
+					Networks: garden.AzureNetworks{
+						K8SNetworks: k8sNetworks,
+						Workers:     garden.CIDR("10.250.0.0/16"),
+						VNet: garden.AzureVNet{
+							CIDR: garden.CIDR("10.250.0.0/16"),
+						},
+					},
+					Workers: []garden.AzureWorker{
+						{
+							Worker:     worker,
+							VolumeSize: "10Gi",
+							VolumeType: "default",
+						},
+					},
+				}
+				shoot.Spec.Cloud.AWS = nil
+				shoot.Spec.Cloud.Azure = azureCloud
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid invalid backup configuration", func() {
+				shoot.Spec.Backup = invalidBackup
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.backup.intervalInSecond"),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.backup.maximum"),
+				}))
+			})
+
+			It("should forbid invalid resource group configuration", func() {
+				shoot.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.resourceGroup.name", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid network configuration", func() {
+				invalidCIDR := garden.CIDR("invalid-cidr")
+				shoot.Spec.Cloud.Azure.Networks.Public = &invalidCIDR
+				shoot.Spec.Cloud.Azure.Networks.Workers = invalidCIDR
+				shoot.Spec.Cloud.Azure.Networks.K8SNetworks = invalidK8sNetworks
+				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(6))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid VNet CIDRs", func() {
+				shoot.Spec.Cloud.Azure.Networks.VNet.CIDR = garden.CIDR("invalid")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     invalidWorker,
+						VolumeSize: "hugo",
+						VolumeType: "",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid workers with auto scaling configured", func() {
+				shoot.Spec.Cloud.Azure.Workers[0].AutoScalerMax = shoot.Spec.Cloud.Azure.Workers[0].AutoScalerMin + 1
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+			})
+		})
+
+		Context("GCP specific validation", func() {
+			var (
+				fldPath  = "gcp"
+				gcpCloud *garden.GCPCloud
+			)
+
+			BeforeEach(func() {
+				gcpCloud = &garden.GCPCloud{
+					Networks: garden.GCPNetworks{
+						K8SNetworks: k8sNetworks,
+						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						VPC: &garden.GCPVPC{
+							Name: "hugo",
+						},
+					},
+					Workers: []garden.GCPWorker{
+						{
+							Worker:     worker,
+							VolumeSize: "10Gi",
+							VolumeType: "default",
+						},
+					},
+					Zones: []string{"europe-west1-b"},
+				}
+				shoot.Spec.Cloud.AWS = nil
+				shoot.Spec.Cloud.GCP = gcpCloud
+				shoot.Spec.Backup = nil
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid providing backup configuration", func() {
+				shoot.Spec.Backup = &garden.Backup{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.backup"),
+				}))
+			})
+
+			It("should forbid invalid network configuration", func() {
+				shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
+				shoot.Spec.Cloud.GCP.Networks.K8SNetworks = invalidK8sNetworks
+				shoot.Spec.Cloud.GCP.Networks.VPC = &garden.GCPVPC{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.name", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+					{
+						Worker:     invalidWorker,
+						VolumeSize: "hugo",
+						VolumeType: "",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty zones list", func() {
+				shoot.Spec.Cloud.GCP.Zones = []string{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+		})
+
+		Context("OpenStack specific validation", func() {
+			var (
+				fldPath        = "openstack"
+				openStackCloud *garden.OpenStackCloud
+			)
+
+			BeforeEach(func() {
+				openStackCloud = &garden.OpenStackCloud{
+					FloatingPoolName:     "my-pool",
+					LoadBalancerProvider: "haproxy",
+					Networks: garden.OpenStackNetworks{
+						K8SNetworks: k8sNetworks,
+						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						Router: &garden.OpenStackRouter{
+							ID: "router1234",
+						},
+					},
+					Workers: []garden.OpenStackWorker{
+						{
+							Worker: worker,
+						},
+					},
+					Zones: []string{"europe-1a"},
+				}
+				shoot.Spec.Cloud.AWS = nil
+				shoot.Spec.Cloud.OpenStack = openStackCloud
+				shoot.Spec.Backup = nil
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid providing backup configuration", func() {
+				shoot.Spec.Backup = &garden.Backup{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.backup"),
+				}))
+			})
+
+			It("should forbid invalid floating pool name configuration", func() {
+				shoot.Spec.Cloud.OpenStack.FloatingPoolName = ""
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.floatingPoolName", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid load balancer provider configuration", func() {
+				shoot.Spec.Cloud.OpenStack.LoadBalancerProvider = ""
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.loadBalancerProvider", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid network configuration", func() {
+				shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
+				shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = invalidK8sNetworks
+				shoot.Spec.Cloud.OpenStack.Networks.Router = &garden.OpenStackRouter{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.router.id", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+					{
+						Worker: invalidWorker,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(5))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty zones list", func() {
+				shoot.Spec.Cloud.OpenStack.Zones = []string{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+		})
+
+		Context("dns section", func() {
+			It("should forbid unsupported dns providers", func() {
+				shoot.Spec.DNS.Provider = garden.DNSProvider("does-not-exist")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.dns.provider"),
+				}))
+			})
+
+			It("should forbid empty hosted zone ids or domains", func() {
+				shoot.Spec.DNS.HostedZoneID = makeStringPointer("")
+				shoot.Spec.DNS.Domain = makeStringPointer("")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.hostedZoneID"),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.domain"),
+				}))
+			})
+		})
+
+		It("should forbid unsupported kubernetes configuration", func() {
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.CABundle = makeStringPointer("")
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.ClientID = makeStringPointer("")
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsClaim = makeStringPointer("")
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.GroupsPrefix = makeStringPointer("")
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.IssuerURL = makeStringPointer("")
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernameClaim = makeStringPointer("")
+			shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.UsernamePrefix = makeStringPointer("")
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(7))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsClaim"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsPrefix"),
+			}))
+			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
+			}))
+			Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernameClaim"),
+			}))
+			Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
 			}))
 		})
 	})

@@ -38,3 +38,22 @@ func DetermineCloudProviderInProfile(spec garden.CloudProfileSpec) (garden.Cloud
 
 	return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack")
 }
+
+// DetermineCloudProviderInShoot takes a Shoot cloud object and returns the cloud provider this profile is used for.
+// If it is not able to determine it, an error will be returned.
+func DetermineCloudProviderInShoot(cloud garden.Cloud) (garden.CloudProvider, error) {
+	if cloud.AWS != nil && cloud.Azure == nil && cloud.GCP == nil && cloud.OpenStack == nil {
+		return garden.CloudProviderAWS, nil
+	}
+	if cloud.Azure != nil && cloud.GCP == nil && cloud.OpenStack == nil && cloud.AWS == nil {
+		return garden.CloudProviderAzure, nil
+	}
+	if cloud.GCP != nil && cloud.OpenStack == nil && cloud.AWS == nil && cloud.Azure == nil {
+		return garden.CloudProviderGCP, nil
+	}
+	if cloud.OpenStack != nil && cloud.AWS == nil && cloud.Azure == nil && cloud.GCP == nil {
+		return garden.CloudProviderOpenStack, nil
+	}
+
+	return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
+}
