@@ -47,8 +47,11 @@ func ValidateCloudProfile(cloudProfile *garden.CloudProfile) field.ErrorList {
 
 // ValidateCloudProfileUpdate validates a CloudProfile object before an update.
 func ValidateCloudProfileUpdate(newProfile, oldProfile *garden.CloudProfile) field.ErrorList {
-	allErrs := apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProfile.ObjectMeta, &oldProfile.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateCloudProfile(newProfile)...)
+
 	return allErrs
 }
 
@@ -387,33 +390,82 @@ func ValidateResourceQuantityValue(key string, value resource.Quantity, fldPath 
 	return allErrs
 }
 
+////////////////////////////////////////////////////
+//                  SECRET BINDINGS               //
+////////////////////////////////////////////////////
+
 // ValidatePrivateSecretBinding validates a PrivateSecretBinding object.
 func ValidatePrivateSecretBinding(binding *garden.PrivateSecretBinding) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateLocalReference(binding.SecretRef, field.NewPath("secretRef"))...)
+	for i, quota := range binding.Quotas {
+		allErrs = append(allErrs, validateCrossReference(quota, field.NewPath("quotas").Index(i))...)
+	}
+
 	return allErrs
 }
 
 // ValidatePrivateSecretBindingUpdate validates a PrivateSecretBinding object before an update.
 func ValidatePrivateSecretBindingUpdate(newBinding, oldBinding *garden.PrivateSecretBinding) field.ErrorList {
-	allErrs := apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidatePrivateSecretBinding(newBinding)...)
+
 	return allErrs
 }
 
 // ValidateCrossSecretBinding validates a CrossSecretBinding object.
 func ValidateCrossSecretBinding(binding *garden.CrossSecretBinding) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateCrossReference(binding.SecretRef, field.NewPath("secretRef"))...)
+	for i, quota := range binding.Quotas {
+		allErrs = append(allErrs, validateCrossReference(quota, field.NewPath("quotas").Index(i))...)
+	}
+
 	return allErrs
 }
 
 // ValidateCrossSecretBindingUpdate validates a CrossSecretBinding object before an update.
 func ValidateCrossSecretBindingUpdate(newBinding, oldBinding *garden.CrossSecretBinding) field.ErrorList {
-	allErrs := apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateCrossSecretBinding(newBinding)...)
+
 	return allErrs
 }
+
+func validateLocalReference(ref garden.LocalReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	}
+
+	return allErrs
+}
+
+func validateCrossReference(ref garden.CrossReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
+	}
+	if len(ref.Namespace) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+	}
+
+	return allErrs
+}
+
+////////////////////////////////////////////////////
+//                     SHOOTS                     //
+////////////////////////////////////////////////////
 
 // ValidateShoot validates a Shoot object.
 func ValidateShoot(shoot *garden.Shoot) field.ErrorList {
