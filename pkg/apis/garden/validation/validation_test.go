@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -1066,7 +1067,7 @@ var _ = Describe("validation", func() {
 			}))
 		})
 
-		It("should forbid cloud specification with empty or invalid keys", func() {
+		It("should forbid Seed specification with empty or invalid keys", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
 			seed.Spec.Domain = "invalid-domain-name"
 			seed.Spec.SecretRef = garden.CrossReference{}
@@ -1122,6 +1123,58 @@ var _ = Describe("validation", func() {
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeTooLong),
 				"Field": Equal("spec.domain"),
+			}))
+		})
+	})
+
+	Describe("#ValidateQuota", func() {
+		var quota *garden.Quota
+
+		BeforeEach(func() {
+			quota = &garden.Quota{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "quota-1",
+					Namespace: "my-namespace",
+				},
+				Spec: garden.QuotaSpec{
+					Scope: garden.QuotaScopeProject,
+					Metrics: corev1.ResourceList{
+						"cpus":   resource.MustParse("200"),
+						"memory": resource.MustParse("4000Gi"),
+					},
+				},
+			}
+		})
+
+		It("should not return any errors", func() {
+			errorList := ValidateQuota(quota)
+
+			Expect(len(errorList)).To(Equal(0))
+		})
+
+		It("should forbid Quota specification with empty or invalid keys", func() {
+			quota.ObjectMeta = metav1.ObjectMeta{}
+			quota.Spec.Scope = garden.QuotaScope("does-not-exist")
+			quota.Spec.Metrics["key"] = resource.MustParse("-100")
+
+			errorList := ValidateQuota(quota)
+
+			Expect(len(errorList)).To(Equal(4))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.name"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.namespace"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.scope"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.metrics[key]"),
 			}))
 		})
 	})
