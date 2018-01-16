@@ -29,6 +29,7 @@ import (
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedfinder "github.com/gardener/gardener/plugin/pkg/shoot/seedfinder"
+	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -135,6 +136,7 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 	shootquotavalidator.Register(o.Admission.Plugins)
 	shootseedfinder.Register(o.Admission.Plugins)
 	shootdnshostedzone.Register(o.Admission.Plugins)
+	shootvalidator.Register(o.Admission.Plugins)
 
 	// Initialize admission plugins
 	admissionInitializer := admissioninitializer.New(gardenInformerFactory, kubeInformerFactory)

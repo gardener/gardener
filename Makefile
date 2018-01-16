@@ -19,6 +19,7 @@ REPOSITORY       := $(VCS)/$(ORGANIZATION)/$(PROJECT)
 VERSION          := $(shell cat VERSION)
 LD_FLAGS         := "-w -X $(REPOSITORY)/pkg/version.Version=$(VERSION)"
 PACKAGES         := $(shell go list ./... | grep -vE '/vendor/|/pkg/client/garden|/pkg/apis')
+TEST_FOLDERS     := cmd pkg plugin
 LINT_FOLDERS     := $(shell echo $(PACKAGES) | sed "s|$(REPOSITORY)|.|g")
 REGISTRY         := eu.gcr.io/sap-cloud-platform-dev1
 IMAGE_REPOSITORY := $(REGISTRY)/garden/$(PROJECT)
@@ -152,11 +153,11 @@ lint:
 
 .PHONY: test
 test:
-	@ginkgo -r pkg
+	@ginkgo -r $(TEST_FOLDERS)
 
 .PHONY: test-cov
 test-cov:
-	@ginkgo -cover -r pkg
+	@ginkgo -cover -r $(TEST_FOLDERS)
 	@echo "mode: set" > gardener.coverprofile && find . -name "*.coverprofile" -type f | xargs cat | grep -v mode: | sort -r | awk '{if($$1 != last) {print $$0;last=$$1}}' >> gardener.coverprofile
 	@go tool cover -html=gardener.coverprofile -o=gardener.coverage.html
 	@rm gardener.coverprofile

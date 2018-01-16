@@ -31,7 +31,7 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /garden-apiserver
-        - --admission-control=ShootSeedFinder,ShootDNSHostedZone,ShootQuotaValidator
+        - --admission-control=ShootSeedFinder,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
         - --audit-log-maxsize=100
