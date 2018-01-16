@@ -1313,10 +1313,6 @@ var _ = Describe("validation", func() {
 			hostedZoneID = "ABCDEF1234"
 			domain       = "my-cluster.example.com"
 
-			backup = &garden.Backup{
-				IntervalInSecond: 1,
-				Maximum:          2,
-			}
 			invalidBackup = &garden.Backup{
 				IntervalInSecond: 0,
 				Maximum:          0,
@@ -1342,6 +1338,12 @@ var _ = Describe("validation", func() {
 				MachineType:   "",
 				AutoScalerMin: -1,
 				AutoScalerMax: -2,
+			}
+			invalidWorkerTooLongName = garden.Worker{
+				Name:          "worker-name-is-too-long",
+				MachineType:   "large",
+				AutoScalerMin: 1,
+				AutoScalerMax: 1,
 			}
 
 			makeStringPointer = func(s string) *string {
@@ -1397,7 +1399,10 @@ var _ = Describe("validation", func() {
 							Mail: "info@example.com",
 						},
 					},
-					Backup: backup,
+					Backup: &garden.Backup{
+						IntervalInSecond: 1,
+						Maximum:          2,
+					},
 					Cloud: garden.Cloud{
 						Profile: "aws-profile",
 						Region:  "eu-west-1",
@@ -1662,6 +1667,25 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should require a node network when specifying an existing VPC", func() {
+				shoot.Spec.Cloud.AWS.Networks.VPC = garden.AWSVPC{
+					ID: "aws-vpc-id",
+				}
+				shoot.Spec.Cloud.AWS.Networks.Nodes = ""
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+			})
+
 			It("should forbid an empty worker list", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{}
 
@@ -1713,6 +1737,18 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Cloud.AWS.Workers[0].Worker = invalidWorkerTooLongName
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
 
@@ -1778,7 +1814,7 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid invalid resource group configuration", func() {
+			It("should forbid specifying a resource group configuration", func() {
 				shoot.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{}
 
 				errorList := ValidateShoot(shoot)
@@ -1802,27 +1838,27 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
 				}))
 				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
 				}))
 				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public", fldPath)),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet", fldPath)),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
 				}))
 			})
 
@@ -1861,7 +1897,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
+				Expect(len(errorList)).To(Equal(8))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -1889,6 +1925,22 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+				Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+			})
+
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Cloud.Azure.Workers[0].Worker = invalidWorkerTooLongName
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
 
@@ -2044,6 +2096,18 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Cloud.GCP.Workers[0].Worker = invalidWorkerTooLongName
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
 			It("should forbid an empty zones list", func() {
 				shoot.Spec.Cloud.GCP.Zones = []string{}
 
@@ -2052,6 +2116,19 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid specifying more than one zone", func() {
+				shoot.Spec.Cloud.GCP.Zones = []string{"zone1", "zone2"}
+				shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"10.250.0.0/16", "10.250.0.0/16"}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
 				}))
 			})
@@ -2187,7 +2264,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(5))
+				Expect(len(errorList)).To(Equal(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
@@ -2207,6 +2284,26 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+			})
+
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+					{
+						Worker: invalidWorkerTooLongName,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
 
@@ -2250,6 +2347,32 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.domain"),
+				}))
+			})
+
+			It("should forbid monocular when provider equals 'unmanaged'", func() {
+				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
+				shoot.Spec.DNS.HostedZoneID = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.addons.monocular.enabled"),
+				}))
+			})
+
+			It("should forbid specifying a hosted zone id when provider equals 'unmanaged'", func() {
+				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
+				shoot.Spec.Addons.Monocular.Enabled = false
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.hostedZoneID"),
 				}))
 			})
 		})
