@@ -66,7 +66,7 @@ spec:
 {{- end }}
       containers:
       - name: prometheus
-        image: quay.io/prometheus/prometheus:v2.0.0
+        image: {{ index .Values.images "prometheus" }}
         imagePullPolicy: IfNotPresent
         args:
         - --config.file=/etc/prometheus/config/prometheus.yaml
@@ -123,7 +123,7 @@ spec:
         - mountPath: /etc/prometheus/seed
           name: prometheus-kubeconfig
       - name: prometheus-config-reloader
-        image: quay.io/coreos/configmap-reload:v0.0.1
+        image: {{ index .Values.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
         - -webhook-url=http://localhost:9090/-/reload
@@ -140,7 +140,7 @@ spec:
         - mountPath: /etc/prometheus/rules
           name: rules
       - name: vpn-seed
-        image: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/seed:v0.0.10
+        image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         env:
         - name: IDENTITY_FILE

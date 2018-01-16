@@ -72,7 +72,7 @@ data:
     - job_name: 'kube-kubelet'
 {{- include "prometheus.kubelet-shoot" (dict "Path" "metrics" "Namespace" .Release.Namespace "JobName" "kube-kubelet") }}
 
-{{- if semverCompare ">= 1.7.3" .Values.global.ShootKubeVersion.GitVersion }}
+{{- if semverCompare ">= 1.7.3" .Values.global.shootKubeVersion.gitVersion }}
 {{/* Check if the version of the Shoot's API server is > 1.7.3 */}}
     # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
     - job_name: 'cadvisor-shoot'

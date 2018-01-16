@@ -2,3 +2,6 @@ domain: cluster.local
 
 imagePullSecrets:
 - name: gcr-readonly
+
+images:
+  readvertiser: image-repository:image-tag

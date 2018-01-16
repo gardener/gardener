@@ -3,7 +3,7 @@ kind: Service
 metadata:
   name: kube-apiserver
   namespace: {{.Release.Namespace}}
-  {{if eq .Values.CloudProvider "aws" -}}
+  {{if eq .Values.cloudProvider "aws" -}}
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "3600"
   {{end -}}

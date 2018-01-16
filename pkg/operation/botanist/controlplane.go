@@ -48,20 +48,23 @@ func (b *Botanist) DeployETCDOperator() error {
 	if err != nil {
 		return err
 	}
-	imagePullSecrets := b.GetImagePullSecretsMap()
 
-	return b.ApplyChartSeed(
-		filepath.Join(common.ChartPath, "seed-controlplane", "charts", "etcd-operator"),
-		"etcd-operator",
-		b.Operation.Shoot.SeedNamespace,
-		nil,
-		map[string]interface{}{
+	var (
+		imagePullSecrets = b.GetImagePullSecretsMap()
+		defaultValues    = map[string]interface{}{
 			"imagePullSecrets": imagePullSecrets,
 			"namespace": map[string]interface{}{
 				"uid": namespace.ObjectMeta.UID,
 			},
-		},
+		}
 	)
+
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"etcd-operator": "etcd-operator"})
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "etcd-operator"), "etcd-operator", b.Operation.Shoot.SeedNamespace, nil, values)
 }
 
 // DeployKubeAPIServerService creates a Service of type 'LoadBalancer' in the Seed cluster which is used to expose the
@@ -74,7 +77,7 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 		b.Operation.Shoot.SeedNamespace,
 		nil,
 		map[string]interface{}{
-			"CloudProvider": b.Shoot.CloudProvider,
+			"cloudProvider": b.Shoot.CloudProvider,
 		},
 	)
 }
@@ -120,29 +123,24 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		return err
 	}
 
-	kubecfgSecret := b.Secrets["kubecfg"]
-	basicAuth := utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
-	imagePullSecrets := b.GetImagePullSecretsMap()
+	var (
+		kubecfgSecret    = b.Secrets["kubecfg"]
+		basicAuth        = utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
+		imagePullSecrets = b.GetImagePullSecretsMap()
 
-	values := map[string]interface{}{
-		"global": map[string]interface{}{
-			"ShootKubeVersion": map[string]interface{}{
-				"GitVersion": b.K8sShootClient.Version(),
-			},
-		},
-		"alertmanager": map[string]interface{}{
+		alertManagerConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"host":            alertManagerHost,
 			},
-		},
-		"grafana": map[string]interface{}{
+		}
+		grafanaConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"host":            grafanaHost,
 			},
-		},
-		"prometheus": map[string]interface{}{
+		}
+		prometheusConfig = map[string]interface{}{
 			"replicaCount": 1,
 			"networks": map[string]interface{}{
 				"pods":     b.Shoot.GetPodNetwork(),
@@ -162,7 +160,43 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 				"checksum/secret-vpn-ssh-keypair":           b.CheckSums["vpn-ssh-keypair"],
 			},
+		}
+		kubeStateMetricsSeedConfig  = map[string]interface{}{}
+		kubeStateMetricsShootConfig = map[string]interface{}{}
+	)
+
+	alertManager, err := b.InjectImages(alertManagerConfig, b.K8sSeedClient.Version(), map[string]string{"alertmanager": "alertmanager", "configmap-reloader": "configmap-reloader"})
+	if err != nil {
+		return err
+	}
+	grafana, err := b.InjectImages(grafanaConfig, b.K8sSeedClient.Version(), map[string]string{"grafana": "grafana", "busybox": "busybox", "grafana-watcher": "grafana-watcher"})
+	if err != nil {
+		return err
+	}
+	prometheus, err := b.InjectImages(prometheusConfig, b.K8sSeedClient.Version(), map[string]string{"prometheus": "prometheus", "configmap-reloader": "configmap-reloader", "vpn-seed": "vpn-seed"})
+	if err != nil {
+		return err
+	}
+	kubeStateMetricsSeed, err := b.InjectImages(kubeStateMetricsSeedConfig, b.K8sSeedClient.Version(), map[string]string{"kube-state-metrics": "kube-state-metrics"})
+	if err != nil {
+		return err
+	}
+	kubeStateMetricsShoot, err := b.InjectImages(kubeStateMetricsShootConfig, b.K8sSeedClient.Version(), map[string]string{"kube-state-metrics": "kube-state-metrics"})
+	if err != nil {
+		return err
+	}
+
+	values := map[string]interface{}{
+		"global": map[string]interface{}{
+			"shootKubeVersion": map[string]interface{}{
+				"gitVersion": b.K8sShootClient.Version(),
+			},
 		},
+		"alertmanager":             alertManager,
+		"grafana":                  grafana,
+		"prometheus":               prometheus,
+		"kube-state-metrics-seed":  kubeStateMetricsSeed,
+		"kube-state-metrics-shoot": kubeStateMetricsShoot,
 	}
 
 	alertingSMTPKeys := b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)

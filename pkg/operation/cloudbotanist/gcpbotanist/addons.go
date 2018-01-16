@@ -63,7 +63,7 @@ func (b *GCPBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, 
 // GenerateCalicoConfig - Not needed on GCP
 func (b *GCPBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"CloudProvider": b.Shoot.CloudProvider,
+		"cloudProvider": b.Shoot.CloudProvider,
 		"enabled":       false,
 	}, nil
 }

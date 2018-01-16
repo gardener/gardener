@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -88,8 +89,17 @@ func List(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.
 }
 
 // BootstrapClusters bootstraps the Seeds cluster and deploys various required manifests.
-func BootstrapClusters(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret) error {
+func BootstrapClusters(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
 	const chartName = "seed-bootstrap"
+
+	kubeStateMetricsImage, err := imageVector.FindImage("kube-state-metrics", k8sGardenClient.Version())
+	if err != nil {
+		return err
+	}
+	addonResizer, err := imageVector.FindImage("addon-resizer", k8sGardenClient.Version())
+	if err != nil {
+		return err
+	}
 
 	seedList, err := List(k8sGardenClient, k8sGardenInformers)
 	if err != nil {
@@ -111,7 +121,11 @@ func BootstrapClusters(k8sGardenClient kubernetes.Client, k8sGardenInformers gar
 			metav1.NamespaceSystem,
 			nil,
 			map[string]interface{}{
-				"CloudProvider": seed.CloudProvider,
+				"cloudProvider": seed.CloudProvider,
+				"images": map[string]interface{}{
+					"kube-state-metrics": kubeStateMetricsImage.String(),
+					"addon-resizer":      addonResizer.String(),
+				},
 			},
 		); err != nil {
 			return err

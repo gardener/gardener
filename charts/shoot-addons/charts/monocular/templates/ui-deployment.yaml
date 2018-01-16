@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: {{ .Chart.Name }}
-        image: "{{ .Values.ui.image.repository }}:{{ .Values.ui.image.tag }}"
+        image: {{ index .Values.images "monocular-ui" }}
         imagePullPolicy: {{ .Values.ui.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.ui.service.internalPort }}

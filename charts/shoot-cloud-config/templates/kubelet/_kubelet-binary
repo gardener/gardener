@@ -22,7 +22,7 @@
       -v /var/run:/var/run:rw \
       -v /var/lib/kubelet:/var/lib/kubelet:shared \
       -v /etc/os-release:/etc/os-release:ro \
-      k8s.gcr.io/hyperkube:v{{ required "kubernetes.version is required" .kubernetes.version }} \
+      {{ required "images.hyperkube is required" .images.hyperkube }}:v{{ required "kubernetes.version is required" .kubernetes.version }} \
       ./hyperkube kubelet \
     "$@"
 - path: /var/lib/kubelet/kubeconfig

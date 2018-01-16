@@ -1,1 +1,3 @@
 authorizedKeys: dummy-base64-encoded-authorized_keys
+images:
+  vpn-shoot: image-repository:image-tag

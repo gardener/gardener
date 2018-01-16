@@ -55,7 +55,10 @@ func (b *OpenStackBotanist) GenerateAdmissionControlConfig() (map[string]interfa
 
 // GenerateCalicoConfig generates values which are required to render the chart calico properly.
 func (b *OpenStackBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
-	return nil, nil
+	return map[string]interface{}{
+		"cloudProvider": b.Shoot.CloudProvider,
+		"enabled":       true,
+	}, nil
 }
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.

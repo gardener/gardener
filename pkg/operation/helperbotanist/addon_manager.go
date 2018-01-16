@@ -45,16 +45,21 @@ func (b *HelperBotanist) DeployKubeAddonManager() error {
 	}
 
 	defaultValues := map[string]interface{}{
-		"CloudConfigContent":       cloudConfig.Files,
-		"CoreAddonsContent":        coreAddons.Files,
-		"AdmissionControlsContent": admissionControls.Files,
-		"OptionalAddonsContent":    optionalAddons.Files,
-		"PodAnnotations": map[string]interface{}{
+		"cloudConfigContent":       cloudConfig.Files,
+		"coreAddonsContent":        coreAddons.Files,
+		"admissionControlsContent": admissionControls.Files,
+		"optionalAddonsContent":    optionalAddons.Files,
+		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-addon-manager": b.CheckSums[name],
 		},
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, defaultValues, nil)
+	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"kube-addon-manager": "kube-addon-manager"})
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, values, nil)
 }
 
 // generateCloudConfigChart renders the kube-addon-manager configuration for the cloud config user data.
@@ -78,6 +83,11 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		cloudProvider["config"] = cloudProviderConfig
 	}
 
+	hyperKube, err := b.ImageVector.FindImage("hyperkube", b.Shoot.Info.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+
 	config := map[string]interface{}{
 		"cloudProvider": cloudProvider,
 		"kubernetes": map[string]interface{}{
@@ -91,6 +101,9 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 			},
 			"nonMasqueradeCIDR": common.ComputeNonMasqueradeCIDR(serviceNetwork),
 			"version":           b.Shoot.Info.Spec.Kubernetes.Version,
+		},
+		"images": map[string]interface{}{
+			"hyperkube": hyperKube.String(),
 		},
 		"workers": userDataConfig.WorkerNames,
 	}
@@ -106,31 +119,54 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 // stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration contains
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
-	calico, err := b.CloudBotanist.GenerateCalicoConfig()
-	if err != nil {
-		return nil, err
-	}
-
 	var (
 		kubeProxySecret  = b.Secrets["kube-proxy"]
 		sshKeyPairSecret = b.Secrets["vpn-ssh-keypair"]
 		global           = map[string]interface{}{
-			"PodNetwork": b.Shoot.GetPodNetwork(),
-		}
-		kubeDNS = map[string]interface{}{
-			"ClusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
-		}
-		kubeProxy = map[string]interface{}{
-			"Kubeconfig":   kubeProxySecret.Data["kubeconfig"],
-			"FeatureGates": b.Shoot.Info.Spec.Kubernetes.KubeProxy.FeatureGates,
-		}
-		vpnShoot = map[string][]byte{
-			"authorizedKeys": sshKeyPairSecret.Data["id_rsa.pub"],
+			"podNetwork": b.Shoot.GetPodNetwork(),
 		}
 		rbac = map[string]interface{}{
 			"enabled": b.Shoot.CloudProvider == gardenv1beta1.CloudProviderGCP,
 		}
+
+		kubeDNSConfig = map[string]interface{}{
+			"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
+		}
+		kubeProxyConfig = map[string]interface{}{
+			"kubeconfig":   kubeProxySecret.Data["kubeconfig"],
+			"featureGates": b.Shoot.Info.Spec.Kubernetes.KubeProxy.FeatureGates,
+		}
+		vpnShootConfig = map[string]interface{}{
+			"authorizedKeys": sshKeyPairSecret.Data["id_rsa.pub"],
+		}
+		nodeExporterConfig = map[string]interface{}{}
 	)
+
+	calicoConfig, err := b.CloudBotanist.GenerateCalicoConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	calico, err := b.Botanist.InjectImages(calicoConfig, b.K8sShootClient.Version(), map[string]string{"calico-node": "calico-node", "calico-cni": "calico-cni"})
+	if err != nil {
+		return nil, err
+	}
+	kubeDNS, err := b.Botanist.InjectImages(kubeDNSConfig, b.K8sShootClient.Version(), map[string]string{"kube-dns": "kube-dns", "kube-dns-dnsmasq": "kube-dns-dnsmasq", "kube-dns-sidecar": "kube-dns-sidecar", "kube-dns-autoscaler": "cluster-proportional-autoscaler"})
+	if err != nil {
+		return nil, err
+	}
+	kubeProxy, err := b.Botanist.InjectImages(kubeProxyConfig, b.K8sShootClient.Version(), map[string]string{"hyperkube": "hyperkube"})
+	if err != nil {
+		return nil, err
+	}
+	vpnShoot, err := b.Botanist.InjectImages(vpnShootConfig, b.K8sShootClient.Version(), map[string]string{"vpn-shoot": "vpn-shoot"})
+	if err != nil {
+		return nil, err
+	}
+	nodeExporter, err := b.Botanist.InjectImages(nodeExporterConfig, b.K8sShootClient.Version(), map[string]string{"node-exporter": "node-exporter"})
+	if err != nil {
+		return nil, err
+	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":     global,
@@ -139,6 +175,9 @@ func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"vpn-shoot":  vpnShoot,
 		"calico":     calico,
 		"rbac":       rbac,
+		"monitoring": map[string]interface{}{
+			"node-exporter": nodeExporter,
+		},
 	})
 }
 
@@ -146,35 +185,68 @@ func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
-	clusterAutoscaler, err := b.CloudBotanist.GenerateClusterAutoscalerConfig()
+	clusterAutoscalerConfig, err := b.CloudBotanist.GenerateClusterAutoscalerConfig()
 	if err != nil {
 		return nil, err
 	}
-	heapster, err := b.Botanist.GenerateHeapsterConfig()
+	heapsterConfig, err := b.Botanist.GenerateHeapsterConfig()
 	if err != nil {
 		return nil, err
 	}
-	helmTiller, err := b.Botanist.GenerateHelmTillerConfig()
+	helmTillerConfig, err := b.Botanist.GenerateHelmTillerConfig()
 	if err != nil {
 		return nil, err
 	}
-	kubeLego, err := b.Botanist.GenerateKubeLegoConfig()
+	kubeLegoConfig, err := b.Botanist.GenerateKubeLegoConfig()
 	if err != nil {
 		return nil, err
 	}
-	kube2IAM, err := b.CloudBotanist.GenerateKube2IAMConfig()
+	kube2IAMConfig, err := b.CloudBotanist.GenerateKube2IAMConfig()
 	if err != nil {
 		return nil, err
 	}
-	kubernetesDashboard, err := b.Botanist.GenerateKubernetesDashboardConfig()
+	kubernetesDashboardConfig, err := b.Botanist.GenerateKubernetesDashboardConfig()
 	if err != nil {
 		return nil, err
 	}
-	monocular, err := b.Botanist.GenerateMonocularConfig()
+	monocularConfig, err := b.Botanist.GenerateMonocularConfig()
 	if err != nil {
 		return nil, err
 	}
-	nginxIngress, err := b.CloudBotanist.GenerateNginxIngressConfig()
+	nginxIngressConfig, err := b.CloudBotanist.GenerateNginxIngressConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	clusterAutoscaler, err := b.Botanist.InjectImages(clusterAutoscalerConfig, b.K8sShootClient.Version(), map[string]string{"hyperkube": "hyperkube", "cluster-autoscaler": "cluster-autoscaler"})
+	if err != nil {
+		return nil, err
+	}
+	heapster, err := b.Botanist.InjectImages(heapsterConfig, b.K8sShootClient.Version(), map[string]string{"heapster": "heapster", "heapster-nanny": "addon-resizer"})
+	if err != nil {
+		return nil, err
+	}
+	helmTiller, err := b.Botanist.InjectImages(helmTillerConfig, b.K8sShootClient.Version(), map[string]string{"helm-tiller": "helm-tiller"})
+	if err != nil {
+		return nil, err
+	}
+	kubeLego, err := b.Botanist.InjectImages(kubeLegoConfig, b.K8sShootClient.Version(), map[string]string{"kube-lego": "kube-lego"})
+	if err != nil {
+		return nil, err
+	}
+	kube2IAM, err := b.Botanist.InjectImages(kube2IAMConfig, b.K8sShootClient.Version(), map[string]string{"kube2iam": "kube2iam"})
+	if err != nil {
+		return nil, err
+	}
+	kubernetesDashboard, err := b.Botanist.InjectImages(kubernetesDashboardConfig, b.K8sShootClient.Version(), map[string]string{"kubernetes-dashboard": "kubernetes-dashboard"})
+	if err != nil {
+		return nil, err
+	}
+	monocular, err := b.Botanist.InjectImages(monocularConfig, b.K8sShootClient.Version(), map[string]string{"monocular-api": "monocular-api", "monocular-ui": "monocular-ui", "monocular-prerender": "monocular-prerender", "busybox": "busybox"})
+	if err != nil {
+		return nil, err
+	}
+	nginxIngress, err := b.Botanist.InjectImages(nginxIngressConfig, b.K8sShootClient.Version(), map[string]string{"nginx-ingress-controller": "nginx-ingress-controller", "ingress-default-backend": "ingress-default-backend", "vts-ingress-exporter": "vts-ingress-exporter"})
 	if err != nil {
 		return nil, err
 	}

@@ -19,8 +19,8 @@ spec:
         checksum/configmap-admission-controls: {{ include (print $.Template.BasePath "/admission-controls.yaml") . | sha256sum }}
         checksum/secret-core-addons: {{ include (print $.Template.BasePath "/core-addons.yaml") . | sha256sum }}
         checksum/secret-optional-addons: {{ include (print $.Template.BasePath "/optional-addons.yaml") . | sha256sum }}
-{{- if .Values.PodAnnotations }}
-{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
         app: kubernetes
@@ -29,7 +29,7 @@ spec:
       terminationGracePeriodSeconds: 5
       containers:
       - name: kube-addon-manager
-        image: k8s.gcr.io/kube-addon-manager:v6.5
+        image: {{ index .Values.images "kube-addon-manager" }}
         imagePullPolicy: IfNotPresent
         env:
         - name: ADDON_MANAGER_LEADER_ELECTION

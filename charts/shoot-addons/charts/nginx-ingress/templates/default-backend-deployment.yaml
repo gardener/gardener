@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: {{ template "name" . }}-{{ .Values.defaultBackend.name }}
-          image: "{{ .Values.defaultBackend.image.repository }}:{{ .Values.defaultBackend.image.tag }}"
+          image: {{ index .Values.images "ingress-default-backend" }}
           imagePullPolicy: "{{ .Values.defaultBackend.image.pullPolicy }}"
           args:
           {{- range $key, $value := .Values.defaultBackend.extraArgs }}

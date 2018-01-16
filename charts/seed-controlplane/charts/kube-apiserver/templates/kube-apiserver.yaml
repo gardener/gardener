@@ -17,8 +17,8 @@ spec:
       annotations:
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
-{{- if .Values.PodAnnotations }}
-{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
         app: kubernetes
@@ -29,17 +29,17 @@ spec:
         operator: Exists
       containers:
       - name: kube-apiserver
-        image: k8s.gcr.io/hyperkube:v{{.Values.KubernetesVersion}}
+        image: {{ index .Values.images "hyperkube" }}:v{{.Values.kubernetesVersion}}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
         - apiserver
-        - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,{{ if semverCompare "< 1.8" .Values.KubernetesVersion }}PersistentVolumeLabel,{{ end }}DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota
-        - --advertise-address={{.Values.AdvertiseAddress}}
+        - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,{{ if semverCompare "< 1.8" .Values.kubernetesVersion }}PersistentVolumeLabel,{{ end }}DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota
+        - --advertise-address={{.Values.advertiseAddress}}
         - --allow-privileged=true
         - --anonymous-auth=false
         - --apiserver-count=1
-        {{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+        {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
         - --audit-log-maxsize=100
@@ -48,7 +48,7 @@ spec:
         - --authorization-mode=RBAC
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
-        - --cloud-provider={{.Values.CloudProvider}}
+        - --cloud-provider={{.Values.cloudProvider}}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
         - --etcd-servers=http://etcd-main-client:2379
@@ -56,7 +56,7 @@ spec:
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --insecure-bind-address=127.0.0.1
         - --insecure-port=8080
-        {{- if semverCompare "< 1.7" .Values.KubernetesVersion }}
+        {{- if semverCompare "< 1.7" .Values.kubernetesVersion }}
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP,LegacyHostIP
         {{- else }}
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
@@ -75,15 +75,15 @@ spec:
         - --requestheader-username-headers=X-Remote-User
         {{- include "kube-apiserver.runtimeConfig" . | trimSuffix "," | indent 8 }}
         - --secure-port=443
-        - --service-cluster-ip-range={{.Values.ServiceNetwork}}
+        - --service-cluster-ip-range={{.Values.serviceNetwork}}
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --v=2
-{{- range $index, $param := $.Values.AdditionalParameters }}
+{{- range $index, $param := $.Values.additionalParameters }}
         - {{$param}}
 {{- end }}
         env:
-{{ toYaml .Values.Environment | indent 10 }}
+{{ toYaml .Values.environment | indent 10 }}
         livenessProbe:
           exec:
             command:
@@ -108,7 +108,7 @@ spec:
           requests:
             cpu: 200m
         volumeMounts:
-        {{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+        {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - name: audit-policy-config
           mountPath: /etc/kubernetes/audit
         {{- end }}
@@ -122,7 +122,7 @@ spec:
           mountPath: /srv/kubernetes/apiserver-kubelet
         - name: kube-aggregator
           mountPath: /srv/kubernetes/aggregator
-        {{- if .Values.OIDCConfig.caBundle }}
+        {{- if .Values.oidcConfig.caBundle }}
         - name: kube-apiserver-oidc-cabundle
           mountPath: /srv/kubernetes/oidc
         {{- end }}
@@ -136,13 +136,13 @@ spec:
         - name: ssl-certs-hosts
           mountPath: /usr/share/ca-certificates
           readOnly: true
-        {{- if ne .Values.CloudProvider "gce" }}
+        {{- if ne .Values.cloudProvider "gce" }}
         - name: usrsharessl
           mountPath: /usr/share/ssl
           readOnly: true
         {{- end }}
       - name: vpn-seed
-        image: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/seed:v0.0.10
+        image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         env:
         - name: IDENTITY_FILE
@@ -150,11 +150,11 @@ spec:
         - name: USER
           value: root
         - name: SERVICE_NETWORK
-          value: {{.Values.ServiceNetwork}}
+          value: {{.Values.serviceNetwork}}
         - name: POD_NETWORK
-          value: {{.Values.PodNetwork}}
+          value: {{.Values.podNetwork}}
         - name: NODE_NETWORK
-          value: {{.Values.NodeNetwork}}
+          value: {{.Values.nodeNetwork}}
         securityContext:
           privileged: true
           capabilities:
@@ -168,7 +168,7 @@ spec:
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
       volumes:
-      {{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+      {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
       - name: audit-policy-config
         configMap:
           name: audit-policy-config
@@ -188,7 +188,7 @@ spec:
       - name: kube-aggregator
         secret:
           secretName: kube-aggregator
-      {{- if .Values.OIDCConfig.caBundle }}
+      {{- if .Values.oidcConfig.caBundle }}
       - name: kube-apiserver-oidc-cabundle
         secret:
           secretName: kube-apiserver-oidc-cabundle
@@ -208,7 +208,7 @@ spec:
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
-      {{- if ne .Values.CloudProvider "gce" }}
+      {{- if ne .Values.cloudProvider "gce" }}
       - name: usrsharessl
         hostPath:
           path: /usr/share/ssl

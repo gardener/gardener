@@ -6,7 +6,7 @@ metadata:
   namespace: {{.Release.Namespace}}
 spec:
   size: 1
-  version: "3.2.6"
+  version: {{ regexFind "[0-9.]+$" (index .Values.images "etcd") }}
   pod:
     labels:
       role: {{.Values.role}}

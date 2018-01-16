@@ -23,7 +23,7 @@ spec:
       serviceAccountName: kube-dns-autoscaler
       containers:
       - name: autoscaler
-        image: k8s.gcr.io/cluster-proportional-autoscaler-amd64:1.1.2
+        image: {{ index .Values.images "kube-dns-autoscaler" }}
         resources:
             requests:
                 cpu: "20m"

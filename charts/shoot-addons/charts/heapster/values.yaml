@@ -1,9 +1,11 @@
 ## Default values for heapster.
 ##
+images:
+  heapster: image-repository:image-tag
+  heapster-nanny: image-repository:image-tag
+
 replicaCount: 1
 image:
-  repository: k8s.gcr.io/heapster
-  tag: v1.5.0
   pullPolicy: IfNotPresent
 ## Here labels can be added to the heapster deployment
 # labels:
@@ -50,8 +52,6 @@ command:
 resizer:
   enabled: true
   image:
-    repository: k8s.gcr.io/addon-resizer
-    tag: "2.1"
     pullPolicy: IfNotPresent
   resources:
     limits:

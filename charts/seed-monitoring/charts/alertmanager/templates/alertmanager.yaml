@@ -63,7 +63,7 @@ spec:
     spec:
       containers:
       - name: alertmanager
-        image: quay.io/prometheus/alertmanager:v0.9.1
+        image: {{ index .Values.images "alertmanager" }}
         imagePullPolicy: IfNotPresent
         command:
         - "sh"
@@ -118,7 +118,7 @@ spec:
           name: alertmanager-db
           subPath: alertmanager-
       - name: alertmanager-config-reloader
-        image: quay.io/coreos/configmap-reload:v0.0.1
+        image: {{ index .Values.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
         - -webhook-url=http://localhost:9093/-/reload

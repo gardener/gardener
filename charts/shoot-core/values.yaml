@@ -1,13 +1,30 @@
 global:
-  PodNetwork: 100.96.0.0/11
+  podNetwork: 100.96.0.0/11
 kube-proxy:
-  Kubeconfig: dummy-add-the-data-of-a-kubernetes-secret
+  kubeconfig: dummy-add-the-data-of-a-kubernetes-secret
+  featureGates: {}
+  images:
+    hyperkube: image-repository
 kube-dns:
-  ClusterDNS: 100.64.0.10
+  clusterDNS: 100.64.0.10
+  images:
+    kube-dns: image-repository:image-tag
+    kube-dns-dnsmasq: image-repository:image-tag
+    kube-dns-sidecar: image-repository:image-tag
+    kube-dns-autoscaler:  image-repository:image-tag
 vpn-shoot:
   authorizedKeys: dummy-base64-encoded-fwfewfewfewfew
+  images:
+    vpn-shoot: image-repository:image-tag
 calico:
-  CloudProvider: aws
   enabled: true
+  cloudProvider: aws
+  images:
+    calico-node: image-repository:image-tag
+    calico-cni:  image-repository:image-tag
 rbac:
   enabled: false
+monitoring:
+  node-exporter:
+    images:
+      node-exporter: image-repository:image-tag

@@ -9,9 +9,9 @@ awsRegion: us-east-1
 # Currently only `aws` & `spotinst` are supported
 cloudProvider: aws
 
-image:
-  repository: k8s.gcr.io/cluster-autoscaler
-  pullPolicy: IfNotPresent
+images:
+  hyperkube: image-repository
+  cluster-autoscaler: image-repository:image-tag
 
 tolerations: []
 

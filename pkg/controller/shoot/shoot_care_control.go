@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -89,14 +90,15 @@ type CareControlInterface interface {
 // implements the documented semantics for caring for Shoots. updater is the UpdaterInterface used
 // to update the status of Shoots. You should use an instance returned from NewDefaultCareControl() for any
 // scenario other than testing.
-func NewDefaultCareControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, updater UpdaterInterface) CareControlInterface {
-	return &defaultCareControl{k8sGardenClient, k8sGardenInformers, secrets, identity, config, updater}
+func NewDefaultCareControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, updater UpdaterInterface) CareControlInterface {
+	return &defaultCareControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, updater}
 }
 
 type defaultCareControl struct {
 	k8sGardenClient    kubernetes.Client
 	k8sGardenInformers gardeninformers.Interface
 	secrets            map[string]*corev1.Secret
+	imageVector        imagevector.ImageVector
 	identity           *gardenv1beta1.Gardener
 	config             *componentconfig.ControllerManagerConfiguration
 	updater            UpdaterInterface
@@ -115,7 +117,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	)
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
-	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets)
+	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 		return nil

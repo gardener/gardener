@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
       - name: kube-state-metrics
-        image: quay.io/coreos/kube-state-metrics:v1.1.0
+        image: {{ index .Values.images "kube-state-metrics" }}
         imagePullPolicy: IfNotPresent
         command:
         - /kube-state-metrics

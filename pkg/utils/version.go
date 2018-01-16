@@ -31,16 +31,7 @@ func CompareVersions(version1, operator, version2 string) (bool, error) {
 		v2 = normalizeVersion(version2)
 	)
 
-	constraint, err := semver.NewConstraint(fmt.Sprintf("%s %s", operator, v2))
-	if err != nil {
-		return false, err
-	}
-	version, _ := semver.NewVersion(v1)
-	if err != nil {
-		return false, err
-	}
-
-	return constraint.Check(version), nil
+	return CheckVersionMeetsConstraint(v1, fmt.Sprintf("%s %s", operator, v2))
 }
 
 func normalizeVersion(version string) string {
@@ -50,4 +41,18 @@ func normalizeVersion(version string) string {
 		v = v[:idx]
 	}
 	return v
+}
+
+// CheckVersionMeetsConstraint returns true if the <version> meets the <constraint>.
+func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
+	c, err := semver.NewConstraint(constraint)
+	if err != nil {
+		return false, err
+	}
+	v, _ := semver.NewVersion(version)
+	if err != nil {
+		return false, err
+	}
+
+	return c.Check(v), nil
 }

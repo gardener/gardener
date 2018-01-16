@@ -1,0 +1,2 @@
+images:
+  kube-state-metrics: image-repository:image-tag

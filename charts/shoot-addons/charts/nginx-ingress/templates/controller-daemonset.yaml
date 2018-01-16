@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
         - name: {{ template "name" . }}-{{ .Values.controller.name }}
-          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}"
+          image: {{ index .Values.images "nginx-ingress-controller" }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args:
             - /nginx-ingress-controller
@@ -104,7 +104,7 @@ spec:
 {{ toYaml .Values.controller.resources | indent 12 }}
       {{- if .Values.controller.stats.enabled }}
         - name: {{ template "name" . }}-{{ .Values.statsExporter.name }}
-          image: "{{ .Values.statsExporter.image.repository }}:{{ .Values.statsExporter.image.tag }}"
+          image: {{ index .Values.images "vts-ingress-exporter" }}
           imagePullPolicy: "{{ .Values.statsExporter.image.pullPolicy }}"
           env:
             - name: METRICS_ADDR

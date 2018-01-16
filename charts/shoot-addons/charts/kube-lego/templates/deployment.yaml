@@ -28,7 +28,7 @@ spec:
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
       containers:
         - name: {{ template "name" . }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ index .Values.images "kube-lego" }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
             - name: LEGO_NAMESPACE

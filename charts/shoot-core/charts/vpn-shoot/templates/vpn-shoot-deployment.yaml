@@ -25,7 +25,7 @@ spec:
         operator: Exists
       containers:
       - name: vpn-shoot
-        image: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/shoot:0.0.9
+        image: {{ index .Values.images "vpn-shoot" }}
         imagePullPolicy: IfNotPresent
         securityContext:
           privileged: true

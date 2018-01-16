@@ -1,0 +1,2 @@
+images:
+  node-exporter: image-repository:image-tag

@@ -1,0 +1,137 @@
+# List of all container images which are deployed by the Gardener.
+# In case an image can only be used for a specific Kubernetes version, the
+# entry must have a key "versions" whose value describe for which versions
+# the respective tag can be used. The syntax must be as described in the
+# Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
+images:
+# Seed controlplane
+- name: etcd-operator
+  repository: eu.gcr.io/sap-cloud-platform-dev1/etcd-operator
+  tag: v0.6.5
+- name: etcd
+  repository: quay.io/coreos/etcd
+  tag: v3.2.14
+- name: hyperkube
+  repository: k8s.gcr.io/hyperkube
+- name: kube-addon-manager
+  repository: k8s.gcr.io/kube-addon-manager
+  tag: v6.5
+- name: vpn-seed
+  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/seed
+  tag: v0.0.10
+- name: auto-node-repair
+  repository: eu.gcr.io/sap-cloud-platform-dev1/auto-node-repair
+  tag: v4
+- name: aws-lb-readvertiser
+  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/garden-readvertiser
+  tag: v0.0.2
+
+# Monitoring
+- name: alertmanager
+  repository: quay.io/prometheus/alertmanager
+  tag: v0.9.1
+- name: prometheus
+  repository: quay.io/prometheus/prometheus
+  tag: v2.0.0
+- name: configmap-reloader
+  repository: quay.io/coreos/configmap-reload
+  tag: v0.0.1
+- name: kube-state-metrics
+  repository: quay.io/coreos/kube-state-metrics
+  tag: v1.1.0
+- name: node-exporter
+  repository: quay.io/prometheus/node-exporter
+  tag: v0.14.0
+- name: grafana
+  repository: grafana/grafana
+  tag: "4.1.1"
+- name: grafana-watcher
+  repository: quay.io/coreos/grafana-watcher
+  tag: v0.0.4
+
+# Shoot core addons
+- name: calico-node
+  repository: quay.io/calico/node
+  tag: v2.6.5
+  versions: ">= 1.7"
+- name: calico-cni
+  repository: quay.io/calico/cni
+  tag: v1.11.2
+  versions: ">= 1.7"
+- name: calico-node
+  repository: quay.io/calico/node
+  tag: v2.4.1
+  versions: "= 1.6"
+- name: calico-cni
+  repository: quay.io/calico/cni
+  tag: v1.11.0
+  versions: "= 1.6"
+- name: vpn-shoot
+  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/shoot
+  tag: "0.0.9"
+- name: kube-dns
+  repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
+  tag: "1.14.7"
+- name: kube-dns-dnsmasq
+  repository: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
+  tag: "1.14.5"
+- name: kube-dns-sidecar
+  repository: k8s.gcr.io/k8s-dns-sidecar-amd64
+  tag: "1.14.5"
+- name: cluster-proportional-autoscaler
+  repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
+  tag: "1.1.2"
+
+# Shoot optional addons
+- name: heapster
+  repository: k8s.gcr.io/heapster
+  tag: v1.5.0
+- name: addon-resizer
+  repository: k8s.gcr.io/addon-resizer
+  tag: "1.0"
+- name: kubernetes-dashboard
+  repository: k8s.gcr.io/kubernetes-dashboard-amd64
+  tag: v1.8.2
+- name: cluster-autoscaler
+  repository: k8s.gcr.io/cluster-autoscaler
+  tag: v1.1.0
+  versions: ">= 1.8"
+- name: cluster-autoscaler
+  repository: k8s.gcr.io/cluster-autoscaler
+  tag: v0.6.2
+  versions: ">= 1.6, < 1.8"
+- name: kube-lego
+  repository: jetstack/kube-lego
+  tag: "0.1.5"
+- name: kube2iam
+  repository: jtblin/kube2iam
+  tag: "0.9.0"
+- name: nginx-ingress-controller
+  repository: k8s.gcr.io/nginx-ingress-controller
+  tag: 0.9.0-beta.15
+- name: ingress-default-backend
+  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/k8s-backend
+  tag: v0.0.2
+- name: vts-ingress-exporter
+  repository: quay.io/cy-play/vts-nginx-exporter
+  tag: v0.0.3
+- name: helm-tiller
+  repository: gcr.io/kubernetes-helm/tiller
+  tag: v2.7.2
+- name: monocular-api
+  repository: bitnami/monocular-api
+  tag: v0.3.1
+- name: monocular-ui
+  repository: bitnami/monocular-ui
+  tag: v0.3.1
+- name: monocular-prerender
+  repository: migmartri/prerender
+  tag: latest
+
+# Miscellaenous
+- name: terraformer
+  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/garden-terraformer
+  tag: v0.10.8-4
+- name: busybox
+  repository: busybox
+  tag: "1.27"

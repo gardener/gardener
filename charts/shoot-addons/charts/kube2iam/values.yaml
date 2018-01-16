@@ -9,9 +9,10 @@ host:
   iptables: true
   interface: cali+
 
+images:
+  kube2iam: image-repository:image-tag
+
 image:
-  repository: jtblin/kube2iam
-  tag: 0.9.0
   pullPolicy: IfNotPresent
 
 ## Node labels for pod assignment

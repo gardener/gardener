@@ -18,9 +18,10 @@ config:
 
 ## kube-lego image
 ##
+images:
+  kube-lego: image-repository:image-tag
+
 image:
-  repository: jetstack/kube-lego
-  tag: 0.1.5
   pullPolicy: IfNotPresent
 
 ## Node labels for pod assignment

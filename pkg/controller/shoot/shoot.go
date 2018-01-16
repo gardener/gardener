@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/version"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -44,6 +45,7 @@ type Controller struct {
 	careControl                CareControlInterface
 	recorder                   record.EventRecorder
 	secrets                    map[string]*corev1.Secret
+	imageVector                imagevector.ImageVector
 	shootLister                gardenlisters.ShootLister
 	shootQueue                 workqueue.RateLimitingInterface
 	shootCareQueue             workqueue.RateLimitingInterface
@@ -70,14 +72,20 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 		panic(err)
 	}
 
+	imageVector, err := imagevector.ReadImageVector()
+	if err != nil {
+		panic(err)
+	}
+
 	shootController := &Controller{
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: k8sGardenInformers,
 		config:             config,
-		control:            NewDefaultControl(k8sGardenClient, k8sGardenInformers, secrets, identity, config, gardenerNamespace, recorder, shootUpdater),
-		careControl:        NewDefaultCareControl(k8sGardenClient, k8sGardenInformers, secrets, identity, config, shootUpdater),
+		control:            NewDefaultControl(k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, gardenerNamespace, recorder, shootUpdater),
+		careControl:        NewDefaultCareControl(k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, shootUpdater),
 		recorder:           recorder,
 		secrets:            secrets,
+		imageVector:        imageVector,
 		shootLister:        shootLister,
 		shootQueue:         workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
 		shootCareQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
@@ -128,7 +136,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		return
 	}
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
-	if err := seed.BootstrapClusters(c.k8sGardenClient, c.k8sGardenInformers, c.secrets); err != nil {
+	if err := seed.BootstrapClusters(c.k8sGardenClient, c.k8sGardenInformers, c.secrets, c.imageVector); err != nil {
 		logger.Logger.Errorf("Failed to bootstrap the Seed clusters: %s", err.Error())
 		return
 	}

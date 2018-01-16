@@ -1,18 +1,18 @@
-CloudProvider: aws
-KubernetesVersion: 1.8.5
-AdvertiseAddress: 127.0.0.1
-ServiceNetwork: 10.0.0.0/24
-PodNetwork: 192.168.0.0/16
-NodeNetwork: 172.16.0.0/20
-Environment: []
-AdditionalParameters: []
-PodAnnotations: {}
-FeatureGates: {}
+cloudProvider: aws
+kubernetesVersion: 1.8.5
+advertiseAddress: 127.0.0.1
+serviceNetwork: 10.0.0.0/24
+podNetwork: 192.168.0.0/16
+nodeNetwork: 172.16.0.0/20
+environment: []
+additionalParameters: []
+podAnnotations: {}
+featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false
-RuntimeConfig: {}
+runtimeConfig: {}
   # autoscaling/v2alpha1: true
-OIDCConfig: {}
+oidcConfig: {}
   # caBundle: |
   #   -----BEGIN CERTIFICATE-----
   #   ...
@@ -23,3 +23,6 @@ OIDCConfig: {}
   # issuerURL: http://localhost
   # usernameClaim: user
   # usernamePrefix: prefix
+images:
+  hyperkube: image-repository
+  vpn-seed: image-repository:image-tag

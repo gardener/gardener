@@ -1,42 +1,42 @@
 {{- define "kube-apiserver.featureGates" }}
-{{- if .Values.FeatureGates }}
-- --feature-gates={{ range $feature, $enabled := .Values.FeatureGates }}{{ $feature }}={{ $enabled }},{{ end }}
+{{- if .Values.featureGates }}
+- --feature-gates={{ range $feature, $enabled := .Values.featureGates }}{{ $feature }}={{ $enabled }},{{ end }}
 {{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.runtimeConfig" }}
-{{- if semverCompare "<= 1.7" .Values.KubernetesVersion }}
-- --runtime-config=batch/v2alpha1=true,{{ if .Values.RuntimeConfig }}{{ range $config, $enabled := .Values.RuntimeConfig }}{{ $config }}={{ $enabled }},{{ end }}{{ end }}
+{{- if semverCompare "<= 1.7" .Values.kubernetesVersion }}
+- --runtime-config=batch/v2alpha1=true,{{ if .Values.runtimeConfig }}{{ range $config, $enabled := .Values.runtimeConfig }}{{ $config }}={{ $enabled }},{{ end }}{{ end }}
 {{- else }}
-{{- if .Values.RuntimeConfig }}
-- --runtime-config={{ range $config, $enabled := .Values.RuntimeConfig }}{{ $config }}={{ $enabled }},{{ end }}
+{{- if .Values.runtimeConfig }}
+- --runtime-config={{ range $config, $enabled := .Values.runtimeConfig }}{{ $config }}={{ $enabled }},{{ end }}
 {{- end }}
 {{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.oidcConfig" }}
-{{- if .Values.OIDCConfig }}
-{{- if .Values.OIDCConfig.issuerURL }}
-- --oidc-issuer-url={{ .Values.OIDCConfig.issuerURL }}
+{{- if .Values.oidcConfig }}
+{{- if .Values.oidcConfig.issuerURL }}
+- --oidc-issuer-url={{ .Values.oidcConfig.issuerURL }}
 {{- end }}
-{{- if .Values.OIDCConfig.clientID }}
-- --oidc-client-id={{ .Values.OIDCConfig.clientID }}
+{{- if .Values.oidcConfig.clientID }}
+- --oidc-client-id={{ .Values.oidcConfig.clientID }}
 {{- end }}
-{{- if .Values.OIDCConfig.caBundle }}
+{{- if .Values.oidcConfig.caBundle }}
 - --oidc-ca-file=/srv/kubernetes/oidc/ca.crt
 {{- end }}
-{{- if .Values.OIDCConfig.usernameClaim }}
-- --oidc-username-claim={{ .Values.OIDCConfig.usernameClaim }}
+{{- if .Values.oidcConfig.usernameClaim }}
+- --oidc-username-claim={{ .Values.oidcConfig.usernameClaim }}
 {{- end }}
-{{- if .Values.OIDCConfig.groupsClaim }}
-- --oidc-groups-claim={{ .Values.OIDCConfig.groupsClaim }}
+{{- if .Values.oidcConfig.groupsClaim }}
+- --oidc-groups-claim={{ .Values.oidcConfig.groupsClaim }}
 {{- end }}
-{{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
-{{- if .Values.OIDCConfig.usernamePrefix }}
-- --oidc-username-prefix={{ .Values.OIDCConfig.usernamePrefix }}
+{{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
+{{- if .Values.oidcConfig.usernamePrefix }}
+- --oidc-username-prefix={{ .Values.oidcConfig.usernamePrefix }}
 {{- end }}
-{{- if .Values.OIDCConfig.groupsPrefix }}
-- --oidc-groups-prefix={{ .Values.OIDCConfig.groupsPrefix }}
+{{- if .Values.oidcConfig.groupsPrefix }}
+- --oidc-groups-prefix={{ .Values.oidcConfig.groupsPrefix }}
 {{- end }}
 {{- end }}
 {{- end }}

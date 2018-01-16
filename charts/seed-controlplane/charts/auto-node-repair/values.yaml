@@ -5,9 +5,10 @@ imagePullSecrets:
 
 autoscalingGroups: []
 
+images:
+  auto-node-repair: image-repository:image-tag
+
 image:
-  repository: eu.gcr.io/sap-cloud-platform-dev1/auto-node-repair
-  tag: v4
   pullPolicy: Always
 
 extraArgs:

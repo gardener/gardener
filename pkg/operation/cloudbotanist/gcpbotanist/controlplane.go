@@ -37,7 +37,7 @@ node-tags = ` + b.Shoot.SeedNamespace, nil
 // Deployment manifest of the kube-apiserver properly.
 func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"AdditionalParameters": []string{
+		"additionalParameters": []string{
 			fmt.Sprintf("--google-json-key=/srv/cloudprovider/%s", ServiceAccountJSON),
 		},
 	}, nil
@@ -47,7 +47,7 @@ func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *GCPBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"AdditionalParameters": []string{
+		"additionalParameters": []string{
 			fmt.Sprintf("--google-json-key=/srv/cloudprovider/%s", ServiceAccountJSON),
 		},
 	}, nil

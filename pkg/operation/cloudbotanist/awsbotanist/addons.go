@@ -222,7 +222,7 @@ func (b *AWSBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, 
 // GenerateCalicoConfig generates values which are required to render the chart calico properly.
 func (b *AWSBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"CloudProvider": b.Shoot.CloudProvider,
+		"cloudProvider": b.Shoot.CloudProvider,
 		"enabled":       true,
 	}, nil
 }

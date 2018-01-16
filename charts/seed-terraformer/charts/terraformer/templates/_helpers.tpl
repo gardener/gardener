@@ -3,7 +3,7 @@ restartPolicy: Never
 activeDeadlineSeconds: 1800
 containers:
 - name: terraform
-  image: eu.gcr.io/sap-cloud-platform-dev1/garden/garden-terraformer:{{.Values.imageTag}}
+  image: {{ index .Values.images "terraformer" }}
   imagePullPolicy: IfNotPresent
   command:
   - sh

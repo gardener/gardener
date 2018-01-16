@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -32,6 +33,7 @@ type Operation struct {
 	GardenerInfo        *gardenv1beta1.Gardener
 	Secrets             map[string]*corev1.Secret
 	CheckSums           map[string]string
+	ImageVector         imagevector.ImageVector
 	Garden              *garden.Garden
 	Seed                *seed.Seed
 	Shoot               *shoot.Shoot

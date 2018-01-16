@@ -70,7 +70,7 @@ spec:
     spec:
       containers:
       - name: etcd-container
-        image: quay.io/coreos/etcd:v3.2
+        image: {{ index .Values.images "etcd" }}
         imagePullPolicy: IfNotPresent
         command:
         - "/usr/local/bin/etcd"

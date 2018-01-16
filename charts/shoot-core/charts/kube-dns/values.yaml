@@ -1,1 +1,6 @@
-ClusterDNS: 100.64.0.10
+clusterDNS: 100.64.0.10
+images:
+  kube-dns: image-repository:image-tag
+  kube-dns-dnsmasq: image-repository:image-tag
+  kube-dns-sidecar: image-repository:image-tag
+  kube-dns-autoscaler:  image-repository:image-tag

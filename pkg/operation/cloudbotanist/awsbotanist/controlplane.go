@@ -53,7 +53,7 @@ KubernetesClusterID = ` + b.Shoot.SeedNamespace, nil
 // Deployment manifest of the kube-apiserver properly.
 func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"Environment": getAWSCredentialsEnvironment(),
+		"environment": getAWSCredentialsEnvironment(),
 	}, nil
 }
 
@@ -61,8 +61,8 @@ func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *AWSBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"ConfigureRoutes": false,
-		"Environment":     getAWSCredentialsEnvironment(),
+		"configureRoutes": false,
+		"environment":     getAWSCredentialsEnvironment(),
 	}, nil
 }
 
@@ -97,13 +97,12 @@ func (b *AWSBotanist) DeployAutoNodeRepair() error {
 		},
 	}
 
-	return b.ApplyChartSeed(
-		filepath.Join(common.ChartPath, "seed-controlplane", "charts", name),
-		name,
-		b.Shoot.SeedNamespace,
-		defaultValues,
-		nil,
-	)
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"auto-node-repair": "auto-node-repair"})
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, values, nil)
 }
 
 // maps are mutable, so it's safer to create a new instance

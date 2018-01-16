@@ -1,11 +1,14 @@
 ## nginx configuration
 ## Ref: https://github.com/kubernetes/ingress/blob/master/controllers/nginx/configuration.md
 ##
+images:
+  nginx-ingress-controller: image-repository:image-tag
+  ingress-default-backend: image-repository:image-tag
+  vts-ingress-exporter: image-repository:image-tag
+
 controller:
   name: controller
   image:
-    repository: k8s.gcr.io/nginx-ingress-controller
-    tag: "0.9.0-beta.15"
     pullPolicy: IfNotPresent
 
   config:
@@ -134,8 +137,6 @@ defaultBackend:
 
   name: nginx-ingress-k8s-backend
   image:
-    repository: eu.gcr.io/sap-cloud-platform-dev1/garden/k8s-backend
-    tag: "v0.0.2"
     pullPolicy: IfNotPresent
 
   extraArgs: {}
@@ -184,8 +185,6 @@ rbac:
 statsExporter:
   name: stats-exporter
   image:
-    repository: quay.io/cy-play/vts-nginx-exporter
-    tag: v0.0.3
     pullPolicy: IfNotPresent
 
   endpoint: /metrics

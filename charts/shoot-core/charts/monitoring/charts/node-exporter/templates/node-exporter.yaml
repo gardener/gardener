@@ -44,7 +44,7 @@ spec:
       hostPID: true
       containers:
       - name: node-exporter
-        image: quay.io/prometheus/node-exporter:v0.14.0
+        image: {{ index .Values.images "node-exporter" }}
         imagePullPolicy: IfNotPresent
         command:
         - /bin/node_exporter

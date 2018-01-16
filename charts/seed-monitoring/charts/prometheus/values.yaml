@@ -6,8 +6,13 @@
 # imagePullSecrets:
 # - name: secret
 # global:
-#   ShootKubeVersion:
-#     GitVersion: v1.6.4
+#   shootKubeVersion:
+#     gitVersion: v1.6.4
+
+images:
+  prometheus: image-repository:image-tag
+  configmap-reloader: image-repository:image-tag
+  vpn-seed: image-repository:image-tag
 
 ingress:
   host: p.seed-1.example.com

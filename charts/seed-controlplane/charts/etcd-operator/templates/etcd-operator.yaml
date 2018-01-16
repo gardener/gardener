@@ -60,7 +60,7 @@ spec:
       serviceAccountName: etcd-operator
       containers:
       - name: etcd-operator
-        image: eu.gcr.io/sap-cloud-platform-dev1/etcd-operator:v0.6.5
+        image: {{ index .Values.images "etcd-operator" }}
         env:
         - name: MY_POD_NAMESPACE
           valueFrom:

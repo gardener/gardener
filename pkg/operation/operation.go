@@ -26,13 +26,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // New creates a new operation object.
-func New(shoot *gardenv1beta1.Shoot, shootLogger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret) (*Operation, error) {
+func New(shoot *gardenv1beta1.Shoot, shootLogger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
 	secrets := make(map[string]*corev1.Secret)
 	for k, v := range secretsMap {
 		secrets[k] = v
@@ -52,6 +53,7 @@ func New(shoot *gardenv1beta1.Shoot, shootLogger *logrus.Entry, k8sGardenClient 
 		Logger:              shootLogger,
 		GardenerInfo:        gardenerInfo,
 		Secrets:             secrets,
+		ImageVector:         imageVector,
 		CheckSums:           make(map[string]string),
 		Garden:              gardenObj,
 		Seed:                seedObj,
@@ -190,4 +192,28 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}
+}
+
+// InjectImages injects images from the image vector into the provided <values> map.
+func (o *Operation) InjectImages(values map[string]interface{}, version string, imageMap map[string]string) (map[string]interface{}, error) {
+	if values == nil {
+		return nil, nil
+	}
+
+	copy := make(map[string]interface{})
+	for k, v := range values {
+		copy[k] = v
+	}
+
+	i := make(map[string]interface{})
+	for keyInChart, imageName := range imageMap {
+		image, err := o.ImageVector.FindImage(imageName, version)
+		if err != nil {
+			return nil, err
+		}
+		i[keyInChart] = image.String()
+	}
+
+	copy["images"] = i
+	return copy, nil
 }

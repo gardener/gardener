@@ -28,12 +28,12 @@ spec:
       hostNetwork: true
       containers:
       - name: kube-proxy
-        image: k8s.gcr.io/hyperkube:{{ .Capabilities.KubeVersion }}
+        image: {{ index .Values.images "hyperkube" }}:{{ .Capabilities.KubeVersion }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
         - proxy
-        - --cluster-cidr={{ .Values.global.PodNetwork }}
+        - --cluster-cidr={{ .Values.global.podNetwork }}
         - --conntrack-max-per-core=131072
         - --kubeconfig=/var/lib/kube-proxy/kubeconfig
         {{- include "kube-proxy.featureGates" . | trimSuffix "," | indent 8 }}

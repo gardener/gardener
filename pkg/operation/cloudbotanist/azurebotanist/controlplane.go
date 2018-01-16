@@ -70,7 +70,7 @@ func (b *AzureBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, e
 		return nil, err
 	}
 	return map[string]interface{}{
-		"AdditionalParameters": []string{
+		"additionalParameters": []string{
 			fmt.Sprintf("--external-hostname=%s", loadBalancerIP),
 		},
 	}, nil

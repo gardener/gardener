@@ -20,7 +20,7 @@ spec:
       serviceAccountName: {{ template "fullname" . }}
       containers:
       - name: {{ .Chart.Name }}
-        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        image: {{ index .Values.images "heapster" }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.service.internalPort }}
@@ -38,8 +38,8 @@ spec:
           {{- end }}
 {{ if .Values.resizer.enabled }}
       - name: {{ .Chart.Name }}-nanny
+        image: {{ index .Values.images "heapster-nanny" }}
         {{ with .Values.resizer }}
-        image: "{{ .image.repository }}:{{ .image.tag }}"
         imagePullPolicy: {{ .image.pullPolicy }}
         resources:
 {{ toYaml .resources | indent 12 }}

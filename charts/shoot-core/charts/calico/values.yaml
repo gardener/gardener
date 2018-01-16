@@ -1,3 +1,6 @@
 global:
-  PodNetwork: 100.96.0.0/11
-CloudProvider: aws
+  podNetwork: 100.96.0.0/11
+cloudProvider: aws
+images:
+  calico-node: image-repository:image-tag
+  calico-cni:  image-repository:image-tag

@@ -35,7 +35,7 @@ spec:
 {{- if .Values.waitForKube2IAM}}
       initContainers:
       - name: init-cluster-autoscaler
-        image: k8s.gcr.io/hyperkube:{{.Capabilities.KubeVersion}}
+        image: {{ index .Values.images "hyperkube" }}:{{.Capabilities.KubeVersion}}
         command:
         - /bin/bash
         - "-c"
@@ -54,8 +54,8 @@ spec:
           image: "{{ .Values.spotinst.image.repository }}:{{ .Values.spotinst.image.tag }}"
           imagePullPolicy: "{{ .Values.spotinst.image.pullPolicy }}"
         {{- else }}
-          image: "{{ .Values.image.repository }}:{{ include "imagetag" . }}"
-          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          image: {{ index .Values.images "cluster-autoscaler" }}
+          imagePullPolicy: IfNotPresent
         {{- end }}
           command:
             - ./cluster-autoscaler

@@ -22,11 +22,11 @@ spec:
       # This feature requires 1.6 Kubernetes. Its needed otherwise Grafana won't fetch the needed metadata from Prometheus
       initContainers:
       - name: init-prometheus
-        image: busybox:1.27
+        image: {{ index .Values.images "busybox" }}
         command: ['sh', '-c', 'until wget -T 5 -qO- http://prometheus-web:8080/status > /dev/null; do echo waiting for Prometheus; sleep 2; done;']
       containers:
       - name: grafana
-        image: grafana/grafana:4.1.1
+        image: {{ index .Values.images "grafana" }}
         imagePullPolicy: IfNotPresent
         env:
         - name: GF_AUTH_BASIC_ENABLED
@@ -57,7 +57,7 @@ spec:
             memory: 200Mi
             cpu: 200m
       - name: grafana-watcher
-        image: quay.io/coreos/grafana-watcher:v0.0.4
+        image: {{ index .Values.images "grafana-watcher" }}
         imagePullPolicy: IfNotPresent
         args:
         - --watch-dir=/var/grafana-dashboards

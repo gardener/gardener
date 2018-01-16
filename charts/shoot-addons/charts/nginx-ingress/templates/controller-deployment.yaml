@@ -32,21 +32,21 @@ spec:
     spec:
       containers:
         - name: {{ template "name" . }}-{{ .Values.controller.name }}
-          image: "{{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}"
+          image: {{ index .Values.images "nginx-ingress-controller" }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args:
             - /nginx-ingress-controller
             - --default-backend-service={{ if .Values.defaultBackend.enabled }}{{ .Release.Namespace }}/{{ template "defaultBackend.fullname" . }}{{ else }}{{ .Values.controller.defaultBackendService }}{{ end }}
-          {{- if and (contains "0.9" .Values.controller.image.tag) .Values.controller.publishService.enabled }}
+          {{- if and (contains "0.9" (index .Values.images "nginx-ingress-controller")) .Values.controller.publishService.enabled }}
             - --publish-service={{ template "controller.publishServicePath" . }}
           {{- end }}
-          {{- if (contains "0.9" .Values.controller.image.tag) }}
+          {{- if (contains "0.9" (index .Values.images "nginx-ingress-controller")) }}
             - --election-id={{ .Values.controller.electionID }}
           {{- end }}
-          {{- if (contains "0.9" .Values.controller.image.tag) }}
+          {{- if (contains "0.9" (index .Values.images "nginx-ingress-controller")) }}
             - --ingress-class={{ .Values.controller.ingressClass }}
           {{- end }}
-          {{- if (contains "0.9" .Values.controller.image.tag) }}
+          {{- if (contains "0.9" (index .Values.images "nginx-ingress-controller")) }}
             - --configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
           {{- else }}
             - --nginx-configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
@@ -110,7 +110,7 @@ spec:
 {{ toYaml .Values.controller.resources | indent 12 }}
       {{- if .Values.controller.stats.enabled }}
         - name: {{ template "name" . }}-{{ .Values.statsExporter.name }}
-          image: "{{ .Values.statsExporter.image.repository }}:{{ .Values.statsExporter.image.tag }}"
+          image: {{ index .Values.images "vts-ingress-exporter" }}
           imagePullPolicy: "{{ .Values.statsExporter.image.pullPolicy }}"
           env:
             - name: METRICS_ADDR

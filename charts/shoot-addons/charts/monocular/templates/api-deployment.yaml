@@ -20,14 +20,14 @@ spec:
     spec:
       initContainers:
       - name: init-monocular
-        image: busybox:1.27
+        image: {{ index .Values.images "busybox" }}
         command:
         - sh
         - -c
         - 'until nslookup kubernetes.default.svc > /dev/null; do echo waiting for kube-dns; sleep 2; done'
       containers:
       - name: {{ .Chart.Name }}
-        image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+        image: {{ index .Values.images "monocular-api" }}
         imagePullPolicy: {{ .Values.api.image.pullPolicy }}
         env:
         - name: MONOCULAR_HOME

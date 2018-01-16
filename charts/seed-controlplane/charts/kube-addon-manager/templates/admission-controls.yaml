@@ -4,7 +4,7 @@ metadata:
   name: kube-addon-manager-admission-controls
   namespace: {{.Release.Namespace}}
 data:
-{{- range $key, $val := .Values.AdmissionControlsContent }}
+{{- range $key, $val := .Values.admissionControlsContent }}
   {{ $key | replace "/" "_" }}: |
 {{ $val | indent 4 }}
 {{- end}}

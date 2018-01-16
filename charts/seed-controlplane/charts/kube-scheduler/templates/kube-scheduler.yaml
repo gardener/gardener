@@ -39,8 +39,8 @@ spec:
     metadata:
       annotations:
         checksum/configmap-componentconfig: {{ include (print $.Template.BasePath "/componentconfig.yaml") . | sha256sum }}
-{{- if .Values.PodAnnotations }}
-{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
         app: kubernetes
@@ -51,12 +51,12 @@ spec:
         operator: Exists
       containers:
       - name: kube-scheduler
-        image: k8s.gcr.io/hyperkube:v{{.Values.KubernetesVersion}}
+        image: {{ index .Values.images "hyperkube" }}:v{{.Values.kubernetesVersion}}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
         - scheduler
-        {{- if semverCompare ">= 1.9" .Values.KubernetesVersion }}
+        {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
         - --config=/var/lib/kube-scheduler-config/config.yaml
         {{- else }}
         - --kubeconfig=/var/lib/kube-scheduler/kubeconfig
@@ -82,7 +82,7 @@ spec:
         volumeMounts:
         - name: kube-scheduler
           mountPath: /var/lib/kube-scheduler
-        {{- if semverCompare ">= 1.9" .Values.KubernetesVersion }}
+        {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
         - name: kube-scheduler-config
           mountPath: /var/lib/kube-scheduler-config
         {{- end }}
@@ -94,7 +94,7 @@ spec:
       - name: kube-scheduler
         secret:
           secretName: kube-scheduler
-      {{- if semverCompare ">= 1.9" .Values.KubernetesVersion }}
+      {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
       - name: kube-scheduler-config
         configMap:
           name: kube-scheduler-config

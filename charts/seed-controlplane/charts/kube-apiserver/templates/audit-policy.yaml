@@ -1,4 +1,4 @@
-{{- if semverCompare ">= 1.8" .Values.KubernetesVersion }}
+{{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

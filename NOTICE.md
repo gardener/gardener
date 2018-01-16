@@ -111,3 +111,8 @@ SemVer
 https://github.com/Masterminds/semver.  
 Copyright (C) 2014-2015, Matt Butcher and Matt Farina  
 MIT license (https://github.com/Masterminds/semver/blob/master/LICENSE.txt)
+
+
+## Container Images
+
+The list of container images and versions deployed by the Gardener can be found [here](charts/images.yaml).

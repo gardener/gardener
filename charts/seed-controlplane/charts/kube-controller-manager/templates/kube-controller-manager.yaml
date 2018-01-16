@@ -37,9 +37,9 @@ spec:
       role: controller-manager
   template:
     metadata:
-{{- if .Values.PodAnnotations }}
+{{- if .Values.podAnnotations }}
       annotations:
-{{ toYaml .Values.PodAnnotations | indent 8 }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
         app: kubernetes
@@ -50,33 +50,33 @@ spec:
         operator: Exists
       containers:
       - name: kube-controller-manager
-        image: k8s.gcr.io/hyperkube:v{{.Values.KubernetesVersion}}
+        image: {{ index .Values.images "hyperkube" }}:v{{.Values.kubernetesVersion}}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
         - controller-manager
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
-        - --cloud-provider={{.Values.CloudProvider}}
+        - --cloud-provider={{.Values.cloudProvider}}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
-        - --cluster-cidr={{.Values.PodNetwork}}
-        - --cluster-name={{.Values.ClusterName}}
+        - --cluster-cidr={{.Values.podNetwork}}
+        - --cluster-name={{.Values.clusterName}}
         - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt
         - --cluster-signing-key-file=/srv/kubernetes/ca/ca.key
-        - --configure-cloud-routes={{.Values.ConfigureRoutes}}
+        - --configure-cloud-routes={{.Values.configureRoutes}}
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
-        - --service-cluster-ip-range={{.Values.ServiceNetwork}}
+        - --service-cluster-ip-range={{.Values.serviceNetwork}}
         - --use-service-account-credentials=true
         - --v=2
-        {{- range $index, $param := $.Values.AdditionalParameters }}
+        {{- range $index, $param := $.Values.additionalParameters }}
         - {{$param}}
         {{- end }}
         env:
-{{ toYaml .Values.Environment | indent 10 }}
+{{ toYaml .Values.environment | indent 10 }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -109,7 +109,7 @@ spec:
         - name: ssl-certs-hosts
           mountPath: /usr/share/ca-certificates
           readOnly: true
-        {{- if ne .Values.CloudProvider "gce" }}
+        {{- if ne .Values.cloudProvider "gce" }}
         - name: usrsharessl
           mountPath: /usr/share/ssl
           readOnly: true
@@ -140,7 +140,7 @@ spec:
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
-      {{- if ne .Values.CloudProvider "gce" }}
+      {{- if ne .Values.cloudProvider "gce" }}
       - name: usrsharessl
         hostPath:
           path: /usr/share/ssl

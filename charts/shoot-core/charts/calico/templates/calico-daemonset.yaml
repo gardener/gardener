@@ -131,7 +131,7 @@ spec:
         # container programs network policy and routes on each
         # host.
         - name: calico-node
-          image: quay.io/calico/node:v2.6.5
+          image: {{ index .Values.images "calico-node" }}
           env:
             # Use Kubernetes API as the backing datastore.
             - name: DATASTORE_TYPE
@@ -159,12 +159,12 @@ spec:
               value: "true"
             # The Calico IPv4 pool to use.  This should match `--cluster-cidr`
             - name: CALICO_IPV4POOL_CIDR
-              value: "{{.Values.global.PodNetwork}}"
+              value: "{{.Values.global.podNetwork}}"
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
               value: "always"
             # Enable IP-in-IP within Felix.
-            {{- if ne .Values.CloudProvider "azure"}}
+            {{- if ne .Values.cloudProvider "azure"}}
             - name: FELIX_IPINIPENABLED
               value: "true"
             {{- else }}
@@ -210,7 +210,7 @@ spec:
         # This container installs the Calico CNI binaries
         # and CNI network config file on each node.
         - name: install-cni
-          image: quay.io/calico/cni:v1.11.2
+          image: {{ index .Values.images "calico-cni" }}
           command: ["/install-cni.sh"]
           env:
             # The CNI network config to install on each node.

@@ -5,4 +5,4 @@ metadata:
   namespace: {{.Release.Namespace}}
 data:
   cloudprovider.conf: |
-{{.Values.CloudProviderConfig | indent 4 }}
+{{.Values.cloudProviderConfig | indent 4 }}

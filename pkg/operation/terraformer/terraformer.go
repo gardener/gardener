@@ -113,7 +113,7 @@ func (t *Terraformer) execute(scriptName string) error {
 		skipJob = t.IsStateEmpty()
 	}
 
-	values := map[string]interface{}{
+	defaultValues := map[string]interface{}{
 		"terraformVariablesEnvironment": t.VariablesEnvironment,
 		"names": map[string]interface{}{
 			"configuration": t.ConfigName,
@@ -122,6 +122,10 @@ func (t *Terraformer) execute(scriptName string) error {
 			"pod":           t.PodName,
 			"job":           t.JobName,
 		},
+	}
+	values, err := t.InjectImages(defaultValues, t.K8sSeedClient.Version(), map[string]string{"terraformer": "terraformer"})
+	if err != nil {
+		return err
 	}
 
 	if !skipPod {

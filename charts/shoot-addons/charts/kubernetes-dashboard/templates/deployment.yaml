@@ -41,7 +41,7 @@ spec:
 {{ toYaml .Values.nodeSelector | indent 10 }}
       containers:
       - name: main
-        image: "{{ .Values.image }}:{{ .Values.imageTag }}"
+        image: {{ index .Values.images "kubernetes-dashboard" }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         resources:
 {{ toYaml .Values.resources | indent 10 }}

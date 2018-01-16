@@ -60,7 +60,7 @@ spec:
       - env:
         - name: TILLER_NAMESPACE
           value: kube-system
-        image: gcr.io/kubernetes-helm/tiller:v2.7.2
+        image: {{ index .Values.images "helm-tiller" }}
         imagePullPolicy: IfNotPresent
         livenessProbe:
           failureThreshold: 3

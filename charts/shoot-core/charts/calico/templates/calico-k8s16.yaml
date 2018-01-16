@@ -39,7 +39,7 @@ spec:
         operator: "Exists"
       containers:
       - name: calico-node
-        image: quay.io/calico/node:v2.4.1
+        image: {{ index .Values.images "calico-node" }}
         env:
         - name: DATASTORE_TYPE
           value: "kubernetes"
@@ -66,10 +66,10 @@ spec:
         - name: WAIT_FOR_DATASTORE
           value: "true"
         - name: CALICO_IPV4POOL_CIDR
-          value: "{{.Values.global.PodNetwork}}"
+          value: "{{.Values.global.podNetwork}}"
         - name: CALICO_IPV4POOL_IPIP
           value: "always"
-        {{- if ne .Values.CloudProvider "azure"}}
+        {{- if ne .Values.cloudProvider "azure"}}
         - name: FELIX_IPINIPENABLED
           value: "true"
         {{- else }}
@@ -114,7 +114,7 @@ spec:
           - mountPath: /etc/service/available/confd
             name: run-volume
       - name: install-cni
-        image: quay.io/calico/cni:v1.11.0
+        image: {{ index .Values.images "calico-cni" }}
         command: ["/install-cni.sh"]
         env:
         # The CNI network config to install on each node.

@@ -25,7 +25,7 @@ spec:
       serviceAccountName: kube-state-metrics
       containers:
       - name: kube-state-metrics
-        image: quay.io/coreos/kube-state-metrics:v1.1.0
+        image: {{ index .Values.images "kube-state-metrics" }}
         imagePullPolicy: IfNotPresent
         command:
         - /kube-state-metrics
@@ -45,7 +45,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 10
       - name: addon-resizer
-        image: k8s.gcr.io/addon-resizer:1.0
+        image: {{ index .Values.images "addon-resizer" }}
         resources:
           limits:
             cpu: 100m

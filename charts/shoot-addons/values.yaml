@@ -10,17 +10,40 @@
 
 cluster-autoscaler:
   enabled: false
+  images:
+    hyperkube: image-repository
+    cluster-autoscaler: image-repository:image-tag
 heapster:
   enabled: false
+  images:
+    heapster: image-repository:image-tag
+    heapster-nanny: image-repository:image-tag
 helm-tiller:
   enabled: false
+  images:
+    helm-tiller: image-repository:image-tag
 kube-lego:
   enabled: false
+  images:
+    kube-lego: image-repository:image-tag
 kube2iam:
   enabled: false
+  images:
+    kube2iam: image-repository:image-tag
 kubernetes-dashboard:
   enabled: false
+  images:
+    kubernetes-dashboard: image-repository:image-tag
 monocular:
   enabled: false
+  images:
+    monocular-api: image-repository:image-tag
+    monocular-ui: image-repository:image-tag
+    monocular-prerender: image-repository:image-tag
+    busybox: image-repository:image-tag
 nginx-ingress:
   enabled: false
+  images:
+    nginx-ingress-controller: image-repository:image-tag
+    ingress-default-backend: image-repository:image-tag
+    vts-ingress-exporter: image-repository:image-tag

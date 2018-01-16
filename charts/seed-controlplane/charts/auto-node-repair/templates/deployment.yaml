@@ -32,7 +32,7 @@ spec:
 {{- end }}
       containers:
         - name: {{ template "name" . }}
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ index .Values.images "auto-node-repair" }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           command:
             - ./auto-node-repair

@@ -27,15 +27,17 @@ import (
 func (b *AWSBotanist) ApplyCreateHook() error {
 	imagePullSecrets := b.GetImagePullSecretsMap()
 
-	if err := b.ApplyChartSeed(
-		filepath.Join(common.ChartPath, "seed-controlplane", "charts", "readvertiser"),
-		"readvertiser",
-		b.Shoot.SeedNamespace,
-		nil,
-		map[string]interface{}{
-			"domain":           b.APIServerAddress,
-			"imagePullSecrets": imagePullSecrets,
-		}); err != nil {
+	defaultValues := map[string]interface{}{
+		"domain":           b.APIServerAddress,
+		"imagePullSecrets": imagePullSecrets,
+	}
+
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"readvertiser": "aws-lb-readvertiser"})
+	if err != nil {
+		return err
+	}
+
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "readvertiser"), "readvertiser", b.Shoot.SeedNamespace, nil, values); err != nil {
 		return err
 	}
 

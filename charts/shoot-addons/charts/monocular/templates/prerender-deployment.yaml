@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: {{ .Chart.Name }}
-        image: "{{ .Values.prerender.image.repository }}:{{ .Values.prerender.image.tag }}"
+        image: {{ index .Values.images "monocular-prerender" }}
         imagePullPolicy: {{ .Values.prerender.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.prerender.service.internalPort }}

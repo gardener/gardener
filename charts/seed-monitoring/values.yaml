@@ -1,5 +1,8 @@
 alertmanager:
   email_configs: []
+  images:
+    alertmanager: image-repository:image-tag
+    configmap-reloader: image-repository:image-tag
 prometheus:
   replicaCount: 1
   networks:
@@ -11,6 +14,21 @@ prometheus:
   namespace:
     uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
   podAnnotations: {}
+  images:
+    prometheus: image-repository:image-tag
+    configmap-reloader: image-repository:image-tag
+    vpn-seed: image-repository:image-tag
+grafana:
+  images:
+    grafana: image-repository:image-tag
+    busybox: image-repository:image-tag
+    grafana-watcher: image-repository:image-tag
+kube-state-metrics-seed:
+  images:
+    kube-state-metrics: image-repository:image-tag
+kube-state-metrics-shoot:
+  images:
+    kube-state-metrics: image-repository:image-tag
 global:
-  ShootKubeVersion:
-    GitVersion: v1.7.5
+  shootKubeVersion:
+    gitVersion: v1.7.5

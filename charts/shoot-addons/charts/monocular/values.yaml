@@ -1,11 +1,15 @@
 # Default values for monocular.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
+images:
+  monocular-api: image-repository:image-tag
+  monocular-ui: image-repository:image-tag
+  monocular-prerender: image-repository:image-tag
+  busybox: image-repository:image-tag
+
 api:
   replicaCount: 1
   image:
-    repository: bitnami/monocular-api
-    tag: v0.3.1
     pullPolicy: Always
   service:
     name: monocular-api
@@ -42,8 +46,6 @@ api:
 ui:
   replicaCount: 1
   image:
-    repository: bitnami/monocular-ui
-    tag: v0.3.1
     pullPolicy: Always
   service:
     name: monocular-ui
@@ -68,8 +70,6 @@ ui:
 prerender:
   replicaCount: 1
   image:
-    repository: migmartri/prerender
-    tag: latest
     pullPolicy: Always
   cacheEnabled: true
   service:

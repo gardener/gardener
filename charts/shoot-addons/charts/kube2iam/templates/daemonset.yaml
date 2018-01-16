@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: kube2iam
-          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          image: {{ index .Values.images "kube2iam" }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           args:
             - --host-interface={{ .Values.host.interface }}
