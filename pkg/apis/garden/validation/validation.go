@@ -542,6 +542,19 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 
+	if spec.DNS.Provider == garden.DNSUnmanaged {
+		if spec.Addons.Monocular.Enabled {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("addons", "monocular", "enabled"), spec.Addons.Monocular.Enabled, fmt.Sprintf("`.spec.addons.monocular.enabled` must be false when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
+		}
+		if spec.DNS.HostedZoneID != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "hostedZoneID"), spec.DNS.HostedZoneID, fmt.Sprintf("`.spec.dns.hostedZoneID` must not be set when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
+		}
+	} else {
+		if spec.DNS.Domain == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("dns", "domain"), fmt.Sprintf("`.spec.dns.domain` may only be empty if `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
+		}
+	}
+
 	return allErrs
 }
 
@@ -660,6 +673,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, validateCIDR(aws.Networks.VPC.CIDR, awsPath.Child("networks", "vpc", "cidr"))...)
 		}
 
+		if len(aws.Networks.VPC.ID) != 0 && len(aws.Networks.Nodes) == 0 {
+			allErrs = append(allErrs, field.Required(awsPath.Child("networks", "nodes"), "node network must not be empty if you are using an existing VPC (specify the VPC CIDR as node network)"))
+		}
+
 		if len(aws.Workers) == 0 {
 			allErrs = append(allErrs, field.Required(awsPath.Child("workers"), "must specify at least one worker"))
 			return allErrs
@@ -675,9 +692,23 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	azure := cloud.Azure
 	azurePath := fldPath.Child("azure")
 	if azure != nil {
-		if azure.ResourceGroup != nil && len(azure.ResourceGroup.Name) == 0 {
-			allErrs = append(allErrs, field.Invalid(azurePath.Child("resourceGroup", "name"), azure.ResourceGroup.Name, "resource group name must not be empty when resource group key is provided"))
+		// Currently, we will not allow deployments into existing resource groups or VNets although this functionality
+		// is already implemented, because the Azure cloud provider (v1.7.6) is not cleaning up self-created resources properly.
+		// This resources would be orphaned when the cluster will be deleted. We block these cases thereby that the Azure shoot
+		// validation here will fail for those cases.
+		// TODO: remove the following block and uncomment below blocks once deployment into existing resource groups/vnets works properly.
+		if azure.ResourceGroup != nil {
+			allErrs = append(allErrs, field.Invalid(azurePath.Child("resourceGroup", "name"), azure.ResourceGroup.Name, "specifying an existing resource group is not supported yet."))
 		}
+		if len(azure.Networks.VNet.Name) != 0 {
+			allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet", "name"), azure.Networks.VNet.Name, "specifying an existing vnet is not supported yet"))
+		}
+		allErrs = append(allErrs, validateCIDR(azure.Networks.VNet.CIDR, azurePath.Child("networks", "vnet", "cidr"))...)
+
+		// TODO: re-enable once deployment into existing resource group works properly.
+		// if azure.ResourceGroup != nil && len(azure.ResourceGroup.Name) == 0 {
+		// 	allErrs = append(allErrs, field.Invalid(azurePath.Child("resourceGroup", "name"), azure.ResourceGroup.Name, "resource group name must not be empty when resource group key is provided"))
+		// }
 
 		allErrs = append(allErrs, validateCIDR(azure.Networks.Nodes, azurePath.Child("networks", "nodes"))...)
 		allErrs = append(allErrs, validateCIDR(azure.Networks.Pods, azurePath.Child("networks", "pods"))...)
@@ -689,11 +720,12 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 
 		allErrs = append(allErrs, validateCIDR(azure.Networks.Workers, azurePath.Child("networks", "workers"))...)
 
-		if (len(azure.Networks.VNet.Name) == 0 && len(azure.Networks.VNet.CIDR) == 0) || (len(azure.Networks.VNet.Name) != 0 && len(azure.Networks.VNet.CIDR) != 0) {
-			allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet"), azure.Networks.VNet, "must specify either a vnet name or a cidr"))
-		} else if len(azure.Networks.VNet.CIDR) != 0 && len(azure.Networks.VNet.Name) == 0 {
-			allErrs = append(allErrs, validateCIDR(azure.Networks.VNet.CIDR, azurePath.Child("networks", "vnet", "cidr"))...)
-		}
+		// TODO: re-enable once deployment into existing vnet works properly.
+		// if (len(azure.Networks.VNet.Name) == 0 && len(azure.Networks.VNet.CIDR) == 0) || (len(azure.Networks.VNet.Name) != 0 && len(azure.Networks.VNet.CIDR) != 0) {
+		// 	allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet"), azure.Networks.VNet, "must specify either a vnet name or a cidr"))
+		// } else if len(azure.Networks.VNet.CIDR) != 0 && len(azure.Networks.VNet.Name) == 0 {
+		// 	allErrs = append(allErrs, validateCIDR(azure.Networks.VNet.CIDR, azurePath.Child("networks", "vnet", "cidr"))...)
+		// }
 
 		if len(azure.Workers) == 0 {
 			allErrs = append(allErrs, field.Required(azurePath.Child("workers"), "must specify at least one worker"))
@@ -704,7 +736,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
-			if worker.AutoScalerMax > worker.AutoScalerMin {
+			if worker.AutoScalerMax != worker.AutoScalerMin {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoScalerMax"), "maximum value must be equal to minimum value"))
 			}
 		}
@@ -717,6 +749,13 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 		if zoneCount == 0 {
 			allErrs = append(allErrs, field.Required(gcpPath.Child("zones"), "must specify at least one zone"))
 			return allErrs
+		}
+
+		// Disable multi-zone deployments due to an issue with PVCs and volume bindings over multiple zones by the default class
+		// https://github.com/kubernetes/kubernetes/issues/50115
+		// TODO: remove the following block and uncomment below blocks once the issue is fixed.
+		if zoneCount != 1 {
+			allErrs = append(allErrs, field.Forbidden(gcpPath.Child("zones"), "cannot specify more than once zone currently"))
 		}
 
 		allErrs = append(allErrs, validateCIDR(gcp.Networks.Nodes, gcpPath.Child("networks", "nodes"))...)
@@ -785,6 +824,9 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 		for i, worker := range openStack.Workers {
 			idxPath := openStackPath.Child("workers").Index(i)
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
+			if worker.AutoScalerMax != worker.AutoScalerMin {
+				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoScalerMax"), "maximum value must be equal to minimum value"))
+			}
 		}
 	}
 
@@ -853,6 +895,10 @@ func validateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	if len(worker.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must specify a name"))
 	}
+	maxWorkerNameLength := 15
+	if len(worker.Name) > maxWorkerNameLength {
+		allErrs = append(allErrs, field.TooLong(fldPath.Child("name"), worker.Name, maxWorkerNameLength))
+	}
 	if len(worker.MachineType) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("machineType"), "must specify a machine type"))
 	}
@@ -863,7 +909,7 @@ func validateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("autoScalerMax"), worker.AutoScalerMax, "maximum value must not be negative"))
 	}
 	if worker.AutoScalerMax < worker.AutoScalerMin {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMax"), "maximum value must not less or equal than minimum value"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMax"), "maximum value must not be less or equal than minimum value"))
 	}
 
 	return allErrs
