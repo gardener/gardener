@@ -78,11 +78,11 @@ $ cd gardener
 
 The development of the Gardener could happen by targetting any cluster. You basically need a Garden cluster (e.g., a [Minikube](https://github.com/kubernetes/minikube) cluster) and one Seed cluster per cloud provider and per data center/region. You can configure the Garden controller manager to watch **all namespaces** for Shoot manifests or to only watch **one single** namespace.
 
-In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](examples/shoot-azure.yaml#L10) for an example Shoot manifest).
+In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](../../example/shoot-azure.yaml#L10) for an example Shoot manifest).
 
 ## Get started
 
-Please take a look at the [example manifests folder](examples) to see which resource objects you need to install into your Garden cluster.
+Please take a look at the [example manifests folder](../../example) to see which resource objects you need to install into your Garden cluster.
 
 For your convenience, we have created a rule in the `Makefile` which will automatically start the Garden controller manager with development settings:
 
