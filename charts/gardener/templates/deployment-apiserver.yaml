@@ -36,7 +36,11 @@ spec:
         - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
-        - --etcd-servers="{{ .Values.apiserver.etcdServers }}"
+        {{- if .Values.apiserver.useEtcdSidecar }}
+        - --etcd-servers=http://localhost:2379
+        {{- else }}
+        - --etcd-servers={{ .Values.apiserver.etcdServers }}
+        {{- end }}
         - --secure-port=443
         - --tls-cert-file=/var/run/kubernetes/garden-apiserver.crt
         - --tls-private-key-file=/var/run/kubernetes/garden-apiserver.key
@@ -47,11 +51,74 @@ spec:
           readOnly: true
         - name: garden-audit-policy-config
           mountPath: /etc/garden/audit
+      {{- if .Values.apiserver.useEtcdSidecar }}
+      - name: etcd
+        image: quay.io/coreos/etcd:v3.2
+        imagePullPolicy: IfNotPresent
+        command:
+        - /usr/local/bin/etcd
+        - --data-dir=/var/etcd/data
+        - --name=etcd
+        - --advertise-client-urls=http://etcd:2379
+        - --listen-peer-urls=http://0.0.0.0:2380
+        - --listen-client-urls=http://0.0.0.0:2379
+        - --initial-advertise-peer-urls=http://etcd:2380
+        - --initial-cluster=etcd=http://etcd:2380
+        - --initial-cluster-state=new
+        - --initial-cluster-token=new
+        livenessProbe:
+          httpGet:
+            port: 2379
+            path: /health
+          initialDelaySeconds: 15
+          timeoutSeconds: 15
+        ports:
+        - name: serverport
+          containerPort: 2380
+        - name: clientport
+          containerPort: 2379
+        resources:
+          requests:
+            cpu: 200m
+        volumeMounts:
+        - name: etcd
+          mountPath: /var/etcd/data
+      {{- end }}
       volumes:
+      {{- if .Values.apiserver.useEtcdSidecar }}
+      - name: etcd
+        emptyDir: {}
+      {{- end }}
       - name: garden-apiserver-cert
         secret:
           secretName: garden-apiserver-cert
       - name: garden-audit-policy-config
         configMap:
           name: garden-audit-policy-config
-{{- end}}
+{{- if .Values.apiserver.useEtcdSidecar }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  labels:
+    sidecar: etcd
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  selector:
+    sidecar: etcd
+  ports:
+  - name: discovery
+    protocol: TCP
+    port: 2380
+    targetPort: 2380
+  - name: client
+    protocol: TCP
+    port: 2379
+    targetPort: 2379
+{{- end }}
+{{- end }}

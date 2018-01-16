@@ -1,6 +1,7 @@
 # Default values for gardener.
 apiserver:
   enabled: true
+  useEtcdSidecar: false # only meant for development purposes
   replicaCount: 1
   etcdServers: http://etcd:2379
   groupPriorityMinimum: 10000
