@@ -520,6 +520,7 @@ func ValidateShootUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newShoot.ObjectMeta, &oldShoot.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateShootSpecUpdate(&newShoot.Spec, &oldShoot.Spec, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateShoot(newShoot)...)
 
 	return allErrs
@@ -829,6 +830,59 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			}
 		}
 	}
+
+	return allErrs
+}
+
+// ValidateShootSpecUpdate validates the specification of a Shoot object.
+func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Profile, oldSpec.Cloud.Profile, fldPath.Child("cloud", "profile"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Region, oldSpec.Cloud.Region, fldPath.Child("cloud", "region"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.SecretBindingRef, oldSpec.Cloud.SecretBindingRef, fldPath.Child("cloud", "secretBindingRef"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Seed, oldSpec.Cloud.Seed, fldPath.Child("cloud", "seed"))...)
+
+	awsPath := fldPath.Child("cloud", "aws")
+	if oldSpec.Cloud.AWS != nil && newSpec.Cloud.AWS == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS, oldSpec.Cloud.AWS, awsPath)...)
+		return allErrs
+	} else if newSpec.Cloud.AWS != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Networks, oldSpec.Cloud.AWS.Networks, awsPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.AWS.Zones, oldSpec.Cloud.AWS.Zones, awsPath.Child("zones"))...)
+	}
+
+	azurePath := fldPath.Child("cloud", "azure")
+	if oldSpec.Cloud.Azure != nil && newSpec.Cloud.Azure == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure, oldSpec.Cloud.Azure, azurePath)...)
+		return allErrs
+	} else if newSpec.Cloud.Azure != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.ResourceGroup, oldSpec.Cloud.Azure.ResourceGroup, azurePath.Child("resourceGroup"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Azure.Networks, oldSpec.Cloud.Azure.Networks, azurePath.Child("networks"))...)
+	}
+
+	gcpPath := fldPath.Child("cloud", "gcp")
+	if oldSpec.Cloud.GCP != nil && newSpec.Cloud.GCP == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP, oldSpec.Cloud.GCP, gcpPath)...)
+		return allErrs
+	} else if newSpec.Cloud.GCP != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Networks, oldSpec.Cloud.GCP.Networks, gcpPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.GCP.Zones, oldSpec.Cloud.GCP.Zones, gcpPath.Child("zones"))...)
+	}
+
+	openStackPath := fldPath.Child("cloud", "openstack")
+	if oldSpec.Cloud.OpenStack != nil && newSpec.Cloud.OpenStack == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack, oldSpec.Cloud.OpenStack, openStackPath)...)
+		return allErrs
+	} else if newSpec.Cloud.OpenStack != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks, oldSpec.Cloud.OpenStack.Networks, openStackPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones, openStackPath.Child("zones"))...)
+	}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
+
+	// TODO: remove this once version upgrades are implemented
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
 
 	return allErrs
 }
