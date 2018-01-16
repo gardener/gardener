@@ -1306,7 +1306,7 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidateShoot", func() {
+	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *garden.Shoot
 
@@ -1316,6 +1316,9 @@ var _ = Describe("validation", func() {
 			invalidBackup = &garden.Backup{
 				IntervalInSecond: 0,
 				Maximum:          0,
+			}
+			addon = garden.Addon{
+				Enabled: true,
 			}
 			k8sNetworks = garden.K8SNetworks{
 				Nodes:    garden.CIDR("10.250.0.0/16"),
@@ -1361,9 +1364,7 @@ var _ = Describe("validation", func() {
 				Spec: garden.ShootSpec{
 					Addons: garden.Addons{
 						Kube2IAM: garden.Kube2IAM{
-							Addon: garden.Addon{
-								Enabled: true,
-							},
+							Addon: addon,
 							Roles: []garden.Kube2IAMRole{
 								{
 									Name:        "iam-role",
@@ -1373,30 +1374,20 @@ var _ = Describe("validation", func() {
 							},
 						},
 						KubernetesDashboard: garden.KubernetesDashboard{
-							Addon: garden.Addon{
-								Enabled: true,
-							},
+							Addon: addon,
 						},
 						ClusterAutoscaler: garden.ClusterAutoscaler{
-							Addon: garden.Addon{
-								Enabled: true,
-							},
+							Addon: addon,
 						},
 						NginxIngress: garden.NginxIngress{
-							Addon: garden.Addon{
-								Enabled: true,
-							},
+							Addon: addon,
 						},
 						Monocular: garden.Monocular{
-							Addon: garden.Addon{
-								Enabled: true,
-							},
+							Addon: addon,
 						},
 						KubeLego: garden.KubeLego{
-							Addon: garden.Addon{
-								Enabled: true,
-							},
-							Mail: "info@example.com",
+							Addon: addon,
+							Mail:  "info@example.com",
 						},
 					},
 					Backup: &garden.Backup{
@@ -1535,6 +1526,37 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.cloud.secretBindingRef.name"),
 			}))
 			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.cloud.seed"),
+			}))
+		})
+
+		It("should forbid updating some cloud keys", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.Cloud.Profile = "another-profile"
+			newShoot.Spec.Cloud.Region = "another-region"
+			newShoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
+				Kind: "PrivateSecretBinding",
+				Name: "another-reference",
+			}
+			newShoot.Spec.Cloud.Seed = makeStringPointer("another-seed")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(4))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.cloud.profile"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.cloud.region"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.cloud.secretBindingRef"),
+			}))
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.cloud.seed"),
 			}))
@@ -1763,6 +1785,41 @@ var _ = Describe("validation", func() {
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
 				}))
 			})
+
+			It("should forbid updating networks and zones", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.AWS.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.AWS.Zones = []string{"another-zone"}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid removing the AWS section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.AWS = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack"),
+				}))
+			})
 		})
 
 		Context("Azure specific validation", func() {
@@ -1823,6 +1880,24 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.resourceGroup.name", fldPath)),
+				}))
+			})
+
+			It("should forbid specifying a vnet name", func() {
+				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{
+					Name: "existing-vnet",
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
 				}))
 			})
 
@@ -1953,6 +2028,47 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+			})
+
+			It("should forbid updating resource group and zones", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.Azure.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{
+					Name: "another-group",
+				}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(3))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.resourceGroup", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.resourceGroup.name", fldPath)),
+				}))
+			})
+
+			It("should forbid removing the Azure section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.Azure = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack"),
 				}))
 			})
 		})
@@ -2130,6 +2246,41 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid updating networks and zones", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.GCP.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.GCP.Zones = []string{"another-zone"}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid removing the GCP section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.GCP = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack"),
 				}))
 			})
 		})
@@ -2318,6 +2469,41 @@ var _ = Describe("validation", func() {
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
 				}))
 			})
+
+			It("should forbid updating networks and zones", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.OpenStack.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.OpenStack.Zones = []string{"another-zone"}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid removing the OpenStack section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.OpenStack = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack"),
+				}))
+			})
 		})
 
 		Context("dns section", func() {
@@ -2350,6 +2536,19 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid not specifying a domain when provider not equals 'unmanaged'", func() {
+				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				shoot.Spec.DNS.Domain = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.domain"),
+				}))
+			})
+
 			It("should forbid monocular when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
 				shoot.Spec.DNS.HostedZoneID = nil
@@ -2373,6 +2572,21 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.hostedZoneID"),
+				}))
+			})
+
+			It("should forbid updating the dns section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")
+				newShoot.Spec.DNS.HostedZoneID = makeStringPointer("another-hosted-zone")
+				newShoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns"),
 				}))
 			})
 		})
@@ -2418,5 +2632,26 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
 			}))
 		})
+
+		It("should forbid updating the kubernetes version", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.Kubernetes.Version = "2.0.0"
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.version"),
+			}))
+		})
 	})
 })
+
+// Helper functions
+
+func prepareShootForUpdate(shoot *garden.Shoot) *garden.Shoot {
+	s := shoot.DeepCopy()
+	s.ResourceVersion = "1"
+	return s
+}
