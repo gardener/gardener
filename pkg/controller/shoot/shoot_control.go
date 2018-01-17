@@ -230,17 +230,6 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		return nil
 	}
 
-	// We check whether the Shoot has been operated by an older version of the Gardener which can no longer be operated due
-	// to incompatible/disruptive changes.
-	shootVersion := shoot.Status.Gardener.Version
-	if shootVersion != "" {
-		shootVersionTooOld, err := utils.CompareVersions(shootVersion, "<", "0.28")
-		if err != nil || shootVersionTooOld {
-			shootLogger.Infof("Will not reconcile as the Shoot has been operated by an older version of the Gardener (%s).", shootVersion)
-			return nil
-		}
-	}
-
 	operationType := gardenv1beta1.ShootLastOperationTypeReconcile
 	if lastOperation == nil || (lastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate && lastOperation.State != gardenv1beta1.ShootLastOperationStateSucceeded) {
 		operationType = gardenv1beta1.ShootLastOperationTypeCreate
