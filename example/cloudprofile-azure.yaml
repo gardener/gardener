@@ -13,10 +13,6 @@ spec:
         - 1.9.1
         - 1.8.6
       machineTypes:
-      - name: Standard_DS1_v2
-        cpus: 1
-        gpus: 0
-        memory: 3500Mi
       - name: Standard_DS2_v2
         cpus: 2
         gpus: 0
