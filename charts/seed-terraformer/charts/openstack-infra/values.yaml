@@ -1,43 +1,43 @@
-openstack:
-  authURL: https://keystone/v3/
-  domainName: CP
-  tenantName: kubernetes
-  region: eu-de-1
-  floatingPoolName: my-pool
-  loadBalancerProvider: my-pool
+# openstack:
+#   authURL: https://keystone/v3/
+#   domainName: CP
+#   tenantName: kubernetes
+#   region: eu-de-1
+#   floatingPoolName: my-pool
+#   loadBalancerProvider: my-pool
 
-create:
-  router: true
+# create:
+#   router: true
 
-sshPublicKey: sshkey-12345
+# sshPublicKey: sshkey-12345
 
-router:
-  id: ${openstack_networking_router_v2.router.id}
+# router:
+#   id: ${openstack_networking_router_v2.router.id}
 
-clusterName: test-namespace
+# clusterName: test-namespace
 
-names:
-  configuration: shoot.tf-config
-  variables: shoot.tf-vars
-  state: shoot.tf-state
+# names:
+#   configuration: shoot.tf-config
+#   variables: shoot.tf-vars
+#   state: shoot.tf-state
 
-initializeEmptyState: true
+# initializeEmptyState: true
 
-coreOSImage: coreos-stable-1520-6-0-v20171012
+# coreOSImage: coreos-stable-1520-6-0-v20171012
 
-cloudConfig:
-  kubeconfig: kubeconfig for cloud-config-downloader
+# cloudConfig:
+#   kubeconfig: kubeconfig for cloud-config-downloader
 
-networks:
-  worker: 10.250.0.0/19
+# networks:
+#   worker: 10.250.0.0/19
 
-workers:
-- name: cpu-worker
-  machineType: medium_4_8
-  zones:
-  - name: rot_1
-    autoScalerMin: 2
-    autoScalerMax: 2
+# workers:
+# - name: cpu-worker
+#   machineType: medium_4_8
+#   zones:
+#   - name: rot_1
+#     autoScalerMin: 2
+#     autoScalerMax: 2
 
-zones:
-- name: rot_1
+# zones:
+# - name: rot_1

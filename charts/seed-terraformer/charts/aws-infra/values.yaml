@@ -1,54 +1,54 @@
-aws:
-  region: eu-west-1
+# aws:
+#   region: eu-west-1
 
-create:
-  vpc: true
-  igw: true
-  clusterAutoscalerPolicies: true
+# create:
+#   vpc: true
+#   igw: true
+#   clusterAutoscalerPolicies: true
 
-sshPublicKey: sshkey-12345
+# sshPublicKey: sshkey-12345
 
-vpc:
-  id: ${aws_vpc.vpc.id}
-  cidr: 10.10.10.10/6
-  dhcpDomainName: eu-west-1.compute.internal
-  internetGatewayID: ${aws_internet_gateway.igw.id}
+# vpc:
+#   id: ${aws_vpc.vpc.id}
+#   cidr: 10.10.10.10/6
+#   dhcpDomainName: eu-west-1.compute.internal
+#   internetGatewayID: ${aws_internet_gateway.igw.id}
 
-clusterName: test-namespace
+# clusterName: test-namespace
 
-names:
-  configuration: shoot.tf-config
-  variables: shoot.tf-vars
-  state: shoot.tf-state
+# names:
+#   configuration: shoot.tf-config
+#   variables: shoot.tf-vars
+#   state: shoot.tf-state
 
-initializeEmptyState: true
+# initializeEmptyState: true
 
-coreOSImage: coreos-12345
+# coreOSImage: coreos-12345
 
-cloudConfig:
-  kubeconfig: kubeconfig for cloud-config-downloader
+# cloudConfig:
+#   kubeconfig: kubeconfig for cloud-config-downloader
 
-workers:
-- name: cpu-worker
-  machineType: m4.xlarge
-  volumeType: gp2
-  volumeSize: 20Gi
-  zones:
-  - name: eu-west-1a
-    autoScalerMin: 2
-    autoScalerMax: 2
-  - name: eu-west-1b
-    autoScalerMin: 1
-    autoScalerMax: 1
+# workers:
+# - name: cpu-worker
+#   machineType: m4.xlarge
+#   volumeType: gp2
+#   volumeSize: 20Gi
+#   zones:
+#   - name: eu-west-1a
+#     autoScalerMin: 2
+#     autoScalerMax: 2
+#   - name: eu-west-1b
+#     autoScalerMin: 1
+#     autoScalerMax: 1
 
-zones:
-- name: eu-west-1a
-  cidr:
-    worker: 10.250.0.0/19
-    public: 10.250.96.0/22
-    internal: 10.250.112.0/22
-- name: eu-west-1b
-  cidr:
-    worker: 10.250.0.0/19
-    public: 10.250.96.0/22
-    internal: 10.250.112.0/22
+# zones:
+# - name: eu-west-1a
+#   cidr:
+#     worker: 10.250.0.0/19
+#     public: 10.250.96.0/22
+#     internal: 10.250.112.0/22
+# - name: eu-west-1b
+#   cidr:
+#     worker: 10.250.0.0/19
+#     public: 10.250.96.0/22
+#     internal: 10.250.112.0/22
