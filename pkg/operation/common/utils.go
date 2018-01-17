@@ -192,7 +192,7 @@ func EnsureImagePullSecrets(k8sClient kubernetes.Client, namespace string, secre
 		_, err := k8sClient.GetServiceAccount(namespace, serviceAccountName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				msg := fmt.Sprintf("Waiting for ServiceAccount '%s' to be created in namespace '%s'...`", serviceAccountName, namespace)
+				msg := fmt.Sprintf("Waiting for ServiceAccount '%s' to be created in namespace '%s'...", serviceAccountName, namespace)
 				if log != nil {
 					log.Info(msg)
 				} else {
