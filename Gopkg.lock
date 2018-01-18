@@ -52,8 +52,8 @@
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/ec2query","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/autoscaling","service/ec2","service/elb","service/sts"]
-  revision = "726cba4d63d34a7055809986b7942c3eae6c4eb2"
-  version = "v1.12.60"
+  revision = "c13a879e75646fe750d21bcb05bf2cabea9791c1"
+  version = "v1.12.65"
 
 [[projects]]
   branch = "master"
@@ -361,7 +361,7 @@
   branch = "master"
   name = "golang.org/x/crypto"
   packages = ["curve25519","ed25519","ed25519/internal/edwards25519","pbkdf2","scrypt","ssh","ssh/terminal"]
-  revision = "5f55bce93ad2c89f411e009659bb1fd83da36e7b"
+  revision = "13931e22f9e72ea58bb73048bc752b48c6d4d4ac"
 
 [[projects]]
   branch = "master"
@@ -373,7 +373,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix","windows"]
-  revision = "810d7000345868fc619eb81f46307107118f4ae1"
+  revision = "2c42eef0765b9837fbdab12011af7830f55f88f0"
 
 [[projects]]
   branch = "master"
@@ -385,7 +385,7 @@
   branch = "master"
   name = "golang.org/x/tools"
   packages = ["go/ast/astutil","imports"]
-  revision = "fbec762f837dc349b73d1eaa820552e2ad177942"
+  revision = "af2bfe26b6891a197d033db63786cf8eb6bebd7b"
 
 [[projects]]
   branch = "master"
@@ -472,6 +472,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "6769d913b5ea3937fb8e39f39e157001fe981c132988a80703ae56d0fa30ed5f"
+  inputs-digest = "f7707d222c089e3383c5adbb4e8636590e41e8d4c4a8bc59623929f39079026e"
   solver-name = "gps-cdcl"
   solver-version = 1

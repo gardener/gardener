@@ -49,6 +49,10 @@ ignored = [
   version = "~1.12.48"
 
 [[constraint]]
+  name = "github.com/ghodss/yaml"
+  version = "^1.0.0"
+
+[[constraint]]
   name = "github.com/jmoiron/jsonq"
   revision = "e874b168d07ecc7808bc950a17998a8aa3141d82"
 

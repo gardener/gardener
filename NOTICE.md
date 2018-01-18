@@ -87,6 +87,11 @@ https://github.com/spf13/cobra.
 Copyright 2015 Steve Francia.  
 Apache 2 license (https://github.com/spf13/cobra/blob/master/LICENSE.txt)  
 
+YAML marshaling and unmarshaling support for Go  
+https://github.com/ghodss/yaml.  
+Copyright (c) 2014 Sam Ghods  
+MIT license (https://github.com/ghodss/yaml/blob/master/LICENSE)
+
 JSONQ  
 https://github.com/jmoiron/jsonq.  
 Copyright (c) 2012, Jason Moiron  
