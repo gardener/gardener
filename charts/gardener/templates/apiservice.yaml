@@ -17,7 +17,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: garden-apiserver-cert
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 type: Opaque
 data:
   garden-apiserver.crt: {{ b64enc .Values.apiserver.tls.crt }}
