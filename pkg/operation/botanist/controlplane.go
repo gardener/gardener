@@ -71,24 +71,10 @@ func (b *Botanist) DeployETCDOperator() error {
 // kube-apiserver deployment (of the Shoot cluster). It waits until the load balancer is available and stores the address
 // on the Botanist's APIServerAddress attribute.
 func (b *Botanist) DeployKubeAPIServerService() error {
-	return b.ApplyChartSeed(
-		filepath.Join(common.ChartPath, "seed-controlplane", "charts", "kube-apiserver-service"),
-		"kube-apiserver-service",
-		b.Operation.Shoot.SeedNamespace,
-		nil,
-		map[string]interface{}{
-			"cloudProvider": b.Shoot.CloudProvider,
-		},
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "kube-apiserver-service"), "kube-apiserver-service", b.Operation.Shoot.SeedNamespace, nil, map[string]interface{}{
+		"cloudProvider": b.Shoot.CloudProvider,
+	},
 	)
-}
-
-// DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
-func (b *Botanist) DeleteKubeAPIServer() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Operation.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
 }
 
 // DeleteKubeAddonManager deletes the kube-addon-manager deployment in the Seed cluster which holds the Shoot's control plane. It
