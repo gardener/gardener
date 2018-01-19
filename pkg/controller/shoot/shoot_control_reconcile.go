@@ -73,11 +73,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		ensureImagePullSecretsShoot          = f.AddTask(botanist.EnsureImagePullSecretsShoot, defaultRetry, initializeShootClients)
 		deployKubeAddonManager               = f.AddTask(helperBotanist.DeployKubeAddonManager, defaultRetry, ensureImagePullSecretsShoot)
 		_                                    = f.AddTask(cloudBotanist.DeployAutoNodeRepair, defaultRetry, waitUntilKubeAPIServerIsReady, deployInfrastructure)
-		_                                    = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients)
 		_                                    = f.AddTaskConditional(cloudBotanist.DeployKube2IAMResources, defaultRetry, addons.Kube2IAM.Enabled, deployInfrastructure)
 		_                                    = f.AddTaskConditional(botanist.DeployNginxIngressResources, 10*time.Minute, addons.NginxIngress.Enabled && managedDNS, deployKubeAddonManager, ensureImagePullSecretsShoot)
 		waitUntilVPNConnectionExists         = f.AddTask(botanist.WaitUntilVPNConnectionExists, 0, deployKubeAddonManager)
-		_                                    = f.AddTask(cloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
+		applyCreateHook                      = f.AddTask(cloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
+		_                                    = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, applyCreateHook)
 	)
 
 	e := f.Execute()
