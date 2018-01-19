@@ -29,6 +29,7 @@ func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 project-id = ` + b.Project + `
 network-name = ` + networkName + `
 multizone = false
+token-url = nil
 local-zone = ` + string(b.Shoot.Info.Spec.Cloud.GCP.Zones[0]) + `
 node-tags = ` + b.Shoot.SeedNamespace, nil
 }
@@ -37,9 +38,7 @@ node-tags = ` + b.Shoot.SeedNamespace, nil
 // Deployment manifest of the kube-apiserver properly.
 func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"additionalParameters": []string{
-			fmt.Sprintf("--google-json-key=/srv/cloudprovider/%s", ServiceAccountJSON),
-		},
+		"environment": getGCPCredentialsEnvironment(),
 	}, nil
 }
 
@@ -47,10 +46,18 @@ func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *GCPBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"additionalParameters": []string{
-			fmt.Sprintf("--google-json-key=/srv/cloudprovider/%s", ServiceAccountJSON),
-		},
+		"environment": getGCPCredentialsEnvironment(),
 	}, nil
+}
+
+// maps are mutable, so it's safer to create a new instance
+func getGCPCredentialsEnvironment() []map[string]interface{} {
+	return []map[string]interface{}{
+		{
+			"name": "GOOGLE_APPLICATION_CREDENTIALS",
+			"value": fmt.Sprintf("/srv/cloudprovider/%s", ServiceAccountJSON),
+		},
+	}
 }
 
 // GenerateKubeSchedulerConfig generates the cloud provider specific values which are required to render the
