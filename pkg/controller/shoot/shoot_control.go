@@ -88,18 +88,7 @@ func (c *Controller) shootDelete(obj interface{}) {
 		return
 	}
 
-	shoot, ok := obj.(*gardenv1beta1.Shoot)
-	if shoot == nil || !ok {
-		return
-	}
-
-	var (
-		shootJSON, _ = json.Marshal(shoot)
-		shootLogger  = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
-	)
-	shootLogger.Infof("[DELETE] %s", key)
-	shootLogger.Debugf(string(shootJSON))
-	shootLogger.Info("Deletion is accepted.")
+	c.shootQueue.Add(key)
 }
 
 func (c *Controller) reconcileShootKey(key string) error {
