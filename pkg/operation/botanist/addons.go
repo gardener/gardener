@@ -113,7 +113,7 @@ func (b *Botanist) GenerateHeapsterConfig() (map[string]interface{}, error) {
 
 	if enabled {
 		addonManagerLabels := map[string]interface{}{
-			"addonmanager.kubernetes.io/mode": "EnsureExists",
+			"addonmanager.kubernetes.io/mode": "Reconcile",
 		}
 		values = map[string]interface{}{
 			"labels": addonManagerLabels,

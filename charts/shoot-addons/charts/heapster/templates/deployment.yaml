@@ -4,9 +4,7 @@ metadata:
   name: {{ template "fullname" . }}
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    {{- range $key, $value := .Values.labels }}
-    {{ $key }}: {{ $value }}
-    {{- end }}
+    addonmanager.kubernetes.io/mode: EnsureExists
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
