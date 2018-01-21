@@ -19,4 +19,4 @@ See our documentation in the `/docs` repository, please [find the index here](do
 
 ## Feedback and Support
 
-Feedback is always welcome. Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](issues).
+Feedback is always welcome. Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues).
