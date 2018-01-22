@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -149,4 +150,29 @@ func (s *Seed) GetIngressFQDN(subDomain, shootName, shootNamespace string) (stri
 		return "", fmt.Errorf("the FQDN for '%s' cannot be longer than 64 characters", result)
 	}
 	return result, nil
+}
+
+// CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
+func (s *Seed) CheckMinimumK8SVersion() error {
+	var minSeedVersion string
+	switch s.CloudProvider {
+	case gardenv1beta1.CloudProviderAzure:
+		minSeedVersion = "1.8.6" // https://github.com/kubernetes/kubernetes/issues/56898
+	default:
+		minSeedVersion = "1.7"
+	}
+
+	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret)
+	if err != nil {
+		return err
+	}
+
+	seedVersionOK, err := utils.CompareVersions(k8sSeedClient.Version(), ">=", minSeedVersion)
+	if err != nil {
+		return err
+	}
+	if !seedVersionOK {
+		return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
+	}
+	return nil
 }

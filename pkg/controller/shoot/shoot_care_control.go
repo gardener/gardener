@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 )
@@ -39,9 +38,7 @@ func (c *Controller) shootCareAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	c.
-		shootCareQueue.
-		AddAfter(key, c.config.Controller.HealthCheckPeriod.Duration)
+	c.shootCareQueue.AddAfter(key, c.config.Controller.HealthCheckPeriod.Duration)
 }
 
 func (c *Controller) shootCareDelete(obj interface{}) {
@@ -53,9 +50,7 @@ func (c *Controller) shootCareDelete(obj interface{}) {
 	if err != nil {
 		return
 	}
-	c.
-		shootCareQueue.
-		Done(key)
+	c.shootCareQueue.Done(key)
 }
 
 func (c *Controller) reconcileShootCareKey(key string) error {
@@ -106,14 +101,8 @@ type defaultCareControl struct {
 
 func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) error {
 	var (
-		shoot            = shootObj.DeepCopy()
-		shootLogger      = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
-		healthCheckError = "ShootCareError"
-		updateStatus     = func(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy *gardenv1beta1.Condition) {
-			if err := c.updateShootStatus(shoot, []gardenv1beta1.Condition{*conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy}); err != nil {
-				shootLogger.Errorf("Could not update the Shoot status in care controller: %+v", err)
-			}
-		}
+		shoot       = shootObj.DeepCopy()
+		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
 	)
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
@@ -124,35 +113,39 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	}
 
 	// Initialize conditions based on the current status.
-	conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy := initConditions(shoot.Status.Conditions)
+	var (
+		newConditions                    = helper.NewConditions(shoot.Status.Conditions, gardenv1beta1.ShootControlPlaneHealthy, gardenv1beta1.ShootEveryNodeReady, gardenv1beta1.ShootSystemComponentsHealthy)
+		conditionControlPlaneHealthy     = newConditions[0]
+		conditionEveryNodeReady          = newConditions[1]
+		conditionSystemComponentsHealthy = newConditions[2]
+	)
 
 	botanist, err := botanistpkg.New(operation)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a botanist object to perform the care operations (%s).", err.Error())
-		conditionControlPlaneHealthy = helper.ModifyCondition(conditionControlPlaneHealthy, corev1.ConditionUnknown, healthCheckError, message)
-		conditionEveryNodeReady = helper.ModifyCondition(conditionEveryNodeReady, corev1.ConditionUnknown, healthCheckError, message)
-		conditionSystemComponentsHealthy = helper.ModifyCondition(conditionSystemComponentsHealthy, corev1.ConditionUnknown, healthCheckError, message)
+		conditionControlPlaneHealthy = helper.ModifyCondition(conditionControlPlaneHealthy, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+		conditionEveryNodeReady = helper.ModifyCondition(conditionEveryNodeReady, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+		conditionSystemComponentsHealthy = helper.ModifyCondition(conditionSystemComponentsHealthy, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
 		operation.Logger.Error(message)
-		updateStatus(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 		return nil
 	}
 	cloudBotanist, err := cloudbotanist.New(operation)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Cloud Botanist to perform the care operations (%s).", err.Error())
-		conditionControlPlaneHealthy = helper.ModifyCondition(conditionControlPlaneHealthy, corev1.ConditionUnknown, healthCheckError, message)
-		conditionEveryNodeReady = helper.ModifyCondition(conditionEveryNodeReady, corev1.ConditionUnknown, healthCheckError, message)
-		conditionSystemComponentsHealthy = helper.ModifyCondition(conditionSystemComponentsHealthy, corev1.ConditionUnknown, healthCheckError, message)
+		conditionControlPlaneHealthy = helper.ModifyCondition(conditionControlPlaneHealthy, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+		conditionEveryNodeReady = helper.ModifyCondition(conditionEveryNodeReady, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+		conditionSystemComponentsHealthy = helper.ModifyCondition(conditionSystemComponentsHealthy, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
 		operation.Logger.Error(message)
-		updateStatus(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 		return nil
 	}
-	err = botanist.InitializeShootClients()
-	if err != nil {
+	if err := botanist.InitializeShootClients(); err != nil {
 		message := fmt.Sprintf("Failed to create a K8SClient for the Shoot cluster to perform the care operations (%s).", err.Error())
-		conditionEveryNodeReady = helper.ModifyCondition(conditionEveryNodeReady, corev1.ConditionUnknown, healthCheckError, message)
-		conditionSystemComponentsHealthy = helper.ModifyCondition(conditionSystemComponentsHealthy, corev1.ConditionUnknown, healthCheckError, message)
+		conditionEveryNodeReady = helper.ModifyCondition(conditionEveryNodeReady, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+		conditionSystemComponentsHealthy = helper.ModifyCondition(conditionSystemComponentsHealthy, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
 		operation.Logger.Error(message)
-		updateStatus(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+		c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 		return nil
 	}
 
@@ -163,18 +156,23 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = healthCheck(botanist, cloudBotanist, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
 
 	// Update Shoot status
-	updateStatus(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
+	c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 
 	return nil
 }
 
-func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions []gardenv1beta1.Condition) error {
-	if shoot.Status.Conditions != nil && !apiequality.Semantic.DeepEqual(conditions, shoot.Status.Conditions) {
+func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions ...gardenv1beta1.Condition) error {
+	if !helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
 		return nil
 	}
+
 	shoot.Status.Conditions = conditions
 
 	_, err := c.updater.UpdateShootStatusIfNoOperation(shoot)
+	if err != nil {
+		logger.Logger.Errorf("Could not update the Seed status: %+v", err)
+	}
+
 	return err
 }
 
@@ -228,44 +226,5 @@ func healthCheck(botanist *botanistpkg.Botanist, cloudBotanist cloudbotanist.Clo
 	wg.Wait()
 
 	botanist.Logger.Debugf("Successfully performed health check for Shoot cluster '%s'", botanist.Shoot.Info.Name)
-	return conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy
-}
-
-// initConditions initializes the Shoot conditions based on an existing list. If a condition type does not exist
-// in the list yet, it will be set to default values.
-func initConditions(conditions []gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
-	var (
-		conditionControlPlaneHealthy     *gardenv1beta1.Condition
-		conditionEveryNodeReady          *gardenv1beta1.Condition
-		conditionSystemComponentsHealthy *gardenv1beta1.Condition
-	)
-
-	// We retrieve the current conditions in order to update them appropriately.
-	for _, condition := range conditions {
-		if condition.Type == gardenv1beta1.ShootControlPlaneHealthy {
-			c := condition
-			conditionControlPlaneHealthy = &c
-		}
-		if condition.Type == gardenv1beta1.ShootEveryNodeReady {
-			c := condition
-			conditionEveryNodeReady = &c
-		}
-		if condition.Type == gardenv1beta1.ShootSystemComponentsHealthy {
-			c := condition
-			conditionSystemComponentsHealthy = &c
-		}
-	}
-
-	// If the conditions have not been set yet for a cluster, we have to initialize them once.
-	if conditionControlPlaneHealthy == nil {
-		conditionControlPlaneHealthy = helper.InitCondition(gardenv1beta1.ShootControlPlaneHealthy, "", "")
-	}
-	if conditionEveryNodeReady == nil {
-		conditionEveryNodeReady = helper.InitCondition(gardenv1beta1.ShootEveryNodeReady, "", "")
-	}
-	if conditionSystemComponentsHealthy == nil {
-		conditionSystemComponentsHealthy = helper.InitCondition(gardenv1beta1.ShootSystemComponentsHealthy, "", "")
-	}
-
 	return conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy
 }

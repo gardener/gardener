@@ -19,6 +19,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -96,4 +97,35 @@ func ModifyCondition(condition *gardenv1beta1.Condition, status corev1.Condition
 		(*condition).LastTransitionTime = metav1.Now()
 	}
 	return condition
+}
+
+// NewConditions initializes the provided conditions based on an existing list. If a condition type does not exist
+// in the list yet, it will be set to default values.
+func NewConditions(conditions []gardenv1beta1.Condition, conditionTypes ...gardenv1beta1.ConditionType) []*gardenv1beta1.Condition {
+	newConditions := []*gardenv1beta1.Condition{}
+
+	// We retrieve the current conditions in order to update them appropriately.
+	for _, conditionType := range conditionTypes {
+		typeFound := false
+
+		for _, condition := range conditions {
+			if condition.Type == conditionType {
+				typeFound = true
+				c := condition
+				newConditions = append(newConditions, &c)
+				break
+			}
+		}
+
+		if !typeFound {
+			newConditions = append(newConditions, InitCondition(conditionType, "", ""))
+		}
+	}
+
+	return newConditions
+}
+
+// ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.
+func ConditionsNeedUpdate(existingConditions, newConditions []gardenv1beta1.Condition) bool {
+	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
 }

@@ -145,6 +145,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		controllerutils.CreateWorker(c.shootCareQueue, "Shoot Care", c.reconcileShootCareKey, stopCh, &waitGroup, c.workerCh)
 	}
 
+	// Shutdown handling
 	<-stopCh
 	c.shootQueue.ShutDown()
 	c.shootCareQueue.ShutDown()

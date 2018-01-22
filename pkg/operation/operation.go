@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -78,22 +77,6 @@ func (o *Operation) InitializeSeedClients() error {
 		return err
 	}
 	chartSeedRenderer := chartrenderer.New(k8sSeedClient)
-
-	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-	var minSeedVersion string
-	switch o.Seed.CloudProvider {
-	case gardenv1beta1.CloudProviderAzure:
-		minSeedVersion = "1.8.6" // https://github.com/kubernetes/kubernetes/issues/56898
-	default:
-		minSeedVersion = "1.7"
-	}
-	seedVersionOK, err := utils.CompareVersions(k8sSeedClient.Version(), ">=", minSeedVersion)
-	if err != nil {
-		return err
-	}
-	if !seedVersionOK {
-		return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
-	}
 
 	o.K8sSeedClient = k8sSeedClient
 	o.ChartSeedRenderer = chartSeedRenderer

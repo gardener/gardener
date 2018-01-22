@@ -99,11 +99,11 @@ func (c *Controller) reconcileShootKey(key string) error {
 
 	shoot, err := c.shootLister.Shoots(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[RECONCILE] %s - skipping because Shoot has been deleted", key)
+		logger.Logger.Debugf("[SHOOT RECONCILE] %s - skipping because Shoot has been deleted", key)
 		return nil
 	}
 	if err != nil {
-		logger.Logger.Infof("[RECONCILE] %s - unable to retrieve object from store: %v", key, err)
+		logger.Logger.Infof("[SHOOT RECONCILE] %s - unable to retrieve object from store: %v", key, err)
 		return err
 	}
 
@@ -166,7 +166,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		lastOperation                      = shoot.Status.LastOperation
 	)
 
-	logger.Logger.Infof("[RECONCILE] %s", key)
+	logger.Logger.Infof("[SHOOT RECONCILE] %s", key)
 	shootJSON, _ := json.Marshal(shoot)
 	shootLogger.Debugf(string(shootJSON))
 

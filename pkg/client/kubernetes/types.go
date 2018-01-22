@@ -53,6 +53,9 @@ type Client interface {
 	ListShoots(string) (*gardenv1beta1.ShootList, error)
 	DeleteShoot(string, string) error
 
+	// Seeds
+	UpdateSeedStatus(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
+
 	// Namespaces
 	CreateNamespace(string, bool) (*corev1.Namespace, error)
 	UpdateNamespace(string) (*corev1.Namespace, error)

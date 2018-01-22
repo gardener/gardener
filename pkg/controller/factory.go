@@ -22,6 +22,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
@@ -95,18 +96,21 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 
 	var (
 		shootController = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		seedController  = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
 	)
 
 	go shootController.Run(workerCount, stopCh)
+	go seedController.Run(workerCount, stopCh)
 
 	logger.Logger.Infof("Garden controller manager (version %s) initialized.", version.Version)
 
+	// Shutdown handling
 	<-stopCh
 	logger.Logger.Info("I have received a stop signal and will no longer watch events of my API group.")
 	logger.Logger.Info("I will terminate as soon as all my running workers have terminated.")
 
 	for {
-		if shootController.RunningWorkers() == 0 {
+		if shootController.RunningWorkers() == 0 && seedController.RunningWorkers() == 0 {
 			logger.Logger.Info("All controllers have been terminated.")
 			break
 		}
