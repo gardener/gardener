@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package utils
 
 import (
-	"reflect"
 	"sync"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
@@ -63,20 +61,4 @@ func worker(queue workqueue.RateLimitingInterface, resourceType string, reconcil
 			}()
 		}
 	}
-}
-
-// CheckIfResourceVersionChanged returns true if the .metadata.resourceVersion fields of oldShoot and newShoot
-// differ, and false otherwise.
-func CheckIfResourceVersionChanged(oldShoot *gardenv1beta1.Shoot, newShoot *gardenv1beta1.Shoot) bool {
-	return oldShoot.ObjectMeta.ResourceVersion != newShoot.ObjectMeta.ResourceVersion
-}
-
-// CheckIfSpecChanged returns true if the .spec fields of oldShoot and newShoot differ, and false otherwise.
-func CheckIfSpecChanged(oldShoot *gardenv1beta1.Shoot, newShoot *gardenv1beta1.Shoot) bool {
-	return !reflect.DeepEqual(oldShoot.Spec, newShoot.Spec)
-}
-
-// CheckIfStatusChanged returns true if the .status fields of oldShoot and newShoot differ, and false otherwise.
-func CheckIfStatusChanged(oldShoot *gardenv1beta1.Shoot, newShoot *gardenv1beta1.Shoot) bool {
-	return !reflect.DeepEqual(oldShoot.Status, newShoot.Status)
 }

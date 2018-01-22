@@ -30,7 +30,7 @@ import (
 	clientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controller/shoot"
+	"github.com/gardener/gardener/pkg/controller"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/handlers"
@@ -323,16 +323,15 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 func startControllers(g *Gardener, stopCh <-chan struct{}) error {
 	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GetGardenClientset(), g.Config.Controller.Reconciliation.ResyncPeriod.Duration)
 
-	go shoot.NewShootController(
+	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
-		gardenInformerFactory.Garden().V1beta1(),
+		gardenInformerFactory,
 		g.Config,
 		g.Identity,
 		g.GardenerNamespace,
 		g.Recorder,
-	).Run(g.Config.Controller.Reconciliation.ConcurrentSyncs, stopCh)
+	).Run(stopCh)
 
-	gardenInformerFactory.Start(stopCh)
 	select {}
 }
 

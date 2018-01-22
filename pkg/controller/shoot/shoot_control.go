@@ -23,13 +23,13 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controller"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
@@ -53,8 +53,8 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 		newShootJSON, _ = json.Marshal(newShoot)
 		shoot           = newShoot.DeepCopy()
 		shootLogger     = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace, "")
-		specChanged     = controller.CheckIfSpecChanged(oldShoot, newShoot)
-		statusChanged   = controller.CheckIfStatusChanged(oldShoot, newShoot)
+		specChanged     = !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
+		statusChanged   = !apiequality.Semantic.DeepEqual(oldShoot.Status, newShoot.Status)
 	)
 	shootLogger.Debugf(string(oldShootJSON))
 	shootLogger.Debugf(string(newShootJSON))
