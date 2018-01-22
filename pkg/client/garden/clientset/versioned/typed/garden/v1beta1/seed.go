@@ -19,6 +19,7 @@ type SeedsGetter interface {
 type SeedInterface interface {
 	Create(*v1beta1.Seed) (*v1beta1.Seed, error)
 	Update(*v1beta1.Seed) (*v1beta1.Seed, error)
+	UpdateStatus(*v1beta1.Seed) (*v1beta1.Seed, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1beta1.Seed, error)
@@ -89,6 +90,21 @@ func (c *seeds) Update(seed *v1beta1.Seed) (result *v1beta1.Seed, err error) {
 	err = c.client.Put().
 		Resource("seeds").
 		Name(seed.Name).
+		Body(seed).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *seeds) UpdateStatus(seed *v1beta1.Seed) (result *v1beta1.Seed, err error) {
+	result = &v1beta1.Seed{}
+	err = c.client.Put().
+		Resource("seeds").
+		Name(seed.Name).
+		SubResource("status").
 		Body(seed).
 		Do().
 		Into(result)

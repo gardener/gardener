@@ -109,8 +109,8 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 		shoot            = shootObj.DeepCopy()
 		shootLogger      = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
 		healthCheckError = "ShootCareError"
-		updateStatus     = func(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy *gardenv1beta1.ShootCondition) {
-			if err := c.updateShootStatus(shoot, []gardenv1beta1.ShootCondition{*conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy}); err != nil {
+		updateStatus     = func(conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy *gardenv1beta1.Condition) {
+			if err := c.updateShootStatus(shoot, []gardenv1beta1.Condition{*conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy}); err != nil {
 				shootLogger.Errorf("Could not update the Shoot status in care controller: %+v", err)
 			}
 		}
@@ -168,7 +168,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	return nil
 }
 
-func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions []gardenv1beta1.ShootCondition) error {
+func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions []gardenv1beta1.Condition) error {
 	if shoot.Status.Conditions != nil && !apiequality.Semantic.DeepEqual(conditions, shoot.Status.Conditions) {
 		return nil
 	}
@@ -201,7 +201,7 @@ func garbageCollection(botanist *botanistpkg.Botanist) {
 // It receives a Garden object <garden> which stores the Shoot object.
 // The current Health check verifies that the control plane running in the Seed cluster is healthy, every
 // node is ready and that all system components (pods running kube-system) are healthy.
-func healthCheck(botanist *botanistpkg.Botanist, cloudBotanist cloudbotanist.CloudBotanist, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy *gardenv1beta1.ShootCondition) (*gardenv1beta1.ShootCondition, *gardenv1beta1.ShootCondition, *gardenv1beta1.ShootCondition) {
+func healthCheck(botanist *botanistpkg.Botanist, cloudBotanist cloudbotanist.CloudBotanist, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
 	var (
 		currentlyScaling = false
 		healthyInstances = 0
@@ -233,11 +233,11 @@ func healthCheck(botanist *botanistpkg.Botanist, cloudBotanist cloudbotanist.Clo
 
 // initConditions initializes the Shoot conditions based on an existing list. If a condition type does not exist
 // in the list yet, it will be set to default values.
-func initConditions(conditions []gardenv1beta1.ShootCondition) (*gardenv1beta1.ShootCondition, *gardenv1beta1.ShootCondition, *gardenv1beta1.ShootCondition) {
+func initConditions(conditions []gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
 	var (
-		conditionControlPlaneHealthy     *gardenv1beta1.ShootCondition
-		conditionEveryNodeReady          *gardenv1beta1.ShootCondition
-		conditionSystemComponentsHealthy *gardenv1beta1.ShootCondition
+		conditionControlPlaneHealthy     *gardenv1beta1.Condition
+		conditionEveryNodeReady          *gardenv1beta1.Condition
+		conditionSystemComponentsHealthy *gardenv1beta1.Condition
 	)
 
 	// We retrieve the current conditions in order to update them appropriately.

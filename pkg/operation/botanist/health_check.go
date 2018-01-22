@@ -23,7 +23,7 @@ import (
 
 // CheckConditionControlPlaneHealthy checks whether the control plane of the Shoot cluster is healthy,
 // i.e. whether all containers running in the relevant namespace in the Seed cluster are healthy.
-func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.ShootCondition) *gardenv1beta1.ShootCondition {
+func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
 	response, err := b.K8sShootClient.Curl("healthz")
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionFalse, "KubeAPIServerNotHealthy", "Could not reach Shoot cluster kube-apiserver's /healthz endpoint: '"+err.Error()+"'")
@@ -57,7 +57,7 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Sh
 
 // CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state and
 // that no node known to the IaaS is not registered to the Shoot's kube-apiserver.
-func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.ShootCondition, currentlyScaling bool, healthyInstances int) *gardenv1beta1.ShootCondition {
+func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition, currentlyScaling bool, healthyInstances int) *gardenv1beta1.Condition {
 	nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchNodeListFailed", err.Error())
@@ -78,7 +78,7 @@ func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.ShootCo
 // CheckConditionSystemComponentsHealthy checks whether every container in the kube-system namespace of the Shoot cluster is in "Running"
 // state and that the number of available replicas per deployment matches the number of actual replicas (i.e., the number of desired pods
 // matches the number of actual running pods).
-func (b *Botanist) CheckConditionSystemComponentsHealthy(condition *gardenv1beta1.ShootCondition) *gardenv1beta1.ShootCondition {
+func (b *Botanist) CheckConditionSystemComponentsHealthy(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
 	// Check whether the number of availableReplicas matches the number of desired replicas.
 	deploymentList, err := b.K8sShootClient.ListDeployments(metav1.NamespaceSystem, metav1.ListOptions{})
 	if err != nil {

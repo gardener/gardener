@@ -55,6 +55,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	seedStorage := seedstore.NewStorage(restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
+	storage["seeds/status"] = seedStorage.Status
 
 	privateSecretBindingStorage := privatesecretbinding.NewStorage(restOptionsGetter)
 	storage["privatesecretbindings"] = privateSecretBindingStorage.PrivateSecretBinding

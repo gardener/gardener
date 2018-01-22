@@ -60,15 +60,15 @@ func DetermineCloudProviderInShoot(cloud gardenv1beta1.Cloud) (gardenv1beta1.Clo
 	return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
 }
 
-// InitCondition initializes a new ShootCondition with an Unknown status.
-func InitCondition(conditionType gardenv1beta1.ShootConditionType, reason, message string) *gardenv1beta1.ShootCondition {
+// InitCondition initializes a new Condition with an Unknown status.
+func InitCondition(conditionType gardenv1beta1.ConditionType, reason, message string) *gardenv1beta1.Condition {
 	if reason == "" {
 		reason = "ConditionInitialized"
 	}
 	if message == "" {
 		message = "The condition has been initialized but its semantic check has not been performed yet."
 	}
-	return &gardenv1beta1.ShootCondition{
+	return &gardenv1beta1.Condition{
 		Type:               conditionType,
 		Status:             corev1.ConditionUnknown,
 		Reason:             reason,
@@ -78,7 +78,7 @@ func InitCondition(conditionType gardenv1beta1.ShootConditionType, reason, messa
 }
 
 // ModifyCondition updates the properties of one specific condition.
-func ModifyCondition(condition *gardenv1beta1.ShootCondition, status corev1.ConditionStatus, reason, message string) *gardenv1beta1.ShootCondition {
+func ModifyCondition(condition *gardenv1beta1.Condition, status corev1.ConditionStatus, reason, message string) *gardenv1beta1.Condition {
 	var update = false
 	if status != (*condition).Status {
 		update = true

@@ -270,6 +270,9 @@ type Seed struct {
 	// Spec defines the Seed cluster properties.
 	// +optional
 	Spec SeedSpec `json:"spec,omitempty"`
+	// Most recently observed status of the Seed cluster.
+	// +optional
+	Status SeedStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -296,6 +299,13 @@ type SeedSpec struct {
 	SecretRef CrossReference `json:"secretRef"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks K8SNetworks `json:"networks"`
+}
+
+// SeedStatus holds the most recently observed status of the Seed cluster.
+type SeedStatus struct {
+	// Conditions represents the latest available observations of a Seed's current state.
+	// +optional
+	Conditions []Condition `json:"conditions,omitempty"`
 }
 
 // SeedCloud defines the cloud profile and the region this Seed cluster belongs to.
@@ -501,7 +511,7 @@ type ShootSpec struct {
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
 	// +optional
-	Conditions []ShootCondition `json:"conditions,omitempty"`
+	Conditions []Condition `json:"conditions,omitempty"`
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener `json:"gardener"`
 	// LastOperation holds information about the last operation on the Shoot.
@@ -973,32 +983,6 @@ type Gardener struct {
 	Version string `json:"version"`
 }
 
-// ShootCondition holds the information about the state of the Shoot cluster.
-type ShootCondition struct {
-	// Type of the Shoot condition.
-	Type ShootConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
-	// The reason for the condition's last transition.
-	Reason string `json:"reason"`
-	// A human readable message indicating details about the transition.
-	Message string `json:"message"`
-}
-
-// ShootConditionType is a string alias.
-type ShootConditionType string
-
-const (
-	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
-	ShootControlPlaneHealthy ShootConditionType = "ControlPlaneHealthy"
-	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
-	ShootEveryNodeReady ShootConditionType = "EveryNodeReady"
-	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
-	ShootSystemComponentsHealthy ShootConditionType = "SystemComponentsHealthy"
-)
-
 // LastOperation indicates the type and the state of the last operation, along with a description
 // message and a progress indicator.
 type LastOperation struct {
@@ -1084,4 +1068,32 @@ const (
 	// GardenerName is the value in a Shoot's `.metadata.finalizers[]` array on which the GardenerName will react
 	// when performing a delete request on a Shoot resource.
 	GardenerName = "gardener"
+)
+
+// Condition holds the information about the state of a resource.
+type Condition struct {
+	// Type of the Shoot condition.
+	Type ConditionType `json:"type"`
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	// The reason for the condition's last transition.
+	Reason string `json:"reason"`
+	// A human readable message indicating details about the transition.
+	Message string `json:"message"`
+}
+
+// ConditionType is a string alias.
+type ConditionType string
+
+const (
+	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
+	SeedAvailable ConditionType = "Available"
+	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
+	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
+	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
+	ShootEveryNodeReady ConditionType = "EveryNodeReady"
+	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
+	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 )

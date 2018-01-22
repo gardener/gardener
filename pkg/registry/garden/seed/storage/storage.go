@@ -17,7 +17,9 @@ package storage
 import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/registry/garden/seed"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -30,20 +32,22 @@ type REST struct {
 
 // SeedStorage implements the storage for Seeds.
 type SeedStorage struct {
-	Seed *REST
+	Seed   *REST
+	Status *StatusREST
 }
 
 // NewStorage creates a new SeedStorage object.
 func NewStorage(optsGetter generic.RESTOptionsGetter) SeedStorage {
-	seedRest := NewREST(optsGetter)
+	seedRest, seedStatusRest := NewREST(optsGetter)
 
 	return SeedStorage{
-		Seed: seedRest,
+		Seed:   seedRest,
+		Status: seedStatusRest,
 	}
 }
 
 // NewREST returns a RESTStorage object that will work with Seed objects.
-func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
+func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &garden.Seed{} },
 		NewListFunc:              func() runtime.Object { return &garden.SeedList{} },
@@ -58,7 +62,30 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
-	return &REST{store}
+
+	statusStore := *store
+	statusStore.UpdateStrategy = seed.StatusStrategy
+	return &REST{store}, &StatusREST{store: &statusStore}
+}
+
+// StatusREST implements the REST endpoint for changing the status of a Seed.
+type StatusREST struct {
+	store *genericregistry.Store
+}
+
+// New creates a new (empty) internal Seed object.
+func (r *StatusREST) New() runtime.Object {
+	return &garden.Seed{}
+}
+
+// Get retrieves the object from the storage. It is required to support Patch.
+func (r *StatusREST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
+	return r.store.Get(ctx, name, options)
+}
+
+// Update alters the status subset of an object.
+func (r *StatusREST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (runtime.Object, bool, error) {
+	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation)
 }
 
 // Implement ShortNamesProvider

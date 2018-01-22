@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -37,7 +38,19 @@ func (seedStrategy) NamespaceScoped() bool {
 }
 
 func (seedStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
-	_ = obj.(*garden.Seed)
+	seed := obj.(*garden.Seed)
+	seed.Status = garden.SeedStatus{}
+	seed.Generation = 1
+}
+
+func (seedStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+	newSeed := obj.(*garden.Seed)
+	oldSeed := old.(*garden.Seed)
+	newSeed.Status = oldSeed.Status
+
+	if !apiequality.Semantic.DeepEqual(oldSeed.Spec, newSeed.Spec) {
+		newSeed.Generation = oldSeed.Generation + 1
+	}
 }
 
 func (seedStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
@@ -52,11 +65,6 @@ func (seedStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (seedStrategy) PrepareForUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) {
-	_ = oldObj.(*garden.Seed)
-	_ = newObj.(*garden.Seed)
-}
-
 func (seedStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
@@ -64,4 +72,21 @@ func (seedStrategy) AllowUnconditionalUpdate() bool {
 func (seedStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldSeed, newSeed := oldObj.(*garden.Seed), newObj.(*garden.Seed)
 	return validation.ValidateSeedUpdate(newSeed, oldSeed)
+}
+
+type seedStatusStrategy struct {
+	seedStrategy
+}
+
+// StatusStrategy defines the storage strategy for the status subresource of Seeds.
+var StatusStrategy = seedStatusStrategy{Strategy}
+
+func (seedStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+	newSeed := obj.(*garden.Seed)
+	oldSeed := old.(*garden.Seed)
+	newSeed.Spec = oldSeed.Spec
+}
+
+func (seedStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+	return validation.ValidateSeedStatusUpdate(obj.(*garden.Seed), old.(*garden.Seed))
 }

@@ -54,7 +54,7 @@ func (b *GCPBotanist) GenerateKubeControllerManagerConfig() (map[string]interfac
 func getGCPCredentialsEnvironment() []map[string]interface{} {
 	return []map[string]interface{}{
 		{
-			"name": "GOOGLE_APPLICATION_CREDENTIALS",
+			"name":  "GOOGLE_APPLICATION_CREDENTIALS",
 			"value": fmt.Sprintf("/srv/cloudprovider/%s", ServiceAccountJSON),
 		},
 	}

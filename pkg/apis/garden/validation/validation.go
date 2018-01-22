@@ -371,6 +371,13 @@ func validateCIDR(cidr garden.CIDR, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
+// ValidateSeedStatusUpdate validates the status field of a Seed object.
+func ValidateSeedStatusUpdate(newSeed, oldSeed *garden.Seed) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	return allErrs
+}
+
 ////////////////////////////////////////////////////
 //                     QUOTAS                     //
 ////////////////////////////////////////////////////
