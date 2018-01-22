@@ -79,3 +79,67 @@ subjects:
   name: "{{ .Values.controller.serviceAccountName }}"
   namespace: "{{ .Release.Namespace }}"
 {{- end}}
+
+# Cluster role setting the permissions for a project member (in the respective namespace/project)
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:project-member
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - shoots
+  - privatesecretbindings
+  - quotas
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - cloudprofiles
+  - crosssecretbindings
+  verbs:
+  - get
+  - list
+  - watch
