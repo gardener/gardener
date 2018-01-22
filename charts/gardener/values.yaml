@@ -25,6 +25,13 @@ controller:
   image:
     repository: rfranzke/garden-controller-manager
     tag: latest
+  internalDomain:
+    provider: aws-route53 # currently, only aws-route53 is supported
+    hostedZoneID: Z3ABCDE1FGHIJK
+    domain: example.com
+    credentials:
+      accessKeyID: access-key-id-with-route53-privileges
+      secretAccessKey: secret-access-key-with-route53-privileges
   config:
     clientConnection:
       acceptContentTypes: application/json
