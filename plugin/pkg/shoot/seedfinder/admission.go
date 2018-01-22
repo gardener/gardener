@@ -89,8 +89,8 @@ func (h *Finder) Admit(a admission.Attributes) error {
 	if err != nil {
 		return admission.NewForbidden(a, err)
 	}
-	shoot.Spec.Cloud.Seed = &seed.Name
 
+	shoot.Spec.Cloud.Seed = &seed.Name
 	return nil
 }
 
@@ -108,5 +108,5 @@ func determineSeed(shoot *garden.Shoot, lister gardenlisters.SeedLister) (*garde
 		}
 	}
 
-	return nil, apierrors.NewInternalError(errors.New("failed to determine an adequate Seed cluster for this cloud profile and region"))
+	return nil, errors.New("failed to determine an adequate Seed cluster for this cloud profile and region")
 }
