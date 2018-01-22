@@ -152,4 +152,32 @@ var _ = Describe("helpers", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
+
+	Describe("#GetCondition", func() {
+		It("should return the found condition", func() {
+			var (
+				conditionType garden.ConditionType = "test-1"
+				condition                          = garden.Condition{
+					Type: conditionType,
+				}
+				conditions = []garden.Condition{condition}
+			)
+
+			cond := GetCondition(conditions, conditionType)
+
+			Expect(cond).NotTo(BeNil())
+			Expect(*cond).To(Equal(condition))
+		})
+
+		It("should return nil because the required condition could not be found", func() {
+			var (
+				conditionType garden.ConditionType = "test-1"
+				conditions                         = []garden.Condition{}
+			)
+
+			cond := GetCondition(conditions, conditionType)
+
+			Expect(cond).To(BeNil())
+		})
+	})
 })

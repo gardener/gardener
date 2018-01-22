@@ -106,23 +106,26 @@ func NewConditions(conditions []gardenv1beta1.Condition, conditionTypes ...garde
 
 	// We retrieve the current conditions in order to update them appropriately.
 	for _, conditionType := range conditionTypes {
-		typeFound := false
-
-		for _, condition := range conditions {
-			if condition.Type == conditionType {
-				typeFound = true
-				c := condition
-				newConditions = append(newConditions, &c)
-				break
-			}
+		if c := GetCondition(conditions, conditionType); c != nil {
+			newConditions = append(newConditions, c)
+			continue
 		}
-
-		if !typeFound {
-			newConditions = append(newConditions, InitCondition(conditionType, "", ""))
-		}
+		newConditions = append(newConditions, InitCondition(conditionType, "", ""))
 	}
 
 	return newConditions
+}
+
+// GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
+// In case the required type could not be found, it returns nil.
+func GetCondition(conditions []gardenv1beta1.Condition, conditionType gardenv1beta1.ConditionType) *gardenv1beta1.Condition {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			c := condition
+			return &c
+		}
+	}
+	return nil
 }
 
 // ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.

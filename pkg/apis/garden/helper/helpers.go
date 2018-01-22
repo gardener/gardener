@@ -57,3 +57,15 @@ func DetermineCloudProviderInShoot(cloud garden.Cloud) (garden.CloudProvider, er
 
 	return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
 }
+
+// GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
+// In case the required type could not be found, it returns nil.
+func GetCondition(conditions []garden.Condition, conditionType garden.ConditionType) *garden.Condition {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			c := condition
+			return &c
+		}
+	}
+	return nil
+}

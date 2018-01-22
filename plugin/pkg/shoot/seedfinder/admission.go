@@ -19,9 +19,11 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
@@ -103,10 +105,17 @@ func determineSeed(shoot *garden.Shoot, lister gardenlisters.SeedLister) (*garde
 
 	for _, seed := range list {
 		// We return the first matching seed cluster.
-		if seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region {
+		if seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && verifySeedAvailability(seed) {
 			return seed, nil
 		}
 	}
 
 	return nil, errors.New("failed to determine an adequate Seed cluster for this cloud profile and region")
+}
+
+func verifySeedAvailability(seed *garden.Seed) bool {
+	if cond := helper.GetCondition(seed.Status.Conditions, garden.SeedAvailable); cond != nil {
+		return cond.Status == corev1.ConditionTrue
+	}
+	return false
 }
