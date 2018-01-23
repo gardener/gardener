@@ -15,6 +15,7 @@
 package logger_test
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/gardener/gardener/pkg/logger"
@@ -64,7 +65,7 @@ var _ = Describe("logger", func() {
 
 				shootLogger := NewShootLogger(logger, name, namespace, "")
 
-				Expect(shootLogger.Data).To(HaveKeyWithValue("shoot", namespace+"/"+name))
+				Expect(shootLogger.Data).To(HaveKeyWithValue("shoot", fmt.Sprintf("%s/%s", namespace, name)))
 			})
 
 			It("should return an Entry object with additional fields (w/ operationID)", func() {
@@ -76,6 +77,17 @@ var _ = Describe("logger", func() {
 				shootLogger := NewShootLogger(logger, name, namespace, operationID)
 
 				Expect(shootLogger.Data).To(HaveKeyWithValue("opid", operationID))
+			})
+		})
+
+		Describe("#NewSeedLogger", func() {
+			It("should return an Entry object with additional fields", func() {
+				logger := NewLogger("info")
+				name := "seed01"
+
+				shootLogger := NewSeedLogger(logger, name)
+
+				Expect(shootLogger.Data).To(HaveKeyWithValue("seed", name))
 			})
 		})
 	})

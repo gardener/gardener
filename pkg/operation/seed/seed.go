@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -89,8 +88,8 @@ func List(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.
 	return seedList, nil
 }
 
-// BootstrapClusters bootstraps the Seeds cluster and deploys various required manifests.
-func BootstrapClusters(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
+// BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
+func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
 	const chartName = "seed-bootstrap"
 
 	kubeStateMetricsImage, err := imageVector.FindImage("kube-state-metrics", k8sGardenClient.Version())
@@ -102,43 +101,29 @@ func BootstrapClusters(k8sGardenClient kubernetes.Client, k8sGardenInformers gar
 		return err
 	}
 
-	seedList, err := List(k8sGardenClient, k8sGardenInformers)
+	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret)
 	if err != nil {
 		return err
 	}
-
-	for _, seed := range seedList {
-		logger.Logger.Infof("Bootstrapping Seed cluster %s...", seed.Info.Name)
-
-		k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret)
-		if err != nil {
-			return err
-		}
-		if err := common.ApplyChart(
-			k8sSeedClient,
-			chartrenderer.New(k8sSeedClient),
-			filepath.Join("charts", chartName),
-			chartName,
-			metav1.NamespaceSystem,
-			nil,
-			map[string]interface{}{
-				"cloudProvider": seed.CloudProvider,
-				"images": map[string]interface{}{
-					"kube-state-metrics": kubeStateMetricsImage.String(),
-					"addon-resizer":      addonResizer.String(),
-				},
+	if err := common.ApplyChart(
+		k8sSeedClient,
+		chartrenderer.New(k8sSeedClient),
+		filepath.Join("charts", chartName),
+		chartName,
+		metav1.NamespaceSystem,
+		nil,
+		map[string]interface{}{
+			"cloudProvider": seed.CloudProvider,
+			"images": map[string]interface{}{
+				"kube-state-metrics": kubeStateMetricsImage.String(),
+				"addon-resizer":      addonResizer.String(),
 			},
-		); err != nil {
-			return err
-		}
-
-		err = common.EnsureImagePullSecrets(k8sSeedClient, metav1.NamespaceSystem, secrets, true, nil)
-		if err != nil {
-			return err
-		}
+		},
+	); err != nil {
+		return err
 	}
 
-	return nil
+	return common.EnsureImagePullSecrets(k8sSeedClient, metav1.NamespaceSystem, secrets, true, nil)
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The

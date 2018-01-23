@@ -23,6 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -47,7 +49,7 @@ type Controller struct {
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
 // event recording. It creates a new Garden controller.
-func NewSeedController(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewSeedController(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = k8sGardenInformers.Garden().V1beta1()
 		seedInformer          = gardenv1beta1Informer.Seeds()
@@ -58,7 +60,7 @@ func NewSeedController(k8sGardenClient kubernetes.Client, k8sGardenInformers gar
 	seedController := &Controller{
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: k8sGardenInformers,
-		control:            NewDefaultControl(k8sGardenClient, k8sGardenInformers, recorder, seedUpdater),
+		control:            NewDefaultControl(k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, seedUpdater),
 		recorder:           recorder,
 		seedLister:         seedLister,
 		seedQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),

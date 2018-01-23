@@ -26,7 +26,6 @@ import (
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/version"
 	"k8s.io/client-go/tools/cache"
@@ -86,17 +85,12 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		return
 	}
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
-	if err := seed.BootstrapClusters(f.k8sGardenClient, f.k8sGardenInformers.Garden().V1beta1(), secrets, imageVector); err != nil {
-		logger.Logger.Errorf("Failed to bootstrap the Seed clusters: %s", err.Error())
-		return
-	}
-	logger.Logger.Info("Successfully bootstrapped the Seed clusters.")
-
-	workerCount := f.config.Controller.Reconciliation.ConcurrentSyncs
 
 	var (
+		workerCount = f.config.Controller.Reconciliation.ConcurrentSyncs
+
 		shootController = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController  = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
+		seedController  = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, secrets, imageVector, f.recorder)
 	)
 
 	go shootController.Run(workerCount, stopCh)

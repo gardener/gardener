@@ -67,3 +67,12 @@ func NewShootLogger(logger *logrus.Logger, shoot, project, operationID string) *
 	}
 	return logger.WithFields(fields)
 }
+
+// NewSeedLogger extends an existing logrus logger and adds an additional field containing the Seed name.
+// Example output: time="2017-06-08T13:00:49+02:00" level=info msg="Creating namespace in seed cluster" seed=crazy-botany.
+func NewSeedLogger(logger *logrus.Logger, seed string) *logrus.Entry {
+	fields := logrus.Fields{
+		"seed": seed,
+	}
+	return logger.WithFields(fields)
+}
