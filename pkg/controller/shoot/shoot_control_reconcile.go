@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -91,6 +92,24 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	if e != nil {
 		e.Description = fmt.Sprintf("Failed to reconcile Shoot cluster state: %s", e.Description)
 		return e
+	}
+
+	// Register the Shoot as Seed cluster if it was annotated properly.
+	registerAsSeed := false
+	if val, ok := o.Shoot.Info.Annotations[common.ShootUseAsSeed]; ok {
+		useAsSeed, err := strconv.ParseBool(val)
+		if err == nil && useAsSeed {
+			registerAsSeed = true
+		}
+	}
+	if registerAsSeed {
+		if err := botanist.RegisterAsSeed(); err != nil {
+			o.Logger.Errorf("Could not register '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
+		}
+	} else {
+		if err := botanist.UnregisterAsSeed(); err != nil {
+			o.Logger.Errorf("Could not unregister '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
+		}
 	}
 
 	o.Logger.Infof("Successfully reconciled Shoot cluster state '%s'", o.Shoot.Info.Name)

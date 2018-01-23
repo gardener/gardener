@@ -80,6 +80,11 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		return formatError("Failed to retrieve the list of pods running in the Shoot namespace in the Seed cluster", err)
 	}
 
+	// Unregister the Shoot as Seed if it was annotated properly.
+	if err := botanist.UnregisterAsSeed(); err != nil {
+		o.Logger.Errorf("Could not unregister '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
+	}
+
 	var (
 		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && len(podList.Items) != 0
 		defaultRetry          = 5 * time.Minute

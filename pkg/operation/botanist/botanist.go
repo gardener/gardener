@@ -15,6 +15,7 @@
 package botanist
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -24,6 +25,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
@@ -101,5 +105,68 @@ func (b *Botanist) InitializeShootClients() error {
 
 	b.Operation.K8sShootClient = k8sShootClient
 	b.Operation.ChartShootRenderer = chartShootRenderer
+	return nil
+}
+
+// RegisterAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
+func (b *Botanist) RegisterAsSeed() error {
+	if b.Shoot.Info.Spec.DNS.Domain == nil {
+		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
+	}
+
+	var (
+		secretData      = b.Shoot.Secret.Data
+		secretName      = fmt.Sprintf("seed-%s", b.Shoot.Info.Name)
+		secretNamespace = common.GardenNamespace
+	)
+	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
+
+	if _, err := b.K8sGardenClient.CreateSecret(secretNamespace, secretName, corev1.SecretTypeOpaque, secretData, true); err != nil {
+		return err
+	}
+
+	k8sNetworks := b.Shoot.GetK8SNetworks()
+	if k8sNetworks == nil {
+		return errors.New("could not retrieve K8SNetworks from the Shoot resource")
+	}
+
+	_, err := b.K8sGardenClient.CreateSeed(&gardenv1beta1.Seed{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: b.Shoot.Info.Name,
+		},
+		Spec: gardenv1beta1.SeedSpec{
+			Cloud: gardenv1beta1.SeedCloud{
+				Profile: b.Shoot.Info.Spec.Cloud.Profile,
+				Region:  b.Shoot.Info.Spec.Cloud.Region,
+			},
+			Domain: *(b.Shoot.Info.Spec.DNS.Domain),
+			SecretRef: gardenv1beta1.CrossReference{
+				Name:      secretName,
+				Namespace: secretNamespace,
+			},
+			Networks: *k8sNetworks,
+		},
+	})
+	return err
+}
+
+// UnregisterAsSeed unregisters a Shoot cluster as a Seed in the Garden cluster.
+func (b *Botanist) UnregisterAsSeed() error {
+	seed, err := b.K8sGardenClient.GetSeed(b.Shoot.Info.Name)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	err = b.K8sGardenClient.DeleteSeed(seed.Name)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	err = b.K8sGardenClient.DeleteSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
 	return nil
 }

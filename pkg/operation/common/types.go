@@ -131,6 +131,10 @@ const (
 
 	// TerraformerPurposeIngress is a constant for the complete Terraform setup with purpose 'ingress'.
 	TerraformerPurposeIngress = "ingress"
+
+	// ShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
+	// Garden cluster once successfully created.
+	ShootUseAsSeed = "shoot.garden.sapcloud.io/use-as-seed"
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

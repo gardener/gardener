@@ -147,47 +147,41 @@ func (s *Shoot) GetNodeCount() int {
 	return nodeCount
 }
 
-// GetPodNetwork returns the pod network CIDR for the Shoot cluster.
-func (s *Shoot) GetPodNetwork() gardenv1beta1.CIDR {
+// GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
+func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 	switch s.CloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
-		return s.Info.Spec.Cloud.AWS.Networks.Pods
+		return &s.Info.Spec.Cloud.AWS.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderAzure:
-		return s.Info.Spec.Cloud.Azure.Networks.Pods
+		return &s.Info.Spec.Cloud.Azure.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderGCP:
-		return s.Info.Spec.Cloud.GCP.Networks.Pods
+		return &s.Info.Spec.Cloud.GCP.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderOpenStack:
-		return s.Info.Spec.Cloud.OpenStack.Networks.Pods
+		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
+	}
+	return nil
+}
+
+// GetPodNetwork returns the pod network CIDR for the Shoot cluster.
+func (s *Shoot) GetPodNetwork() gardenv1beta1.CIDR {
+	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
+		return k8sNetworks.Pods
 	}
 	return ""
 }
 
 // GetServiceNetwork returns the service network CIDR for the Shoot cluster.
 func (s *Shoot) GetServiceNetwork() gardenv1beta1.CIDR {
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		return s.Info.Spec.Cloud.AWS.Networks.Services
-	case gardenv1beta1.CloudProviderAzure:
-		return s.Info.Spec.Cloud.Azure.Networks.Services
-	case gardenv1beta1.CloudProviderGCP:
-		return s.Info.Spec.Cloud.GCP.Networks.Services
-	case gardenv1beta1.CloudProviderOpenStack:
-		return s.Info.Spec.Cloud.OpenStack.Networks.Services
+	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
+		return k8sNetworks.Services
 	}
 	return ""
 }
 
 // GetNodeNetwork returns the node network CIDR for the Shoot cluster.
 func (s *Shoot) GetNodeNetwork() gardenv1beta1.CIDR {
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		return s.Info.Spec.Cloud.AWS.Networks.Nodes
-	case gardenv1beta1.CloudProviderAzure:
-		return s.Info.Spec.Cloud.Azure.Networks.Nodes
-	case gardenv1beta1.CloudProviderGCP:
-		return s.Info.Spec.Cloud.GCP.Networks.Nodes
-	case gardenv1beta1.CloudProviderOpenStack:
-		return s.Info.Spec.Cloud.OpenStack.Networks.Nodes
+	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
+		return k8sNetworks.Nodes
 	}
 	return ""
 }

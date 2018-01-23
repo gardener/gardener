@@ -79,6 +79,9 @@ func (b *Botanist) WaitUntilVPNConnectionExists() error {
 		podList, err := b.K8sShootClient.ListPods(metav1.NamespaceSystem, metav1.ListOptions{
 			LabelSelector: "app=vpn-shoot",
 		})
+		if err != nil {
+			return false, err
+		}
 		for _, pod := range podList.Items {
 			if pod.Status.Phase == corev1.PodRunning {
 				vpnPod = &pod

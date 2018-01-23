@@ -53,7 +53,6 @@ func (c *Controller) seedUpdate(oldObj, newObj interface{}) {
 	if !specChanged && statusChanged {
 		return
 	}
-
 	c.seedAdd(newObj)
 }
 
@@ -63,7 +62,6 @@ func (c *Controller) seedDelete(obj interface{}) {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
-
 	c.seedQueue.Add(key)
 }
 
