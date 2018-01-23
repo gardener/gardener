@@ -25,17 +25,11 @@ import (
 // GenerateCloudProviderConfig returns a cloud provider config for the Azure cloud provider
 // as defined here: https://github.com/kubernetes/kubernetes/blob/release-1.7/pkg/cloudprovider/providers/azure/azure.go#L58.
 func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetState()
-	if err != nil {
-		return "", err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-
-	resourceGroupName, err := state.String("modules", "0", "outputs", "resourceGroupName", "value")
-	if err != nil {
-		return "", err
-	}
-	vnetName, err := state.String("modules", "0", "outputs", "vnetName", "value")
+	var (
+		resourceGroupName = "resourceGroupName"
+		vnetName          = "vnetName"
+	)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(resourceGroupName, vnetName)
 	if err != nil {
 		return "", err
 	}
@@ -43,9 +37,9 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 	return `cloud: AZUREPUBLICCLOUD
 tenantId: ` + string(b.Shoot.Secret.Data[TenantID]) + `
 subscriptionId: ` + string(b.Shoot.Secret.Data[SubscriptionID]) + `
-resourceGroup: ` + resourceGroupName + `
+resourceGroup: ` + stateVariables[resourceGroupName] + `
 location: ` + b.Shoot.Info.Spec.Cloud.Region + `
-vnetName: ` + vnetName + `
+vnetName: ` + stateVariables[vnetName] + `
 subnetName: workers
 securityGroupName: nodes
 routeTableName: worker_route_table
@@ -94,57 +88,21 @@ func (b *AzureBotanist) DeployAutoNodeRepair() error {
 	return nil
 }
 
-// GenerateEtcdBackupSecretData generates the data for the secret which is required by the etcd-operator to
-// store the backups on the ABS container, i.e. the secret contains the Azure storage account and the respective access key.
-func (b *AzureBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetState()
-	if err != nil {
-		return nil, err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-
-	storageAccountName, err := state.String("modules", "0", "outputs", "storageAccountName", "value")
-	if err != nil {
-		return nil, err
-	}
-
-	storageAccessKey, err := state.String("modules", "0", "outputs", "storageAccessKey", "value")
-	if err != nil {
-		return nil, err
-	}
-
-	secretData := map[string][]byte{
-		"storage-account": []byte(storageAccountName),
-		"storage-key":     []byte(storageAccessKey),
-	}
-
-	return secretData, nil
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetState()
-	if err != nil {
-		return nil, nil, err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-
-	storageAccountName, err := state.String("modules", "0", "outputs", "storageAccountName", "value")
-	if err != nil {
-		return nil, nil, err
-	}
-	storageAccessKey, err := state.String("modules", "0", "outputs", "storageAccessKey", "value")
-	if err != nil {
-		return nil, nil, err
-	}
-	containerName, err := state.String("modules", "0", "outputs", "containerName", "value")
+	var (
+		storageAccountName = "storageAccountName"
+		storageAccessKey   = "storageAccessKey"
+		containerName      = "containerName"
+	)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(storageAccountName, storageAccessKey, containerName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	secretData := map[string][]byte{
-		"storage-account": []byte(storageAccountName),
-		"storage-key":     []byte(storageAccessKey),
+		"storage-account": []byte(stateVariables[storageAccountName]),
+		"storage-key":     []byte(stateVariables[storageAccessKey]),
 	}
 
 	backupConfigData := map[string]interface{}{
@@ -152,7 +110,7 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
 		"storageType":            "ABS",
 		"abs": map[string]interface{}{
-			"absContainer": containerName,
+			"absContainer": stateVariables[containerName],
 			"absSecret":    common.BackupSecretName,
 		},
 	}

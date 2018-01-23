@@ -51,12 +51,8 @@ func (b *AWSBotanist) DestroyKube2IAMResources() error {
 // generateTerraformKube2IAMConfig creates the Terraform variables and the Terraform config (for kube2iam)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1beta1.Kube2IAMRole) (map[string]interface{}, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetState()
-	if err != nil {
-		return nil, err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-	nodesRoleARN, err := state.String("modules", "0", "outputs", "nodes_role_arn", "value")
+	nodesRoleARN := "nodes_role_arn"
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(nodesRoleARN)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +63,7 @@ func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1be
 	}
 
 	return map[string]interface{}{
-		"nodesRoleARN": nodesRoleARN,
+		"nodesRoleARN": stateVariables[nodesRoleARN],
 		"roles":        roles,
 	}, nil
 }

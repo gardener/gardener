@@ -14,7 +14,12 @@
 
 package terraformer
 
-import apierrors "k8s.io/apimachinery/pkg/api/errors"
+import (
+	"errors"
+
+	"github.com/gardener/gardener/pkg/utils"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+)
 
 // GetState returns the Terraform state as byte slice.
 func (t *Terraformer) GetState() ([]byte, error) {
@@ -23,6 +28,31 @@ func (t *Terraformer) GetState() ([]byte, error) {
 		return nil, err
 	}
 	return []byte(configmap.Data["terraform.tfstate"]), nil
+}
+
+// GetStateOutputVariables returns the given <variable> from the given Terraform <stateData>.
+// In case the variable was not found, an error is returned.
+func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]string, error) {
+	stateConfigMap, err := t.GetState()
+	if err != nil {
+		return nil, err
+	}
+	state := utils.ConvertJSONToMap(stateConfigMap)
+
+	output := make(map[string]string)
+	for _, variable := range variables {
+		value, err := state.String("modules", "0", "outputs", variable, "value")
+		if err != nil {
+			return nil, err
+		}
+		output[variable] = value
+	}
+
+	if len(output) != len(variables) {
+		return nil, errors.New("could not find all requested variables")
+	}
+
+	return output, nil
 }
 
 // IsStateEmpty returns true if the Terraform state is empty, and false otherwise.

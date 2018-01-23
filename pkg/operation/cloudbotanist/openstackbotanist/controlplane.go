@@ -29,16 +29,12 @@ func (b *OpenStackBotanist) DeployAutoNodeRepair() error {
 
 // GenerateCloudProviderConfig returns
 func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetState()
+	cloudConfig := "cloud_config"
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(cloudConfig)
 	if err != nil {
 		return "", err
 	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-	cloudConf, err := state.String("modules", "0", "outputs", "cloud_config", "value")
-	if err != nil {
-		return "", err
-	}
-	return cloudConf, nil
+	return stateVariables[cloudConfig], nil
 }
 
 // GenerateKubeAPIServerConfig returns

@@ -19,31 +19,25 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // GenerateCloudProviderConfig generates the AWS cloud provider config.
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/release-1.7/pkg/cloudprovider/providers/aws/aws.go#L399-L444
 func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetState()
-	if err != nil {
-		return "", err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
+	var (
+		vpcID    = "vpc_id"
+		subnetID = "subnet_id"
+	)
 
-	vpcID, err := state.String("modules", "0", "outputs", "vpc_id", "value")
-	if err != nil {
-		return "", err
-	}
-	subnetID, err := state.String("modules", "0", "outputs", "subnet_id", "value")
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(vpcID, subnetID)
 	if err != nil {
 		return "", err
 	}
 
 	return `[Global]
-VPC = ` + vpcID + `
-SubnetID = ` + subnetID + `
+VPC = ` + stateVariables[vpcID] + `
+SubnetID = ` + stateVariables[subnetID] + `
 DisableSecurityGroupIngress = true
 KubernetesClusterTag = ` + b.Shoot.SeedNamespace + `
 KubernetesClusterID = ` + b.Shoot.SeedNamespace + `
@@ -130,61 +124,17 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 	}
 }
 
-// GenerateEtcdBackupSecretData generates the data for the secret which is required by the etcd-operator to
-// store the backups on the S3 backup, i.e. the secret contains the AWS credentials and the respective region.
-func (b *AWSBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetState()
-	if err != nil {
-		return nil, err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-
-	accessKeyID, err := state.String("modules", "0", "outputs", AccessKeyID, "value")
-	if err != nil {
-		return nil, err
-	}
-	secretAccessKey, err := state.String("modules", "0", "outputs", SecretAccessKey, "value")
-	if err != nil {
-		return nil, err
-	}
-
-	credentials := `[default]
-aws_access_key_id = ` + string(accessKeyID) + `
-aws_secret_access_key = ` + string(secretAccessKey)
-
-	config := `[default]
-region = ` + b.Seed.Info.Spec.Cloud.Region
-
-	return map[string][]byte{
-		"credentials": []byte(credentials),
-		"config":      []byte(config),
-	}, nil
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetState()
-	if err != nil {
-		return nil, nil, err
-	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
-
-	accessKeyID, err := state.String("modules", "0", "outputs", AccessKeyID, "value")
-	if err != nil {
-		return nil, nil, err
-	}
-	secretAccessKey, err := state.String("modules", "0", "outputs", SecretAccessKey, "value")
-	if err != nil {
-		return nil, nil, err
-	}
-	bucketName, err := state.String("modules", "0", "outputs", "bucketName", "value")
+	bucketName := "bucketName"
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(AccessKeyID, SecretAccessKey, bucketName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	credentials := `[default]
-aws_access_key_id = ` + string(accessKeyID) + `
-aws_secret_access_key = ` + string(secretAccessKey)
+aws_access_key_id = ` + stateVariables[AccessKeyID] + `
+aws_secret_access_key = ` + stateVariables[SecretAccessKey]
 
 	config := `[default]
 region = ` + b.Seed.Info.Spec.Cloud.Region
@@ -199,7 +149,7 @@ region = ` + b.Seed.Info.Spec.Cloud.Region
 		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
 		"storageType":            "S3",
 		"s3": map[string]interface{}{
-			"s3Bucket":  bucketName,
+			"s3Bucket":  stateVariables[bucketName],
 			"awsSecret": common.BackupSecretName,
 		},
 	}

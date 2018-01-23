@@ -60,11 +60,11 @@ func (t *Terraformer) waitForPod() int32 {
 	wait.PollImmediate(5*time.Second, 120*time.Second, func() (bool, error) {
 		t.Logger.Infof("Waiting for Terraform validation Pod '%s' to be completed...", t.PodName)
 		pod, err := t.K8sSeedClient.GetPod(t.Namespace, t.PodName)
+		if apierrors.IsNotFound(err) {
+			t.Logger.Warn("Terraform validation Pod disappeared unexpectedly, somebody must have manually deleted it!")
+			return true, nil
+		}
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				t.Logger.Warn("Terraform validation Pod disappeared unexpectedly, somebody must have manually deleted it!")
-				return true, nil
-			}
 			exitCode = 1 // 'terraform plan' exit code for "errors"
 			return false, err
 		}
