@@ -1840,7 +1840,7 @@ var _ = Describe("validation", func() {
 					Workers: []garden.AzureWorker{
 						{
 							Worker:     worker,
-							VolumeSize: "10Gi",
+							VolumeSize: "35Gi",
 							VolumeType: "default",
 						},
 					},
@@ -2004,6 +2004,24 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+			})
+
+			It("should forbid worker volume sizes smaller than 35Gi", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "34Gi",
+						VolumeType: "ok",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
 				}))
 			})
 

@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
@@ -746,6 +747,15 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
 			if worker.AutoScalerMax != worker.AutoScalerMin {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoScalerMax"), "maximum value must be equal to minimum value"))
+			}
+			volumeSizeRegex, _ := regexp.Compile(`^(\d+)Gi$`)
+			minmumVolumeSize := 35
+			match := volumeSizeRegex.FindStringSubmatch(worker.VolumeSize)
+			if len(match) == 2 {
+				volSize, err := strconv.Atoi(match[1])
+				if err != nil || volSize < minmumVolumeSize {
+					allErrs = append(allErrs, field.Invalid(idxPath.Child("volumeSize"), worker.VolumeSize, fmt.Sprintf("volume size must be at least %dGi", minmumVolumeSize)))
+				}
 			}
 		}
 	}
