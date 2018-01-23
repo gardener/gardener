@@ -174,7 +174,7 @@ func (b *AzureBotanist) generateTerraformBackupConfig() map[string]interface{} {
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Seed.Secret.Data[SubscriptionID]),
 			"tenantID":           string(b.Seed.Secret.Data[TenantID]),
-			"region":             b.Shoot.Info.Spec.Cloud.Region,
+			"region":             b.Seed.Info.Spec.Cloud.Region,
 			"storageAccountName": fmt.Sprintf("bkp%s", utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))[:15]),
 		},
 		"clusterName": b.Shoot.SeedNamespace,

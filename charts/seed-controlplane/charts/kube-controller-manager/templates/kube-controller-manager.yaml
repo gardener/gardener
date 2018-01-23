@@ -109,11 +109,6 @@ spec:
         - name: ssl-certs-hosts
           mountPath: /usr/share/ca-certificates
           readOnly: true
-        {{- if ne .Values.cloudProvider "gce" }}
-        - name: usrsharessl
-          mountPath: /usr/share/ssl
-          readOnly: true
-        {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -140,9 +135,3 @@ spec:
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
-      {{- if ne .Values.cloudProvider "gce" }}
-      - name: usrsharessl
-        hostPath:
-          path: /usr/share/ssl
-      {{- end }}
-

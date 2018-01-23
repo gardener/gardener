@@ -69,14 +69,14 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 	var (
 		kubeletSecret = b.Secrets["kubelet"]
 		cloudProvider = map[string]interface{}{
-			"name": b.CloudBotanist.GetCloudProviderName(),
+			"name": b.ShootCloudBotanist.GetCloudProviderName(),
 		}
 		serviceNetwork = b.Shoot.GetServiceNetwork()
-		userDataConfig = b.CloudBotanist.GenerateCloudConfigUserDataConfig()
+		userDataConfig = b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig()
 	)
 
 	if userDataConfig.CloudConfig {
-		cloudProviderConfig, err := b.CloudBotanist.GenerateCloudProviderConfig()
+		cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
 		if err != nil {
 			return nil, err
 		}
@@ -142,7 +142,7 @@ func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		nodeExporterConfig = map[string]interface{}{}
 	)
 
-	calicoConfig, err := b.CloudBotanist.GenerateCalicoConfig()
+	calicoConfig, err := b.ShootCloudBotanist.GenerateCalicoConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +185,7 @@ func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
-	clusterAutoscalerConfig, err := b.CloudBotanist.GenerateClusterAutoscalerConfig()
+	clusterAutoscalerConfig, err := b.ShootCloudBotanist.GenerateClusterAutoscalerConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-	kube2IAMConfig, err := b.CloudBotanist.GenerateKube2IAMConfig()
+	kube2IAMConfig, err := b.ShootCloudBotanist.GenerateKube2IAMConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +213,7 @@ func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-	nginxIngressConfig, err := b.CloudBotanist.GenerateNginxIngressConfig()
+	nginxIngressConfig, err := b.ShootCloudBotanist.GenerateNginxIngressConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 // extensions. It will be stored as a ConfigMap and mounted into the Pod. The configuration contains
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HelperBotanist) generateAdmissionControlsChart() (*chartrenderer.RenderedChart, error) {
-	config, err := b.CloudBotanist.GenerateAdmissionControlConfig()
+	config, err := b.ShootCloudBotanist.GenerateAdmissionControlConfig()
 	if err != nil {
 		return nil, err
 	}

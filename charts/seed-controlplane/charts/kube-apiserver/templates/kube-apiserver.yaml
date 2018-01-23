@@ -48,7 +48,9 @@ spec:
         - --authorization-mode=RBAC
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
+        {{- if semverCompare "< 1.9" .Values.kubernetesVersion }}
         - --cloud-provider={{.Values.cloudProvider}}
+        {{- end }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
         - --etcd-servers=http://etcd-main-client:2379
@@ -136,11 +138,6 @@ spec:
         - name: ssl-certs-hosts
           mountPath: /usr/share/ca-certificates
           readOnly: true
-        {{- if ne .Values.cloudProvider "gce" }}
-        - name: usrsharessl
-          mountPath: /usr/share/ssl
-          readOnly: true
-        {{- end }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -208,8 +205,3 @@ spec:
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
-      {{- if ne .Values.cloudProvider "gce" }}
-      - name: usrsharessl
-        hostPath:
-          path: /usr/share/ssl
-      {{- end }}

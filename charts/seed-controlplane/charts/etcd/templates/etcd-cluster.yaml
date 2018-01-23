@@ -12,7 +12,7 @@ spec:
       role: {{.Values.role}}
     pv:
       volumeSizeInMB: 10000
-{{- if eq .Values.role "main" }}
+{{- if and (eq .Values.role "main") .Values.backup }}
   backup:
 {{ toYaml .Values.backup | indent 4 }}
 {{- end }}

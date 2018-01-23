@@ -17,31 +17,32 @@ package awsbotanist
 import (
 	"errors"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/aws"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // New takes an operation object <o> and creates a new AWSBotanist object.
-func New(o *operation.Operation) (*AWSBotanist, error) {
-	region := o.Shoot.Info.Spec.Cloud.Region
-
-	if o.Shoot.Info.Spec.Cloud.AWS == nil {
-		return nil, errors.New("cannot instantiate an AWS botanist if `.spec.cloud.aws` is nil")
+func New(o *operation.Operation, purpose string) (*AWSBotanist, error) {
+	var cloudProvider gardenv1beta1.CloudProvider
+	switch purpose {
+	case common.CloudPurposeShoot:
+		cloudProvider = o.Shoot.CloudProvider
+	case common.CloudPurposeSeed:
+		cloudProvider = o.Seed.CloudProvider
 	}
+
+	if cloudProvider != gardenv1beta1.CloudProviderAWS {
+		return nil, errors.New("cannot instantiate an AWS botanist if neither Shoot nor Seed cluster specifies AWS")
+	}
+
+	region := o.Shoot.Info.Spec.Cloud.Region
 
 	return &AWSBotanist{
 		Operation:         o,
 		CloudProviderName: "aws",
-		SeedAWSClient: aws.NewClient(
-			string(o.Seed.Secret.Data[AccessKeyID]),
-			string(o.Seed.Secret.Data[SecretAccessKey]),
-			region,
-		),
-		ShootAWSClient: aws.NewClient(
-			string(o.Shoot.Secret.Data[AccessKeyID]),
-			string(o.Shoot.Secret.Data[SecretAccessKey]),
-			region,
-		),
+		AWSClient:         aws.NewClient(string(o.Shoot.Secret.Data[AccessKeyID]), string(o.Shoot.Secret.Data[SecretAccessKey]), region),
 	}, nil
 }
 

@@ -19,23 +19,46 @@ import (
 	"encoding/json"
 	"errors"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
 // New takes an operation object <o> and creates a new GCPBotanist object.
-func New(o *operation.Operation) (*GCPBotanist, error) {
-	if o.Shoot.Info.Spec.Cloud.GCP == nil {
-		return nil, errors.New("cannot instantiate an GCP botanist if `.spec.cloud.gcp` is nil")
+func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
+	var cloudProvider gardenv1beta1.CloudProvider
+	switch purpose {
+	case common.CloudPurposeShoot:
+		cloudProvider = o.Shoot.CloudProvider
+	case common.CloudPurposeSeed:
+		cloudProvider = o.Seed.CloudProvider
 	}
 
+	if cloudProvider != gardenv1beta1.CloudProviderGCP {
+		return nil, errors.New("cannot instantiate an GCP botanist if neither Shoot nor Seed cluster specifies GCP")
+	}
+
+	// Read vpc name out of the Shoot manifest
 	vpcName := ""
-	if vpc := o.Shoot.Info.Spec.Cloud.GCP.Networks.VPC; vpc != nil {
-		vpcName = vpc.Name
+	if purpose == common.CloudPurposeShoot {
+		if gcp := o.Shoot.Info.Spec.Cloud.GCP; gcp != nil {
+			if vpc := gcp.Networks.VPC; vpc != nil {
+				vpcName = vpc.Name
+			}
+		}
 	}
 
 	// Read project id out of the service account
-	serviceAccount := utils.ConvertJSONToMap(o.Shoot.Secret.Data[ServiceAccountJSON])
+	var serviceAccountJSON []byte
+	switch purpose {
+	case common.CloudPurposeShoot:
+		serviceAccountJSON = o.Shoot.Secret.Data[ServiceAccountJSON]
+	case common.CloudPurposeSeed:
+		serviceAccountJSON = o.Seed.Secret.Data[ServiceAccountJSON]
+	}
+
+	serviceAccount := utils.ConvertJSONToMap(serviceAccountJSON)
 	project, err := serviceAccount.String(ProjectID)
 	if err != nil {
 		return nil, err
@@ -43,7 +66,7 @@ func New(o *operation.Operation) (*GCPBotanist, error) {
 
 	// Minify serviceaccount json to allow injection into Terraform environment
 	buf := new(bytes.Buffer)
-	err = json.Compact(buf, o.Shoot.Secret.Data[ServiceAccountJSON])
+	err = json.Compact(buf, serviceAccountJSON)
 	if err != nil {
 		return nil, err
 	}

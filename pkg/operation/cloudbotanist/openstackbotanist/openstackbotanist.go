@@ -17,13 +17,23 @@ package openstackbotanist
 import (
 	"errors"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // New takes an operation object <o> and creates a new OpenStackBotanist object.
-func New(o *operation.Operation) (*OpenStackBotanist, error) {
-	if o.Shoot.Info.Spec.Cloud.OpenStack == nil {
-		return nil, errors.New("cannot instantiate an OpenStack botanist if `.spec.cloud.openstack` is nil")
+func New(o *operation.Operation, purpose string) (*OpenStackBotanist, error) {
+	var cloudProvider gardenv1beta1.CloudProvider
+	switch purpose {
+	case common.CloudPurposeShoot:
+		cloudProvider = o.Shoot.CloudProvider
+	case common.CloudPurposeSeed:
+		cloudProvider = o.Seed.CloudProvider
+	}
+
+	if cloudProvider != gardenv1beta1.CloudProviderOpenStack {
+		return nil, errors.New("cannot instantiate an OpenStack botanist if neither Shoot nor Seed cluster specifies OpenStack")
 	}
 
 	return &OpenStackBotanist{

@@ -29,19 +29,29 @@ var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane",
 // (called 'main') is used for all the data the Shoot Kubernetes cluster needs to store, whereas the second etcd
 // cluster (called 'events') is only used to store the events data. The objectstore is also set up to store the backups.
 func (b *HelperBotanist) DeployETCD() error {
-	secretData, err := b.CloudBotanist.GenerateEtcdBackupSecretData()
-	if err != nil {
-		return err
-	}
-	_, err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, common.BackupSecretName, corev1.SecretTypeOpaque, secretData, true)
+	secretData, backupConfigData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
 	if err != nil {
 		return err
 	}
 
-	etcdConfig, err := b.CloudBotanist.GenerateEtcdConfig(common.BackupSecretName)
-	if err != nil {
-		return err
+	// Some cloud botanists do not yet support backup and won't return secret data.
+	if secretData != nil {
+		_, err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, common.BackupSecretName, corev1.SecretTypeOpaque, secretData, true)
+		if err != nil {
+			return err
+		}
 	}
+
+	// Some cloud botanists do not yet support backup and won't return backup config data.
+	etcdConfig := map[string]interface{}{
+		"kind": "StatefulSet",
+	}
+
+	if backupConfigData != nil {
+		etcdConfig["kind"] = "EtcdCluster"
+		etcdConfig["backup"] = backupConfigData
+	}
+
 	etcd, err := b.Botanist.InjectImages(etcdConfig, b.K8sSeedClient.Version(), map[string]string{"etcd": "etcd"})
 	if err != nil {
 		return err
@@ -60,7 +70,7 @@ func (b *HelperBotanist) DeployETCD() error {
 // provider configuration. It will create a ConfigMap for it and store it in the Seed cluster.
 func (b *HelperBotanist) DeployCloudProviderConfig() error {
 	name := "cloud-provider-config"
-	cloudProviderConfig, err := b.CloudBotanist.GenerateCloudProviderConfig()
+	cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
 	if err != nil {
 		return err
 	}
@@ -85,7 +95,7 @@ func (b *HelperBotanist) DeployKubeAPIServer() error {
 
 	defaultValues := map[string]interface{}{
 		"advertiseAddress":  loadBalancerIP,
-		"cloudProvider":     b.CloudBotanist.GetCloudProviderName(),
+		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
@@ -103,7 +113,7 @@ func (b *HelperBotanist) DeployKubeAPIServer() error {
 			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
 		},
 	}
-	cloudValues, err := b.CloudBotanist.GenerateKubeAPIServerConfig()
+	cloudValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerConfig()
 	if err != nil {
 		return err
 	}
@@ -126,7 +136,7 @@ func (b *HelperBotanist) DeployKubeControllerManager() error {
 	name := "kube-controller-manager"
 
 	defaultValues := map[string]interface{}{
-		"cloudProvider":     b.CloudBotanist.GetCloudProviderName(),
+		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
 		"clusterName":       b.Shoot.SeedNamespace,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
@@ -141,7 +151,7 @@ func (b *HelperBotanist) DeployKubeControllerManager() error {
 			"checksum/configmap-cloud-provider-config": b.CheckSums["cloud-provider-config"],
 		},
 	}
-	cloudValues, err := b.CloudBotanist.GenerateKubeControllerManagerConfig()
+	cloudValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
 	if err != nil {
 		return err
 	}
@@ -167,7 +177,7 @@ func (b *HelperBotanist) DeployKubeScheduler() error {
 			},
 		}
 	)
-	cloudValues, err := b.CloudBotanist.GenerateKubeSchedulerConfig()
+	cloudValues, err := b.ShootCloudBotanist.GenerateKubeSchedulerConfig()
 	if err != nil {
 		return err
 	}

@@ -25,6 +25,7 @@ import (
 // both must be used.
 type HelperBotanist struct {
 	*operation.Operation
-	Botanist      *botanist.Botanist
-	CloudBotanist cloudbotanist.CloudBotanist
+	Botanist           *botanist.Botanist
+	SeedCloudBotanist  cloudbotanist.CloudBotanist
+	ShootCloudBotanist cloudbotanist.CloudBotanist
 }

@@ -79,7 +79,7 @@ func (b *AWSBotanist) createKube2IAMRoles(customRoles []gardenv1beta1.Kube2IAMRo
 		tmpRoles, roles []gardenv1beta1.Kube2IAMRole
 	)
 
-	awsAccountID, err := b.ShootAWSClient.GetAccountID()
+	awsAccountID, err := b.AWSClient.GetAccountID()
 	if err != nil {
 		return nil, err
 	}
@@ -155,7 +155,7 @@ func (b *AWSBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 	)
 
 	if enabled {
-		awsAccountID, err := b.ShootAWSClient.GetAccountID()
+		awsAccountID, err := b.AWSClient.GetAccountID()
 		if err != nil {
 			return nil, err
 		}

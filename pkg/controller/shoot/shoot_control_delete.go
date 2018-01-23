@@ -58,9 +58,13 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		return formatError("Failed to retrieve the Shoot namespace in the Seed cluster", err)
 	}
 
-	cloudBotanist, err := cloudbotanistpkg.New(o)
+	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
-		return formatError("Failed to create a CloudBotanist", err)
+		return formatError("Failed to create a Seed CloudBotanist", err)
+	}
+	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
+	if err != nil {
+		return formatError("Failed to create a Shoot CloudBotanist", err)
 	}
 
 	// We check whether the Shoot namespace in the Seed cluster is already in a terminating state, i.e. whether
@@ -84,7 +88,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		ensureImagePullSecretsGarden     = f.AddTask(botanist.EnsureImagePullSecretsGarden, defaultRetry)
 		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, defaultRetry, cleanupShootResources)
-		applyDeleteHook                  = f.AddTask(cloudBotanist.ApplyDeleteHook, defaultRetry, initializeShootClients)
+		applyDeleteHook                  = f.AddTask(shootCloudBotanist.ApplyDeleteHook, defaultRetry, initializeShootClients)
 		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, applyDeleteHook)
 		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, applyDeleteHook)
 		waitUntilKubeAddonManagerDeleted = f.AddTask(botanist.WaitUntilKubeAddonManagerDeleted, 0, deleteKubeAddonManager)
@@ -117,10 +121,10 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		checkPersistentVolumeClaimCleanup = f.AddTaskConditional(botanist.CheckPersistentVolumeClaimCleanup, cleanupRetry, cleanupShootResources, cleanupPersistentVolumeClaims)
 		syncPointCleanup                  = f.AddSyncPoint(ensureImagePullSecretsGarden, checkCRDCleanup, checkNamespaceCleanup, checkStatefulSetCleanup, checkDeploymentCleanup, checkReplicationControllerCleanup, checkReplicaSetCleanup, checkDaemonSetCleanup, checkJobCleanup, checkPodCleanup, checkServiceCleanup, checkPersistentVolumeClaimCleanup)
 		destroyNginxIngressResources      = f.AddTask(botanist.DestroyNginxIngressResources, 0, syncPointCleanup)
-		destroyKube2IAMResources          = f.AddTask(cloudBotanist.DestroyKube2IAMResources, 0, syncPointCleanup)
-		destroyInfrastructure             = f.AddTask(cloudBotanist.DestroyInfrastructure, 0, syncPointCleanup)
+		destroyKube2IAMResources          = f.AddTask(shootCloudBotanist.DestroyKube2IAMResources, 0, syncPointCleanup)
+		destroyInfrastructure             = f.AddTask(shootCloudBotanist.DestroyInfrastructure, 0, syncPointCleanup)
 		destroyExternalDomainDNSRecord    = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, syncPointCleanup)
-		destroyBackupInfrastructure       = f.AddTask(cloudBotanist.DestroyBackupInfrastructure, 0, syncPointCleanup)
+		destroyBackupInfrastructure       = f.AddTask(seedCloudBotanist.DestroyBackupInfrastructure, 0, syncPointCleanup)
 		destroyInternalDomainDNSRecord    = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointCleanup)
 		syncPointTerraformers             = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord, destroyBackupInfrastructure, destroyInternalDomainDNSRecord)
 		deleteNamespace                   = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers)

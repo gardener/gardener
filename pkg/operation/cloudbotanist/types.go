@@ -29,11 +29,10 @@ type CloudBotanist interface {
 	DeployAutoNodeRepair() error
 	GenerateCloudProviderConfig() (string, error)
 	GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig
+	GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error)
 	GenerateKubeAPIServerConfig() (map[string]interface{}, error)
 	GenerateKubeControllerManagerConfig() (map[string]interface{}, error)
 	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
-	GenerateEtcdBackupSecretData() (map[string][]byte, error)
-	GenerateEtcdConfig(string) (map[string]interface{}, error)
 
 	// Addons
 	DeployKube2IAMResources() error

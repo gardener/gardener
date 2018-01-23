@@ -72,9 +72,8 @@ func (b *Botanist) DeployETCDOperator() error {
 // on the Botanist's APIServerAddress attribute.
 func (b *Botanist) DeployKubeAPIServerService() error {
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "kube-apiserver-service"), "kube-apiserver-service", b.Operation.Shoot.SeedNamespace, nil, map[string]interface{}{
-		"cloudProvider": b.Shoot.CloudProvider,
-	},
-	)
+		"cloudProvider": b.Seed.CloudProvider,
+	})
 }
 
 // DeleteKubeAddonManager deletes the kube-addon-manager deployment in the Seed cluster which holds the Shoot's control plane. It

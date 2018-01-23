@@ -46,7 +46,8 @@ VPC = ` + vpcID + `
 SubnetID = ` + subnetID + `
 DisableSecurityGroupIngress = true
 KubernetesClusterTag = ` + b.Shoot.SeedNamespace + `
-KubernetesClusterID = ` + b.Shoot.SeedNamespace, nil
+KubernetesClusterID = ` + b.Shoot.SeedNamespace + `
+Zone = ` + b.Shoot.Info.Spec.Cloud.AWS.Zones[0], nil
 }
 
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
@@ -152,7 +153,7 @@ aws_access_key_id = ` + string(accessKeyID) + `
 aws_secret_access_key = ` + string(secretAccessKey)
 
 	config := `[default]
-region = ` + b.Shoot.Info.Spec.Cloud.Region
+region = ` + b.Seed.Info.Spec.Cloud.Region
 
 	return map[string][]byte{
 		"credentials": []byte(credentials),
@@ -160,30 +161,48 @@ region = ` + b.Shoot.Info.Spec.Cloud.Region
 	}, nil
 }
 
-// GenerateEtcdConfig returns the etcd deployment configuration (including backup settings) for the etcd
-// Helm chart.
-func (b *AWSBotanist) GenerateEtcdConfig(secretName string) (map[string]interface{}, error) {
+// GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
+func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetState()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	state := utils.ConvertJSONToMap(stateConfigMap)
 
+	accessKeyID, err := state.String("modules", "0", "outputs", AccessKeyID, "value")
+	if err != nil {
+		return nil, nil, err
+	}
+	secretAccessKey, err := state.String("modules", "0", "outputs", SecretAccessKey, "value")
+	if err != nil {
+		return nil, nil, err
+	}
 	bucketName, err := state.String("modules", "0", "outputs", "bucketName", "value")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return map[string]interface{}{
-		"kind": "EtcdCluster",
-		"backup": map[string]interface{}{
-			"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
-			"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
-			"storageType":            "S3",
-			"s3": map[string]interface{}{
-				"s3Bucket":  bucketName,
-				"awsSecret": secretName,
-			},
+	credentials := `[default]
+aws_access_key_id = ` + string(accessKeyID) + `
+aws_secret_access_key = ` + string(secretAccessKey)
+
+	config := `[default]
+region = ` + b.Seed.Info.Spec.Cloud.Region
+
+	secretData := map[string][]byte{
+		"credentials": []byte(credentials),
+		"config":      []byte(config),
+	}
+
+	backupConfigData := map[string]interface{}{
+		"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
+		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
+		"storageType":            "S3",
+		"s3": map[string]interface{}{
+			"s3Bucket":  bucketName,
+			"awsSecret": common.BackupSecretName,
 		},
-	}, nil
+	}
+
+	return secretData, backupConfigData, nil
 }

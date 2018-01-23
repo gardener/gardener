@@ -72,17 +72,8 @@ func (b *GCPBotanist) DeployAutoNodeRepair() error {
 	return nil
 }
 
-// GenerateEtcdBackupSecretData generates the secret data for etcd-operator having credentials and config for
-// backup infrastructure.
+// GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 // TODO: implement backup functionality for GCP
-func (b *GCPBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, error) {
-	return nil, nil
-}
-
-// GenerateEtcdConfig returns the map of Cloud specific backup configuration required by etcd-operator.
-// TODO: implement backup functionality for GCP
-func (b *GCPBotanist) GenerateEtcdConfig(string) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"kind": "StatefulSet",
-	}, nil
+func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
+	return nil, nil, nil
 }

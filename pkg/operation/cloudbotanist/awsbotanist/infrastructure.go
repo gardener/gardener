@@ -32,7 +32,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 	)
 	// check if we should use an existing VPC or create a new one
 	if vpcID != "" {
-		vpcExists, err := b.ShootAWSClient.CheckIfVPCExists(vpcID)
+		vpcExists, err := b.AWSClient.CheckIfVPCExists(vpcID)
 		if err != nil {
 			return err
 		}
@@ -40,7 +40,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 
 		// check if we should use the existing IGW or create a new one
 		if vpcExists {
-			igwID, err := b.ShootAWSClient.GetInternetGateway(vpcID)
+			igwID, err := b.AWSClient.GetInternetGateway(vpcID)
 			if err != nil {
 				return err
 			}
@@ -168,7 +168,7 @@ func (b *AWSBotanist) generateTerraformBackupVariablesEnvironment() []map[string
 func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"aws": map[string]interface{}{
-			"region": b.Shoot.Info.Spec.Cloud.Region,
+			"region": b.Seed.Info.Spec.Cloud.Region,
 		},
 		"bucket": map[string]interface{}{
 			"name": b.Shoot.SeedNamespace,

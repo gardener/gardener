@@ -166,7 +166,7 @@ func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap ma
 	for key, value := range keyValueMap {
 		m = append(m, map[string]interface{}{
 			"name":  fmt.Sprintf("TF_VAR_%s", key),
-			"value": string(secret.Data[value]),
+			"value": strings.TrimSpace(string(secret.Data[value])),
 		})
 	}
 	return m

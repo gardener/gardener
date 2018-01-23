@@ -17,13 +17,23 @@ package azurebotanist
 import (
 	"errors"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // New takes an operation object <o> and creates a new AzureBotanist object.
-func New(o *operation.Operation) (*AzureBotanist, error) {
-	if o.Shoot.Info.Spec.Cloud.Azure == nil {
-		return nil, errors.New("cannot instantiate an Azure botanist if `.spec.cloud.azure` is nil")
+func New(o *operation.Operation, purpose string) (*AzureBotanist, error) {
+	var cloudProvider gardenv1beta1.CloudProvider
+	switch purpose {
+	case common.CloudPurposeShoot:
+		cloudProvider = o.Shoot.CloudProvider
+	case common.CloudPurposeSeed:
+		cloudProvider = o.Seed.CloudProvider
+	}
+
+	if cloudProvider != gardenv1beta1.CloudProviderAzure {
+		return nil, errors.New("cannot instantiate an Azure botanist if neither Shoot nor Seed cluster specifies Azure")
 	}
 
 	return &AzureBotanist{

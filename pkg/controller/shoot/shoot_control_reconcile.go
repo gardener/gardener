@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
+	"github.com/gardener/gardener/pkg/operation/common"
 	helperbotanistpkg "github.com/gardener/gardener/pkg/operation/helperbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
@@ -36,14 +37,20 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	if err != nil {
 		return formatError("Failed to create a Botanist", err)
 	}
-	cloudBotanist, err := cloudbotanistpkg.New(o)
+	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
-		return formatError("Failed to create a CloudBotanist", err)
+		return formatError("Failed to create a Seed CloudBotanist", err)
 	}
+	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
+	if err != nil {
+		return formatError("Failed to create a Shoot CloudBotanist", err)
+	}
+
 	helperBotanist := &helperbotanistpkg.HelperBotanist{
-		Operation:     o,
-		Botanist:      botanist,
-		CloudBotanist: cloudBotanist,
+		Operation:          o,
+		Botanist:           botanist,
+		SeedCloudBotanist:  seedCloudBotanist,
+		ShootCloudBotanist: shootCloudBotanist,
 	}
 
 	var (
@@ -61,8 +68,8 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		deployETCDOperator                   = f.AddTask(botanist.DeployETCDOperator, defaultRetry, deployNamespace, ensureImagePullSecretsSeed)
 		_                                    = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady, ensureImagePullSecretsGarden)
 		_                                    = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS, ensureImagePullSecretsGarden)
-		deployInfrastructure                 = f.AddTask(cloudBotanist.DeployInfrastructure, 0, deploySecrets, ensureImagePullSecretsGarden)
-		deployBackupInfrastructure           = f.AddTask(cloudBotanist.DeployBackupInfrastructure, 0, ensureImagePullSecretsGarden)
+		deployInfrastructure                 = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets, ensureImagePullSecretsGarden)
+		deployBackupInfrastructure           = f.AddTask(seedCloudBotanist.DeployBackupInfrastructure, 0, ensureImagePullSecretsGarden)
 		deployETCD                           = f.AddTask(helperBotanist.DeployETCD, defaultRetry, deployETCDOperator, deployBackupInfrastructure)
 		deployCloudProviderConfig            = f.AddTask(helperBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)
 		deployKubeAPIServer                  = f.AddTask(helperBotanist.DeployKubeAPIServer, defaultRetry, deploySecrets, deployETCD, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig)
@@ -72,11 +79,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		initializeShootClients               = f.AddTask(botanist.InitializeShootClients, defaultRetry, waitUntilKubeAPIServerIsReady)
 		ensureImagePullSecretsShoot          = f.AddTask(botanist.EnsureImagePullSecretsShoot, defaultRetry, initializeShootClients)
 		deployKubeAddonManager               = f.AddTask(helperBotanist.DeployKubeAddonManager, defaultRetry, ensureImagePullSecretsShoot)
-		_                                    = f.AddTask(cloudBotanist.DeployAutoNodeRepair, defaultRetry, waitUntilKubeAPIServerIsReady, deployInfrastructure)
-		_                                    = f.AddTaskConditional(cloudBotanist.DeployKube2IAMResources, defaultRetry, addons.Kube2IAM.Enabled, deployInfrastructure)
+		_                                    = f.AddTask(shootCloudBotanist.DeployAutoNodeRepair, defaultRetry, waitUntilKubeAPIServerIsReady, deployInfrastructure)
+		_                                    = f.AddTaskConditional(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, addons.Kube2IAM.Enabled, deployInfrastructure)
 		_                                    = f.AddTaskConditional(botanist.DeployNginxIngressResources, 10*time.Minute, addons.NginxIngress.Enabled && managedDNS, deployKubeAddonManager, ensureImagePullSecretsShoot)
 		waitUntilVPNConnectionExists         = f.AddTask(botanist.WaitUntilVPNConnectionExists, 0, deployKubeAddonManager)
-		applyCreateHook                      = f.AddTask(cloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
+		applyCreateHook                      = f.AddTask(seedCloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
 		_                                    = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, applyCreateHook)
 	)
 

@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -130,7 +131,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 		c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 		return nil
 	}
-	cloudBotanist, err := cloudbotanist.New(operation)
+	cloudBotanist, err := cloudbotanist.New(operation, common.CloudPurposeShoot)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Cloud Botanist to perform the care operations (%s).", err.Error())
 		conditionControlPlaneHealthy = helper.ModifyCondition(conditionControlPlaneHealthy, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)

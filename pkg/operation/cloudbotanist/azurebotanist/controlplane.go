@@ -121,30 +121,41 @@ func (b *AzureBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, error
 	return secretData, nil
 }
 
-// GenerateEtcdConfig returns the etcd deployment configuration (including backup settings) for the etcd
-// Helm chart.
-func (b *AzureBotanist) GenerateEtcdConfig(secretName string) (map[string]interface{}, error) {
+// GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
+func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetState()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	state := utils.ConvertJSONToMap(stateConfigMap)
 
+	storageAccountName, err := state.String("modules", "0", "outputs", "storageAccountName", "value")
+	if err != nil {
+		return nil, nil, err
+	}
+	storageAccessKey, err := state.String("modules", "0", "outputs", "storageAccessKey", "value")
+	if err != nil {
+		return nil, nil, err
+	}
 	containerName, err := state.String("modules", "0", "outputs", "containerName", "value")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return map[string]interface{}{
-		"kind": "EtcdCluster",
-		"backup": map[string]interface{}{
-			"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
-			"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
-			"storageType":            "ABS",
-			"abs": map[string]interface{}{
-				"absContainer": containerName,
-				"absSecret":    secretName,
-			},
+	secretData := map[string][]byte{
+		"storage-account": []byte(storageAccountName),
+		"storage-key":     []byte(storageAccessKey),
+	}
+
+	backupConfigData := map[string]interface{}{
+		"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
+		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
+		"storageType":            "ABS",
+		"abs": map[string]interface{}{
+			"absContainer": containerName,
+			"absSecret":    common.BackupSecretName,
 		},
-	}, nil
+	}
+
+	return secretData, backupConfigData, nil
 }

@@ -43,12 +43,12 @@ func (b *AWSBotanist) ApplyCreateHook() error {
 
 	// Change ELB health check to SSL (avoid TLS handshake errors because of AWS ELB health checks)
 	loadBalancerName := b.APIServerAddress[:32]
-	elb, err := b.SeedAWSClient.GetELB(loadBalancerName)
+	elb, err := b.AWSClient.GetELB(loadBalancerName)
 	if err != nil {
 		return err
 	}
 	targetPort := (*elb.LoadBalancerDescriptions[0].HealthCheck.Target)[4:]
-	return b.SeedAWSClient.UpdateELBHealthCheck(loadBalancerName, targetPort)
+	return b.AWSClient.UpdateELBHealthCheck(loadBalancerName, targetPort)
 }
 
 // ApplyDeleteHook does currently nothing for AWS.
@@ -71,7 +71,7 @@ func (b *AWSBotanist) CheckIfClusterGetsScaled() (bool, int, error) {
 			groupList = append(groupList, awssdk.String(fmt.Sprintf("%s-nodes-%s-z%d", b.Shoot.SeedNamespace, worker.Name, i)))
 		}
 	}
-	groups, err := b.ShootAWSClient.GetAutoScalingGroups(groupList)
+	groups, err := b.AWSClient.GetAutoScalingGroups(groupList)
 	if err != nil {
 		return false, 0, err
 	}

@@ -23,8 +23,7 @@ import (
 type AWSBotanist struct {
 	*operation.Operation
 	CloudProviderName string
-	SeedAWSClient     aws.ClientInterface
-	ShootAWSClient    aws.ClientInterface
+	AWSClient         aws.ClientInterface
 }
 
 const (

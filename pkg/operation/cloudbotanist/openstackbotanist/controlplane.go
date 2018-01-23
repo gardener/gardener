@@ -17,7 +17,6 @@ package openstackbotanist
 import (
 	"fmt"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
@@ -70,15 +69,8 @@ func (b *OpenStackBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, e
 	return nil, nil
 }
 
-// GenerateEtcdBackupDefaults returns
-func (b *OpenStackBotanist) GenerateEtcdBackupDefaults() *gardenv1beta1.Backup {
-	return nil
-}
-
-// GenerateEtcdConfig returns the etcd deployment configuration (including backup settings) for the etcd
-// Helm chart.
-func (b *OpenStackBotanist) GenerateEtcdConfig(string) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"kind": "StatefulSet",
-	}, nil
+// GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
+// TODO: implement backup functionality for OpenStack
+func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
+	return nil, nil, nil
 }

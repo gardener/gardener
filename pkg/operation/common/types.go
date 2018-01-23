@@ -93,6 +93,12 @@ const (
 	// PrometheusDeploymentName is the name of the Prometheus deployment.
 	PrometheusDeploymentName = "prometheus"
 
+	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
+	CloudPurposeShoot = "shoot"
+
+	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
+	CloudPurposeSeed = "seed"
+
 	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
 	TerraformerConfigSuffix = ".tf-config"
 

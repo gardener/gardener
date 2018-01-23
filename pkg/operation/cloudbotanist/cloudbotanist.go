@@ -15,7 +15,7 @@
 package cloudbotanist
 
 import (
-	"fmt"
+	"errors"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
@@ -23,23 +23,34 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/azurebotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // New creates a Cloud Botanist for the specific cloud provider of the operation.
 // The Cloud Botanist is responsible for all operations which require IaaS specific knowledge.
 // We store the infrastructure credentials on the Botanist object for later usage so that we do not
 // need to read the IaaS Secret again.
-func New(o *operation.Operation) (CloudBotanist, error) {
-	switch o.Shoot.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		return awsbotanist.New(o)
-	case gardenv1beta1.CloudProviderAzure:
-		return azurebotanist.New(o)
-	case gardenv1beta1.CloudProviderGCP:
-		return gcpbotanist.New(o)
-	case gardenv1beta1.CloudProviderOpenStack:
-		return openstackbotanist.New(o)
+func New(o *operation.Operation, purpose string) (CloudBotanist, error) {
+	var cloudProvider gardenv1beta1.CloudProvider
+	switch purpose {
+	case common.CloudPurposeShoot:
+		cloudProvider = o.Shoot.CloudProvider
+	case common.CloudPurposeSeed:
+		cloudProvider = o.Seed.CloudProvider
 	default:
-		return nil, fmt.Errorf("unsupported cloud provider")
+		return nil, errors.New("unspported cloud botanist purpose")
+	}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return awsbotanist.New(o, purpose)
+	case gardenv1beta1.CloudProviderAzure:
+		return azurebotanist.New(o, purpose)
+	case gardenv1beta1.CloudProviderGCP:
+		return gcpbotanist.New(o, purpose)
+	case gardenv1beta1.CloudProviderOpenStack:
+		return openstackbotanist.New(o, purpose)
+	default:
+		return nil, errors.New("unsupported cloud provider")
 	}
 }
