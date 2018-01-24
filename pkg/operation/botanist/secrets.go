@@ -639,6 +639,22 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			RunsInSeed:         true,
 		},
 
+		// Secret definition for machine-controller-manager
+		ControlPlaneSecret{
+			TLSSecret: TLSSecret{
+				Secret: Secret{
+					Name: "machine-controller-manager",
+				},
+				CommonName:   "system:machine-controller-manager",
+				Organization: nil,
+				DNSNames:     nil,
+				IPAddresses:  nil,
+				IsServerCert: false,
+			},
+			KubeconfigRequired: true,
+			RunsInSeed:         true,
+		},
+
 		// Secret definition for kube-addon-manager
 		ControlPlaneSecret{
 			TLSSecret: TLSSecret{

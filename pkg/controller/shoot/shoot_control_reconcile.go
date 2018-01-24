@@ -46,7 +46,6 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	if err != nil {
 		return formatError("Failed to create a Shoot CloudBotanist", err)
 	}
-
 	hybridBotanist := &hybridbotanistpkg.HybridBotanist{
 		Operation:          o,
 		Botanist:           botanist,
@@ -74,6 +73,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		_                                    = f.AddTask(hybridBotanist.DeployKubeScheduler, defaultRetry, deployKubeAPIServer)
 		waitUntilKubeAPIServerIsReady        = f.AddTask(botanist.WaitUntilKubeAPIServerIsReady, 0, deployKubeAPIServer)
 		initializeShootClients               = f.AddTask(botanist.InitializeShootClients, defaultRetry, waitUntilKubeAPIServerIsReady)
+		_                                    = f.AddTask(botanist.DeployMachineControllerManager, defaultRetry, initializeShootClients)
 		deployKubeAddonManager               = f.AddTask(hybridBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients)
 		_                                    = f.AddTask(shootCloudBotanist.DeployAutoNodeRepair, defaultRetry, waitUntilKubeAPIServerIsReady, deployInfrastructure)
 		_                                    = f.AddTask(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, deployInfrastructure)

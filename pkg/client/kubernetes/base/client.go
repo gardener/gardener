@@ -21,11 +21,12 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-// Bootstrap will fetch all Kubernetes server resources, i.e. all registered API groups and the
+// DiscoverAPIGroups will fetch all Kubernetes server resources, i.e. all registered API groups and the
 // associated resources.
-func (c *Client) Bootstrap() error {
+func (c *Client) DiscoverAPIGroups() error {
 	apiResourceList, err := c.clientset.Discovery().ServerResources()
 	c.apiResourceList = apiResourceList
+	c.apiDiscoveryFetchNum++
 	return err
 }
 

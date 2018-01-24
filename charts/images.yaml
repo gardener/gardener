@@ -10,6 +10,9 @@ images:
   tag: v3.2.15
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
+- name: machine-controller-manager
+  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
+  tag: "0.1.0"
 - name: kube-addon-manager
   repository: k8s.gcr.io/kube-addon-manager
   tag: v6.5

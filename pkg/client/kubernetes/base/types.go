@@ -39,11 +39,12 @@ var (
 // allowing requests to arbitrary URLs.
 // The version string contains only the major/minor part in the form <major>.<minor>.
 type Client struct {
-	apiResourceList []*metav1.APIResourceList
-	version         string
-	config          *rest.Config
-	clientConfig    clientcmd.ClientConfig
-	clientset       *kubernetes.Clientset
-	gardenClientset *gardenclientset.Clientset
-	restClient      rest.Interface
+	apiResourceList      []*metav1.APIResourceList
+	apiDiscoveryFetchNum int
+	config               *rest.Config
+	clientConfig         clientcmd.ClientConfig
+	clientset            *kubernetes.Clientset
+	gardenClientset      *gardenclientset.Clientset
+	restClient           rest.Interface
+	version              string
 }

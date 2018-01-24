@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DeployNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
@@ -64,6 +65,33 @@ func (b *Botanist) DeleteKubeAddonManager() error {
 		return nil
 	}
 	return err
+}
+
+// DeployMachineControllerManager deploys the machine-controller-manager into the Shoot namespace in the Seed cluster. It is responsible
+// for managing the worker nodes of the Shoot.
+func (b *Botanist) DeployMachineControllerManager() error {
+	var (
+		name          = "machine-controller-manager"
+		defaultValues = map[string]interface{}{
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-machine-controller-manager": b.CheckSums[name],
+			},
+			"namespace": map[string]interface{}{
+				"uid": b.SeedNamespaceObject.UID,
+			},
+		}
+	)
+
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
+	if err != nil {
+		return err
+	}
+
+	if err := b.ApplyChartShoot(filepath.Join(common.ChartPath, "shoot-machines"), name, metav1.NamespaceSystem, nil, nil); err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Operation.Shoot.SeedNamespace, nil, values)
 }
 
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components

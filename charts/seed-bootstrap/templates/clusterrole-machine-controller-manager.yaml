@@ -1,0 +1,40 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:machine-controller-manager
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - awsmachineclasses
+  - azuremachineclasses
+  - gcpmachineclasses
+  - openstackmachineclasses
+  - machinedeployments
+  - machines
+  - machinesets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - secrets
+  - endpoints
+  - events
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch

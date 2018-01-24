@@ -141,6 +141,20 @@ func (c *Client) BuildPath(apiVersion, kind, namespace string) (string, error) {
 			return "", fmt.Errorf("%s is not registered in API group %s", kind, apiVersion)
 		}
 	}
+
+	// There is no clear indicator for the kube-apiserver whether it is ready to serve requests or not. We discover
+	// all the available API groups while creating the Kubernetes client, however, at that point in time it might be
+	// the case that not all API groups have been registered. Thus, we need to have some retry logic regarding the
+	// discovery.
+	// See also: https://github.com/kubernetes/kubernetes/issues/45786
+	if c.apiDiscoveryFetchNum < 5 {
+		// Refresh Seed client API group discovery
+		if err := c.DiscoverAPIGroups(); err != nil {
+			return "", fmt.Errorf("Failure while re-discoverying the API groups (try no. %d)", c.apiDiscoveryFetchNum)
+		}
+		return c.BuildPath(apiVersion, kind, namespace)
+	}
+
 	return "", fmt.Errorf("Could not find API group %s", apiVersion)
 }
 

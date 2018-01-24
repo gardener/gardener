@@ -30,7 +30,7 @@ import (
 // (which are performed with the help of kubernetes/client-go) in order to allow the implementation
 // of several Kubernetes versions.
 type Client interface {
-	Bootstrap() error
+	DiscoverAPIGroups() error
 
 	// Getter & Setter
 	Clientset() *kubernetes.Clientset

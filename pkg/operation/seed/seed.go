@@ -136,7 +136,7 @@ func (s *Seed) CheckMinimumK8SVersion() error {
 	case gardenv1beta1.CloudProviderAzure:
 		minSeedVersion = "1.8.6" // https://github.com/kubernetes/kubernetes/issues/56898
 	default:
-		minSeedVersion = "1.7"
+		minSeedVersion = "1.8" // CRD garbage collection
 	}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret)

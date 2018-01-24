@@ -142,7 +142,7 @@ func newKubernetesClient(config *rest.Config, clientset *kubernetes.Clientset, c
 		return nil, fmt.Errorf("Kubernetes cluster has version %s which is not supported", gitVersion)
 	}
 
-	if err := k8sClient.Bootstrap(); err != nil {
+	if err := k8sClient.DiscoverAPIGroups(); err != nil {
 		if len(k8sClient.GetAPIResourceList()) == 0 {
 			return nil, err
 		}
