@@ -27,7 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	componentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	clientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller"
@@ -240,7 +240,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenClientset, err := clientset.NewForConfig(k8sGardenClient.GetConfig())
+	gardenClientset, err := gardenclientset.NewForConfig(k8sGardenClient.GetConfig())
 	if err != nil {
 		return nil, err
 	}
