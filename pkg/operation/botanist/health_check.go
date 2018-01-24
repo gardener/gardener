@@ -15,10 +15,14 @@
 package botanist
 
 import (
+	"fmt"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CheckConditionControlPlaneHealthy checks whether the control plane of the Shoot cluster is healthy,
@@ -66,12 +70,34 @@ func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Conditi
 		return helper.ModifyCondition(condition, corev1.ConditionFalse, "NodeMissing", "At least one healthy node known to the IaaS provider but not registered to the cluster.")
 	}
 	for _, node := range nodeList.Items {
-		for _, nodeCondition := range node.Status.Conditions {
-			if nodeCondition.Type == corev1.NodeReady && nodeCondition.Status != corev1.ConditionTrue {
-				return helper.ModifyCondition(condition, corev1.ConditionFalse, "NodeNotReady", "Node "+node.ObjectMeta.Name+" is not ready.")
+		if !node.Spec.Unschedulable {
+			for _, nodeCondition := range node.Status.Conditions {
+				if nodeCondition.Type == corev1.NodeReady && nodeCondition.Status != corev1.ConditionTrue {
+					return helper.ModifyCondition(condition, corev1.ConditionFalse, "NodeNotReady", fmt.Sprintf("Node %s is not ready.", node.Name))
+				}
 			}
 		}
 	}
+
+	var machineList unstructured.Unstructured
+	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machines", b.Shoot.SeedNamespace).Do().Into(&machineList); err != nil {
+		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchMachineListFailed", err.Error())
+	}
+	if err := machineList.EachListItem(func(o runtime.Object) error {
+		var (
+			obj                             = o.(*unstructured.Unstructured)
+			machineName                     = obj.GetName()
+			machinePhase, machinePhaseFound = unstructured.NestedString(obj.UnstructuredContent(), "status", "currentStatus", "phase")
+		)
+
+		if !machinePhaseFound || machinePhase != "Running" {
+			return fmt.Errorf("Machine %s is not running (phase: %s)", machineName, machinePhase)
+		}
+		return nil
+	}); err != nil {
+		return helper.ModifyCondition(condition, corev1.ConditionFalse, "MachineUnhealthy", err.Error())
+	}
+
 	return helper.ModifyCondition(condition, corev1.ConditionTrue, "EveryNodeReady", "Every node registered to the cluster is ready.")
 }
 

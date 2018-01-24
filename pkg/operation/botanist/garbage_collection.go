@@ -19,23 +19,25 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
 // i.e., it deletes old replica sets which have a desired=actual=0 replica count.
 func (b *Botanist) PerformGarbageCollectionSeed() error {
-	replicasetList, err := b.K8sSeedClient.ListReplicaSets(b.Shoot.SeedNamespace, metav1.ListOptions{})
+	replicaSetList, err := b.K8sSeedClient.ListReplicaSets(b.Shoot.SeedNamespace, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-	for _, replicaset := range replicasetList {
+	for _, replicaSet := range replicaSetList {
 		var (
-			name            = replicaset.ObjectMeta.Name
-			desiredReplicas = replicaset.Spec.Replicas
-			actualReplicas  = replicaset.Status.Replicas
+			name            = replicaSet.Name
+			desiredReplicas = replicaSet.Spec.Replicas
+			actualReplicas  = replicaSet.Status.Replicas
 		)
 		if desiredReplicas != nil && *desiredReplicas == int32(0) && actualReplicas == int32(0) {
-			b.Logger.Debugf("Deleting replicaset %s as the number of desired and actual replicas is 0.", name)
+			b.Logger.Debugf("Deleting Replicaset %s as the number of desired and actual replicas is 0.", name)
 			err := b.K8sSeedClient.DeleteReplicaSet(b.Shoot.SeedNamespace, name)
 			if apierrors.IsNotFound(err) {
 				return nil
@@ -45,7 +47,38 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 			}
 		}
 	}
-	return nil
+
+	var machineSetList unstructured.Unstructured
+	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machinesets", b.Shoot.SeedNamespace).Do().Into(&machineSetList); err != nil {
+		return err
+	}
+	return machineSetList.EachListItem(func(o runtime.Object) error {
+		var (
+			obj                                                       = o.(*unstructured.Unstructured)
+			machineSetName                                            = obj.GetName()
+			machineSetDesiredReplicas, machineSetDesiredReplicasFound = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
+			machineSetActualReplicas, machineSetActualReplicasFound   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
+		)
+
+		if !machineSetDesiredReplicasFound {
+			machineSetDesiredReplicas = -1
+		}
+		if !machineSetActualReplicasFound {
+			machineSetActualReplicas = -1
+		}
+
+		if machineSetDesiredReplicas == 0 && machineSetActualReplicas == 0 {
+			b.Logger.Debugf("Deleting MachineSet %s as the number of desired and actual replicas is 0.", machineSetName)
+			err := b.K8sSeedClient.MachineV1alpha1("DELETE", "machinesets", b.Shoot.SeedNamespace).Name(machineSetName).Do().Error()
+			if apierrors.IsNotFound(err) {
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
