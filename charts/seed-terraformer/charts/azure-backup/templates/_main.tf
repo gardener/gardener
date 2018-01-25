@@ -7,7 +7,7 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "{{ required "clusterName is required" .Values.clusterName }}-sapk8s-backup"
+  name     = "{{ required "clusterName is required" .Values.clusterName }}-backup"
   location = "{{ required "azure.region is required" .Values.azure.region }}"
 }
 

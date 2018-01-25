@@ -26,10 +26,14 @@ import (
 // as defined here: https://github.com/kubernetes/kubernetes/blob/release-1.7/pkg/cloudprovider/providers/azure/azure.go#L58.
 func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 	var (
-		resourceGroupName = "resourceGroupName"
-		vnetName          = "vnetName"
+		resourceGroupName   = "resourceGroupName"
+		vnetName            = "vnetName"
+		availabilitySetName = "availabilitySetName"
+		subnetName          = "subnetName"
+		routeTableName      = "routeTableName"
+		securityGroupName   = "securityGroupName"
 	)
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(resourceGroupName, vnetName)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(resourceGroupName, vnetName, subnetName, routeTableName, availabilitySetName, securityGroupName)
 	if err != nil {
 		return "", err
 	}
@@ -40,10 +44,10 @@ subscriptionId: ` + string(b.Shoot.Secret.Data[SubscriptionID]) + `
 resourceGroup: ` + stateVariables[resourceGroupName] + `
 location: ` + b.Shoot.Info.Spec.Cloud.Region + `
 vnetName: ` + stateVariables[vnetName] + `
-subnetName: workers
-securityGroupName: nodes
-routeTableName: worker_route_table
-primaryAvailabilitySetName: workers-avset
+subnetName: ` + stateVariables[subnetName] + `
+securityGroupName: ` + stateVariables[securityGroupName] + `
+routeTableName: ` + stateVariables[routeTableName] + `
+primaryAvailabilitySetName: ` + stateVariables[availabilitySetName] + `
 aadClientId: ` + string(b.Shoot.Secret.Data[ClientID]) + `
 aadClientSecret: ` + string(b.Shoot.Secret.Data[ClientSecret]) + `
 cloudProviderBackoff: true

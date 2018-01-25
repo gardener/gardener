@@ -28,8 +28,8 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 	var (
 		createResourceGroup = true
 		createVNet          = true
-		resourceGroupName   = fmt.Sprintf("%s-sapk8s", b.Shoot.SeedNamespace)
-		vnetName            = fmt.Sprintf("%s-vnet", b.Shoot.SeedNamespace)
+		resourceGroupName   = b.Shoot.SeedNamespace
+		vnetName            = b.Shoot.SeedNamespace
 		vnetCIDR            = b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers
 	)
 	// check if we should use an existing ResourceGroup or create a new one

@@ -27,17 +27,17 @@ resource "azurerm_virtual_network" "vnet" {
 {{- end}}
 
 resource "azurerm_subnet" "subnet_workers" {
-  name                      = "workers"
+  name                      = "{{ required "clusterName is required" .Values.clusterName }}-nodes"
   resource_group_name       = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
   virtual_network_name      = "{{ required "resourceGroup.vnet.name is required" .Values.resourceGroup.vnet.name }}"
   address_prefix            = "{{ required "networks.worker is required" .Values.networks.worker }}"
   route_table_id            = "${azurerm_route_table.route_table.id}"
-  network_security_group_id = "${azurerm_network_security_group.nodes.id}"
+  network_security_group_id = "${azurerm_network_security_group.workers.id}"
 }
 
 {{ if .Values.networks.public -}}
 resource "azurerm_subnet" "subnet_public_utility" {
-  name                      = "public_utility"
+  name                      = "{{ required "clusterName is required" .Values.clusterName }}-public-utility"
   resource_group_name       = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
   virtual_network_name      = "{{ required "resourceGroup.vnet.name is required" .Values.resourceGroup.vnet.name }}"
   address_prefix            = "{{ required "networks.public is required" .Values.networks.public }}"
@@ -45,7 +45,7 @@ resource "azurerm_subnet" "subnet_public_utility" {
 }
 
 resource "azurerm_network_security_group" "bastion" {
-  name                = "bastion"
+  name                = "{{ required "clusterName is required" .Values.clusterName }}-bastion"
   location            = "{{ required "azure.region is required" .Values.azure.region }}"
   resource_group_name = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
 
@@ -69,8 +69,8 @@ resource "azurerm_route_table" "route_table" {
   resource_group_name = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
 }
 
-resource "azurerm_network_security_group" "nodes" {
-  name                = "nodes"
+resource "azurerm_network_security_group" "workers" {
+  name                = "{{ required "clusterName is required" .Values.clusterName }}-workers"
   location            = "{{ required "azure.region is required" .Values.azure.region }}"
   resource_group_name = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
 }
@@ -80,7 +80,7 @@ resource "azurerm_network_security_group" "nodes" {
 #=====================================================================
 
 resource "azurerm_availability_set" "workers_av" {
-  name                         = "workers-avset"
+  name                         = "{{ required "clusterName is required" .Values.clusterName }}-avset-workers"
   resource_group_name          = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
   location                     = "{{ required "azure.region is required" .Values.azure.region }}"
   platform_update_domain_count = "{{ required "azure.countUpdateDomains is required" .Values.azure.countUpdateDomains }}"
@@ -94,21 +94,21 @@ resource "azurerm_availability_set" "workers_av" {
 
 {{ range $j, $worker := .Values.workers }}
 resource "azurerm_network_interface" "{{ $worker.name }}_nci" {
-  name                 = "{{ $worker.name }}-${count.index}-nci"
+  name                 = "{{ required "clusterName is required" $.Values.clusterName }}-{{ $worker.name }}-${count.index}-nci"
   count                = "{{ required "worker.autoScalerMin is required" $worker.autoScalerMin }}"
   location             = "{{ required "azure.region is required" $.Values.azure.region }}"
   resource_group_name  = "{{ required "resourceGroup.name is required" $.Values.resourceGroup.name }}"
   enable_ip_forwarding = "true"
 
   ip_configuration {
-    name                          = "{{ $worker.name }}-${count.index}-ip-conf"
+    name                          = "{{ required "clusterName is required" $.Values.clusterName }}-{{ $worker.name }}-${count.index}-ip-conf"
     subnet_id                     = "${azurerm_subnet.subnet_workers.id}"
     private_ip_address_allocation = "dynamic"
   }
 }
 
 resource "azurerm_virtual_machine" "{{ $worker.name }}_node" {
-  name                          = "{{ $worker.name }}-${count.index}"
+  name                          = "{{ required "clusterName is required" $.Values.clusterName }}-{{ $worker.name }}-${count.index}"
   count                         = "{{ required "worker.autoScalerMin is required" $worker.autoScalerMin }}"
   location                      = "{{ required "azure.region is required" $.Values.azure.region }}"
   resource_group_name           = "{{ required "resourceGroup.name is required" $.Values.resourceGroup.name }}"
@@ -125,7 +125,7 @@ resource "azurerm_virtual_machine" "{{ $worker.name }}_node" {
   }
 
   storage_os_disk {
-    name              = "{{ $worker.name }}-${count.index}-os-disk"
+    name              = "{{ required "clusterName is required" $.Values.clusterName }}-{{ $worker.name }}-${count.index}-os-disk"
     caching           = "None"
     create_option     = "FromImage"
     disk_size_gb      = "{{ regexFind "^(\\d+)" (required "worker.volumeSize is required" $worker.volumeSize) }}"
@@ -147,7 +147,7 @@ resource "azurerm_virtual_machine" "{{ $worker.name }}_node" {
   }
 
   os_profile {
-    computer_name  = "{{ $worker.name }}-${count.index}"
+    computer_name  = "{{ required "clusterName is required" $.Values.clusterName }}-{{ $worker.name }}-${count.index}"
     admin_username = "core"
     custom_data    = <<EOF
 {{ include "terraformer-common.cloud-config.user-data" (set $.Values "workerName" $worker.name) }}
@@ -168,4 +168,19 @@ output "vnetName" {
   value = "{{ required "resourceGroup.vnet.name is required" .Values.resourceGroup.vnet.name }}"
 }
 
+output "availabilitySetName" {
+  value = "${azurerm_availability_set.workers_av.name}"
+}
+
+output "subnetName" {
+  value = "${azurerm_subnet.subnet_workers.name}"
+}
+
+output "routeTableName" {
+  value = "${azurerm_route_table.route_table.name}"
+}
+
+output "securityGroupName" {
+  value = "${azurerm_network_security_group.workers.name}"
+}
 {{- end -}}
