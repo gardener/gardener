@@ -16,6 +16,7 @@ rules:
   - replicationcontrollers
   - limitranges
   - persistentvolumeclaims
+  - namespaces
   verbs:
   - list
   - watch
