@@ -819,7 +819,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Secret: Secret{
 				Name: "alertmanager-tls",
 			},
-			CommonName:   alertManagerHost,
+			CommonName:   "alertmanager",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{alertManagerHost},
 			IPAddresses:  nil,
@@ -831,7 +831,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Secret: Secret{
 				Name: "grafana-tls",
 			},
-			CommonName:   grafanaHost,
+			CommonName:   "grafana",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{grafanaHost},
 			IPAddresses:  nil,
@@ -843,7 +843,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Secret: Secret{
 				Name: "prometheus-tls",
 			},
-			CommonName:   prometheusHost,
+			CommonName:   "prometheus",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{prometheusHost},
 			IPAddresses:  nil,
@@ -861,7 +861,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Name:       "monocular-tls",
 				DoNotApply: true,
 			},
-			CommonName:   monocularHost,
+			CommonName:   "monocular",
 			Organization: nil,
 			DNSNames:     []string{monocularHost},
 			IPAddresses:  nil,
