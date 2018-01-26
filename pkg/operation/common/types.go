@@ -19,8 +19,7 @@ const (
 	AlertManagerDeploymentName = "alertmanager"
 
 	// BackupSecretName defines the name of the secret containing the credentials which are required to
-	// authenticate against the respective cloud provider (required by etcd-operator to store the backups
-	// of Shoot clusters).
+	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
 	BackupSecretName = "etcd-backup"
 
 	// ChartPath is the path to the Helm charts.

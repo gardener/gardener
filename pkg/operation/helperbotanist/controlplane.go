@@ -25,9 +25,9 @@ import (
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
 
-// DeployETCD deploys two etcd clusters (either via StatefulSets or via the etcd-operator). The first etcd cluster
-// (called 'main') is used for all the data the Shoot Kubernetes cluster needs to store, whereas the second etcd
-// cluster (called 'events') is only used to store the events data. The objectstore is also set up to store the backups.
+// DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
+/// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
+// store the events data. The objectstore is also set up to store the backups.
 func (b *HelperBotanist) DeployETCD() error {
 	secretData, backupConfigData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
 	if err != nil {
@@ -42,13 +42,10 @@ func (b *HelperBotanist) DeployETCD() error {
 		}
 	}
 
-	// Some cloud botanists do not yet support backup and won't return backup config data.
-	etcdConfig := map[string]interface{}{
-		"kind": "StatefulSet",
-	}
+	etcdConfig := map[string]interface{}{}
 
+	// Some cloud botanists do not yet support backup and won't return backup config data.
 	if backupConfigData != nil {
-		etcdConfig["kind"] = "EtcdCluster"
 		etcdConfig["backup"] = backupConfigData
 	}
 

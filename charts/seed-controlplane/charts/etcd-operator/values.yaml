@@ -1,8 +1,0 @@
-imagePullSecrets:
-- name: gcr-readonly
-
-namespace:
-  uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
-
-images:
-  etcd-operator: image-repository:image-tag

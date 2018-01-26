@@ -46,26 +46,6 @@ func (b *Botanist) DeleteNamespace() error {
 	return err
 }
 
-// DeployETCDOperator deploys the etcd-operator which is used to spin up etcd clusters by leveraging the CRD concept.
-func (b *Botanist) DeployETCDOperator() error {
-	var (
-		imagePullSecrets = b.GetImagePullSecretsMap()
-		defaultValues    = map[string]interface{}{
-			"imagePullSecrets": imagePullSecrets,
-			"namespace": map[string]interface{}{
-				"uid": b.SeedNamespaceObject.UID,
-			},
-		}
-	)
-
-	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"etcd-operator": "etcd-operator"})
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "etcd-operator"), "etcd-operator", b.Operation.Shoot.SeedNamespace, nil, values)
-}
-
 // DeployKubeAPIServerService creates a Service of type 'LoadBalancer' in the Seed cluster which is used to expose the
 // kube-apiserver deployment (of the Shoot cluster). It waits until the load balancer is available and stores the address
 // on the Botanist's APIServerAddress attribute.

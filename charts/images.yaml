@@ -5,12 +5,9 @@
 # Masterminds/semver package: https://github.com/Masterminds/semver#hyphen-range-comparisons.
 images:
 # Seed controlplane
-- name: etcd-operator
-  repository: eu.gcr.io/sap-cloud-platform-dev1/etcd-operator
-  tag: v0.6.5
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.2.14
+  tag: v3.2.15
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: kube-addon-manager

@@ -1,12 +1,9 @@
 role: for-test
 
-# Either 'StatefulSet' or 'EtcdCluster'
-kind: StatefulSet
-
 images:
   etcd: image-repository:image-tag
 
-# following block is only meaningful if kind==EtcdCluster
+# TODO: Deploy backup sidecar using the below configuration
 # backup:
 #   backupIntervalInSecond: 86400
 #   maxBackups: 7
