@@ -35,33 +35,25 @@ spec:
           image: {{ index .Values.images "nginx-ingress-controller" }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args:
-            - /nginx-ingress-controller
-            - --default-backend-service={{ if .Values.defaultBackend.enabled }}{{ .Release.Namespace }}/{{ template "defaultBackend.fullname" . }}{{ else }}{{ .Values.controller.defaultBackendService }}{{ end }}
-          {{- if and (contains "0.9" (index .Values.images "nginx-ingress-controller")) .Values.controller.publishService.enabled }}
-            - --publish-service={{ template "controller.publishServicePath" . }}
+          - /nginx-ingress-controller
+          - --default-backend-service={{ if .Values.defaultBackend.enabled }}{{ .Release.Namespace }}/{{ template "defaultBackend.fullname" . }}{{ else }}{{ .Values.controller.defaultBackendService }}{{ end }}
+          {{- if .Values.controller.publishService.enabled }}
+          - --publish-service={{ template "controller.publishServicePath" . }}
           {{- end }}
-          {{- if (contains "0.9" (index .Values.images "nginx-ingress-controller")) }}
-            - --election-id={{ .Values.controller.electionID }}
-          {{- end }}
-          {{- if (contains "0.9" (index .Values.images "nginx-ingress-controller")) }}
-            - --ingress-class={{ .Values.controller.ingressClass }}
-          {{- end }}
-          {{- if (contains "0.9" (index .Values.images "nginx-ingress-controller")) }}
-            - --configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
-          {{- else }}
-            - --nginx-configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
-          {{- end }}
+          - --election-id={{ .Values.controller.electionID }}
+          - --ingress-class={{ .Values.controller.ingressClass }}
+          - --configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
           {{- if .Values.tcp }}
-            - --tcp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-tcp
+          - --tcp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-tcp
           {{- end }}
           {{- if .Values.udp }}
-            - --udp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-udp
+          - --udp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-udp
           {{- end }}
           {{- if .Values.controller.scope.enabled }}
-            - --watch-namespace={{ default .Release.Namespace .Values.controller.scope.namespace }}
+          - --watch-namespace={{ default .Release.Namespace .Values.controller.scope.namespace }}
           {{- end }}
           {{- range $key, $value := .Values.controller.extraArgs }}
-            - --{{ $key }}={{ $value }}
+          - --{{ $key }}={{ $value }}
           {{- end }}
           env:
             - name: POD_NAME

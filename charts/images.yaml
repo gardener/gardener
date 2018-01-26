@@ -107,8 +107,8 @@ images:
   repository: jtblin/kube2iam
   tag: "0.9.0"
 - name: nginx-ingress-controller
-  repository: k8s.gcr.io/nginx-ingress-controller
-  tag: 0.9.0-beta.15
+  repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
+  tag: "0.10.1"
 - name: ingress-default-backend
   repository: eu.gcr.io/sap-cloud-platform-dev1/garden/k8s-backend
   tag: v0.0.2
