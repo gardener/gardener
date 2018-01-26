@@ -16,7 +16,6 @@ package garden
 
 import (
 	"fmt"
-	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -28,15 +27,21 @@ import (
 )
 
 // New creates a new Garden object (based on a Shoot object).
-func New(shoot *gardenv1beta1.Shoot) *Garden {
+func New(k8sGardenClient kubernetes.Client, shoot *gardenv1beta1.Shoot) (*Garden, error) {
+	namespace, err := k8sGardenClient.GetNamespace(shoot.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
 	projectName := shoot.Namespace
-	if strings.HasPrefix(shoot.Namespace, common.ProjectPrefix) {
-		projectName = strings.SplitAfterN(shoot.Namespace, common.ProjectPrefix, 2)[1]
+	name, ok := namespace.Labels[common.ProjectName]
+	if ok && len(name) > 0 {
+		projectName = name
 	}
 
 	return &Garden{
 		ProjectName: projectName,
-	}
+	}, nil
 }
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.

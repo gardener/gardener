@@ -46,4 +46,5 @@ type Operation struct {
 	ChartShootRenderer  chartrenderer.ChartRenderer
 	APIServerIngresses  []corev1.LoadBalancerIngress
 	APIServerAddress    string
+	SeedNamespaceObject *corev1.Namespace
 }

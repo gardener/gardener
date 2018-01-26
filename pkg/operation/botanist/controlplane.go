@@ -27,8 +27,12 @@ import (
 // components for the Shoot cluster. Moreover, the cloud provider configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
 func (b *Botanist) DeployNamespace() error {
-	_, err := b.K8sSeedClient.CreateNamespace(b.Operation.Shoot.SeedNamespace, true)
-	return err
+	namespace, err := b.K8sSeedClient.CreateNamespace(b.Operation.Shoot.SeedNamespace, true)
+	if err != nil {
+		return err
+	}
+	b.SeedNamespaceObject = namespace
+	return nil
 }
 
 // DeleteNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
@@ -44,17 +48,12 @@ func (b *Botanist) DeleteNamespace() error {
 
 // DeployETCDOperator deploys the etcd-operator which is used to spin up etcd clusters by leveraging the CRD concept.
 func (b *Botanist) DeployETCDOperator() error {
-	namespace, err := b.K8sSeedClient.GetNamespace(b.Operation.Shoot.SeedNamespace)
-	if err != nil {
-		return err
-	}
-
 	var (
 		imagePullSecrets = b.GetImagePullSecretsMap()
 		defaultValues    = map[string]interface{}{
 			"imagePullSecrets": imagePullSecrets,
 			"namespace": map[string]interface{}{
-				"uid": namespace.ObjectMeta.UID,
+				"uid": b.SeedNamespaceObject.UID,
 			},
 		}
 	)
@@ -90,11 +89,6 @@ func (b *Botanist) DeleteKubeAddonManager() error {
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring() error {
-	namespace, err := b.K8sSeedClient.GetNamespace(b.Operation.Shoot.SeedNamespace)
-	if err != nil {
-		return err
-	}
-
 	alertManagerHost, err := b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
 	if err != nil {
 		return err
@@ -138,7 +132,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			},
 			"imagePullSecrets": imagePullSecrets,
 			"namespace": map[string]interface{}{
-				"uid": namespace.ObjectMeta.UID,
+				"uid": b.SeedNamespaceObject.UID,
 			},
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-prometheus":                b.CheckSums["prometheus"],

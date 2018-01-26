@@ -27,7 +27,7 @@ import (
 
 // New takes a <k8sGardenClient>, the <k8sGardenInformers> and a <shoot> manifest, and creates a new Shoot representation.
 // It will add the CloudProfile, the cloud provider secret, compute the internal cluster domain and identify the cloud provider.
-func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, shoot *gardenv1beta1.Shoot, internalDomain string) (*Shoot, error) {
+func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, shoot *gardenv1beta1.Shoot, projectName, internalDomain string) (*Shoot, error) {
 	var (
 		secret *corev1.Secret
 		err    error
@@ -66,7 +66,7 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 		Info:                  shoot,
 		Secret:                secret,
 		CloudProfile:          cloudProfile,
-		SeedNamespace:         fmt.Sprintf("shoot-%s-%s", shoot.Namespace, shoot.Name),
+		SeedNamespace:         fmt.Sprintf("shoot-%s-%s", projectName, shoot.Name),
 		InternalClusterDomain: internalDomain,
 	}
 

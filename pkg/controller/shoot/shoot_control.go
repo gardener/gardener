@@ -177,7 +177,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	}
 
 	// We check whether the Shoot's annotations contains the a key stating the Garden action equals to 'delete' which means that the
-	// user has confirmed the deletion via the Gardener UI. In this case we have to trigger the deletion of the Shoot cluster.
+	// user has confirmed the deletion via the Gardener Dashboard. In this case we have to trigger the deletion of the Shoot cluster.
 	if shoot.DeletionTimestamp != nil && !confirmationDeletionTimestampFound {
 		shootLogger.Infof("Shoot cluster's deletionTimestamp is set but the confirmation annotation '%s' is missing. Skipping.", common.ConfirmationDeletionTimestamp)
 		return nil

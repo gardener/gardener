@@ -38,12 +38,15 @@ func New(shoot *gardenv1beta1.Shoot, shootLogger *logrus.Entry, k8sGardenClient 
 		secrets[k] = v
 	}
 
-	gardenObj := garden.New(shoot)
+	gardenObj, err := garden.New(k8sGardenClient, shoot)
+	if err != nil {
+		return nil, err
+	}
 	seedObj, err := seed.NewFromName(k8sGardenClient, k8sGardenInformers, *(shoot.Spec.Cloud.Seed))
 	if err != nil {
 		return nil, err
 	}
-	shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, fmt.Sprintf("api.internal.%s.%s.%s", shoot.Name, gardenObj.ProjectName, secrets[common.GardenRoleInternalDomain].Annotations[common.DNSDomain]))
+	shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.ProjectName, fmt.Sprintf("api.internal.%s.%s.%s", shoot.Name, gardenObj.ProjectName, secrets[common.GardenRoleInternalDomain].Annotations[common.DNSDomain]))
 	if err != nil {
 		return nil, err
 	}
