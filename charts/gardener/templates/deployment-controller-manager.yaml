@@ -3,6 +3,7 @@ apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: garden-controller-manager
+  namespace: garden
   labels:
     app: gardener
     role: controller-manager

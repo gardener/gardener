@@ -25,6 +25,7 @@ import (
 	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/version"
@@ -70,7 +71,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		panic("Timed out waiting for caches to sync")
 	}
 
-	secrets, err := garden.ReadGardenSecrets(f.k8sGardenClient, f.config.GardenNamespace, f.config.ClientConnection.KubeConfigFile == "")
+	secrets, err := garden.ReadGardenSecrets(f.k8sGardenClient, common.GardenNamespace, f.config.ClientConnection.KubeConfigFile == "")
 	if err != nil {
 		panic(err)
 	}
@@ -80,7 +81,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		panic(err)
 	}
 
-	if err := garden.BootstrapCluster(f.k8sGardenClient, f.config.GardenNamespace, secrets); err != nil {
+	if err := garden.BootstrapCluster(f.k8sGardenClient, common.GardenNamespace, secrets); err != nil {
 		logger.Logger.Errorf("Failed to bootstrap the Garden cluster: %s", err.Error())
 		return
 	}

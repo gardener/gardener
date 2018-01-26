@@ -3,6 +3,7 @@ apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: garden-apiserver
+  namespace: garden
   labels:
     app: gardener
     role: apiserver
@@ -101,6 +102,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: etcd
+  namespace: garden
   labels:
     sidecar: etcd
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"

@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/server"
 	"github.com/gardener/gardener/pkg/server/handlers"
 	"github.com/gardener/gardener/pkg/utils"
@@ -389,7 +390,7 @@ func getGardenerIdentity(k8sGardenClient kubernetes.Client, runningInCluster boo
 	var (
 		gardenerID        = utils.GenerateRandomString(64)
 		gardenerName, _   = os.Hostname()
-		gardenerNamespace = getGardenerNamespace(runningInCluster, config.GardenNamespace, config.Controller.WatchNamespace)
+		gardenerNamespace = getGardenerNamespace(runningInCluster, common.GardenNamespace, config.Controller.WatchNamespace)
 	)
 	if runningInCluster {
 		gardenerID = ""

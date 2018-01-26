@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: garden-controller-manager-configmap
+  namespace: garden
 data:
   config.yaml: |
     ---
@@ -18,7 +19,6 @@ data:
         concurrentSyncs: {{ .Values.controller.config.controller.reconciliation.concurrentSyncs }}
         resyncPeriod: {{ .Values.controller.config.controller.reconciliation.resyncPeriod }}
         retryDuration: {{ .Values.controller.config.controller.reconciliation.retryDuration }}
-    gardenNamespace: {{ .Values.controller.config.gardenNamespace }}
     leaderElection:
       leaderElect: {{ .Values.controller.config.leaderElection.leaderElect }}
       leaseDuration: {{ .Values.controller.config.leaderElection.leaseDuration }}

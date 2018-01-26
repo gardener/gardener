@@ -2,6 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: garden-audit-policy-config
+  namespace: garden
   labels:
     app: gardener
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"

@@ -91,7 +91,6 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_componentconfig_Cont
 	if err := Convert_v1alpha1_ControllerManagerControllerConfiguration_To_componentconfig_ControllerManagerControllerConfiguration(&in.Controller, &out.Controller, s); err != nil {
 		return err
 	}
-	out.GardenNamespace = in.GardenNamespace
 	out.Images = *(*[]componentconfig.ControllerManagerImagesConfiguration)(unsafe.Pointer(&in.Images))
 	if err := Convert_v1alpha1_LeaderElectionConfiguration_To_componentconfig_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
 		return err
@@ -118,7 +117,6 @@ func autoConvert_componentconfig_ControllerManagerConfiguration_To_v1alpha1_Cont
 	if err := Convert_componentconfig_ControllerManagerControllerConfiguration_To_v1alpha1_ControllerManagerControllerConfiguration(&in.Controller, &out.Controller, s); err != nil {
 		return err
 	}
-	out.GardenNamespace = in.GardenNamespace
 	out.Images = *(*[]ControllerManagerImagesConfiguration)(unsafe.Pointer(&in.Images))
 	if err := Convert_componentconfig_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(&in.LeaderElection, &out.LeaderElection, s); err != nil {
 		return err

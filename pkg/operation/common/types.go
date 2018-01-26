@@ -48,7 +48,9 @@ const (
 	// EtcdRoleEvents is the constant defining the role for etcd storing events in Shoot.
 	EtcdRoleEvents = "events"
 
-	// GardenNamespace is a constant for the Garden namespace which holds configuration for the Gardener.
+	// GardenNamespace is the namespace in which the configuration and secrets for
+	// the Garden controller manager will be stored (e.g., secrets for the Seed clusters).
+	// It is also used by the garden-apiserver.
 	GardenNamespace = "garden"
 
 	// GardenRole is the key for an annotation on a Kubernetes Secret object whose value must be either 'seed' or

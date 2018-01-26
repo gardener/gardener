@@ -11,7 +11,6 @@ controller:
     concurrentSyncs: 20
     resyncPeriod: 10m
     retryDuration: 1440m
-gardenNamespace: garden
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

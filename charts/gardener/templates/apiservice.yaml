@@ -11,13 +11,13 @@ spec:
   versionPriority: {{ .Values.apiserver.versionPriority }}
   service:
     name: garden-apiserver
-    namespace: {{ .Release.Namespace }}
+    namespace: garden
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: garden-apiserver-cert
-  namespace: {{ .Release.Namespace }}
+  namespace: garden
 type: Opaque
 data:
   garden-apiserver.crt: {{ b64enc .Values.apiserver.tls.crt }}

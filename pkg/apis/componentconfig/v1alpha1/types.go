@@ -105,12 +105,6 @@ type ControllerManagerConfiguration struct {
 	ClientConnection ClientConnectionConfiguration `json:"clientConnection"`
 	// Controller defines the configuration of the controllers.
 	Controller ControllerManagerControllerConfiguration `json:"controller"`
-	// GardenNamespace is the namespace in which the configuration and secrets for
-	// the Garden controller manager will be stored (e.g., secrets for the Seed clusters).
-	// Not specifying this field means the same namespace the Garden controller manager is
-	// running in (only reasonable when the Garden controller manager runs inside a Kubernetes
-	// cluster).
-	GardenNamespace string `json:"gardenNamespace"`
 	// Images is a list of container images which are deployed by the Garden controller manager.
 	Images []ControllerManagerImagesConfiguration `json:"images"`
 	// LeaderElection defines the configuration of leader election client.
