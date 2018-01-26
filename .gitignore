@@ -1,13 +1,13 @@
-args
-bin
-.vscode
-.idea
-.kube-secrets
-tmp/*
-dev/*
+/args
+/bin
+/.kube-secrets
+/tmp/*
+/dev
 
 *.coverprofile
 *.html
+.vscode
+.idea
 .DS_Store
 
 ./garden-apiserver
