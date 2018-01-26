@@ -299,6 +299,8 @@ type SeedSpec struct {
 	SecretRef CrossReference `json:"secretRef"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks K8SNetworks `json:"networks"`
+	// Visible labels the Seed cluster as selectable for the seedfinder admisson controller.
+	Visible *bool `json:"visible"`
 }
 
 // SeedStatus holds the most recently observed status of the Seed cluster.

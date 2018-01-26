@@ -39,6 +39,9 @@ var _ = Describe("seedfinder", func() {
 			seedName         = "seed-1"
 			region           = "europe"
 
+			falseVar = false
+			trueVar  = true
+
 			seedBase = garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
@@ -48,6 +51,7 @@ var _ = Describe("seedfinder", func() {
 						Profile: cloudProfileName,
 						Region:  region,
 					},
+					Visible: &trueVar,
 				},
 				Status: garden.SeedStatus{
 					Conditions: []garden.Condition{
@@ -140,6 +144,20 @@ var _ = Describe("seedfinder", func() {
 					Status: corev1.ConditionFalse,
 				},
 			}
+
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+			err := admissionHandler.Admit(attrs)
+
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			Expect(shoot.Spec.Cloud.Seed).To(BeNil())
+		})
+
+		It("should fail because it cannot find a seed cluster due to invisibility", func() {
+			shoot.Spec.Cloud.Seed = nil
+			seed.Spec.Visible = &falseVar
 
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)

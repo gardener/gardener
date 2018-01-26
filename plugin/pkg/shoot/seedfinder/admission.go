@@ -105,7 +105,7 @@ func determineSeed(shoot *garden.Shoot, lister gardenlisters.SeedLister) (*garde
 
 	for _, seed := range list {
 		// We return the first matching seed cluster.
-		if seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && verifySeedAvailability(seed) {
+		if seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) {
 			return seed, nil
 		}
 	}
