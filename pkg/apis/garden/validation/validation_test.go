@@ -1035,7 +1035,7 @@ var _ = Describe("validation", func() {
 						Profile: "aws",
 						Region:  "eu-west-1",
 					},
-					Domain: "my-seed-1.example.com",
+					IngressDomain: "ingress.my-seed-1.example.com",
 					SecretRef: garden.CrossReference{
 						Name:      "seed-aws",
 						Namespace: "garden",
@@ -1069,7 +1069,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
-			seed.Spec.Domain = "invalid-domain-name"
+			seed.Spec.IngressDomain = "invalid-domain-name"
 			seed.Spec.SecretRef = garden.CrossReference{}
 			seed.Spec.Networks = garden.K8SNetworks{
 				Nodes:    garden.CIDR("invalid-cidr"),
@@ -1090,7 +1090,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.domain"),
+				"Field": Equal("spec.ingressDomain"),
 			}))
 			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
@@ -1111,18 +1111,6 @@ var _ = Describe("validation", func() {
 			Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.networks.services"),
-			}))
-		})
-
-		It("should forbid too long seed domain names", func() {
-			seed.Spec.Domain = "some.domain.name.which.is.too.long.to.be.valid.com"
-
-			errorList := ValidateSeed(seed)
-
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeTooLong),
-				"Field": Equal("spec.domain"),
 			}))
 		})
 	})

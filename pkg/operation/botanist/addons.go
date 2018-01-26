@@ -28,11 +28,7 @@ func (b *Botanist) DeployNginxIngressResources() error {
 	if err != nil {
 		return err
 	}
-	name, err := b.Shoot.GetIngressFQDN("*")
-	if err != nil {
-		return err
-	}
-	return b.DeployDNSRecord("ingress", name, loadBalancerIngress, false)
+	return b.DeployDNSRecord("ingress", b.Shoot.GetIngressFQDN("*"), loadBalancerIngress, false)
 }
 
 // DestroyNginxIngressResources destroys the nginx-ingress resources created by Terraform.
@@ -80,18 +76,17 @@ func (b *Botanist) GenerateMonocularConfig() (map[string]interface{}, error) {
 	)
 
 	if enabled {
-		monocularHost, err := b.Shoot.GetIngressFQDN("monocular")
-		if err != nil {
+		var (
+			name          = "monocular-tls"
+			monocularHost = b.Shoot.GetIngressFQDN("monocular")
+			kubecfgSecret = b.Secrets["kubecfg"]
+			basicAuth     = utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
+		)
+
+		if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, name, corev1.SecretTypeTLS, b.Secrets[name].Data, true); err != nil {
 			return nil, err
 		}
-		kubecfgSecret := b.Secrets["kubecfg"]
-		basicAuth := utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
-		_, err = b.
-			K8sShootClient.
-			CreateSecret(metav1.NamespaceSystem, "monocular-tls", corev1.SecretTypeTLS, b.Secrets["monocular-tls"].Data, true)
-		if err != nil {
-			return nil, err
-		}
+
 		values = map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,

@@ -89,23 +89,13 @@ func (b *Botanist) DeleteKubeAddonManager() error {
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring() error {
-	alertManagerHost, err := b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
-	if err != nil {
-		return err
-	}
-	grafanaHost, err := b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
-	if err != nil {
-		return err
-	}
-	prometheusHost, err := b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
-	if err != nil {
-		return err
-	}
-
 	var (
 		kubecfgSecret    = b.Secrets["kubecfg"]
 		basicAuth        = utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
 		imagePullSecrets = b.GetImagePullSecretsMap()
+		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
+		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
+		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
 
 		alertManagerConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{

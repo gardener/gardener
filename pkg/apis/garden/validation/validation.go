@@ -344,11 +344,8 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 	}
 
 	r, _ := regexp.Compile(`^(?:[a-zA-Z0-9\-]+\.)*[a-zA-Z0-9]+\.[a-zA-Z0-9]{2,6}$`)
-	if !r.MatchString(seedSpec.Domain) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("domain"), seedSpec.Domain, fmt.Sprintf("domain must match the regex %s", r)))
-	}
-	if len(seedSpec.Domain) > 32 {
-		allErrs = append(allErrs, field.TooLong(fldPath.Child("domain"), seedSpec.Domain, 32))
+	if !r.MatchString(seedSpec.IngressDomain) {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingressDomain"), seedSpec.IngressDomain, fmt.Sprintf("domain must match the regex %s", r)))
 	}
 
 	allErrs = append(allErrs, validateCrossReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)

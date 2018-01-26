@@ -534,18 +534,11 @@ func generateGardenSecretName(shootName, secretName string) string {
 // configuration for the creation of certificates (server/client), RSA key pairs, basic authentication
 // credentials, etc.
 func (b *Botanist) generateSecrets() ([]interface{}, error) {
-	alertManagerHost, err := b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
-	if err != nil {
-		return nil, err
-	}
-	grafanaHost, err := b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
-	if err != nil {
-		return nil, err
-	}
-	prometheusHost, err := b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
+		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
+		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
+	)
 
 	apiServerCertDNSNames := []string{
 		fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
@@ -852,10 +845,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 	}
 
 	if b.Shoot.Info.Spec.Addons.Monocular.Enabled && b.Shoot.Info.Spec.DNS.Domain != nil {
-		monocularHost, err := b.Shoot.GetIngressFQDN("monocular")
-		if err != nil {
-			return nil, err
-		}
+		monocularHost := b.Shoot.GetIngressFQDN("monocular")
 		secretList = append(secretList, TLSSecret{
 			Secret: Secret{
 				Name:       "monocular-tls",

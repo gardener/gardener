@@ -2246,7 +2246,7 @@ func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.S
 	if err := Convert_v1beta1_SeedCloud_To_garden_SeedCloud(&in.Cloud, &out.Cloud, s); err != nil {
 		return err
 	}
-	out.Domain = in.Domain
+	out.IngressDomain = in.IngressDomain
 	if err := Convert_v1beta1_CrossReference_To_garden_CrossReference(&in.SecretRef, &out.SecretRef, s); err != nil {
 		return err
 	}
@@ -2265,7 +2265,7 @@ func autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *S
 	if err := Convert_garden_SeedCloud_To_v1beta1_SeedCloud(&in.Cloud, &out.Cloud, s); err != nil {
 		return err
 	}
-	out.Domain = in.Domain
+	out.IngressDomain = in.IngressDomain
 	if err := Convert_garden_CrossReference_To_v1beta1_CrossReference(&in.SecretRef, &out.SecretRef, s); err != nil {
 		return err
 	}

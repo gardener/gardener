@@ -127,14 +127,9 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
-// end result is '<subDomain>.<shoot-name>.<garden-namespace>.ingress.<seed-fqdn>'. It must not exceed 64
-// characters in length (see RFC-5280 for details).
-func (s *Seed) GetIngressFQDN(subDomain, shootName, shootNamespace string) (string, error) {
-	result := fmt.Sprintf("%s.%s.%s.ingress.%s", subDomain, shootName, shootNamespace, s.Info.Spec.Domain)
-	if len(result) > 64 {
-		return "", fmt.Errorf("the FQDN for '%s' cannot be longer than 64 characters", result)
-	}
-	return result, nil
+// end result is '<subDomain>.<shootName>.<projectName>.<seed-ingress-domain>'.
+func (s *Seed) GetIngressFQDN(subDomain, shootName, projectName string) string {
+	return fmt.Sprintf("%s.%s.%s.%s", subDomain, shootName, projectName, s.Info.Spec.IngressDomain)
 }
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.

@@ -291,9 +291,9 @@ type SeedList struct {
 type SeedSpec struct {
 	// Cloud defines the cloud profile and the region this Seed cluster belongs to.
 	Cloud SeedCloud `json:"cloud"`
-	// Domain is the domain of the Seed cluster. It will be used to construct ingress URLs for system applications
-	// running in Shoot clusters.
-	Domain string `json:"domain"`
+	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
+	// to construct ingress URLs for system applications running in Shoot clusters.
+	IngressDomain string `json:"ingressDomain"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
 	SecretRef CrossReference `json:"secretRef"`

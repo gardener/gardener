@@ -26,6 +26,12 @@ const (
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
+	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
+	CloudPurposeShoot = "shoot"
+
+	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
+	CloudPurposeSeed = "seed"
+
 	// ConfirmationDeletionTimestamp is an annotation on a Shoot resource whose value must be set equal to the Shoot's
 	// '.metadata.deletionTimestamp' value to trigger the deletion process of the Shoot cluster.
 	ConfirmationDeletionTimestamp = "confirmation.garden.sapcloud.io/deletionTimestamp"
@@ -82,6 +88,11 @@ const (
 	// is used to send alerts to.
 	GardenOperatedBy = "garden.sapcloud.io/operatedBy"
 
+	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
+	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
+	// '*.<IngressPrefix>.cluster.example.com'.
+	IngressPrefix = "ingress"
+
 	// KubeAPIServerDeploymentName is the name of the kube-apiserver deployment.
 	KubeAPIServerDeploymentName = "kube-apiserver"
 
@@ -94,12 +105,6 @@ const (
 
 	// PrometheusDeploymentName is the name of the Prometheus deployment.
 	PrometheusDeploymentName = "prometheus"
-
-	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
-	CloudPurposeShoot = "shoot"
-
-	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
-	CloudPurposeSeed = "seed"
 
 	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
 	TerraformerConfigSuffix = ".tf-config"

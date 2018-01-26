@@ -9,7 +9,7 @@ spec:
   secretRef:
     name: seed-azure-dev
     namespace: garden
-  domain: dev.azure.seed.example.com
+  ingressDomain: dev.azure.seed.example.com
   networks:
     nodes: 10.240.0.0/16
     pods: 10.241.128.0/17

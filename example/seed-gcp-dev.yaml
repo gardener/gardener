@@ -9,7 +9,7 @@ spec:
   secretRef:
     name: seed-gcp-dev
     namespace: garden
-  domain: dev.gcp.seed.example.com
+  ingressDomain: dev.gcp.seed.example.com
   networks:
     nodes: 10.240.0.0/16
     pods: 10.241.128.0/17

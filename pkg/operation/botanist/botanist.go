@@ -139,7 +139,7 @@ func (b *Botanist) RegisterAsSeed() error {
 				Profile: b.Shoot.Info.Spec.Cloud.Profile,
 				Region:  b.Shoot.Info.Spec.Cloud.Region,
 			},
-			Domain: *(b.Shoot.Info.Spec.DNS.Domain),
+			IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *(b.Shoot.Info.Spec.DNS.Domain)),
 			SecretRef: gardenv1beta1.CrossReference{
 				Name:      secretName,
 				Namespace: secretNamespace,
