@@ -201,10 +201,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
-	clusterAutoscalerConfig, err := b.ShootCloudBotanist.GenerateClusterAutoscalerConfig()
-	if err != nil {
-		return nil, err
-	}
 	heapsterConfig, err := b.Botanist.GenerateHeapsterConfig()
 	if err != nil {
 		return nil, err
@@ -234,10 +230,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 
-	clusterAutoscaler, err := b.Botanist.InjectImages(clusterAutoscalerConfig, b.K8sShootClient.Version(), map[string]string{"hyperkube": "hyperkube", "cluster-autoscaler": "cluster-autoscaler"})
-	if err != nil {
-		return nil, err
-	}
 	heapster, err := b.Botanist.InjectImages(heapsterConfig, b.K8sShootClient.Version(), map[string]string{"heapster": "heapster", "heapster-nanny": "addon-resizer"})
 	if err != nil {
 		return nil, err
@@ -268,7 +260,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"cluster-autoscaler":   clusterAutoscaler,
 		"heapster":             heapster,
 		"helm-tiller":          helmTiller,
 		"kube-lego":            kubeLego,

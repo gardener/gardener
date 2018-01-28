@@ -4,7 +4,6 @@
 # create:
 #   vpc: true
 #   igw: true
-#   clusterAutoscalerPolicies: true
 
 # sshPublicKey: sshkey-12345
 

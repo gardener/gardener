@@ -23,8 +23,3 @@ func (b *OpenStackBotanist) ApplyCreateHook() error {
 func (b *OpenStackBotanist) ApplyDeleteHook() error {
 	return nil
 }
-
-// CheckIfClusterGetsScaled does currently nothing for OpenStack, as ScaleSets aren't supported.
-func (b *OpenStackBotanist) CheckIfClusterGetsScaled() (bool, int, error) {
-	return false, 0, nil
-}

@@ -31,11 +31,6 @@ func (b *AzureBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error)
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateClusterAutoscalerConfig - Not needed on Azure.
-func (b *AzureBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateAdmissionControlConfig generates values which are required to render the chart admissions-controls properly.
 func (b *AzureBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{

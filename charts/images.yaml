@@ -99,14 +99,6 @@ images:
 - name: kubernetes-dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
   tag: v1.8.2
-- name: cluster-autoscaler
-  repository: k8s.gcr.io/cluster-autoscaler
-  tag: v1.1.0
-  versions: ">= 1.8"
-- name: cluster-autoscaler
-  repository: k8s.gcr.io/cluster-autoscaler
-  tag: v0.6.2
-  versions: ">= 1.6, < 1.8"
 - name: kube-lego
   repository: jetstack/kube-lego
   tag: "0.1.5"

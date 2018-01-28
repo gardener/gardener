@@ -19,7 +19,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -35,10 +34,9 @@ func NewClient(accessKeyID, secretAccessKey, region string) ClientInterface {
 	sess := session.Must(session.NewSession(awsConfig))
 	config := &aws.Config{Region: aws.String(region)}
 	return &Client{
-		AutoScaling: autoscaling.New(sess, config),
-		EC2:         ec2.New(sess, config),
-		ELB:         elb.New(sess, config),
-		STS:         sts.New(sess, config),
+		EC2: ec2.New(sess, config),
+		ELB: elb.New(sess, config),
+		STS: sts.New(sess, config),
 	}
 }
 
@@ -135,15 +133,4 @@ func (c *Client) UpdateELBHealthCheck(loadBalancerName string, targetPort string
 		ELB.
 		ConfigureHealthCheck(configureHealthCheckInput)
 	return err
-}
-
-// GetAutoScalingGroups returns a filtered list of AutoScaling groups (only for the given list of AutoScaling
-// group names <autoscalingGroupNames>).
-func (c *Client) GetAutoScalingGroups(autoscalingGroupNames []*string) (*autoscaling.DescribeAutoScalingGroupsOutput, error) {
-	describeAutoScalingGroupsInput := &autoscaling.DescribeAutoScalingGroupsInput{
-		AutoScalingGroupNames: autoscalingGroupNames,
-	}
-	return c.
-		AutoScaling.
-		DescribeAutoScalingGroups(describeAutoScalingGroupsInput)
 }

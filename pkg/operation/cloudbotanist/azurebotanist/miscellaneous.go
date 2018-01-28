@@ -23,8 +23,3 @@ func (b *AzureBotanist) ApplyCreateHook() error {
 func (b *AzureBotanist) ApplyDeleteHook() error {
 	return nil
 }
-
-// CheckIfClusterGetsScaled does currently nothing for Azure, as ScaleSets aren't supported.
-func (b *AzureBotanist) CheckIfClusterGetsScaled() (bool, int, error) {
-	return false, 0, nil
-}

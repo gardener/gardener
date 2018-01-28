@@ -61,13 +61,10 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Co
 
 // CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state and
 // that no node known to the IaaS is not registered to the Shoot's kube-apiserver.
-func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition, currentlyScaling bool, healthyInstances int) *gardenv1beta1.Condition {
+func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
 	nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchNodeListFailed", err.Error())
-	}
-	if !currentlyScaling && healthyInstances > len(nodeList.Items) {
-		return helper.ModifyCondition(condition, corev1.ConditionFalse, "NodeMissing", "At least one healthy node known to the IaaS provider but not registered to the cluster.")
 	}
 	for _, node := range nodeList.Items {
 		if !node.Spec.Unschedulable {

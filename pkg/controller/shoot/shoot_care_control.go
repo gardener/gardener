@@ -201,15 +201,7 @@ func garbageCollection(botanist *botanistpkg.Botanist) {
 // The current Health check verifies that the control plane running in the Seed cluster is healthy, every
 // node is ready and that all system components (pods running kube-system) are healthy.
 func healthCheck(botanist *botanistpkg.Botanist, cloudBotanist cloudbotanist.CloudBotanist, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
-	var (
-		currentlyScaling = false
-		healthyInstances = 0
-		wg               sync.WaitGroup
-	)
-
-	// We ask the Cloud Botanist whether the Shoot cluster is currently scaled or not to avoid problems of potentially
-	// non-existing infrastructure resources like autoscaling groups.
-	currentlyScaling, healthyInstances, _ = cloudBotanist.CheckIfClusterGetsScaled()
+	var wg sync.WaitGroup
 
 	wg.Add(3)
 	go func() {
@@ -218,7 +210,7 @@ func healthCheck(botanist *botanistpkg.Botanist, cloudBotanist cloudbotanist.Clo
 	}()
 	go func() {
 		defer wg.Done()
-		conditionEveryNodeReady = botanist.CheckConditionEveryNodeReady(conditionEveryNodeReady, currentlyScaling, healthyInstances)
+		conditionEveryNodeReady = botanist.CheckConditionEveryNodeReady(conditionEveryNodeReady)
 	}()
 	go func() {
 		defer wg.Done()

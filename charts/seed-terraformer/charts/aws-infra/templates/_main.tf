@@ -310,26 +310,6 @@ resource "aws_iam_role_policy" "nodes" {
 {
   "Version": "2012-10-17",
   "Statement": [
-{{- if $.Values.create.clusterAutoscalerPolicies }}
-    {
-      "Action": [
-        "autoscaling:DescribeAutoScalingGroups",
-        "autoscaling:DescribeAutoScalingInstances"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    },
-    {
-      "Action": [
-        "autoscaling:SetDesiredCapacity",
-        "autoscaling:TerminateInstanceInAutoScalingGroup"
-      ],
-      "Effect": "Allow",
-      "Resource": [
-{{- include "aws-infra.asg-policies" $.Values | trimSuffix "," | indent 8 }}
-      ]
-    },
-{{- end}}
     {
       "Effect": "Allow",
       "Action": [

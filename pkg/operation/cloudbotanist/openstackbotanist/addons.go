@@ -31,11 +31,6 @@ func (b *OpenStackBotanist) GenerateKube2IAMConfig() (map[string]interface{}, er
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateClusterAutoscalerConfig - Not needed on OpenStack.
-func (b *OpenStackBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateAdmissionControlConfig generates values which are required to render the chart admissions-controls properly.
 func (b *OpenStackBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{

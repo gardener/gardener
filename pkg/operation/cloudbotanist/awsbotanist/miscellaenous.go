@@ -15,10 +15,8 @@
 package awsbotanist
 
 import (
-	"fmt"
 	"path/filepath"
 
-	awssdk "github.com/aws/aws-sdk-go/aws"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -54,62 +52,4 @@ func (b *AWSBotanist) ApplyCreateHook() error {
 // ApplyDeleteHook does currently nothing for AWS.
 func (b *AWSBotanist) ApplyDeleteHook() error {
 	return nil
-}
-
-// CheckIfClusterGetsScaled checks whether the Shoot cluster gets currently scaled.
-// It returns a boolean value and the number of instances which are healthy from the perspective
-// of AWS (those which have the InService state).
-func (b *AWSBotanist) CheckIfClusterGetsScaled() (bool, int, error) {
-	var (
-		currentlyScaling = false
-		healthyInstances = 0
-	)
-
-	groupList := []*string{}
-	for i := range b.Shoot.Info.Spec.Cloud.AWS.Zones {
-		for _, worker := range b.Shoot.Info.Spec.Cloud.AWS.Workers {
-			groupList = append(groupList, awssdk.String(fmt.Sprintf("%s-nodes-%s-z%d", b.Shoot.SeedNamespace, worker.Name, i)))
-		}
-	}
-	groups, err := b.AWSClient.GetAutoScalingGroups(groupList)
-	if err != nil {
-		return false, 0, err
-	}
-
-	for _, group := range groups.AutoScalingGroups {
-		desired := group.DesiredCapacity
-		instances := group.Instances
-		if *desired != int64(len(instances)) {
-			return true, 0, nil
-		}
-		for _, instance := range instances {
-			if *instance.LifecycleState != "InService" {
-				currentlyScaling = true
-			} else {
-				healthyInstances++
-			}
-		}
-	}
-	return currentlyScaling, healthyInstances, nil
-}
-
-// GetASGs returns the set of AutoScalingGroups used for a Shoot cluster.
-func (b *AWSBotanist) GetASGs() []map[string]interface{} {
-	var (
-		autoscalingGroups = []map[string]interface{}{}
-		zones             = b.Shoot.Info.Spec.Cloud.AWS.Zones
-		zoneCount         = len(zones)
-	)
-
-	for i := range zones {
-		for _, worker := range b.Shoot.Info.Spec.Cloud.AWS.Workers {
-			autoscalingGroups = append(autoscalingGroups, map[string]interface{}{
-				"name":    fmt.Sprintf("%s-nodes-%s-z%d", b.Shoot.SeedNamespace, worker.Name, i),
-				"minSize": common.DistributeOverZones(i, worker.AutoScalerMin, zoneCount),
-				"maxSize": common.DistributeOverZones(i, worker.AutoScalerMax, zoneCount),
-			})
-		}
-	}
-
-	return autoscalingGroups
 }

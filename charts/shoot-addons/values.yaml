@@ -8,11 +8,6 @@
 # vpn-shoot:
 #   secret: "dummy base64 encoded authorized_keys"
 
-cluster-autoscaler:
-  enabled: false
-  images:
-    hyperkube: image-repository
-    cluster-autoscaler: image-repository:image-tag
 heapster:
   enabled: false
   images:

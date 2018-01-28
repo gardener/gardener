@@ -22,6 +22,8 @@ import (
 // CloudBotanist is an interface which must be implemented by cloud-specific Botanists. The Cloud Botanist
 // is responsible for all operations which require IaaS specific knowledge.
 type CloudBotanist interface {
+	GetCloudProviderName() string
+
 	// Infrastructure
 	DeployInfrastructure() error
 	DestroyInfrastructure() error
@@ -37,14 +39,13 @@ type CloudBotanist interface {
 	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
 
 	// Machines
-	GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error)
 	GetMachineClassInfo() (string, string, string)
+	GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error)
 
 	// Addons
 	DeployKube2IAMResources() error
 	DestroyKube2IAMResources() error
 	GenerateKube2IAMConfig() (map[string]interface{}, error)
-	GenerateClusterAutoscalerConfig() (map[string]interface{}, error)
 	GenerateAdmissionControlConfig() (map[string]interface{}, error)
 	GenerateCalicoConfig() (map[string]interface{}, error)
 	GenerateNginxIngressConfig() (map[string]interface{}, error)
@@ -52,8 +53,4 @@ type CloudBotanist interface {
 	// Hooks
 	ApplyCreateHook() error
 	ApplyDeleteHook() error
-
-	// Miscellaneous (Health check, ...)
-	CheckIfClusterGetsScaled() (bool, int, error)
-	GetCloudProviderName() string
 }

@@ -23,8 +23,3 @@ func (b *GCPBotanist) ApplyCreateHook() error {
 func (b *GCPBotanist) ApplyDeleteHook() error {
 	return nil
 }
-
-// CheckIfClusterGetsScaled does currently nothing for GCP.
-func (b *GCPBotanist) CheckIfClusterGetsScaled() (bool, int, error) {
-	return false, 0, nil
-}

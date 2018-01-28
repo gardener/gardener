@@ -31,11 +31,6 @@ func (b *GCPBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateClusterAutoscalerConfig - Not needed on GCP.
-func (b *GCPBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateAdmissionControlConfig generates values which are required to render the chart admissions-controls properly.
 func (b *GCPBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{

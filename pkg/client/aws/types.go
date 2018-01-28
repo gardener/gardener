@@ -15,7 +15,6 @@
 package aws
 
 import (
-	"github.com/aws/aws-sdk-go/service/autoscaling"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/elb"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -28,17 +27,14 @@ type ClientInterface interface {
 	GetInternetGateway(string) (string, error)
 	GetELB(string) (*elb.DescribeLoadBalancersOutput, error)
 	UpdateELBHealthCheck(string, string) error
-	GetAutoScalingGroups([]*string) (*autoscaling.DescribeAutoScalingGroupsOutput, error)
 }
 
 // Client is a struct containing several clients for the different AWS services it needs to interact with.
-// * AutoScaling is the standard client for the AutoScaling service.
 // * EC2 is the standard client for the EC2 service.
 // * ELB is the standard client for the ELB service.
 // * STS is the standard client for the STS service.
 type Client struct {
-	AutoScaling *autoscaling.AutoScaling
-	EC2         *ec2.EC2
-	ELB         *elb.ELB
-	STS         *sts.STS
+	EC2 *ec2.EC2
+	ELB *elb.ELB
+	STS *sts.STS
 }

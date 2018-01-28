@@ -21,7 +21,6 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DeployKube2IAMResources creates the respective IAM roles which have been specified in the Shoot manifest
@@ -84,54 +83,6 @@ func (b *AWSBotanist) createKube2IAMRoles(customRoles []gardenv1beta1.Kube2IAMRo
 		return nil, err
 	}
 
-	// If the ClusterAutoScaler addon is enabled, then we have to create an appropriate instance profile for it such that
-	// it can scale up/down the cluster nodes.
-	if b.Shoot.ClusterAutoscalerEnabled() {
-		stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetState()
-		if err != nil {
-			return nil, err
-		}
-		state := utils.ConvertJSONToMap(stateConfigMap)
-		var autoScalingARNs []string
-
-		for i := range b.Shoot.Info.Spec.Cloud.AWS.Zones {
-			for j := range b.Shoot.Info.Spec.Cloud.AWS.Workers {
-				value, err := state.String("modules", "0", "outputs", fmt.Sprintf("asg_nodes_pool%d_z%d", j, i), "value")
-				if err != nil {
-					return nil, err
-				}
-
-				autoScalingARNs = append(autoScalingARNs, `"`+value+`"`)
-			}
-		}
-
-		tmpRoles = append(tmpRoles, gardenv1beta1.Kube2IAMRole{
-			Name:        "autoscaling",
-			Description: "Allow access to scale AutoScaling Groups up/down",
-			Policy: fmt.Sprintf(`{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Action": [
-        "autoscaling:DescribeAutoScalingGroups",
-        "autoscaling:DescribeAutoScalingInstances"
-      ],
-      "Effect": "Allow",
-      "Resource": "*"
-    },
-    {
-      "Action": [
-        "autoscaling:SetDesiredCapacity",
-        "autoscaling:TerminateInstanceInAutoScalingGroup"
-      ],
-      "Effect": "Allow",
-      "Resource": [%s]
-    }
-  ]
-}`, strings.Join(autoScalingARNs, ", ")),
-		})
-	}
-
 	// Add the roles defined in the Shoot manifest (.spec.addons.kube2iam.roles) to the list of roles we will
 	// create for Kube2IAM.
 	for _, customRole := range customRoles {
@@ -163,33 +114,6 @@ func (b *AWSBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 			"extraArgs": map[string]interface{}{
 				"base-role-arn": fmt.Sprintf("arn:aws:iam::%s:role/", awsAccountID),
 			},
-		}
-	}
-
-	return common.GenerateAddonConfig(values, enabled), nil
-}
-
-// GenerateClusterAutoscalerConfig generates the values which are required to render the chart of
-// aws-cluster-autosclaer properly.
-func (b *AWSBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
-	var (
-		podAnnotations  = map[string]interface{}{}
-		enabled         = b.Shoot.ClusterAutoscalerEnabled()
-		kube2iamEnabled = b.Shoot.Kube2IAMEnabled()
-		values          map[string]interface{}
-	)
-
-	if enabled {
-		autoscalingGroups := b.GetASGs()
-
-		if kube2iamEnabled {
-			podAnnotations["iam.amazonaws.com/role"] = fmt.Sprintf("%s-autoscaling", b.Shoot.SeedNamespace)
-		}
-		values = map[string]interface{}{
-			"awsRegion":         b.Shoot.Info.Spec.Cloud.Region,
-			"autoscalingGroups": autoscalingGroups,
-			"podAnnotations":    podAnnotations,
-			"waitForKube2IAM":   kube2iamEnabled,
 		}
 	}
 
