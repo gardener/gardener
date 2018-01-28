@@ -46,6 +46,15 @@ func (in *ControllerManagerConfiguration) DeepCopyInto(out *ControllerManagerCon
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	out.ClientConnection = in.ClientConnection
+	if in.GardenerClientConnection != nil {
+		in, out := &in.GardenerClientConnection, &out.GardenerClientConnection
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(ClientConnectionConfiguration)
+			**out = **in
+		}
+	}
 	in.Controller.DeepCopyInto(&out.Controller)
 	if in.Images != nil {
 		in, out := &in.Images, &out.Images

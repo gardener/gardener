@@ -103,6 +103,10 @@ type ControllerManagerConfiguration struct {
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
 	ClientConnection ClientConnectionConfiguration `json:"clientConnection"`
+	// GardenerClientConnection specifies the kubeconfig file and client connection
+	// settings for the garden-apiserver.
+	// +optional
+	GardenerClientConnection *ClientConnectionConfiguration `json:"gardenerClientConnection,omitempty"`
 	// Controller defines the configuration of the controllers.
 	Controller ControllerManagerControllerConfiguration `json:"controller"`
 	// Images is a list of container images which are deployed by the Gardener controller manager.

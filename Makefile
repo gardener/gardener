@@ -40,12 +40,12 @@ export GOBIN
 .PHONY: dev
 dev:
 	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
-	@KUBECONFIG=dev/garden-kubeconfig.yaml WATCH_NAMESPACE=$(USER) go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
+	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config WATCH_NAMESPACE=$(USER) go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
 
 .PHONY: dev-all
 dev-all:
 	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
-	@KUBECONFIG=dev/garden-kubeconfig.yaml go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
+	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
 
 .PHONY: verify
 verify: vet fmt lint test

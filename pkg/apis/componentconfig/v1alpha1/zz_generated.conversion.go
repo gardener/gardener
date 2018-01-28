@@ -88,6 +88,7 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_componentconfig_Cont
 	if err := Convert_v1alpha1_ClientConnectionConfiguration_To_componentconfig_ClientConnectionConfiguration(&in.ClientConnection, &out.ClientConnection, s); err != nil {
 		return err
 	}
+	out.GardenerClientConnection = (*componentconfig.ClientConnectionConfiguration)(unsafe.Pointer(in.GardenerClientConnection))
 	if err := Convert_v1alpha1_ControllerManagerControllerConfiguration_To_componentconfig_ControllerManagerControllerConfiguration(&in.Controller, &out.Controller, s); err != nil {
 		return err
 	}
@@ -114,6 +115,7 @@ func autoConvert_componentconfig_ControllerManagerConfiguration_To_v1alpha1_Cont
 	if err := Convert_componentconfig_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(&in.ClientConnection, &out.ClientConnection, s); err != nil {
 		return err
 	}
+	out.GardenerClientConnection = (*ClientConnectionConfiguration)(unsafe.Pointer(in.GardenerClientConnection))
 	if err := Convert_componentconfig_ControllerManagerControllerConfiguration_To_v1alpha1_ControllerManagerControllerConfiguration(&in.Controller, &out.Controller, s); err != nil {
 		return err
 	}
