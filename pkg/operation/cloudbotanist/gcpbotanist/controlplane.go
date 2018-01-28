@@ -66,12 +66,6 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 	return nil, nil
 }
 
-// DeployAutoNodeRepair deploys the auto-node-repair into the Seed cluster. It primary job is to repair
-// unHealthy Nodes by replacing them by newer ones - Not needed on GCP yet. To be implemented later
-func (b *GCPBotanist) DeployAutoNodeRepair() error {
-	return nil
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 // TODO: implement backup functionality for GCP
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {

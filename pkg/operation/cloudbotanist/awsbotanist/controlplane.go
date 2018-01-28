@@ -15,8 +15,6 @@
 package awsbotanist
 
 import (
-	"path/filepath"
-
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
@@ -65,37 +63,6 @@ func (b *AWSBotanist) GenerateKubeControllerManagerConfig() (map[string]interfac
 // Deployment manifest of the kube-scheduler properly.
 func (b *AWSBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, error) {
 	return nil, nil
-}
-
-// DeployAutoNodeRepair deploys the auto-node-repair into the Seed cluster. It primary job is to repair
-// unHealthy Nodes by replacing them by newer ones.
-func (b *AWSBotanist) DeployAutoNodeRepair() error {
-	var (
-		name                 = "auto-node-repair"
-		autoscalingGroups    = b.GetASGs()
-		environmentVariables = getAWSCredentialsEnvironment()
-	)
-
-	environmentVariables = append(environmentVariables, map[string]interface{}{
-		"name":  "AWS_REGION",
-		"value": b.Shoot.Info.Spec.Cloud.Region,
-	})
-
-	defaultValues := map[string]interface{}{
-		"namespace":         b.Shoot.SeedNamespace,
-		"autoscalingGroups": autoscalingGroups,
-		"environment":       environmentVariables,
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-auto-node-repair": b.CheckSums[name],
-		},
-	}
-
-	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"auto-node-repair": "auto-node-repair"})
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, values, nil)
 }
 
 // maps are mutable, so it's safer to create a new instance

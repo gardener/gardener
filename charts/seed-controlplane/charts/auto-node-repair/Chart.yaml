@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Repairs unhealthy nodes for a given cluster. Only supports AWS for now.
-name: auto-node-repair
-version: 0.1.0

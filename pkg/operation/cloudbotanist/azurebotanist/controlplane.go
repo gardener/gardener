@@ -86,12 +86,6 @@ func (b *AzureBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 	return nil, nil
 }
 
-// DeployAutoNodeRepair deploys the auto-node-repair into the Seed cluster. It primary job is to repair
-// unHealthy Nodes by replacing them by newer ones - Not needed on Azure yet. To be implemented later
-func (b *AzureBotanist) DeployAutoNodeRepair() error {
-	return nil
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	var (

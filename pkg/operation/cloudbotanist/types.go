@@ -29,7 +29,6 @@ type CloudBotanist interface {
 	DestroyBackupInfrastructure() error
 
 	// Control Plane
-	DeployAutoNodeRepair() error
 	GenerateCloudProviderConfig() (string, error)
 	GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig
 	GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error)

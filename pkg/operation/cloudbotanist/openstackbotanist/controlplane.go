@@ -22,12 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
-// DeployAutoNodeRepair returns
-func (b *OpenStackBotanist) DeployAutoNodeRepair() error {
-	return nil
-}
-
-// GenerateCloudProviderConfig returns
+// GenerateCloudProviderConfig generates the OpenStack cloud provider config.
 func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 	cloudConfig := "cloud_config"
 	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(cloudConfig)
@@ -37,7 +32,8 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 	return stateVariables[cloudConfig], nil
 }
 
-// GenerateKubeAPIServerConfig returns
+// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
+// Deployment manifest of the kube-apiserver properly.
 func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.APIServerAddress)
 	if err != nil {
@@ -50,18 +46,15 @@ func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{
 	}, nil
 }
 
-// GenerateKubeControllerManagerConfig returns
+// GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
+// render the Deployment manifest of the kube-controller-manager properly.
 func (b *OpenStackBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
 	return nil, nil
 }
 
-// GenerateKubeSchedulerConfig returns
+// GenerateKubeSchedulerConfig generates the cloud provider specific values which are required to render the
+// Deployment manifest of the kube-scheduler properly.
 func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, error) {
-	return nil, nil
-}
-
-// GenerateEtcdBackupSecretData returns
-func (b *OpenStackBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, error) {
 	return nil, nil
 }
 
