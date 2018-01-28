@@ -20,11 +20,8 @@ import (
 	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,54 +55,6 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	return b, nil
-}
-
-// InitializeSeedClients will use the Garden Kubernetes client to read the Seed Secret in the Garden
-// cluster which contains a Kubeconfig that can be used to authenticate against the Seed cluster. With it,
-// a Kubernetes client as well as a Chart renderer for the Seed cluster will be initialized and attached to
-// the already existing Botanist object.
-func (b *Botanist) InitializeSeedClients() error {
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(b.Seed.Secret)
-	if err != nil {
-		return err
-	}
-	chartSeedRenderer := chartrenderer.New(k8sSeedClient)
-
-	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-	var minSeedVersion string
-	switch b.Seed.CloudProvider {
-	case gardenv1beta1.CloudProviderAzure:
-		minSeedVersion = "1.8.6" // https://github.com/kubernetes/kubernetes/issues/56898
-	default:
-		minSeedVersion = "1.7"
-	}
-	seedVersionOK, err := utils.CompareVersions(k8sSeedClient.Version(), ">=", minSeedVersion)
-	if err != nil {
-		return err
-	}
-	if !seedVersionOK {
-		return fmt.Errorf("the Kubernetes version of the Seed cluster must be at least %s", minSeedVersion)
-	}
-
-	b.Operation.K8sSeedClient = k8sSeedClient
-	b.Operation.ChartSeedRenderer = chartSeedRenderer
-	return nil
-}
-
-// InitializeShootClients will use the Seed Kubernetes client to read the gardener Secret in the Seed
-// cluster which contains a Kubeconfig that can be used to authenticate against the Shoot cluster. With it,
-// a Kubernetes client as well as a Chart renderer for the Shoot cluster will be initialized and attached to
-// the already existing Botanist object.
-func (b *Botanist) InitializeShootClients() error {
-	k8sShootClient, err := kubernetes.NewClientFromSecret(b.K8sSeedClient, b.Shoot.SeedNamespace, "gardener")
-	if err != nil {
-		return err
-	}
-	chartShootRenderer := chartrenderer.New(k8sShootClient)
-
-	b.Operation.K8sShootClient = k8sShootClient
-	b.Operation.ChartShootRenderer = chartShootRenderer
-	return nil
 }
 
 // RegisterAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
