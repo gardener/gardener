@@ -1708,6 +1708,29 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
+				}))
+			})
+
 			It("should forbid invalid worker configuration", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
@@ -1949,6 +1972,29 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "35Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "35Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
+				}))
+			})
+
 			It("should forbid invalid worker configuration", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
@@ -2173,6 +2219,29 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
 				}))
 			})
 
@@ -2409,6 +2478,25 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+					{
+						Worker: worker,
+					},
+					{
+						Worker: worker,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
 				}))
 			})
 

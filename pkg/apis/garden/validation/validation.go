@@ -622,6 +622,7 @@ func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, f
 
 func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+	workerNames := make(map[string]bool)
 
 	if len(cloud.Profile) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("profile"), "must specify a cloud profile"))
@@ -692,6 +693,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			if workerNames[worker.Name] {
+				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
+			}
+			workerNames[worker.Name] = true
 		}
 	}
 
@@ -754,6 +759,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 					allErrs = append(allErrs, field.Invalid(idxPath.Child("volumeSize"), worker.VolumeSize, fmt.Sprintf("volume size must be at least %dGi", minmumVolumeSize)))
 				}
 			}
+			if workerNames[worker.Name] {
+				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
+			}
+			workerNames[worker.Name] = true
 		}
 	}
 
@@ -797,6 +806,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			if workerNames[worker.Name] {
+				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
+			}
+			workerNames[worker.Name] = true
 		}
 	}
 
@@ -842,6 +855,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			if worker.AutoScalerMax != worker.AutoScalerMin {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoScalerMax"), "maximum value must be equal to minimum value"))
 			}
+			if workerNames[worker.Name] {
+				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
+			}
+			workerNames[worker.Name] = true
 		}
 	}
 
