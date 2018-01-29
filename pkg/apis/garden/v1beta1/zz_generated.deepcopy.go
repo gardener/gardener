@@ -1942,6 +1942,15 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 			**out = **in
 		}
 	}
+	if in.Protected != nil {
+		in, out := &in.Protected, &out.Protected
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
 	return
 }
 

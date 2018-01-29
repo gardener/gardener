@@ -2254,6 +2254,7 @@ func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.S
 		return err
 	}
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
+	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
 	return nil
 }
 
@@ -2274,6 +2275,7 @@ func autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *S
 		return err
 	}
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
+	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
 	return nil
 }
 

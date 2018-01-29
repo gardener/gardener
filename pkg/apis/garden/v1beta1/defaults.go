@@ -96,4 +96,8 @@ func SetDefaults_Seed(obj *Seed) {
 	if obj.Spec.Visible == nil {
 		obj.Spec.Visible = &trueVar
 	}
+	falseVar := false
+	if obj.Spec.Protected == nil {
+		obj.Spec.Protected = &falseVar
+	}
 }
