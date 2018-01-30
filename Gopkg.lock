@@ -659,16 +659,16 @@
     "storage/v1alpha1",
     "storage/v1beta1"
   ]
-  revision = "kubernetes-1.9.1"
+  revision = "kubernetes-1.9.2"
 
 [[projects]]
+  branch = "release-1.9"
   name = "k8s.io/apiextensions-apiserver"
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1beta1"
   ]
-  revision = "097c49c1906b3527571b6876c7bf47c4487f6c61"
-  version = "kubernetes-1.9.1"
+  revision = "6f29dd12234812844d29f52bd520bb01374619ce"
 
 [[projects]]
   name = "k8s.io/apimachinery"
@@ -821,8 +821,8 @@
     "plugin/pkg/authenticator/token/webhook",
     "plugin/pkg/authorizer/webhook"
   ]
-  revision = "d0762227e2dd234c2db8efc3946c33ad2453c9e8"
-  version = "kubernetes-1.9.1"
+  revision = "2a1092aaa7202e8f9b188281ff9424a014ce61c2"
+  version = "kubernetes-1.9.2"
 
 [[projects]]
   branch = "release-6.0"
@@ -974,7 +974,7 @@
     "cmd/lister-gen/generators",
     "cmd/openapi-gen"
   ]
-  revision = "kubernetes-1.9.1"
+  revision = "kubernetes-1.9.2"
 
 [[projects]]
   branch = "master"
@@ -1022,6 +1022,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "48a102b5b87614fa718b79e9c8fe036ada1bc5a3f28f0d10a4f932aec68f8137"
+  inputs-digest = "9f57a9fdd1581b1e298c238be7c0b9082f9323ea5d4a6b64c8cf3499b3cddd94"
   solver-name = "gps-cdcl"
   solver-version = 1
