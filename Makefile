@@ -63,7 +63,7 @@ release: apiserver-release controller-manager-release
 
 
 .PHONY: apiserver-release
-apiserver-release: apiserver-build apiserver-docker-build apiserver-docker-image docker-login apiserver-docker-push apiserver-rename-binaries
+apiserver-release: apiserver-build apiserver-build-release apiserver-docker-image docker-login apiserver-docker-push apiserver-rename-binaries
 
 .PHONY: apiserver-build
 apiserver-build:
@@ -71,16 +71,11 @@ apiserver-build:
 
 .PHONY: apiserver-build-release
 apiserver-build-release:
-	@go build -o /go/bin/garden-apiserver $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-apiserver/*.go
-
-.PHONY: apiserver-docker-build
-apiserver-docker-build:
-	@./$(BUILD_DIR)/garden-apiserver/docker-build.sh
-	@sudo chown $(user):$(group) $(BIN_DIR)/rel/garden-apiserver
+	@env GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/rel/garden-apiserver $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-apiserver/*.go
 
 .PHONY: apiserver-docker-image
 apiserver-docker-image:
-	@if [[ ! -f $(BIN_DIR)/rel/garden-apiserver ]]; then echo "No binary found. Please run 'make apiserver-docker-build'"; false; fi
+	@if [[ ! -f $(BIN_DIR)/rel/garden-apiserver ]]; then echo "No binary found. Please run 'make apiserver-build-release'"; false; fi
 	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/garden-apiserver/Dockerfile --rm .
 
 .PHONY: apiserver-docker-push
@@ -95,7 +90,7 @@ apiserver-rename-binaries:
 
 
 .PHONY: controller-manager-release
-controller-manager-release: controller-manager-build controller-manager-docker-build controller-manager-docker-image docker-login controller-manager-docker-push controller-manager-rename-binaries
+controller-manager-release: controller-manager-build controller-manager-build-release controller-manager-docker-image docker-login controller-manager-docker-push controller-manager-rename-binaries
 
 .PHONY: controller-manager-build
 controller-manager-build:
@@ -103,16 +98,11 @@ controller-manager-build:
 
 .PHONY: controller-manager-build-release
 controller-manager-build-release:
-	@go build -o /go/bin/garden-controller-manager $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-controller-manager/*.go
-
-.PHONY: controller-manager-docker-build
-controller-manager-docker-build:
-	@./$(BUILD_DIR)/garden-controller-manager/docker-build.sh
-	@sudo chown $(user):$(group) $(BIN_DIR)/rel/garden-controller-manager
+	@env GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/rel/garden-controller-manager $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-controller-manager/*.go
 
 .PHONY: controller-manager-docker-image
 controller-manager-docker-image:
-	@if [[ ! -f $(BIN_DIR)/rel/garden-controller-manager ]]; then echo "No binary found. Please run 'make controller-manager-docker-build'"; false; fi
+	@if [[ ! -f $(BIN_DIR)/rel/garden-controller-manager ]]; then echo "No binary found. Please run 'make controller-manager-build-release'"; false; fi
 	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/garden-controller-manager/Dockerfile --rm .
 
 .PHONY: controller-manager-docker-push
