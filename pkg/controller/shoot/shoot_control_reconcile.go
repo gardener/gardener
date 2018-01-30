@@ -124,7 +124,7 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 	if len(status.UID) == 0 {
 		o.Shoot.Info.Status.UID = o.Shoot.Info.UID
 	}
-	if status.OperationStartTime == nil {
+	if status.OperationStartTime == nil || (status.LastOperation != nil && status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded) {
 		o.Shoot.Info.Status.OperationStartTime = &now
 	}
 
