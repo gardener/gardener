@@ -17,23 +17,7 @@
 
 # initializeEmptyState: true
 
-# coreOSImage: coreos-stable-1520-6-0-v20171012
-
-# cloudConfig:
-#   kubeconfig: kubeconfig for cloud-config-downloader
-
 # networks:
 #   services: 100.64.0.0/13
 #   pods: 100.96.0.0/11
 #   worker: 10.250.0.0/19
-
-# workers:
-# - name: cpu-worker
-#   machineType: n1-standard-4
-#   volumeType: pd-standard
-#   volumeSize: 20Gi
-#   zones:
-#   - name: europe-west1-b
-#     autoScalerMin: 2
-#     autoScalerMax: 2
-

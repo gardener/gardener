@@ -131,79 +131,14 @@ resource "google_compute_firewall" "rule-allow-health-checks" {
 }
 
 //=====================================================================
-//= Autoscaler, instance group manager and instance templates
+//= Output variables
 //=====================================================================
-{{ range $j, $worker := .Values.workers }}
-resource "google_compute_instance_template" "shoot-template-{{ required "worker.name is required" $worker.name }}" {
-  name                 = "{{ required "clusterName is required" $.Values.clusterName }}-shoot-template-{{ required "worker.name is required" $worker.name }}"
-  description          = "Shoot worker group {{ required "worker.name is required" $worker.name }}"
-  instance_description = "Kubernetes Shoot node"
-  tags                 = ["{{ required "clusterName is required" $.Values.clusterName }}"]
-  machine_type         = "{{ required "worker.machineType is required" $worker.machineType }}"
-  region               = "{{ required "google.region is required" $.Values.google.region }}"
-  can_ip_forward       = true // Allows this instance to send and receive packets with non-matching destination or source IPs
 
-  scheduling {
-    automatic_restart   = true // Restarts if instance was terminated by gcp not a user
-    on_host_maintenance = "MIGRATE" // Google live migrates vm during maintenance
-  }
-
-  disk {
-    source_image = "{{ required "coreOSImage is required" $.Values.coreOSImage }}"
-    disk_type    = "{{ required "worker.volumeType is required" $worker.volumeType }}"
-    disk_size_gb = {{ regexFind "^(\\d+)" (required "worker.volumeSize is required" $worker.volumeSize) }}
-    auto_delete  = true
-    boot         = true
-  }
-
-  service_account {
-    scopes = [
-      "https://www.googleapis.com/auth/compute",
-    ]
-    email = "${google_service_account.serviceaccount.email}"
-  }
-
-  network_interface {
-    subnetwork = "${google_compute_subnetwork.subnetwork-nodes.name}"
-    access_config {
-      // Ephemeral IP
-    }
-  }
-  metadata {
-    user-data = <<EOF
-{{ include "terraformer-common.cloud-config.user-data" (set $.Values "workerName" $worker.name) }}
-EOF
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-{{- end}}
-
-{{ range $j, $worker := .Values.workers }}
-{{ range $zoneIndex, $zone := $worker.zones }}
-resource "google_compute_instance_group_manager" "igm-{{ $zoneIndex }}-{{ $j }}" {
-  name               = "{{ required "clusterName is required" $.Values.clusterName }}-igm-{{ required "worker.name is required" $worker.name }}-z{{ $zoneIndex }}"
-  base_instance_name = "{{ required "clusterName is required" $.Values.clusterName }}-zone-{{ required "zone.name is required" $zone.name }}"
-  zone               = "{{ required "zone.name is required" $zone.name }}"
-  instance_template  = "${google_compute_instance_template.shoot-template-{{ required "worker.name is required" $worker.name }}.self_link}"
+output "service_account_email" {
+  value = "${google_service_account.serviceaccount.email}"
 }
 
-resource "google_compute_autoscaler" "as-{{ $zoneIndex }}-{{ $j }}" {
-  name   = "{{ required "clusterName is required" $.Values.clusterName }}-as-{{ required "worker.name is required" $worker.name }}-z{{ $zoneIndex }}"
-  zone   = "{{ required "zone.name is required" $zone.name }}"
-  target = "${google_compute_instance_group_manager.igm-{{ $zoneIndex }}-{{ $j }}.self_link}"
-
-  autoscaling_policy = {
-    min_replicas    = {{ required "zone.autoScalerMin is required" $zone.autoScalerMin }}
-    max_replicas    = {{ required "zone.autoScalerMax is required" $zone.autoScalerMax }}
-    cooldown_period = 60
-
-    cpu_utilization {
-      target = 0.8
-    }
-  }
+output "subnet_nodes" {
+  value = "${google_compute_subnetwork.subnetwork-nodes.name}"
 }
-{{- end -}}
-{{- end -}}
 {{- end -}}

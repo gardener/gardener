@@ -15,7 +15,6 @@
 package gcpbotanist
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
@@ -63,17 +62,6 @@ func (b *GCPBotanist) generateTerraformInfraVariablesEnvironment() []map[string]
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName string) map[string]interface{} {
-	var (
-		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
-		workers                     = distributeWorkersOverZones(b.Shoot.Info.Spec.Cloud.GCP.Workers, b.Shoot.Info.Spec.Cloud.GCP.Zones)
-	)
-
-	networks := map[string]interface{}{
-		"pods":     b.Shoot.GetPodNetwork(),
-		"services": b.Shoot.GetServiceNetwork(),
-		"worker":   b.Shoot.Info.Spec.Cloud.GCP.Networks.Workers[0],
-	}
-
 	return map[string]interface{}{
 		"google": map[string]interface{}{
 			"region":  b.Shoot.Info.Spec.Cloud.Region,
@@ -86,12 +74,14 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 			"name": vpcName,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": b.Shoot.Info.Spec.Cloud.GCP.MachineImage.Image,
-		"cloudConfig": map[string]interface{}{
-			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
+		"cloudConfig": map[string]interface{}{ // Keep that until the terraformer-common chart does not longer include cloud config downloader
+			"kubeconfig": "not-used-for-gcp",
 		},
-		"networks": networks,
-		"workers":  workers,
+		"networks": map[string]interface{}{
+			"pods":     b.Shoot.GetPodNetwork(),
+			"services": b.Shoot.GetServiceNetwork(),
+			"worker":   b.Shoot.Info.Spec.Cloud.GCP.Networks.Workers[0],
+		},
 	}
 }
 
@@ -105,34 +95,4 @@ func (b *GCPBotanist) DeployBackupInfrastructure() error {
 // TODO: implement backup functionality for GCP
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
 	return nil
-}
-
-// distributeWorkersOverZones distributes the worker groups over the zones equally and returns a map
-// which can be injected into a Helm chart.
-func distributeWorkersOverZones(workerList []gardenv1beta1.GCPWorker, zoneList []string) []map[string]interface{} {
-	var (
-		workers = []map[string]interface{}{}
-		zoneLen = len(zoneList)
-	)
-
-	for _, worker := range workerList {
-		var workerZones = []map[string]interface{}{}
-		for zoneIndex, zone := range zoneList {
-			workerZones = append(workerZones, map[string]interface{}{
-				"name":          zone,
-				"autoScalerMin": common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
-				"autoScalerMax": common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
-			})
-		}
-
-		workers = append(workers, map[string]interface{}{
-			"name":        worker.Name,
-			"machineType": worker.MachineType,
-			"volumeType":  worker.VolumeType,
-			"volumeSize":  common.DiskSize(worker.VolumeSize),
-			"zones":       workerZones,
-		})
-	}
-
-	return workers
 }
