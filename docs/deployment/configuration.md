@@ -5,9 +5,6 @@ In order to establish different configuration settings for the same cloud enviro
 Seed clusters have their [own resource](../../example/seed-aws-dev.yaml) as well. These resources contain metadata about the respective Seed cluster and a reference to a secret holding the credentials (see below).
 
 The Gardener requires some secrets in order to work properly. These secrets are:
-* *Image pull secrets*, contain the [Docker configuration](https://kubernetes.io/docs/concepts/containers/images/#creating-a-secret-with-a-docker-config) holding the credentials required to pull images from private registries, please see [this](../../example/secret-image-pull.yaml) for an example.
-  * All configured image pull secrets will be created in the respective Kubernetes clusters to allow authenticating against the private registries.
-
 * *Seed cluster secrets*, contain the credentials of the cloud provider account in which the Seed cluster is deployed, and a Kubeconfig which can be used to authenticate against the Seed cluster's kube-apiserver, please see [this](../../example/secret-seed-aws-dev.yaml) for an example.
 
 * *Internal domain secrets* (optional), contain the DNS provider credentials (with appropriate privileges) which will be used to create/delete internal DNS records for the Shoot clusters (e.g., `example.com`), please see [this](../../example/secret-internal-domain.yaml) for an example.

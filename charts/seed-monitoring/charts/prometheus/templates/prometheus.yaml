@@ -60,10 +60,6 @@ spec:
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
-{{- if .Values.imagePullSecrets }}
-      imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 6 }}
-{{- end }}
       containers:
       - name: prometheus
         image: {{ index .Values.images "prometheus" }}

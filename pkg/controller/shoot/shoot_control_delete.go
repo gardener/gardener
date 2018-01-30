@@ -86,7 +86,6 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		cleanupRetry          = 10 * time.Minute
 
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
-		ensureImagePullSecretsGarden     = f.AddTask(botanist.EnsureImagePullSecretsGarden, defaultRetry)
 		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, defaultRetry, cleanupShootResources)
 		applyDeleteHook                  = f.AddTask(shootCloudBotanist.ApplyDeleteHook, defaultRetry, initializeShootClients)
 		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, applyDeleteHook)
@@ -119,7 +118,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		checkServiceCleanup               = f.AddTaskConditional(botanist.CheckServiceCleanup, cleanupRetry, cleanupShootResources, cleanupServices)
 		cleanupPersistentVolumeClaims     = f.AddTaskConditional(botanist.CleanupPersistentVolumeClaims, defaultRetry, cleanupShootResources, waitUntilKubeAddonManagerDeleted)
 		checkPersistentVolumeClaimCleanup = f.AddTaskConditional(botanist.CheckPersistentVolumeClaimCleanup, cleanupRetry, cleanupShootResources, cleanupPersistentVolumeClaims)
-		syncPointCleanup                  = f.AddSyncPoint(ensureImagePullSecretsGarden, checkCRDCleanup, checkNamespaceCleanup, checkStatefulSetCleanup, checkDeploymentCleanup, checkReplicationControllerCleanup, checkReplicaSetCleanup, checkDaemonSetCleanup, checkJobCleanup, checkPodCleanup, checkServiceCleanup, checkPersistentVolumeClaimCleanup)
+		syncPointCleanup                  = f.AddSyncPoint(checkCRDCleanup, checkNamespaceCleanup, checkStatefulSetCleanup, checkDeploymentCleanup, checkReplicationControllerCleanup, checkReplicaSetCleanup, checkDaemonSetCleanup, checkJobCleanup, checkPodCleanup, checkServiceCleanup, checkPersistentVolumeClaimCleanup)
 		destroyNginxIngressResources      = f.AddTask(botanist.DestroyNginxIngressResources, 0, syncPointCleanup)
 		destroyKube2IAMResources          = f.AddTask(shootCloudBotanist.DestroyKube2IAMResources, 0, syncPointCleanup)
 		destroyInfrastructure             = f.AddTask(shootCloudBotanist.DestroyInfrastructure, 0, syncPointCleanup)
@@ -131,8 +130,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		_                                 = f.AddTask(botanist.WaitUntilNamespaceDeleted, 0, deleteNamespace)
 		_                                 = f.AddTask(botanist.DeleteGardenSecrets, defaultRetry, deleteNamespace)
 	)
-	e := f.Execute()
-	if e != nil {
+	if e := f.Execute(); e != nil {
 		e.Description = fmt.Sprintf("Failed to delete Shoot cluster: %s", e.Description)
 		return e
 	}

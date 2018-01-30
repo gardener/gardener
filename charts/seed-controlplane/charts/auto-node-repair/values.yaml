@@ -1,8 +1,5 @@
 namespace: default
 
-imagePullSecrets:
-- name: gcr-readonly
-
 autoscalingGroups: []
 
 images:

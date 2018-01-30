@@ -15,24 +15,18 @@
 package common
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
@@ -170,61 +164,4 @@ func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap ma
 		})
 	}
 	return m
-}
-
-// EnsureImagePullSecrets takes a Kubernetes client <k8sClient> and a <namespace> and creates the
-// image pull secrets stored in the Garden namespace and having the respective role label. After
-// that it patches the default service account in that namespace by appending the names of the just
-// created secrets to its .imagePullSecrets[] list.
-func EnsureImagePullSecrets(k8sClient kubernetes.Client, namespace string, secrets map[string]*corev1.Secret, createSecrets bool, log *logrus.Entry) error {
-	var (
-		imagePullKeys       = GetSecretKeysWithPrefix(GardenRoleImagePull, secrets)
-		serviceAccountName  = "default"
-		serviceAccountPatch = corev1.ServiceAccount{
-			ImagePullSecrets: []corev1.LocalObjectReference{},
-		}
-	)
-	if len(imagePullKeys) == 0 {
-		return nil
-	}
-
-	err := wait.PollImmediate(5*time.Second, 60*time.Second, func() (bool, error) {
-		_, err := k8sClient.GetServiceAccount(namespace, serviceAccountName)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				msg := fmt.Sprintf("Waiting for ServiceAccount '%s' to be created in namespace '%s'...", serviceAccountName, namespace)
-				if log != nil {
-					log.Info(msg)
-				} else {
-					logger.Logger.Info(msg)
-				}
-				return false, nil
-			}
-			return false, err
-		}
-		return true, nil
-	})
-	if err != nil {
-		return err
-	}
-
-	for _, key := range imagePullKeys {
-		secret := secrets[key]
-		if createSecrets {
-			_, err := k8sClient.CreateSecret(namespace, secret.Name, corev1.SecretTypeDockercfg, secret.Data, true)
-			if err != nil {
-				return err
-			}
-		}
-		serviceAccountPatch.ImagePullSecrets = append(serviceAccountPatch.ImagePullSecrets, corev1.LocalObjectReference{
-			Name: secret.Name,
-		})
-	}
-
-	patch, err := json.Marshal(serviceAccountPatch)
-	if err != nil {
-		return err
-	}
-	_, err = k8sClient.PatchServiceAccount(namespace, serviceAccountName, patch)
-	return err
 }

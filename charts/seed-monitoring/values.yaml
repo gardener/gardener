@@ -9,8 +9,6 @@ prometheus:
     pods: 100.96.0.0/11
     services: 100.64.0.0/13
     nodes: 10.250.0.0/16
-  # imagePullSecrets:
-  # - name: secret
   namespace:
     uid: 100c3bb5-48b9-4f88-96ef-48ed557d4212
   podAnnotations: {}

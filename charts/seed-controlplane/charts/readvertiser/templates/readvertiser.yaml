@@ -39,10 +39,6 @@ spec:
       labels:
         app: readvertiser
     spec:
-{{- if .Values.imagePullSecrets }}
-      imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 6 }}
-{{- end }}
       serviceAccountName: readvertiser
       tolerations:
       - effect: NoExecute

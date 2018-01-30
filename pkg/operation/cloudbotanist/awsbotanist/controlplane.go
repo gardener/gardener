@@ -73,7 +73,6 @@ func (b *AWSBotanist) DeployAutoNodeRepair() error {
 	var (
 		name                 = "auto-node-repair"
 		autoscalingGroups    = b.GetASGs()
-		imagePullSecrets     = b.GetImagePullSecretsMap()
 		environmentVariables = getAWSCredentialsEnvironment()
 	)
 
@@ -85,7 +84,6 @@ func (b *AWSBotanist) DeployAutoNodeRepair() error {
 	defaultValues := map[string]interface{}{
 		"namespace":         b.Shoot.SeedNamespace,
 		"autoscalingGroups": autoscalingGroups,
-		"imagePullSecrets":  imagePullSecrets,
 		"environment":       environmentVariables,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-auto-node-repair": b.CheckSums[name],

@@ -105,7 +105,8 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 	if err != nil {
 		return err
 	}
-	if err := common.ApplyChart(
+
+	return common.ApplyChart(
 		k8sSeedClient,
 		chartrenderer.New(k8sSeedClient),
 		filepath.Join("charts", chartName),
@@ -119,11 +120,7 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 				"addon-resizer":      addonResizer.String(),
 			},
 		},
-	); err != nil {
-		return err
-	}
-
-	return common.EnsureImagePullSecrets(k8sSeedClient, metav1.NamespaceSystem, secrets, true, nil)
+	)
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The

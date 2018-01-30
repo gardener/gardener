@@ -107,27 +107,6 @@ func (o *Operation) InitializeShootClients() error {
 	return nil
 }
 
-// EnsureImagePullSecretsGarden ensures that the image pull secrets do exist in the Garden cluster
-// namespace in which the Shoot resource has been created, and that the default service account in
-// that namespace contains the respective .imagePullSecrets[] field.
-func (o *Operation) EnsureImagePullSecretsGarden() error {
-	return common.EnsureImagePullSecrets(o.K8sGardenClient, o.Shoot.Info.Namespace, o.Secrets, true, o.Logger)
-}
-
-// EnsureImagePullSecretsSeed ensures that the image pull secrets do exist in the Seed cluster's
-// Shoot namespace and that the default service account in that namespace contains the respective
-// .imagePullSecrets[] field.
-func (o *Operation) EnsureImagePullSecretsSeed() error {
-	return common.EnsureImagePullSecrets(o.K8sSeedClient, o.Shoot.SeedNamespace, o.Secrets, true, o.Logger)
-}
-
-// EnsureImagePullSecretsShoot ensures that the image pull secrets do exist in the Shoot cluster's
-// kube-system namespace and that the default service account in that namespace contains the
-// respective .imagePullSecrets[] field.
-func (o *Operation) EnsureImagePullSecretsShoot() error {
-	return common.EnsureImagePullSecrets(o.K8sShootClient, metav1.NamespaceSystem, o.Secrets, true, o.Logger)
-}
-
 // ApplyChartGarden takes a path to a chart <chartPath>, name of the release <name>, release's namespace <namespace>
 // and two maps <defaultValues>, <additionalValues>, and renders the template based on the merged result of both value maps.
 // The resulting manifest will be applied to the Garden cluster.
@@ -153,19 +132,6 @@ func (o *Operation) ApplyChartShoot(chartPath, name, namespace string, defaultVa
 // are prefixed with <kind>.
 func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 	return common.GetSecretKeysWithPrefix(kind, o.Secrets)
-}
-
-// GetImagePullSecretsMap returns all known image pull secrets as map whereas the key is "name" and
-// the value is the respective name of the image pull secret. The map can be used to specify a list
-// of image pull secrets on a Kubernetes PodTemplateSpec object.
-func (o *Operation) GetImagePullSecretsMap() []map[string]interface{} {
-	imagePullSecrets := []map[string]interface{}{}
-	for _, key := range o.GetSecretKeysOfRole(common.GardenRoleImagePull) {
-		imagePullSecrets = append(imagePullSecrets, map[string]interface{}{
-			"name": o.Secrets[key].Name,
-		})
-	}
-	return imagePullSecrets
 }
 
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section

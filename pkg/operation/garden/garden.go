@@ -89,14 +89,6 @@ func ReadGardenSecrets(k8sGardenClient kubernetes.Client, gardenNamespace string
 			numberOfInternalDomainSecrets++
 		}
 
-		// Retrieving image pull secrets based on all secrets in the Garden namespace which have
-		// a label indicating the Garden role image-pull.
-		if labels[common.GardenRole] == common.GardenRoleImagePull {
-			imagePull := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleImagePull, name)] = &imagePull
-			logger.Logger.Infof("Found image pull secret %s.", name)
-		}
-
 		// Retrieving alerting SMTP secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role alerting-smtp.
 		// Only when using the in-cluster config as we do not want to configure alerts in development modus.
@@ -125,6 +117,5 @@ func BootstrapCluster(k8sGardenClient kubernetes.Client, gardenNamespace string,
 	if !gardenVersionOK {
 		return fmt.Errorf("the Kubernetes version of the Garden cluster must be at least %s", minGardenVersion)
 	}
-
-	return common.EnsureImagePullSecrets(k8sGardenClient, gardenNamespace, secrets, false, nil)
+	return nil
 }

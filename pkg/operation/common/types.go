@@ -71,9 +71,6 @@ const (
 	// GardenRoleInternalDomain is the value of the GardenRole key indicating type 'internal-domain'.
 	GardenRoleInternalDomain = "internal-domain"
 
-	// GardenRoleImagePull is the value of the GardenRole key indicating type 'image-pull'.
-	GardenRoleImagePull = "image-pull"
-
 	// GardenRoleAlertingSMTP is the value of the GardenRole key indicating type 'alerting-smtp'.
 	GardenRoleAlertingSMTP = "alerting-smtp"
 

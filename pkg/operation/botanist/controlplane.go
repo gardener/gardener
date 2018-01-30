@@ -72,7 +72,6 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	var (
 		kubecfgSecret    = b.Secrets["kubecfg"]
 		basicAuth        = utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
-		imagePullSecrets = b.GetImagePullSecretsMap()
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
 		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
@@ -100,7 +99,6 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"basicAuthSecret": basicAuth,
 				"host":            prometheusHost,
 			},
-			"imagePullSecrets": imagePullSecrets,
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},

@@ -25,11 +25,8 @@ import (
 // ApplyCreateHook updates the AWS ELB health check to SSL and deploys the readvertiser.
 // https://github.com/gardener/aws-lb-readvertiser
 func (b *AWSBotanist) ApplyCreateHook() error {
-	imagePullSecrets := b.GetImagePullSecretsMap()
-
 	defaultValues := map[string]interface{}{
-		"domain":           b.APIServerAddress,
-		"imagePullSecrets": imagePullSecrets,
+		"domain": b.APIServerAddress,
 	}
 
 	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"readvertiser": "aws-lb-readvertiser"})
