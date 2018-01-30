@@ -29,6 +29,7 @@ import (
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedfinder "github.com/gardener/gardener/plugin/pkg/shoot/seedfinder"
+	shootseedprotector "github.com/gardener/gardener/plugin/pkg/shoot/seedprotector"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -135,6 +136,7 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 	// Admission plugin registration
 	shootquotavalidator.Register(o.Admission.Plugins)
 	shootseedfinder.Register(o.Admission.Plugins)
+	shootseedprotector.Register(o.Admission.Plugins)
 	shootdnshostedzone.Register(o.Admission.Plugins)
 	shootvalidator.Register(o.Admission.Plugins)
 

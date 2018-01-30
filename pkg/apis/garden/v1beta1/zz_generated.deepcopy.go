@@ -1853,7 +1853,7 @@ func (in *Seed) DeepCopyInto(out *Seed) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
-	out.Spec = in.Spec
+	in.Spec.DeepCopyInto(&out.Spec)
 	in.Status.DeepCopyInto(&out.Status)
 	return
 }
@@ -1933,6 +1933,24 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 	out.Cloud = in.Cloud
 	out.SecretRef = in.SecretRef
 	out.Networks = in.Networks
+	if in.Visible != nil {
+		in, out := &in.Visible, &out.Visible
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
+	if in.Protected != nil {
+		in, out := &in.Protected, &out.Protected
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(bool)
+			**out = **in
+		}
+	}
 	return
 }
 

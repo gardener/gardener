@@ -89,3 +89,15 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
 	}
 }
+
+// SetDefaults_Seed sets default values for Seed objects.
+func SetDefaults_Seed(obj *Seed) {
+	trueVar := true
+	if obj.Spec.Visible == nil {
+		obj.Spec.Visible = &trueVar
+	}
+	falseVar := false
+	if obj.Spec.Protected == nil {
+		obj.Spec.Protected = &falseVar
+	}
+}

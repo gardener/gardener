@@ -12,9 +12,22 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&Seed{}, func(obj interface{}) { SetObjectDefaults_Seed(obj.(*Seed)) })
+	scheme.AddTypeDefaultingFunc(&SeedList{}, func(obj interface{}) { SetObjectDefaults_SeedList(obj.(*SeedList)) })
 	scheme.AddTypeDefaultingFunc(&Shoot{}, func(obj interface{}) { SetObjectDefaults_Shoot(obj.(*Shoot)) })
 	scheme.AddTypeDefaultingFunc(&ShootList{}, func(obj interface{}) { SetObjectDefaults_ShootList(obj.(*ShootList)) })
 	return nil
+}
+
+func SetObjectDefaults_Seed(in *Seed) {
+	SetDefaults_Seed(in)
+}
+
+func SetObjectDefaults_SeedList(in *SeedList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_Seed(a)
+	}
 }
 
 func SetObjectDefaults_Shoot(in *Shoot) {

@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedfinder_test
+package seedprotector_test
 
 import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	. "github.com/gardener/gardener/plugin/pkg/shoot/seedfinder"
-	corev1 "k8s.io/api/core/v1"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/seedprotector"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -27,18 +26,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("seedfinder", func() {
+var _ = Describe("seedprotector", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler      *Finder
+			admissonHandler       *Protector
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			seed                  garden.Seed
 			shoot                 garden.Shoot
 
-			cloudProfileName = "cloudprofile-1"
-			seedName         = "seed-1"
-			region           = "europe"
-
+			seedName = "seed-1"
 			falseVar = false
 			trueVar  = true
 
@@ -47,19 +43,7 @@ var _ = Describe("seedfinder", func() {
 					Name: seedName,
 				},
 				Spec: garden.SeedSpec{
-					Cloud: garden.SeedCloud{
-						Profile: cloudProfileName,
-						Region:  region,
-					},
-					Visible: &trueVar,
-				},
-				Status: garden.SeedStatus{
-					Conditions: []garden.Condition{
-						{
-							Type:   garden.SeedAvailable,
-							Status: corev1.ConditionTrue,
-						},
-					},
+					Protected: &falseVar,
 				},
 			}
 			shootBase = garden.Shoot{
@@ -69,104 +53,77 @@ var _ = Describe("seedfinder", func() {
 				},
 				Spec: garden.ShootSpec{
 					Cloud: garden.Cloud{
-						Profile: cloudProfileName,
-						Region:  region,
+						Seed: &seedName,
 					},
 				},
 			}
 		)
 
 		BeforeEach(func() {
-			admissionHandler, _ = New()
+			admissonHandler, _ = New()
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+			admissonHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 
 			seed = seedBase
 			shoot = shootBase
 		})
 
-		It("should do nothing because the shoot already references a seed", func() {
-			shoot.Spec.Cloud.Seed = &seedName
-
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(*shoot.Spec.Cloud.Seed).To(Equal(seedName))
-		})
-
-		It("should find a seed cluster referencing the same profile and region and indicating availability", func() {
+		It("should pass because no Seed is specified in shoot.Spec.Cloud.Seed", func() {
 			shoot.Spec.Cloud.Seed = nil
 
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			err := admissonHandler.Admit(attrs)
 
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(*shoot.Spec.Cloud.Seed).To(Equal(seedName))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should fail because it cannot find a seed cluster due to invalid region", func() {
-			shoot.Spec.Cloud.Seed = nil
-			shoot.Spec.Cloud.Region = "another-region"
+		It("should pass because the Seed specified in shoot manifest is not protected and shoot is not in garden namespace", func() {
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			err := admissonHandler.Admit(attrs)
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should pass because shoot is not in garden namespace and seed is not protected", func() {
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			err := admissonHandler.Admit(attrs)
+
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should fail because shoot is not in garden namespace and seed is protected", func() {
+			seed.Spec.Protected = &trueVar
 
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-			err := admissionHandler.Admit(attrs)
+			err := admissonHandler.Admit(attrs)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			Expect(shoot.Spec.Cloud.Seed).To(BeNil())
 		})
 
-		It("should fail because it cannot find a seed cluster due to invalid profile", func() {
-			shoot.Spec.Cloud.Seed = nil
-			shoot.Spec.Cloud.Profile = "another-profile"
+		It("should pass because shoot is in garden namespace and seed is protected", func() {
+			shoot.Namespace = "garden"
+			seed.Spec.Protected = &trueVar
 
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			err := admissonHandler.Admit(attrs)
 
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			Expect(shoot.Spec.Cloud.Seed).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("should fail because it cannot find a seed cluster due to unavailability", func() {
-			shoot.Spec.Cloud.Seed = nil
-			seed.Status.Conditions = []garden.Condition{
-				{
-					Type:   garden.SeedAvailable,
-					Status: corev1.ConditionFalse,
-				},
-			}
+		It("should pass because shoot is in garden namespace and seed is not protected", func() {
+			shoot.Namespace = "garden"
 
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			err := admissonHandler.Admit(attrs)
 
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			Expect(shoot.Spec.Cloud.Seed).To(BeNil())
-		})
-
-		It("should fail because it cannot find a seed cluster due to invisibility", func() {
-			shoot.Spec.Cloud.Seed = nil
-			seed.Spec.Visible = &falseVar
-
-			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			Expect(shoot.Spec.Cloud.Seed).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 })
