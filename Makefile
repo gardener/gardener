@@ -53,7 +53,6 @@ verify: vet fmt lint test
 .PHONY: revendor
 revendor:
 	@dep ensure -update
-	@dep prune
 
 
 .PHONY: build

@@ -81,3 +81,8 @@ ignored = [
 [[override]]
   name = "github.com/ugorji/go"
   revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
+
+[prune]
+  unused-packages = true
+  go-tests = true
+  non-go = true

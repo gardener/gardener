@@ -26,7 +26,7 @@ $ go get -u github.com/onsi/ginkgo/ginkgo
 $ go get -u github.com/onsi/gomega
 ```
 
-We use [Dep](https://github.com/golang/dep) for managing Golang package dependencies. Please install it:
+We use [Dep](https://github.com/golang/dep) for managing Golang package dependencies. Please install it (**at least version `0.4.1`**):
 
 ```bash
 $ brew install dep

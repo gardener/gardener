@@ -32,6 +32,7 @@ import (
 
 	"k8s.io/helm/pkg/ignore"
 	"k8s.io/helm/pkg/proto/hapi/chart"
+	"k8s.io/helm/pkg/sympath"
 )
 
 // Load takes a string name, tries to resolve it to a file or directory, and then loads it.
@@ -243,8 +244,13 @@ func LoadDir(dir string) (*chart.Chart, error) {
 	files := []*BufferedFile{}
 	topdir += string(filepath.Separator)
 
-	err = filepath.Walk(topdir, func(name string, fi os.FileInfo, err error) error {
+	walk := func(name string, fi os.FileInfo, err error) error {
 		n := strings.TrimPrefix(name, topdir)
+		if n == "" {
+			// No need to process top level. Avoid bug with helmignore .* matching
+			// empty names. See issue 1779.
+			return nil
+		}
 
 		// Normalize to / since it will also work on Windows
 		n = filepath.ToSlash(n)
@@ -273,8 +279,8 @@ func LoadDir(dir string) (*chart.Chart, error) {
 
 		files = append(files, &BufferedFile{Name: n, Data: data})
 		return nil
-	})
-	if err != nil {
+	}
+	if err = sympath.Walk(topdir, walk); err != nil {
 		return c, err
 	}
 
