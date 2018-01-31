@@ -32,6 +32,20 @@ controller:
     credentials:
       accessKeyID: access-key-id-with-route53-privileges
       secretAccessKey: secret-access-key-with-route53-privileges
+  defaultDomains: []
+  # - domain: example.com
+  #   provider: aws-route53 # currently, only aws-route53 is supported
+  #   hostedZoneID: Z3ABCDE1FGHIJK
+  #   credentials:
+  #     accessKeyID: access-key-id-with-route53-privileges
+  #     secretAccessKey: secret-access-key-with-route53-privileges
+  alertingSMTP: []
+  # - to: email-address-to-send-notifcations-to
+  #   from: email-address-to-send-notifcations-from
+  #   smarthost: smtp-host-used-for-sending
+  #   auth_username: smtp-authentication-username
+  #   auth_identity: smtp-authentication-username
+  #   auth_password: smtp-authentication-password
   config:
     clientConnection:
       acceptContentTypes: application/json
