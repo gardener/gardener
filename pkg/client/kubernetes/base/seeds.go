@@ -44,6 +44,11 @@ func (c *Client) UpdateSeedStatus(seed *gardenv1beta1.Seed) (*gardenv1beta1.Seed
 	return c.GardenClientset.GardenV1beta1().Seeds().UpdateStatus(seed)
 }
 
+// ListSeeds return a list of Seed resources.
+func (c *Client) ListSeeds() (*gardenv1beta1.SeedList, error) {
+	return c.GardenClientset.GardenV1beta1().Seeds().List(metav1.ListOptions{})
+}
+
 // DeleteSeed deletes an existing Seed resource.
 func (c *Client) DeleteSeed(name string) error {
 	return c.GardenClientset.GardenV1beta1().Seeds().Delete(name, &defaultDeleteOptions)

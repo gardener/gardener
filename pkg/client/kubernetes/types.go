@@ -58,7 +58,11 @@ type Client interface {
 	GetSeed(string) (*gardenv1beta1.Seed, error)
 	UpdateSeed(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
 	UpdateSeedStatus(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
+	ListSeeds() (*gardenv1beta1.SeedList, error)
 	DeleteSeed(string) error
+
+	// Cloud Profiles
+	UpdateCloudProfile(*gardenv1beta1.CloudProfile) (*gardenv1beta1.CloudProfile, error)
 
 	// Namespaces
 	CreateNamespace(string, bool) (*corev1.Namespace, error)
