@@ -22,6 +22,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
+	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
@@ -29,6 +30,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 )
@@ -102,8 +105,8 @@ type ControlInterface interface {
 // implements the documented semantics for Seeds. updater is the UpdaterInterface used
 // to update the status of Seeds. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, shootLister gardenlisters.ShootLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, shootLister}
 }
 
 type defaultControl struct {
@@ -113,6 +116,7 @@ type defaultControl struct {
 	imageVector        imagevector.ImageVector
 	recorder           record.EventRecorder
 	updater            UpdaterInterface
+	shootLister        gardenlisters.ShootLister
 }
 
 func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) error {
@@ -125,6 +129,32 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		seedJSON, _ = json.Marshal(seed)
 		seedLogger  = logger.NewSeedLogger(logger.Logger, seed.Name)
 	)
+
+	// The deletionTimestamp labels a Seed as intented to get deleted. Before deletion, it has to be ensured that no Shoots
+	// are depending on the Seed anymore. When this happens the controller will remove the Finalizers from the Seed and deletion will be triggered.
+	if seed.DeletionTimestamp != nil {
+		associatedShoots, err := c.determineShootAssociations(seed.Name)
+		if err != nil {
+			seedLogger.Error(err.Error())
+			return nil
+		}
+		if len(associatedShoots) == 0 {
+			seedLogger.Info("No Shoots are attached to Seed. Deletion accepted.")
+
+			finalizers := sets.NewString(seed.Finalizers...)
+			finalizers.Delete(gardenv1beta1.GardenerName)
+			seed.Finalizers = finalizers.UnsortedList()
+
+			_, err := c.k8sGardenClient.UpdateSeed(seed)
+			if err != nil {
+				seedLogger.Error(err.Error())
+				return nil
+			}
+			return nil
+		}
+		seedLogger.Infof("Can't delete Seed, because the following Shoot(s) are still attached: %v", associatedShoots)
+		return nil
+	}
 
 	seedLogger.Infof("[SEED RECONCILE] %s", key)
 	seedLogger.Debugf(string(seedJSON))
@@ -176,4 +206,21 @@ func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, conditions .
 	}
 
 	return err
+}
+
+func (c *defaultControl) determineShootAssociations(seed string) ([]string, error) {
+	var associatedShoots []string
+	shoots, err := c.shootLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, shoot := range shoots {
+		if shoot.Spec.Cloud.Seed == nil {
+			continue
+		}
+		if *shoot.Spec.Cloud.Seed == seed {
+			associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
+		}
+	}
+	return associatedShoots, nil
 }

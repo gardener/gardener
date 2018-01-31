@@ -42,6 +42,8 @@ type Controller struct {
 	seedQueue  workqueue.RateLimitingInterface
 	seedSynced cache.InformerSynced
 
+	shootLister gardenlisters.ShootLister
+
 	workerCh               chan int
 	numberOfRunningWorkers int
 }
@@ -55,15 +57,17 @@ func NewSeedController(k8sGardenClient kubernetes.Client, k8sGardenInformers gar
 		seedInformer          = gardenv1beta1Informer.Seeds()
 		seedLister            = seedInformer.Lister()
 		seedUpdater           = NewRealUpdater(k8sGardenClient, seedLister)
+		shootLister           = gardenv1beta1Informer.Shoots().Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: k8sGardenInformers,
-		control:            NewDefaultControl(k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, seedUpdater),
+		control:            NewDefaultControl(k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, seedUpdater, shootLister),
 		recorder:           recorder,
 		seedLister:         seedLister,
 		seedQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		shootLister:        shootLister,
 		workerCh:           make(chan int),
 	}
 
