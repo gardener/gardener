@@ -59,3 +59,20 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   "componentconfig:v1alpha1" \
   --extra-peer-dirs=github.com/gardener/gardener/pkg/apis/componentconfig,github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
   -h <(headers)
+
+rm -Rf ./$(dirname "${0}")/../openapi/openapi_generated.go
+go install ./$(dirname "${0}")/../vendor/k8s.io/code-generator/cmd/openapi-gen
+
+echo "Generating openapi definitions"
+${GOPATH}/bin/openapi-gen "$@" \
+  --v 1 \
+  --logtostderr \
+  --input-dirs=github.com/gardener/gardener/pkg/apis/garden/v1beta1 \
+  --input-dirs=k8s.io/api/core/v1 \
+  --input-dirs=k8s.io/apimachinery/pkg/apis/meta/v1 \
+  --input-dirs=k8s.io/apimachinery/pkg/api/resource \
+  --input-dirs=k8s.io/apimachinery/pkg/types \
+  --input-dirs=k8s.io/apimachinery/pkg/version \
+  --input-dirs=k8s.io/apimachinery/pkg/runtime \
+  --output-package=github.com/gardener/gardener/pkg/openapi \
+  -h <(headers)

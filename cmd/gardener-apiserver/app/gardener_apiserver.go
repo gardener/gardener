@@ -19,6 +19,10 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/gardener/gardener/pkg/version"
+
+	"github.com/gardener/gardener/pkg/openapi"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -145,6 +149,11 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 	if err := o.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, api.Scheme, admissionInitializer); err != nil {
 		return nil, nil, nil, err
 	}
+
+	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, api.Scheme)
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = "Gardener"
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = version.Version
+	gardenerAPIServerConfig.SwaggerConfig = genericapiserver.DefaultSwaggerConfig()
 
 	return &apiserver.Config{
 		GenericConfig: gardenerAPIServerConfig,

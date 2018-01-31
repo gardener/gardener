@@ -18,7 +18,7 @@ PROJECT          := gardener
 REPOSITORY       := $(VCS)/$(ORGANIZATION)/$(PROJECT)
 VERSION          := $(shell cat VERSION)
 LD_FLAGS         := "-w -X $(REPOSITORY)/pkg/version.Version=$(VERSION)"
-PACKAGES         := $(shell go list ./... | grep -vE '/vendor/|/pkg/client/garden|/pkg/apis')
+PACKAGES         := $(shell go list ./... | grep -vE '/vendor/|/pkg/client/garden|/pkg/apis|/pkg/openapi')
 TEST_FOLDERS     := cmd pkg plugin
 LINT_FOLDERS     := $(shell echo $(PACKAGES) | sed "s|$(REPOSITORY)|.|g")
 REGISTRY         := eu.gcr.io/sap-cloud-platform-dev1
