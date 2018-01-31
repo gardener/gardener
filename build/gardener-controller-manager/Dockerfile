@@ -16,9 +16,9 @@ FROM alpine:3.7
 
 RUN apk add --update bash curl
 
-COPY bin/rel/garden-controller-manager /garden-controller-manager
+COPY bin/rel/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts
 
 WORKDIR /
 
-ENTRYPOINT ["/garden-controller-manager"]
+ENTRYPOINT ["/gardener-controller-manager"]

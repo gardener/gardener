@@ -30,8 +30,8 @@ type Config struct {
 	ExtraConfig   ExtraConfig
 }
 
-// GardenServer contains state for a Garden API server.
-type GardenServer struct {
+// GardenerServer contains state for a Gardener API server.
+type GardenerServer struct {
 	GenericAPIServer *genericapiserver.GenericAPIServer
 }
 
@@ -59,13 +59,13 @@ func (cfg *Config) Complete() CompletedConfig {
 	return CompletedConfig{&c}
 }
 
-// New returns a new instance of GardenServer from the given config.
-func (c completedConfig) New() (*GardenServer, error) {
-	genericServer, err := c.GenericConfig.New("garden-apiserver", genericapiserver.EmptyDelegate)
+// New returns a new instance of GardenerServer from the given config.
+func (c completedConfig) New() (*GardenerServer, error) {
+	genericServer, err := c.GenericConfig.New("gardener-apiserver", genericapiserver.EmptyDelegate)
 	if err != nil {
 		return nil, err
 	}
-	s := &GardenServer{
+	s := &GardenerServer{
 		GenericAPIServer: genericServer,
 	}
 

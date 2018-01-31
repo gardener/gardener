@@ -97,7 +97,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	go shootController.Run(workerCount, stopCh)
 	go seedController.Run(workerCount, stopCh)
 
-	logger.Logger.Infof("Garden controller manager (version %s) initialized.", version.Version)
+	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 
 	// Shutdown handling
 	<-stopCh

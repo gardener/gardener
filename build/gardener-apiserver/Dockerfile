@@ -16,8 +16,8 @@ FROM alpine:3.7
 
 RUN apk add --update bash curl
 
-ADD bin/rel/garden-apiserver /garden-apiserver
+ADD bin/rel/gardener-apiserver /gardener-apiserver
 
 WORKDIR /
 
-ENTRYPOINT ["/garden-apiserver"]
+ENTRYPOINT ["/gardener-apiserver"]

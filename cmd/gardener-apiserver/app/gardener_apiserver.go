@@ -40,13 +40,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// NewCommandStartGardenAPIServer creates a *cobra.Command object with default parameters.
-func NewCommandStartGardenAPIServer(out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
+// NewCommandStartGardenerAPIServer creates a *cobra.Command object with default parameters.
+func NewCommandStartGardenerAPIServer(out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
 	opts := NewOptions(out, errOut)
 
 	cmd := &cobra.Command{
-		Use:   "garden-apiserver",
-		Short: "Launch the Garden API server",
+		Use:   "gardener-apiserver",
+		Short: "Launch the Gardener API server",
 		Long: `In essence, the Gardener is an extension API server along with a bundle
 of Kubernetes controllers which introduce new API objects in an existing Kubernetes
 cluster (which is called Garden cluster) in order to use them for the management of
@@ -72,7 +72,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 	return cmd
 }
 
-// Options has all the context and parameters needed to run a Garden API server.
+// Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
 	Admission   *genericoptions.AdmissionOptions
 	Recommended *genericoptions.RecommendedOptions
@@ -111,15 +111,15 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 
 	// Create clientset for the garden.sapcloud.io API group
 	// Use loopback config to create a new Kubernetes client for the garden.sapcloud.io API group
-	gardenAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
-	if err := o.Recommended.ApplyTo(gardenAPIServerConfig); err != nil {
+	gardenerAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
+	if err := o.Recommended.ApplyTo(gardenerAPIServerConfig); err != nil {
 		return nil, nil, nil, err
 	}
-	gardenClient, err := gardenclientset.NewForConfig(gardenAPIServerConfig.LoopbackClientConfig)
+	gardenClient, err := gardenclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenAPIServerConfig.LoopbackClientConfig.Timeout)
+	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 
 	// Create clientset for the native Kubernetes API group
 	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
@@ -142,12 +142,12 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 
 	// Initialize admission plugins
 	admissionInitializer := admissioninitializer.New(gardenInformerFactory, kubeInformerFactory)
-	if err := o.Admission.ApplyTo(&gardenAPIServerConfig.Config, gardenAPIServerConfig.SharedInformerFactory, gardenAPIServerConfig.ClientConfig, api.Scheme, admissionInitializer); err != nil {
+	if err := o.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, api.Scheme, admissionInitializer); err != nil {
 		return nil, nil, nil, err
 	}
 
 	return &apiserver.Config{
-		GenericConfig: gardenAPIServerConfig,
+		GenericConfig: gardenerAPIServerConfig,
 		ExtraConfig:   apiserver.ExtraConfig{},
 	}, gardenInformerFactory, kubeInformerFactory, nil
 }
@@ -163,7 +163,7 @@ func (o Options) run(stopCh <-chan struct{}) error {
 		return err
 	}
 
-	server.GenericAPIServer.AddPostStartHook("start-garden-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
+	server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
 		gardenInformerFactory.Start(context.StopCh)
 		kubeInformerFactory.Start(context.StopCh)
 		return nil

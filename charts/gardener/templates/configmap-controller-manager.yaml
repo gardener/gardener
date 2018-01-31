@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: garden-controller-manager-configmap
+  name: gardener-controller-manager-configmap
   namespace: garden
 data:
   config.yaml: |

@@ -51,16 +51,16 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-// Options has all the context and parameters needed to run a Garden controller manager.
+// Options has all the context and parameters needed to run a Gardener controller manager.
 type Options struct {
-	// ConfigFile is the location of the Garden controller manager's configuration file.
+	// ConfigFile is the location of the Gardener controller manager's configuration file.
 	ConfigFile string
 	config     *componentconfig.ControllerManagerConfiguration
 	scheme     *runtime.Scheme
 	codecs     serializer.CodecFactory
 }
 
-// AddFlags adds flags for a specific Garden controller manager to the specified FlagSet.
+// AddFlags adds flags for a specific Gardener controller manager to the specified FlagSet.
 func AddFlags(options *Options, fs *pflag.FlagSet) {
 	fs.StringVar(&options.ConfigFile, "config", options.ConfigFile, "The path to the configuration file.")
 }
@@ -112,7 +112,7 @@ func (o *Options) decodeConfig(data []byte) (*componentconfig.ControllerManagerC
 
 func (o *Options) configFileSpecified() error {
 	if len(o.ConfigFile) == 0 {
-		return fmt.Errorf("missing Garden controller manager config file")
+		return fmt.Errorf("missing Gardener controller manager config file")
 	}
 	return nil
 }
@@ -162,16 +162,16 @@ func (o *Options) run() error {
 	return gardener.Run(stop)
 }
 
-// NewCommandStartGardenControllerManager creates a *cobra.Command object with default parameters
-func NewCommandStartGardenControllerManager() *cobra.Command {
+// NewCommandStartGardenerControllerManager creates a *cobra.Command object with default parameters
+func NewCommandStartGardenerControllerManager() *cobra.Command {
 	opts, err := NewOptions()
 	if err != nil {
 		panic(err)
 	}
 
 	cmd := &cobra.Command{
-		Use:   "garden-controller-manager",
-		Short: "Launch the Garden controller manager",
+		Use:   "gardener-controller-manager",
+		Short: "Launch the Gardener controller manager",
 		Long: `In essence, the Gardener is an extension API server along with a bundle
 of Kubernetes controllers which introduce new API objects in an existing Kubernetes
 cluster (which is called Garden cluster) in order to use them for the management of
@@ -202,7 +202,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 }
 
 // Gardener represents all the parameters required to start the
-// Garden controller manager.
+// Gardener controller manager.
 type Gardener struct {
 	Config            *componentconfig.ControllerManagerConfiguration
 	Identity          *gardenv1beta1.Gardener
@@ -214,7 +214,7 @@ type Gardener struct {
 	LeaderElection    *leaderelection.LeaderElectionConfig
 }
 
-// NewGardener is the main entry point of instantiating a new Garden controller manager.
+// NewGardener is the main entry point of instantiating a new Gardener controller manager.
 func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Gardener, error) {
 	if config == nil {
 		return nil, errors.New("config is required")
@@ -223,7 +223,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 
 	// Initialize logger
 	logger := logger.NewLogger(config.LogLevel)
-	logger.Info("Starting Garden controller manager...")
+	logger.Info("Starting Gardener controller manager...")
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
@@ -340,7 +340,7 @@ func createRecorder(kubeClient *k8s.Clientset) record.EventRecorder {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(logger.Logger.Debugf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: typedcorev1.New(kubeClient.CoreV1().RESTClient()).Events("")})
-	return eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "garden-controller-manager"})
+	return eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "gardener-controller-manager"})
 }
 
 func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration, client *k8s.Clientset, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
@@ -382,8 +382,8 @@ func getGardenerNamespace(runningInCluster bool, gardenNamespace string, watchNa
 	return *watchNamespace
 }
 
-// We want to determine the Docker container id of the currently running Garden controller manager because
-// we need to identify for still ongoing operations whether another Garden controller manager instance is
+// We want to determine the Docker container id of the currently running Gardener controller manager because
+// we need to identify for still ongoing operations whether another Gardener controller manager instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
 func getGardenerIdentity(k8sGardenClient kubernetes.Client, runningInCluster bool, config *componentconfig.ControllerManagerConfiguration) (*gardenv1beta1.Gardener, string, error) {

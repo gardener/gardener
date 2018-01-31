@@ -31,5 +31,5 @@ func Serve(k8sGardenClient kubernetes.Client, bindAddress string, port int, metr
 
 	listenAddress := fmt.Sprintf("%s:%d", bindAddress, port)
 	go http.ListenAndServe(listenAddress, nil)
-	logger.Logger.Infof("Garden controller manager HTTP server started (serving on %s)", listenAddress)
+	logger.Logger.Infof("Gardener controller manager HTTP server started (serving on %s)", listenAddress)
 }

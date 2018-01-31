@@ -76,7 +76,7 @@ $ cd gardener
 1. You have understood the [principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/), what their purpose is and how they interact with each other.
 1. You have understood the [architecture of the Garden](https://github.com/gardener/documentation/wiki/Architecture), and what the various clusters are used for.
 
-The development of the Gardener could happen by targetting any cluster. You basically need a Garden cluster (e.g., a [Minikube](https://github.com/kubernetes/minikube) cluster) and one Seed cluster per cloud provider and per data center/region. You can configure the Garden controller manager to watch **all namespaces** for Shoot manifests or to only watch **one single** namespace.
+The development of the Gardener could happen by targetting any cluster. You basically need a Garden cluster (e.g., a [Minikube](https://github.com/kubernetes/minikube) cluster) and one Seed cluster per cloud provider and per data center/region. You can configure the Gardener controller manager to watch **all namespaces** for Shoot manifests or to only watch **one single** namespace.
 
 In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](../../example/shoot-azure.yaml#L10) for an example Shoot manifest).
 
@@ -84,14 +84,14 @@ In order to ensure that a specific Seed cluster will be chosen, add the `.spec.c
 
 Please take a look at the [example manifests folder](../../example) to see which resource objects you need to install into your Garden cluster.
 
-For your convenience, we have created a rule in the `Makefile` which will automatically start the Garden controller manager with development settings:
+For your convenience, we have created a rule in the `Makefile` which will automatically start the Gardener controller manager with development settings:
 
 ```bash
 $ make dev
-time="2017-12-05T15:58:48+01:00" level=info msg="Starting Garden controller manager..."
+time="2017-12-05T15:58:48+01:00" level=info msg="Starting Gardener controller manager..."
 [...]
 time="2017-12-05T15:58:55+01:00" level=info msg="Watching only namespace 'johndoe' for Shoot resources..."
-time="2017-12-05T15:58:55+01:00" level=info msg="Garden controller manager (version 0.28.0) initialized successfully."
+time="2017-12-05T15:58:55+01:00" level=info msg="Gardener controller manager (version 0.28.0) initialized successfully."
 ```
 
 :information_source: Your username is inferred from the user you are logged in with on your machine. The version is incremented based on the content of the `VERSION` file. The version is important for the Gardener in order to identify which Gardener version has last operated a Shoot cluster.

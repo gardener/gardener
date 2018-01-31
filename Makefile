@@ -40,12 +40,12 @@ export GOBIN
 .PHONY: dev
 dev:
 	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
-	@KUBECONFIG=dev/garden-kubeconfig.yaml WATCH_NAMESPACE=$(USER) go run -ldflags $(LD_FLAGS_RUN) cmd/garden-controller-manager/main.go --config=dev/componentconfig-garden-controller-manager.yaml
+	@KUBECONFIG=dev/garden-kubeconfig.yaml WATCH_NAMESPACE=$(USER) go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
 
 .PHONY: dev-all
 dev-all:
 	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
-	@KUBECONFIG=dev/garden-kubeconfig.yaml go run -ldflags $(LD_FLAGS_RUN) cmd/garden-controller-manager/main.go --config=dev/componentconfig-garden-controller-manager.yaml
+	@KUBECONFIG=dev/garden-kubeconfig.yaml go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
 
 .PHONY: verify
 verify: vet fmt lint test
@@ -67,16 +67,16 @@ apiserver-release: apiserver-build apiserver-build-release apiserver-docker-imag
 
 .PHONY: apiserver-build
 apiserver-build:
-	@go build -o $(BIN_DIR)/garden-apiserver $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-apiserver/*.go
+	@go build -o $(BIN_DIR)/gardener-apiserver $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/gardener-apiserver/*.go
 
 .PHONY: apiserver-build-release
 apiserver-build-release:
-	@env GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/rel/garden-apiserver $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-apiserver/*.go
+	@env GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/rel/gardener-apiserver $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/gardener-apiserver/*.go
 
 .PHONY: apiserver-docker-image
 apiserver-docker-image:
-	@if [[ ! -f $(BIN_DIR)/rel/garden-apiserver ]]; then echo "No binary found. Please run 'make apiserver-build-release'"; false; fi
-	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/garden-apiserver/Dockerfile --rm .
+	@if [[ ! -f $(BIN_DIR)/rel/gardener-apiserver ]]; then echo "No binary found. Please run 'make apiserver-build-release'"; false; fi
+	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/gardener-apiserver/Dockerfile --rm .
 
 .PHONY: apiserver-docker-push
 apiserver-docker-push:
@@ -85,8 +85,8 @@ apiserver-docker-push:
 
 .PHONY: apiserver-rename-binaries
 apiserver-rename-binaries:
-	@if [[ -f $(BIN_DIR)/garden-apiserver ]]; then cp $(BIN_DIR)/garden-apiserver garden-apiserver-darwin-amd64; fi
-	@if [[ -f $(BIN_DIR)/rel/garden-apiserver ]]; then cp $(BIN_DIR)/rel/garden-apiserver garden-apiserver-linux-amd64; fi
+	@if [[ -f $(BIN_DIR)/gardener-apiserver ]]; then cp $(BIN_DIR)/gardener-apiserver gardener-apiserver-darwin-amd64; fi
+	@if [[ -f $(BIN_DIR)/rel/gardener-apiserver ]]; then cp $(BIN_DIR)/rel/gardener-apiserver gardener-apiserver-linux-amd64; fi
 
 
 .PHONY: controller-manager-release
@@ -94,16 +94,16 @@ controller-manager-release: controller-manager-build controller-manager-build-re
 
 .PHONY: controller-manager-build
 controller-manager-build:
-	@go build -o $(BIN_DIR)/garden-controller-manager $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-controller-manager/*.go
+	@go build -o $(BIN_DIR)/gardener-controller-manager $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/gardener-controller-manager/*.go
 
 .PHONY: controller-manager-build-release
 controller-manager-build-release:
-	@env GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/rel/garden-controller-manager $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/garden-controller-manager/*.go
+	@env GOOS=linux GOARCH=amd64 go build -o $(BIN_DIR)/rel/gardener-controller-manager $(GO_EXTRA_FLAGS) -ldflags $(LD_FLAGS) cmd/gardener-controller-manager/*.go
 
 .PHONY: controller-manager-docker-image
 controller-manager-docker-image:
-	@if [[ ! -f $(BIN_DIR)/rel/garden-controller-manager ]]; then echo "No binary found. Please run 'make controller-manager-build-release'"; false; fi
-	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/garden-controller-manager/Dockerfile --rm .
+	@if [[ ! -f $(BIN_DIR)/rel/gardener-controller-manager ]]; then echo "No binary found. Please run 'make controller-manager-build-release'"; false; fi
+	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/gardener-controller-manager/Dockerfile --rm .
 
 .PHONY: controller-manager-docker-push
 controller-manager-docker-push:
@@ -112,8 +112,8 @@ controller-manager-docker-push:
 
 .PHONY: controller-manager-rename-binaries
 controller-manager-rename-binaries:
-	@if [[ -f $(BIN_DIR)/garden-controller-manager ]]; then cp $(BIN_DIR)/garden-controller-manager garden-controller-manager-darwin-amd64; fi
-	@if [[ -f $(BIN_DIR)/rel/garden-controller-manager ]]; then cp $(BIN_DIR)/rel/garden-controller-manager garden-controller-manager-linux-amd64; fi
+	@if [[ -f $(BIN_DIR)/gardener-controller-manager ]]; then cp $(BIN_DIR)/gardener-controller-manager gardener-controller-manager-darwin-amd64; fi
+	@if [[ -f $(BIN_DIR)/rel/gardener-controller-manager ]]; then cp $(BIN_DIR)/rel/gardener-controller-manager gardener-controller-manager-linux-amd64; fi
 
 
 .PHONY: docker-login

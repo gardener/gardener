@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: garden-controller-manager
+  name: gardener-controller-manager
   namespace: garden
   labels:
     app: gardener

@@ -18,7 +18,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/gardener/gardener/cmd/garden-controller-manager/app"
+	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
 
-	command := app.NewCommandStartGardenControllerManager()
+	command := app.NewCommandStartGardenerControllerManager()
 	if err := command.Execute(); err != nil {
 		os.Exit(1)
 	}

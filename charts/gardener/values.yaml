@@ -6,9 +6,9 @@ apiserver:
   etcdServers: http://etcd:2379
   groupPriorityMinimum: 10000
   versionPriority: 20
-  serviceAccountName: garden-apiserver
+  serviceAccountName: gardener-apiserver
   image:
-    repository: rfranzke/garden-apiserver
+    repository: rfranzke/gardener-apiserver
     tag: latest
   caBundle: |
     ---
@@ -21,9 +21,9 @@ apiserver:
 controller:
   enabled: true
   replicaCount: 1
-  serviceAccountName: garden-controller-manager
+  serviceAccountName: gardener-controller-manager
   image:
-    repository: rfranzke/garden-controller-manager
+    repository: rfranzke/gardener-controller-manager
     tag: latest
   internalDomain:
     provider: aws-route53 # currently, only aws-route53 is supported

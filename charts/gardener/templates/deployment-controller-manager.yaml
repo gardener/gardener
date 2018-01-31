@@ -2,7 +2,7 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: garden-controller-manager
+  name: gardener-controller-manager
   namespace: garden
   labels:
     app: gardener
@@ -27,12 +27,12 @@ spec:
     spec:
       serviceAccountName: {{ .Values.controller.serviceAccountName }}
       containers:
-      - name: garden-controller-manager
+      - name: gardener-controller-manager
         image: {{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}
         imagePullPolicy: IfNotPresent
         command:
-        - /garden-controller-manager
-        - --config=/etc/garden-controller-manager/config.yaml
+        - /gardener-controller-manager
+        - --config=/etc/gardener-controller-manager/config.yaml
         livenessProbe:
           httpGet:
             path: /healthz
@@ -48,11 +48,11 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
-        - name: garden-controller-manager-config
-          mountPath: /etc/garden-controller-manager
+        - name: gardener-controller-manager-config
+          mountPath: /etc/gardener-controller-manager
       terminationGracePeriodSeconds: 3600
       volumes:
-      - name: garden-controller-manager-config
+      - name: gardener-controller-manager-config
         configMap:
-          name: garden-controller-manager-configmap
+          name: gardener-controller-manager-configmap
 {{- end}}

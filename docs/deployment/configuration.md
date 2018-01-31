@@ -46,7 +46,7 @@ The Seed cluster which is used to deploy the control plane of a Shoot cluster ca
 
 The cloud provider secrets can be stored in any namespace. With [`PrivateSecretBindings`](../../example/privatesecretbinding-core-aws.yaml) one can reference a secret in the same namespace, whereas one has to use [`CrossSecretBindings`](../../example/crosssecretbinding-default-my-aws-secret.yaml) when referencing a secret in another namespace.
 
-## Configuration file for Garden controller manager
-The Garden controller manager does only support one command line flag which should be a path to a valid configuration file.
+## Configuration file for Gardener controller manager
+The Gardener controller manager does only support one command line flag which should be a path to a valid configuration file.
 
-Please take a look at [this](../../example/componentconfig-garden-controller-manager.yaml) example configuration.
+Please take a look at [this](../../example/componentconfig-gardener-controller-manager.yaml) example configuration.

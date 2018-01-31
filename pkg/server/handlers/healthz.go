@@ -32,7 +32,7 @@ func UpdateHealth(isHealthy bool) {
 }
 
 // Healthz is a HTTP handler for the /healthz endpoint which responses with 200 OK status code
-// if the Garden controller manager is healthy; and with 500 Internal Server error status code otherwise.
+// if the Gardener controller manager is healthy; and with 500 Internal Server error status code otherwise.
 func Healthz(w http.ResponseWriter, r *http.Request) {
 	mutex.Lock()
 	isHealthy := healthy

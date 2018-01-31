@@ -54,8 +54,8 @@ const (
 	EtcdRoleEvents = "events"
 
 	// GardenNamespace is the namespace in which the configuration and secrets for
-	// the Garden controller manager will be stored (e.g., secrets for the Seed clusters).
-	// It is also used by the garden-apiserver.
+	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
+	// It is also used by the gardener-apiserver.
 	GardenNamespace = "garden"
 
 	// GardenRole is the key for an annotation on a Kubernetes Secret object whose value must be either 'seed' or

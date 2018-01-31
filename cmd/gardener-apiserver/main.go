@@ -19,7 +19,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/gardener/gardener/cmd/garden-apiserver/app"
+	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/util/logs"
 )
@@ -33,7 +33,7 @@ func main() {
 	}
 
 	stopCh := genericapiserver.SetupSignalHandler()
-	command := app.NewCommandStartGardenAPIServer(os.Stdout, os.Stderr, stopCh)
+	command := app.NewCommandStartGardenerAPIServer(os.Stdout, os.Stderr, stopCh)
 	command.Flags().AddGoFlagSet(flag.CommandLine)
 	if err := command.Execute(); err != nil {
 		os.Exit(1)

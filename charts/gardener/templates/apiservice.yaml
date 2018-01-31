@@ -10,16 +10,16 @@ spec:
   groupPriorityMinimum: {{ .Values.apiserver.groupPriorityMinimum }}
   versionPriority: {{ .Values.apiserver.versionPriority }}
   service:
-    name: garden-apiserver
+    name: gardener-apiserver
     namespace: garden
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: garden-apiserver-cert
+  name: gardener-apiserver-cert
   namespace: garden
 type: Opaque
 data:
-  garden-apiserver.crt: {{ b64enc .Values.apiserver.tls.crt }}
-  garden-apiserver.key: {{ b64enc .Values.apiserver.tls.key }}
+  gardener-apiserver.crt: {{ b64enc .Values.apiserver.tls.crt }}
+  gardener-apiserver.key: {{ b64enc .Values.apiserver.tls.key }}
 {{- end}}

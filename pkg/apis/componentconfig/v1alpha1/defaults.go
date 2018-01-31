@@ -26,7 +26,7 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 	return RegisterDefaults(scheme)
 }
 
-// SetDefaults_ControllerManagerConfiguration sets defaults for the configuration of the Garden controller manager.
+// SetDefaults_ControllerManagerConfiguration sets defaults for the configuration of the Gardener controller manager.
 func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfiguration) {
 	if len(obj.Server.BindAddress) == 0 {
 		obj.Server.BindAddress = "0.0.0.0"
@@ -53,7 +53,7 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 }
 
-// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Garden controller manager.
+// SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
 func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
 	zero := metav1.Duration{}
 	if obj.LeaseDuration == zero {

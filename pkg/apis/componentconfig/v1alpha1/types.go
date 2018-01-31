@@ -97,7 +97,7 @@ type ServerConfiguration struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// ControllerManagerConfiguration defines the configuration for the Garden controller manager.
+// ControllerManagerConfiguration defines the configuration for the Gardener controller manager.
 type ControllerManagerConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// ClientConnection specifies the kubeconfig file and client connection
@@ -105,7 +105,7 @@ type ControllerManagerConfiguration struct {
 	ClientConnection ClientConnectionConfiguration `json:"clientConnection"`
 	// Controller defines the configuration of the controllers.
 	Controller ControllerManagerControllerConfiguration `json:"controller"`
-	// Images is a list of container images which are deployed by the Garden controller manager.
+	// Images is a list of container images which are deployed by the Gardener controller manager.
 	Images []ControllerManagerImagesConfiguration `json:"images"`
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
@@ -119,7 +119,7 @@ type ControllerManagerConfiguration struct {
 }
 
 // ControllerManagerControllerConfiguration contains configuration for the controllers
-// of the Garden controller manager. Not only the usual reconciliation configuration is reflected,
+// of the Gardener controller manager. Not only the usual reconciliation configuration is reflected,
 // but also a health check period and a namespace which should be watched.
 type ControllerManagerControllerConfiguration struct {
 	// HealthCheckPeriod is the duration how often the health check of Shoot clusters
@@ -132,7 +132,7 @@ type ControllerManagerControllerConfiguration struct {
 }
 
 // ControllerManagerImagesConfiguration contains configuration for the contaimer images and
-// tags/versions which are used by the Garden controller manager.
+// tags/versions which are used by the Gardener controller manager.
 type ControllerManagerImagesConfiguration struct {
 	// Name is an alias for the image.
 	Name string `json:"name"`
@@ -145,5 +145,5 @@ const (
 	ControllerManagerDefaultLockObjectNamespace = "garden"
 
 	// ControllerManagerDefaultLockObjectName is the default lock name for leader election.
-	ControllerManagerDefaultLockObjectName = "garden-controller-manager-leader-election"
+	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
 )
