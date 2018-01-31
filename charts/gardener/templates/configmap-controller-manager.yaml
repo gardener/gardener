@@ -1,33 +1,41 @@
+{{- if .Values.controller.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: gardener-controller-manager-configmap
   namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
 data:
   config.yaml: |
     ---
     apiVersion: componentconfig.sapcloud.io/v1alpha1
     kind: ControllerManagerConfiguration
     clientConnection:
-      acceptContentTypes: {{ .Values.controller.config.clientConnection.acceptContentTypes }}
-      contentType: {{ .Values.controller.config.clientConnection.contentType }}
-      qps: {{ .Values.controller.config.clientConnection.qps }}
-      burst: {{ .Values.controller.config.clientConnection.burst }}
+      acceptContentTypes: {{ required ".Values.controller.config.clientConnection.acceptContentTypes is required" .Values.controller.config.clientConnection.acceptContentTypes }}
+      contentType: {{ required ".Values.controller.config.clientConnection.contentType is required" .Values.controller.config.clientConnection.contentType }}
+      qps: {{ required ".Values.controller.config.clientConnection.qps is required" .Values.controller.config.clientConnection.qps }}
+      burst: {{ required ".Values.controller.config.clientConnection.burst is required" .Values.controller.config.clientConnection.burst }}
     controller:
-      healthCheckPeriod: {{ .Values.controller.config.controller.healthCheckPeriod }}
+      healthCheckPeriod: {{ required ".Values.controller.config.controller.healthCheckPeriod is required" .Values.controller.config.controller.healthCheckPeriod }}
       reconciliation:
-        concurrentSyncs: {{ .Values.controller.config.controller.reconciliation.concurrentSyncs }}
-        resyncPeriod: {{ .Values.controller.config.controller.reconciliation.resyncPeriod }}
-        retryDuration: {{ .Values.controller.config.controller.reconciliation.retryDuration }}
+        concurrentSyncs: {{ required ".Values.controller.config.controller.reconciliation.concurrentSyncs is required" .Values.controller.config.controller.reconciliation.concurrentSyncs }}
+        resyncPeriod: {{ required ".Values.controller.config.controller.reconciliation.resyncPeriod is required" .Values.controller.config.controller.reconciliation.resyncPeriod }}
+        retryDuration: {{ required ".Values.controller.config.controller.reconciliation.retryDuration is required" .Values.controller.config.controller.reconciliation.retryDuration }}
     leaderElection:
-      leaderElect: {{ .Values.controller.config.leaderElection.leaderElect }}
-      leaseDuration: {{ .Values.controller.config.leaderElection.leaseDuration }}
-      renewDeadline: {{ .Values.controller.config.leaderElection.renewDeadline }}
-      retryPeriod: {{ .Values.controller.config.leaderElection.retryPeriod }}
-      resourceLock: {{ .Values.controller.config.leaderElection.resourceLock }}
-    logLevel: {{ .Values.controller.config.logLevel }}
+      leaderElect: {{ required ".Values.controller.config.leaderElection.leaderElect is required" .Values.controller.config.leaderElection.leaderElect }}
+      leaseDuration: {{ required ".Values.controller.config.leaderElection.leaseDuration is required" .Values.controller.config.leaderElection.leaseDuration }}
+      renewDeadline: {{ required ".Values.controller.config.leaderElection.renewDeadline is required" .Values.controller.config.leaderElection.renewDeadline }}
+      retryPeriod: {{ required ".Values.controller.config.leaderElection.retryPeriod is required" .Values.controller.config.leaderElection.retryPeriod }}
+      resourceLock: {{ required ".Values.controller.config.leaderElection.resourceLock is required" .Values.controller.config.leaderElection.resourceLock }}
+    logLevel: {{ required ".Values.controller.config.logLevel is required" .Values.controller.config.logLevel }}
     metrics:
-      interval: {{ .Values.controller.config.metrics.interval }}
+      interval: {{ required ".Values.controller.config.metrics.interval is required" .Values.controller.config.metrics.interval }}
     server:
-      bindAddress: {{ .Values.controller.config.server.bindAddress }}
-      port: {{ .Values.controller.config.server.port }}
+      bindAddress: {{ required ".Values.controller.config.server.bindAddress is required" .Values.controller.config.server.bindAddress }}
+      port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+{{- end }}

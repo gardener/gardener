@@ -1,0 +1,21 @@
+{{- if .Values.apiserver.enabled }}
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1beta1.garden.sapcloud.io
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  caBundle: {{ required ".Values.apiserver.caBundle is required" (b64enc .Values.apiserver.caBundle) }}
+  group: garden.sapcloud.io
+  version: v1beta1
+  groupPriorityMinimum: {{ required ".Values.apiserver.groupPriorityMinimum is required" .Values.apiserver.groupPriorityMinimum }}
+  versionPriority: {{ required ".Values.apiserver.versionPriority is required" .Values.apiserver.versionPriority }}
+  service:
+    name: gardener-apiserver
+    namespace: garden
+{{- end }}

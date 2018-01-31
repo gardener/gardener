@@ -11,7 +11,7 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
-  replicas: {{ .Values.apiserver.replicaCount }}
+  replicas: {{ required ".Values.apiserver.replicaCount is required" .Values.apiserver.replicaCount }}
   selector:
     matchLabels:
       app: gardener
@@ -25,10 +25,10 @@ spec:
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
     spec:
-      serviceAccountName: {{ .Values.apiserver.serviceAccountName }}
+      serviceAccountName: {{ required ".Values.apiserver.serviceAccountName is required" .Values.apiserver.serviceAccountName }}
       containers:
       - name: gardener-apiserver
-        image: {{ .Values.apiserver.image.repository }}:{{ .Values.apiserver.image.tag }}
+        image: {{ required ".Values.apiserver.image.repository is required" .Values.apiserver.image.repository }}:{{ required ".Values.apiserver.image.tag is required" .Values.apiserver.image.tag }}
         imagePullPolicy: IfNotPresent
         command:
         - /gardener-apiserver
@@ -37,10 +37,19 @@ spec:
         - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
-        {{- if .Values.apiserver.useEtcdSidecar }}
+        {{- if .Values.apiserver.etcd.useSidecar }}
         - --etcd-servers=http://localhost:2379
         {{- else }}
-        - --etcd-servers={{ .Values.apiserver.etcdServers }}
+        - --etcd-servers={{ required ".Values.apiserver.etcd.servers is required" .Values.apiserver.etcd.servers }}
+        {{- if .Values.apiserver.etcd.caBundle }}
+        - --etcd-cafile=/var/run/kubernetes/etcd-client-ca.crt
+        {{- end }}
+        {{- if .Values.apiserver.etcd.tls }}
+        - --etcd-certfile=/var/run/kubernetes/etcd-client.crt
+        {{- end }}
+        {{- if .Values.apiserver.etcd.tls }}
+        - --etcd-keyfile=/var/run/kubernetes/etcd-client.key
+        {{- end }}
         {{- end }}
         - --secure-port=443
         - --tls-cert-file=/var/run/kubernetes/gardener-apiserver.crt
@@ -52,7 +61,7 @@ spec:
           readOnly: true
         - name: garden-audit-policy-config
           mountPath: /etc/garden/audit
-      {{- if .Values.apiserver.useEtcdSidecar }}
+      {{- if .Values.apiserver.etcd.useSidecar }}
       - name: etcd
         image: quay.io/coreos/etcd:v3.2
         imagePullPolicy: IfNotPresent
@@ -86,7 +95,7 @@ spec:
           mountPath: /var/etcd/data
       {{- end }}
       volumes:
-      {{- if .Values.apiserver.useEtcdSidecar }}
+      {{- if .Values.apiserver.etcd.useSidecar }}
       - name: etcd
         emptyDir: {}
       {{- end }}
@@ -96,7 +105,7 @@ spec:
       - name: garden-audit-policy-config
         configMap:
           name: garden-audit-policy-config
-{{- if .Values.apiserver.useEtcdSidecar }}
+{{- if .Values.apiserver.etcd.useSidecar }}
 ---
 apiVersion: v1
 kind: Service

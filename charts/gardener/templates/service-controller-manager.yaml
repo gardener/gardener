@@ -16,7 +16,7 @@ spec:
     role: controller-manager
     release: {{ .Release.Name }}
   ports:
-  - port: {{ .Values.controller.config.server.port }}
+  - port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
     protocol: TCP
-    targetPort: {{ .Values.controller.config.server.port }}
-{{- end}}
+    targetPort: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+{{- end }}

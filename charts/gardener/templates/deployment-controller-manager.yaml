@@ -11,7 +11,7 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
-  replicas: {{ .Values.controller.replicaCount }}
+  replicas: {{ required ".Values.controller.replicaCount is required" .Values.controller.replicaCount }}
   selector:
     matchLabels:
       app: gardener
@@ -25,10 +25,10 @@ spec:
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
     spec:
-      serviceAccountName: {{ .Values.controller.serviceAccountName }}
+      serviceAccountName: {{ required ".Values.controller.serviceAccountName is required" .Values.controller.serviceAccountName }}
       containers:
       - name: gardener-controller-manager
-        image: {{ .Values.controller.image.repository }}:{{ .Values.controller.image.tag }}
+        image: {{ required ".Values.controller.image.repository is required" .Values.controller.image.repository }}:{{ required ".Values.controller.image.tag is required" .Values.controller.image.tag }}
         imagePullPolicy: IfNotPresent
         command:
         - /gardener-controller-manager
@@ -36,7 +36,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ .Values.controller.config.server.port }}
+            port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
             scheme: HTTP
           initialDelaySeconds: 30
           timeoutSeconds: 5

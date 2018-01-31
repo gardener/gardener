@@ -1,23 +1,44 @@
-# Default values for gardener.
+# Gardener API server configuration values
 apiserver:
   enabled: true
-  useEtcdSidecar: false # only meant for development purposes
   replicaCount: 1
-  etcdServers: http://etcd:2379
-  groupPriorityMinimum: 10000
-  versionPriority: 20
   serviceAccountName: gardener-apiserver
   image:
     repository: rfranzke/gardener-apiserver
     tag: latest
+  etcd:
+    useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
+    servers: https://etcd:2379
+    # caBundle: |
+    #   -----BEGIN CERTIFICATE-----
+    #   ...
+    #   -----END CERTIFICATE-----
+    # tls:
+    #   crt: |
+    #     -----BEGIN CERTIFICATE-----
+    #     ...
+    #     -----END CERTIFICATE-----
+    #   key: |
+    #     -----BEGIN RSA PRIVATE KEY-----
+    #     ...
+    #     -----END RSA PRIVATE KEY-----
+  groupPriorityMinimum: 10000
+  versionPriority: 20
   caBundle: |
-    ---
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----
   tls:
     crt: |
-      ---
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
     key: |
-      ---
+      -----BEGIN RSA PRIVATE KEY-----
+      ...
+      -----END RSA PRIVATE KEY-----
 
+# Gardener controller manager configuration values
 controller:
   enabled: true
   replicaCount: 1
@@ -40,8 +61,8 @@ controller:
   #     accessKeyID: access-key-id-with-route53-privileges
   #     secretAccessKey: secret-access-key-with-route53-privileges
   alertingSMTP: []
-  # - to: email-address-to-send-notifcations-to
-  #   from: email-address-to-send-notifcations-from
+  # - to: email-address-to-send-alerts-to
+  #   from: email-address-to-send-alerts-from
   #   smarthost: smtp-host-used-for-sending
   #   auth_username: smtp-authentication-username
   #   auth_identity: smtp-authentication-username
