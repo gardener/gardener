@@ -46,6 +46,7 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
@@ -228,24 +229,37 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
 	var (
-		kubeconfig       = config.ClientConnection.KubeConfigFile
-		runningInCluster = kubeconfig == ""
+		kubeconfig         = config.ClientConnection.KubeConfigFile
+		gardenerKubeConfig = config.GardenerClientConnection.KubeConfigFile
+		runningInCluster   = kubeconfig == ""
 	)
+
 	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
+
+	gardenerClient := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: gardenerKubeConfig},
+		&clientcmd.ConfigOverrides{},
+	)
+
+	gardenerClientConfig, err := gardenerClient.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenClientset, err := gardenclientset.NewForConfig(k8sGardenClient.GetConfig())
+	gardenerClientSet, err := gardenclientset.NewForConfig(gardenerClientConfig)
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClient.SetGardenClientset(gardenClientset)
+	k8sGardenClient.SetGardenClientset(gardenerClientSet)
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (

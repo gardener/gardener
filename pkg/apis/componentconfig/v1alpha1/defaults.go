@@ -45,6 +45,26 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.ClientConnection.Burst = 100
 	}
 
+	if obj.GardenerClientConnection == nil {
+		obj.GardenerClientConnection = &obj.ClientConnection
+	} else {
+		if len(obj.GardenerClientConnection.KubeConfigFile) == 0 {
+			obj.GardenerClientConnection.KubeConfigFile = obj.ClientConnection.KubeConfigFile
+		}
+		if len(obj.GardenerClientConnection.AcceptContentTypes) == 0 {
+			obj.GardenerClientConnection.AcceptContentTypes = "application/json"
+		}
+		if len(obj.GardenerClientConnection.ContentType) == 0 {
+			obj.GardenerClientConnection.ContentType = "application/json"
+		}
+		if obj.GardenerClientConnection.QPS == 0.0 {
+			obj.GardenerClientConnection.QPS = obj.ClientConnection.QPS
+		}
+		if obj.GardenerClientConnection.Burst == 0 {
+			obj.GardenerClientConnection.Burst = obj.ClientConnection.Burst
+		}
+	}
+
 	if len(obj.LeaderElection.LockObjectNamespace) == 0 {
 		obj.LeaderElection.LockObjectNamespace = ControllerManagerDefaultLockObjectNamespace
 	}
