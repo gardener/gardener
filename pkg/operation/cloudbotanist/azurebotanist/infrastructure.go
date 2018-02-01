@@ -85,28 +85,11 @@ func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() []map[strin
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, createVNet bool, resourceGroupName, vnetName string, vnetCIDR gardenv1beta1.CIDR, countUpdateDomains, countFaultDomains gardenv1beta1.AzureDomainCount) map[string]interface{} {
-	var (
-		sshSecret                   = b.Secrets["ssh-keypair"]
-		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
-		workers                     = []map[string]interface{}{}
-	)
-
-	networks := map[string]interface{}{
+	var networks = map[string]interface{}{
 		"worker": b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers,
 	}
 	if b.Shoot.Info.Spec.Cloud.Azure.Networks.Public != nil {
 		networks["public"] = *(b.Shoot.Info.Spec.Cloud.Azure.Networks.Public)
-	}
-
-	for _, worker := range b.Shoot.Info.Spec.Cloud.Azure.Workers {
-		workers = append(workers, map[string]interface{}{
-			"name":          worker.Name,
-			"machineType":   worker.MachineType,
-			"volumeType":    worker.VolumeType,
-			"volumeSize":    common.DiskSize(worker.VolumeSize),
-			"autoScalerMin": worker.AutoScalerMin,
-			"autoScalerMax": worker.AutoScalerMax,
-		})
 	}
 
 	return map[string]interface{}{
@@ -121,7 +104,6 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 			"resourceGroup": createResourceGroup,
 			"vnet":          createVNet,
 		},
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
 		"resourceGroup": map[string]interface{}{
 			"name": resourceGroupName,
 			"vnet": map[string]interface{}{
@@ -130,15 +112,10 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 			},
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": map[string]interface{}{
-			"sku":     b.Shoot.Info.Spec.Cloud.Azure.MachineImage.SKU,
-			"version": b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Version,
-		},
-		"cloudConfig": map[string]interface{}{
-			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
+		"cloudConfig": map[string]interface{}{ // Keep that until the terraformer-common chart does not longer include cloud config downloader
+			"kubeconfig": "not-used-for-azure",
 		},
 		"networks": networks,
-		"workers":  workers,
 	}
 }
 

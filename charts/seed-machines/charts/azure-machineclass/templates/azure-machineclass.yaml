@@ -1,0 +1,59 @@
+{{- range $index, $machineClass := .Values.machineClasses }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    garden.sapcloud.io/purpose: machineclass
+type: Opaque
+data:
+  userData: {{ $machineClass.secret.cloudConfig | b64enc }}
+  azureClientId: {{ $machineClass.secret.clientID | b64enc }}
+  azureClientSecret: {{ $machineClass.secret.clientSecret | b64enc }}
+  azureSubscriptionId: {{ $machineClass.secret.subscriptionID | b64enc }}
+  azureTenantId: {{ $machineClass.secret.tenantID | b64enc }}
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: AzureMachineClass
+metadata:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  location: {{ $machineClass.region }}
+  properties:
+    availabilitySet:
+      id: {{ $machineClass.availabilitySetID }}
+    hardwareProfile:
+      vmSize: {{ $machineClass.machineType }}
+    osProfile:
+      adminUserName: core
+      linuxConfiguration:
+        disablePasswordAuthentication: true
+        ssh:
+          publicKeys:
+            path: /home/core/.ssh/authorized_keys
+            keyData: {{ $machineClass.sshPublicKey }}
+    storageProfile:
+      imageReference:
+        publisher: {{ $machineClass.image.publisher }}
+        offer: {{ $machineClass.image.offer }}
+        sku: {{ $machineClass.image.sku }}
+        version: {{ $machineClass.image.version }}
+      osDisk:
+        caching: None
+        diskSizeGB: {{ $machineClass.volumeSize }}
+        createOption: FromImage
+  resourceGroup: {{ $machineClass.resourceGroup }}
+  secretRef:
+    name: {{ $machineClass.name }}
+    namespace: {{ $.Release.Namespace }}
+  subnetInfo:
+    vnetName: {{ $machineClass.vnetName }}
+    subnetName: {{ $machineClass.subnetName }}
+{{- if $machineClass.tags }}
+  tags:
+{{ toYaml $machineClass.tags | indent 4 }}
+{{- end }}
+{{- end }}

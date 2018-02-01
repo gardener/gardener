@@ -1,0 +1,25 @@
+machineClasses:
+- name: class-1
+  region: northeurope
+  resourceGroup: my-resource-group
+  vnetName: my-vnet
+  subnetName: my-subnet-in-my-vnet
+  availabilitySetID: /subscriptions/subscription-id/resourceGroups/resource-group-name/providers/Microsoft.Compute/availabilitySets/availablity-set-name
+  tags:
+    Name: shoot-crazy-botany
+    kubernetes.io-cluster-shoot-crazy-botany: "1"
+    kubernetes.io-role-node: "1"
+  secret:
+    clientID: ABCD
+    clientSecret: ABCD
+    subscriptionID: abc
+    tenantID: abc
+    cloudConfig: abc
+  machineType: Standard_DS1_V2
+  image:
+    publisher: CoreOS
+    offer: CoreOS
+    sku: Stable
+    version: "1576.5.0"
+  volumeSize: 50
+  sshPublicKey: ssh-rsa AAAAB3...

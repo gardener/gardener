@@ -9,8 +9,6 @@
 #   resourceGroup: true
 #   vnet: true
 
-# sshPublicKey: sshkey-12345
-
 # resourceGroup:
 #   name: my-resource-group
 #   vnet:
@@ -26,21 +24,6 @@
 
 # initializeEmptyState: true
 
-# coreOSImage:
-#   sku: Beta
-#   version: 1548.3.0
-
-# cloudConfig:
-#   kubeconfig: kubeconfig for cloud-config-downloader
-
 # networks:
 #   worker: 10.250.0.0/19
 # #  public: 10.250.96.0/22 # optional
-
-# workers:
-# - name: cpu-worker
-#   machineType: Standard_DS2_v2
-#   volumeType: standard
-#   volumeSize: 20Gi
-#   autoScalerMin: 2
-#   autoScalerMax: 2

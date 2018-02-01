@@ -15,23 +15,99 @@
 package azurebotanist
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
 // contains the machine class template.
-// TODO@MachineController: Implement once the machine-controller-manager supports Azure.
 func (b *AzureBotanist) GetMachineClassInfo() (classKind, classPlural, classChartName string) {
-	classKind = ""
-	classPlural = ""
-	classChartName = ""
+	classKind = "AzureMachineClass"
+	classPlural = "azuremachineclasses"
+	classChartName = "azure-machineclass"
 	return
 }
 
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
-// also generates a list of corresponding MachineDeployments. It returns the name of the cloud-specific MachineClass, the cloud-specific Helm
-// chart name, the corresponding values, and the list of MachineDeployments.
-// TODO@MachineController: Implement once the machine-controller-manager supports Azure.
+// also generates a list of corresponding MachineDeployments. It returns the computed list of MachineClasses and
+// MachineDeployments.
 func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error) {
-	return nil, nil, nil
+	var (
+		resourceGroupName = "resourceGroupName"
+		vnetName          = "vnetName"
+		subnetName        = "subnetName"
+		availabilitySetID = "availabilitySetID"
+		outputVariables   = []string{resourceGroupName, vnetName, subnetName, availabilitySetID}
+		workers           = b.Shoot.Info.Spec.Cloud.Azure.Workers
+
+		machineDeployments = []operation.MachineDeployment{}
+		machineClasses     = []map[string]interface{}{}
+	)
+
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(outputVariables...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, worker := range workers {
+		volumeSize, err := strconv.Atoi(common.DiskSize(worker.VolumeSize))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		machineClassSpec := map[string]interface{}{
+			"region":            b.Shoot.Info.Spec.Cloud.Region,
+			"resourceGroup":     stateVariables[resourceGroupName],
+			"vnetName":          stateVariables[vnetName],
+			"subnetName":        stateVariables[subnetName],
+			"availabilitySetID": stateVariables[availabilitySetID],
+			"tags": map[string]interface{}{
+				"Name": b.Shoot.SeedNamespace,
+				fmt.Sprintf("kubernetes.io-cluster-%s", b.Shoot.SeedNamespace): "1",
+				"kubernetes.io-role-node":                                      "1",
+			},
+			"secret": map[string]interface{}{
+				"clientID":       string(b.Shoot.Secret.Data[ClientID]),
+				"clientSecret":   string(b.Shoot.Secret.Data[ClientSecret]),
+				"subscriptionID": string(b.Shoot.Secret.Data[SubscriptionID]),
+				"tenantID":       string(b.Shoot.Secret.Data[TenantID]),
+				"cloudConfig":    cloudConfig.FileContent("cloud-config.yaml"),
+			},
+			"machineType": worker.MachineType,
+			"image": map[string]interface{}{
+				"publisher": b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Publisher,
+				"offer":     b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Offer,
+				"sku":       b.Shoot.Info.Spec.Cloud.Azure.MachineImage.SKU,
+				"version":   b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Version,
+			},
+			"volumeSize":   volumeSize,
+			"sshPublicKey": string(b.Secrets["ssh-keypair"].Data["id_rsa.pub"]),
+		}
+
+		var (
+			machineClassSpecHash = common.MachineClassHash(machineClassSpec, b.Shoot.KubernetesMajorMinorVersion)
+			deploymentName       = fmt.Sprintf("%s-%s", b.Shoot.SeedNamespace, worker.Name)
+			className            = fmt.Sprintf("%s-%s", deploymentName, machineClassSpecHash)
+		)
+
+		machineDeployments = append(machineDeployments, operation.MachineDeployment{
+			Name:      deploymentName,
+			ClassName: className,
+			Replicas:  worker.AutoScalerMax,
+		})
+
+		machineClassSpec["name"] = className
+		machineClasses = append(machineClasses, machineClassSpec)
+	}
+
+	return machineClasses, machineDeployments, nil
 }
