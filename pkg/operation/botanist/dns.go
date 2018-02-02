@@ -135,6 +135,12 @@ func (b *Botanist) getDomainCredentials(purposeInternalDomain bool, requiredKeys
 	switch {
 	case purposeInternalDomain:
 		secret = b.Secrets[common.GardenRoleInternalDomain]
+	case b.Shoot.Info.Spec.DNS.SecretName != nil:
+		dnsSecret, err := b.K8sGardenClient.GetSecret(b.Shoot.Info.Namespace, *b.Shoot.Info.Spec.DNS.SecretName)
+		if err != nil {
+			return nil, err
+		}
+		secret = dnsSecret
 	case b.DefaultDomainSecret != nil:
 		secret = b.DefaultDomainSecret
 	default:
