@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: garden-audit-policy-config
+  name: gardener-audit-policy-config
   namespace: garden
   labels:
     app: gardener

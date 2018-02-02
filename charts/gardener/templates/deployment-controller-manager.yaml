@@ -18,6 +18,11 @@ spec:
       role: controller-manager
   template:
     metadata:
+      annotations:
+        checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/configmap-controller-manager.yaml") . | sha256sum }}
+        checksum/secret-default-domain: {{ include (print $.Template.BasePath "/secret-default-domain.yaml") . | sha256sum }}
+        checksum/secret-internal-domain: {{ include (print $.Template.BasePath "/secret-internal-domain.yaml") . | sha256sum }}
+        checksum/secret-alerting-smtp: {{ include (print $.Template.BasePath "/secret-alerting-smtp.yaml") . | sha256sum }}
       labels:
         app: gardener
         role: controller-manager

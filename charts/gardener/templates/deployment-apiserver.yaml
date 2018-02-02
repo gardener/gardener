@@ -18,6 +18,9 @@ spec:
       role: apiserver
   template:
     metadata:
+      annotations:
+        checksum/configmap-gardener-audit-policy-config: {{ include (print $.Template.BasePath "/configmap-apiserver-audit.yaml") . | sha256sum }}
+        checksum/secret-gardener-apiserver-cert: {{ include (print $.Template.BasePath "/secret-apiserver.yaml") . | sha256sum }}
       labels:
         app: gardener
         role: apiserver
@@ -59,7 +62,7 @@ spec:
         - name: gardener-apiserver-cert
           mountPath: /var/run/kubernetes
           readOnly: true
-        - name: garden-audit-policy-config
+        - name: gardener-audit-policy-config
           mountPath: /etc/garden/audit
       {{- if .Values.apiserver.etcd.useSidecar }}
       - name: etcd
@@ -102,9 +105,9 @@ spec:
       - name: gardener-apiserver-cert
         secret:
           secretName: gardener-apiserver-cert
-      - name: garden-audit-policy-config
+      - name: gardener-audit-policy-config
         configMap:
-          name: garden-audit-policy-config
+          name: gardener-audit-policy-config
 {{- if .Values.apiserver.etcd.useSidecar }}
 ---
 apiVersion: v1
