@@ -20,6 +20,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -171,7 +172,7 @@ func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 			"region": b.Seed.Info.Spec.Cloud.Region,
 		},
 		"bucket": map[string]interface{}{
-			"name": b.Shoot.SeedNamespace,
+			"name": fmt.Sprintf("%s-%s", b.Shoot.SeedNamespace, utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))[:5]),
 		},
 		"clusterName": b.Shoot.SeedNamespace,
 	}
