@@ -1106,6 +1106,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"secretName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "SecretName is a name of a secret containing credentials for the stated HostedZoneID and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behaviour, i.e. forcing the Gardener to only look into the given secret.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
 					Required: []string{"provider"},
 				},

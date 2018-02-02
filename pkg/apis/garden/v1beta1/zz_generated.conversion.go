@@ -972,6 +972,7 @@ func autoConvert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversio
 	out.Provider = garden.DNSProvider(in.Provider)
 	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
+	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	return nil
 }
 
@@ -984,6 +985,7 @@ func autoConvert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversio
 	out.Provider = DNSProvider(in.Provider)
 	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
+	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
 	return nil
 }
 

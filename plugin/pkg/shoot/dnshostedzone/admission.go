@@ -145,18 +145,30 @@ func verifyHostedZoneID(shoot *garden.Shoot, privateSecretBindingLister gardenli
 		}
 	}
 
-	// If the hosted zone id does not match a default domain then the cloud provider secret must contain valid
-	// credentials for the respective DNS provider.
-	cloudProviderSecret, err := getCloudProviderSecret(shoot, privateSecretBindingLister, crossSecretBindingLister, secretLister)
-	if err != nil {
-		return err
+	// If the hosted zone id does not match a default domain then either the cloud provider secret must contain valid
+	// credentials for the respective DNS provider, or the spec.dns section must contain a field 'secretName' which is
+	// a reference to a secret containing the needed credentials.
+	var credentials *corev1.Secret
+	if shoot.Spec.DNS.SecretName != nil {
+		referencedSecret, err := secretLister.Secrets(shoot.Namespace).Get(*shoot.Spec.DNS.SecretName)
+		if err != nil {
+			return err
+		}
+		credentials = referencedSecret
+	} else {
+		cloudProviderSecret, err := getCloudProviderSecret(shoot, privateSecretBindingLister, crossSecretBindingLister, secretLister)
+		if err != nil {
+			return err
+		}
+		credentials = cloudProviderSecret
 	}
+
 	switch shoot.Spec.DNS.Provider {
 	case garden.DNSAWSRoute53:
-		_, accessKeyFound := cloudProviderSecret.Data[awsbotanist.AccessKeyID]
-		_, secretKeyFound := cloudProviderSecret.Data[awsbotanist.SecretAccessKey]
+		_, accessKeyFound := credentials.Data[awsbotanist.AccessKeyID]
+		_, secretKeyFound := credentials.Data[awsbotanist.SecretAccessKey]
 		if !accessKeyFound || !secretKeyFound {
-			return errors.New("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret contains AWS credentials for Route53")
+			return errors.New("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains AWS credentials for Route53")
 		}
 	}
 

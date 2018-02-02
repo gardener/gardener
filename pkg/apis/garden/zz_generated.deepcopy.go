@@ -764,6 +764,15 @@ func (in *DNS) DeepCopyInto(out *DNS) {
 			**out = **in
 		}
 	}
+	if in.SecretName != nil {
+		in, out := &in.SecretName, &out.SecretName
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
+	}
 	return
 }
 
