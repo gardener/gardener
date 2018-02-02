@@ -337,10 +337,13 @@ type CrossReference struct {
 // K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type K8SNetworks struct {
 	// Nodes is the CIDR of the node network.
+	// +optional
 	Nodes CIDR
 	// Pods is the CIDR of the pod network.
+	// +optional
 	Pods CIDR
 	// Services is the CIDR of the service network.
+	// +optional
 	Services CIDR
 }
 
@@ -580,6 +583,7 @@ type AWSCloud struct {
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AWSVPC
@@ -629,6 +633,7 @@ type AzureResourceGroup struct {
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet
@@ -670,6 +675,7 @@ type GCPCloud struct {
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	// +optional
@@ -709,6 +715,7 @@ type OpenStackCloud struct {
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks
 	// Router indicates whether to use an existing router or create a new one.
 	// +optional
@@ -774,36 +781,50 @@ type Addon struct {
 
 // HelmTiller describes configuration values for the helm-tiller addon.
 type HelmTiller struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 }
 
 // Heapster describes configuration values for the heapster addon.
 type Heapster struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 }
 
 // KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.
 type KubernetesDashboard struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 }
 
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
 type ClusterAutoscaler struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 }
 
 // Monocular describes configuration values for the monocular addon.
 type Monocular struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 }
 
 // KubeLego describes configuration values for the kube-lego addon.
 type KubeLego struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 	// Mail is the email address to register at Let's Encrypt.
 	// +optional
@@ -812,6 +833,8 @@ type KubeLego struct {
 
 // Kube2IAM describes configuration values for the kube2iam addon.
 type Kube2IAM struct {
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
 	Addon
 	// Roles is list of AWS IAM roles which should be created by the Gardener.
 	// +optional

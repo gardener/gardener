@@ -173,9 +173,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "AWSNetworks holds information about the Kubernetes and infrastructure networks.",
 					Properties: map[string]spec.Schema{
-						"K8SNetworks": {
+						"nodes": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"),
+								Description: "Nodes is the CIDR of the node network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"pods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Pods is the CIDR of the pod network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Services is the CIDR of the service network.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"vpc": {
@@ -227,11 +243,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"K8SNetworks", "vpc", "internal", "public", "workers"},
+					Required: []string{"vpc", "internal", "public", "workers"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSVPC", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSVPC"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile": {
 			Schema: spec.Schema{
@@ -293,9 +309,32 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "AWSWorker is the definition of a worker group.",
 					Properties: map[string]spec.Schema{
-						"Worker": {
+						"name": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"),
+								Description: "Name is the name of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"machineType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineType is the machine type of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"autoScalerMin": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the minimum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"autoScalerMax": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the maximum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
 						"volumeType": {
@@ -313,11 +352,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"Worker", "volumeType", "volumeSize"},
+					Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon": {
 			Schema: spec.Schema{
@@ -538,9 +576,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "AzureNetworks holds information about the Kubernetes and infrastructure networks.",
 					Properties: map[string]spec.Schema{
-						"K8SNetworks": {
+						"nodes": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"),
+								Description: "Nodes is the CIDR of the node network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"pods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Pods is the CIDR of the pod network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Services is the CIDR of the service network.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"vnet": {
@@ -564,11 +618,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"K8SNetworks", "vnet", "workers"},
+					Required: []string{"vnet", "workers"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureVNet", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureVNet"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile": {
 			Schema: spec.Schema{
@@ -667,9 +721,32 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "AzureWorker is the definition of a worker group.",
 					Properties: map[string]spec.Schema{
-						"Worker": {
+						"name": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"),
+								Description: "Name is the name of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"machineType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineType is the machine type of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"autoScalerMin": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the minimum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"autoScalerMax": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the maximum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
 						"volumeType": {
@@ -687,11 +764,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"Worker", "volumeType", "volumeSize"},
+					Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup": {
 			Schema: spec.Schema{
@@ -903,17 +979,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition": {
 			Schema: spec.Schema{
@@ -1275,9 +1351,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "GCPNetworks holds information about the Kubernetes and infrastructure networks.",
 					Properties: map[string]spec.Schema{
-						"K8SNetworks": {
+						"nodes": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"),
+								Description: "Nodes is the CIDR of the node network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"pods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Pods is the CIDR of the pod network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Services is the CIDR of the service network.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"vpc": {
@@ -1301,11 +1393,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"K8SNetworks", "workers"},
+					Required: []string{"workers"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPVPC", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPVPC"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile": {
 			Schema: spec.Schema{
@@ -1354,9 +1446,32 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "GCPWorker is the definition of a worker group.",
 					Properties: map[string]spec.Schema{
-						"Worker": {
+						"name": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"),
+								Description: "Name is the name of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"machineType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineType is the machine type of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"autoScalerMin": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the minimum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"autoScalerMax": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the maximum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
 						"volumeType": {
@@ -1374,11 +1489,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"Worker", "volumeType", "volumeSize"},
+					Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener": {
 			Schema: spec.Schema{
@@ -1417,34 +1531,34 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "Heapster describes configuration values for the heapster addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HelmTiller": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Description: "HelmTiller describes configuration values for the helm-tiller addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks": {
 			Schema: spec.Schema{
@@ -1473,7 +1587,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"nodes", "pods", "services"},
 				},
 			},
 			Dependencies: []string{},
@@ -1483,9 +1596,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "Kube2IAM describes configuration values for the kube2iam addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 						"roles": {
@@ -1502,11 +1617,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole": {
 			Schema: spec.Schema{
@@ -1599,9 +1713,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "KubeLego describes configuration values for the kube-lego addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 						"email": {
@@ -1612,11 +1728,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeProxyConfig": {
 			Schema: spec.Schema{
@@ -1779,17 +1893,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError": {
 			Schema: spec.Schema{
@@ -1931,34 +2045,34 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "Monocular describes configuration values for the monocular addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Description: "NginxIngress describes configuration values for the nginx-ingress addon.",
 					Properties: map[string]spec.Schema{
-						"Addon": {
+						"enabled": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"),
+								Description: "Enabled indicates whether the addon is enabled or not.",
+								Type:        []string{"boolean"},
+								Format:      "",
 							},
 						},
 					},
-					Required: []string{"Addon"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig": {
 			Schema: spec.Schema{
@@ -2220,9 +2334,25 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "OpenStackNetworks holds information about the Kubernetes and infrastructure networks.",
 					Properties: map[string]spec.Schema{
-						"K8SNetworks": {
+						"nodes": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"),
+								Description: "Nodes is the CIDR of the node network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"pods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Pods is the CIDR of the pod network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Services is the CIDR of the service network.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"router": {
@@ -2246,11 +2376,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"K8SNetworks", "workers"},
+					Required: []string{"workers"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackRouter"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackRouter"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile": {
 			Schema: spec.Schema{
@@ -2313,17 +2443,39 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "OpenStackWorker is the definition of a worker group.",
 					Properties: map[string]spec.Schema{
-						"Worker": {
+						"name": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"),
+								Description: "Name is the name of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"machineType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineType is the machine type of the worker group.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"autoScalerMin": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the minimum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
+							},
+						},
+						"autoScalerMax": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoScalerMin is the maximum number of VMs to create.",
+								Type:        []string{"integer"},
+								Format:      "int32",
 							},
 						},
 					},
-					Required: []string{"Worker"},
+					Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Worker"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PrivateSecretBinding": {
 			Schema: spec.Schema{

@@ -337,11 +337,14 @@ type CrossReference struct {
 // K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type K8SNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes CIDR `json:"nodes"`
+	// +optional
+	Nodes CIDR `json:"nodes,omitempty"`
 	// Pods is the CIDR of the pod network.
-	Pods CIDR `json:"pods"`
+	// +optional
+	Pods CIDR `json:"pods,omitempty"`
 	// Services is the CIDR of the service network.
-	Services CIDR `json:"services"`
+	// +optional
+	Services CIDR `json:"services,omitempty"`
 }
 
 ////////////////////////////////////////////////////
@@ -580,7 +583,8 @@ type AWSCloud struct {
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
-	K8SNetworks
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AWSVPC `json:"vpc"`
 	// Internal is a list of private subnets to create (used for internal load balancers).
@@ -603,7 +607,7 @@ type AWSVPC struct {
 
 // AWSWorker is the definition of a worker group.
 type AWSWorker struct {
-	Worker
+	Worker `json:",inline"`
 	// VolumeType is the type of the root volumes.
 	VolumeType string `json:"volumeType"`
 	// VolumeSize is the size of the root volume.
@@ -629,7 +633,8 @@ type AzureResourceGroup struct {
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
-	K8SNetworks
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+	K8SNetworks `json:",inline"`
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet `json:"vnet"`
 	// Public is a CIDR of a public subnet to create (used for bastion).
@@ -651,7 +656,7 @@ type AzureVNet struct {
 
 // AzureWorker is the definition of a worker group.
 type AzureWorker struct {
-	Worker
+	Worker `json:",inline"`
 	// VolumeType is the type of the root volumes.
 	VolumeType string `json:"volumeType"`
 	// VolumeSize is the size of the root volume.
@@ -670,7 +675,8 @@ type GCPCloud struct {
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
-	K8SNetworks
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	// +optional
 	VPC *GCPVPC `json:"vpc,omitempty"`
@@ -686,7 +692,7 @@ type GCPVPC struct {
 
 // GCPWorker is the definition of a worker group.
 type GCPWorker struct {
-	Worker
+	Worker `json:",inline"`
 	// VolumeType is the type of the root volumes.
 	VolumeType string `json:"volumeType"`
 	// VolumeSize is the size of the root volume.
@@ -709,7 +715,8 @@ type OpenStackCloud struct {
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
-	K8SNetworks
+	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+	K8SNetworks `json:",inline"`
 	// Router indicates whether to use an existing router or create a new one.
 	// +optional
 	Router *OpenStackRouter `json:"router,omitempty"`
@@ -725,7 +732,7 @@ type OpenStackRouter struct {
 
 // OpenStackWorker is the definition of a worker group.
 type OpenStackWorker struct {
-	Worker
+	Worker `json:",inline"`
 }
 
 // Worker is the base definition of a worker group.
@@ -774,37 +781,51 @@ type Addon struct {
 
 // HelmTiller describes configuration values for the helm-tiller addon.
 type HelmTiller struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 }
 
 // Heapster describes configuration values for the heapster addon.
 type Heapster struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 }
 
 // KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.
 type KubernetesDashboard struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 }
 
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
 type ClusterAutoscaler struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 }
 
 // Monocular describes configuration values for the monocular addon.
 type Monocular struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 }
 
 // KubeLego describes configuration values for the kube-lego addon.
 type KubeLego struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 	// Mail is the email address to register at Let's Encrypt.
 	// +optional
 	Mail string `json:"email,omitempty"`
@@ -812,7 +833,9 @@ type KubeLego struct {
 
 // Kube2IAM describes configuration values for the kube2iam addon.
 type Kube2IAM struct {
-	Addon
+	// Addon also enabling or disabling a specific addon and is used to derive from.
+	// +optional
+	Addon `json:",inline"`
 	// Roles is list of AWS IAM roles which should be created by the Gardener.
 	// +optional
 	Roles []Kube2IAMRole `json:"roles,omitempty"`
