@@ -4,7 +4,7 @@ apiserver:
   replicaCount: 1
   serviceAccountName: gardener-apiserver
   image:
-    repository: rfranzke/gardener-apiserver
+    repository: eu.gcr.io/gardener-project/gardener/apiserver
     tag: latest
   etcd:
     useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
@@ -44,7 +44,7 @@ controller:
   replicaCount: 1
   serviceAccountName: gardener-controller-manager
   image:
-    repository: rfranzke/gardener-controller-manager
+    repository: eu.gcr.io/gardener-project/gardener/controller-manager
     tag: latest
   internalDomain:
     provider: aws-route53 # currently, only aws-route53 is supported

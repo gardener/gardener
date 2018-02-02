@@ -14,14 +14,14 @@ images:
   repository: k8s.gcr.io/kube-addon-manager
   tag: v6.5
 - name: vpn-seed
-  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/seed
-  tag: v0.0.10
+  repository: eu.gcr.io/gardener-project/gardener/vpn-seed
+  tag: latest
 - name: auto-node-repair
-  repository: eu.gcr.io/sap-cloud-platform-dev1/auto-node-repair
-  tag: v4
+  repository: eu.gcr.io/gardener-project/gardener/auto-node-repair
+  tag: latest
 - name: aws-lb-readvertiser
-  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/garden-readvertiser
-  tag: v0.0.2
+  repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
+  tag: latest
 
 # Monitoring
 - name: alertmanager
@@ -64,8 +64,8 @@ images:
   tag: v1.11.0
   versions: "= 1.6"
 - name: vpn-shoot
-  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/vpn/shoot
-  tag: "0.0.9"
+  repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
+  tag: latest
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
   tag: "1.14.7"
@@ -107,8 +107,8 @@ images:
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
   tag: "0.10.1"
 - name: ingress-default-backend
-  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/k8s-backend
-  tag: v0.0.2
+  repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
+  tag: latest
 - name: vts-ingress-exporter
   repository: quay.io/cy-play/vts-nginx-exporter
   tag: v0.0.3
@@ -127,8 +127,8 @@ images:
 
 # Miscellaenous
 - name: terraformer
-  repository: eu.gcr.io/sap-cloud-platform-dev1/garden/garden-terraformer
-  tag: v0.10.8-4
+  repository: eu.gcr.io/gardener-project/gardener/terraformer
+  tag: latest
 - name: busybox
   repository: busybox
   tag: "1.27"

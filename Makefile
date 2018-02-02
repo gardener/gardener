@@ -12,18 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VCS              := github.com
-ORGANIZATION     := gardener
-PROJECT          := gardener
-REPOSITORY       := $(VCS)/$(ORGANIZATION)/$(PROJECT)
-VERSION          := $(shell cat VERSION)
-LD_FLAGS         := "-w -X $(REPOSITORY)/pkg/version.Version=$(VERSION)"
-PACKAGES         := $(shell go list ./... | grep -vE '/vendor/|/pkg/client/garden|/pkg/apis|/pkg/openapi')
-TEST_FOLDERS     := cmd pkg plugin
-LINT_FOLDERS     := $(shell echo $(PACKAGES) | sed "s|$(REPOSITORY)|.|g")
-REGISTRY         := eu.gcr.io/sap-cloud-platform-dev1
-IMAGE_REPOSITORY := $(REGISTRY)/garden/$(PROJECT)
-IMAGE_TAG        := $(VERSION)
+VCS                                := github.com
+ORGANIZATION                       := gardener
+PROJECT                            := gardener
+REPOSITORY                         := $(VCS)/$(ORGANIZATION)/$(PROJECT)
+VERSION                            := $(shell cat VERSION)
+LD_FLAGS                           := "-w -X $(REPOSITORY)/pkg/version.Version=$(VERSION)"
+PACKAGES                           := $(shell go list ./... | grep -vE '/vendor/|/pkg/client/garden|/pkg/apis|/pkg/openapi')
+TEST_FOLDERS                       := cmd pkg plugin
+LINT_FOLDERS                       := $(shell echo $(PACKAGES) | sed "s|$(REPOSITORY)|.|g")
+REGISTRY                           := eu.gcr.io/gardener-project/gardener
+APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
+APISERVER_IMAGE_TAG                := $(VERSION)
+CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
+CONROLLER_MANAGER_IMAGE_TAG        := $(VERSION)
 
 TYPES_FILES      := $(shell find pkg/apis -name types.go)
 
@@ -76,12 +78,12 @@ apiserver-build-release:
 .PHONY: apiserver-docker-image
 apiserver-docker-image:
 	@if [[ ! -f $(BIN_DIR)/rel/gardener-apiserver ]]; then echo "No binary found. Please run 'make apiserver-build-release'"; false; fi
-	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/gardener-apiserver/Dockerfile --rm .
+	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(APISERVER_IMAGE_TAG) -f $(BUILD_DIR)/gardener-apiserver/Dockerfile --rm .
 
 .PHONY: apiserver-docker-push
 apiserver-docker-push:
-	@if ! docker images $(IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make apiserver-docker-image'"; false; fi
-	@gcloud docker -- push $(IMAGE_REPOSITORY):$(IMAGE_TAG)
+	@if ! docker images $(APISERVER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(APISERVER_IMAGE_TAG); then echo "$(APISERVER_IMAGE_REPOSITORY) version $(APISERVER_IMAGE_TAG) is not yet built. Please run 'make apiserver-docker-image'"; false; fi
+	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):$(APISERVER_IMAGE_TAG)
 
 .PHONY: apiserver-rename-binaries
 apiserver-rename-binaries:
@@ -103,12 +105,12 @@ controller-manager-build-release:
 .PHONY: controller-manager-docker-image
 controller-manager-docker-image:
 	@if [[ ! -f $(BIN_DIR)/rel/gardener-controller-manager ]]; then echo "No binary found. Please run 'make controller-manager-build-release'"; false; fi
-	@docker build -t $(IMAGE_REPOSITORY):$(IMAGE_TAG) -f $(BUILD_DIR)/gardener-controller-manager/Dockerfile --rm .
+	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(CONROLLER_MANAGER_IMAGE_TAG) -f $(BUILD_DIR)/gardener-controller-manager/Dockerfile --rm .
 
 .PHONY: controller-manager-docker-push
 controller-manager-docker-push:
-	@if ! docker images $(IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make controller-manager-docker-image'"; false; fi
-	@gcloud docker -- push $(IMAGE_REPOSITORY):$(IMAGE_TAG)
+	@if ! docker images $(CONROLLER_MANAGER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(CONROLLER_MANAGER_IMAGE_TAG); then echo "$(CONROLLER_MANAGER_IMAGE_REPOSITORY) version $(CONROLLER_MANAGER_IMAGE_TAG) is not yet built. Please run 'make controller-manager-docker-image'"; false; fi
+	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(CONROLLER_MANAGER_IMAGE_TAG)
 
 .PHONY: controller-manager-rename-binaries
 controller-manager-rename-binaries:
