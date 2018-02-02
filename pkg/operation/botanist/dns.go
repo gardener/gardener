@@ -19,6 +19,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	corev1 "k8s.io/api/core/v1"
@@ -48,8 +49,8 @@ func (b *Botanist) DestroyExternalDomainDNSRecord() error {
 // will point to <target>.
 func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purposeInternalDomain bool) error {
 	var (
+		chartName         string
 		tfvarsEnvironment []map[string]interface{}
-		values            map[string]interface{}
 		err               error
 	)
 
@@ -59,15 +60,26 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 		if err != nil {
 			return err
 		}
-		values = b.GenerateTerraformRoute53Config(name, []string{target})
+		chartName = "aws-route53"
+	case gardenv1beta1.DNSGoogleCloudDNS:
+		tfvarsEnvironment, err = b.GenerateTerraformCloudDNSVariablesEnvironment(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
+		chartName = "gcp-clouddns"
 	default:
 		return nil
+	}
+
+	hostedZoneID, err := b.getHostedZoneID(purposeInternalDomain)
+	if err != nil {
+		return err
 	}
 
 	return terraformer.
 		New(b.Operation, terraformerPurpose).
 		SetVariablesEnvironment(tfvarsEnvironment).
-		DefineConfig("aws-route53", values).
+		DefineConfig(chartName, b.GenerateTerraformDNSConfig(name, hostedZoneID, []string{target})).
 		Apply()
 }
 
@@ -81,6 +93,11 @@ func (b *Botanist) DestroyDNSRecord(terraformerPurpose string, purposeInternalDo
 	switch b.determineDNSProvider(purposeInternalDomain) {
 	case gardenv1beta1.DNSAWSRoute53:
 		tfvarsEnvironment, err = b.GenerateTerraformRoute53VariablesEnvironment(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
+	case gardenv1beta1.DNSGoogleCloudDNS:
+		tfvarsEnvironment, err = b.GenerateTerraformCloudDNSVariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
@@ -107,14 +124,42 @@ func (b *Botanist) GenerateTerraformRoute53VariablesEnvironment(purposeInternalD
 	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
 }
 
-// GenerateTerraformRoute53Config creates the Terraform variables and the Terraform config (for the DNS record)
+// GenerateTerraformCloudDNSVariablesEnvironment generates the environment containing the credentials which
+// are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *Botanist) GenerateTerraformCloudDNSVariablesEnvironment(purposeInternalDomain bool) ([]map[string]interface{}, error) {
+	secret, err := b.getDomainCredentials(purposeInternalDomain, gcpbotanist.ServiceAccountJSON)
+	if err != nil {
+		return nil, err
+	}
+	project, err := gcpbotanist.ExtractProjectID(secret.Data[gcpbotanist.ServiceAccountJSON])
+	if err != nil {
+		return nil, err
+	}
+	minifiedServiceAccount, err := gcpbotanist.MinifyServiceAccount(secret.Data[gcpbotanist.ServiceAccountJSON])
+	if err != nil {
+		return nil, err
+	}
+	return []map[string]interface{}{
+		{
+			"name":  "TF_VAR_SERVICEACCOUNT",
+			"value": minifiedServiceAccount,
+		},
+		{
+			"name":  "GOOGLE_PROJECT",
+			"value": project,
+		},
+	}, nil
+}
+
+// GenerateTerraformDNSConfig creates the Terraform variables and the Terraform config (for the DNS record)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *Botanist) GenerateTerraformRoute53Config(name string, values []string) map[string]interface{} {
+func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID string, values []string) map[string]interface{} {
 	targetType, _ := common.IdentifyAddressType(values[0])
 
 	return map[string]interface{}{
 		"record": map[string]interface{}{
-			"hostedZoneID": b.Shoot.Info.Spec.DNS.HostedZoneID,
+			"hostedZoneID": hostedZoneID,
 			"name":         name,
 			"type":         targetType,
 			"values":       values,
@@ -153,4 +198,16 @@ func (b *Botanist) getDomainCredentials(purposeInternalDomain bool, requiredKeys
 		}
 	}
 	return secret, nil
+}
+
+func (b *Botanist) getHostedZoneID(purposeInternalDomain bool) (string, error) {
+	switch {
+	case purposeInternalDomain:
+		return b.Secrets[common.GardenRoleInternalDomain].Annotations[common.DNSHostedZoneID], nil
+	case b.DefaultDomainSecret != nil:
+		return b.DefaultDomainSecret.Annotations[common.DNSHostedZoneID], nil
+	case b.Shoot.Info.Spec.DNS.HostedZoneID != nil:
+		return *b.Shoot.Info.Spec.DNS.HostedZoneID, nil
+	}
+	return "", fmt.Errorf("unable to determine the hosted zone id")
 }

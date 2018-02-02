@@ -25,6 +25,7 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -168,7 +169,12 @@ func verifyHostedZoneID(shoot *garden.Shoot, privateSecretBindingLister gardenli
 		_, accessKeyFound := credentials.Data[awsbotanist.AccessKeyID]
 		_, secretKeyFound := credentials.Data[awsbotanist.SecretAccessKey]
 		if !accessKeyFound || !secretKeyFound {
-			return errors.New("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains AWS credentials for Route53")
+			return fmt.Errorf("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains credentials for AWS Route53 (%s and %s)", awsbotanist.AccessKeyID, awsbotanist.SecretAccessKey)
+		}
+	case garden.DNSGoogleCloudDNS:
+		_, serviceAccountJSONFound := credentials.Data[gcpbotanist.ServiceAccountJSON]
+		if !serviceAccountJSONFound {
+			return fmt.Errorf("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains credentials for Google CloudDNS (%s)", gcpbotanist.ServiceAccountJSON)
 		}
 	}
 

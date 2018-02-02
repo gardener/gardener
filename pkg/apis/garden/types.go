@@ -885,6 +885,8 @@ const (
 	DNSUnmanaged DNSProvider = "unmanaged"
 	// DNSAWSRoute53 is a constant for the 'aws-route53' DNS provider.
 	DNSAWSRoute53 DNSProvider = "aws-route53"
+	// DNSGoogleCloudDNS is a constant for the 'google-clouddns' DNS provider.
+	DNSGoogleCloudDNS DNSProvider = "google-clouddns"
 )
 
 // CloudProvider is a string alias.
@@ -935,6 +937,8 @@ type KubernetesConfig struct {
 
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
 	KubernetesConfig
 	// RuntimeConfig contains information about enabled or disabled APIs.
 	// +optional
@@ -972,21 +976,29 @@ type OIDCConfig struct {
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
 	KubernetesConfig
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
 	KubernetesConfig
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
 	KubernetesConfig
 }
 
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
 	KubernetesConfig
 }
 

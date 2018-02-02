@@ -17,6 +17,7 @@ package botanist
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -41,6 +42,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 			prefix            = fmt.Sprintf("%s-", common.GardenRoleDefaultDomain)
 			defaultDomainKeys = o.GetSecretKeysOfRole(common.GardenRoleDefaultDomain)
 		)
+		sort.Slice(defaultDomainKeys, func(i, j int) bool { return len(defaultDomainKeys[i]) >= len(defaultDomainKeys[j]) })
 		for _, key := range defaultDomainKeys {
 			defaultDomain := strings.SplitAfter(key, prefix)[1]
 			if strings.HasSuffix(*(o.Shoot.Info.Spec.DNS.Domain), defaultDomain) {

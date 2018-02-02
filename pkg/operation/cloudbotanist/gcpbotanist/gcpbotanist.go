@@ -22,7 +22,6 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // New takes an operation object <o> and creates a new GCPBotanist object.
@@ -58,15 +57,13 @@ func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
 		serviceAccountJSON = o.Seed.Secret.Data[ServiceAccountJSON]
 	}
 
-	serviceAccount := utils.ConvertJSONToMap(serviceAccountJSON)
-	project, err := serviceAccount.String(ProjectID)
+	project, err := ExtractProjectID(serviceAccountJSON)
 	if err != nil {
 		return nil, err
 	}
 
 	// Minify serviceaccount json to allow injection into Terraform environment
-	buf := new(bytes.Buffer)
-	err = json.Compact(buf, serviceAccountJSON)
+	minifiedServiceAccount, err := MinifyServiceAccount(serviceAccountJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -76,11 +73,33 @@ func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
 		CloudProviderName:      "gce",
 		VPCName:                vpcName,
 		Project:                project,
-		MinifiedServiceAccount: buf.String(),
+		MinifiedServiceAccount: minifiedServiceAccount,
 	}, nil
 }
 
 // GetCloudProviderName returns the Kubernetes cloud provider name for this cloud.
 func (b *GCPBotanist) GetCloudProviderName() string {
 	return b.CloudProviderName
+}
+
+// MinifyServiceAccount uses the provided service account JSON objects and minifies it.
+// This is required when you want to inject it as environment variable into Terraform.
+func MinifyServiceAccount(serviceAccountJSON []byte) (string, error) {
+	buf := new(bytes.Buffer)
+	if err := json.Compact(buf, serviceAccountJSON); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
+}
+
+// ExtractProjectID extracts the value of the key "project_id" from the service account
+// JSON document.
+func ExtractProjectID(ServiceAccountJSON []byte) (string, error) {
+	var j struct {
+		Project string `json:"project_id"`
+	}
+	if err := json.Unmarshal(ServiceAccountJSON, &j); err != nil {
+		return "Error", err
+	}
+	return j.Project, nil
 }

@@ -47,19 +47,25 @@ controller:
     repository: eu.gcr.io/gardener-project/gardener/controller-manager
     tag: latest
   internalDomain:
-    provider: aws-route53 # currently, only aws-route53 is supported
+    provider: aws-route53 # aws-route53 or google-clouddns
     hostedZoneID: Z3ABCDE1FGHIJK
     domain: example.com
     credentials:
+      # for aws-route53 we need 'accessKeyID' and 'secretAccessKey'
       accessKeyID: access-key-id-with-route53-privileges
       secretAccessKey: secret-access-key-with-route53-privileges
+      # for google-clouddns we need 'serviceaccount.json' field' (service account needs 'DNS administrator' role)
+      # serviceaccount.json: '{"type": "service_account", "project_id": "...", ...}'
   defaultDomains: []
   # - domain: example.com
-  #   provider: aws-route53 # currently, only aws-route53 is supported
+  #   provider: aws-route53 # aws-route53 or google-clouddns
   #   hostedZoneID: Z3ABCDE1FGHIJK
   #   credentials:
+  #     # for aws-route53 we need 'accessKeyID' and 'secretAccessKey'
   #     accessKeyID: access-key-id-with-route53-privileges
   #     secretAccessKey: secret-access-key-with-route53-privileges
+  #     # for google-clouddns we need 'serviceaccount.json' field' (service account needs 'DNS administrator' role)
+  #     serviceaccount.json: '{"type": "service_account", "project_id": "...", ...}'
   alertingSMTP: []
   # - to: email-address-to-send-alerts-to
   #   from: email-address-to-send-alerts-from

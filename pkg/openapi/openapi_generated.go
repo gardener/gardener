@@ -1659,9 +1659,18 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "KubeAPIServerConfig contains configuration settings for the kube-apiserver.",
 					Properties: map[string]spec.Schema{
-						"KubernetesConfig": {
+						"featureGates": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"),
+								Description: "FeatureGates contains information about enabled feature gates.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"boolean"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 						"runtimeConfig": {
@@ -1685,28 +1694,34 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"KubernetesConfig"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeControllerManagerConfig": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Description: "KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.",
 					Properties: map[string]spec.Schema{
-						"KubernetesConfig": {
+						"featureGates": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"),
+								Description: "FeatureGates contains information about enabled feature gates.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"boolean"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 					},
-					Required: []string{"KubernetesConfig"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego": {
 			Schema: spec.Schema{
@@ -1737,51 +1752,72 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "KubeProxyConfig contains configuration settings for the kube-proxy.",
 					Properties: map[string]spec.Schema{
-						"KubernetesConfig": {
+						"featureGates": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"),
+								Description: "FeatureGates contains information about enabled feature gates.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"boolean"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 					},
-					Required: []string{"KubernetesConfig"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeSchedulerConfig": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Description: "KubeSchedulerConfig contains configuration settings for the kube-scheduler.",
 					Properties: map[string]spec.Schema{
-						"KubernetesConfig": {
+						"featureGates": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"),
+								Description: "FeatureGates contains information about enabled feature gates.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"boolean"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 					},
-					Required: []string{"KubernetesConfig"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeletConfig": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Description: "KubeletConfig contains configuration settings for the kubelet.",
 					Properties: map[string]spec.Schema{
-						"KubernetesConfig": {
+						"featureGates": {
 							SchemaProps: spec.SchemaProps{
-								Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"),
+								Description: "FeatureGates contains information about enabled feature gates.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"boolean"},
+											Format: "",
+										},
+									},
+								},
 							},
 						},
 					},
-					Required: []string{"KubernetesConfig"},
 				},
 			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig"},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes": {
 			Schema: spec.Schema{

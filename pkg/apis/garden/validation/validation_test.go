@@ -2656,6 +2656,21 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid specifying a secret name when provider equals 'unmanaged'", func() {
+				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
+				shoot.Spec.Addons.Monocular.Enabled = false
+				shoot.Spec.DNS.HostedZoneID = nil
+				shoot.Spec.DNS.SecretName = makeStringPointer("")
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.secretName"),
+				}))
+			})
+
 			It("should forbid specifying a hosted zone id when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
 				shoot.Spec.Addons.Monocular.Enabled = false

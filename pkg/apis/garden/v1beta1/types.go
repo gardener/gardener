@@ -885,6 +885,8 @@ const (
 	DNSUnmanaged DNSProvider = "unmanaged"
 	// DNSAWSRoute53 is a constant for the 'aws-route53' DNS provider.
 	DNSAWSRoute53 DNSProvider = "aws-route53"
+	// DNSGoogleCloudDNS is a constant for the 'google-clouddns' DNS provider.
+	DNSGoogleCloudDNS DNSProvider = "google-clouddns"
 )
 
 // CloudProvider is a string alias.
@@ -931,12 +933,15 @@ type Kubernetes struct {
 // KubernetesConfig contains common configuration fields for the control plane components.
 type KubernetesConfig struct {
 	// FeatureGates contains information about enabled feature gates.
+	// +optional
 	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
-	KubernetesConfig
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
+	KubernetesConfig `json:",inline"`
 	// RuntimeConfig contains information about enabled or disabled APIs.
 	// +optional
 	RuntimeConfig map[string]bool `json:"runtimeConfig,omitempty"`
@@ -973,22 +978,30 @@ type OIDCConfig struct {
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
-	KubernetesConfig
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
+	KubernetesConfig `json:",inline"`
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
-	KubernetesConfig
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
+	KubernetesConfig `json:",inline"`
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {
-	KubernetesConfig
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
+	KubernetesConfig `json:",inline"`
 }
 
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
-	KubernetesConfig
+	// KubernetesConfig contains common configuration fields for the control plane components.
+	// +optional
+	KubernetesConfig `json:",inline"`
 }
 
 const (
