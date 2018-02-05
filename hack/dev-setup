@@ -1,0 +1,103 @@
+#!/bin/sh
+
+DEV_DIR=$(dirname "${0}")/../dev
+EXAMPLE_DIR=$(dirname "${0}")/../example
+MINIKUBE_IP=$(minikube ip)
+IP_ROUTE=$(ip route get 1)
+IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
+
+echo "After OSX sleep, minikube's time is off."
+echo "This results in x509 certificate auth to not work for shoot certificates"
+minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)
+
+mkdir -p ${DEV_DIR}
+
+cp ${EXAMPLE_DIR}/componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
+
+kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-core.yaml
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: etcd
+  namespace: garden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: etcd
+  template:
+    metadata:
+      labels:
+        run: etcd
+    spec:
+      containers:
+      - image: quay.io/coreos/etcd:v3.1.10
+        name: etcd
+        command:
+        - etcd
+        - -advertise-client-urls=http://${MINIKUBE_IP}:2379
+        - -listen-client-urls=http://0.0.0.0:2379
+        - -data-dir=/etcd-data
+        volumeMounts:
+        - mountPath: /etcd-data
+          name: data
+      volumes:
+      - name: data
+        hostPath:
+          path: /etc/gardener/etcd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  namespace: garden
+spec:
+  ports:
+  - port: 2379
+    nodePort: 32379
+  selector:
+    run: etcd
+  type: NodePort
+EOF
+
+cat <<EOF | kubectl apply -f -
+kind: Service
+apiVersion: v1
+metadata:
+  name: gardener-apiserver
+  namespace: garden
+spec:
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: gardener-apiserver
+  namespace: garden
+subsets:
+- addresses:
+  - ip: ${IP_ADDRESS}
+  ports:
+  - port: 8443
+EOF
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: v1beta1.garden.sapcloud.io
+spec:
+  insecureSkipTLSVerify: true
+  group: garden.sapcloud.io
+  version: v1beta1
+  groupPriorityMinimum: 10000
+  versionPriority: 20
+  service:
+    name: gardener-apiserver
+    namespace: garden
+EOF

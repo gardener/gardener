@@ -39,15 +39,26 @@ USER             := $(shell id -u -n)
 export PATH
 export GOBIN
 
+.PHONY: dev-setup
+dev-setup:
+	@./hack/dev-setup
+
 .PHONY: dev
 dev:
 	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
-	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config WATCH_NAMESPACE=$(USER) go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
-
-.PHONY: dev-all
-dev-all:
-	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
 	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
+
+.PHONY: dev-apiserver
+dev-apiserver:
+	@go run cmd/gardener-apiserver/main.go \
+			--admission-control=ShootSeedFinder,ShootSeedProtector,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator \
+			--etcd-servers=http://$(shell minikube ip):32379 \
+			--tls-cert-file ~/.minikube/apiserver.crt \
+			--tls-private-key-file ~/.minikube/apiserver.key \
+			--secure-port=8443 \
+			--kubeconfig ~/.kube/config \
+			--authentication-kubeconfig ~/.kube/config \
+			--authorization-kubeconfig ~/.kube/config
 
 .PHONY: verify
 verify: vet fmt lint test
@@ -62,7 +73,6 @@ build: apiserver-build controller-manager-build
 
 .PHONY: release
 release: apiserver-release controller-manager-release
-
 
 .PHONY: apiserver-release
 apiserver-release: apiserver-build apiserver-build-release apiserver-docker-image docker-login apiserver-docker-push apiserver-rename-binaries
