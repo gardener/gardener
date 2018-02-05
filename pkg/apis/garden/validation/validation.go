@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/utils"
@@ -1020,8 +1021,37 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, fldPath *field.
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
 
-	// TODO: remove this once version upgrades are implemented
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+
+	return allErrs
+}
+
+func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Forbid Kubernetes version downgrade
+	downgrade, err := utils.CompareVersions(new, "<", old)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
+	}
+	if downgrade {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version downgrade is not supported"))
+	}
+
+	// Forbid Kubernetes version upgrade which skips a minor version
+	oldVersion, err := semver.NewVersion(old)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, old, err.Error()))
+	}
+	nextMinorVersion := oldVersion.IncMinor().IncMinor()
+
+	skippingMinorVersion, err := utils.CompareVersions(new, ">=", nextMinorVersion.String())
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, new, err.Error()))
+	}
+	if skippingMinorVersion {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "kubernetes version upgrade cannot skip a minor version"))
+	}
 
 	return allErrs
 }

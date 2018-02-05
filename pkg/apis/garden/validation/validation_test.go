@@ -1741,6 +1741,7 @@ var _ = Describe("validation", func() {
 						Domain:       &domain,
 					},
 					Kubernetes: garden.Kubernetes{
+						Version: "1.8.2",
 						KubeAPIServer: &garden.KubeAPIServerConfig{
 							OIDCConfig: &garden.OIDCConfig{
 								CABundle:       makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -3033,15 +3034,28 @@ var _ = Describe("validation", func() {
 			}))
 		})
 
-		It("should forbid updating the kubernetes version", func() {
+		It("should forbid kubernetes version downgrades", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = "2.0.0"
+			newShoot.Spec.Kubernetes.Version = "1.7.2"
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(len(errorList)).To(Equal(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.kubernetes.version"),
+			}))
+		})
+
+		It("should forbid kubernetes version upgrades skipping a minor version", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.Kubernetes.Version = "1.10.1"
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
 				"Field": Equal("spec.kubernetes.version"),
 			}))
 		})
