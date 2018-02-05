@@ -87,6 +87,16 @@ On other OS, please check the [Git installation documentation](https://git-scm.c
 
 You'll need to have [minikube](https://github.com/kubernetes/minikube#installation) installed and running.
 
+## Installing iproute2
+
+`iproute2` provides a collection of utilities for network administration and configuration.
+
+On Mac OS run
+
+```bash
+$ brew install iproute2mac
+```
+
 ## [Optional] Installing Docker
 
 In case you want to build Docker images for the Gardener you have to install Docker itself. We recommend using [Docker for Mac OS X](https://docs.docker.com/docker-for-mac/) which can be downloaded from [here](https://download.docker.com/mac/stable/Docker.dmg).
@@ -121,7 +131,7 @@ $ cd gardener
 
 The development of the Gardener could happen by targeting any cluster. You basically need a Garden cluster (e.g., a [Minikube](https://github.com/kubernetes/minikube) cluster) and one Seed cluster per cloud provider and per data center/region. You can configure the Gardener controller manager to watch **all namespaces** for Shoot manifests or to only watch **one single** namespace.
 
-The commands bellow will configure your `minikube` with the absolute minimum resources to launch Gardener API server & controller manager:
+The commands below will configure your `minikube` with the absolute minimum resources to launch Gardener API server & controller manager:
 
 ```bash
 $ minikube start
@@ -136,13 +146,17 @@ Please provide an *internal domain secret* (see [this](../../example/secret-inte
 
 ```bash
 $ mkdir -p dev
+
+$ kubectl apply -f example/namespace-garden.yaml
+namespace "garden" created
+
 $ cp example/secret-internal-domain.yaml dev/secret-internal-domain.yaml
 # <Put your credentials in dev/secret-internal-domain.yaml>
+
 $ kubectl apply -f dev/secret-internal-domain.yaml
 secret "internal-domain-example-com" created
 
 $ make dev-setup
-namespace "garden" configured
 namespace "garden-core" configured
 deployment "etcd" configured
 service "etcd" unchanged
@@ -186,7 +200,7 @@ No resources found.
 
 to operate against your local running Gardener API server.
 
-> Note: `No resources found` is the expected result of our initial development setup.
+> Note: It may take several seconds until the `minikube` cluster recognizes that the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
 
 ## Additional information
 
