@@ -15,13 +15,13 @@ images:
   tag: v6.5
 - name: vpn-seed
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
-  tag: latest
+  tag: "0.1.0"
 - name: auto-node-repair
   repository: eu.gcr.io/gardener-project/gardener/auto-node-repair
-  tag: latest
+  tag: "0.1.0"
 - name: aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
-  tag: latest
+  tag: "0.1.0"
 
 # Monitoring
 - name: alertmanager
@@ -65,7 +65,7 @@ images:
   versions: "= 1.6"
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
-  tag: latest
+  tag: "0.1.0"
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
   tag: "1.14.7"
@@ -108,7 +108,7 @@ images:
   tag: "0.10.1"
 - name: ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: latest
+  tag: "0.1.0"
 - name: vts-ingress-exporter
   repository: quay.io/cy-play/vts-nginx-exporter
   tag: v0.0.3
@@ -128,7 +128,7 @@ images:
 # Miscellaenous
 - name: terraformer
   repository: eu.gcr.io/gardener-project/gardener/terraformer
-  tag: latest
+  tag: "0.1.0"
 - name: busybox
   repository: busybox
   tag: "1.27"
