@@ -3,6 +3,7 @@
 set -e
 set -x
 
+
 # $1 SRC_DIR (repository root directory)
 # $2 VERSION_FILE (a regular file containing the build version)
 # OR via env vars:
