@@ -21,6 +21,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -112,17 +113,18 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 	// no Shoots and Seed s are assigned to the CloudProfile anymore. If this is the case then the controlller will remove
 	// the Finalizers from the CloudProfile and deletion will be triggered.
 	if cloudProfile.DeletionTimestamp != nil {
-		associatedShoots, err := c.determineAssociations("shoot", cloudProfile.Name)
+		associatedShoots, err := controllerutils.DetermineShootAssociations(cloudProfile, c.shootLister)
 		if err != nil {
-			logger.Logger.Error(err)
+			cloudProfileLogger.Error(err.Error())
 			return nil
 		}
-		associatedSeed, err := c.determineAssociations("seed", cloudProfile.Name)
+		associatedSeeds, err := c.determineSeedAssociations(cloudProfile.Name)
 		if err != nil {
-			logger.Logger.Error(err)
+			cloudProfileLogger.Error(err.Error())
 			return nil
 		}
-		if len(associatedShoots) == 0 && len(associatedSeed) == 0 {
+
+		if len(associatedShoots) == 0 && len(associatedSeeds) == 0 {
 			cloudProfileLogger.Infof("No Shoots and Seeds are attached to CloudProfile. Deletion accepted.")
 
 			finalizers := sets.NewString(cloudProfile.Finalizers...)
@@ -136,54 +138,31 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 			}
 			return nil
 		}
-		message := "Can't delete CloudProfile, because Shoot(s) and/or Seed(s) are still attached."
+		message := "Can't delete CloudProfile, because Shoots and/or Seeds are still attached."
 		if len(associatedShoots) != 0 {
 			message += fmt.Sprintf(" Shoots: %+v", associatedShoots)
 		}
-		if len(associatedSeed) != 0 {
-			message += fmt.Sprintf(" Seeds: %+v", associatedSeed)
+		if len(associatedSeeds) != 0 {
+			message += fmt.Sprintf(" Seeds: %+v", associatedSeeds)
 		}
 		cloudProfileLogger.Info(message)
 		return nil
 	}
+
 	cloudProfileLogger.Infof("[CLOUDPROFILE RECONCILE] %s", key)
 	return nil
 }
 
-func (c *defaultControl) determineAssociations(resourceType, cloudProfile string) ([]string, error) {
-	var associatedResources []string
-
-	if resourceType == "shoot" {
-		shoots, err := c.shootLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-		for _, shoot := range shoots {
-			if shoot.Spec.Cloud.Profile == "" {
-				continue
-			}
-			if shoot.Spec.Cloud.Profile == cloudProfile {
-				associatedResources = append(associatedResources, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
-			}
-		}
-		return associatedResources, nil
+func (c *defaultControl) determineSeedAssociations(cloudProfileName string) ([]string, error) {
+	var associatedSeeds []string
+	seeds, err := c.seedLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
 	}
-
-	if resourceType == "seed" {
-		seeds, err := c.seedLister.List(labels.Everything())
-		if err != nil {
-			return nil, err
+	for _, seed := range seeds {
+		if seed.Spec.Cloud.Profile == cloudProfileName {
+			associatedSeeds = append(associatedSeeds, cloudProfileName)
 		}
-		for _, seed := range seeds {
-			if seed.Spec.Cloud.Profile == "" {
-				continue
-			}
-			if seed.Spec.Cloud.Profile == cloudProfile {
-				associatedResources = append(associatedResources, seed.Name)
-			}
-		}
-		return associatedResources, nil
 	}
-
-	return nil, fmt.Errorf("Could not determine CloudProfile associations, due to unknown resource type %s", resourceType)
+	return associatedSeeds, nil
 }
