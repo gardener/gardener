@@ -18,7 +18,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 )
 
-// UpdateCloudProfile update an existing CloudProfile resource.
+// UpdateCloudProfile updates an existing CloudProfile resource.
 func (c *Client) UpdateCloudProfile(cloudProfile *gardenv1beta1.CloudProfile) (*gardenv1beta1.CloudProfile, error) {
 	return c.GardenClientset.GardenV1beta1().CloudProfiles().Update(cloudProfile)
 }

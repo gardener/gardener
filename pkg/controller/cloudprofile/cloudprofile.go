@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-// Controller controlls CloudProfiles.
+// Controller controls CloudProfiles.
 type Controller struct {
 	k8sGardenClient    kubernetes.Client
 	k8sGardenInformers gardeninformers.SharedInformerFactory

@@ -52,7 +52,6 @@ func (c *Controller) cloudProfileDelete(obj interface{}) {
 }
 
 func (c *Controller) reconcileCloudProfileKey(key string) error {
-	// Get the cloudprofile to the key from cache
 	_, cloudProfileName, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
@@ -110,8 +109,8 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 	)
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
-	// no Shoots and Seed s are assigned to the CloudProfile anymore. If this is the case then the controlller will remove
-	// the Finalizers from the CloudProfile and deletion will be triggered.
+	// no Shoots and Seed  are assigned to the CloudProfile anymore. If this is the case then the controlller will remove
+	// the finalizers from the CloudProfile so that it can be garbage collected.
 	if cloudProfile.DeletionTimestamp != nil {
 		associatedShoots, err := controllerutils.DetermineShootAssociations(cloudProfile, c.shootLister)
 		if err != nil {
@@ -138,7 +137,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 			}
 			return nil
 		}
-		message := "Can't delete CloudProfile, because Shoots and/or Seeds are still attached."
+		message := "Can't delete CloudProfile, because Shoots and/or Seeds are still referencing it."
 		if len(associatedShoots) != 0 {
 			message += fmt.Sprintf(" Shoots: %+v", associatedShoots)
 		}

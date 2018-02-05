@@ -130,8 +130,9 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		seedLogger  = logger.NewSeedLogger(logger.Logger, seed.Name)
 	)
 
-	// The deletionTimestamp labels a Seed as intented to get deleted. Before deletion, it has to be ensured that no Shoots
-	// are depending on the Seed anymore. When this happens the controller will remove the Finalizers from the Seed and deletion will be triggered.
+	// The deletionTimestamp labels a Seed as intented to get deleted. Before deletion,
+	// it has to be ensured that no Shoots are depending on the Seed anymore.
+	// When this happens the controller will remove the finalizers from the Seed so that it can be garbage collected.
 	if seed.DeletionTimestamp != nil {
 		associatedShoots, err := controllerutils.DetermineShootAssociations(seed, c.shootLister)
 		if err != nil {
@@ -153,7 +154,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			}
 			return nil
 		}
-		seedLogger.Infof("Can't delete Seed, because the following Shoots are still attached: %v", associatedShoots)
+		seedLogger.Infof("Can't delete Seed, because the following Shoots are still referencing it: %v", associatedShoots)
 		return nil
 	}
 
