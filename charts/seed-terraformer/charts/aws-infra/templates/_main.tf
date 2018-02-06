@@ -42,12 +42,13 @@ resource "aws_internet_gateway" "igw" {
 resource "aws_route_table" "routetable_main" {
   vpc_id = "{{ required "vpc.id is required" .Values.vpc.id }}"
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "{{ required "vpc.internetGatewayID is required" .Values.vpc.internetGatewayID }}"
-  }
-
 {{ include "aws-infra.common-tags" .Values | indent 2 }}
+}
+
+resource "aws_route" "public" {
+  route_table_id         = "${aws_route_table.routetable_main.id}"
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = "{{ required "vpc.internetGatewayID is required" .Values.vpc.internetGatewayID }}"
 }
 
 resource "aws_security_group" "bastions" {
@@ -192,12 +193,13 @@ resource "aws_nat_gateway" "natgw_z{{ $index }}" {
 resource "aws_route_table" "routetable_private_utility_z{{ $index }}" {
   vpc_id = "{{ required "vpc.id is required" $.Values.vpc.id }}"
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_nat_gateway.natgw_z{{ $index }}.id}"
-  }
-
 {{ include "aws-infra.tags-with-suffix" (set $.Values "suffix" (print "private-" $zone.name)) }}
+}
+
+resource "aws_route" "private_utility_z{{ $index }}_nat" {
+  route_table_id         = "${aws_route_table.routetable_private_utility_z{{ $index }}.id}"
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = "${aws_nat_gateway.natgw_z{{ $index }}.id}"
 }
 
 resource "aws_route_table_association" "routetable_private_utility_z{{ $index }}_association_private_utility_z{{ $index }}" {
