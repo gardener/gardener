@@ -255,19 +255,19 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenerClientSet, err := gardenclientset.NewForConfig(gardenerClientConfig)
+	gardenerClientset, err := gardenclientset.NewForConfig(gardenerClientConfig)
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClient.SetGardenClientset(gardenerClientSet)
+	k8sGardenClient.SetGardenClientset(gardenerClientset)
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (
 		leaderElectionConfig *leaderelection.LeaderElectionConfig
-		recorder             = createRecorder(k8sGardenClient.GetClientset())
+		recorder             = createRecorder(k8sGardenClient.Clientset())
 	)
 	if config.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = makeLeaderElectionConfig(config.LeaderElection, k8sGardenClientLeaderElection.GetClientset(), recorder)
+		leaderElectionConfig, err = makeLeaderElectionConfig(config.LeaderElection, k8sGardenClientLeaderElection.Clientset(), recorder)
 		if err != nil {
 			return nil, err
 		}
@@ -336,7 +336,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 }
 
 func startControllers(g *Gardener, stopCh <-chan struct{}) error {
-	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GetGardenClientset(), g.Config.Controller.Reconciliation.ResyncPeriod.Duration)
+	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), g.Config.Controller.Reconciliation.ResyncPeriod.Duration)
 
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,

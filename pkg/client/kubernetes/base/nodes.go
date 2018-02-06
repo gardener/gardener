@@ -23,11 +23,7 @@ import (
 
 // ListNodes returns a list of Nodes.
 func (c *Client) ListNodes(listOptions metav1.ListOptions) (*corev1.NodeList, error) {
-	nodes, err := c.
-		Clientset.
-		CoreV1().
-		Nodes().
-		List(listOptions)
+	nodes, err := c.clientset.CoreV1().Nodes().List(listOptions)
 	if err != nil {
 		return nil, err
 	}

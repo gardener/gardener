@@ -24,15 +24,11 @@ var namespacePath = []string{"api", "v1", "namespaces"}
 
 // CreateNamespace creates a new Namespace object.
 func (c *Client) CreateNamespace(name string, updateIfExists bool) (*corev1.Namespace, error) {
-	namespace, err := c.
-		Clientset.
-		CoreV1().
-		Namespaces().
-		Create(&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-		})
+	namespace, err := c.clientset.CoreV1().Namespaces().Create(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	})
 	if err != nil && apierrors.IsAlreadyExists(err) && updateIfExists {
 		return c.UpdateNamespace(name)
 	}
@@ -41,46 +37,30 @@ func (c *Client) CreateNamespace(name string, updateIfExists bool) (*corev1.Name
 
 // UpdateNamespace updates an already existing Namespace object.
 func (c *Client) UpdateNamespace(name string) (*corev1.Namespace, error) {
-	return c.
-		Clientset.
-		CoreV1().
-		Namespaces().
-		Update(&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
-		})
+	return c.clientset.CoreV1().Namespaces().Update(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	})
 }
 
 // GetNamespace returns a Namespace object.
 func (c *Client) GetNamespace(name string) (*corev1.Namespace, error) {
-	return c.
-		Clientset.
-		CoreV1().
-		Namespaces().
-		Get(name, metav1.GetOptions{})
+	return c.clientset.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
 }
 
 // ListNamespaces returns a list of namespaces. The selection can be restricted by passing a <selector>.
 func (c *Client) ListNamespaces(selector metav1.ListOptions) (*corev1.NamespaceList, error) {
-	return c.
-		Clientset.
-		CoreV1().
-		Namespaces().
-		List(selector)
+	return c.clientset.CoreV1().Namespaces().List(selector)
 }
 
 // DeleteNamespace deletes a namespace.
 func (c *Client) DeleteNamespace(name string) error {
 	deleteGracePeriod := int64(1)
-	return c.
-		Clientset.
-		CoreV1().
-		Namespaces().
-		Delete(name, &metav1.DeleteOptions{
-			PropagationPolicy:  &propagationPolicy,
-			GracePeriodSeconds: &deleteGracePeriod,
-		})
+	return c.clientset.CoreV1().Namespaces().Delete(name, &metav1.DeleteOptions{
+		PropagationPolicy:  &propagationPolicy,
+		GracePeriodSeconds: &deleteGracePeriod,
+	})
 }
 
 // CleanupNamespaces deletes all the Namespaces in the cluster other than those stored in the

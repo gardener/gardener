@@ -23,20 +23,12 @@ var jobPath = []string{"apis", "batch", "v1", "jobs"}
 
 // GetJob returns a Job object.
 func (c *Client) GetJob(namespace, name string) (*batch_v1.Job, error) {
-	return c.
-		Clientset.
-		BatchV1().
-		Jobs(namespace).
-		Get(name, metav1.GetOptions{})
+	return c.clientset.BatchV1().Jobs(namespace).Get(name, metav1.GetOptions{})
 }
 
 // DeleteJob deletes a Job object.
 func (c *Client) DeleteJob(namespace, name string) error {
-	return c.
-		Clientset.
-		BatchV1().
-		Jobs(namespace).
-		Delete(name, &defaultDeleteOptions)
+	return c.clientset.BatchV1().Jobs(namespace).Delete(name, &defaultDeleteOptions)
 }
 
 // CleanupJobs deletes all the Jobs in the cluster other than those stored in the

@@ -141,8 +141,7 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 	o.Shoot.Info.Status.LastOperation.Progress = progress
 	o.Shoot.Info.Status.LastOperation.LastUpdateTime = metav1.Now()
 
-	newShoot, err := o.K8sGardenClient.UpdateShootStatus(o.Shoot.Info)
-	if err == nil {
+	if newShoot, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).UpdateStatus(o.Shoot.Info); err == nil {
 		o.Shoot.Info = newShoot
 	}
 }

@@ -68,7 +68,7 @@ func (m metrics) initShootMetrics() {
 
 	m.collect(func() {
 		var state float64
-		shoots, err := m.k8sGardenClient.ListShoots(metav1.NamespaceAll)
+		shoots, err := m.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			logger.Logger.Info("Unable to fetch shoots. skip shoot metric set...")
 			return

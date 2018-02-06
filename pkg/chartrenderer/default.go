@@ -115,7 +115,7 @@ func (r *DefaultChartRenderer) renderRelease(chart *chartapi.Chart, releaseName,
 		return nil, fmt.Errorf("can't process requirements for import values for chart %s: ,%s", chartName, err)
 	}
 
-	caps, err := capabilities(r.client.GetClientset().Discovery())
+	caps, err := capabilities(r.client.Clientset().Discovery())
 	if err != nil {
 		return nil, err
 	}

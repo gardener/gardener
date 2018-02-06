@@ -43,11 +43,6 @@ export GOBIN
 dev-setup:
 	@./hack/dev-setup
 
-.PHONY: dev
-dev:
-	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
-	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
-
 .PHONY: dev-apiserver
 dev-apiserver:
 	@go run cmd/gardener-apiserver/main.go \
@@ -58,7 +53,13 @@ dev-apiserver:
 			--secure-port=8443 \
 			--kubeconfig ~/.kube/config \
 			--authentication-kubeconfig ~/.kube/config \
-			--authorization-kubeconfig ~/.kube/config
+			--authorization-kubeconfig ~/.kube/config \
+			--v=2
+
+.PHONY: dev
+dev:
+	$(eval LD_FLAGS_RUN = "-w -X $(REPOSITORY)/pkg/version.Version="$(shell ./hack/get-next-version))
+	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run -ldflags $(LD_FLAGS_RUN) cmd/gardener-controller-manager/main.go --config=dev/componentconfig-gardener-controller-manager.yaml
 
 .PHONY: verify
 verify: vet fmt lint test
@@ -73,6 +74,7 @@ build: apiserver-build controller-manager-build
 
 .PHONY: release
 release: apiserver-release controller-manager-release
+
 
 .PHONY: apiserver-release
 apiserver-release: apiserver-build apiserver-build-release apiserver-docker-image docker-login apiserver-docker-push apiserver-rename-binaries

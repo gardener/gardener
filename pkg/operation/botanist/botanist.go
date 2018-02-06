@@ -81,7 +81,7 @@ func (b *Botanist) RegisterAsSeed() error {
 		return errors.New("could not retrieve K8SNetworks from the Shoot resource")
 	}
 
-	_, err := b.K8sGardenClient.CreateSeed(&gardenv1beta1.Seed{
+	seed := &gardenv1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: b.Shoot.Info.Name,
 		},
@@ -97,13 +97,17 @@ func (b *Botanist) RegisterAsSeed() error {
 			},
 			Networks: *k8sNetworks,
 		},
-	})
+	}
+	_, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Create(seed)
+	if apierrors.IsAlreadyExists(err) {
+		_, err = b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Update(seed)
+	}
 	return err
 }
 
 // UnregisterAsSeed unregisters a Shoot cluster as a Seed in the Garden cluster.
 func (b *Botanist) UnregisterAsSeed() error {
-	seed, err := b.K8sGardenClient.GetSeed(b.Shoot.Info.Name)
+	seed, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Get(b.Shoot.Info.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -111,12 +115,10 @@ func (b *Botanist) UnregisterAsSeed() error {
 		return err
 	}
 
-	err = b.K8sGardenClient.DeleteSeed(seed.Name)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Delete(seed.Name, nil); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
-	err = b.K8sGardenClient.DeleteSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.DeleteSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	return nil

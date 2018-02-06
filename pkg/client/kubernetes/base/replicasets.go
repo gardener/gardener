@@ -26,11 +26,7 @@ var replicasetPath = []string{"apis", "extensions", "v1beta1", "replicasets"}
 // ListReplicaSets returns the list of ReplicaSets in the given <namespace>.
 func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOptions) ([]*mapping.ReplicaSet, error) {
 	var replicasetList []*mapping.ReplicaSet
-	replicasets, err := c.
-		Clientset.
-		ExtensionsV1beta1().
-		ReplicaSets(namespace).
-		List(listOptions)
+	replicasets, err := c.clientset.ExtensionsV1beta1().ReplicaSets(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +41,7 @@ func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOption
 
 // DeleteReplicaSet deletes a ReplicaSet object.
 func (c *Client) DeleteReplicaSet(namespace, name string) error {
-	return c.
-		Clientset.
-		ExtensionsV1beta1().
-		ReplicaSets(namespace).
-		Delete(name, &defaultDeleteOptions)
+	return c.clientset.ExtensionsV1beta1().ReplicaSets(namespace).Delete(name, &defaultDeleteOptions)
 }
 
 // CleanupReplicaSets deletes all the ReplicaSets in the cluster other than those stored in the

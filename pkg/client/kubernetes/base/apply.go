@@ -128,36 +128,18 @@ func (c *Client) BuildPath(apiVersion, kind, namespace string) (string, error) {
 // post performs a HTTP POST request on the given path and with the given body (must be a byte
 // slice containing valid JSON). An error will be returned if one occurrs.
 func (c *Client) post(path string, body []byte) error {
-	return c.
-		RESTClient.
-		Post().
-		AbsPath(path).
-		Body(body).
-		Do().
-		Error()
+	return c.restClient.Post().AbsPath(path).Body(body).Do().Error()
 }
 
 // put performs a HTTP PUT request on the given path and with the given body (must be a byte
 // slice containing valid JSON). An error will be returned if one occurrs.
 func (c *Client) put(path string, body []byte) error {
-	return c.
-		RESTClient.
-		Put().
-		AbsPath(path).
-		Body(body).
-		Do().
-		Error()
+	return c.restClient.Put().AbsPath(path).Body(body).Do().Error()
 }
 
 // patch performs a HTTP PATCH request on the given path and with the given body (must be a byte
 // slice containing valid JSON). An error will be returned if one occurrs.
 // The patch type is merge patch.
 func (c *Client) patch(path string, body []byte) error {
-	return c.
-		RESTClient.
-		Patch(types.MergePatchType).
-		AbsPath(path).
-		Body(body).
-		Do().
-		Error()
+	return c.restClient.Patch(types.MergePatchType).AbsPath(path).Body(body).Do().Error()
 }

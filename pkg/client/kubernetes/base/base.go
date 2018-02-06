@@ -23,11 +23,11 @@ import (
 // New returns a new Kubernetes base client.
 func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clientcmd.ClientConfig) (*Client, error) {
 	baseClient := &Client{
-		Config:          config,
-		ClientConfig:    clientConfig,
-		Clientset:       clientset,
-		GardenClientset: nil,
-		RESTClient:      clientset.Discovery().RESTClient(),
+		config:          config,
+		clientConfig:    clientConfig,
+		clientset:       clientset,
+		gardenClientset: nil,
+		restClient:      clientset.Discovery().RESTClient(),
 	}
 
 	gitVersion, err := baseClient.QueryVersion()

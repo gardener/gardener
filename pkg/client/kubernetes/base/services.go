@@ -23,11 +23,7 @@ var servicePath = []string{"api", "v1", "services"}
 
 // GetService returns the desired Service object.
 func (c *Client) GetService(namespace, name string) (*corev1.Service, error) {
-	return c.
-		Clientset.
-		CoreV1().
-		Services(namespace).
-		Get(name, metav1.GetOptions{})
+	return c.clientset.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
 }
 
 // CleanupServices deletes all the Services in the cluster other than those stored in the

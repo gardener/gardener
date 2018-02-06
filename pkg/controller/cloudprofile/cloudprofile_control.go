@@ -130,8 +130,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 			finalizers.Delete(gardenv1beta1.GardenerName)
 			cloudProfile.Finalizers = finalizers.UnsortedList()
 
-			_, err := c.k8sGardenClient.UpdateCloudProfile(cloudProfile)
-			if err != nil {
+			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil {
 				logger.Logger.Error(err)
 				return nil
 			}

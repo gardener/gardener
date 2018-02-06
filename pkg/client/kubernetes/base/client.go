@@ -24,10 +24,7 @@ import (
 // Bootstrap will fetch all Kubernetes server resources, i.e. all registered API groups and the
 // associated resources.
 func (c *Client) Bootstrap() error {
-	apiResourceList, err := c.
-		Clientset.
-		Discovery().
-		ServerResources()
+	apiResourceList, err := c.clientset.Discovery().ServerResources()
 	c.apiResourceList = apiResourceList
 	return err
 }
@@ -39,40 +36,40 @@ func (c *Client) GetAPIResourceList() []*metav1.APIResourceList {
 
 // GetConfig will return the Config attribute of the Client object.
 func (c *Client) GetConfig() *rest.Config {
-	return c.Config
+	return c.config
 }
 
-// GetClientset will return the Clientset attribute of the Client object.
-func (c *Client) GetClientset() *kubernetes.Clientset {
-	return c.Clientset
+// Clientset will return the Clientset attribute of the Client object.
+func (c *Client) Clientset() *kubernetes.Clientset {
+	return c.clientset
 }
 
-// GetGardenClientset will return the GardenClientset attribute of the Client object.
-func (c *Client) GetGardenClientset() *gardenclientset.Clientset {
-	return c.GardenClientset
+// GardenClientset will return the GardenClientset attribute of the Client object.
+func (c *Client) GardenClientset() *gardenclientset.Clientset {
+	return c.gardenClientset
 }
 
 // GetRESTClient will return the RESTClient attribute of the Client object.
 func (c *Client) GetRESTClient() rest.Interface {
-	return c.RESTClient
+	return c.restClient
 }
 
 // SetConfig will set the Config attribute of the Client object.
 func (c *Client) SetConfig(config *rest.Config) {
-	c.Config = config
+	c.config = config
 }
 
 // SetClientset will set the Clientset attribute of the Client object.
 func (c *Client) SetClientset(clientset *kubernetes.Clientset) {
-	c.Clientset = clientset
+	c.clientset = clientset
 }
 
 // SetGardenClientset will set the GardenClientset attribute of the Client object.
 func (c *Client) SetGardenClientset(client *gardenclientset.Clientset) {
-	c.GardenClientset = client
+	c.gardenClientset = client
 }
 
 // SetRESTClient will set the RESTClient attribute of the Client object.
 func (c *Client) SetRESTClient(client rest.Interface) {
-	c.RESTClient = client
+	c.restClient = client
 }

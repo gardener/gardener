@@ -23,8 +23,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// DetermineShootAssociations get a <shootLister> to determine the Shoots resources,
-// which associated to given <obj>.
+// DetermineShootAssociations gets a <shootLister> to determine the Shoots resources which are associated
+// to given <obj> (either a CloudProfile a or a Seed object).
 func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.ShootLister) ([]string, error) {
 	var associatedShoots []string
 	shoots, err := shootLister.List(labels.Everything())
@@ -42,7 +42,7 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 			}
 		case *gardenv1beta1.Seed:
 			seed := obj.(*gardenv1beta1.Seed)
-			if *shoot.Spec.Cloud.Seed == seed.Name {
+			if shoot.Spec.Cloud.Seed != nil && *shoot.Spec.Cloud.Seed == seed.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:

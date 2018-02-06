@@ -18,7 +18,7 @@ var statefulsetPath = []string{"apis", "apps", "v1", "statefulsets"}
 
 // DeleteStatefulSet deletes a StatefulSet object.
 func (c *Client) DeleteStatefulSet(namespace, name string) error {
-	return c.Clientset.AppsV1().StatefulSets(namespace).Delete(name, &defaultDeleteOptions)
+	return c.Clientset().AppsV1().StatefulSets(namespace).Delete(name, &defaultDeleteOptions)
 }
 
 // CleanupStatefulSets deletes all the StatefulSets in the Shoot cluster other than those stored in the

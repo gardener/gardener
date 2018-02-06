@@ -17,7 +17,6 @@ package kubernetes
 import (
 	"bytes"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	clientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
 	batch_v1 "k8s.io/api/batch/v1"
@@ -34,35 +33,15 @@ type Client interface {
 	Bootstrap() error
 
 	// Getter & Setter
+	Clientset() *kubernetes.Clientset
+	GardenClientset() *clientset.Clientset
 	GetAPIResourceList() []*metav1.APIResourceList
 	GetConfig() *rest.Config
-	GetClientset() *kubernetes.Clientset
-	GetGardenClientset() *clientset.Clientset
 	GetRESTClient() rest.Interface
 	SetConfig(*rest.Config)
 	SetClientset(*kubernetes.Clientset)
 	SetGardenClientset(*clientset.Clientset)
 	SetRESTClient(rest.Interface)
-
-	// Shoots
-	CreateShoot(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
-	GetShoot(string, string) (*gardenv1beta1.Shoot, error)
-	PatchShoot(*gardenv1beta1.Shoot, []byte) (*gardenv1beta1.Shoot, error)
-	UpdateShoot(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
-	UpdateShootStatus(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
-	ListShoots(string) (*gardenv1beta1.ShootList, error)
-	DeleteShoot(string, string) error
-
-	// Seeds
-	CreateSeed(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
-	GetSeed(string) (*gardenv1beta1.Seed, error)
-	UpdateSeed(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
-	UpdateSeedStatus(*gardenv1beta1.Seed) (*gardenv1beta1.Seed, error)
-	ListSeeds() (*gardenv1beta1.SeedList, error)
-	DeleteSeed(string) error
-
-	// Cloud Profiles
-	UpdateCloudProfile(*gardenv1beta1.CloudProfile) (*gardenv1beta1.CloudProfile, error)
 
 	// Namespaces
 	CreateNamespace(string, bool) (*corev1.Namespace, error)
@@ -77,10 +56,6 @@ type Client interface {
 	ListSecrets(string, metav1.ListOptions) (*corev1.SecretList, error)
 	GetSecret(string, string) (*corev1.Secret, error)
 	DeleteSecret(string, string) error
-
-	// ServiceAccounts
-	GetServiceAccount(string, string) (*corev1.ServiceAccount, error)
-	PatchServiceAccount(string, string, []byte) (*corev1.ServiceAccount, error)
 
 	// ConfigMaps
 	GetConfigMap(string, string) (*corev1.ConfigMap, error)

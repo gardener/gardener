@@ -156,9 +156,7 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 		LastUpdateTime: metav1.Now(),
 	}
 
-	newShoot, err := c.
-		updater.
-		UpdateShootStatus(o.Shoot.Info)
+	newShoot, err := c.updater.UpdateShootStatus(o.Shoot.Info)
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}

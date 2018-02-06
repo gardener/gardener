@@ -21,18 +21,10 @@ import (
 
 // GetConfigMap returns a ConfigMap object.
 func (c *Client) GetConfigMap(namespace, name string) (*corev1.ConfigMap, error) {
-	return c.
-		Clientset.
-		CoreV1().
-		ConfigMaps(namespace).
-		Get(name, metav1.GetOptions{})
+	return c.clientset.CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
 }
 
 // DeleteConfigMap deletes a ConfigMap object.
 func (c *Client) DeleteConfigMap(namespace, name string) error {
-	return c.
-		Clientset.
-		CoreV1().
-		ConfigMaps(namespace).
-		Delete(name, &defaultDeleteOptions)
+	return c.clientset.CoreV1().ConfigMaps(namespace).Delete(name, &defaultDeleteOptions)
 }

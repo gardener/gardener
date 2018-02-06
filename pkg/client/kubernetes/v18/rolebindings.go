@@ -22,11 +22,7 @@ import (
 // ListRoleBindings returns a list of rolebindings in a given <namespace>.
 // The selection can be restricted by passsing an <selector>.
 func (c *Client) ListRoleBindings(namespace string, selector metav1.ListOptions) ([]*mapping.RoleBinding, error) {
-	roleBindings, err := c.
-		Clientset.
-		RbacV1().
-		RoleBindings(namespace).
-		List(selector)
+	roleBindings, err := c.Clientset().RbacV1().RoleBindings(namespace).List(selector)
 	if err != nil {
 		return nil, err
 	}

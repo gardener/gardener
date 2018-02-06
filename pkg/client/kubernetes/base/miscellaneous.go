@@ -20,13 +20,8 @@ import (
 
 // Curl performs an HTTP GET request to the API server and returns the result.
 func (c *Client) Curl(path string) (*rest.Result, error) {
-	res := c.
-		RESTClient.
-		Get().
-		AbsPath(path).
-		Do()
-	err := res.Error()
-	if err != nil {
+	res := c.restClient.Get().AbsPath(path).Do()
+	if err := res.Error(); err != nil {
 		return nil, err
 	}
 	return &res, nil
@@ -34,10 +29,7 @@ func (c *Client) Curl(path string) (*rest.Result, error) {
 
 // QueryVersion queries the version of the API server and returns the GitVersion (e.g., v1.8.0).
 func (c *Client) QueryVersion() (string, error) {
-	version, err := c.
-		Clientset.
-		Discovery().
-		ServerVersion()
+	version, err := c.clientset.Discovery().ServerVersion()
 	if err != nil {
 		return "", err
 	}

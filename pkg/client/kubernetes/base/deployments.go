@@ -25,11 +25,7 @@ var deploymentPath = []string{"apis", "apps", "v1beta1", "deployments"}
 
 // GetDeployment returns a Deployment object.
 func (c *Client) GetDeployment(namespace, name string) (*mapping.Deployment, error) {
-	deployment, err := c.
-		Clientset.
-		AppsV1beta1().
-		Deployments(namespace).
-		Get(name, metav1.GetOptions{})
+	deployment, err := c.clientset.AppsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -39,11 +35,7 @@ func (c *Client) GetDeployment(namespace, name string) (*mapping.Deployment, err
 // ListDeployments returns the list of Deployments in the given <namespace>.
 func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOptions) ([]*mapping.Deployment, error) {
 	var deploymentList []*mapping.Deployment
-	deployments, err := c.
-		Clientset.
-		AppsV1beta1().
-		Deployments(namespace).
-		List(listOptions)
+	deployments, err := c.clientset.AppsV1beta1().Deployments(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -58,11 +50,7 @@ func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOption
 
 // DeleteDeployment deletes a Deployment object.
 func (c *Client) DeleteDeployment(namespace, name string) error {
-	return c.
-		Clientset.
-		AppsV1beta1().
-		Deployments(namespace).
-		Delete(name, &defaultDeleteOptions)
+	return c.clientset.AppsV1beta1().Deployments(namespace).Delete(name, &defaultDeleteOptions)
 }
 
 // CleanupDeployments deletes all the Deployments in the cluster other than those stored in the

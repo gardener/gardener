@@ -61,7 +61,7 @@ func (u *realUpdater) update(shoot *gardenv1beta1.Shoot, abortRetryFunc func(sho
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		shoot.Status = status
-		newShoot, updateErr = u.k8sGardenClient.UpdateShootStatus(shoot)
+		newShoot, updateErr = u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus(shoot)
 		if updateErr == nil {
 			return nil
 		}

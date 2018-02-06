@@ -22,12 +22,7 @@ import (
 
 // ListResources will return a list of Kubernetes resources as JSON byte slice.
 func (c *Client) ListResources(scoped bool, absPath []string) ([]byte, error) {
-	return c.
-		RESTClient.
-		Get().
-		AbsPath(absPath...).
-		Do().
-		Raw()
+	return c.restClient.Get().AbsPath(absPath...).Do().Raw()
 }
 
 // CleanupResource will delete all resources except for those stored in the <exceptions> map.
@@ -63,13 +58,7 @@ func (c *Client) CleanupResource(exceptions map[string]bool, scoped bool, absPat
 			continue
 		}
 
-		err := c.
-			RESTClient.
-			Delete().
-			AbsPath(absPathDelete...).
-			Do().
-			Error()
-		if err != nil {
+		if err := c.restClient.Delete().AbsPath(absPathDelete...).Do().Error(); err != nil {
 			return err
 		}
 	}

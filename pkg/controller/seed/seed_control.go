@@ -147,8 +147,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			finalizers.Delete(gardenv1beta1.GardenerName)
 			seed.Finalizers = finalizers.UnsortedList()
 
-			_, err := c.k8sGardenClient.UpdateSeed(seed)
-			if err != nil {
+			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Update(seed); err != nil {
 				seedLogger.Error(err.Error())
 				return nil
 			}

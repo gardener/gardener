@@ -41,9 +41,9 @@ var (
 type Client struct {
 	apiResourceList []*metav1.APIResourceList
 	version         string
-	Config          *rest.Config
-	ClientConfig    clientcmd.ClientConfig
-	Clientset       *kubernetes.Clientset
-	GardenClientset *gardenclientset.Clientset
-	RESTClient      rest.Interface
+	config          *rest.Config
+	clientConfig    clientcmd.ClientConfig
+	clientset       *kubernetes.Clientset
+	gardenClientset *gardenclientset.Clientset
+	restClient      rest.Interface
 }

@@ -27,17 +27,11 @@ var crdPath = []string{"apis", "apiextensions.k8s.io", "v1beta1", "customresourc
 // use the APIExtensions client.
 func (c *Client) GetCRD(name string) (*mapping.CustomResourceDefinition, error) {
 	var crd apiextensions_v1beta1.CustomResourceDefinition
-	body, err := c.
-		RESTClient.
-		Get().
-		AbsPath(crdPath[0], crdPath[1], crdPath[2], crdPath[3], name).
-		Do().
-		Raw()
+	body, err := c.restClient.Get().AbsPath(crdPath[0], crdPath[1], crdPath[2], crdPath[3], name).Do().Raw()
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(body, &crd)
-	if err != nil {
+	if err := json.Unmarshal(body, &crd); err != nil {
 		return nil, err
 	}
 	return mapping.ApiextensionsV1beta1CustomResourceDefinition(crd), nil
