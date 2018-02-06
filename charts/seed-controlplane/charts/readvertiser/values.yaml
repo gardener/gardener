@@ -1,4 +1,0 @@
-domain: cluster.local
-
-images:
-  readvertiser: image-repository:image-tag

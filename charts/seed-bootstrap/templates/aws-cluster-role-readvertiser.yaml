@@ -5,9 +5,9 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: readvertiser
+  name: aws-lb-readvertiser
   labels:
-    app: readvertiser
+    app: aws-lb-readvertiser
 rules:
 - apiGroups:
   - extensions

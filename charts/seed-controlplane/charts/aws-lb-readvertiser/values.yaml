@@ -1,0 +1,4 @@
+domain: cluster.local
+
+images:
+  aws-lb-readvertiser: image-repository:image-tag

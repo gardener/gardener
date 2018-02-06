@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Helm chart for aws-lb-readvertiser
+name: aws-lb-readvertiser
+version: 0.1.0

@@ -1,51 +1,51 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: readvertiser
+  name: aws-lb-readvertiser
   namespace: {{.Release.Namespace}}
   labels:
-    app: readvertiser
+    app: aws-lb-readvertiser
 ---
 apiVersion: {{include "rbacversion" .}}
 kind: RoleBinding
 metadata:
   labels:
-    app: readvertiser
-  name: readvertiser
+    app: aws-lb-readvertiser
+  name: aws-lb-readvertiser
   namespace: {{.Release.Namespace}}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: readvertiser
+  name: aws-lb-readvertiser
 subjects:
 - kind: ServiceAccount
-  name: readvertiser
+  name: aws-lb-readvertiser
   namespace: {{.Release.Namespace}}
 ---
 apiVersion: {{include "deploymentversion" .}}
 kind: Deployment
 metadata:
-  name: readvertiser
+  name: aws-lb-readvertiser
   namespace: {{.Release.Namespace}}
   labels:
-    app: readvertiser
+    app: aws-lb-readvertiser
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: readvertiser
+      app: aws-lb-readvertiser
   template:
     metadata:
       labels:
-        app: readvertiser
+        app: aws-lb-readvertiser
     spec:
-      serviceAccountName: readvertiser
+      serviceAccountName: aws-lb-readvertiser
       tolerations:
       - effect: NoExecute
         operator: Exists
       containers:
-      - name: readvertiser
-        image: {{ index .Values.images "readvertiser" }}
+      - name: aws-lb-readvertiser
+        image: {{ index .Values.images "aws-lb-readvertiser" }}
         imagePullPolicy: IfNotPresent
         args:
         - "--name=kube-apiserver"

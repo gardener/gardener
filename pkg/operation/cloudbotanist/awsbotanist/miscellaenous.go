@@ -22,19 +22,22 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// ApplyCreateHook updates the AWS ELB health check to SSL and deploys the readvertiser.
+// ApplyCreateHook updates the AWS ELB health check to SSL and deploys the aws-lb-readvertiser.
 // https://github.com/gardener/aws-lb-readvertiser
 func (b *AWSBotanist) ApplyCreateHook() error {
-	defaultValues := map[string]interface{}{
-		"domain": b.APIServerAddress,
-	}
+	var (
+		name          = "aws-lb-readvertiser"
+		defaultValues = map[string]interface{}{
+			"domain": b.APIServerAddress,
+		}
+	)
 
-	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"readvertiser": "aws-lb-readvertiser"})
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
 	if err != nil {
 		return err
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "readvertiser"), "readvertiser", b.Shoot.SeedNamespace, nil, values); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values); err != nil {
 		return err
 	}
 
