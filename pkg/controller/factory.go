@@ -22,6 +22,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	cloudprofilecontroller "github.com/gardener/gardener/pkg/controller/cloudprofile"
 	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
@@ -90,12 +91,14 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	var (
 		workerCount = f.config.Controller.Reconciliation.ConcurrentSyncs
 
-		shootController = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController  = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, secrets, imageVector, f.recorder)
+		shootController        = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		seedController         = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, secrets, imageVector, f.recorder)
+		cloudProfileController = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
 	)
 
 	go shootController.Run(workerCount, stopCh)
 	go seedController.Run(workerCount, stopCh)
+	go cloudProfileController.Run(workerCount, stopCh)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 

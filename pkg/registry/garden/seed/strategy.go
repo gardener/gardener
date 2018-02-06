@@ -17,9 +17,11 @@ package seed
 import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/storage/names"
@@ -40,6 +42,13 @@ func (seedStrategy) NamespaceScoped() bool {
 func (seedStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
 	seed := obj.(*garden.Seed)
 	seed.Status = garden.SeedStatus{}
+
+	finalizers := sets.NewString()
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+	}
+	seed.Finalizers = finalizers.UnsortedList()
+
 	seed.Generation = 1
 }
 

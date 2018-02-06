@@ -76,3 +76,12 @@ func NewSeedLogger(logger *logrus.Logger, seed string) *logrus.Entry {
 	}
 	return logger.WithFields(fields)
 }
+
+// NewCloudProfileLogger extends an existing logrus logger and adds an additional field containing the CloudProfile name.
+// Example output: time="2017-06-08T13:00:49+02:00" level=info msg="Deletion accepted" cloudprofile=aws.
+func NewCloudProfileLogger(logger *logrus.Logger, cloudprofile string) *logrus.Entry {
+	fields := logrus.Fields{
+		"cloudprofile": cloudprofile,
+	}
+	return logger.WithFields(fields)
+}

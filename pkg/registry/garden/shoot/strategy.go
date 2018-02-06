@@ -17,6 +17,7 @@ package shoot
 import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
 
@@ -42,7 +43,11 @@ func (shootStrategy) NamespaceScoped() bool {
 func (shootStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
 	shoot := obj.(*garden.Shoot)
 	shoot.Status = garden.ShootStatus{}
-	shoot.Finalizers = []string{gardenv1beta1.GardenerName}
+	finalizers := sets.NewString()
+	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		finalizers.Insert(gardenv1beta1.GardenerName)
+	}
+	shoot.Finalizers = finalizers.UnsortedList()
 	shoot.Generation = 1
 }
 
