@@ -161,7 +161,7 @@ func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 // GetPodNetwork returns the pod network CIDR for the Shoot cluster.
 func (s *Shoot) GetPodNetwork() gardenv1beta1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
-		return k8sNetworks.Pods
+		return *k8sNetworks.Pods
 	}
 	return ""
 }
@@ -169,7 +169,7 @@ func (s *Shoot) GetPodNetwork() gardenv1beta1.CIDR {
 // GetServiceNetwork returns the service network CIDR for the Shoot cluster.
 func (s *Shoot) GetServiceNetwork() gardenv1beta1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
-		return k8sNetworks.Services
+		return *k8sNetworks.Services
 	}
 	return ""
 }
@@ -177,7 +177,42 @@ func (s *Shoot) GetServiceNetwork() gardenv1beta1.CIDR {
 // GetNodeNetwork returns the node network CIDR for the Shoot cluster.
 func (s *Shoot) GetNodeNetwork() gardenv1beta1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
-		return k8sNetworks.Nodes
+		return *k8sNetworks.Nodes
 	}
 	return ""
+}
+
+// ClusterAutoscalerEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) ClusterAutoscalerEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.ClusterAutoscaler != nil && s.Info.Spec.Addons.ClusterAutoscaler.Enabled
+}
+
+// HeapsterEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) HeapsterEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Heapster != nil && s.Info.Spec.Addons.Heapster.Enabled
+}
+
+// Kube2IAMEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) Kube2IAMEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Kube2IAM != nil && s.Info.Spec.Addons.Kube2IAM.Enabled
+}
+
+// KubeLegoEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) KubeLegoEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubeLego != nil && s.Info.Spec.Addons.KubeLego.Enabled
+}
+
+// KubernetesDashboardEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) KubernetesDashboardEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubernetesDashboard != nil && s.Info.Spec.Addons.KubernetesDashboard.Enabled
+}
+
+// NginxIngressEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) NginxIngressEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.NginxIngress != nil && s.Info.Spec.Addons.NginxIngress.Enabled
+}
+
+// MonocularEnabled returns true if the XX addon is enabled in the Shoot manifest.
+func (s *Shoot) MonocularEnabled() bool {
+	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Monocular != nil && s.Info.Spec.Addons.Monocular.Enabled
 }

@@ -27,6 +27,10 @@ import (
 // DeployKube2IAMResources creates the respective IAM roles which have been specified in the Shoot manifest
 // addon section. Moreover, some default IAM roles will be created.
 func (b *AWSBotanist) DeployKube2IAMResources() error {
+	if !b.Shoot.Kube2IAMEnabled() {
+		return b.DestroyKube2IAMResources()
+	}
+
 	values, err := b.generateTerraformKube2IAMConfig(b.Shoot.Info.Spec.Addons.Kube2IAM.Roles)
 	if err != nil {
 		return err
@@ -82,7 +86,7 @@ func (b *AWSBotanist) createKube2IAMRoles(customRoles []gardenv1beta1.Kube2IAMRo
 
 	// If the ClusterAutoScaler addon is enabled, then we have to create an appropriate instance profile for it such that
 	// it can scale up/down the cluster nodes.
-	if b.Shoot.Info.Spec.Addons.ClusterAutoscaler.Enabled {
+	if b.Shoot.ClusterAutoscalerEnabled() {
 		stateConfigMap, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetState()
 		if err != nil {
 			return nil, err
@@ -146,7 +150,7 @@ func (b *AWSBotanist) createKube2IAMRoles(customRoles []gardenv1beta1.Kube2IAMRo
 // GenerateKube2IAMConfig generates the values which are required to render the chart of kube2iam properly.
 func (b *AWSBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 	var (
-		enabled = b.Shoot.Info.Spec.Addons.Kube2IAM.Enabled
+		enabled = b.Shoot.Kube2IAMEnabled()
 		values  map[string]interface{}
 	)
 
@@ -169,22 +173,23 @@ func (b *AWSBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 // aws-cluster-autosclaer properly.
 func (b *AWSBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
 	var (
-		podAnnotations = map[string]interface{}{}
-		enabled        = b.Shoot.Info.Spec.Addons.ClusterAutoscaler.Enabled
-		values         map[string]interface{}
+		podAnnotations  = map[string]interface{}{}
+		enabled         = b.Shoot.ClusterAutoscalerEnabled()
+		kube2iamEnabled = b.Shoot.Kube2IAMEnabled()
+		values          map[string]interface{}
 	)
 
 	if enabled {
 		autoscalingGroups := b.GetASGs()
 
-		if b.Shoot.Info.Spec.Addons.Kube2IAM.Enabled {
+		if kube2iamEnabled {
 			podAnnotations["iam.amazonaws.com/role"] = fmt.Sprintf("%s-autoscaling", b.Shoot.SeedNamespace)
 		}
 		values = map[string]interface{}{
 			"awsRegion":         b.Shoot.Info.Spec.Cloud.Region,
 			"autoscalingGroups": autoscalingGroups,
 			"podAnnotations":    podAnnotations,
-			"waitForKube2IAM":   b.Shoot.Info.Spec.Addons.Kube2IAM.Enabled,
+			"waitForKube2IAM":   kube2iamEnabled,
 		}
 	}
 
@@ -225,12 +230,11 @@ func (b *AWSBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AWSBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	// Use common.GenerateAddonConfig for error-handling.
 	return common.GenerateAddonConfig(map[string]interface{}{
 		"controller": map[string]interface{}{
 			"config": map[string]interface{}{
 				"use-proxy-protocol": "true",
 			},
 		},
-	}, b.Shoot.Info.Spec.Addons.NginxIngress.Enabled), nil
+	}, b.Shoot.NginxIngressEnabled()), nil
 }

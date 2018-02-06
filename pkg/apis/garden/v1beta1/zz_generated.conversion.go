@@ -73,8 +73,6 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 		Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler,
 		Convert_v1beta1_Condition_To_garden_Condition,
 		Convert_garden_Condition_To_v1beta1_Condition,
-		Convert_v1beta1_CrossReference_To_garden_CrossReference,
-		Convert_garden_CrossReference_To_v1beta1_CrossReference,
 		Convert_v1beta1_CrossSecretBinding_To_garden_CrossSecretBinding,
 		Convert_garden_CrossSecretBinding_To_v1beta1_CrossSecretBinding,
 		Convert_v1beta1_CrossSecretBindingList_To_garden_CrossSecretBindingList,
@@ -133,8 +131,6 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 		Convert_garden_LastError_To_v1beta1_LastError,
 		Convert_v1beta1_LastOperation_To_garden_LastOperation,
 		Convert_garden_LastOperation_To_v1beta1_LastOperation,
-		Convert_v1beta1_LocalReference_To_garden_LocalReference,
-		Convert_garden_LocalReference_To_v1beta1_LocalReference,
 		Convert_v1beta1_MachineType_To_garden_MachineType,
 		Convert_garden_MachineType_To_v1beta1_MachineType,
 		Convert_v1beta1_Monocular_To_garden_Monocular,
@@ -179,6 +175,8 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 		Convert_garden_SeedCloud_To_v1beta1_SeedCloud,
 		Convert_v1beta1_SeedList_To_garden_SeedList,
 		Convert_garden_SeedList_To_v1beta1_SeedList,
+		Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks,
+		Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks,
 		Convert_v1beta1_SeedSpec_To_garden_SeedSpec,
 		Convert_garden_SeedSpec_To_v1beta1_SeedSpec,
 		Convert_v1beta1_SeedStatus_To_garden_SeedStatus,
@@ -345,8 +343,8 @@ func Convert_garden_AWSProfile_To_v1beta1_AWSProfile(in *garden.AWSProfile, out 
 }
 
 func autoConvert_v1beta1_AWSVPC_To_garden_AWSVPC(in *AWSVPC, out *garden.AWSVPC, s conversion.Scope) error {
-	out.ID = in.ID
-	out.CIDR = garden.CIDR(in.CIDR)
+	out.ID = (*string)(unsafe.Pointer(in.ID))
+	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -356,8 +354,8 @@ func Convert_v1beta1_AWSVPC_To_garden_AWSVPC(in *AWSVPC, out *garden.AWSVPC, s c
 }
 
 func autoConvert_garden_AWSVPC_To_v1beta1_AWSVPC(in *garden.AWSVPC, out *AWSVPC, s conversion.Scope) error {
-	out.ID = in.ID
-	out.CIDR = CIDR(in.CIDR)
+	out.ID = (*string)(unsafe.Pointer(in.ID))
+	out.CIDR = (*CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -415,27 +413,13 @@ func Convert_garden_Addon_To_v1beta1_Addon(in *garden.Addon, out *Addon, s conve
 }
 
 func autoConvert_v1beta1_Addons_To_garden_Addons(in *Addons, out *garden.Addons, s conversion.Scope) error {
-	if err := Convert_v1beta1_Kube2IAM_To_garden_Kube2IAM(&in.Kube2IAM, &out.Kube2IAM, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_Heapster_To_garden_Heapster(&in.Heapster, &out.Heapster, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard(&in.KubernetesDashboard, &out.KubernetesDashboard, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(&in.ClusterAutoscaler, &out.ClusterAutoscaler, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_NginxIngress_To_garden_NginxIngress(&in.NginxIngress, &out.NginxIngress, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_Monocular_To_garden_Monocular(&in.Monocular, &out.Monocular, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_KubeLego_To_garden_KubeLego(&in.KubeLego, &out.KubeLego, s); err != nil {
-		return err
-	}
+	out.ClusterAutoscaler = (*garden.ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
+	out.Heapster = (*garden.Heapster)(unsafe.Pointer(in.Heapster))
+	out.Kube2IAM = (*garden.Kube2IAM)(unsafe.Pointer(in.Kube2IAM))
+	out.KubeLego = (*garden.KubeLego)(unsafe.Pointer(in.KubeLego))
+	out.KubernetesDashboard = (*garden.KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
+	out.NginxIngress = (*garden.NginxIngress)(unsafe.Pointer(in.NginxIngress))
+	out.Monocular = (*garden.Monocular)(unsafe.Pointer(in.Monocular))
 	return nil
 }
 
@@ -445,27 +429,13 @@ func Convert_v1beta1_Addons_To_garden_Addons(in *Addons, out *garden.Addons, s c
 }
 
 func autoConvert_garden_Addons_To_v1beta1_Addons(in *garden.Addons, out *Addons, s conversion.Scope) error {
-	if err := Convert_garden_Kube2IAM_To_v1beta1_Kube2IAM(&in.Kube2IAM, &out.Kube2IAM, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_Heapster_To_v1beta1_Heapster(&in.Heapster, &out.Heapster, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(&in.KubernetesDashboard, &out.KubernetesDashboard, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(&in.ClusterAutoscaler, &out.ClusterAutoscaler, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_NginxIngress_To_v1beta1_NginxIngress(&in.NginxIngress, &out.NginxIngress, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_Monocular_To_v1beta1_Monocular(&in.Monocular, &out.Monocular, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_KubeLego_To_v1beta1_KubeLego(&in.KubeLego, &out.KubeLego, s); err != nil {
-		return err
-	}
+	out.ClusterAutoscaler = (*ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
+	out.Heapster = (*Heapster)(unsafe.Pointer(in.Heapster))
+	out.Kube2IAM = (*Kube2IAM)(unsafe.Pointer(in.Kube2IAM))
+	out.KubeLego = (*KubeLego)(unsafe.Pointer(in.KubeLego))
+	out.KubernetesDashboard = (*KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
+	out.NginxIngress = (*NginxIngress)(unsafe.Pointer(in.NginxIngress))
+	out.Monocular = (*Monocular)(unsafe.Pointer(in.Monocular))
 	return nil
 }
 
@@ -665,8 +635,8 @@ func Convert_garden_AzureResourceGroup_To_v1beta1_AzureResourceGroup(in *garden.
 }
 
 func autoConvert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.AzureVNet, s conversion.Scope) error {
-	out.Name = in.Name
-	out.CIDR = garden.CIDR(in.CIDR)
+	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -676,8 +646,8 @@ func Convert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.Az
 }
 
 func autoConvert_garden_AzureVNet_To_v1beta1_AzureVNet(in *garden.AzureVNet, out *AzureVNet, s conversion.Scope) error {
-	out.Name = in.Name
-	out.CIDR = CIDR(in.CIDR)
+	out.Name = (*string)(unsafe.Pointer(in.Name))
+	out.CIDR = (*CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -823,6 +793,7 @@ func autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudPr
 	out.Azure = (*garden.AzureProfile)(unsafe.Pointer(in.Azure))
 	out.GCP = (*garden.GCPProfile)(unsafe.Pointer(in.GCP))
 	out.OpenStack = (*garden.OpenStackProfile)(unsafe.Pointer(in.OpenStack))
+	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
 }
 
@@ -836,6 +807,7 @@ func autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.
 	out.Azure = (*AzureProfile)(unsafe.Pointer(in.Azure))
 	out.GCP = (*GCPProfile)(unsafe.Pointer(in.GCP))
 	out.OpenStack = (*OpenStackProfile)(unsafe.Pointer(in.OpenStack))
+	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
 }
 
@@ -896,34 +868,10 @@ func Convert_garden_Condition_To_v1beta1_Condition(in *garden.Condition, out *Co
 	return autoConvert_garden_Condition_To_v1beta1_Condition(in, out, s)
 }
 
-func autoConvert_v1beta1_CrossReference_To_garden_CrossReference(in *CrossReference, out *garden.CrossReference, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Namespace = in.Namespace
-	return nil
-}
-
-// Convert_v1beta1_CrossReference_To_garden_CrossReference is an autogenerated conversion function.
-func Convert_v1beta1_CrossReference_To_garden_CrossReference(in *CrossReference, out *garden.CrossReference, s conversion.Scope) error {
-	return autoConvert_v1beta1_CrossReference_To_garden_CrossReference(in, out, s)
-}
-
-func autoConvert_garden_CrossReference_To_v1beta1_CrossReference(in *garden.CrossReference, out *CrossReference, s conversion.Scope) error {
-	out.Name = in.Name
-	out.Namespace = in.Namespace
-	return nil
-}
-
-// Convert_garden_CrossReference_To_v1beta1_CrossReference is an autogenerated conversion function.
-func Convert_garden_CrossReference_To_v1beta1_CrossReference(in *garden.CrossReference, out *CrossReference, s conversion.Scope) error {
-	return autoConvert_garden_CrossReference_To_v1beta1_CrossReference(in, out, s)
-}
-
 func autoConvert_v1beta1_CrossSecretBinding_To_garden_CrossSecretBinding(in *CrossSecretBinding, out *garden.CrossSecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_CrossReference_To_garden_CrossReference(&in.SecretRef, &out.SecretRef, s); err != nil {
-		return err
-	}
-	out.Quotas = *(*[]garden.CrossReference)(unsafe.Pointer(&in.Quotas))
+	out.SecretRef = in.SecretRef
+	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
 	return nil
 }
 
@@ -934,10 +882,8 @@ func Convert_v1beta1_CrossSecretBinding_To_garden_CrossSecretBinding(in *CrossSe
 
 func autoConvert_garden_CrossSecretBinding_To_v1beta1_CrossSecretBinding(in *garden.CrossSecretBinding, out *CrossSecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_CrossReference_To_v1beta1_CrossReference(&in.SecretRef, &out.SecretRef, s); err != nil {
-		return err
-	}
-	out.Quotas = *(*[]CrossReference)(unsafe.Pointer(&in.Quotas))
+	out.SecretRef = in.SecretRef
+	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
 	return nil
 }
 
@@ -1273,9 +1219,9 @@ func Convert_garden_HelmTiller_To_v1beta1_HelmTiller(in *garden.HelmTiller, out 
 }
 
 func autoConvert_v1beta1_K8SNetworks_To_garden_K8SNetworks(in *K8SNetworks, out *garden.K8SNetworks, s conversion.Scope) error {
-	out.Nodes = garden.CIDR(in.Nodes)
-	out.Pods = garden.CIDR(in.Pods)
-	out.Services = garden.CIDR(in.Services)
+	out.Nodes = (*garden.CIDR)(unsafe.Pointer(in.Nodes))
+	out.Pods = (*garden.CIDR)(unsafe.Pointer(in.Pods))
+	out.Services = (*garden.CIDR)(unsafe.Pointer(in.Services))
 	return nil
 }
 
@@ -1285,9 +1231,9 @@ func Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(in *K8SNetworks, out *gar
 }
 
 func autoConvert_garden_K8SNetworks_To_v1beta1_K8SNetworks(in *garden.K8SNetworks, out *K8SNetworks, s conversion.Scope) error {
-	out.Nodes = CIDR(in.Nodes)
-	out.Pods = CIDR(in.Pods)
-	out.Services = CIDR(in.Services)
+	out.Nodes = (*CIDR)(unsafe.Pointer(in.Nodes))
+	out.Pods = (*CIDR)(unsafe.Pointer(in.Pods))
+	out.Services = (*CIDR)(unsafe.Pointer(in.Services))
 	return nil
 }
 
@@ -1498,21 +1444,11 @@ func Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.KubeletCon
 
 func autoConvert_v1beta1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *garden.Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
-	if err := Convert_v1beta1_KubeAPIServerConfig_To_garden_KubeAPIServerConfig(&in.KubeAPIServer, &out.KubeAPIServer, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_KubeControllerManagerConfig_To_garden_KubeControllerManagerConfig(&in.KubeControllerManager, &out.KubeControllerManager, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_KubeSchedulerConfig_To_garden_KubeSchedulerConfig(&in.KubeScheduler, &out.KubeScheduler, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_KubeProxyConfig_To_garden_KubeProxyConfig(&in.KubeProxy, &out.KubeProxy, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_KubeletConfig_To_garden_KubeletConfig(&in.Kubelet, &out.Kubelet, s); err != nil {
-		return err
-	}
+	out.KubeAPIServer = (*garden.KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	out.KubeControllerManager = (*garden.KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
+	out.KubeScheduler = (*garden.KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
+	out.KubeProxy = (*garden.KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
+	out.Kubelet = (*garden.KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	return nil
 }
@@ -1524,21 +1460,11 @@ func Convert_v1beta1_Kubernetes_To_garden_Kubernetes(in *Kubernetes, out *garden
 
 func autoConvert_garden_Kubernetes_To_v1beta1_Kubernetes(in *garden.Kubernetes, out *Kubernetes, s conversion.Scope) error {
 	out.AllowPrivilegedContainers = (*bool)(unsafe.Pointer(in.AllowPrivilegedContainers))
-	if err := Convert_garden_KubeAPIServerConfig_To_v1beta1_KubeAPIServerConfig(&in.KubeAPIServer, &out.KubeAPIServer, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_KubeControllerManagerConfig_To_v1beta1_KubeControllerManagerConfig(&in.KubeControllerManager, &out.KubeControllerManager, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_KubeSchedulerConfig_To_v1beta1_KubeSchedulerConfig(&in.KubeScheduler, &out.KubeScheduler, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_KubeProxyConfig_To_v1beta1_KubeProxyConfig(&in.KubeProxy, &out.KubeProxy, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_KubeletConfig_To_v1beta1_KubeletConfig(&in.Kubelet, &out.Kubelet, s); err != nil {
-		return err
-	}
+	out.KubeAPIServer = (*KubeAPIServerConfig)(unsafe.Pointer(in.KubeAPIServer))
+	out.KubeControllerManager = (*KubeControllerManagerConfig)(unsafe.Pointer(in.KubeControllerManager))
+	out.KubeScheduler = (*KubeSchedulerConfig)(unsafe.Pointer(in.KubeScheduler))
+	out.KubeProxy = (*KubeProxyConfig)(unsafe.Pointer(in.KubeProxy))
+	out.Kubelet = (*KubeletConfig)(unsafe.Pointer(in.Kubelet))
 	out.Version = in.Version
 	return nil
 }
@@ -1660,26 +1586,6 @@ func autoConvert_garden_LastOperation_To_v1beta1_LastOperation(in *garden.LastOp
 // Convert_garden_LastOperation_To_v1beta1_LastOperation is an autogenerated conversion function.
 func Convert_garden_LastOperation_To_v1beta1_LastOperation(in *garden.LastOperation, out *LastOperation, s conversion.Scope) error {
 	return autoConvert_garden_LastOperation_To_v1beta1_LastOperation(in, out, s)
-}
-
-func autoConvert_v1beta1_LocalReference_To_garden_LocalReference(in *LocalReference, out *garden.LocalReference, s conversion.Scope) error {
-	out.Name = in.Name
-	return nil
-}
-
-// Convert_v1beta1_LocalReference_To_garden_LocalReference is an autogenerated conversion function.
-func Convert_v1beta1_LocalReference_To_garden_LocalReference(in *LocalReference, out *garden.LocalReference, s conversion.Scope) error {
-	return autoConvert_v1beta1_LocalReference_To_garden_LocalReference(in, out, s)
-}
-
-func autoConvert_garden_LocalReference_To_v1beta1_LocalReference(in *garden.LocalReference, out *LocalReference, s conversion.Scope) error {
-	out.Name = in.Name
-	return nil
-}
-
-// Convert_garden_LocalReference_To_v1beta1_LocalReference is an autogenerated conversion function.
-func Convert_garden_LocalReference_To_v1beta1_LocalReference(in *garden.LocalReference, out *LocalReference, s conversion.Scope) error {
-	return autoConvert_garden_LocalReference_To_v1beta1_LocalReference(in, out, s)
 }
 
 func autoConvert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
@@ -1950,7 +1856,6 @@ func autoConvert_v1beta1_OpenStackProfile_To_garden_OpenStackProfile(in *OpenSta
 	if err := Convert_v1beta1_OpenStackMachineImage_To_garden_OpenStackMachineImage(&in.MachineImage, &out.MachineImage, s); err != nil {
 		return err
 	}
-	out.CABundle = in.CABundle
 	return nil
 }
 
@@ -1967,7 +1872,6 @@ func autoConvert_garden_OpenStackProfile_To_v1beta1_OpenStackProfile(in *garden.
 	if err := Convert_garden_OpenStackMachineImage_To_v1beta1_OpenStackMachineImage(&in.MachineImage, &out.MachineImage, s); err != nil {
 		return err
 	}
-	out.CABundle = in.CABundle
 	return nil
 }
 
@@ -2022,10 +1926,8 @@ func Convert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker(in *garden.OpenSt
 
 func autoConvert_v1beta1_PrivateSecretBinding_To_garden_PrivateSecretBinding(in *PrivateSecretBinding, out *garden.PrivateSecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_v1beta1_LocalReference_To_garden_LocalReference(&in.SecretRef, &out.SecretRef, s); err != nil {
-		return err
-	}
-	out.Quotas = *(*[]garden.CrossReference)(unsafe.Pointer(&in.Quotas))
+	out.SecretRef = in.SecretRef
+	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
 	return nil
 }
 
@@ -2036,10 +1938,8 @@ func Convert_v1beta1_PrivateSecretBinding_To_garden_PrivateSecretBinding(in *Pri
 
 func autoConvert_garden_PrivateSecretBinding_To_v1beta1_PrivateSecretBinding(in *garden.PrivateSecretBinding, out *PrivateSecretBinding, s conversion.Scope) error {
 	out.ObjectMeta = in.ObjectMeta
-	if err := Convert_garden_LocalReference_To_v1beta1_LocalReference(&in.SecretRef, &out.SecretRef, s); err != nil {
-		return err
-	}
-	out.Quotas = *(*[]CrossReference)(unsafe.Pointer(&in.Quotas))
+	out.SecretRef = in.SecretRef
+	out.Quotas = *(*[]v1.ObjectReference)(unsafe.Pointer(&in.Quotas))
 	return nil
 }
 
@@ -2244,15 +2144,37 @@ func Convert_garden_SeedList_To_v1beta1_SeedList(in *garden.SeedList, out *SeedL
 	return autoConvert_garden_SeedList_To_v1beta1_SeedList(in, out, s)
 }
 
+func autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
+	out.Nodes = garden.CIDR(in.Nodes)
+	out.Pods = garden.CIDR(in.Pods)
+	out.Services = garden.CIDR(in.Services)
+	return nil
+}
+
+// Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks is an autogenerated conversion function.
+func Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
+	return autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in, out, s)
+}
+
+func autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
+	out.Nodes = CIDR(in.Nodes)
+	out.Pods = CIDR(in.Pods)
+	out.Services = CIDR(in.Services)
+	return nil
+}
+
+// Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks is an autogenerated conversion function.
+func Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
+	return autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in, out, s)
+}
+
 func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.SeedSpec, s conversion.Scope) error {
 	if err := Convert_v1beta1_SeedCloud_To_garden_SeedCloud(&in.Cloud, &out.Cloud, s); err != nil {
 		return err
 	}
 	out.IngressDomain = in.IngressDomain
-	if err := Convert_v1beta1_CrossReference_To_garden_CrossReference(&in.SecretRef, &out.SecretRef, s); err != nil {
-		return err
-	}
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.Networks, &out.Networks, s); err != nil {
+	out.SecretRef = in.SecretRef
+	if err := Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
@@ -2270,10 +2192,8 @@ func autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *S
 		return err
 	}
 	out.IngressDomain = in.IngressDomain
-	if err := Convert_garden_CrossReference_To_v1beta1_CrossReference(&in.SecretRef, &out.SecretRef, s); err != nil {
-		return err
-	}
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.Networks, &out.Networks, s); err != nil {
+	out.SecretRef = in.SecretRef
+	if err := Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
@@ -2361,9 +2281,7 @@ func Convert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *Sh
 }
 
 func autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.ShootSpec, s conversion.Scope) error {
-	if err := Convert_v1beta1_Addons_To_garden_Addons(&in.Addons, &out.Addons, s); err != nil {
-		return err
-	}
+	out.Addons = (*garden.Addons)(unsafe.Pointer(in.Addons))
 	out.Backup = (*garden.Backup)(unsafe.Pointer(in.Backup))
 	if err := Convert_v1beta1_Cloud_To_garden_Cloud(&in.Cloud, &out.Cloud, s); err != nil {
 		return err
@@ -2383,9 +2301,7 @@ func Convert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.Sh
 }
 
 func autoConvert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out *ShootSpec, s conversion.Scope) error {
-	if err := Convert_garden_Addons_To_v1beta1_Addons(&in.Addons, &out.Addons, s); err != nil {
-		return err
-	}
+	out.Addons = (*Addons)(unsafe.Pointer(in.Addons))
 	out.Backup = (*Backup)(unsafe.Pointer(in.Backup))
 	if err := Convert_garden_Cloud_To_v1beta1_Cloud(&in.Cloud, &out.Cloud, s); err != nil {
 		return err

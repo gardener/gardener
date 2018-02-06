@@ -28,12 +28,14 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 	var (
 		createIGW         = true
 		createVPC         = true
+		vpcID             = "${aws_vpc.vpc.id}"
 		internetGatewayID = "${aws_internet_gateway.igw.id}"
-		vpcID             = b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID
+		vpcCIDR           = ""
 	)
+
 	// check if we should use an existing VPC or create a new one
-	if vpcID != "" {
-		vpcExists, err := b.AWSClient.CheckIfVPCExists(vpcID)
+	if b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID != nil {
+		vpcExists, err := b.AWSClient.CheckIfVPCExists(*b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID)
 		if err != nil {
 			return err
 		}
@@ -41,17 +43,20 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 
 		// check if we should use the existing IGW or create a new one
 		if vpcExists {
-			igwID, err := b.AWSClient.GetInternetGateway(vpcID)
+			vpcID = *b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID
+			igwID, err := b.AWSClient.GetInternetGateway(*b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID)
 			if err != nil {
 				return err
 			}
 			if igwID != "" {
 				internetGatewayID = igwID
-				createIGW = true
+				createIGW = false
 			}
 		}
-	} else {
-		vpcID = "${aws_vpc.vpc.id}"
+	}
+
+	if b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR != nil {
+		vpcCIDR = string(*b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR)
 	}
 
 	machineImage, err := findAMIForRegion(b.Shoot.Info.Spec.Cloud.Region, b.Shoot.CloudProfile.Spec.AWS.MachineImages)
@@ -62,7 +67,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 	return terraformer.
 		New(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("aws-infra", b.generateTerraformInfraConfig(createVPC, createIGW, vpcID, internetGatewayID, machineImage)).
+		DefineConfig("aws-infra", b.generateTerraformInfraConfig(createVPC, createIGW, vpcID, internetGatewayID, vpcCIDR, machineImage)).
 		Apply()
 }
 
@@ -86,7 +91,7 @@ func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() []map[string]
 
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vpcID, internetGatewayID string, machineImage gardenv1beta1.AWSMachineImage) map[string]interface{} {
+func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vpcID, internetGatewayID, vpcCIDR string, machineImage gardenv1beta1.AWSMachineImage) map[string]interface{} {
 	var (
 		sshSecret                   = b.Secrets["ssh-keypair"]
 		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
@@ -117,12 +122,12 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vp
 		"create": map[string]interface{}{
 			"vpc": createVPC,
 			"igw": createIGW,
-			"clusterAutoscalerPolicies": b.Shoot.Info.Spec.Addons.ClusterAutoscaler.Enabled && !b.Shoot.Info.Spec.Addons.Kube2IAM.Enabled,
+			"clusterAutoscalerPolicies": b.Shoot.ClusterAutoscalerEnabled() && !b.Shoot.Kube2IAMEnabled(),
 		},
 		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
 		"vpc": map[string]interface{}{
 			"id":                vpcID,
-			"cidr":              b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR,
+			"cidr":              vpcCIDR,
 			"dhcpDomainName":    dhcpDomainName,
 			"internetGatewayID": internetGatewayID,
 		},

@@ -24,6 +24,10 @@ import (
 
 // DeployNginxIngressResources creates the respective wildcard DNS record for the nginx-ingress-controller.
 func (b *Botanist) DeployNginxIngressResources() error {
+	if !b.Shoot.NginxIngressEnabled() {
+		return b.DestroyNginxIngressResources()
+	}
+
 	loadBalancerIngress, _, err := common.GetLoadBalancerIngress(b.K8sShootClient, metav1.NamespaceSystem, "addons-nginx-ingress-controller")
 	if err != nil {
 		return err
@@ -39,20 +43,20 @@ func (b *Botanist) DestroyNginxIngressResources() error {
 // GenerateNginxIngressConfig generates the values which are required to render the chart of
 // the nginx-ingress-controller properly.
 func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.NginxIngress.Enabled), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
 // the kubernetes-dashboard properly.
 func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.KubernetesDashboard.Enabled), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.KubernetesDashboardEnabled()), nil
 }
 
 // GenerateKubeLegoConfig generates the values which are required to render the chart of
 // kube-lego properly.
 func (b *Botanist) GenerateKubeLegoConfig() (map[string]interface{}, error) {
 	var (
-		enabled = b.Shoot.Info.Spec.Addons.KubeLego.Enabled
+		enabled = b.Shoot.KubeLegoEnabled()
 		values  map[string]interface{}
 	)
 
@@ -64,14 +68,14 @@ func (b *Botanist) GenerateKubeLegoConfig() (map[string]interface{}, error) {
 		}
 	}
 
-	return common.GenerateAddonConfig(values, b.Shoot.Info.Spec.Addons.KubeLego.Enabled), nil
+	return common.GenerateAddonConfig(values, enabled), nil
 }
 
 // GenerateMonocularConfig generates the values which are required to render the chart of
 // monocular properly.
 func (b *Botanist) GenerateMonocularConfig() (map[string]interface{}, error) {
 	var (
-		enabled = b.Shoot.Info.Spec.Addons.Monocular.Enabled
+		enabled = b.Shoot.MonocularEnabled()
 		values  map[string]interface{}
 	)
 
@@ -102,7 +106,7 @@ func (b *Botanist) GenerateMonocularConfig() (map[string]interface{}, error) {
 // heapster properly.
 func (b *Botanist) GenerateHeapsterConfig() (map[string]interface{}, error) {
 	var (
-		enabled = b.Shoot.Info.Spec.Addons.Heapster.Enabled
+		enabled = b.Shoot.HeapsterEnabled()
 		values  map[string]interface{}
 	)
 
@@ -124,5 +128,5 @@ func (b *Botanist) GenerateHeapsterConfig() (map[string]interface{}, error) {
 // GenerateHelmTillerConfig generates the values which are required to render the chart of
 // helm-tiller properly.
 func (b *Botanist) GenerateHelmTillerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.Monocular.Enabled), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.MonocularEnabled()), nil
 }

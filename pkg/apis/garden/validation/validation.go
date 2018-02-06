@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -156,10 +157,12 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		if len(spec.OpenStack.KeyStoneURL) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keyStoneURL"), "must provide the URL to KeyStone"))
 		}
+	}
 
-		_, err := utils.DecodeCertificate([]byte(spec.OpenStack.CABundle))
+	if spec.CABundle != nil {
+		_, err := utils.DecodeCertificate([]byte(*(spec.CABundle)))
 		if err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("openstack", "caBundle"), spec.OpenStack.CABundle, "caBundle is not a valid PEM-encoded certificate"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
 		}
 	}
 
@@ -348,7 +351,7 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingressDomain"), seedSpec.IngressDomain, fmt.Sprintf("domain must match the regex %s", r)))
 	}
 
-	allErrs = append(allErrs, validateCrossReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
+	allErrs = append(allErrs, validateObjectReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
 
 	networksPath := fldPath.Child("networks")
 	allErrs = append(allErrs, validateCIDR(seedSpec.Networks.Nodes, networksPath.Child("nodes"))...)
@@ -361,8 +364,7 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 func validateCIDR(cidr garden.CIDR, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	_, _, err := net.ParseCIDR(string(cidr))
-	if err != nil {
+	if _, _, err := net.ParseCIDR(string(cidr)); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath, cidr, err.Error()))
 	}
 
@@ -442,9 +444,9 @@ func ValidatePrivateSecretBinding(binding *garden.PrivateSecretBinding) field.Er
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateLocalReference(binding.SecretRef, field.NewPath("secretRef"))...)
+	allErrs = append(allErrs, validateLocalObjectReference(binding.SecretRef, field.NewPath("secretRef"))...)
 	for i, quota := range binding.Quotas {
-		allErrs = append(allErrs, validateCrossReference(quota, field.NewPath("quotas").Index(i))...)
+		allErrs = append(allErrs, validateObjectReference(quota, field.NewPath("quotas").Index(i))...)
 	}
 
 	return allErrs
@@ -465,9 +467,9 @@ func ValidateCrossSecretBinding(binding *garden.CrossSecretBinding) field.ErrorL
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateCrossReference(binding.SecretRef, field.NewPath("secretRef"))...)
+	allErrs = append(allErrs, validateObjectReference(binding.SecretRef, field.NewPath("secretRef"))...)
 	for i, quota := range binding.Quotas {
-		allErrs = append(allErrs, validateCrossReference(quota, field.NewPath("quotas").Index(i))...)
+		allErrs = append(allErrs, validateObjectReference(quota, field.NewPath("quotas").Index(i))...)
 	}
 
 	return allErrs
@@ -483,7 +485,7 @@ func ValidateCrossSecretBindingUpdate(newBinding, oldBinding *garden.CrossSecret
 	return allErrs
 }
 
-func validateLocalReference(ref garden.LocalReference, fldPath *field.Path) field.ErrorList {
+func validateLocalObjectReference(ref corev1.LocalObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(ref.Name) == 0 {
@@ -493,7 +495,7 @@ func validateLocalReference(ref garden.LocalReference, fldPath *field.Path) fiel
 	return allErrs
 }
 
-func validateCrossReference(ref garden.CrossReference, fldPath *field.Path) field.ErrorList {
+func validateObjectReference(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(ref.Name) == 0 {
@@ -549,7 +551,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 
 	if spec.DNS.Provider == garden.DNSUnmanaged {
-		if spec.Addons.Monocular.Enabled {
+		if spec.Addons != nil && spec.Addons.Monocular != nil && spec.Addons.Monocular.Enabled {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("addons", "monocular", "enabled"), spec.Addons.Monocular.Enabled, fmt.Sprintf("`.spec.addons.monocular.enabled` must be false when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
 		}
 		if spec.DNS.HostedZoneID != nil {
@@ -567,10 +569,14 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
-func validateAddons(addons garden.Addons, fldPath *field.Path) field.ErrorList {
+func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if addons.Kube2IAM.Enabled {
+	if addons == nil {
+		return allErrs
+	}
+
+	if addons.Kube2IAM != nil && addons.Kube2IAM.Enabled {
 		kube2iamPath := fldPath.Child("kube2iam")
 		for i, role := range addons.Kube2IAM.Roles {
 			idxPath := kube2iamPath.Child("roles").Index(i)
@@ -591,7 +597,7 @@ func validateAddons(addons garden.Addons, fldPath *field.Path) field.ErrorList {
 		}
 	}
 
-	if addons.KubeLego.Enabled {
+	if addons.KubeLego != nil && addons.KubeLego.Enabled {
 		if !utils.TestEmail(addons.KubeLego.Mail) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("kube-lego", "mail"), addons.KubeLego.Mail, "must provide a valid email address when kube-lego is enabled"))
 		}
@@ -602,12 +608,6 @@ func validateAddons(addons garden.Addons, fldPath *field.Path) field.ErrorList {
 
 func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	// to be removed once backup functionality has been implemented for GCP/OpenStack
-	if (cloudProvider == garden.CloudProviderGCP || cloudProvider == garden.CloudProviderOpenStack) && backup != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath, fmt.Sprintf("backup section is not yet supported for %s shoots", cloudProvider)))
-		return allErrs
-	}
 
 	if backup == nil {
 		return allErrs
@@ -652,9 +652,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			return allErrs
 		}
 
-		allErrs = append(allErrs, validateCIDR(aws.Networks.Nodes, awsPath.Child("networks", "nodes"))...)
-		allErrs = append(allErrs, validateCIDR(aws.Networks.Pods, awsPath.Child("networks", "pods"))...)
-		allErrs = append(allErrs, validateCIDR(aws.Networks.Services, awsPath.Child("networks", "services"))...)
+		allErrs = append(allErrs, validateK8SNetworks(aws.Networks.K8SNetworks, awsPath.Child("networks"))...)
 
 		if len(aws.Networks.Internal) != zoneCount {
 			allErrs = append(allErrs, field.Invalid(awsPath.Child("networks", "internal"), aws.Networks.Internal, "must specify as many internal networks as zones"))
@@ -677,14 +675,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, validateCIDR(cidr, awsPath.Child("networks", "workers").Index(i))...)
 		}
 
-		if (len(aws.Networks.VPC.ID) == 0 && len(aws.Networks.VPC.CIDR) == 0) || (len(aws.Networks.VPC.ID) != 0 && len(aws.Networks.VPC.CIDR) != 0) {
+		if (aws.Networks.VPC.ID == nil && aws.Networks.VPC.CIDR == nil) || (aws.Networks.VPC.ID != nil && aws.Networks.VPC.CIDR != nil) {
 			allErrs = append(allErrs, field.Invalid(awsPath.Child("networks", "vpc"), aws.Networks.VPC, "must specify either a vpc id or a cidr"))
-		} else if len(aws.Networks.VPC.CIDR) != 0 && len(aws.Networks.VPC.ID) == 0 {
-			allErrs = append(allErrs, validateCIDR(aws.Networks.VPC.CIDR, awsPath.Child("networks", "vpc", "cidr"))...)
-		}
-
-		if len(aws.Networks.VPC.ID) != 0 && len(aws.Networks.Nodes) == 0 {
-			allErrs = append(allErrs, field.Required(awsPath.Child("networks", "nodes"), "node network must not be empty if you are using an existing VPC (specify the VPC CIDR as node network)"))
+		} else if aws.Networks.VPC.CIDR != nil && aws.Networks.VPC.ID == nil {
+			allErrs = append(allErrs, validateCIDR(*(aws.Networks.VPC.CIDR), awsPath.Child("networks", "vpc", "cidr"))...)
 		}
 
 		if len(aws.Workers) == 0 {
@@ -714,19 +708,22 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 		if azure.ResourceGroup != nil {
 			allErrs = append(allErrs, field.Invalid(azurePath.Child("resourceGroup", "name"), azure.ResourceGroup.Name, "specifying an existing resource group is not supported yet."))
 		}
-		if len(azure.Networks.VNet.Name) != 0 {
-			allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet", "name"), azure.Networks.VNet.Name, "specifying an existing vnet is not supported yet"))
+		if azure.Networks.VNet.Name != nil {
+			allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet", "name"), *(azure.Networks.VNet.Name), "specifying an existing vnet is not supported yet"))
+		} else {
+			if azure.Networks.VNet.CIDR == nil {
+				allErrs = append(allErrs, field.Required(azurePath.Child("networks", "vnet", "cidr"), "must specify a vnet cidr"))
+			} else {
+				allErrs = append(allErrs, validateCIDR(*(azure.Networks.VNet.CIDR), azurePath.Child("networks", "vnet", "cidr"))...)
+			}
 		}
-		allErrs = append(allErrs, validateCIDR(azure.Networks.VNet.CIDR, azurePath.Child("networks", "vnet", "cidr"))...)
 
 		// TODO: re-enable once deployment into existing resource group works properly.
 		// if azure.ResourceGroup != nil && len(azure.ResourceGroup.Name) == 0 {
 		// 	allErrs = append(allErrs, field.Invalid(azurePath.Child("resourceGroup", "name"), azure.ResourceGroup.Name, "resource group name must not be empty when resource group key is provided"))
 		// }
 
-		allErrs = append(allErrs, validateCIDR(azure.Networks.Nodes, azurePath.Child("networks", "nodes"))...)
-		allErrs = append(allErrs, validateCIDR(azure.Networks.Pods, azurePath.Child("networks", "pods"))...)
-		allErrs = append(allErrs, validateCIDR(azure.Networks.Services, azurePath.Child("networks", "services"))...)
+		allErrs = append(allErrs, validateK8SNetworks(azure.Networks.K8SNetworks, azurePath.Child("networks"))...)
 
 		if azure.Networks.Public != nil {
 			allErrs = append(allErrs, validateCIDR(*azure.Networks.Public, azurePath.Child("networks", "public"))...)
@@ -735,10 +732,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, validateCIDR(azure.Networks.Workers, azurePath.Child("networks", "workers"))...)
 
 		// TODO: re-enable once deployment into existing vnet works properly.
-		// if (len(azure.Networks.VNet.Name) == 0 && len(azure.Networks.VNet.CIDR) == 0) || (len(azure.Networks.VNet.Name) != 0 && len(azure.Networks.VNet.CIDR) != 0) {
+		// if (azure.Networks.VNet.Name == nil && azure.Networks.VNet.CIDR == nil) || (azure.Networks.VNet.Name != nil && azure.Networks.VNet.CIDR != nil) {
 		// 	allErrs = append(allErrs, field.Invalid(azurePath.Child("networks", "vnet"), azure.Networks.VNet, "must specify either a vnet name or a cidr"))
-		// } else if len(azure.Networks.VNet.CIDR) != 0 && len(azure.Networks.VNet.Name) == 0 {
-		// 	allErrs = append(allErrs, validateCIDR(azure.Networks.VNet.CIDR, azurePath.Child("networks", "vnet", "cidr"))...)
+		// } else if azure.Networks.VNet.CIDR != nil && azure.Networks.VNet.Name == nil {
+		// 	allErrs = append(allErrs, validateCIDR(*(azure.Networks.VNet.CIDR), azurePath.Child("networks", "vnet", "cidr"))...)
 		// }
 
 		if len(azure.Workers) == 0 {
@@ -785,9 +782,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			allErrs = append(allErrs, field.Forbidden(gcpPath.Child("zones"), "cannot specify more than once zone currently"))
 		}
 
-		allErrs = append(allErrs, validateCIDR(gcp.Networks.Nodes, gcpPath.Child("networks", "nodes"))...)
-		allErrs = append(allErrs, validateCIDR(gcp.Networks.Pods, gcpPath.Child("networks", "pods"))...)
-		allErrs = append(allErrs, validateCIDR(gcp.Networks.Services, gcpPath.Child("networks", "services"))...)
+		allErrs = append(allErrs, validateK8SNetworks(gcp.Networks.K8SNetworks, gcpPath.Child("networks"))...)
 
 		if len(gcp.Networks.Workers) != zoneCount {
 			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "workers"), gcp.Networks.Workers, "must specify as many workers networks as zones"))
@@ -833,9 +828,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			return allErrs
 		}
 
-		allErrs = append(allErrs, validateCIDR(openStack.Networks.Nodes, openStackPath.Child("networks", "nodes"))...)
-		allErrs = append(allErrs, validateCIDR(openStack.Networks.Pods, openStackPath.Child("networks", "pods"))...)
-		allErrs = append(allErrs, validateCIDR(openStack.Networks.Services, openStackPath.Child("networks", "services"))...)
+		allErrs = append(allErrs, validateK8SNetworks(openStack.Networks.K8SNetworks, openStackPath.Child("networks"))...)
 
 		if len(openStack.Networks.Workers) != zoneCount {
 			allErrs = append(allErrs, field.Invalid(openStackPath.Child("networks", "workers"), openStack.Networks.Workers, "must specify as many workers networks as zones"))
@@ -943,34 +936,61 @@ func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 	return allErrs
 }
 
+func validateK8SNetworks(networks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if networks.Nodes != nil {
+		allErrs = append(allErrs, validateCIDR(*networks.Nodes, fldPath.Child("nodes"))...)
+	} else {
+		allErrs = append(allErrs, field.Required(fldPath.Child("nodes"), "nodes CIDR cannot be unset"))
+	}
+
+	if networks.Pods != nil {
+		allErrs = append(allErrs, validateCIDR(*networks.Pods, fldPath.Child("pods"))...)
+	} else {
+		allErrs = append(allErrs, field.Required(fldPath.Child("pods"), "pods CIDR cannot be unset"))
+	}
+
+	if networks.Services != nil {
+		allErrs = append(allErrs, validateCIDR(*networks.Services, fldPath.Child("services"))...)
+	} else {
+		allErrs = append(allErrs, field.Required(fldPath.Child("services"), "services CIDR cannot be unset"))
+	}
+
+	return allErrs
+}
+
 func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	oidc := kubernetes.KubeAPIServer.OIDCConfig
-	if oidc != nil {
-		oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
+	kubeAPIServer := kubernetes.KubeAPIServer
+	if kubeAPIServer != nil {
+		oidc := kubeAPIServer.OIDCConfig
+		if oidc != nil {
+			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 
-		_, err := utils.DecodeCertificate([]byte(*oidc.CABundle))
-		if err != nil {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
-		}
-		if len(*oidc.ClientID) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "client id cannot be empty when key is provided"))
-		}
-		if len(*oidc.GroupsClaim) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), oidc.GroupsClaim, "groups claim cannot be empty when key is provided"))
-		}
-		if len(*oidc.GroupsPrefix) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), oidc.GroupsPrefix, "groups prefix cannot be empty when key is provided"))
-		}
-		if len(*oidc.IssuerURL) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
-		}
-		if len(*oidc.UsernameClaim) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), oidc.UsernameClaim, "username claim cannot be empty when key is provided"))
-		}
-		if len(*oidc.UsernamePrefix) == 0 {
-			allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
+			_, err := utils.DecodeCertificate([]byte(*oidc.CABundle))
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
+			}
+			if len(*oidc.ClientID) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "client id cannot be empty when key is provided"))
+			}
+			if len(*oidc.GroupsClaim) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), oidc.GroupsClaim, "groups claim cannot be empty when key is provided"))
+			}
+			if len(*oidc.GroupsPrefix) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), oidc.GroupsPrefix, "groups prefix cannot be empty when key is provided"))
+			}
+			if len(*oidc.IssuerURL) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
+			}
+			if len(*oidc.UsernameClaim) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), oidc.UsernameClaim, "username claim cannot be empty when key is provided"))
+			}
+			if len(*oidc.UsernamePrefix) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
+			}
 		}
 	}
 

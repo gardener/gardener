@@ -23,39 +23,63 @@ import (
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
 // If it is not able to determine it, an error will be returned.
 func DetermineCloudProviderInProfile(spec garden.CloudProfileSpec) (garden.CloudProvider, error) {
-	if spec.AWS != nil && spec.Azure == nil && spec.GCP == nil && spec.OpenStack == nil {
-		return garden.CloudProviderAWS, nil
+	var (
+		cloud     garden.CloudProvider
+		numClouds = 0
+	)
+
+	if spec.AWS != nil {
+		numClouds++
+		cloud = garden.CloudProviderAWS
 	}
-	if spec.Azure != nil && spec.GCP == nil && spec.OpenStack == nil && spec.AWS == nil {
-		return garden.CloudProviderAzure, nil
+	if spec.Azure != nil {
+		numClouds++
+		cloud = garden.CloudProviderAzure
 	}
-	if spec.GCP != nil && spec.OpenStack == nil && spec.AWS == nil && spec.Azure == nil {
-		return garden.CloudProviderGCP, nil
+	if spec.GCP != nil {
+		numClouds++
+		cloud = garden.CloudProviderGCP
 	}
-	if spec.OpenStack != nil && spec.AWS == nil && spec.Azure == nil && spec.GCP == nil {
-		return garden.CloudProviderOpenStack, nil
+	if spec.OpenStack != nil {
+		numClouds++
+		cloud = garden.CloudProviderOpenStack
 	}
 
-	return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack")
+	if numClouds != 1 {
+		return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack")
+	}
+	return cloud, nil
 }
 
 // DetermineCloudProviderInShoot takes a Shoot cloud object and returns the cloud provider this profile is used for.
 // If it is not able to determine it, an error will be returned.
-func DetermineCloudProviderInShoot(cloud garden.Cloud) (garden.CloudProvider, error) {
-	if cloud.AWS != nil && cloud.Azure == nil && cloud.GCP == nil && cloud.OpenStack == nil {
-		return garden.CloudProviderAWS, nil
+func DetermineCloudProviderInShoot(cloudObj garden.Cloud) (garden.CloudProvider, error) {
+	var (
+		cloud     garden.CloudProvider
+		numClouds = 0
+	)
+
+	if cloudObj.AWS != nil {
+		numClouds++
+		cloud = garden.CloudProviderAWS
 	}
-	if cloud.Azure != nil && cloud.GCP == nil && cloud.OpenStack == nil && cloud.AWS == nil {
-		return garden.CloudProviderAzure, nil
+	if cloudObj.Azure != nil {
+		numClouds++
+		cloud = garden.CloudProviderAzure
 	}
-	if cloud.GCP != nil && cloud.OpenStack == nil && cloud.AWS == nil && cloud.Azure == nil {
-		return garden.CloudProviderGCP, nil
+	if cloudObj.GCP != nil {
+		numClouds++
+		cloud = garden.CloudProviderGCP
 	}
-	if cloud.OpenStack != nil && cloud.AWS == nil && cloud.Azure == nil && cloud.GCP == nil {
-		return garden.CloudProviderOpenStack, nil
+	if cloudObj.OpenStack != nil {
+		numClouds++
+		cloud = garden.CloudProviderOpenStack
 	}
 
-	return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
+	if numClouds != 1 {
+		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
+	}
+	return cloud, nil
 }
 
 // GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.

@@ -148,9 +148,8 @@ const (
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to
 // render the shoot-cloud-config chart properly.
 type CloudConfigUserDataConfig struct {
-	CloudConfig       bool
-	KubeletParameters []string
-	NetworkPlugin     string
-	CABundle          string
-	WorkerNames       []string
+	ProvisionCloudConfig bool
+	KubeletParameters    []string
+	NetworkPlugin        string
+	WorkerNames          []string
 }

@@ -133,19 +133,11 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 
 func validateAWS(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *garden.Shoot) field.ErrorList {
 	var (
-		allErrs field.ErrorList
+		allErrs = field.ErrorList{}
 		path    = field.NewPath("spec", "cloud", "aws")
 	)
 
-	if yes := networksIntersect(seed.Spec.Networks.Nodes, shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Nodes); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Nodes, "shoot node network intersects with seed node network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Pods, shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods, "shoot pod network intersects with seed pod network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Services, shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services, "shoot service network intersects with seed service network"))
-	}
+	allErrs = append(allErrs, validateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Cloud.AWS.Networks.K8SNetworks, path.Child("networks"))...)
 
 	if ok, validDNSProviders := validateDNSConstraints(cloudProfile.Spec.AWS.Constraints.DNSProviders, shoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), shoot.Spec.DNS.Provider, validDNSProviders))
@@ -184,19 +176,11 @@ func validateAWS(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *ga
 
 func validateAzure(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *garden.Shoot) field.ErrorList {
 	var (
-		allErrs field.ErrorList
+		allErrs = field.ErrorList{}
 		path    = field.NewPath("spec", "cloud", "azure")
 	)
 
-	if yes := networksIntersect(seed.Spec.Networks.Nodes, shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes, "shoot node network intersects with seed node network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Pods, shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods, "shoot pod network intersects with seed pod network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Services, shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services, "shoot service network intersects with seed service network"))
-	}
+	allErrs = append(allErrs, validateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Cloud.Azure.Networks.K8SNetworks, path.Child("networks"))...)
 
 	if ok, validDNSProviders := validateDNSConstraints(cloudProfile.Spec.Azure.Constraints.DNSProviders, shoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), shoot.Spec.DNS.Provider, validDNSProviders))
@@ -227,19 +211,11 @@ func validateAzure(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *
 
 func validateGCP(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *garden.Shoot) field.ErrorList {
 	var (
-		allErrs field.ErrorList
+		allErrs = field.ErrorList{}
 		path    = field.NewPath("spec", "cloud", "gcp")
 	)
 
-	if yes := networksIntersect(seed.Spec.Networks.Nodes, shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Nodes); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Nodes, "shoot node network intersects with seed node network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Pods, shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Pods); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Pods, "shoot pod network intersects with seed pod network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Services, shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Services); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.GCP.Networks.K8SNetworks.Services, "shoot service network intersects with seed service network"))
-	}
+	allErrs = append(allErrs, validateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Cloud.GCP.Networks.K8SNetworks, path.Child("networks"))...)
 
 	if ok, validDNSProviders := validateDNSConstraints(cloudProfile.Spec.GCP.Constraints.DNSProviders, shoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), shoot.Spec.DNS.Provider, validDNSProviders))
@@ -274,19 +250,11 @@ func validateGCP(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *ga
 
 func validateOpenStack(cloudProfile *garden.CloudProfile, seed *garden.Seed, shoot *garden.Shoot) field.ErrorList {
 	var (
-		allErrs field.ErrorList
+		allErrs = field.ErrorList{}
 		path    = field.NewPath("spec", "cloud", "openstack")
 	)
 
-	if yes := networksIntersect(seed.Spec.Networks.Nodes, shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Nodes); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Nodes, "shoot node network intersects with seed node network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Pods, shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Pods); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Pods, "shoot pod network intersects with seed pod network"))
-	}
-	if yes := networksIntersect(seed.Spec.Networks.Services, shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Services); yes {
-		allErrs = append(allErrs, field.Invalid(path.Child("networks", "nodes"), shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks.Services, "shoot service network intersects with seed service network"))
-	}
+	allErrs = append(allErrs, validateNetworkDisjointedness(seed.Spec.Networks, shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, path.Child("networks"))...)
 
 	if ok, validDNSProviders := validateDNSConstraints(cloudProfile.Spec.OpenStack.Constraints.DNSProviders, shoot.Spec.DNS.Provider); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), shoot.Spec.DNS.Provider, validDNSProviders))
@@ -376,6 +344,22 @@ func validateMachineTypes(constraints []garden.MachineType, machineType string) 
 	}
 
 	return ok, validValues
+}
+
+func validateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if yes := networksIntersect(seedNetworks.Nodes, *k8sNetworks.Nodes); yes {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes"), *k8sNetworks.Nodes, "shoot node network intersects with seed node network"))
+	}
+	if yes := networksIntersect(seedNetworks.Pods, *k8sNetworks.Pods); yes {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes"), *k8sNetworks.Pods, "shoot pod network intersects with seed pod network"))
+	}
+	if yes := networksIntersect(seedNetworks.Services, *k8sNetworks.Services); yes {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("nodes"), *k8sNetworks.Services, "shoot service network intersects with seed service network"))
+	}
+
+	return allErrs
 }
 
 func validateVolumeTypes(constraints []garden.VolumeType, volumeType string) (bool, []string) {

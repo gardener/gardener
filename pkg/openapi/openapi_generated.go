@@ -370,6 +370,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -379,10 +380,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "Addons is a collection of configuration for specific addons which are managed by the Gardener.",
 					Properties: map[string]spec.Schema{
-						"kube2iam": {
+						"cluster-autoscaler": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Kube2IAM holds configuration settings for the kube2iam addon (only AWS).",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM"),
+								Description: "ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler"),
 							},
 						},
 						"heapster": {
@@ -391,16 +392,22 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster"),
 							},
 						},
+						"kube2iam": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kube2IAM holds configuration settings for the kube2iam addon (only AWS).",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM"),
+							},
+						},
+						"kube-lego": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubeLego holds configuration settings for the kube-lego addon.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego"),
+							},
+						},
 						"kubernetes-dashboard": {
 							SchemaProps: spec.SchemaProps{
 								Description: "KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.",
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard"),
-							},
-						},
-						"cluster-autoscaler": {
-							SchemaProps: spec.SchemaProps{
-								Description: "ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler"),
 							},
 						},
 						"nginx-ingress": {
@@ -413,12 +420,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "Monocular holds configuration settings for the monocular addon.",
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular"),
-							},
-						},
-						"kube-lego": {
-							SchemaProps: spec.SchemaProps{
-								Description: "KubeLego holds configuration settings for the kube-lego addon.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego"),
 							},
 						},
 					},
@@ -968,6 +969,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"),
 							},
 						},
+						"caBundle": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
 				},
 			},
@@ -987,6 +995,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -1037,31 +1046,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "CrossReference is a reference to an object in a different Kubernetes namespace.",
-					Properties: map[string]spec.Schema{
-						"name": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Name is the name of the object.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"namespace": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Namespace is the namespace of the object.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-					},
-					Required: []string{"name", "namespace"},
-				},
-			},
-			Dependencies: []string{},
-		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossSecretBinding": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -1089,7 +1073,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"secretRef": {
 							SchemaProps: spec.SchemaProps{
 								Description: "SecretRef is a reference to a secret object in another namespace.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference"),
+								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 							},
 						},
 						"quotas": {
@@ -1099,7 +1083,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference"),
+											Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 										},
 									},
 								},
@@ -1109,7 +1093,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossSecretBindingList": {
 			Schema: spec.Schema{
@@ -1539,6 +1523,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -1556,6 +1541,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -1617,6 +1603,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled", "roles"},
 				},
 			},
 			Dependencies: []string{
@@ -1743,6 +1730,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled", "email"},
 				},
 			},
 			Dependencies: []string{},
@@ -1937,6 +1925,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -2019,24 +2008,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalReference": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "LocalReference is a reference to an object in the same Kubernetes namespace.",
-					Properties: map[string]spec.Schema{
-						"name": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Name is the name of the object.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-					},
-					Required: []string{"name"},
-				},
-			},
-			Dependencies: []string{},
-		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -2089,6 +2060,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -2106,6 +2078,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
+					Required: []string{"enabled"},
 				},
 			},
 			Dependencies: []string{},
@@ -2442,15 +2415,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage"),
 							},
 						},
-						"caBundle": {
-							SchemaProps: spec.SchemaProps{
-								Description: "CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
 					},
-					Required: []string{"constraints", "keystoneURL", "machineImage", "caBundle"},
+					Required: []string{"constraints", "keystoneURL", "machineImage"},
 				},
 			},
 			Dependencies: []string{
@@ -2540,7 +2506,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"secretRef": {
 							SchemaProps: spec.SchemaProps{
 								Description: "SecretRef is a reference to a secret object in the same namespace.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalReference"),
+								Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
 							},
 						},
 						"quotas": {
@@ -2550,7 +2516,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference"),
+											Ref: ref("k8s.io/api/core/v1.ObjectReference"),
 										},
 									},
 								},
@@ -2560,7 +2526,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"k8s.io/api/core/v1.LocalObjectReference", "k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PrivateSecretBindingList": {
 			Schema: spec.Schema{
@@ -2871,6 +2837,38 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Seed", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
 		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.",
+					Properties: map[string]spec.Schema{
+						"nodes": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Nodes is the CIDR of the node network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"pods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Pods is the CIDR of the pod network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Services is the CIDR of the service network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"nodes", "pods", "services"},
+				},
+			},
+			Dependencies: []string{},
+		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedSpec": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -2892,13 +2890,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"secretRef": {
 							SchemaProps: spec.SchemaProps{
 								Description: "SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for the account the Seed cluster has been deployed to.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference"),
+								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
 							},
 						},
 						"networks": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Networks defines the pod, service and worker network of the Seed cluster.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks"),
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks"),
 							},
 						},
 						"visible": {
@@ -2916,11 +2914,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"cloud", "ingressDomain", "secretRef", "networks", "visible", "protected"},
+					Required: []string{"cloud", "ingressDomain", "secretRef", "networks"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CrossReference", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "k8s.io/api/core/v1.ObjectReference"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus": {
 			Schema: spec.Schema{
@@ -3069,7 +3067,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"addons", "cloud", "dns", "kubernetes"},
+					Required: []string{"cloud", "dns", "kubernetes"},
 				},
 			},
 			Dependencies: []string{

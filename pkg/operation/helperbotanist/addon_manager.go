@@ -75,7 +75,7 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		userDataConfig = b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig()
 	)
 
-	if userDataConfig.CloudConfig {
+	if userDataConfig.ProvisionCloudConfig {
 		cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
 		if err != nil {
 			return nil, err
@@ -97,7 +97,6 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 				"kubeconfig":    string(kubeletSecret.Data["kubeconfig"]),
 				"networkPlugin": userDataConfig.NetworkPlugin,
 				"parameters":    userDataConfig.KubeletParameters,
-				"featureGates":  b.Shoot.Info.Spec.Kubernetes.Kubelet.FeatureGates,
 			},
 			"nonMasqueradeCIDR": common.ComputeNonMasqueradeCIDR(serviceNetwork),
 			"version":           b.Shoot.Info.Spec.Kubernetes.Version,
@@ -108,8 +107,13 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		"workers": userDataConfig.WorkerNames,
 	}
 
-	if userDataConfig.CABundle != "" {
-		config["caBundle"] = userDataConfig.CABundle
+	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
+	if kubeletConfig != nil {
+		config["kubernetes"].(map[string]interface{})["kubelet"].(map[string]interface{})["featureGates"] = kubeletConfig.FeatureGates
+	}
+
+	if b.Shoot.CloudProfile.Spec.CABundle != nil {
+		config["caBundle"] = *(b.Shoot.CloudProfile.Spec.CABundle)
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config", metav1.NamespaceSystem, config)
@@ -133,14 +137,18 @@ func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
 		}
 		kubeProxyConfig = map[string]interface{}{
-			"kubeconfig":   kubeProxySecret.Data["kubeconfig"],
-			"featureGates": b.Shoot.Info.Spec.Kubernetes.KubeProxy.FeatureGates,
+			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
 		}
 		vpnShootConfig = map[string]interface{}{
 			"authorizedKeys": sshKeyPairSecret.Data["id_rsa.pub"],
 		}
 		nodeExporterConfig = map[string]interface{}{}
 	)
+
+	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
+	if proxyConfig != nil {
+		kubeProxyConfig["featureGates"] = proxyConfig.FeatureGates
+	}
 
 	calicoConfig, err := b.ShootCloudBotanist.GenerateCalicoConfig()
 	if err != nil {

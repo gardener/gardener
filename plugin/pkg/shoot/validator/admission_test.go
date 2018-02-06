@@ -37,10 +37,13 @@ var _ = Describe("validator", func() {
 			seed                  garden.Seed
 			shoot                 garden.Shoot
 
+			podCIDR     = garden.CIDR("100.96.0.0/11")
+			serviceCIDR = garden.CIDR("100.64.0.0/13")
+			nodesCIDR   = garden.CIDR("10.250.0.0/16")
 			k8sNetworks = garden.K8SNetworks{
-				Pods:     garden.CIDR("100.96.0.0/11"),
-				Services: garden.CIDR("100.64.0.0/13"),
-				Nodes:    garden.CIDR("10.250.0.0/16"),
+				Pods:     &podCIDR,
+				Services: &serviceCIDR,
+				Nodes:    &nodesCIDR,
 			}
 			seedName = "seed"
 
@@ -50,15 +53,19 @@ var _ = Describe("validator", func() {
 				},
 				Spec: garden.CloudProfileSpec{},
 			}
-			seedBase = garden.Seed{
+
+			seedPodsCIDR     = garden.CIDR("10.241.128.0/17")
+			seedServicesCIDR = garden.CIDR("10.241.0.0/17")
+			seedNodesCIDR    = garden.CIDR("10.240.0.0/16")
+			seedBase         = garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: seedName,
 				},
 				Spec: garden.SeedSpec{
-					Networks: garden.K8SNetworks{
-						Pods:     garden.CIDR("10.241.128.0/17"),
-						Services: garden.CIDR("10.241.0.0/17"),
-						Nodes:    garden.CIDR("10.240.0.0/16"),
+					Networks: garden.SeedNetworks{
+						Pods:     seedPodsCIDR,
+						Services: seedServicesCIDR,
+						Nodes:    seedNodesCIDR,
 					},
 				},
 			}
@@ -213,7 +220,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Cloud.AWS.Networks.Nodes = garden.CIDR("10.240.0.0/16")
+				shoot.Spec.Cloud.AWS.Networks.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -226,7 +233,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
-				shoot.Spec.Cloud.AWS.Networks.Pods = garden.CIDR("10.241.128.0/17")
+				shoot.Spec.Cloud.AWS.Networks.Pods = &seedPodsCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -239,7 +246,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
-				shoot.Spec.Cloud.AWS.Networks.Services = garden.CIDR("10.241.0.0/17")
+				shoot.Spec.Cloud.AWS.Networks.Services = &seedServicesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -421,7 +428,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Cloud.Azure.Networks.Nodes = garden.CIDR("10.240.0.0/16")
+				shoot.Spec.Cloud.Azure.Networks.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -434,7 +441,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
-				shoot.Spec.Cloud.Azure.Networks.Pods = garden.CIDR("10.241.128.0/17")
+				shoot.Spec.Cloud.Azure.Networks.Pods = &seedPodsCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -447,7 +454,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
-				shoot.Spec.Cloud.Azure.Networks.Services = garden.CIDR("10.241.0.0/17")
+				shoot.Spec.Cloud.Azure.Networks.Services = &seedServicesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -619,7 +626,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Cloud.GCP.Networks.Nodes = garden.CIDR("10.240.0.0/16")
+				shoot.Spec.Cloud.GCP.Networks.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -632,7 +639,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
-				shoot.Spec.Cloud.GCP.Networks.Pods = garden.CIDR("10.241.128.0/17")
+				shoot.Spec.Cloud.GCP.Networks.Pods = &seedPodsCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -645,7 +652,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
-				shoot.Spec.Cloud.GCP.Networks.Services = garden.CIDR("10.241.0.0/17")
+				shoot.Spec.Cloud.GCP.Networks.Services = &seedServicesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -808,7 +815,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
-				shoot.Spec.Cloud.OpenStack.Networks.Nodes = garden.CIDR("10.240.0.0/16")
+				shoot.Spec.Cloud.OpenStack.Networks.Nodes = &seedNodesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -821,7 +828,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
-				shoot.Spec.Cloud.OpenStack.Networks.Pods = garden.CIDR("10.241.128.0/17")
+				shoot.Spec.Cloud.OpenStack.Networks.Pods = &seedPodsCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
@@ -834,7 +841,7 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject because the shoot service and the seed service networks intersect", func() {
-				shoot.Spec.Cloud.OpenStack.Networks.Services = garden.CIDR("10.241.0.0/17")
+				shoot.Spec.Cloud.OpenStack.Networks.Services = &seedServicesCIDR
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)

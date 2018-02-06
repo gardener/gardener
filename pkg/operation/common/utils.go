@@ -105,20 +105,17 @@ func ComputeNonMasqueradeCIDR(cidr gardenv1beta1.CIDR) string {
 	return strings.Join(cidrSplit, "/")
 }
 
-// GenerateAddonConfig returns the provided <values> in case <isEnabled> is a boolean value which
-// is true. Otherwise, nil is returned.
-func GenerateAddonConfig(values map[string]interface{}, isEnabled interface{}) map[string]interface{} {
-	enabled, ok := isEnabled.(bool)
-	if !ok {
-		enabled = false
+// GenerateAddonConfig returns the provided <values> in case <enabled> is true. Otherwise, nil is
+// being returned.
+func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string]interface{} {
+	v := map[string]interface{}{
+		"enabled": enabled,
 	}
-	v := make(map[string]interface{})
 	if enabled {
 		for key, value := range values {
 			v[key] = value
 		}
 	}
-	v["enabled"] = enabled
 	return v
 }
 

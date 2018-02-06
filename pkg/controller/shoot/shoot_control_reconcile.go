@@ -56,7 +56,6 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 
 	var (
 		defaultRetry = 5 * time.Minute
-		addons       = o.Shoot.Info.Spec.Addons
 		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
 
 		f                                    = flow.New("Shoot cluster creation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
@@ -77,8 +76,8 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		initializeShootClients               = f.AddTask(botanist.InitializeShootClients, defaultRetry, waitUntilKubeAPIServerIsReady)
 		deployKubeAddonManager               = f.AddTask(helperBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients)
 		_                                    = f.AddTask(shootCloudBotanist.DeployAutoNodeRepair, defaultRetry, waitUntilKubeAPIServerIsReady, deployInfrastructure)
-		_                                    = f.AddTaskConditional(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, addons.Kube2IAM.Enabled, deployInfrastructure)
-		_                                    = f.AddTaskConditional(botanist.DeployNginxIngressResources, 10*time.Minute, addons.NginxIngress.Enabled && managedDNS, deployKubeAddonManager)
+		_                                    = f.AddTask(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, deployInfrastructure)
+		_                                    = f.AddTaskConditional(botanist.DeployNginxIngressResources, 10*time.Minute, managedDNS, deployKubeAddonManager)
 		waitUntilVPNConnectionExists         = f.AddTask(botanist.WaitUntilVPNConnectionExists, 0, deployKubeAddonManager)
 		applyCreateHook                      = f.AddTask(seedCloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
 		_                                    = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, applyCreateHook)

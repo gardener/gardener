@@ -106,7 +106,7 @@ func (t *Terraformer) prepare() (int, error) {
 // cleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
 // the Secret which stores the Terraform variables.
 func (t *Terraformer) cleanupConfiguration() error {
-	t.Logger.Infof("Deleting Terraform variables Secret '%s'", t.VariablesName)
+	t.Logger.Debugf("Deleting Terraform variables Secret '%s'", t.VariablesName)
 	err := t.K8sSeedClient.DeleteSecret(t.Namespace, t.VariablesName)
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -115,7 +115,7 @@ func (t *Terraformer) cleanupConfiguration() error {
 		return err
 	}
 
-	t.Logger.Infof("Deleting Terraform configuration ConfigMap '%s'", t.ConfigName)
+	t.Logger.Debugf("Deleting Terraform configuration ConfigMap '%s'", t.ConfigName)
 	err = t.K8sSeedClient.DeleteConfigMap(t.Namespace, t.ConfigName)
 	if apierrors.IsNotFound(err) {
 		return nil
@@ -124,7 +124,7 @@ func (t *Terraformer) cleanupConfiguration() error {
 		return err
 	}
 
-	t.Logger.Infof("Deleting Terraform state ConfigMap '%s'", t.StateName)
+	t.Logger.Debugf("Deleting Terraform state ConfigMap '%s'", t.StateName)
 	err = t.K8sSeedClient.DeleteConfigMap(t.Namespace, t.StateName)
 	if apierrors.IsNotFound(err) {
 		return nil

@@ -97,8 +97,6 @@ func (b *HelperBotanist) DeployKubeAPIServer() error {
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
 		"nodeNetwork":       b.Shoot.GetNodeNetwork(),
-		"featureGates":      b.Shoot.Info.Spec.Kubernetes.KubeAPIServer.FeatureGates,
-		"runtimeConfig":     b.Shoot.Info.Spec.Kubernetes.KubeAPIServer.RuntimeConfig,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[name],
@@ -114,9 +112,15 @@ func (b *HelperBotanist) DeployKubeAPIServer() error {
 	if err != nil {
 		return err
 	}
-	oidcConfig := b.Shoot.Info.Spec.Kubernetes.KubeAPIServer.OIDCConfig
-	if oidcConfig != nil {
-		defaultValues["oidcConfig"] = oidcConfig
+
+	apiServerConfig := b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
+	if apiServerConfig != nil {
+		defaultValues["featureGates"] = apiServerConfig.FeatureGates
+		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
+
+		if apiServerConfig.OIDCConfig != nil {
+			defaultValues["oidcConfig"] = apiServerConfig.OIDCConfig
+		}
 	}
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube", "vpn-seed": "vpn-seed"})
@@ -139,7 +143,6 @@ func (b *HelperBotanist) DeployKubeControllerManager() error {
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
 		"configureRoutes":   true,
-		"featureGates":      b.Shoot.Info.Spec.Kubernetes.KubeControllerManager.FeatureGates,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                       b.CheckSums["ca"],
 			"checksum/secret-kube-apiserver":           b.CheckSums["kube-apiserver"],
@@ -151,6 +154,11 @@ func (b *HelperBotanist) DeployKubeControllerManager() error {
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
 	if err != nil {
 		return err
+	}
+
+	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
+	if controllerManagerConfig != nil {
+		defaultValues["featureGates"] = controllerManagerConfig.FeatureGates
 	}
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})
@@ -168,7 +176,6 @@ func (b *HelperBotanist) DeployKubeScheduler() error {
 		name          = "kube-scheduler"
 		defaultValues = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"featureGates":      b.Shoot.Info.Spec.Kubernetes.KubeScheduler.FeatureGates,
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-kube-scheduler": b.CheckSums[name],
 			},
@@ -177,6 +184,11 @@ func (b *HelperBotanist) DeployKubeScheduler() error {
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeSchedulerConfig()
 	if err != nil {
 		return err
+	}
+
+	schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler
+	if schedulerConfig != nil {
+		defaultValues["featureGates"] = schedulerConfig.FeatureGates
 	}
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})

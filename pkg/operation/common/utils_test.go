@@ -83,89 +83,89 @@ var _ = Describe("common", func() {
 		})
 
 		Describe("#GenerateAddonConfig", func() {
-			Context("values=nil and isEnabled=nil", func() {
+			Context("values=nil and enabled=false", func() {
 				It("should return a map with key enabled=false", func() {
 					var (
-						values    map[string]interface{}
-						isEnabled interface{}
+						values  map[string]interface{}
+						enabled = false
 					)
 
-					result := GenerateAddonConfig(values, isEnabled)
+					result := GenerateAddonConfig(values, enabled)
 
 					Expect(result).To(SatisfyAll(
-						HaveKeyWithValue("enabled", false),
+						HaveKeyWithValue("enabled", enabled),
 						HaveLen(1),
 					))
 				})
 			})
 
-			Context("values=nil and isEnabled=true", func() {
+			Context("values=nil and enabled=true", func() {
 				It("should return a map with key enabled=true", func() {
 					var (
-						values    map[string]interface{}
-						isEnabled = true
+						values  map[string]interface{}
+						enabled = true
 					)
 
-					result := GenerateAddonConfig(values, isEnabled)
+					result := GenerateAddonConfig(values, enabled)
 
 					Expect(result).To(SatisfyAll(
-						HaveKeyWithValue("enabled", isEnabled),
+						HaveKeyWithValue("enabled", enabled),
 						HaveLen(1),
 					))
 				})
 			})
 
-			Context("values=<empty map> and isEnabled=true", func() {
+			Context("values=<empty map> and enabled=true", func() {
 				It("should return a map with key enabled=true", func() {
 					var (
-						values    = map[string]interface{}{}
-						isEnabled = true
+						values  = map[string]interface{}{}
+						enabled = true
 					)
 
-					result := GenerateAddonConfig(values, isEnabled)
+					result := GenerateAddonConfig(values, enabled)
 
 					Expect(result).To(SatisfyAll(
-						HaveKeyWithValue("enabled", isEnabled),
+						HaveKeyWithValue("enabled", enabled),
 						HaveLen(1),
 					))
 				})
 			})
 
-			Context("values=<non-empty map> and isEnabled=true", func() {
+			Context("values=<non-empty map> and enabled=true", func() {
 				It("should return a map with the values and key enabled=true", func() {
 					var (
 						values = map[string]interface{}{
 							"foo": "bar",
 						}
-						isEnabled = true
+						enabled = true
 					)
 
-					result := GenerateAddonConfig(values, isEnabled)
+					result := GenerateAddonConfig(values, enabled)
 
 					for key := range values {
 						_, ok := result[key]
 						Expect(ok).To(BeTrue())
 					}
 					Expect(result).To(SatisfyAll(
-						HaveKeyWithValue("enabled", isEnabled),
+						HaveKeyWithValue("enabled", enabled),
 						HaveLen(1+len(values)),
 					))
 				})
 			})
 
-			Context("values=<non-empty map> and isEnabled=false", func() {
+			Context("values=<non-empty map> and enabled=false", func() {
 				It("should return a map with key enabled=false", func() {
 					var (
 						values = map[string]interface{}{
 							"foo": "bar",
 						}
-						isEnabled = false
+						enabled = false
 					)
 
-					result := GenerateAddonConfig(values, isEnabled)
+					result := GenerateAddonConfig(values, enabled)
 
 					Expect(result).To(SatisfyAll(
-						HaveKeyWithValue("enabled", isEnabled),
+						HaveKeyWithValue("enabled", enabled),
 						HaveLen(1),
 					))
 				})

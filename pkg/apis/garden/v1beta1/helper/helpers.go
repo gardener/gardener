@@ -26,39 +26,63 @@ import (
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
 // If it is not able to determine it, an error will be returned.
 func DetermineCloudProviderInProfile(spec gardenv1beta1.CloudProfileSpec) (gardenv1beta1.CloudProvider, error) {
-	if spec.AWS != nil && spec.Azure == nil && spec.GCP == nil && spec.OpenStack == nil {
-		return gardenv1beta1.CloudProviderAWS, nil
+	var (
+		cloud     gardenv1beta1.CloudProvider
+		numClouds = 0
+	)
+
+	if spec.AWS != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderAWS
 	}
-	if spec.Azure != nil && spec.GCP == nil && spec.OpenStack == nil && spec.AWS == nil {
-		return gardenv1beta1.CloudProviderAzure, nil
+	if spec.Azure != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderAzure
 	}
-	if spec.GCP != nil && spec.OpenStack == nil && spec.AWS == nil && spec.Azure == nil {
-		return gardenv1beta1.CloudProviderGCP, nil
+	if spec.GCP != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderGCP
 	}
-	if spec.OpenStack != nil && spec.AWS == nil && spec.Azure == nil && spec.GCP == nil {
-		return gardenv1beta1.CloudProviderOpenStack, nil
+	if spec.OpenStack != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderOpenStack
 	}
 
-	return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack")
+	if numClouds != 1 {
+		return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack")
+	}
+	return cloud, nil
 }
 
 // DetermineCloudProviderInShoot takes a Shoot cloud object and returns the cloud provider this profile is used for.
 // If it is not able to determine it, an error will be returned.
-func DetermineCloudProviderInShoot(cloud gardenv1beta1.Cloud) (gardenv1beta1.CloudProvider, error) {
-	if cloud.AWS != nil && cloud.Azure == nil && cloud.GCP == nil && cloud.OpenStack == nil {
-		return gardenv1beta1.CloudProviderAWS, nil
+func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.CloudProvider, error) {
+	var (
+		cloud     gardenv1beta1.CloudProvider
+		numClouds = 0
+	)
+
+	if cloudObj.AWS != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderAWS
 	}
-	if cloud.Azure != nil && cloud.GCP == nil && cloud.OpenStack == nil && cloud.AWS == nil {
-		return gardenv1beta1.CloudProviderAzure, nil
+	if cloudObj.Azure != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderAzure
 	}
-	if cloud.GCP != nil && cloud.OpenStack == nil && cloud.AWS == nil && cloud.Azure == nil {
-		return gardenv1beta1.CloudProviderGCP, nil
+	if cloudObj.GCP != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderGCP
 	}
-	if cloud.OpenStack != nil && cloud.AWS == nil && cloud.Azure == nil && cloud.GCP == nil {
-		return gardenv1beta1.CloudProviderOpenStack, nil
+	if cloudObj.OpenStack != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderOpenStack
 	}
 
-	return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
+	if numClouds != 1 {
+		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
+	}
+	return cloud, nil
 }
 
 // InitCondition initializes a new Condition with an Unknown status.

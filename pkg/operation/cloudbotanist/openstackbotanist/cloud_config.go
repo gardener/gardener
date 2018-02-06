@@ -21,9 +21,8 @@ import (
 // GenerateCloudConfigUserDataConfig generates values which are required to render the chart shoot-cloud-config properly.
 func (b *OpenStackBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
 	return &common.CloudConfigUserDataConfig{
-		CABundle:      b.Shoot.CloudProfile.Spec.OpenStack.CABundle,
-		CloudConfig:   true,
-		NetworkPlugin: "cni",
-		WorkerNames:   b.Shoot.GetWorkerNames(),
+		ProvisionCloudConfig: true,
+		NetworkPlugin:        "cni",
+		WorkerNames:          b.Shoot.GetWorkerNames(),
 	}
 }

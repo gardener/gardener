@@ -32,18 +32,20 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 		vnetName            = b.Shoot.SeedNamespace
 		vnetCIDR            = b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers
 	)
+
 	// check if we should use an existing ResourceGroup or create a new one
 	if b.Shoot.Info.Spec.Cloud.Azure.ResourceGroup != nil {
 		createResourceGroup = false
 		resourceGroupName = b.Shoot.Info.Spec.Cloud.Azure.ResourceGroup.Name
 	}
+
 	// check if we should use an existing ResourceGroup or create a new one
-	if b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.Name != "" {
+	if b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.Name != nil {
 		createVNet = false
-		vnetName = b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.Name
+		vnetName = *b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.Name
 	}
-	if b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.CIDR != "" {
-		vnetCIDR = b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.CIDR
+	if b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.CIDR != nil {
+		vnetCIDR = *b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.CIDR
 	}
 
 	countUpdateDomains, err := findDomainCountForRegion(b.Shoot.Info.Spec.Cloud.Region, b.Shoot.CloudProfile.Spec.Azure.CountUpdateDomains)

@@ -91,11 +91,15 @@ func (b *Botanist) RegisterAsSeed() error {
 				Region:  b.Shoot.Info.Spec.Cloud.Region,
 			},
 			IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *(b.Shoot.Info.Spec.DNS.Domain)),
-			SecretRef: gardenv1beta1.CrossReference{
+			SecretRef: corev1.ObjectReference{
 				Name:      secretName,
 				Namespace: secretNamespace,
 			},
-			Networks: *k8sNetworks,
+			Networks: gardenv1beta1.SeedNetworks{
+				Pods:     *k8sNetworks.Pods,
+				Services: *k8sNetworks.Services,
+				Nodes:    *k8sNetworks.Nodes,
+			},
 		},
 	}
 	_, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Create(seed)

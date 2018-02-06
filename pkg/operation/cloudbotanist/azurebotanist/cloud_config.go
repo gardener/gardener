@@ -21,8 +21,8 @@ import (
 // GenerateCloudConfigUserDataConfig generates values which are required to render the chart shoot-cloud-config properly.
 func (b *AzureBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
 	return &common.CloudConfigUserDataConfig{
-		NetworkPlugin: "cni",
-		CloudConfig:   true,
-		WorkerNames:   b.Shoot.GetWorkerNames(),
+		NetworkPlugin:        "cni",
+		ProvisionCloudConfig: true,
+		WorkerNames:          b.Shoot.GetWorkerNames(),
 	}
 }

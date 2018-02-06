@@ -56,7 +56,7 @@ var _ = Describe("quotavalidator", func() {
 					Name:      secretBindingName,
 					Namespace: namespace,
 				},
-				SecretRef: garden.LocalReference{
+				SecretRef: corev1.LocalObjectReference{
 					Name: cloudProviderSecretName,
 				},
 			}

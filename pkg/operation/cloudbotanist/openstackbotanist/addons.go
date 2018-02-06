@@ -63,5 +63,5 @@ func (b *OpenStackBotanist) GenerateCalicoConfig() (map[string]interface{}, erro
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *OpenStackBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.NginxIngress.Enabled), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }

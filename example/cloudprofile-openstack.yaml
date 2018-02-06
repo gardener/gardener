@@ -34,7 +34,7 @@ spec:
     keystoneURL: https://url-to-keystone/v3/
     machineImage:
       name: coreos-1520.6.0
-    caBundle: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    ...
+    -----END CERTIFICATE-----

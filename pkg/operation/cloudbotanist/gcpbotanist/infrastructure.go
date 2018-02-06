@@ -26,6 +26,7 @@ func (b *GCPBotanist) DeployInfrastructure() error {
 		vpcName   = "${google_compute_network.network.name}"
 		createVPC = true
 	)
+
 	// check if we should use an existing VPC or create a new one
 	if b.VPCName != "" {
 		vpcName = b.VPCName

@@ -67,6 +67,9 @@ type CloudProfileSpec struct {
 	// OpenStack is the profile specification for the OpenStack cloud.
 	// +optional
 	OpenStack *OpenStackProfile `json:"openstack,omitempty"`
+	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
+	// +optional
+	CABundle *string `json:"caBundle,omitempty"`
 }
 
 // AWSProfile defines certain constraints and definitions for the AWS cloud.
@@ -175,8 +178,6 @@ type OpenStackProfile struct {
 	KeyStoneURL string `json:"keystoneURL"`
 	// MachineImage defines the name of the machine image in the OpenStack environment.
 	MachineImage OpenStackMachineImage `json:"machineImage"`
-	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
-	CABundle string `json:"caBundle"`
 }
 
 // OpenStackConstraints is an object containing constraints for certain values in the Shoot specification.
@@ -296,13 +297,15 @@ type SeedSpec struct {
 	IngressDomain string `json:"ingressDomain"`
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
-	SecretRef CrossReference `json:"secretRef"`
+	SecretRef corev1.ObjectReference `json:"secretRef"`
 	// Networks defines the pod, service and worker network of the Seed cluster.
-	Networks K8SNetworks `json:"networks"`
+	Networks SeedNetworks `json:"networks"`
 	// Visible labels the Seed cluster as selectable for the seedfinder admisson controller.
-	Visible *bool `json:"visible"`
+	// +optional
+	Visible *bool `json:"visible,omitempty"`
 	// Protected prevent that the Seed Cluster can be used for regular Shoot cluster control planes.
-	Protected *bool `json:"protected"`
+	// +optional
+	Protected *bool `json:"protected,omitempty"`
 }
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
@@ -320,35 +323,18 @@ type SeedCloud struct {
 	Region string `json:"region"`
 }
 
-// LocalReference is a reference to an object in the same Kubernetes namespace.
-type LocalReference struct {
-	// Name is the name of the object.
-	Name string `json:"name"`
-}
-
-// CrossReference is a reference to an object in a different Kubernetes namespace.
-type CrossReference struct {
-	// Name is the name of the object.
-	Name string `json:"name"`
-	// Namespace is the namespace of the object.
-	Namespace string `json:"namespace"`
-}
-
-// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
-type K8SNetworks struct {
+// SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	// +optional
-	Nodes CIDR `json:"nodes,omitempty"`
+	Nodes CIDR `json:"nodes"`
 	// Pods is the CIDR of the pod network.
-	// +optional
-	Pods CIDR `json:"pods,omitempty"`
+	Pods CIDR `json:"pods"`
 	// Services is the CIDR of the service network.
-	// +optional
-	Services CIDR `json:"services,omitempty"`
+	Services CIDR `json:"services"`
 }
 
 ////////////////////////////////////////////////////
-//                     QUOTAS                    //
+//                      QUOTAS                    //
 ////////////////////////////////////////////////////
 
 // +genclient
@@ -421,10 +407,10 @@ type PrivateSecretBinding struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// SecretRef is a reference to a secret object in the same namespace.
 	// +optional
-	SecretRef LocalReference `json:"secretRef,omitempty"`
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty"`
 	// Quotas is a list of references to Quota objects in other namespaces.
 	// +optional
-	Quotas []CrossReference `json:"quotas,omitempty"`
+	Quotas []corev1.ObjectReference `json:"quotas,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -449,10 +435,10 @@ type CrossSecretBinding struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	// SecretRef is a reference to a secret object in another namespace.
 	// +optional
-	SecretRef CrossReference `json:"secretRef,omitempty"`
+	SecretRef corev1.ObjectReference `json:"secretRef,omitempty"`
 	// Quotas is a list of references to Quota objects in other namespaces.
 	// +optional
-	Quotas []CrossReference `json:"quotas,omitempty"`
+	Quotas []corev1.ObjectReference `json:"quotas,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -502,7 +488,8 @@ type ShootList struct {
 // ShootSpec is the specification of a Shoot.
 type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
-	Addons Addons `json:"addons"`
+	// +optional
+	Addons *Addons `json:"addons,omitempty"`
 	// Backup contains configuration settings for the etcd backups.
 	// +optional
 	Backup *Backup `json:"backup,omitempty"`
@@ -570,6 +557,19 @@ type Cloud struct {
 	OpenStack *OpenStackCloud `json:"openstack,omitempty"`
 }
 
+// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+type K8SNetworks struct {
+	// Nodes is the CIDR of the node network.
+	// +optional
+	Nodes *CIDR `json:"nodes,omitempty"`
+	// Pods is the CIDR of the pod network.
+	// +optional
+	Pods *CIDR `json:"pods,omitempty"`
+	// Services is the CIDR of the service network.
+	// +optional
+	Services *CIDR `json:"services,omitempty"`
+}
+
 // AWSCloud contains the Shoot specification for AWS.
 
 type AWSCloud struct {
@@ -583,7 +583,6 @@ type AWSCloud struct {
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
-	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AWSVPC `json:"vpc"`
@@ -599,10 +598,10 @@ type AWSNetworks struct {
 type AWSVPC struct {
 	// ID is the AWS VPC id of an existing VPC.
 	// +optional
-	ID string `json:"id,omitempty"`
+	ID *string `json:"id,omitempty"`
 	// CIDR is a CIDR range for a new VPC.
 	// +optional
-	CIDR CIDR `json:"cidr,omitempty"`
+	CIDR *CIDR `json:"cidr,omitempty"`
 }
 
 // AWSWorker is the definition of a worker group.
@@ -633,7 +632,6 @@ type AzureResourceGroup struct {
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
-	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks `json:",inline"`
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet `json:"vnet"`
@@ -648,10 +646,10 @@ type AzureNetworks struct {
 type AzureVNet struct {
 	// Name is the AWS VNet name of an existing VNet.
 	// +optional
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
 	// CIDR is a CIDR range for a new VNet.
 	// +optional
-	CIDR CIDR `json:"cidr,omitempty"`
+	CIDR *CIDR `json:"cidr,omitempty"`
 }
 
 // AzureWorker is the definition of a worker group.
@@ -675,7 +673,6 @@ type GCPCloud struct {
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
-	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks `json:",inline"`
 	// VPC indicates whether to use an existing VPC or create a new one.
 	// +optional
@@ -715,7 +712,6 @@ type OpenStackCloud struct {
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
-	// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 	K8SNetworks `json:",inline"`
 	// Router indicates whether to use an existing router or create a new one.
 	// +optional
@@ -749,96 +745,77 @@ type Worker struct {
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
-	// Kube2IAM holds configuration settings for the kube2iam addon (only AWS).
-	// +optional
-	Kube2IAM Kube2IAM `json:"kube2iam,omitempty"`
-	// Heapster holds configuration settings for the heapster addon.
-	// +optional
-	Heapster Heapster `json:"heapster,omitempty"`
-	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
-	// +optional
-	KubernetesDashboard KubernetesDashboard `json:"kubernetes-dashboard,omitempty"`
 	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
 	// +optional
-	ClusterAutoscaler ClusterAutoscaler `json:"cluster-autoscaler,omitempty"`
-	// NginxIngress holds configuration settings for the nginx-ingress addon.
+	ClusterAutoscaler *ClusterAutoscaler `json:"cluster-autoscaler,omitempty"`
+	// Heapster holds configuration settings for the heapster addon.
 	// +optional
-	NginxIngress NginxIngress `json:"nginx-ingress,omitempty"`
-	// Monocular holds configuration settings for the monocular addon.
+	Heapster *Heapster `json:"heapster,omitempty"`
+	// Kube2IAM holds configuration settings for the kube2iam addon (only AWS).
 	// +optional
-	Monocular Monocular `json:"monocular,omitempty"`
+	Kube2IAM *Kube2IAM `json:"kube2iam,omitempty"`
 	// KubeLego holds configuration settings for the kube-lego addon.
 	// +optional
-	KubeLego KubeLego `json:"kube-lego,omitempty"`
+	KubeLego *KubeLego `json:"kube-lego,omitempty"`
+	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
+	// +optional
+	KubernetesDashboard *KubernetesDashboard `json:"kubernetes-dashboard,omitempty"`
+	// NginxIngress holds configuration settings for the nginx-ingress addon.
+	// +optional
+	NginxIngress *NginxIngress `json:"nginx-ingress,omitempty"`
+	// Monocular holds configuration settings for the monocular addon.
+	// +optional
+	Monocular *Monocular `json:"monocular,omitempty"`
 }
 
 // Addon also enabling or disabling a specific addon and is used to derive from.
 type Addon struct {
 	// Enabled indicates whether the addon is enabled or not.
-	// +optional
 	Enabled bool `json:"enabled"`
 }
 
 // HelmTiller describes configuration values for the helm-tiller addon.
 type HelmTiller struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 }
 
 // Heapster describes configuration values for the heapster addon.
 type Heapster struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 }
 
 // KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.
 type KubernetesDashboard struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 }
 
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
 type ClusterAutoscaler struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 }
 
 // Monocular describes configuration values for the monocular addon.
 type Monocular struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 }
 
 // KubeLego describes configuration values for the kube-lego addon.
 type KubeLego struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 	// Mail is the email address to register at Let's Encrypt.
-	// +optional
-	Mail string `json:"email,omitempty"`
+	Mail string `json:"email"`
 }
 
 // Kube2IAM describes configuration values for the kube2iam addon.
 type Kube2IAM struct {
-	// Addon also enabling or disabling a specific addon and is used to derive from.
-	// +optional
 	Addon `json:",inline"`
 	// Roles is list of AWS IAM roles which should be created by the Gardener.
-	// +optional
-	Roles []Kube2IAMRole `json:"roles,omitempty"`
+	Roles []Kube2IAMRole `json:"roles"`
 }
 
 // Kube2IAMRole allows passing AWS IAM policies which will result in IAM roles.
@@ -913,19 +890,19 @@ type Kubernetes struct {
 	AllowPrivilegedContainers *bool `json:"allowPrivilegedContainers,omitempty"`
 	// KubeAPIServer contains configuration settings for the kube-apiserver.
 	// +optional
-	KubeAPIServer KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
+	KubeAPIServer *KubeAPIServerConfig `json:"kubeAPIServer,omitempty"`
 	// KubeControllerManager contains configuration settings for the kube-controller-manager.
 	// +optional
-	KubeControllerManager KubeControllerManagerConfig `json:"kubeControllerManager,omitempty"`
+	KubeControllerManager *KubeControllerManagerConfig `json:"kubeControllerManager,omitempty"`
 	// KubeScheduler contains configuration settings for the kube-scheduler.
 	// +optional
-	KubeScheduler KubeSchedulerConfig `json:"kubeScheduler,omitempty"`
+	KubeScheduler *KubeSchedulerConfig `json:"kubeScheduler,omitempty"`
 	// KubeProxy contains configuration settings for the kube-proxy.
 	// +optional
-	KubeProxy KubeProxyConfig `json:"kubeProxy,omitempty"`
+	KubeProxy *KubeProxyConfig `json:"kubeProxy,omitempty"`
 	// Kubelet contains configuration settings for the kubelet.
 	// +optional
-	Kubelet KubeletConfig `json:"kubelet,omitempty"`
+	Kubelet *KubeletConfig `json:"kubelet,omitempty"`
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	Version string `json:"version"`
 }
@@ -939,8 +916,6 @@ type KubernetesConfig struct {
 
 // KubeAPIServerConfig contains configuration settings for the kube-apiserver.
 type KubeAPIServerConfig struct {
-	// KubernetesConfig contains common configuration fields for the control plane components.
-	// +optional
 	KubernetesConfig `json:",inline"`
 	// RuntimeConfig contains information about enabled or disabled APIs.
 	// +optional
@@ -978,29 +953,21 @@ type OIDCConfig struct {
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
-	// KubernetesConfig contains common configuration fields for the control plane components.
-	// +optional
 	KubernetesConfig `json:",inline"`
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {
-	// KubernetesConfig contains common configuration fields for the control plane components.
-	// +optional
 	KubernetesConfig `json:",inline"`
 }
 
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {
-	// KubernetesConfig contains common configuration fields for the control plane components.
-	// +optional
 	KubernetesConfig `json:",inline"`
 }
 
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
-	// KubernetesConfig contains common configuration fields for the control plane components.
-	// +optional
 	KubernetesConfig `json:",inline"`
 }
 
@@ -1111,7 +1078,7 @@ const (
 )
 
 const (
-	// GardenerName is the value in a Shoot's `.metadata.finalizers[]` array on which the GardenerName will react
+	// GardenerName is the value in a Shoot's `.metadata.finalizers[]` array on which the Gardener will react
 	// when performing a delete request on a Shoot resource.
 	GardenerName = "gardener"
 )

@@ -146,6 +146,18 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(0))
 			})
 
+			It("should forbid ca bundles with unsupported format", func() {
+				awsCloudProfile.Spec.CABundle = makeStringPointer("unsupported")
+
+				errorList := ValidateCloudProfile(awsCloudProfile)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.caBundle"),
+				}))
+			})
+
 			Context("dns provider constraints", func() {
 				It("should enforce that at least one provider has been defined", func() {
 					awsCloudProfile.Spec.AWS.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
@@ -791,7 +803,6 @@ var _ = Describe("validation", func() {
 								Zones:        zonesConstraint,
 							},
 							KeyStoneURL: "http://url-to-keystone/v3",
-							CABundle:    "-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----",
 							MachineImage: garden.OpenStackMachineImage{
 								Name: "coreos-1.6.4",
 							},
@@ -1005,20 +1016,6 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
-
-			Context("ca bundle validation", func() {
-				It("should forbid ca bundles with unsupported format", func() {
-					openStackCloudProfile.Spec.OpenStack.CABundle = "----"
-
-					errorList := ValidateCloudProfile(openStackCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.caBundle", fldPath)),
-					}))
-				})
-			})
 		})
 	})
 
@@ -1036,11 +1033,11 @@ var _ = Describe("validation", func() {
 						Region:  "eu-west-1",
 					},
 					IngressDomain: "ingress.my-seed-1.example.com",
-					SecretRef: garden.CrossReference{
+					SecretRef: corev1.ObjectReference{
 						Name:      "seed-aws",
 						Namespace: "garden",
 					},
-					Networks: garden.K8SNetworks{
+					Networks: garden.SeedNetworks{
 						Nodes:    garden.CIDR("10.250.0.0/16"),
 						Pods:     garden.CIDR("100.96.0.0/11"),
 						Services: garden.CIDR("100.64.0.0/13"),
@@ -1070,8 +1067,8 @@ var _ = Describe("validation", func() {
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
 			seed.Spec.IngressDomain = "invalid-domain-name"
-			seed.Spec.SecretRef = garden.CrossReference{}
-			seed.Spec.Networks = garden.K8SNetworks{
+			seed.Spec.SecretRef = corev1.ObjectReference{}
+			seed.Spec.Networks = garden.SeedNetworks{
 				Nodes:    garden.CIDR("invalid-cidr"),
 				Pods:     garden.CIDR("300.300.300.300/300"),
 				Services: garden.CIDR("invalid-cidr"),
@@ -1176,7 +1173,7 @@ var _ = Describe("validation", func() {
 					Name:      "profile",
 					Namespace: "garden",
 				},
-				SecretRef: garden.LocalReference{
+				SecretRef: corev1.LocalObjectReference{
 					Name: "my-secret",
 				},
 			}
@@ -1190,7 +1187,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid empty PrivateSecretBinding resources", func() {
 			secretBinding.ObjectMeta = metav1.ObjectMeta{}
-			secretBinding.SecretRef = garden.LocalReference{}
+			secretBinding.SecretRef = corev1.LocalObjectReference{}
 
 			errorList := ValidatePrivateSecretBinding(secretBinding)
 
@@ -1210,7 +1207,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid empty stated Quota names", func() {
-			secretBinding.Quotas = []garden.CrossReference{
+			secretBinding.Quotas = []corev1.ObjectReference{
 				{},
 			}
 
@@ -1237,7 +1234,7 @@ var _ = Describe("validation", func() {
 					Name:      "profile",
 					Namespace: "garden",
 				},
-				SecretRef: garden.CrossReference{
+				SecretRef: corev1.ObjectReference{
 					Name:      "my-secret",
 					Namespace: "my-namespace",
 				},
@@ -1252,7 +1249,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid empty CrossSecretBinding resources", func() {
 			secretBinding.ObjectMeta = metav1.ObjectMeta{}
-			secretBinding.SecretRef = garden.CrossReference{}
+			secretBinding.SecretRef = corev1.ObjectReference{}
 
 			errorList := ValidateCrossSecretBinding(secretBinding)
 
@@ -1276,7 +1273,7 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid empty stated Quota names", func() {
-			secretBinding.Quotas = []garden.CrossReference{
+			secretBinding.Quotas = []corev1.ObjectReference{
 				{},
 			}
 
@@ -1301,6 +1298,11 @@ var _ = Describe("validation", func() {
 			hostedZoneID = "ABCDEF1234"
 			domain       = "my-cluster.example.com"
 
+			nodeCIDR    = garden.CIDR("10.250.0.0/16")
+			podCIDR     = garden.CIDR("100.96.0.0/11")
+			serviceCIDR = garden.CIDR("100.64.0.0/13")
+			invalidCIDR = garden.CIDR("invalid-cidr")
+
 			invalidBackup = &garden.Backup{
 				IntervalInSecond: 0,
 				Maximum:          0,
@@ -1309,14 +1311,14 @@ var _ = Describe("validation", func() {
 				Enabled: true,
 			}
 			k8sNetworks = garden.K8SNetworks{
-				Nodes:    garden.CIDR("10.250.0.0/16"),
-				Pods:     garden.CIDR("100.96.0.0/11"),
-				Services: garden.CIDR("100.64.0.0/13"),
+				Nodes:    &nodeCIDR,
+				Pods:     &podCIDR,
+				Services: &serviceCIDR,
 			}
 			invalidK8sNetworks = garden.K8SNetworks{
-				Nodes:    garden.CIDR("invalid-cidr"),
-				Pods:     garden.CIDR("invalid-cidr"),
-				Services: garden.CIDR("invalid-cidr"),
+				Nodes:    &invalidCIDR,
+				Pods:     &invalidCIDR,
+				Services: &invalidCIDR,
 			}
 			worker = garden.Worker{
 				Name:          "worker-name",
@@ -1336,11 +1338,6 @@ var _ = Describe("validation", func() {
 				AutoScalerMin: 1,
 				AutoScalerMax: 1,
 			}
-
-			makeStringPointer = func(s string) *string {
-				ptr := s
-				return &ptr
-			}
 		)
 
 		BeforeEach(func() {
@@ -1350,8 +1347,8 @@ var _ = Describe("validation", func() {
 					Namespace: "my-namespace",
 				},
 				Spec: garden.ShootSpec{
-					Addons: garden.Addons{
-						Kube2IAM: garden.Kube2IAM{
+					Addons: &garden.Addons{
+						Kube2IAM: &garden.Kube2IAM{
 							Addon: addon,
 							Roles: []garden.Kube2IAMRole{
 								{
@@ -1361,19 +1358,19 @@ var _ = Describe("validation", func() {
 								},
 							},
 						},
-						KubernetesDashboard: garden.KubernetesDashboard{
+						KubernetesDashboard: &garden.KubernetesDashboard{
 							Addon: addon,
 						},
-						ClusterAutoscaler: garden.ClusterAutoscaler{
+						ClusterAutoscaler: &garden.ClusterAutoscaler{
 							Addon: addon,
 						},
-						NginxIngress: garden.NginxIngress{
+						NginxIngress: &garden.NginxIngress{
 							Addon: addon,
 						},
-						Monocular: garden.Monocular{
+						Monocular: &garden.Monocular{
 							Addon: addon,
 						},
-						KubeLego: garden.KubeLego{
+						KubeLego: &garden.KubeLego{
 							Addon: addon,
 							Mail:  "info@example.com",
 						},
@@ -1396,7 +1393,7 @@ var _ = Describe("validation", func() {
 								Public:      []garden.CIDR{"10.250.0.0/16"},
 								Workers:     []garden.CIDR{"10.250.0.0/16"},
 								VPC: garden.AWSVPC{
-									CIDR: garden.CIDR("10.250.0.0/16"),
+									CIDR: &nodeCIDR,
 								},
 							},
 							Workers: []garden.AWSWorker{
@@ -1415,7 +1412,7 @@ var _ = Describe("validation", func() {
 						Domain:       &domain,
 					},
 					Kubernetes: garden.Kubernetes{
-						KubeAPIServer: garden.KubeAPIServerConfig{
+						KubeAPIServer: &garden.KubeAPIServerConfig{
 							OIDCConfig: &garden.OIDCConfig{
 								CABundle:       makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
 								ClientID:       makeStringPointer("client-id"),
@@ -1564,7 +1561,7 @@ var _ = Describe("validation", func() {
 						Public:      []garden.CIDR{"10.250.0.0/16"},
 						Workers:     []garden.CIDR{"10.250.0.0/16"},
 						VPC: garden.AWSVPC{
-							CIDR: garden.CIDR("10.250.0.0/16"),
+							CIDR: &nodeCIDR,
 						},
 					},
 					Workers: []garden.AWSWorker{
@@ -1666,7 +1663,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid VPC CIDRs", func() {
-				shoot.Spec.Cloud.AWS.Networks.VPC.CIDR = garden.CIDR("invalid")
+				shoot.Spec.Cloud.AWS.Networks.VPC.CIDR = &invalidCIDR
 
 				errorList := ValidateShoot(shoot)
 
@@ -1674,25 +1671,6 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.cidr", fldPath)),
-				}))
-			})
-
-			It("should require a node network when specifying an existing VPC", func() {
-				shoot.Spec.Cloud.AWS.Networks.VPC = garden.AWSVPC{
-					ID: "aws-vpc-id",
-				}
-				shoot.Spec.Cloud.AWS.Networks.Nodes = ""
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
 				}))
 			})
 
@@ -1799,7 +1777,8 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.AWS.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				cidr := garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.AWS.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.AWS.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -1845,7 +1824,7 @@ var _ = Describe("validation", func() {
 						K8SNetworks: k8sNetworks,
 						Workers:     garden.CIDR("10.250.0.0/16"),
 						VNet: garden.AzureVNet{
-							CIDR: garden.CIDR("10.250.0.0/16"),
+							CIDR: &nodeCIDR,
 						},
 					},
 					Workers: []garden.AzureWorker{
@@ -1896,24 +1875,19 @@ var _ = Describe("validation", func() {
 
 			It("should forbid specifying a vnet name", func() {
 				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{
-					Name: "existing-vnet",
+					Name: makeStringPointer("existing-vnet"),
 				}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(2))
+				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.name", fldPath)),
 				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
-				}))
 			})
 
 			It("should forbid invalid network configuration", func() {
-				invalidCIDR := garden.CIDR("invalid-cidr")
 				shoot.Spec.Cloud.Azure.Networks.Public = &invalidCIDR
 				shoot.Spec.Cloud.Azure.Networks.Workers = invalidCIDR
 				shoot.Spec.Cloud.Azure.Networks.K8SNetworks = invalidK8sNetworks
@@ -1923,7 +1897,7 @@ var _ = Describe("validation", func() {
 
 				Expect(len(errorList)).To(Equal(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
+					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
@@ -1949,7 +1923,7 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid VNet CIDRs", func() {
-				shoot.Spec.Cloud.Azure.Networks.VNet.CIDR = garden.CIDR("invalid")
+				shoot.Spec.Cloud.Azure.Networks.VNet.CIDR = &invalidCIDR
 
 				errorList := ValidateShoot(shoot)
 
@@ -2085,7 +2059,8 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating resource group and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.Azure.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				cidr := garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.Azure.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{
 					Name: "another-group",
 				}
@@ -2158,18 +2133,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should forbid providing backup configuration", func() {
-				shoot.Spec.Backup = &garden.Backup{}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.backup"),
-				}))
 			})
 
 			It("should forbid invalid network configuration", func() {
@@ -2326,7 +2289,8 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.GCP.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				cidr := garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.GCP.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.GCP.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -2393,18 +2357,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should forbid providing backup configuration", func() {
-				shoot.Spec.Backup = &garden.Backup{}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.backup"),
-				}))
 			})
 
 			It("should forbid invalid floating pool name configuration", func() {
@@ -2566,7 +2518,8 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.Cloud.OpenStack.Networks.Pods = garden.CIDR("255.255.255.255/32")
+				cidr := garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.OpenStack.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.OpenStack.Zones = []string{"another-zone"}
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
@@ -2758,6 +2711,11 @@ var _ = Describe("validation", func() {
 })
 
 // Helper functions
+
+func makeStringPointer(s string) *string {
+	ptr := s
+	return &ptr
+}
 
 func prepareShootForUpdate(shoot *garden.Shoot) *garden.Shoot {
 	s := shoot.DeepCopy()

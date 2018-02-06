@@ -39,7 +39,7 @@ spec:
           # addon-manager executes kubectl apply -f /etc/kubernetes/addons/, but because there are hidden ../data files,
           # it applies every single file 2 times.
         - name: ADDON_PATH
-          value: "/etc/kubernetes/addons/cloud-config/..data/.,/etc/kubernetes/addons/core/..data/.,/etc/kubernetes/addons/optional/..data/."
+          value: "/etc/kubernetes/addons/cloud-config/..data/.,/etc/kubernetes/addons/core/..data/.{{ if .Values.optionalAddonsContent }},/etc/kubernetes/addons/optional/..data/.{{ end }}"
         resources:
           requests:
             cpu: 5m

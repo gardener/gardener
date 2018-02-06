@@ -844,7 +844,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 		},
 	}
 
-	if b.Shoot.Info.Spec.Addons.Monocular.Enabled && b.Shoot.Info.Spec.DNS.Domain != nil {
+	if b.Shoot.MonocularEnabled() && b.Shoot.Info.Spec.DNS.Domain != nil {
 		monocularHost := b.Shoot.GetIngressFQDN("monocular")
 		secretList = append(secretList, TLSSecret{
 			Secret: Secret{

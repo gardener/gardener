@@ -26,6 +26,7 @@ func (b *OpenStackBotanist) DeployInfrastructure() error {
 		routerID     = "${openstack_networking_router_v2.router.id}"
 		createRouter = true
 	)
+
 	// check if we should use an existing Router or create a new one
 	if b.Shoot.Info.Spec.Cloud.OpenStack.Networks.Router != nil {
 		routerID = b.Shoot.Info.Spec.Cloud.OpenStack.Networks.Router.ID
