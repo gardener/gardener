@@ -74,9 +74,6 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 			"name": vpcName,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"cloudConfig": map[string]interface{}{ // Keep that until the terraformer-common chart does not longer include cloud config downloader
-			"kubeconfig": "not-used-for-gcp",
-		},
 		"networks": map[string]interface{}{
 			"pods":     b.Shoot.GetPodNetwork(),
 			"services": b.Shoot.GetServiceNetwork(),

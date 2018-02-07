@@ -16,7 +16,6 @@ package azurebotanist
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -54,11 +53,6 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 	}
 
 	for _, worker := range workers {
-		volumeSize, err := strconv.Atoi(common.DiskSize(worker.VolumeSize))
-		if err != nil {
-			return nil, nil, err
-		}
-
 		cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
 		if err != nil {
 			return nil, nil, err
@@ -89,7 +83,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 				"sku":       b.Shoot.Info.Spec.Cloud.Azure.MachineImage.SKU,
 				"version":   b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Version,
 			},
-			"volumeSize":   volumeSize,
+			"volumeSize":   common.DiskSize(worker.VolumeSize),
 			"sshPublicKey": string(b.Secrets["ssh-keypair"].Data["id_rsa.pub"]),
 		}
 

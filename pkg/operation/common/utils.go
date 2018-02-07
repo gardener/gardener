@@ -59,13 +59,13 @@ func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string 
 // of index <zoneIndex>.
 // The distribution happens equally. In case of an uneven number <size>, the last zone will have
 // one more node than the others.
-func DistributeOverZones(zoneIndex, size, zoneSize int) string {
+func DistributeOverZones(zoneIndex, size, zoneSize int) int {
 	first := size / zoneSize
 	second := 0
 	if zoneIndex < (size % zoneSize) {
 		second = 1
 	}
-	return strconv.Itoa(first + second)
+	return first + second
 }
 
 // IdentifyAddressType takes a string containing an address (hostname or IP) and tries to parse it
@@ -91,10 +91,15 @@ func ComputeClusterIP(cidr gardenv1beta1.CIDR, lastByte byte) string {
 }
 
 // DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and
-// returns it as string, i.e. "10" will be returned.
-func DiskSize(size string) string {
+// returns it as string, i.e. "10" will be returned. If the conversion to integer fails or if
+// the pattern does not match, it will return 0.
+func DiskSize(size string) int {
 	regex, _ := regexp.Compile("^(\\d+)")
-	return regex.FindString(size)
+	i, err := strconv.Atoi(regex.FindString(size))
+	if err != nil {
+		return 0
+	}
+	return i
 }
 
 // ComputeNonMasqueradeCIDR computes the CIDR range which should be non-masqueraded (this is passed as

@@ -16,7 +16,6 @@ package gcpbotanist
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -55,11 +54,6 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 
 	for zoneIndex, zone := range zones {
 		for _, worker := range workers {
-			volumeSize, err := strconv.Atoi(common.DiskSize(worker.VolumeSize))
-			if err != nil {
-				return nil, nil, err
-			}
-
 			cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
 			if err != nil {
 				return nil, nil, err
@@ -75,7 +69,7 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 					{
 						"autoDelete": true,
 						"boot":       true,
-						"sizeGb":     volumeSize,
+						"sizeGb":     common.DiskSize(worker.VolumeSize),
 						"type":       worker.VolumeType,
 						"image":      b.Shoot.Info.Spec.Cloud.GCP.MachineImage.Image,
 						"labels": map[string]interface{}{
@@ -116,15 +110,10 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 				className            = fmt.Sprintf("%s-%s", deploymentName, machineClassSpecHash)
 			)
 
-			replicas, err := strconv.Atoi(common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen))
-			if err != nil {
-				return nil, nil, err
-			}
-
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
 				Name:      deploymentName,
 				ClassName: className,
-				Replicas:  replicas,
+				Replicas:  common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
 			})
 
 			machineClassSpec["name"] = className

@@ -15,7 +15,6 @@
 package openstackbotanist
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
@@ -61,23 +60,6 @@ func (b *OpenStackBotanist) generateTerraformInfraVariablesEnvironment() []map[s
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, routerID string) map[string]interface{} {
-	var (
-		sshSecret                   = b.Secrets["ssh-keypair"]
-		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
-		workers                     = distributeWorkersOverZones(b.Shoot.Info.Spec.Cloud.OpenStack.Workers, b.Shoot.Info.Spec.Cloud.OpenStack.Zones)
-		zones                       = []map[string]interface{}{}
-	)
-
-	for _, zone := range b.Shoot.Info.Spec.Cloud.OpenStack.Zones {
-		zones = append(zones, map[string]interface{}{
-			"name": zone,
-		})
-	}
-
-	networks := map[string]interface{}{
-		"worker": b.Shoot.Info.Spec.Cloud.OpenStack.Networks.Workers[0],
-	}
-
 	return map[string]interface{}{
 		"openstack": map[string]interface{}{
 			"authURL":              b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL,
@@ -90,18 +72,14 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 		"create": map[string]interface{}{
 			"router": createRouter,
 		},
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
+		"sshPublicKey": string(b.Secrets["ssh-keypair"].Data["id_rsa.pub"]),
 		"router": map[string]interface{}{
 			"id": routerID,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": b.Shoot.Info.Spec.Cloud.OpenStack.MachineImage.Image,
-		"cloudConfig": map[string]interface{}{
-			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
+		"networks": map[string]interface{}{
+			"worker": b.Shoot.Info.Spec.Cloud.OpenStack.Networks.Workers[0],
 		},
-		"networks": networks,
-		"workers":  workers,
-		"zones":    zones,
 	}
 }
 
@@ -113,32 +91,4 @@ func (b *OpenStackBotanist) DeployBackupInfrastructure() error {
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *OpenStackBotanist) DestroyBackupInfrastructure() error {
 	return nil
-}
-
-// distributeWorkersOverZones distributes the worker groups over the zones equally and returns a map
-// which can be injected into a Helm chart.
-func distributeWorkersOverZones(workerList []gardenv1beta1.OpenStackWorker, zoneList []string) []map[string]interface{} {
-	var (
-		workers = []map[string]interface{}{}
-		zoneLen = len(zoneList)
-	)
-
-	for _, worker := range workerList {
-		var workerZones = []map[string]interface{}{}
-		for zoneIndex, zone := range zoneList {
-			workerZones = append(workerZones, map[string]interface{}{
-				"name":          zone,
-				"autoScalerMin": common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
-				"autoScalerMax": common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
-			})
-		}
-
-		workers = append(workers, map[string]interface{}{
-			"name":        worker.Name,
-			"machineType": worker.MachineType,
-			"zones":       workerZones,
-		})
-	}
-
-	return workers
 }

@@ -8,9 +8,4 @@ variable "CLIENT_SECRET" {
   description = "Azure client secret of technical user"
   type        = "string"
 }
-
-variable "CLOUD_CONFIG_DOWNLOADER_KUBECONFIG" {
-  description = "Kubeconfig for the Cloud Config Downloader"
-  type        = "string"
-}
 {{- end -}}

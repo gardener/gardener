@@ -42,13 +42,6 @@ func (b *HybridBotanist) DeployMachines() error {
 		return fmt.Errorf("The CloudBotanist failed to generate the machine config: '%s'", err.Error())
 	}
 
-	// TODO@MachineController: remove below once the machine-controller-manager supports all cloud providers
-	if machineDeployments == nil {
-		b.Logger.Info("Skipping machine deployment as cloud is not yet supported.")
-		return nil
-	}
-	// TODO@MachineController: remove above once the machine-controller-manager supports all cloud providers
-
 	// Deploy generated machine classes.
 	values := map[string]interface{}{
 		"machineClasses": machineClassChartValues,

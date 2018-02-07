@@ -62,11 +62,14 @@ var _ = Describe("common", func() {
 
 		Describe("#DiskSize", func() {
 			It("should return a string", func() {
-				size := "10"
+				var (
+					size    = "10"
+					sizeInt = 10
+				)
 
 				result := DiskSize(size + "Gi")
 
-				Expect(result).To(Equal(size))
+				Expect(result).To(Equal(sizeInt))
 			})
 		})
 

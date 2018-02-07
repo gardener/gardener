@@ -124,10 +124,7 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vp
 			"internetGatewayID": internetGatewayID,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"cloudConfig": map[string]interface{}{ // Keep that until the terraformer-common chart does not longer include cloud config downloader
-			"kubeconfig": "not-used-for-aws",
-		},
-		"zones": zones,
+		"zones":       zones,
 	}
 }
 

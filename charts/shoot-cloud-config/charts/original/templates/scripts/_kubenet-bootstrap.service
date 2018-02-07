@@ -10,7 +10,6 @@
     Restart=on-failure
     RestartSec=10
     ExecStartPre=/usr/bin/touch /tmp/bootstrap_success
-    ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
     ExecStartPre=/bin/sh -c 'sudo mkdir -p /var/lib/kubelet'
     ExecStartPre=/bin/sh -c 'sudo mkdir -p /opt/bin/kubernetes'
     ExecStartPre=/bin/sh -c 'sudo mkdir -p /opt/cni/bin'

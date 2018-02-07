@@ -82,68 +82,20 @@ resource "openstack_compute_keypair_v2" "ssh_key" {
 }
 
 //=====================================================================
-//= Bastion Host
+//= Output Variables
 //=====================================================================
 
-data "openstack_images_image_v2" "bastion" {
-  name        = "{{ required "coreOSImage is required" $.Values.coreOSImage }}"
-  most_recent = true
+output "network_id" {
+  value = "${openstack_networking_network_v2.cluster.id}"
 }
 
-resource "openstack_networking_floatingip_v2" "bastion" {
-  pool = "{{ required "openstack.floatingPoolName is required" .Values.openstack.floatingPoolName }}"
+output "key_name" {
+  value = "${openstack_compute_keypair_v2.ssh_key.name}"
 }
 
-resource "openstack_compute_floatingip_associate_v2" "bastion" {
-  floating_ip = "${openstack_networking_floatingip_v2.bastion.address}"
-  instance_id = "${openstack_compute_instance_v2.bastion.id}"
+output "security_group_name" {
+  value = "${openstack_networking_secgroup_v2.cluster.name}"
 }
-
-resource "openstack_compute_instance_v2" "bastion" {
-  name              = "{{ required "clusterName is required" .Values.clusterName }}-bastion"
-  availability_zone = "{{ required "zones is required" (index .Values.zones 0).name }}"
-  flavor_name       = "m1.small"
-  image_id          = "${data.openstack_images_image_v2.bastion.id}"
-  key_pair          = "${openstack_compute_keypair_v2.ssh_key.name}"
-  security_groups   = ["${openstack_networking_secgroup_v2.cluster.name}"]
-  force_delete      = true
-
-  network {
-    uuid = "${openstack_networking_network_v2.cluster.id}"
-  }
-}
-
-//=====================================================================
-//= Worker Nodes
-//=====================================================================
-
-data "openstack_images_image_v2" "worker" {
-  name        = "{{ required "coreOSImage is required" $.Values.coreOSImage }}"
-  most_recent = true
-}
-
-{{ range $j, $worker := .Values.workers }}
-{{ range $zoneIndex, $zone := $worker.zones }}
-resource "openstack_compute_instance_v2" "worker-{{ $zoneIndex }}-{{ $j }}" {
-  name              = "{{ required "clusterName is required" $.Values.clusterName }}-{{ required "worker.name is required" $worker.name }}-${count.index}"
-  count             = "{{ required "zone.autoScalerMin is required" $zone.autoScalerMin }}"
-  flavor_name       = "{{ required "worker.machineType is required" $worker.machineType }}"
-  availability_zone = "{{ required "zone.name is required" $zone.name }}"
-  image_id          = "${data.openstack_images_image_v2.worker.id}"
-  key_pair          = "${openstack_compute_keypair_v2.ssh_key.name}"
-  security_groups   = ["${openstack_networking_secgroup_v2.cluster.name}"]
-  force_delete      = true
-
-  network {
-    uuid = "${openstack_networking_network_v2.cluster.id}"
-  }
-
-  user_data = <<EOF
-{{ include "terraformer-common.cloud-config.user-data" (set $.Values "workerName" $worker.name) }}
-EOF
-}
-{{- end }}
-{{- end }}
 
 output "cloud_config" {
   value = <<EOF

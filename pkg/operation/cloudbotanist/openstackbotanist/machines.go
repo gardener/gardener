@@ -15,24 +15,89 @@
 package openstackbotanist
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
 // contains the machine class template.
-// TODO@MachineController: Implement once the machine-controller-manager supports OpenStack.
 func (b *OpenStackBotanist) GetMachineClassInfo() (classKind, classPlural, classChartName string) {
-	classKind = ""
-	classPlural = ""
-	classChartName = ""
+	classKind = "OpenStackMachineClass"
+	classPlural = "openstackmachineclasses"
+	classChartName = "openstack-machineclass"
 	return
 }
 
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
 // also generates a list of corresponding MachineDeployments. The provided worker groups will be distributed over
-// the desired availability zones. It returns the name of the cloud-specific MachineClass, the cloud-specific Helm
-// chart name, the corresponding values, and the list of MachineDeployments.
-// TODO@MachineController: Implement once the machine-controller-manager supports OpenStack.
+// the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
 func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error) {
-	return nil, nil, nil
+	var (
+		networkID         = "network_id"
+		keyName           = "key_name"
+		securityGroupName = "security_group_name"
+		outputVariables   = []string{networkID, keyName, securityGroupName}
+		workers           = b.Shoot.Info.Spec.Cloud.OpenStack.Workers
+		zones             = b.Shoot.Info.Spec.Cloud.OpenStack.Zones
+		zoneLen           = len(zones)
+
+		machineDeployments = []operation.MachineDeployment{}
+		machineClasses     = []map[string]interface{}{}
+	)
+
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(outputVariables...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for zoneIndex, zone := range zones {
+		for _, worker := range workers {
+			cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			machineClassSpec := map[string]interface{}{
+				"region":           b.Shoot.Info.Spec.Cloud.Region,
+				"availabilityZone": zone,
+				"machineType":      worker.MachineType,
+				"keyName":          stateVariables[keyName],
+				"imageName":        b.Shoot.Info.Spec.Cloud.OpenStack.MachineImage.Image,
+				"networkID":        stateVariables[networkID],
+				"securityGroups":   []string{stateVariables[securityGroupName]},
+				"tags": map[string]string{
+					fmt.Sprintf("kubernetes.io/cluster/%s", b.Shoot.SeedNamespace): "1",
+					"kubernetes.io/role/node":                                      "1",
+				},
+				"secret": map[string]interface{}{
+					"authURL":     b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL,
+					"domainName":  string(b.Shoot.Secret.Data[DomainName]),
+					"tenantName":  string(b.Shoot.Secret.Data[TenantName]),
+					"username":    string(b.Shoot.Secret.Data[UserName]),
+					"password":    string(b.Shoot.Secret.Data[Password]),
+					"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
+				},
+			}
+
+			var (
+				machineClassSpecHash = common.MachineClassHash(machineClassSpec, b.Shoot.KubernetesMajorMinorVersion)
+				deploymentName       = fmt.Sprintf("%s-%s-z%d", b.Shoot.SeedNamespace, worker.Name, zoneIndex+1)
+				className            = fmt.Sprintf("%s-%s", deploymentName, machineClassSpecHash)
+			)
+
+			machineDeployments = append(machineDeployments, operation.MachineDeployment{
+				Name:      deploymentName,
+				ClassName: className,
+				Replicas:  common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
+			})
+
+			machineClassSpec["name"] = className
+			machineClasses = append(machineClasses, machineClassSpec)
+		}
+	}
+
+	return machineClasses, machineDeployments, nil
 }

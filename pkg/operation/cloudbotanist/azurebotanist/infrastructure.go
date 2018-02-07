@@ -112,10 +112,7 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 			},
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"cloudConfig": map[string]interface{}{ // Keep that until the terraformer-common chart does not longer include cloud config downloader
-			"kubeconfig": "not-used-for-azure",
-		},
-		"networks": networks,
+		"networks":    networks,
 	}
 }
 
