@@ -18,10 +18,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"path"
-
-	"github.com/gardener/gardener/pkg/utils"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,12 +33,9 @@ func (c *Client) Apply(m []byte) error {
 	var (
 		decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(m), 1024)
 		decodedObj map[string]interface{}
-		name       string
-		namespace  string
-		err        error
 	)
 
-	for err = decoder.Decode(&decodedObj); err == nil; err = decoder.Decode(&decodedObj) {
+	for err := decoder.Decode(&decodedObj); err == nil; err = decoder.Decode(&decodedObj) {
 		if len(decodedObj) == 0 {
 			continue
 		}
@@ -49,48 +43,45 @@ func (c *Client) Apply(m []byte) error {
 		if e != nil {
 			return e
 		}
-		manifestObj := utils.ConvertJSONToMap(manifest)
+		decodedObj = nil
 
-		apiVersion, e := manifestObj.String("apiVersion")
-		if e != nil {
+		var metadata struct {
+			metav1.TypeMeta   `json:",inline"`
+			metav1.ObjectMeta `json:"metadata,omitempty"`
+		}
+		if e := json.Unmarshal(manifest, &metadata); e != nil {
 			return e
 		}
-		kind, e := manifestObj.String("kind")
-		if e != nil {
-			return e
-		}
-		name, e = manifestObj.String("metadata", "name")
-		if e != nil {
-			return e
-		}
-		ns, e := manifestObj.String("metadata", "namespace")
-		if e != nil {
-			namespace = ""
-		} else {
-			namespace = ns
-		}
+
+		var (
+			apiVersion = metadata.APIVersion
+			kind       = metadata.Kind
+			name       = metadata.Name
+			namespace  = metadata.Namespace
+		)
 
 		absPath, e := c.BuildPath(apiVersion, kind, namespace)
 		if e != nil {
 			return e
 		}
+		absPathName := path.Join(absPath, name)
 
-		e = c.post(absPath, manifest)
-		if e != nil {
-			if apierrors.IsAlreadyExists(e) {
-				e := c.patch(path.Join(absPath, name), manifest)
-				if e != nil {
-					return e
+		if postErr := c.post(absPath, manifest); postErr != nil {
+			if apierrors.IsAlreadyExists(postErr) {
+				switch kind {
+				case "Service":
+					if patchErr := c.patch(absPathName, manifest); patchErr != nil {
+						return patchErr
+					}
+				default:
+					if putErr := c.put(absPathName, manifest); putErr != nil {
+						return putErr
+					}
 				}
 			} else {
-				return e
+				return postErr
 			}
 		}
-
-		decodedObj = nil
-	}
-	if err != io.EOF {
-		return err
 	}
 	return nil
 }
