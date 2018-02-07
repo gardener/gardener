@@ -18,12 +18,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"path"
+
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/rest"
 )
 
 // Apply is a function which does the same like `kubectl apply -f <file>`. It takes a bunch of manifests <m>,
@@ -33,55 +37,79 @@ func (c *Client) Apply(m []byte) error {
 	var (
 		decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(m), 1024)
 		decodedObj map[string]interface{}
+		err        error
 	)
 
-	for err := decoder.Decode(&decodedObj); err == nil; err = decoder.Decode(&decodedObj) {
-		if len(decodedObj) == 0 {
+	for err = decoder.Decode(&decodedObj); err == nil; err = decoder.Decode(&decodedObj) {
+		if decodedObj == nil {
 			continue
 		}
-		manifest, e := json.Marshal(decodedObj)
-		if e != nil {
-			return e
-		}
+
+		newObj := unstructured.Unstructured{Object: decodedObj}
 		decodedObj = nil
 
-		var metadata struct {
-			metav1.TypeMeta   `json:",inline"`
-			metav1.ObjectMeta `json:"metadata,omitempty"`
-		}
-		if e := json.Unmarshal(manifest, &metadata); e != nil {
+		manifest, e := json.Marshal(newObj.UnstructuredContent())
+		if e != nil {
 			return e
 		}
 
 		var (
-			apiVersion = metadata.APIVersion
-			kind       = metadata.Kind
-			name       = metadata.Name
-			namespace  = metadata.Namespace
+			apiVersion = newObj.GetAPIVersion()
+			kind       = newObj.GetKind()
+			name       = newObj.GetName()
+			namespace  = newObj.GetNamespace()
 		)
 
 		absPath, e := c.BuildPath(apiVersion, kind, namespace)
 		if e != nil {
 			return e
 		}
-		absPathName := path.Join(absPath, name)
 
-		if postErr := c.post(absPath, manifest); postErr != nil {
-			if apierrors.IsAlreadyExists(postErr) {
-				switch kind {
-				case "Service":
-					if patchErr := c.patch(absPathName, manifest); patchErr != nil {
-						return patchErr
-					}
-				default:
-					if putErr := c.put(absPathName, manifest); putErr != nil {
-						return putErr
-					}
-				}
-			} else {
+		var (
+			absPathName = path.Join(absPath, name)
+			getResult   = c.get(absPathName)
+			getErr      = getResult.Error()
+			oldObj      unstructured.Unstructured
+		)
+
+		if apierrors.IsNotFound(getErr) {
+			// Resource object was not found, i.e. it does not exist yet. We need to POST.
+			if postErr := c.post(absPath, manifest); postErr != nil {
 				return postErr
 			}
+		} else {
+			if getErr != nil {
+				// We have received an error from the GET request which we do not expect.
+				return getErr
+			}
+
+			// We have received an result from the GET request, i.e. the object does exist already.
+			// We need to use the current resource version and inject it into the new manifest.
+			raw, e := getResult.Raw()
+			if e != nil {
+				return e
+			}
+			if e := json.Unmarshal(raw, &oldObj); e != nil {
+				return e
+			}
+			newObj.SetResourceVersion(oldObj.GetResourceVersion())
+
+			if kind == "Service" {
+				newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
+			}
+
+			manifest, e = json.Marshal(newObj.UnstructuredContent())
+			if e != nil {
+				return e
+			}
+
+			if putErr := c.put(absPathName, manifest); putErr != nil {
+				return putErr
+			}
 		}
+	}
+	if err != io.EOF {
+		return err
 	}
 	return nil
 }
@@ -114,6 +142,11 @@ func (c *Client) BuildPath(apiVersion, kind, namespace string) (string, error) {
 		}
 	}
 	return "", fmt.Errorf("Could not find API group %s", apiVersion)
+}
+
+// get performs a HTTP GET request on the given path. It will return the result object.
+func (c *Client) get(path string) rest.Result {
+	return c.restClient.Get().AbsPath(path).Do()
 }
 
 // post performs a HTTP POST request on the given path and with the given body (must be a byte
