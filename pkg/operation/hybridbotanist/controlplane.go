@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helperbotanist
+package hybridbotanist
 
 import (
 	"fmt"
@@ -28,7 +28,7 @@ var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane",
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
 /// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
-func (b *HelperBotanist) DeployETCD() error {
+func (b *HybridBotanist) DeployETCD() error {
 	secretData, backupConfigData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
 	if err != nil {
 		return err
@@ -65,7 +65,7 @@ func (b *HelperBotanist) DeployETCD() error {
 
 // DeployCloudProviderConfig asks the Cloud Botanist to provide the cloud specific values for the cloud
 // provider configuration. It will create a ConfigMap for it and store it in the Seed cluster.
-func (b *HelperBotanist) DeployCloudProviderConfig() error {
+func (b *HybridBotanist) DeployCloudProviderConfig() error {
 	name := "cloud-provider-config"
 	cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
 	if err != nil {
@@ -82,7 +82,7 @@ func (b *HelperBotanist) DeployCloudProviderConfig() error {
 
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
-func (b *HelperBotanist) DeployKubeAPIServer() error {
+func (b *HybridBotanist) DeployKubeAPIServer() error {
 	name := "kube-apiserver"
 	loadBalancer := b.Botanist.APIServerAddress
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(loadBalancer)
@@ -133,7 +133,7 @@ func (b *HelperBotanist) DeployKubeAPIServer() error {
 
 // DeployKubeControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-controller-manager deployment.
-func (b *HelperBotanist) DeployKubeControllerManager() error {
+func (b *HybridBotanist) DeployKubeControllerManager() error {
 	name := "kube-controller-manager"
 
 	defaultValues := map[string]interface{}{
@@ -171,7 +171,7 @@ func (b *HelperBotanist) DeployKubeControllerManager() error {
 
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-scheduler deployment.
-func (b *HelperBotanist) DeployKubeScheduler() error {
+func (b *HybridBotanist) DeployKubeScheduler() error {
 	var (
 		name          = "kube-scheduler"
 		defaultValues = map[string]interface{}{

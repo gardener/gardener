@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helperbotanist
+package hybridbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation"
@@ -20,10 +20,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
 )
 
-// HelperBotanist is a struct which contains the "normal" Botanist as well as the CloudBotanist.
+// HybridBotanist is a struct which contains the "normal" Botanist as well as the CloudBotanist.
 // It is used to execute the work for which input from both is required or functionalities from
 // both must be used.
-type HelperBotanist struct {
+type HybridBotanist struct {
 	*operation.Operation
 	Botanist           *botanist.Botanist
 	SeedCloudBotanist  cloudbotanist.CloudBotanist

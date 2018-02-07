@@ -24,7 +24,7 @@ import (
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
-	helperbotanistpkg "github.com/gardener/gardener/pkg/operation/helperbotanist"
+	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,7 +47,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		return formatError("Failed to create a Shoot CloudBotanist", err)
 	}
 
-	helperBotanist := &helperbotanistpkg.HelperBotanist{
+	hybridBotanist := &hybridbotanistpkg.HybridBotanist{
 		Operation:          o,
 		Botanist:           botanist,
 		SeedCloudBotanist:  seedCloudBotanist,
@@ -67,14 +67,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		_                                    = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
 		deployInfrastructure                 = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
 		deployBackupInfrastructure           = f.AddTask(seedCloudBotanist.DeployBackupInfrastructure, 0, deployNamespace)
-		deployETCD                           = f.AddTask(helperBotanist.DeployETCD, defaultRetry, deployBackupInfrastructure)
-		deployCloudProviderConfig            = f.AddTask(helperBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)
-		deployKubeAPIServer                  = f.AddTask(helperBotanist.DeployKubeAPIServer, defaultRetry, deploySecrets, deployETCD, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig)
-		_                                    = f.AddTask(helperBotanist.DeployKubeControllerManager, defaultRetry, deployCloudProviderConfig, deployKubeAPIServer)
-		_                                    = f.AddTask(helperBotanist.DeployKubeScheduler, defaultRetry, deployKubeAPIServer)
+		deployETCD                           = f.AddTask(hybridBotanist.DeployETCD, defaultRetry, deployBackupInfrastructure)
+		deployCloudProviderConfig            = f.AddTask(hybridBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)
+		deployKubeAPIServer                  = f.AddTask(hybridBotanist.DeployKubeAPIServer, defaultRetry, deploySecrets, deployETCD, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig)
+		_                                    = f.AddTask(hybridBotanist.DeployKubeControllerManager, defaultRetry, deployCloudProviderConfig, deployKubeAPIServer)
+		_                                    = f.AddTask(hybridBotanist.DeployKubeScheduler, defaultRetry, deployKubeAPIServer)
 		waitUntilKubeAPIServerIsReady        = f.AddTask(botanist.WaitUntilKubeAPIServerIsReady, 0, deployKubeAPIServer)
 		initializeShootClients               = f.AddTask(botanist.InitializeShootClients, defaultRetry, waitUntilKubeAPIServerIsReady)
-		deployKubeAddonManager               = f.AddTask(helperBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients)
+		deployKubeAddonManager               = f.AddTask(hybridBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients)
 		_                                    = f.AddTask(shootCloudBotanist.DeployAutoNodeRepair, defaultRetry, waitUntilKubeAPIServerIsReady, deployInfrastructure)
 		_                                    = f.AddTask(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, deployInfrastructure)
 		_                                    = f.AddTaskConditional(botanist.DeployNginxIngressResources, 10*time.Minute, managedDNS, deployKubeAddonManager)

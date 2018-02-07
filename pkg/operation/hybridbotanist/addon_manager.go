@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package helperbotanist
+package hybridbotanist
 
 import (
 	"path/filepath"
@@ -25,7 +25,7 @@ import (
 
 // DeployKubeAddonManager deploys the Kubernetes Addon Manager which will use labelled Kubernetes resources in order
 // to ensure that they exist in a cluster/reconcile them in case somebody changed something.
-func (b *HelperBotanist) DeployKubeAddonManager() error {
+func (b *HybridBotanist) DeployKubeAddonManager() error {
 	name := "kube-addon-manager"
 	cloudConfig, err := b.generateCloudConfigChart()
 	if err != nil {
@@ -65,7 +65,7 @@ func (b *HelperBotanist) DeployKubeAddonManager() error {
 // generateCloudConfigChart renders the kube-addon-manager configuration for the cloud config user data.
 // It will be stored as a Secret and mounted into the Pod. The configuration contains
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
-func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChart, error) {
+func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChart, error) {
 	var (
 		kubeletSecret = b.Secrets["kubelet"]
 		cloudProvider = map[string]interface{}{
@@ -122,7 +122,7 @@ func (b *HelperBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 // generateCoreAddonsChart renders the kube-addon-manager configuration for the core addons. It will be
 // stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration contains
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
-func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
+func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
 		kubeProxySecret  = b.Secrets["kube-proxy"]
 		sshKeyPairSecret = b.Secrets["vpn-ssh-keypair"]
@@ -192,7 +192,7 @@ func (b *HelperBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // generateOptionalAddonsChart renders the kube-addon-manager chart for the optional addons. It
 // will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
-func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
+func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
 	clusterAutoscalerConfig, err := b.ShootCloudBotanist.GenerateClusterAutoscalerConfig()
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func (b *HelperBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 // generateAdmissionControlsChart renders the kube-addon-manager configuration for the admission control
 // extensions. It will be stored as a ConfigMap and mounted into the Pod. The configuration contains
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
-func (b *HelperBotanist) generateAdmissionControlsChart() (*chartrenderer.RenderedChart, error) {
+func (b *HybridBotanist) generateAdmissionControlsChart() (*chartrenderer.RenderedChart, error) {
 	config, err := b.ShootCloudBotanist.GenerateAdmissionControlConfig()
 	if err != nil {
 		return nil, err
