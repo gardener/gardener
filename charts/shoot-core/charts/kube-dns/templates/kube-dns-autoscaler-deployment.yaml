@@ -20,6 +20,10 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      tolerations:
+      # Mark the pod as a critical add-on for rescheduling.
+      - key: CriticalAddonsOnly
+        operator: Exists
       serviceAccountName: kube-dns-autoscaler
       containers:
       - name: autoscaler

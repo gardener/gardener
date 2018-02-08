@@ -21,10 +21,11 @@ spec:
   replicas: {{ .Values.replicaCount }}
   template:
     metadata:
-    {{- if .Values.podAnnotations }}
       annotations:
+    {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
     {{- end }}
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         app: {{ template "fullname" . }}
         release: {{ .Release.Name }}
@@ -99,7 +100,12 @@ spec:
     {{- end }}
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
       tolerations:
-{{ toYaml .Values.tolerations | indent 8 }}
+{{- if .Values.tolerations }}
+{{ toYaml .Values.tolerations | indent 6 }}
+{{- end}}
+      # Mark the pod as a critical add-on for rescheduling.
+      - key: CriticalAddonsOnly
+        operator: Exists
       volumes:
         - name: ssl-certs
           hostPath:

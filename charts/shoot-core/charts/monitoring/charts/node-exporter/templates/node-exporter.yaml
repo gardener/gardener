@@ -37,9 +37,14 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         component: node-exporter
     spec:
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
       hostNetwork: true
       hostPID: true
       containers:

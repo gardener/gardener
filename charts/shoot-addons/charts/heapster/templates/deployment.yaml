@@ -12,9 +12,15 @@ spec:
       app: {{ template "fullname" . }}
   template:
     metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         app: {{ template "fullname" . }}
     spec:
+      tolerations:
+      # Mark the pod as a critical add-on for rescheduling.
+      - key: CriticalAddonsOnly
+        operator: Exists
       serviceAccountName: {{ template "fullname" . }}
       containers:
       - name: {{ .Chart.Name }}
