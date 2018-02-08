@@ -50,7 +50,8 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      creationTimestamp: null
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         app: helm
         name: tiller
@@ -68,10 +69,6 @@ spec:
             path: /liveness
             port: 44135
             scheme: HTTP
-          initialDelaySeconds: 1
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
         name: tiller
         ports:
         - containerPort: 44134
@@ -83,20 +80,11 @@ spec:
             path: /readiness
             port: 44135
             scheme: HTTP
-          initialDelaySeconds: 1
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        resources: {}
-        terminationMessagePath: /dev/termination-log
-        terminationMessagePolicy: File
-      dnsPolicy: ClusterFirst
-      nodeSelector:
-        beta.kubernetes.io/os: linux
-      restartPolicy: Always
-      schedulerName: default-scheduler
-      securityContext: {}
-      terminationGracePeriodSeconds: 30
+      tolerations:
+      # Mark the pod as a critical add-on for rescheduling.
+      - key: CriticalAddonsOnly
+        operator: Exists
+
 ---
 
 apiVersion: {{include "rbacversion" .}}

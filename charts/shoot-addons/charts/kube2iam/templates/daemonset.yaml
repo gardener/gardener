@@ -21,14 +21,19 @@ spec:
       release: {{ .Release.Name }}
   template:
     metadata:
-    {{- if .Values.podAnnotations }}
       annotations:
+{{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
-    {{- end }}
+{{- end }}
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
     spec:
+      tolerations:
+      # Mark the pod as a critical add-on for rescheduling.
+      - key: CriticalAddonsOnly
+        operator: Exists
       containers:
         - name: kube2iam
           image: {{ index .Values.images "kube2iam" }}
