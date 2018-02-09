@@ -194,6 +194,7 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 	if !utils.TimeElapsed(o.Shoot.Info.DeletionTimestamp, c.config.Controller.Reconciliation.RetryDuration.Duration) {
 		description += " Operation will be retried."
 		state = gardenv1beta1.ShootLastOperationStateError
+	} else {
 		delete(o.Shoot.Info.Annotations, common.ConfirmationDeletionTimestamp)
 	}
 
