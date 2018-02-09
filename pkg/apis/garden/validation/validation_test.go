@@ -1474,7 +1474,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateQuota(quota)
 
-			Expect(len(errorList)).To(Equal(4))
+			Expect(len(errorList)).To(Equal(5))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
@@ -1488,6 +1488,10 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.scope"),
 			}))
 			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.metrics[key]"),
+			}))
+			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.metrics[key]"),
 			}))

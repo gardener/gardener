@@ -431,6 +431,30 @@ type QuotaSpec struct {
 	Scope QuotaScope
 }
 
+// QuotaStatus holds the most recently observed status of the Quota constraints.
+type QuotaStatus struct {
+	// Metrics holds the current status of the constraints defined in the spec. Only used for Quotas whose scope
+	// is 'secret'.
+	Metrics corev1.ResourceList
+}
+
+const (
+	// QuotaMetricCPU is the constraint for the amount of CPUs
+	QuotaMetricCPU corev1.ResourceName = corev1.ResourceCPU
+	// QuotaMetricGPU is the constraint for the amount of GPUs (e.g. from Nvidia)
+	QuotaMetricGPU corev1.ResourceName = "gpu"
+	// QuotaMetricMemory is the constraint for the amount of memory
+	QuotaMetricMemory corev1.ResourceName = corev1.ResourceMemory
+	// QuotaMetricStorageBasic is the constraint for the size of a basic disk
+	QuotaMetricStorageBasic corev1.ResourceName = corev1.ResourceStorage + ".basic"
+	// QuotaMetricStorageStandard is the constraint for the size of a standard disk
+	QuotaMetricStorageStandard corev1.ResourceName = corev1.ResourceStorage + ".standard"
+	// QuotaMetricStoragePremium is the constraint for the size of a premium disk (e.g. SSD)
+	QuotaMetricStoragePremium corev1.ResourceName = corev1.ResourceStorage + ".premium"
+	// QuotaMetricLoadbalancer is the constraint for the amount of loadbalancers
+	QuotaMetricLoadbalancer corev1.ResourceName = "loadbalancer"
+)
+
 // QuotaScope is a string alias.
 type QuotaScope string
 
