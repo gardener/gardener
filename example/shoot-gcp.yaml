@@ -39,8 +39,6 @@ spec:
       enabled: true
     heapster:
       enabled: true
-    kube-lego: {}
-    kube2iam: {}
     kubernetes-dashboard:
       enabled: true
     monocular:
