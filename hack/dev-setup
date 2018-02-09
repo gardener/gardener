@@ -46,7 +46,7 @@ spec:
       volumes:
       - name: data
         hostPath:
-          path: /etc/gardener/etcd
+          path: /data/gardener-etcd
 ---
 apiVersion: v1
 kind: Service
