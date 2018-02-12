@@ -42,6 +42,7 @@ type Client interface {
 	SetClientset(*kubernetes.Clientset)
 	SetGardenClientset(*clientset.Clientset)
 	SetRESTClient(rest.Interface)
+	MachineV1alpha1(string, string, string) *rest.Request
 
 	// Namespaces
 	CreateNamespace(string, bool) (*corev1.Namespace, error)
