@@ -17,7 +17,6 @@ package awsbotanist
 import (
 	"fmt"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
@@ -88,11 +87,9 @@ func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() []map[string]
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vpcID, internetGatewayID, vpcCIDR string) map[string]interface{} {
 	var (
-		sshSecret                   = b.Secrets["ssh-keypair"]
-		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
-		dhcpDomainName              = "ec2.internal"
-		workers                     = distributeWorkersOverZones(b.Shoot.Info.Spec.Cloud.AWS.Workers, b.Shoot.Info.Spec.Cloud.AWS.Zones)
-		zones                       = []map[string]interface{}{}
+		sshSecret      = b.Secrets["ssh-keypair"]
+		dhcpDomainName = "ec2.internal"
+		zones          = []map[string]interface{}{}
 	)
 
 	if b.Shoot.Info.Spec.Cloud.Region != "us-east-1" {
@@ -127,12 +124,10 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vp
 			"internetGatewayID": internetGatewayID,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": b.Shoot.Info.Spec.Cloud.AWS.MachineImage.AMI,
-		"cloudConfig": map[string]interface{}{
-			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
+		"cloudConfig": map[string]interface{}{ // Keep that until the terraformer-common chart does not longer include cloud config downloader
+			"kubeconfig": "not-used-for-aws",
 		},
-		"workers": workers,
-		"zones":   zones,
+		"zones": zones,
 	}
 }
 
@@ -176,34 +171,4 @@ func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 		},
 		"clusterName": b.Shoot.SeedNamespace,
 	}
-}
-
-// distributeWorkersOverZones distributes the worker groups over the zones equally and returns a map
-// which can be injected into a Helm chart.
-func distributeWorkersOverZones(workerList []gardenv1beta1.AWSWorker, zoneList []string) []map[string]interface{} {
-	var (
-		workers = []map[string]interface{}{}
-		zoneLen = len(zoneList)
-	)
-
-	for _, worker := range workerList {
-		var workerZones = []map[string]interface{}{}
-		for zoneIndex, zone := range zoneList {
-			workerZones = append(workerZones, map[string]interface{}{
-				"name":          zone,
-				"autoScalerMin": common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
-				"autoScalerMax": common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
-			})
-		}
-
-		workers = append(workers, map[string]interface{}{
-			"name":        worker.Name,
-			"machineType": worker.MachineType,
-			"volumeType":  worker.VolumeType,
-			"volumeSize":  common.DiskSize(worker.VolumeSize),
-			"zones":       workerZones,
-		})
-	}
-
-	return workers
 }

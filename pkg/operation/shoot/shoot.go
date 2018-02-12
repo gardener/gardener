@@ -18,11 +18,13 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Masterminds/semver"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -81,6 +83,12 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 		return nil, err
 	}
 	shootObj.CloudProvider = cloudProvider
+
+	v, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
+	if err != nil {
+		return nil, err
+	}
+	shootObj.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 
 	return shootObj, nil
 }
@@ -215,4 +223,11 @@ func (s *Shoot) NginxIngressEnabled() bool {
 // MonocularEnabled returns true if the XX addon is enabled in the Shoot manifest.
 func (s *Shoot) MonocularEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Monocular != nil && s.Info.Spec.Addons.Monocular.Enabled
+}
+
+// ComputeCloudConfigSecretName computes the name for a secret which contains the original cloud config for
+// the worker group with the given <workerName>. It is build by the cloud config secret prefix, the worker
+// name itself and a hash of the minor Kubernetes version of the Shoot cluster.
+func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
+	return fmt.Sprintf("%s-%s-%s", common.CloudConfigPrefix, workerName, utils.ComputeSHA256Hex([]byte(s.KubernetesMajorMinorVersion))[:5])
 }

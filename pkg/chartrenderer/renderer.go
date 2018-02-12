@@ -22,5 +22,6 @@ type ChartRenderer interface {
 // RenderedChart holds a map of rendered templates file with template file name as key and
 // rendered template as value.
 type RenderedChart struct {
-	Files map[string]string
+	ChartName string
+	Files     map[string]string
 }

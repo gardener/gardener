@@ -75,7 +75,7 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		userDataConfig = b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig()
 	)
 
-	if userDataConfig.ProvisionCloudConfig {
+	if userDataConfig.ProvisionCloudProviderConfig {
 		cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
 		if err != nil {
 			return nil, err
@@ -86,6 +86,14 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 	hyperKube, err := b.ImageVector.FindImage("hyperkube", b.Shoot.Info.Spec.Kubernetes.Version)
 	if err != nil {
 		return nil, err
+	}
+
+	workers := []map[string]interface{}{}
+	for _, workerName := range userDataConfig.WorkerNames {
+		workers = append(workers, map[string]interface{}{
+			"name":       workerName,
+			"secretName": b.Shoot.ComputeCloudConfigSecretName(workerName),
+		})
 	}
 
 	config := map[string]interface{}{
@@ -104,7 +112,7 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		"images": map[string]interface{}{
 			"hyperkube": hyperKube.String(),
 		},
-		"workers": userDataConfig.WorkerNames,
+		"workers": workers,
 	}
 
 	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
@@ -116,7 +124,7 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		config["caBundle"] = *(b.Shoot.CloudProfile.Spec.CABundle)
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config", metav1.NamespaceSystem, config)
+	return b.ComputeOriginalCloudConfig(config)
 }
 
 // generateCoreAddonsChart renders the kube-addon-manager configuration for the core addons. It will be

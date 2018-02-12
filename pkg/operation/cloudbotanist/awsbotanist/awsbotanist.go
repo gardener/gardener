@@ -37,12 +37,10 @@ func New(o *operation.Operation, purpose string) (*AWSBotanist, error) {
 		return nil, errors.New("cannot instantiate an AWS botanist if neither Shoot nor Seed cluster specifies AWS")
 	}
 
-	region := o.Shoot.Info.Spec.Cloud.Region
-
 	return &AWSBotanist{
 		Operation:         o,
 		CloudProviderName: "aws",
-		AWSClient:         aws.NewClient(string(o.Shoot.Secret.Data[AccessKeyID]), string(o.Shoot.Secret.Data[SecretAccessKey]), region),
+		AWSClient:         aws.NewClient(string(o.Shoot.Secret.Data[AccessKeyID]), string(o.Shoot.Secret.Data[SecretAccessKey]), o.Shoot.Info.Spec.Cloud.Region),
 	}, nil
 }
 

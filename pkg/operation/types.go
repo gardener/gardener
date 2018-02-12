@@ -48,3 +48,11 @@ type Operation struct {
 	APIServerAddress    string
 	SeedNamespaceObject *corev1.Namespace
 }
+
+// MachineDeployment holds insformation about the name, class, replicas of a MachineDeployment
+// managed by the machine-controller-manager.
+type MachineDeployment struct {
+	Name      string
+	ClassName string
+	Replicas  int
+}

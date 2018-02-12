@@ -50,8 +50,8 @@ func (c *Client) GardenClientset() *gardenclientset.Clientset {
 	return c.gardenClientset
 }
 
-// GetRESTClient will return the RESTClient attribute of the Client object.
-func (c *Client) GetRESTClient() rest.Interface {
+// RESTClient will return the RESTClient attribute of the Client object.
+func (c *Client) RESTClient() rest.Interface {
 	return c.restClient
 }
 

@@ -127,7 +127,7 @@ func (f *Flow) startTask(task *Task) {
 	go func() {
 		if !task.Skip {
 			f.infof("Executing %s", task)
-			err := utils.Retry(f.Logger, task.RetryDuration, utils.RetryFunc(task.Function))
+			err := utils.Retry(f.Logger, task.RetryDuration, utils.RetryFunc(f.Logger, task.Function))
 			if err != nil {
 				task.Error = utilerrors.New(err)
 			}

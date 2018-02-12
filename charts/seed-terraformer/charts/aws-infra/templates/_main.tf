@@ -121,6 +121,10 @@ resource "aws_subnet" "nodes_z{{ $index }}" {
 {{ include "aws-infra.tags-with-suffix" (set $.Values "suffix" (print "nodes-z" $index)) }}
 }
 
+output "subnet_nodes_z{{ $index }}" {
+  value = "${aws_subnet.nodes_z{{ $index }}.id}"
+}
+
 resource "aws_subnet" "private_utility_z{{ $index }}" {
   vpc_id            = "{{ required "vpc.id is required" $.Values.vpc.id }}"
   cidr_block        = "{{ required "zone.cidr.internal is required" $zone.cidr.internal }}"
@@ -161,6 +165,10 @@ resource "aws_subnet" "public_utility_z{{ $index }}" {
     "kubernetes.io/cluster/{{ required "clusterName is required" $.Values.clusterName }}"  = "1"
     "kubernetes.io/role/elb" = "use"
   }
+}
+
+output "subnet_public_utility_z{{ $index }}" {
+  value = "${aws_subnet.public_utility_z{{ $index }}.id}"
 }
 
 resource "aws_security_group_rule" "nodes_tcp_public_z{{ $index }}" {
@@ -361,110 +369,6 @@ resource "aws_key_pair" "kubernetes" {
 }
 
 //=====================================================================
-//= EC2 Launch Configuration and AutoScaling Groups
-//=====================================================================
-
-resource "aws_launch_configuration" "bastions" {
-  name                        = "{{ required "clusterName is required" .Values.clusterName }}-bastions"
-  image_id                    = "{{ required "coreOSImage is required" .Values.coreOSImage }}"
-  instance_type               = "t2.nano"
-  iam_instance_profile        = "${aws_iam_instance_profile.bastions.name}"
-  key_name                    = "${aws_key_pair.kubernetes.key_name}"
-  security_groups             = ["${aws_security_group.bastions.id}"]
-  associate_public_ip_address = true
-}
-
-resource "aws_autoscaling_group" "bastions" {
-  name                      = "{{ required "clusterName is required" .Values.clusterName }}-bastions"
-  launch_configuration      = "${aws_launch_configuration.bastions.name}"
-  min_size                  = 0
-  max_size                  = 1
-  desired_capacity          = 0
-  default_cooldown          = 300
-  health_check_grace_period = 0
-  health_check_type         = "EC2"
-  vpc_zone_identifier       = ["${aws_subnet.public_utility_z0.id}"]
-  termination_policies      = ["Default"]
-
-  tag {
-    key                 = "Name"
-    value               = "{{ required "clusterName is required" .Values.clusterName }}-bastions"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/cluster/{{ required "clusterName is required" .Values.clusterName }}"
-    value               = "1"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/role/bastion"
-    value               = "1"
-    propagate_at_launch = true
-  }
-}
-
-
-{{ range $j, $worker := .Values.workers }}
-{{ range $zoneIndex, $zone := $worker.zones }}
-resource "aws_launch_configuration" "nodes_pool{{ $j }}_z{{ $zoneIndex }}" {
-  name                        = "{{ required "clusterName is required" $.Values.clusterName }}-nodes-{{ required "worker.name is required" $worker.name }}-z{{ $zoneIndex }}"
-  image_id                    = "{{ required "coreOSImage is required" $.Values.coreOSImage }}"
-  instance_type               = "{{ required "worker.machineType is required" $worker.machineType }}"
-  iam_instance_profile        = "${aws_iam_instance_profile.nodes.name}"
-  key_name                    = "${aws_key_pair.kubernetes.key_name}"
-  security_groups             = ["${aws_security_group.nodes.id}"]
-  associate_public_ip_address = false
-
-  root_block_device = {
-    volume_type = "{{ required "worker.volumeType is required" $worker.volumeType }}"
-    volume_size = {{ regexFind "^(\\d+)" (required "worker.volumeSize is required" $worker.volumeSize) }}
-  }
-
-  user_data = <<EOF
-{{ include "terraformer-common.cloud-config.user-data" (set $.Values "workerName" $worker.name) }}
-EOF
-}
-
-resource "aws_autoscaling_group" "nodes_pool{{ $j }}_z{{ $zoneIndex }}" {
-  name                      = "{{ required "clusterName is required" $.Values.clusterName }}-nodes-{{ required "worker.name is required" $worker.name }}-z{{ $zoneIndex }}"
-  launch_configuration      = "${aws_launch_configuration.nodes_pool{{ $j }}_z{{ $zoneIndex }}.name}"
-  desired_capacity          = {{ required "zone.autoScalerMin is required" $zone.autoScalerMin }}
-  min_size                  = {{ required "zone.autoScalerMin is required" $zone.autoScalerMin }}
-  max_size                  = {{ required "zone.autoScalerMax is required" $zone.autoScalerMax }}
-  default_cooldown          = 300
-  health_check_grace_period = 0
-  health_check_type         = "EC2"
-  vpc_zone_identifier       = ["${aws_subnet.nodes_z{{ $zoneIndex }}.id}"]
-  termination_policies      = ["Default"]
-
-  tag {
-    key                 = "Name"
-    value               = "{{ required "clusterName is required" $.Values.clusterName }}-nodes-{{ required "worker.name is required" $worker.name }}-z{{ $zoneIndex }}"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/cluster/{{ required "clusterName is required" $.Values.clusterName }}"
-    value               = "1"
-    propagate_at_launch = true
-  }
-
-  tag {
-    key                 = "kubernetes.io/role/node"
-    value               = "1"
-    propagate_at_launch = true
-  }
-}
-
-output "asg_nodes_pool{{ $j }}_z{{ $zoneIndex }}" {
-  value = "${aws_autoscaling_group.nodes_pool{{ $j }}_z{{ $zoneIndex }}.arn}"
-}
-{{- end -}}
-{{- end }}
-
-//=====================================================================
 //= Output variables
 //=====================================================================
 
@@ -472,14 +376,24 @@ output "vpc_id" {
   value = "{{ required "vpc.id is required" .Values.vpc.id }}"
 }
 
-output "subnet_id" {
-  value = "${aws_subnet.public_utility_z0.id}"
+output "iamInstanceProfileNodes" {
+  value = "${aws_iam_instance_profile.nodes.name}"
+}
+
+output "keyName" {
+  value = "${aws_key_pair.kubernetes.key_name}"
+}
+
+output "security_group_nodes" {
+  value = "${aws_security_group.nodes.id}"
 }
 
 output "nodes_role_arn" {
   value = "${aws_iam_role.nodes.arn}"
 }
 {{- end -}}
+
+
 {{- define "aws-infra.common-tags" -}}
 tags {
   Name = "{{ required "clusterName is required" .clusterName }}"

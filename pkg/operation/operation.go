@@ -16,6 +16,7 @@ package operation
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -170,6 +171,23 @@ func (o *Operation) InjectImages(values map[string]interface{}, version string, 
 	return copy, nil
 }
 
+// ComputeDownloaderCloudConfig computes the downloader cloud config which is injected as user data while
+// creating machines/VMs. It needs the name of the worker group it is used for (<workerName>) and returns
+// the rendered chart.
+func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrenderer.RenderedChart, error) {
+	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, map[string]interface{}{
+		"kubeconfig": string(o.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
+		"secretName": o.Shoot.ComputeCloudConfigSecretName(workerName),
+	})
+}
+
+// ComputeOriginalCloudConfig computes the original cloud config which is downloaded by the cloud config
+// downloader process running on machines/VMs. It will regularly check for new versions and restart all
+// units once it finds a newer state.
+func (o *Operation) ComputeOriginalCloudConfig(config map[string]interface{}) (*chartrenderer.RenderedChart, error) {
+	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "original"), "shoot-cloud-config-original", metav1.NamespaceSystem, config)
+}
+
 // constructInternalDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster
 // which is only used for internal purposes (all kubeconfigs except the one which is received by the
 // user will only talk with the kube-apiserver via this domain). In case the given <internalDomain>
@@ -181,4 +199,26 @@ func constructInternalDomain(shootName, shootProject, internalDomain string) str
 		return fmt.Sprintf("api.%s.%s.%s", shootName, shootProject, internalDomain)
 	}
 	return fmt.Sprintf("api.%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
+}
+
+// NameContainedInMachineDeploymentList checks whether the <name> is part of the <machineDeployments>
+// list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.
+func NameContainedInMachineDeploymentList(name string, machineDeployments []MachineDeployment) bool {
+	for _, deployment := range machineDeployments {
+		if name == deployment.Name {
+			return true
+		}
+	}
+	return false
+}
+
+// ClassContainedInMachineDeploymentList checks whether the <className> is part of the <machineDeployments>
+// list, i.e. whether there is an entry whose 'ClassName' attribute matches <name>. It returns true or false.
+func ClassContainedInMachineDeploymentList(className string, machineDeployments []MachineDeployment) bool {
+	for _, deployment := range machineDeployments {
+		if className == deployment.ClassName {
+			return true
+		}
+	}
+	return false
 }

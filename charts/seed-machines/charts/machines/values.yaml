@@ -1,0 +1,11 @@
+machineDeployments:
+- name: class-1
+  replicas: 3
+  minReadySeconds: 200
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 1
+  labels: {}
+  class:
+    kind: AWSMachineClass
+    name: shoot-garden-core-ncm-nodes-cpu-worker-z0

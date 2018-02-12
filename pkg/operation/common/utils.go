@@ -105,6 +105,12 @@ func ComputeNonMasqueradeCIDR(cidr gardenv1beta1.CIDR) string {
 	return strings.Join(cidrSplit, "/")
 }
 
+// MachineClassHash returns the SHA256-hash value of the <val> struct's representation concatenated with the
+// provided <version>.
+func MachineClassHash(machineClassSpec map[string]interface{}, version string) string {
+	return utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%s-%s", utils.HashForMap(machineClassSpec), version)))[:5]
+}
+
 // GenerateAddonConfig returns the provided <values> in case <enabled> is true. Otherwise, nil is
 // being returned.
 func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string]interface{} {

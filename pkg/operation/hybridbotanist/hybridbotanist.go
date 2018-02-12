@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package shoot
+package hybridbotanist
 
 import (
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/botanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist"
 )
 
-// Shoot is an object containing information about a Shoot cluster.
-type Shoot struct {
-	Info                        *gardenv1beta1.Shoot
-	Secret                      *corev1.Secret
-	CloudProfile                *gardenv1beta1.CloudProfile
-	CloudProvider               gardenv1beta1.CloudProvider
-	SeedNamespace               string
-	InternalClusterDomain       string
-	ExternalClusterDomain       *string
-	KubernetesMajorMinorVersion string
+// New takes an operation object <o>, a Botanist object <b>, and two CloudBotanist objects
+// <seedCB> and <shootCB>, and creates a new HybridBotanist object.
+func New(o *operation.Operation, b *botanist.Botanist, seedCB, shootCB cloudbotanist.CloudBotanist) (*HybridBotanist, error) {
+	return &HybridBotanist{
+		Operation:          o,
+		Botanist:           b,
+		SeedCloudBotanist:  seedCB,
+		ShootCloudBotanist: shootCB,
+	}, nil
 }

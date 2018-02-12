@@ -25,6 +25,10 @@ const (
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
+	// CloudConfigPrefix is a constant for the prefix which is added to secret storing the original cloud config (which
+	// is being downloaded from the cloud-config-downloader process)
+	CloudConfigPrefix = "cloud-config"
+
 	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
 	CloudPurposeShoot = "shoot"
 
@@ -83,6 +87,9 @@ const (
 	// GardenOperatedBy is the key for an annotation of a Shoot cluster whose value must be a valid email address and
 	// is used to send alerts to.
 	GardenOperatedBy = "garden.sapcloud.io/operatedBy"
+
+	// GardenPurpose is a key for a label describing the purpose of the respective object.
+	GardenPurpose = "garden.sapcloud.io/purpose"
 
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
@@ -148,8 +155,8 @@ const (
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to
 // render the shoot-cloud-config chart properly.
 type CloudConfigUserDataConfig struct {
-	ProvisionCloudConfig bool
-	KubeletParameters    []string
-	NetworkPlugin        string
-	WorkerNames          []string
+	ProvisionCloudProviderConfig bool
+	KubeletParameters            []string
+	NetworkPlugin                string
+	WorkerNames                  []string
 }

@@ -37,7 +37,7 @@ type Client interface {
 	GardenClientset() *clientset.Clientset
 	GetAPIResourceList() []*metav1.APIResourceList
 	GetConfig() *rest.Config
-	GetRESTClient() rest.Interface
+	RESTClient() rest.Interface
 	SetConfig(*rest.Config)
 	SetClientset(*kubernetes.Clientset)
 	SetGardenClientset(*clientset.Clientset)

@@ -15,8 +15,7 @@
 package utils
 
 import (
-	"errors"
-	"strconv"
+	"fmt"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -26,31 +25,22 @@ import (
 // Retry always waits the 5 seconds before retrying <f> the next time.
 // It ensures that the function <f> is always executed at least once.
 func Retry(logger *logrus.Entry, maxWaitTime time.Duration, f func() (bool, error)) error {
-	var (
-		startTime = time.Now().UTC()
-		tries     = 1
-	)
+	var startTime = time.Now().UTC()
 
 	for {
 		success, err := f()
 		if success {
-			logger.Debug("Try number #" + strconv.Itoa(tries) + " succeeded")
 			return nil
 		}
 
 		if time.Since(startTime) >= maxWaitTime {
 			if err != nil {
-				logger.Error("Maximum waiting time exceeded after " + strconv.Itoa(tries) + " tries, returning error")
+				logger.Errorf("Maximum waiting time exceeded after %s waiting time, returning error", maxWaitTime)
 				return err
 			}
-			return errors.New("Maximum waiting time exceeded after " + strconv.Itoa(tries) + " tries, but no error occurred")
+			return fmt.Errorf("Maximum waiting time exceeded after %s waiting time, but no error occurred", maxWaitTime)
 		}
 
-		logger.Info("Try number #" + strconv.Itoa(tries) + " did not succeed, trying again...")
-		if err != nil {
-			logger.Info(err)
-		}
-		tries++
 		time.Sleep(5 * time.Second)
 	}
 }
@@ -60,12 +50,14 @@ func Retry(logger *logrus.Entry, maxWaitTime time.Duration, f func() (bool, erro
 // The function <f> must not require any arguments and only return an error. It will be executed and if it
 // returns an error, the returned-tuple will be (false, err), whereby it will be (true, nil) if the execution
 // of <f> was successful.
-func RetryFunc(f func() error) func() (bool, error) {
+func RetryFunc(logger *logrus.Entry, f func() error) func() (bool, error) {
 	return func() (bool, error) {
-		err := f()
-		if err != nil {
+		funcName := FuncName(f)
+		if err := f(); err != nil {
+			logger.Infof("Execution of %s did not succeed... (%s)", funcName, err.Error())
 			return false, err
 		}
+		logger.Debug("Successful execution of %s", funcName)
 		return true, nil
 	}
 }

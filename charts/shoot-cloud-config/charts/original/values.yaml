@@ -2,13 +2,10 @@
 #   name: aws
 #   config: |
 #     Kubernetes cloud provider config
-
 # caBundle: |
 #   root certificates
-
 # images:
 #   hyperkube: image-repository
-
 # kubernetes:
 #   caCert: abcd
 #   clusterDNS: 100.64.0.10
@@ -21,7 +18,8 @@
 #       #  RotateKubeletServerCertificate: false
 #   nonMasqueradeCIDR: 100.64.0.0/10
 #   version: 1.8.4
-
 # workers:
-# - cpu-worker
-# - cpu-worker2
+# - name: cpu-worker
+#   secretName: cloud-config-cpu-worker-ab234
+# - name: cpu-worker2
+#   secretName: cloud-config-cpu-worker2-4av4a

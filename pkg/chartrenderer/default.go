@@ -61,7 +61,7 @@ func (r *DefaultChartRenderer) Render(chartPath, releaseName, namespace string, 
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
 
-// Manifest retrurns the manifest of the rendered chart as byte arrray
+// Manifest returns the manifest of the rendered chart as byte array.
 func (c *RenderedChart) Manifest() []byte {
 	// Aggregate all valid manifests into one big doc.
 	b := bytes.NewBuffer(nil)
@@ -73,12 +73,20 @@ func (c *RenderedChart) Manifest() []byte {
 	return b.Bytes()
 }
 
-// ManifestAsString retrurns the manifest of the rendered chart as string
+// ManifestAsString returns the manifest of the rendered chart as string.
 func (c *RenderedChart) ManifestAsString() string {
 	return string(c.Manifest())
 }
 
-// GetVersionSet retrieves a set of available k8s API versions
+// FileContent returns explicity the content of the provided <filename>.
+func (c *RenderedChart) FileContent(filename string) string {
+	if content, ok := c.Files[fmt.Sprintf("%s/templates/%s", c.ChartName, filename)]; ok {
+		return content
+	}
+	return ""
+}
+
+// GetVersionSet retrieves a set of available k8s API versions.
 func GetVersionSet(client discovery.ServerGroupsInterface) (chartutil.VersionSet, error) {
 	groups, err := client.ServerGroups()
 	if err != nil {
@@ -151,7 +159,8 @@ func (r *DefaultChartRenderer) renderResources(ch *chartapi.Chart, values chartu
 	}
 
 	return &RenderedChart{
-		Files: files,
+		ChartName: ch.Metadata.Name,
+		Files:     files,
 	}, nil
 }
 

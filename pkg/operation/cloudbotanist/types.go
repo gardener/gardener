@@ -14,7 +14,10 @@
 
 package cloudbotanist
 
-import "github.com/gardener/gardener/pkg/operation/common"
+import (
+	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
+)
 
 // CloudBotanist is an interface which must be implemented by cloud-specific Botanists. The Cloud Botanist
 // is responsible for all operations which require IaaS specific knowledge.
@@ -33,6 +36,10 @@ type CloudBotanist interface {
 	GenerateKubeAPIServerConfig() (map[string]interface{}, error)
 	GenerateKubeControllerManagerConfig() (map[string]interface{}, error)
 	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
+
+	// Machines
+	GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error)
+	GetMachineClassInfo() (string, string, string)
 
 	// Addons
 	DeployKube2IAMResources() error

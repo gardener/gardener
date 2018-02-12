@@ -27,7 +27,7 @@ import (
 func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
 	var (
 		vpcID    = "vpc_id"
-		subnetID = "subnet_id"
+		subnetID = "subnet_public_utility_z0"
 	)
 
 	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(vpcID, subnetID)

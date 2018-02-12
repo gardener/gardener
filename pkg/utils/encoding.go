@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"errors"
+	"sort"
 )
 
 // EncodeBase64 takes a byte slice and returns the Base64-encoded string.
@@ -120,4 +121,26 @@ func ComputeSHA1Hex(in []byte) string {
 // slice <in>, converts it to a string and returns it.
 func ComputeSHA256Hex(in []byte) string {
 	return hex.EncodeToString(SHA256(in))
+}
+
+// HashForMap creates a hash value for a map of type map[string]interface{} and returns it.
+func HashForMap(m map[string]interface{}) string {
+	var hash string
+
+	var keys []string
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		switch v := m[k].(type) {
+		case string:
+			hash += ComputeSHA256Hex([]byte(v))
+		case map[string]interface{}:
+			hash += HashForMap(v)
+		}
+	}
+
+	return ComputeSHA256Hex([]byte(hash))
 }

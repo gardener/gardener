@@ -24,6 +24,7 @@ type AWSBotanist struct {
 	*operation.Operation
 	CloudProviderName string
 	AWSClient         aws.ClientInterface
+	AMI               string
 }
 
 const (

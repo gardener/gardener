@@ -13,5 +13,5 @@ rules:
   - get
   resourceNames:
 {{- range $key, $value := .Values.workers }}
-  - cloud-config-{{ $value }}
+  - {{ $value.secretName }}
 {{- end }}

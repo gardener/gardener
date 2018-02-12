@@ -1,0 +1,26 @@
+{{- range $index, $deployment := .Values.machineDeployments }}
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: MachineDeployment
+metadata:
+  name: {{ $deployment.name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  replicas: {{ $deployment.replicas }}
+  minReadySeconds: {{ $deployment.minReadySeconds }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ $deployment.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ $deployment.rollingUpdate.maxUnavailable }}
+  selector:
+    matchLabels:
+{{ toYaml $deployment.labels | indent 6 }}
+  template:
+    metadata:
+      labels:
+{{ toYaml $deployment.labels | indent 8 }}
+    spec:
+      class:
+{{ toYaml $deployment.class | indent 8 }}
+{{- end }}
