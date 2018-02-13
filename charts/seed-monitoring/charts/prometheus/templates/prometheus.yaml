@@ -42,7 +42,7 @@ metadata:
 spec:
   updateStrategy:
     type: RollingUpdate
-  replicas: {{.Values.replicaCount}}
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: prometheus

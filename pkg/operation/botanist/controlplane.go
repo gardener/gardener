@@ -103,21 +103,29 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
 		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
+		replicas         = 1
+	)
 
+	if b.Shoot.Hibernated {
+		replicas = 0
+	}
+
+	var (
 		alertManagerConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"host":            alertManagerHost,
 			},
+			"replicas": replicas,
 		}
 		grafanaConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"host":            grafanaHost,
 			},
+			"replicas": replicas,
 		}
 		prometheusConfig = map[string]interface{}{
-			"replicaCount": 1,
 			"networks": map[string]interface{}{
 				"pods":     b.Shoot.GetPodNetwork(),
 				"services": b.Shoot.GetServiceNetwork(),
@@ -135,9 +143,14 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 				"checksum/secret-vpn-ssh-keypair":           b.CheckSums["vpn-ssh-keypair"],
 			},
+			"replicas": replicas,
 		}
-		kubeStateMetricsSeedConfig  = map[string]interface{}{}
-		kubeStateMetricsShootConfig = map[string]interface{}{}
+		kubeStateMetricsSeedConfig = map[string]interface{}{
+			"replicas": replicas,
+		}
+		kubeStateMetricsShootConfig = map[string]interface{}{
+			"replicas": replicas,
+		}
 	)
 
 	alertManager, err := b.InjectImages(alertManagerConfig, b.K8sSeedClient.Version(), map[string]string{"alertmanager": "alertmanager", "configmap-reloader": "configmap-reloader"})
@@ -197,13 +210,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		values["alertmanager"].(map[string]interface{})["email_configs"] = emailConfigs
 	}
 
-	return b.ApplyChartSeed(
-		filepath.Join(common.ChartPath, "seed-monitoring"),
-		fmt.Sprintf("%s-monitoring", b.Operation.Shoot.SeedNamespace),
-		b.Operation.Shoot.SeedNamespace,
-		nil,
-		values,
-	)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, values)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

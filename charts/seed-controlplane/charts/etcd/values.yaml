@@ -1,4 +1,5 @@
 role: for-test
+replicas: 1
 
 images:
   etcd: image-repository:image-tag

@@ -8,3 +8,4 @@ ingress:
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 
 email_configs: []
+replicas: 1

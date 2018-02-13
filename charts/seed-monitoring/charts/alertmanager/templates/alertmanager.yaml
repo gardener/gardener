@@ -49,7 +49,7 @@ metadata:
 spec:
   updateStrategy:
     type: RollingUpdate
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       component: alertmanager

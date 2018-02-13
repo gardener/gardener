@@ -56,7 +56,7 @@ spec:
   updateStrategy:
     type: RollingUpdate
   serviceName: etcd-{{.Values.role}}
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: etcd-statefulset

@@ -29,4 +29,5 @@ type Shoot struct {
 	InternalClusterDomain       string
 	ExternalClusterDomain       *string
 	KubernetesMajorMinorVersion string
+	Hibernated                  bool
 }

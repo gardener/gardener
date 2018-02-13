@@ -30,7 +30,7 @@ metadata:
     app: kubernetes
     role: scheduler
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: kubernetes

@@ -1,4 +1,5 @@
 kubernetesVersion: 1.9.1
+replicas: 1
 podAnnotations: {}
 featureGates: {}
   # CustomResourceValidation: true

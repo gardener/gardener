@@ -1,6 +1,7 @@
 cloudConfigContent: {}
 coreAddonsContent: {}
 admissionControlsContent: {}
+replicas: 1
 optionalAddonsContent: {}
 podAnnotations: {}
 images:

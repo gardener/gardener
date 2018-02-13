@@ -1,4 +1,5 @@
 podAnnotations: {}
+replicas: 1
 
 images:
   machine-controller-manager: image-repository:image-tag

@@ -30,7 +30,7 @@ metadata:
   labels:
     app: aws-lb-readvertiser
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: aws-lb-readvertiser

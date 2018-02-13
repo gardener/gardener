@@ -26,7 +26,7 @@ metadata:
     component: kube-state-metrics
     type: shoot
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       component: kube-state-metrics

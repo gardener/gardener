@@ -7,7 +7,7 @@ metadata:
   labels:
     component: grafana
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       component: grafana

@@ -7,7 +7,7 @@ metadata:
     app: kubernetes
     role: apiserver
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: kubernetes
@@ -38,7 +38,7 @@ spec:
         - --advertise-address={{.Values.advertiseAddress}}
         - --allow-privileged=true
         - --anonymous-auth=false
-        - --apiserver-count=1
+        - --apiserver-count={{ .Values.replicas }}
         {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml

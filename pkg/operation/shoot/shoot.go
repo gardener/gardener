@@ -71,24 +71,38 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 		CloudProfile:          cloudProfile,
 		SeedNamespace:         fmt.Sprintf("shoot-%s-%s", projectName, shoot.Name),
 		InternalClusterDomain: internalDomain,
+		Hibernated:            true,
 	}
 
+	// Determine the external Shoot cluster domain, i.e. the domain which will be put into the Kubeconfig handed out
+	// to the user.
 	if shoot.Spec.DNS.Domain != nil {
 		extDomain := fmt.Sprintf("api.%s", *(shoot.Spec.DNS.Domain))
 		shootObj.ExternalClusterDomain = &extDomain
 	}
 
+	// Determine the cloud provider kind of this Shoot object.
 	cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 	if err != nil {
 		return nil, err
 	}
 	shootObj.CloudProvider = cloudProvider
 
+	// Store the Kubernetes version in the format <major>.<minor> on the Shoot object.
 	v, err := semver.NewVersion(shoot.Spec.Kubernetes.Version)
 	if err != nil {
 		return nil, err
 	}
 	shootObj.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+
+	// Check whether the Shoot should be hibernated
+	workers := shootObj.GetWorkers()
+	for _, worker := range workers {
+		if worker.AutoScalerMax != 0 {
+			shootObj.Hibernated = false
+			break
+		}
+	}
 
 	return shootObj, nil
 }
@@ -99,27 +113,41 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 	return fmt.Sprintf("%s.%s.%s", subDomain, common.IngressPrefix, *(s.Info.Spec.DNS.Domain))
 }
 
-// GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
-func (s *Shoot) GetWorkerNames() []string {
-	workerNames := []string{}
+// GetWorkers returns a list of worker objects of the worker groups in the Shoot manifest.
+func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
+	workers := []gardenv1beta1.Worker{}
 
 	switch s.CloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		for _, worker := range s.Info.Spec.Cloud.AWS.Workers {
-			workerNames = append(workerNames, worker.Name)
+			workers = append(workers, worker.Worker)
 		}
 	case gardenv1beta1.CloudProviderAzure:
 		for _, worker := range s.Info.Spec.Cloud.Azure.Workers {
-			workerNames = append(workerNames, worker.Name)
+			workers = append(workers, worker.Worker)
 		}
 	case gardenv1beta1.CloudProviderGCP:
 		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
-			workerNames = append(workerNames, worker.Name)
+			workers = append(workers, worker.Worker)
 		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
-			workerNames = append(workerNames, worker.Name)
+			workers = append(workers, worker.Worker)
 		}
+	}
+
+	return workers
+}
+
+// GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
+func (s *Shoot) GetWorkerNames() []string {
+	var (
+		workers     = s.GetWorkers()
+		workerNames = []string{}
+	)
+
+	for _, worker := range workers {
+		workerNames = append(workerNames, worker.Name)
 	}
 
 	return workerNames
@@ -190,37 +218,37 @@ func (s *Shoot) GetNodeNetwork() gardenv1beta1.CIDR {
 	return ""
 }
 
-// ClusterAutoscalerEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.
 func (s *Shoot) ClusterAutoscalerEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.ClusterAutoscaler != nil && s.Info.Spec.Addons.ClusterAutoscaler.Enabled
 }
 
-// HeapsterEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// HeapsterEnabled returns true if the heapster addon is enabled in the Shoot manifest.
 func (s *Shoot) HeapsterEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Heapster != nil && s.Info.Spec.Addons.Heapster.Enabled
 }
 
-// Kube2IAMEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// Kube2IAMEnabled returns true if the kube2iam addon is enabled in the Shoot manifest.
 func (s *Shoot) Kube2IAMEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Kube2IAM != nil && s.Info.Spec.Addons.Kube2IAM.Enabled
 }
 
-// KubeLegoEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// KubeLegoEnabled returns true if the kube-lego addon is enabled in the Shoot manifest.
 func (s *Shoot) KubeLegoEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubeLego != nil && s.Info.Spec.Addons.KubeLego.Enabled
 }
 
-// KubernetesDashboardEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// KubernetesDashboardEnabled returns true if the kubernetes-dashboard addon is enabled in the Shoot manifest.
 func (s *Shoot) KubernetesDashboardEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.KubernetesDashboard != nil && s.Info.Spec.Addons.KubernetesDashboard.Enabled
 }
 
-// NginxIngressEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// NginxIngressEnabled returns true if the nginx-ingress addon is enabled in the Shoot manifest.
 func (s *Shoot) NginxIngressEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.NginxIngress != nil && s.Info.Spec.Addons.NginxIngress.Enabled
 }
 
-// MonocularEnabled returns true if the XX addon is enabled in the Shoot manifest.
+// MonocularEnabled returns true if the monocular addon is enabled in the Shoot manifest.
 func (s *Shoot) MonocularEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Monocular != nil && s.Info.Spec.Addons.Monocular.Enabled
 }

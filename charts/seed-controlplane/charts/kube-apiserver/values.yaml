@@ -1,4 +1,5 @@
 cloudProvider: aws
+replicas: 1
 kubernetesVersion: 1.8.5
 advertiseAddress: 127.0.0.1
 serviceNetwork: 10.0.0.0/24

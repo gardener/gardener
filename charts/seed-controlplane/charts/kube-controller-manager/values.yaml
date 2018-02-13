@@ -1,4 +1,5 @@
 cloudProvider: aws
+replicas: 1
 kubernetesVersion: 1.7.5
 serviceNetwork: 10.0.0.0/24
 configureRoutes: false
