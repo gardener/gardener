@@ -132,13 +132,12 @@ var _ = Describe("quotavalidator", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should bring error: shoot with cross secret binding without quotas", func() {
+		It("should allow: shoot with cross secret binding without quotas", func() {
 			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 			err := admissionHandler.Admit(attrs)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should bring error: shoot with cross secret binding having quota without namespace", func() {
@@ -193,24 +192,6 @@ var _ = Describe("quotavalidator", func() {
 			Expect(apierrors.IsInternalError(err)).To(BeTrue())
 		})
 
-		It("should allow: shoot with cross secret binding having quota with no metrics", func() {
-			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
-				{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
-				},
-			}
-			quota.Spec.Scope = "secret"
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
 		It("should bring error: shoot with cross secret binding having quotas from different namespaces", func() {
 			// set cross SB
 			crossSB.Quotas = []garden.CrossReference{
@@ -250,6 +231,7 @@ var _ = Describe("quotavalidator", func() {
 
 			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
 			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 			err := admissionHandler.Admit(attrs)
 
@@ -289,6 +271,42 @@ var _ = Describe("quotavalidator", func() {
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should bring error: shoot with cross secret binding having quota exceeding limits", func() {
+			// set cross SB
+			crossSB.Quotas = []garden.CrossReference{
+				{
+					Namespace: "test-trial-namespace",
+					Name:      "test-quota",
+				},
+			}
+			// set high enough quota
+			quota.Spec.Scope = "secret"
+			quota.Spec.Metrics = corev1.ResourceList{
+				corev1.ResourceCPU: resource.MustParse("1"),
+			}
+			// set worker at shoot
+			shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+				{
+					Worker: garden.Worker{
+						Name:          "test-worker",
+						MachineType:   "n1-standard-2",
+						AutoScalerMax: 2,
+					},
+					VolumeType: "pd-standard",
+					VolumeSize: "20Gi",
+				},
+			}
+
+			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
+			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			err := admissionHandler.Admit(attrs)
+
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsForbidden(err)).To(BeTrue())
 		})
 	})
 })

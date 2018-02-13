@@ -445,8 +445,6 @@ const (
 	QuotaMetricGPU corev1.ResourceName = "gpu"
 	// QuotaMetricMemory is the constraint for the amount of memory
 	QuotaMetricMemory corev1.ResourceName = corev1.ResourceMemory
-	// QuotaMetricStorageBasic is the constraint for the size of a basic disk
-	QuotaMetricStorageBasic corev1.ResourceName = corev1.ResourceStorage + ".basic"
 	// QuotaMetricStorageStandard is the constraint for the size of a standard disk
 	QuotaMetricStorageStandard corev1.ResourceName = corev1.ResourceStorage + ".standard"
 	// QuotaMetricStoragePremium is the constraint for the size of a premium disk (e.g. SSD)

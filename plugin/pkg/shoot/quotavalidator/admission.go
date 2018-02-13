@@ -24,7 +24,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	"github.com/gardener/gardener/pkg/logger"
+	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -85,6 +85,12 @@ func (h *RejectShootIfQuotaExceeded) ValidateInitialization() error {
 	if h.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
 	}
+	if h.crossSBLister == nil {
+		return errors.New("missing crossSecretBinding lister")
+	}
+	if h.quotaLister == nil {
+		return errors.New("missing quota lister")
+	}
 	return nil
 }
 
@@ -104,8 +110,10 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
 
+	//TODO support also PrivateSecretBindings
 	// Currently only consider quotas for CrossSecretBindings
 	if shoot.Spec.Cloud.SecretBindingRef.Kind != "CrossSecretBinding" {
+		glog.V(2).Infof("Currently quotas are not supported for %s", shoot.Spec.Cloud.SecretBindingRef.Kind)
 		return nil
 	}
 
@@ -115,30 +123,32 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	if err != nil {
 		return err
 	}
-	logger.Logger.Debugf("CrossSecretBinding %s is referenced in shoot", shoot.Spec.Cloud.SecretBindingRef.Name)
+	glog.V(2).Infof("CrossSecretBinding %s is referenced in shoot", shoot.Spec.Cloud.SecretBindingRef.Name)
 
 	// retrieve the quota(s) from the secret binding
 	var quotaReferences []garden.CrossReference
 	quotaReferences = usedCrossSB.Quotas
 	if len(quotaReferences) == 0 {
-		return apierrors.NewBadRequest(fmt.Sprintf("The CrossSecretBinding with the name %s has no quotas referenced", shoot.Spec.Cloud.SecretBindingRef.Name))
+		glog.V(2).Infof("The CrossSecretBinding with the name %s has no quotas referenced", shoot.Spec.Cloud.SecretBindingRef.Name)
+		return nil
 	}
+	if len(quotaReferences) > 2 {
+		return apierrors.NewBadRequest(fmt.Sprintf("The CrossSecretBinding with the name %s has more than 2 quotas referenced", shoot.Spec.Cloud.SecretBindingRef.Name))
+	}
+	glog.V(2).Infof("CrossSecretBinding has %d quotas for the secret %s", len(quotaReferences), usedCrossSB.SecretRef.Name)
 
-	logger.Logger.Debugf("CrossSecretBinding has %d quotas for the secret %s", len(quotaReferences), usedCrossSB.SecretRef.Name)
-
-	var quotaNamespace string
+	var tempQuotaScope garden.QuotaScope
 	for _, quotaReference := range quotaReferences {
-		if quotaNamespace != "" && quotaNamespace != quotaReference.Namespace {
-			return apierrors.NewInternalError(fmt.Errorf("The CrossSecretBinding with the name %s has referenced secrets from different namespaces", shoot.Spec.Cloud.SecretBindingRef.Name))
-		}
-		if quotaReference.Namespace == "" {
-			return apierrors.NewInternalError(fmt.Errorf("The CrossSecretBinding with the name %s has referenced a secret without a namespace", shoot.Spec.Cloud.SecretBindingRef.Name))
-		}
-		quotaNamespace = quotaReference.Namespace
 
-		result, err := h.isReferencedQuotaExceeded(a, quotaReference.Namespace, quotaReference.Name)
+		result, quotaScope, err := h.isReferencedQuotaExceeded(a, quotaReference.Namespace, quotaReference.Name)
 		if err != nil {
 			return apierrors.NewInternalError(err)
+		}
+		// check that max 1 project and 1 secret quota is referenced
+		if tempQuotaScope == "" {
+			tempQuotaScope = quotaScope
+		} else if quotaScope == tempQuotaScope {
+			return apierrors.NewInternalError(fmt.Errorf("The CrossSecretBinding with the name %s has referenced secrets with the same scope", shoot.Spec.Cloud.SecretBindingRef.Name))
 		}
 		if result {
 			return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded for %v", shoot.Name))
@@ -148,41 +158,33 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	return nil
 }
 
-func (h *RejectShootIfQuotaExceeded) isReferencedQuotaExceeded(a admission.Attributes, namespace, name string) (bool, error) {
+func (h *RejectShootIfQuotaExceeded) isReferencedQuotaExceeded(a admission.Attributes, namespace, name string) (bool, garden.QuotaScope, error) {
 	quotaNamespaceLister := h.quotaLister.Quotas(namespace)
 	usedQuota, err := quotaNamespaceLister.Get(name)
 	if err != nil {
-		return false, err
+		return false, "", err
 	}
 
-	// check scope of the quota
 	switch usedQuota.Spec.Scope {
 	case garden.QuotaScopeSecret:
-		return h.isSecretQuotaExceeded(a, *usedQuota)
+		result, err := h.isSecretQuotaExceeded(a, *usedQuota)
+		return result, garden.QuotaScopeSecret, err
 	case garden.QuotaScopeProject:
-		return isProjectQuotaExceeded(a, *usedQuota)
+		result, err := isProjectQuotaExceeded(a, *usedQuota)
+		return result, garden.QuotaScopeProject, err
 	default:
-		return false, fmt.Errorf("Incorrect scope %s defined in quota with the name %s in namespace %s", usedQuota.Spec.Scope, name, namespace)
+		return false, "", fmt.Errorf("Incorrect scope %s defined in quota with the name %s in namespace %s", usedQuota.Spec.Scope, name, namespace)
 	}
 }
 
 func (h *RejectShootIfQuotaExceeded) isSecretQuotaExceeded(a admission.Attributes, quota garden.Quota) (bool, error) {
-	logger.Logger.Infof("Checking secret quota %s", quota.Name)
+	glog.V(2).Infof("Checking secret quota %s", quota.Name)
 
 	// get the metrics of the quota object
 	quotaMetrics := quota.Spec.Metrics
-	if len(quotaMetrics) == 0 {
-		logger.Logger.Warnf("Secret quota %s has no metrics set", quota.Name)
-		return false, nil
-	}
 
-	// get the status from the quota object
-	statusMetrics := quota.Status.Metrics
-	if len(statusMetrics) == 0 {
-		logger.Logger.Debugf("Secret quota %s has no status yet", quota.Name)
-	}
-
-	//TODO consider also updated clusters
+	// calculate the status of the quota object dynamically
+	statusMetrics, nil := determineCurrentStatusSecretQuota(quota)
 
 	// get the metrics that the new shoot cluster will use
 	shoot, ok := a.GetObject().(*garden.Shoot)
@@ -205,16 +207,18 @@ func (h *RejectShootIfQuotaExceeded) isSecretQuotaExceeded(a admission.Attribute
 		newStatusValue.Add(shootMetrics[quotaMetricKey])
 		// check if new cluster would exceed the current metric
 		if quotaMetricValue.Cmp(newStatusValue) < 0 {
-			logger.Logger.Warnf("The quota for %s on shoot %s exceeded; max=%s, new=%s", quotaMetricKey, shoot.Name, quotaMetricValue.String(), newStatusValue.String())
+			glog.V(2).Infof("The quota for %s on shoot %s exceeded; max=%s, new=%s", quotaMetricKey, shoot.Name, quotaMetricValue.String(), newStatusValue.String())
 			return true, nil
 		}
 	}
 
 	// all quota checks passed
-
-	//TODO update the status of the quota object
-
 	return false, nil
+}
+
+func determineCurrentStatusSecretQuota(quota garden.Quota) (v1.ResourceList, error) {
+	// TODO get the status dynamically
+	return quota.Status.Metrics, nil
 }
 
 func isProjectQuotaExceeded(a admission.Attributes, quota garden.Quota) (bool, error) {
@@ -306,7 +310,7 @@ func retrieveQuotaWorkersForShoot(shoot *garden.Shoot, cloudProvider garden.Clou
 
 		for idx, osWorker := range shoot.Spec.Cloud.OpenStack.Workers {
 			workers[idx].Worker = osWorker.Worker
-			// no volumes in shoot for openstack
+			//TODO handle volumes in cloud profile for openstack
 		}
 	}
 	return workers
