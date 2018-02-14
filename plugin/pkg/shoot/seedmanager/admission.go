@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedfinder
+package seedmanager
 
 import (
 	"errors"
@@ -23,6 +23,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
@@ -31,7 +32,7 @@ import (
 
 const (
 	// PluginName is the name of this admission plugin.
-	PluginName = "ShootSeedFinder"
+	PluginName = "ShootSeedManager"
 )
 
 // Register registers a plugin.
@@ -41,28 +42,28 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// Finder contains listers and and admission handler.
-type Finder struct {
+// SeedManager contains listers and and admission handler.
+type SeedManager struct {
 	*admission.Handler
 	seedLister gardenlisters.SeedLister
 }
 
-var _ = admissioninitializer.WantsInternalGardenInformerFactory(&Finder{})
+var _ = admissioninitializer.WantsInternalGardenInformerFactory(&SeedManager{})
 
-// New creates a new Finder admission plugin.
-func New() (*Finder, error) {
-	return &Finder{
+// New creates a new SeedManager admission plugin.
+func New() (*SeedManager, error) {
+	return &SeedManager{
 		Handler: admission.NewHandler(admission.Create),
 	}, nil
 }
 
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (h *Finder) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
+func (h *SeedManager) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
 	h.seedLister = f.Garden().InternalVersion().Seeds().Lister()
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
-func (h *Finder) ValidateInitialization() error {
+func (h *SeedManager) ValidateInitialization() error {
 	if h.seedLister == nil {
 		return errors.New("missing seed lister")
 	}
@@ -72,7 +73,7 @@ func (h *Finder) ValidateInitialization() error {
 // Admit ensures that the object in-flight is of kind Shoot.
 // In addition it tries to find an adequate Seed cluster for the given cloud provider profile and region,
 // and writes the name into the Shoot specification.
-func (h *Finder) Admit(a admission.Attributes) error {
+func (h *SeedManager) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
 	if !h.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
@@ -87,11 +88,22 @@ func (h *Finder) Admit(a admission.Attributes) error {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
 
-	// If the Shoot manifest already specifies a desired Seed cluster, then we do nothing.
+	// If the Shoot manifest already specifies a desired Seed cluster, then we check whether it is protected or not.
+	// In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
 	if shoot.Spec.Cloud.Seed != nil {
+		seed, err := h.seedLister.Get(*shoot.Spec.Cloud.Seed)
+		if err != nil {
+			return admission.NewForbidden(a, err)
+		}
+
+		if shoot.Namespace != common.GardenNamespace && seed.Spec.Protected != nil && *seed.Spec.Protected {
+			return admission.NewForbidden(a, errors.New("forbidden to use a protected seed"))
+		}
+
 		return nil
 	}
 
+	// If no Seed is referenced, we try to determine an adequate one.
 	seed, err := determineSeed(shoot, h.seedLister)
 	if err != nil {
 		return admission.NewForbidden(a, err)

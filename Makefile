@@ -46,7 +46,7 @@ dev-setup:
 .PHONY: dev-apiserver
 dev-apiserver:
 	@go run cmd/gardener-apiserver/main.go \
-			--admission-control=ResourceReferenceManager,ShootSeedFinder,ShootSeedProtector,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator \
+			--admission-control=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator \
 			--etcd-servers=http://$(shell minikube ip):32379 \
 			--tls-cert-file ~/.minikube/apiserver.crt \
 			--tls-private-key-file ~/.minikube/apiserver.key \

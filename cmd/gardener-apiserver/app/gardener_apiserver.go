@@ -33,8 +33,7 @@ import (
 	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
-	shootseedfinder "github.com/gardener/gardener/plugin/pkg/shoot/seedfinder"
-	shootseedprotector "github.com/gardener/gardener/plugin/pkg/shoot/seedprotector"
+	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -142,10 +141,19 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 	// Admission plugin registration
 	resourcereferencemanager.Register(o.Admission.Plugins)
 	shootquotavalidator.Register(o.Admission.Plugins)
-	shootseedfinder.Register(o.Admission.Plugins)
-	shootseedprotector.Register(o.Admission.Plugins)
+	shootseedmanager.Register(o.Admission.Plugins)
 	shootdnshostedzone.Register(o.Admission.Plugins)
 	shootvalidator.Register(o.Admission.Plugins)
+
+	// Enable some admission plugins by default
+	enabledPlugins := sets.NewString(o.Admission.PluginNames...)
+	if !enabledPlugins.Has(resourcereferencemanager.PluginName) {
+		enabledPlugins.Insert(resourcereferencemanager.PluginName)
+	}
+	if !enabledPlugins.Has(shootvalidator.PluginName) {
+		enabledPlugins.Insert(shootvalidator.PluginName)
+	}
+	o.Admission.PluginNames = enabledPlugins.List()
 
 	// Initialize admission plugins
 	admissionInitializer := admissioninitializer.New(gardenInformerFactory, kubeInformerFactory)

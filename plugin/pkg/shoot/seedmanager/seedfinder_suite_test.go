@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package seedfinder_test
+package seedmanager_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestSeedFinder(t *testing.T) {
+func TestSeedManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootSeedFinder Suite")
+	RunSpecs(t, "Admission ShootSeedManager Suite")
 }
