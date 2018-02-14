@@ -54,16 +54,17 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	var (
 		defaultRetry = 5 * time.Minute
 		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
+		isCloud      = o.Shoot.Info.Spec.Cloud.Vagrant == nil
 
 		f                                    = flow.New("Shoot cluster creation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		deployNamespace                      = f.AddTask(botanist.DeployNamespace, defaultRetry)
 		deployKubeAPIServerService           = f.AddTask(botanist.DeployKubeAPIServerService, defaultRetry, deployNamespace)
-		waitUntilKubeAPIServerServiceIsReady = f.AddTask(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, deployKubeAPIServerService)
+		waitUntilKubeAPIServerServiceIsReady = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, isCloud, deployKubeAPIServerService)
 		deploySecrets                        = f.AddTask(botanist.DeploySecrets, 0, waitUntilKubeAPIServerServiceIsReady)
 		_                                    = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady)
 		_                                    = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
 		deployInfrastructure                 = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
-		deployBackupInfrastructure           = f.AddTask(seedCloudBotanist.DeployBackupInfrastructure, 0, deployNamespace)
+		deployBackupInfrastructure           = f.AddTaskConditional(seedCloudBotanist.DeployBackupInfrastructure, 0, isCloud, deployNamespace)
 		deployETCD                           = f.AddTask(hybridBotanist.DeployETCD, defaultRetry, deployBackupInfrastructure)
 		deployCloudProviderConfig            = f.AddTask(hybridBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)
 		deployKubeAPIServer                  = f.AddTask(hybridBotanist.DeployKubeAPIServer, defaultRetry, deploySecrets, deployETCD, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig)

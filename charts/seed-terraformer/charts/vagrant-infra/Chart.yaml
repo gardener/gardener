@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Vagrant chart for main k8s infrastructure
+name: vagrant-infra
+version: 0.1.0

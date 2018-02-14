@@ -73,7 +73,7 @@ spec:
         - --requestheader-group-headers=X-Remote-Group
         - --requestheader-username-headers=X-Remote-User
         {{- include "kube-apiserver.runtimeConfig" . | trimSuffix "," | indent 8 }}
-        - --secure-port=443
+        - --secure-port={{ required ".securePort is required" .Values.securePort }}
         - --service-cluster-ip-range={{.Values.serviceNetwork}}
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key

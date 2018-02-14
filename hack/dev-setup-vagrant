@@ -1,0 +1,116 @@
+#!/bin/bash
+#
+# Copyright 2018 The Gardener Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+DEV_DIR=$(dirname "${0}")/../dev
+MINIKUBE_IP=$(minikube ip)
+IP_ROUTE=$(ip route get 1)
+IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
+
+kubectl apply -f example/cloudprofile-vagrant.yaml
+kubectl apply -f example/privatesecretbinding-core-vagrant.yaml
+kubectl apply -f example/secret-core-vagrant.yaml
+
+kubectl config set-cluster gardener-dev \
+  --kubeconfig ${DEV_DIR}/vagrant-kubeconfig \
+  --certificate-authority $HOME/.minikube/ca.crt \
+  --server https://${MINIKUBE_IP}:8443 \
+  --embed-certs=true
+
+kubectl config set-credentials gardener-dev \
+  --kubeconfig ${DEV_DIR}/vagrant-kubeconfig \
+  --client-certificate $HOME/.minikube/client.crt \
+  --client-key $HOME/.minikube/client.key \
+  --embed-certs=true
+
+kubectl config set-context gardener-dev \
+  --kubeconfig ${DEV_DIR}/vagrant-kubeconfig \
+  --cluster gardener-dev \
+  --user gardener-dev
+
+kubectl config use-context gardener-dev \
+  --kubeconfig ${DEV_DIR}/vagrant-kubeconfig
+
+kubectl delete secret -n garden seed-vagrant-dev 2> /dev/null
+kubectl create secret -n garden generic seed-vagrant-dev --from-file=kubeconfig=dev/vagrant-kubeconfig
+
+cat <<EOF | kubectl apply -f -
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Seed
+metadata:
+  name: vagrant-dev
+spec:
+  cloud:
+    profile: vagrant
+    region: local
+  secretRef:
+    name: seed-vagrant-dev
+    namespace: garden
+  ingressDomain: ${MINIKUBE_IP}.nip.io
+  networks:
+    nodes: 10.240.0.0/16
+    pods: 10.241.128.0/17
+    services: 10.241.0.0/17
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: internal-domain-unamanaged
+  namespace: garden
+  labels:
+    garden.sapcloud.io/role: internal-domain
+  annotations:
+    dns.garden.sapcloud.io/provider: unmanaged
+    dns.garden.sapcloud.io/domain: nip.io
+    dns.garden.sapcloud.io/hostedZoneID: ABCDEFG
+type: Opaque
+EOF
+
+cat <<EOF > ${DEV_DIR}/shoot-vagrant.yaml
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Shoot
+metadata:
+  name: vagrant
+  namespace: garden-core
+spec:
+  cloud:
+    profile: vagrant
+    region: local
+    secretBindingRef:
+      kind: PrivateSecretBinding
+      name: core-vagrant
+    vagrant:
+      networks:
+        nodes: 10.250.0.0/19
+        pods: 100.96.0.0/11
+        services: 100.64.0.0/13
+      endpoint: localhost:3777
+  kubernetes:
+    version: 1.9.1
+  dns:
+    provider: unmanaged
+    domain: ${MINIKUBE_IP}.nip.io
+  addons:
+    cluster-autoscaler:
+      enabled: false
+    heapster:
+      enabled: false
+    kubernetes-dashboard:
+      enabled: true
+    monocular:
+      enabled: false
+    nginx-ingress:
+      enabled: false
+EOF

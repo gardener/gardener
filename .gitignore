@@ -13,3 +13,4 @@
 ./gardener-apiserver
 ./gardener-controller-manager
 TODO
+.vagrant

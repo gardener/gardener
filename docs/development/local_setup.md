@@ -107,6 +107,10 @@ On other OS, please check the [Docker installation documentation](https://docs.d
 
 In case you have to create a new release or a new hotfix of the Gardener you have to push the resulting Docker image into a Docker registry. Currently, we are using the Google Container Registry (this could change in the future). Please follow the official [installation instructions from Google](https://cloud.google.com/sdk/downloads).
 
+## [Optional] Installing `vagrant`
+
+In case you want to run the `gardner-vagrant-provider` and test the creation of Shoot clusters on your machine you have to [install](https://www.vagrantup.com/downloads.html) Vagrant.
+
 ## Local Gardener setup
 
 This setup is only meant to be used for developing purposes, which means that only the control plane of the Gardener cluster is running on your machine.
@@ -201,6 +205,55 @@ No resources found.
 to operate against your local running Gardener API server.
 
 > Note: It may take several seconds until the `minikube` cluster recognizes that the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
+
+### [Optional] Run the Gardener Vagrant Provider
+
+The Gardener Vagrant Provider gives you the ability to create Shoot clusters on your local machine without the need to have an account on a Cloud Provider.
+
+In a new terminal
+
+```bash
+$ make dev-setup-vagrant
+cloudprofile "vagrant" created
+privatesecretbinding "core-vagrant" created
+secret "core-vagrant" created
+Cluster "gardener-dev" set.
+User "gardener-dev" set.
+Context "gardener-dev" modified.
+Switched to context "gardener-dev".
+secret "seed-vagrant-dev" created
+seed "vagrant-dev" created
+secret "internal-domain-unamanaged" created
+
+$ make dev-vagrant
+2018/02/14 10:53:34 Listening on :3777
+2018/02/14 10:53:34 Vagrant directory /Users/foo/go/src/github.com/gardener/gardener/vagrant
+```
+
+`make dev-setup` automatically configures `minikube` to serve as a Seed cluster. You can create the Shoot cluster by running
+
+```bash
+$ kubect apply -f dev/shoot-vagrant.yaml
+shoot "vagrant" created
+```
+
+When the Shoot API server is created you can download the `kubeconfig` for it and access it:
+
+```bash
+$ kubectl --namespace shoot-garden-core-vagrant get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > shoot-kubeconfig
+
+# Depending on your Internet speed, it can take some time, before your node reports a READY status.
+$ kubectl --kubeconfig shoot-kubeconfig get nodes
+NAME                    STATUS    ROLES     AGE       VERSION
+192.168.99.201.nip.io   Ready     node      1m        v1.9.1
+```
+
+For additional debugging on your vagrant node you can `ssh` into it
+
+```bash
+$ cd vagrant
+$ vagrant ssh
+```
 
 ## Additional information
 

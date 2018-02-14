@@ -45,6 +45,10 @@ start:
 			cmd/gardener-controller-manager/main.go \
 			--config=dev/componentconfig-gardener-controller-manager.yaml
 
+.PHONY: start-vagrant
+start-vagrant:
+	@go run cmd/gardener-vagrant-provider/main.go
+
 #################################################################
 # Rules related to binary build, Docker image build and release #
 #################################################################
