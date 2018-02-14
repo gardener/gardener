@@ -155,7 +155,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
-	calico, err := b.Botanist.InjectImages(calicoConfig, b.K8sShootClient.Version(), map[string]string{"calico-node": "calico-node", "calico-cni": "calico-cni"})
+	calico, err := b.Botanist.InjectImages(calicoConfig, b.K8sShootClient.Version(), map[string]string{"calico-node": "calico-node", "calico-cni": "calico-cni", "calico-typha": "calico-typha"})
 	if err != nil {
 		return nil, err
 	}

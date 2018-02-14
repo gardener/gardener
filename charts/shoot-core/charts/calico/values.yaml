@@ -3,4 +3,5 @@ global:
 cloudProvider: aws
 images:
   calico-node: image-repository:image-tag
-  calico-cni:  image-repository:image-tag
+  calico-cni: image-repository:image-tag
+  calico-typha: image-repository:image-tag

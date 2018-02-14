@@ -19,53 +19,68 @@ metadata:
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 rules:
-  - apiGroups: [""]
-    resources:
-      - namespaces
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups: [""]
-    resources:
-      - pods/status
-    verbs:
-      - update
-  - apiGroups: [""]
-    resources:
-      - pods
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups: [""]
-    resources:
-      - nodes
-    verbs:
-      - get
-      - list
-      - update
-      - watch
-  - apiGroups: ["extensions"]
-    resources:
-      - networkpolicies
-    verbs:
-      - get
-      - list
-      - watch
-  - apiGroups: ["crd.projectcalico.org"]
-    resources:
-      - globalfelixconfigs
-      - bgppeers
-      - globalbgpconfigs
-      - ippools
-      - globalnetworkpolicies
-    verbs:
-      - create
-      - get
-      - list
-      - update
-      - watch
+- apiGroups: [""]
+  resources:
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: [""]
+  resources:
+  - pods/status
+  verbs:
+  - update
+- apiGroups: [""]
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups: [""]
+  resources:
+  - services
+  verbs:
+  - get
+- apiGroups: [""]
+  resources:
+  - endpoints
+  verbs:
+  - get
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups: ["extensions"]
+  resources:
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups: ["crd.projectcalico.org"]
+  resources:
+  - globalfelixconfigs
+  - felixconfigurations
+  - bgppeers
+  - globalbgpconfigs
+  - bgpconfigurations
+  - ippools
+  - globalnetworkpolicies
+  - networkpolicies
+  - clusterinformations
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
 
 ---
 
@@ -101,6 +116,10 @@ spec:
   selector:
     matchLabels:
       k8s-app: calico-node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
   template:
     metadata:
       labels:
@@ -162,7 +181,7 @@ spec:
               value: "{{.Values.global.podNetwork}}"
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
-              value: "always"
+              value: "Always"
             # Enable IP-in-IP within Felix.
             {{- if ne .Values.cloudProvider "azure"}}
             - name: FELIX_IPINIPENABLED
@@ -173,14 +192,20 @@ spec:
             - name: CALICO_NETWORKING_BACKEND
               value: "none"
             {{- end }}
+            # Typha support: controlled by the ConfigMap.
+            - name: FELIX_TYPHAK8SSERVICENAME
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: typha_service_name
             # Set based on the k8s node name.
             - name: NODENAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            # No IP address needed.
+            # Auto-detect the BGP IP address.
             - name: IP
-              value: ""
+              value: "autodetect"
             - name: FELIX_HEALTHENABLED
               value: "true"
           securityContext:
@@ -213,6 +238,9 @@ spec:
           image: {{ index .Values.images "calico-cni" }}
           command: ["/install-cni.sh"]
           env:
+            # Name of the CNI config file to create.
+            - name: CNI_CONF_NAME
+              value: "10-calico.conflist"
             # The CNI network config to install on each node.
             - name: CNI_NETWORK_CONFIG
               valueFrom:
@@ -244,16 +272,120 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
+---
+
+# This manifest creates a Service, which will be backed by Calico's Typha daemon.
+# Typha sits in between Felix and the API server, reducing Calico's load on the API server.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: calico-typha
+  namespace: kube-system
+  labels:
+    k8s-app: calico-typha
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  ports:
+    - port: 5473
+      protocol: TCP
+      targetPort: calico-typha
+      name: calico-typha
+  selector:
+    k8s-app: calico-typha
+
+---
+
+# This manifest creates a Deployment of Typha to back the above service.
+
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: calico-typha
+  namespace: kube-system
+  labels:
+    k8s-app: calico-typha
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-typha
+  # Number of Typha replicas.  To enable Typha, set this to a non-zero value *and* set the
+  # typha_service_name variable in the calico-config ConfigMap above.
+  #
+  # We recommend using Typha if you have more than 50 nodes.  Above 100 nodes it is essential
+  # (when using the Kubernetes datastore).  Use one replica for every 100-200 nodes.  In
+  # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
+  replicas: 0
+  revisionHistoryLimit: 2
+  template:
+    metadata:
+      labels:
+        k8s-app: calico-typha
+      annotations:
+        # This, along with the CriticalAddonsOnly toleration below, marks the pod as a critical
+        # add-on, ensuring it gets priority scheduling and that its resources are reserved
+        # if it ever gets evicted.
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      # Since Calico can't network a pod until Typha is up, we need to run Typha itself
+      # as a host-networked pod.
+      hostNetwork: true
+      serviceAccountName: calico-node
+      containers:
+      - image: {{ index .Values.images "calico-typha" }}
+        name: calico-typha
+        ports:
+        - containerPort: 5473
+          name: calico-typha
+          protocol: TCP
+        env:
+          # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
+          - name: TYPHA_LOGSEVERITYSCREEN
+            value: "info"
+          # Disable logging to file and syslog since those don't make sense in Kubernetes.
+          - name: TYPHA_LOGFILEPATH
+            value: "none"
+          - name: TYPHA_LOGSEVERITYSYS
+            value: "none"
+          # Monitor the Kubernetes API to find the number of running instances and rebalance
+          # connections.
+          - name: TYPHA_CONNECTIONREBALANCINGMODE
+            value: "kubernetes"
+          - name: TYPHA_DATASTORETYPE
+            value: "kubernetes"
+          - name: TYPHA_HEALTHENABLED
+            value: "true"
+          # Uncomment these lines to enable prometheus metrics.  Since Typha is host-networked,
+          # this opens a port on the host, which may need to be secured.
+          #- name: TYPHA_PROMETHEUSMETRICSENABLED
+          #  value: "true"
+          #- name: TYPHA_PROMETHEUSMETRICSPORT
+          #  value: "9093"
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 9098
+          periodSeconds: 30
+          initialDelaySeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 9098
+          periodSeconds: 10
 
 # Create all the CustomResourceDefinitions needed for
 # Calico policy and networking mode.
 ---
 
 apiVersion: apiextensions.k8s.io/v1beta1
-description: Calico Global Felix Configuration
+description: Calico Felix Configuration
 kind: CustomResourceDefinition
 metadata:
-   name: globalfelixconfigs.crd.projectcalico.org
+   name: felixconfigurations.crd.projectcalico.org
    labels:
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
@@ -261,9 +393,9 @@ spec:
   group: crd.projectcalico.org
   version: v1
   names:
-    kind: GlobalFelixConfig
-    plural: globalfelixconfigs
-    singular: globalfelixconfig
+    kind: FelixConfiguration
+    plural: felixconfigurations
+    singular: felixconfiguration
 
 ---
 
@@ -286,10 +418,10 @@ spec:
 ---
 
 apiVersion: apiextensions.k8s.io/v1beta1
-description: Calico Global BGP Configuration
+description: Calico BGP Configuration
 kind: CustomResourceDefinition
 metadata:
-  name: globalbgpconfigs.crd.projectcalico.org
+  name: bgpconfigurations.crd.projectcalico.org
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
@@ -297,9 +429,9 @@ spec:
   group: crd.projectcalico.org
   version: v1
   names:
-    kind: GlobalBGPConfig
-    plural: globalbgpconfigs
-    singular: globalbgpconfig
+    kind: BGPConfiguration
+    plural: bgpconfigurations
+    singular: bgpconfiguration
 
 ---
 
@@ -322,6 +454,24 @@ spec:
 ---
 
 apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico Cluster Information
+kind: CustomResourceDefinition
+metadata:
+  name: clusterinformations.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: ClusterInformation
+    plural: clusterinformations
+    singular: clusterinformation
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
 description: Calico Global Network Policies
 kind: CustomResourceDefinition
 metadata:
@@ -336,5 +486,23 @@ spec:
     kind: GlobalNetworkPolicy
     plural: globalnetworkpolicies
     singular: globalnetworkpolicy
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+description: Calico Network Policies
+kind: CustomResourceDefinition
+metadata:
+  name: networkpolicies.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  scope: Namespaced
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: NetworkPolicy
+    plural: networkpolicies
+    singular: networkpolicy
 
 {{- end -}}
