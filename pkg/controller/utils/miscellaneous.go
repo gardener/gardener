@@ -50,6 +50,11 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 			if shoot.Spec.Cloud.SecretBindingRef.Kind == "PrivateSecretBinding" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
+		case *gardenv1beta1.CrossSecretBinding:
+			binding := obj.(*gardenv1beta1.CrossSecretBinding)
+			if shoot.Spec.Cloud.SecretBindingRef.Kind == "CrossSecretBinding" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
+			}
 		default:
 			return nil, fmt.Errorf("Unable to determine Shoot associations, due to unknown type %t", t)
 		}

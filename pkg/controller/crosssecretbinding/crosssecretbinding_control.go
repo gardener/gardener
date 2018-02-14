@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package privatesecretbinding
+package crosssecretbinding
 
 import (
 	"errors"
@@ -32,64 +32,64 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
-func (c *Controller) privateSecretBindingAdd(obj interface{}) {
+func (c *Controller) crossSecretBindingAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
-	c.privateSecretBindingQueue.Add(key)
+	c.crossSecretBindingQueue.Add(key)
 }
 
-func (c *Controller) privateSecretBindingUpdate(oldObj, newObj interface{}) {
-	c.privateSecretBindingAdd(newObj)
+func (c *Controller) crossSecretBindingUpdate(oldObj, newObj interface{}) {
+	c.crossSecretBindingAdd(newObj)
 }
 
-func (c *Controller) privateSecretBindingDelete(obj interface{}) {
+func (c *Controller) crossSecretBindingDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
-	c.privateSecretBindingQueue.Add(key)
+	c.crossSecretBindingQueue.Add(key)
 }
 
-func (c *Controller) reconcilePrivateSecretBindingKey(key string) error {
+func (c *Controller) reconcileCrossSecretBindingKey(key string) error {
 	namespace, name, err := cache.SplitMetaNamespaceKey(key)
 	if err != nil {
 		return err
 	}
 
-	privateSecretBinding, err := c.privateSecretBindingLister.PrivateSecretBindings(namespace).Get(name)
+	crossSecretBinding, err := c.crossSecretBindingLister.CrossSecretBindings(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[PRIVATESECRETBINDING RECONCILE] %s - skipping because PrivateSecretBinding has been deleted", key)
+		logger.Logger.Debugf("[CROSSSECRETBINDING RECONCILE] %s - skipping because CrossSecretBinding has been deleted", key)
 		return nil
 	}
 	if err != nil {
-		logger.Logger.Infof("[PRIVATESECRETBINDING RECONCILE] %s - unable to retrieve object from store: %v", key, err)
+		logger.Logger.Infof("[CROSSSECRETBINDING RECONCILE] %s - unable to retrieve object from store: %v", key, err)
 		return err
 	}
 
-	err = c.control.ReconcilePrivateSecretBinding(privateSecretBinding, key)
+	err = c.control.ReconcileCrossSecretBinding(crossSecretBinding, key)
 	if err != nil {
-		c.privateSecretBindingQueue.AddAfter(key, time.Minute)
+		c.crossSecretBindingQueue.AddAfter(key, time.Minute)
 	}
 	return nil
 }
 
-// ControlInterface implements the control logic for updating PrivateSecretBindings. It is implemented as an interface to allow
+// ControlInterface implements the control logic for updating CrossSecretBindings. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type ControlInterface interface {
-	// ReconcilePrivateSecretBinding implements the control logic for PrivateSecretBinding creation, update, and deletion.
+	// ReconcileCrossSecretBinding implements the control logic for CrossSecretBinding creation, update, and deletion.
 	// If an implementation returns a non-nil error, the invocation will be retried using a rate-limited strategy.
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
-	ReconcilePrivateSecretBinding(privateSecretBinding *gardenv1beta1.PrivateSecretBinding, key string) error
+	ReconcileCrossSecretBinding(crossSecretBinding *gardenv1beta1.CrossSecretBinding, key string) error
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
-// implements the documented semantics for PrivateSecretBindings. updater is the UpdaterInterface used
-// to update the status of PrivateSecretBindings. You should use an instance returned from NewDefaultControl() for any
+// implements the documented semantics for CrossSecretBindings. updater is the UpdaterInterface used
+// to update the status of CrossSecretBindings. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
 func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretLister, shootLister}
@@ -103,21 +103,21 @@ type defaultControl struct {
 	shootLister        gardenlisters.ShootLister
 }
 
-func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.PrivateSecretBinding, key string) error {
+func (c *defaultControl) ReconcileCrossSecretBinding(obj *gardenv1beta1.CrossSecretBinding, key string) error {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
 	}
 	var (
-		privateSecretBinding       = obj.DeepCopy()
-		privateSecretBindingLogger = logger.NewFieldLogger(logger.Logger, "privatesecretbinding", fmt.Sprintf("%s/%s", privateSecretBinding.Namespace, privateSecretBinding.Name))
+		crossSecretBinding       = obj.DeepCopy()
+		crossSecretBindingLogger = logger.NewFieldLogger(logger.Logger, "crosssecretbinding", fmt.Sprintf("%s/%s", crossSecretBinding.Namespace, crossSecretBinding.Name))
 	)
 
-	// Add the Gardener finalizer to the referenced PrivateSecretBinding secret to protect it from deletion as long as
-	// the PrivateSecretBinding resource does exist.
-	secret, err := c.secretLister.Secrets(privateSecretBinding.Namespace).Get(privateSecretBinding.SecretRef.Name)
+	// Add the Gardener finalizer to the referenced CrossSecretBinding secret to protect it from deletion as long as
+	// the CrossSecretBinding resource does exist.
+	secret, err := c.secretLister.Secrets(crossSecretBinding.SecretRef.Namespace).Get(crossSecretBinding.SecretRef.Name)
 	if err != nil {
-		privateSecretBindingLogger.Error(err.Error())
+		crossSecretBindingLogger.Error(err.Error())
 		return err
 	}
 	secretFinalizers := sets.NewString(secret.Finalizers...)
@@ -126,49 +126,49 @@ func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.Privat
 	}
 	secret.Finalizers = secretFinalizers.UnsortedList()
 	if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
-		privateSecretBindingLogger.Error(err.Error())
+		crossSecretBindingLogger.Error(err.Error())
 		return err
 	}
 
-	// The deletionTimestamp labels a PrivateSecretBinding as intented to get deleted. Before deletion,
-	// it has to be ensured that no Shoots are depending on the PrivateSecretBinding anymore.
-	// When this happens the controller will remove the finalizers from the PrivateSecretBinding so that it can be garbage collected.
-	if privateSecretBinding.DeletionTimestamp != nil {
-		associatedShoots, err := controllerutils.DetermineShootAssociations(privateSecretBinding, c.shootLister)
+	// The deletionTimestamp labels a CrossSecretBinding as intented to get deleted. Before deletion,
+	// it has to be ensured that no Shoots are depending on the CrossSecretBinding anymore.
+	// When this happens the controller will remove the finalizers from the CrossSecretBinding so that it can be garbage collected.
+	if crossSecretBinding.DeletionTimestamp != nil {
+		associatedShoots, err := controllerutils.DetermineShootAssociations(crossSecretBinding, c.shootLister)
 		if err != nil {
-			privateSecretBindingLogger.Error(err.Error())
+			crossSecretBindingLogger.Error(err.Error())
 			return err
 		}
 
 		if len(associatedShoots) == 0 {
-			privateSecretBindingLogger.Info("No Shoots are referencing the PrivateSecretBinding. Deletion accepted.")
+			crossSecretBindingLogger.Info("No Shoots are referencing the CrossSecretBinding. Deletion accepted.")
 
 			// Remove finalizer from referenced secret
-			secret, err := c.secretLister.Secrets(privateSecretBinding.Namespace).Get(privateSecretBinding.SecretRef.Name)
+			secret, err := c.secretLister.Secrets(crossSecretBinding.SecretRef.Namespace).Get(crossSecretBinding.SecretRef.Name)
 			if err != nil {
-				privateSecretBindingLogger.Error(err.Error())
+				crossSecretBindingLogger.Error(err.Error())
 				return err
 			}
 			secretFinalizers := sets.NewString(secret.Finalizers...)
 			secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
 			secret.Finalizers = secretFinalizers.UnsortedList()
 			if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
-				privateSecretBindingLogger.Error(err.Error())
+				crossSecretBindingLogger.Error(err.Error())
 				return err
 			}
 
-			// Remove finalizer from PrivateSecretBinding
-			privateSecretBindingFinalizers := sets.NewString(privateSecretBinding.Finalizers...)
-			privateSecretBindingFinalizers.Delete(gardenv1beta1.GardenerName)
-			privateSecretBinding.Finalizers = privateSecretBindingFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().PrivateSecretBindings(privateSecretBinding.Namespace).Update(privateSecretBinding); err != nil {
-				privateSecretBindingLogger.Error(err.Error())
+			// Remove finalizer from CrossSecretBinding
+			crossSecretBindingFinalizers := sets.NewString(crossSecretBinding.Finalizers...)
+			crossSecretBindingFinalizers.Delete(gardenv1beta1.GardenerName)
+			crossSecretBinding.Finalizers = crossSecretBindingFinalizers.UnsortedList()
+			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().CrossSecretBindings(crossSecretBinding.Namespace).Update(crossSecretBinding); err != nil {
+				crossSecretBindingLogger.Error(err.Error())
 				return err
 			}
 			return nil
 		}
-		privateSecretBindingLogger.Infof("Can't delete PrivateSecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
-		return errors.New("PrivateSecretBinding still has references")
+		crossSecretBindingLogger.Infof("Can't delete CrossSecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
+		return errors.New("CrossSecretBinding still has references")
 	}
 	return nil
 }
