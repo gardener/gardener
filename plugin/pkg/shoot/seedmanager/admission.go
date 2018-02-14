@@ -70,9 +70,9 @@ func (h *SeedManager) ValidateInitialization() error {
 	return nil
 }
 
-// Admit ensures that the object in-flight is of kind Shoot.
-// In addition it tries to find an adequate Seed cluster for the given cloud provider profile and region,
-// and writes the name into the Shoot specification.
+// Admit tries to find an adequate Seed cluster for the given cloud provider profile and region,
+// and writes the name into the Shoot specification. It also ensures that protected Seeds are
+// only usable by Shoots in the garden namespace.
 func (h *SeedManager) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
 	if !h.WaitForReady() {

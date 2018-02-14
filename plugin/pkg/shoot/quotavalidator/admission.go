@@ -72,8 +72,7 @@ func (h *RejectShootIfQuotaExceeded) ValidateInitialization() error {
 	return nil
 }
 
-// Admit ensures that the object in-flight is of kind Shoot.
-// In addition it checks that the request resources are within the quota limits.
+// Admit checks that the requested Shoot resources are within the quota limits.
 func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
 	if !h.WaitForReady() {

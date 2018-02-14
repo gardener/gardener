@@ -100,9 +100,7 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
-// Admit ensures that the object in-flight is of kind Shoot.
-// In addition it tries to find an adequate Seed cluster for the given cloud provider profile and region,
-// and writes the name into the Shoot specification.
+// Admit ensures that referenced resources do actually exist.
 func (r *ReferenceManager) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
 	if !r.WaitForReady() {
