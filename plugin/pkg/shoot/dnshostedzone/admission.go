@@ -36,9 +36,14 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 )
 
+const (
+	// PluginName is the name of this admission plugin.
+	PluginName = "ShootDNSHostedZone"
+)
+
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register("ShootDNSHostedZone", func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

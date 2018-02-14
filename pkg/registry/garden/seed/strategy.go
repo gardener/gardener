@@ -41,15 +41,15 @@ func (seedStrategy) NamespaceScoped() bool {
 
 func (seedStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
 	seed := obj.(*garden.Seed)
+
+	seed.Generation = 1
 	seed.Status = garden.SeedStatus{}
 
-	finalizers := sets.NewString()
+	finalizers := sets.NewString(seed.Finalizers...)
 	if !finalizers.Has(gardenv1beta1.GardenerName) {
 		finalizers.Insert(gardenv1beta1.GardenerName)
 	}
 	seed.Finalizers = finalizers.UnsortedList()
-
-	seed.Generation = 1
 }
 
 func (seedStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {

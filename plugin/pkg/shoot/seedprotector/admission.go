@@ -27,9 +27,14 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 )
 
+const (
+	// PluginName is the name of this admission plugin.
+	PluginName = "ShootSeedProtector"
+)
+
 // Register registers a plugin.
 func Register(plugins *admission.Plugins) {
-	plugins.Register("ShootSeedProtector", func(config io.Reader) (admission.Interface, error) {
+	plugins.Register(PluginName, func(config io.Reader) (admission.Interface, error) {
 		return New()
 	})
 }

@@ -42,13 +42,15 @@ func (shootStrategy) NamespaceScoped() bool {
 
 func (shootStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
 	shoot := obj.(*garden.Shoot)
+
+	shoot.Generation = 1
 	shoot.Status = garden.ShootStatus{}
-	finalizers := sets.NewString()
+
+	finalizers := sets.NewString(shoot.Finalizers...)
 	if !finalizers.Has(gardenv1beta1.GardenerName) {
 		finalizers.Insert(gardenv1beta1.GardenerName)
 	}
 	shoot.Finalizers = finalizers.UnsortedList()
-	shoot.Generation = 1
 }
 
 func (shootStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
