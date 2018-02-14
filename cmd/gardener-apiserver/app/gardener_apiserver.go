@@ -30,6 +30,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedfinder "github.com/gardener/gardener/plugin/pkg/shoot/seedfinder"
@@ -37,6 +38,7 @@ import (
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	kubeinformers "k8s.io/client-go/informers"
@@ -138,6 +140,7 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
 
 	// Admission plugin registration
+	resourcereferencemanager.Register(o.Admission.Plugins)
 	shootquotavalidator.Register(o.Admission.Plugins)
 	shootseedfinder.Register(o.Admission.Plugins)
 	shootseedprotector.Register(o.Admission.Plugins)
