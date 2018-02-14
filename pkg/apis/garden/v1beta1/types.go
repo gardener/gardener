@@ -67,6 +67,9 @@ type CloudProfileSpec struct {
 	// OpenStack is the profile specification for the OpenStack cloud.
 	// +optional
 	OpenStack *OpenStackProfile `json:"openstack,omitempty"`
+	// Vagrant is the profile specification for the Vagrant provider.
+	// +optional
+	Vagrant *VagrantProfile `json:"vagrant,omitempty"`
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
@@ -238,6 +241,18 @@ type OpenStackMachineImage struct {
 	Name MachineImageName `json:"name"`
 	// Image is the technical name of the image.
 	Image string `json:"image"`
+}
+
+// VagrantProfile defines constraints and definitions for the Vagrant local development.
+type VagrantProfile struct {
+	// Constraints is an object containing constraints for certain values in the Shoot specification.
+	Constraints VagrantConstraints `json:"constraints"`
+}
+
+// VagrantConstraints is an object containing constraints for certain values in the Shoot specification.
+type VagrantConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
 }
 
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
@@ -592,6 +607,9 @@ type Cloud struct {
 	// OpenStack contains the Shoot specification for the OpenStack cloud.
 	// +optional
 	OpenStack *OpenStackCloud `json:"openstack,omitempty"`
+	// Vagrant contains the Shoot specification for the Vagrant local provider.
+	// +optional
+	Vagrant *VagrantLocal `json:"vagrant,omitempty"`
 }
 
 // K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
@@ -788,6 +806,19 @@ type OpenStackWorker struct {
 	Worker `json:",inline"`
 }
 
+// VagrantLocal contains the Shoot specification for local Vagrant provider.
+type VagrantLocal struct {
+	// Networks holds information about the Kubernetes and infrastructure networks.
+	Networks VagrantNetworks `json:"networks"`
+	// Endpoint of the local vagrant service.
+	Endpoint string `json:"endpoint"`
+}
+
+// VagrantNetworks holds information about the Kubernetes and infrastructure networks.
+type VagrantNetworks struct {
+	K8SNetworks `json:",inline"`
+}
+
 // Worker is the base definition of a worker group.
 type Worker struct {
 	// Name is the name of the worker group.
@@ -935,6 +966,8 @@ const (
 	CloudProviderGCP CloudProvider = "gcp"
 	// CloudProviderOpenStack is a constant for the OpenStack cloud provider.
 	CloudProviderOpenStack CloudProvider = "openstack"
+	// CloudProviderVagrant is a constant for the Vagrant local development provider.
+	CloudProviderVagrant CloudProvider = "vagrant"
 )
 
 // CIDR is a string alias.

@@ -50,9 +50,13 @@ func DetermineCloudProviderInProfile(spec gardenv1beta1.CloudProfileSpec) (garde
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderOpenStack
 	}
+	if spec.Vagrant != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderVagrant
+	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack")
+		return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack/vagrant")
 	}
 	return cloud, nil
 }
@@ -81,9 +85,13 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderOpenStack
 	}
+	if cloudObj.Vagrant != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderVagrant
+	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack")
+		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/vagrant")
 	}
 	return cloud, nil
 }
