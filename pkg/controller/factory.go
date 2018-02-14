@@ -23,6 +23,7 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controller/cloudprofile"
+	privatesecretbindingcontroller "github.com/gardener/gardener/pkg/controller/privatesecretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
@@ -101,14 +102,16 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	var (
 		workerCount = f.config.Controller.Reconciliation.ConcurrentSyncs
 
-		shootController        = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController         = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
-		cloudProfileController = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
+		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
+		cloudProfileController         = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
+		privateSecretBindingController = privatesecretbindingcontroller.NewPrivateSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 	)
 
 	go shootController.Run(workerCount, stopCh)
 	go seedController.Run(workerCount, stopCh)
 	go cloudProfileController.Run(workerCount, stopCh)
+	go privateSecretBindingController.Run(workerCount, stopCh)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 
@@ -118,7 +121,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	logger.Logger.Info("I will terminate as soon as all my running workers have terminated.")
 
 	for {
-		if shootController.RunningWorkers() == 0 && seedController.RunningWorkers() == 0 && cloudProfileController.RunningWorkers() == 0 {
+		if shootController.RunningWorkers() == 0 && seedController.RunningWorkers() == 0 && cloudProfileController.RunningWorkers() == 0 && privateSecretBindingController.RunningWorkers() == 0 {
 			logger.Logger.Info("All controllers have been terminated.")
 			break
 		}
