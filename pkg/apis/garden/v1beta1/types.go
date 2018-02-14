@@ -1078,9 +1078,13 @@ const (
 )
 
 const (
-	// GardenerName is the value in a Shoot's `.metadata.finalizers[]` array on which the Gardener will react
-	// when performing a delete request on a Shoot resource.
+	// GardenerName is the value in a Garden resource's `.metadata.finalizers[]` array on which the Gardener will react
+	// when performing a delete request on a resource.
 	GardenerName = "gardener"
+
+	// ExternalGardenerName is the value in a Kubernetes core resources `.metadata.finalizers[]` array on which the
+	// Gardener will react when performing a delete request on a resource.
+	ExternalGardenerName = "garden.sapcloud.io/gardener"
 )
 
 // Condition holds the information about the state of a resource.

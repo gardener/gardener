@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/version"
+	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 )
@@ -41,17 +42,19 @@ type GardenControllerFactory struct {
 	gardenNamespace    string
 	k8sGardenClient    kubernetes.Client
 	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sInformers       kubeinformers.SharedInformerFactory
 	recorder           record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
-func NewGardenControllerFactory(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, recorder record.EventRecorder) *GardenControllerFactory {
+func NewGardenControllerFactory(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
 		config:             config,
 		identity:           identity,
 		gardenNamespace:    gardenNamespace,
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: gardenInformerFactory,
+		k8sInformers:       kubeInformerFactory,
 		recorder:           recorder,
 	}
 }
@@ -65,11 +68,18 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		quotaInformer                = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
 		seedInformer                 = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
 		shootInformer                = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
+
+		secretInformer = f.k8sInformers.Core().V1().Secrets().Informer()
 	)
 
 	f.k8sGardenInformers.Start(stopCh)
 	if !cache.WaitForCacheSync(make(<-chan struct{}), cloudProfileInformer.HasSynced, privateSecretBindingInformer.HasSynced, crossSecretBindingInformer.HasSynced, quotaInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
-		panic("Timed out waiting for caches to sync")
+		panic("Timed out waiting for Garden caches to sync")
+	}
+
+	f.k8sInformers.Start(stopCh)
+	if !cache.WaitForCacheSync(make(<-chan struct{}), secretInformer.HasSynced) {
+		panic("Timed out waiting for Kube caches to sync")
 	}
 
 	secrets, err := garden.ReadGardenSecrets(f.k8sGardenClient, common.GardenNamespace, f.config.ClientConnection.KubeConfigFile == "")
@@ -92,7 +102,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		workerCount = f.config.Controller.Reconciliation.ConcurrentSyncs
 
 		shootController        = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController         = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, secrets, imageVector, f.recorder)
+		seedController         = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
 		cloudProfileController = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
 	)
 
@@ -108,7 +118,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	logger.Logger.Info("I will terminate as soon as all my running workers have terminated.")
 
 	for {
-		if shootController.RunningWorkers() == 0 && seedController.RunningWorkers() == 0 {
+		if shootController.RunningWorkers() == 0 && seedController.RunningWorkers() == 0 && cloudProfileController.RunningWorkers() == 0 {
 			logger.Logger.Info("All controllers have been terminated.")
 			break
 		}

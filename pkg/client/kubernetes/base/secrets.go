@@ -48,6 +48,11 @@ func (c *Client) UpdateSecret(namespace, name string, secretType corev1.SecretTy
 	})
 }
 
+// UpdateSecretObject updates an already existing Secret object.
+func (c *Client) UpdateSecretObject(secret *corev1.Secret) (*corev1.Secret, error) {
+	return c.clientset.CoreV1().Secrets(secret.Namespace).Update(secret)
+}
+
 // ListSecrets lists all Secrets in a given <namespace>.
 func (c *Client) ListSecrets(namespace string, listOptions metav1.ListOptions) (*corev1.SecretList, error) {
 	secrets, err := c.clientset.CoreV1().Secrets(namespace).List(listOptions)

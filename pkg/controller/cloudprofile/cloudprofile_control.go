@@ -15,6 +15,7 @@
 package cloudprofile
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -88,7 +89,6 @@ type ControlInterface interface {
 // implements the documented semantics for CloudProfiles.
 func NewDefaultControl(k8sGardenClient kubernetes.Client, seedLister gardenlisters.SeedLister, shootLister gardenlisters.ShootLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, seedLister, shootLister}
-
 }
 
 type defaultControl struct {
@@ -105,7 +105,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 
 	var (
 		cloudProfile       = obj.DeepCopy()
-		cloudProfileLogger = logger.NewCloudProfileLogger(logger.Logger, cloudProfile.Name)
+		cloudProfileLogger = logger.NewFieldLogger(logger.Logger, "cloudprofile", cloudProfile.Name)
 	)
 
 	// The deletionTimestamp labels the CloudProfile as intended to get deleted. Before deletion, it has to be ensured that
@@ -115,16 +115,16 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 		associatedShoots, err := controllerutils.DetermineShootAssociations(cloudProfile, c.shootLister)
 		if err != nil {
 			cloudProfileLogger.Error(err.Error())
-			return nil
+			return err
 		}
 		associatedSeeds, err := c.determineSeedAssociations(cloudProfile.Name)
 		if err != nil {
 			cloudProfileLogger.Error(err.Error())
-			return nil
+			return err
 		}
 
 		if len(associatedShoots) == 0 && len(associatedSeeds) == 0 {
-			cloudProfileLogger.Infof("No Shoots and Seeds are attached to CloudProfile. Deletion accepted.")
+			cloudProfileLogger.Infof("No Shoots and Seeds are referencing the CloudProfile. Deletion accepted.")
 
 			finalizers := sets.NewString(cloudProfile.Finalizers...)
 			finalizers.Delete(gardenv1beta1.GardenerName)
@@ -132,7 +132,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 
 			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil {
 				logger.Logger.Error(err)
-				return nil
+				return err
 			}
 			return nil
 		}
@@ -144,10 +144,8 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 			message += fmt.Sprintf(" Seeds: %+v", associatedSeeds)
 		}
 		cloudProfileLogger.Info(message)
-		return nil
+		return errors.New("CloudProfile still has references")
 	}
-
-	cloudProfileLogger.Infof("[CLOUDPROFILE RECONCILE] %s", key)
 	return nil
 }
 

@@ -80,14 +80,15 @@ var _ = Describe("logger", func() {
 			})
 		})
 
-		Describe("#NewSeedLogger", func() {
+		Describe("#NewFieldLogger", func() {
 			It("should return an Entry object with additional fields", func() {
 				logger := NewLogger("info")
-				name := "seed01"
+				key := "foo"
+				value := "bar"
 
-				shootLogger := NewSeedLogger(logger, name)
+				fieldLogger := NewFieldLogger(logger, key, value)
 
-				Expect(shootLogger.Data).To(HaveKeyWithValue("seed", name))
+				Expect(fieldLogger.Data).To(HaveKeyWithValue(key, value))
 			})
 		})
 	})

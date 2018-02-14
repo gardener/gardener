@@ -43,6 +43,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	kubeinformers "k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -337,10 +338,12 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 
 func startControllers(g *Gardener, stopCh <-chan struct{}) error {
 	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), g.Config.Controller.Reconciliation.ResyncPeriod.Duration)
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 30*time.Second)
 
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
 		gardenInformerFactory,
+		kubeInformerFactory,
 		g.Config,
 		g.Identity,
 		g.GardenerNamespace,
