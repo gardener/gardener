@@ -108,6 +108,7 @@ func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.Privat
 	if err != nil {
 		return err
 	}
+
 	var (
 		privateSecretBinding       = obj.DeepCopy()
 		privateSecretBindingLogger = logger.NewFieldLogger(logger.Logger, "privatesecretbinding", fmt.Sprintf("%s/%s", privateSecretBinding.Namespace, privateSecretBinding.Name))

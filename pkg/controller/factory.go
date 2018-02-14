@@ -25,6 +25,7 @@ import (
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controller/cloudprofile"
 	crosssecretbindingcontroller "github.com/gardener/gardener/pkg/controller/crosssecretbinding"
 	privatesecretbindingcontroller "github.com/gardener/gardener/pkg/controller/privatesecretbinding"
+	quotacontroller "github.com/gardener/gardener/pkg/controller/quota"
 	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
@@ -105,6 +106,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 
 		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
+		quotaController                = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
 		cloudProfileController         = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
 		privateSecretBindingController = privatesecretbindingcontroller.NewPrivateSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 		crossSecretBindingController   = crosssecretbindingcontroller.NewCrossSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
@@ -112,6 +114,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 
 	go shootController.Run(workerCount, stopCh)
 	go seedController.Run(workerCount, stopCh)
+	go quotaController.Run(workerCount, stopCh)
 	go cloudProfileController.Run(workerCount, stopCh)
 	go privateSecretBindingController.Run(workerCount, stopCh)
 	go crossSecretBindingController.Run(workerCount, stopCh)
@@ -124,12 +127,17 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	logger.Logger.Info("I will terminate as soon as all my running workers have terminated.")
 
 	for {
-		if shootController.RunningWorkers() == 0 && seedController.RunningWorkers() == 0 && cloudProfileController.RunningWorkers() == 0 && privateSecretBindingController.RunningWorkers() == 0 && crossSecretBindingController.RunningWorkers() == 0 {
+		if shootController.RunningWorkers() == 0 &&
+			seedController.RunningWorkers() == 0 &&
+			quotaController.RunningWorkers() == 0 &&
+			cloudProfileController.RunningWorkers() == 0 &&
+			privateSecretBindingController.RunningWorkers() == 0 &&
+			crossSecretBindingController.RunningWorkers() == 0 {
+
 			logger.Logger.Info("All controllers have been terminated.")
 			break
 		}
 		time.Sleep(5 * time.Second)
 	}
-
 	os.Exit(0)
 }

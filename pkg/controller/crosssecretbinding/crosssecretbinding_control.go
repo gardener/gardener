@@ -108,6 +108,7 @@ func (c *defaultControl) ReconcileCrossSecretBinding(obj *gardenv1beta1.CrossSec
 	if err != nil {
 		return err
 	}
+
 	var (
 		crossSecretBinding       = obj.DeepCopy()
 		crossSecretBindingLogger = logger.NewFieldLogger(logger.Logger, "crosssecretbinding", fmt.Sprintf("%s/%s", crossSecretBinding.Namespace, crossSecretBinding.Name))

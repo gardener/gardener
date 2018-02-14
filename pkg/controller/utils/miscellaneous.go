@@ -61,3 +61,43 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 	}
 	return associatedShoots, nil
 }
+
+// DeterminePrivateSecretBindingAssociations gets a <bindingLister> to determine the PrivateSecretBinding
+// resources which are associated to given Quota <obj>.
+func DeterminePrivateSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.PrivateSecretBindingLister) ([]string, error) {
+	var associatedBindings []string
+	bindings, err := bindingLister.List(labels.Everything())
+	if err != nil {
+		logger.Logger.Info(err.Error())
+		return nil, err
+	}
+
+	for _, binding := range bindings {
+		for _, quotaRef := range binding.Quotas {
+			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
+				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))
+			}
+		}
+	}
+	return associatedBindings, nil
+}
+
+// DetermineCrossSecretBindingAssociations gets a <bindingLister> to determine the CrossSecretBinding
+// resources which are associated to given Quota <obj>.
+func DetermineCrossSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.CrossSecretBindingLister) ([]string, error) {
+	var associatedBindings []string
+	bindings, err := bindingLister.List(labels.Everything())
+	if err != nil {
+		logger.Logger.Info(err.Error())
+		return nil, err
+	}
+
+	for _, binding := range bindings {
+		for _, quotaRef := range binding.Quotas {
+			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
+				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))
+			}
+		}
+	}
+	return associatedBindings, nil
+}

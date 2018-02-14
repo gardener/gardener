@@ -127,6 +127,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	if err != nil {
 		return err
 	}
+
 	var (
 		seed        = obj.DeepCopy()
 		seedJSON, _ = json.Marshal(seed)
