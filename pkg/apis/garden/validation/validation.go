@@ -72,58 +72,37 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	if spec.AWS != nil {
 		allErrs = append(allErrs, validateDNSProviders(spec.AWS.Constraints.DNSProviders, fldPath.Child("aws", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.AWS.Constraints.Kubernetes, fldPath.Child("aws", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateAWSMachineImages(spec.AWS.Constraints.MachineImages, fldPath.Child("aws", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.AWS.Constraints.MachineTypes, fldPath.Child("aws", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.AWS.Constraints.VolumeTypes, fldPath.Child("aws", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.AWS.Constraints.Zones, fldPath.Child("aws", "constraints", "zones"))...)
-
-		if len(spec.AWS.MachineImages) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("aws", "machineImages"), "must provide at least one machine image"))
-		}
-		r, _ := regexp.Compile(`^ami-[a-z0-9]+$`)
-		for i, image := range spec.AWS.MachineImages {
-			idxPath := fldPath.Child("aws", "machineImages").Index(i)
-			regionPath := idxPath.Child("region")
-			amiPath := idxPath.Child("ami")
-			if len(image.Region) == 0 {
-				allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
-			}
-			if !r.MatchString(image.AMI) {
-				allErrs = append(allErrs, field.Invalid(amiPath, image.AMI, fmt.Sprintf("ami's must match the regex %s", r)))
-			}
-		}
 	}
 
 	if spec.Azure != nil {
 		allErrs = append(allErrs, validateDNSProviders(spec.Azure.Constraints.DNSProviders, fldPath.Child("azure", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Azure.Constraints.Kubernetes, fldPath.Child("azure", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateAzureMachineImages(spec.Azure.Constraints.MachineImages, fldPath.Child("azure", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Azure.Constraints.MachineTypes, fldPath.Child("azure", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Azure.Constraints.VolumeTypes, fldPath.Child("azure", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountFaultDomains, fldPath.Child("azure", "countFaultDomains"))...)
 		allErrs = append(allErrs, validateAzureDomainCount(spec.Azure.CountUpdateDomains, fldPath.Child("azure", "countUpdateDomains"))...)
-
-		if len(spec.Azure.MachineImage.Channel) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("azure", "machineImage", "channel"), "must provide a channel"))
-		}
-		if len(spec.Azure.MachineImage.Version) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("azure", "machineImage", "version"), "must provide a version"))
-		}
 	}
 
 	if spec.GCP != nil {
 		allErrs = append(allErrs, validateDNSProviders(spec.GCP.Constraints.DNSProviders, fldPath.Child("gcp", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.GCP.Constraints.Kubernetes, fldPath.Child("gcp", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateGCPMachineImages(spec.GCP.Constraints.MachineImages, fldPath.Child("gcp", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.GCP.Constraints.MachineTypes, fldPath.Child("gcp", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.GCP.Constraints.VolumeTypes, fldPath.Child("gcp", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.GCP.Constraints.Zones, fldPath.Child("gcp", "constraints", "zones"))...)
-
-		if len(spec.GCP.MachineImage.Name) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("gcp", "machineImage", "name"), "must provide an image name"))
-		}
 	}
 
 	if spec.OpenStack != nil {
 		allErrs = append(allErrs, validateDNSProviders(spec.OpenStack.Constraints.DNSProviders, fldPath.Child("openstack", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.OpenStack.Constraints.Kubernetes, fldPath.Child("openstack", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateOpenStackMachineImages(spec.OpenStack.Constraints.MachineImages, fldPath.Child("openstack", "constraints", "machineImages"))...)
+		allErrs = append(allErrs, validateOpenStackMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateZones(spec.OpenStack.Constraints.Zones, fldPath.Child("openstack", "constraints", "zones"))...)
 
 		floatingPoolPath := fldPath.Child("openstack", "constraints", "floatingPools")
 		if len(spec.OpenStack.Constraints.FloatingPools) == 0 {
@@ -148,13 +127,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 				allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 			}
 		}
-
-		if len(spec.OpenStack.MachineImage.Name) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "machineImage", "name"), "must provide an image name"))
-		}
-
-		allErrs = append(allErrs, validateOpenStackMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateZones(spec.OpenStack.Constraints.Zones, fldPath.Child("openstack", "constraints", "zones"))...)
 
 		if len(spec.OpenStack.KeyStoneURL) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keyStoneURL"), "must provide the URL to KeyStone"))
@@ -228,6 +200,124 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 	}
 
+	return allErrs
+}
+
+func validateMachineImageNames(names []garden.MachineImageName, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(names) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
+		return allErrs
+	}
+
+	imageNames := map[garden.MachineImageName]bool{}
+	for i, name := range names {
+		idxPath := fldPath.Index(i)
+
+		if imageNames[name] {
+			allErrs = append(allErrs, field.Duplicate(idxPath, name))
+		}
+		imageNames[name] = true
+
+		if name != garden.MachineImageCoreOS {
+			allErrs = append(allErrs, field.NotSupported(idxPath, name, []string{string(garden.MachineImageCoreOS)}))
+		}
+	}
+
+	return allErrs
+}
+
+func validateAWSMachineImages(machineImages []garden.AWSMachineImageMapping, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	machineImageNames := []garden.MachineImageName{}
+	r, _ := regexp.Compile(`^ami-[a-z0-9]+$`)
+
+	for i, image := range machineImages {
+		machineImageNames = append(machineImageNames, image.Name)
+		idxPath := fldPath.Index(i)
+
+		if len(image.Regions) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("regions"), "must provide at least one region per machine image"))
+		}
+
+		regionNames := map[string]bool{}
+		for j, region := range image.Regions {
+			regionIdxPath := idxPath.Child("regions").Index(j)
+
+			if regionNames[region.Name] {
+				allErrs = append(allErrs, field.Duplicate(regionIdxPath, region.Name))
+			}
+			regionNames[region.Name] = true
+
+			if !r.MatchString(region.AMI) {
+				allErrs = append(allErrs, field.Invalid(regionIdxPath.Child("ami"), region.AMI, fmt.Sprintf("ami's must match the regex %s", r)))
+			}
+		}
+	}
+
+	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
+	return allErrs
+}
+
+func validateAzureMachineImages(machineImages []garden.AzureMachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	machineImageNames := []garden.MachineImageName{}
+	for i, image := range machineImages {
+		machineImageNames = append(machineImageNames, image.Name)
+		idxPath := fldPath.Index(i)
+
+		if len(image.Publisher) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("publisher"), image.Publisher))
+		}
+		if len(image.Offer) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("offer"), image.Offer))
+		}
+		if len(image.SKU) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("sku"), image.SKU))
+		}
+		if len(image.Version) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("version"), image.Version))
+		}
+	}
+
+	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
+	return allErrs
+}
+
+func validateGCPMachineImages(machineImages []garden.GCPMachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	machineImageNames := []garden.MachineImageName{}
+	for i, image := range machineImages {
+		machineImageNames = append(machineImageNames, image.Name)
+		idxPath := fldPath.Index(i)
+
+		if len(image.Image) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("image"), image.Image))
+		}
+	}
+
+	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
+	return allErrs
+}
+
+func validateOpenStackMachineImages(machineImages []garden.OpenStackMachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	machineImageNames := []garden.MachineImageName{}
+	for i, image := range machineImages {
+		machineImageNames = append(machineImageNames, image.Name)
+		idxPath := fldPath.Index(i)
+
+		if len(image.Image) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("image"), image.Image))
+		}
+	}
+
+	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
 	return allErrs
 }
 

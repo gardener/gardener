@@ -131,8 +131,8 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 		},
 		"clusterName": b.Shoot.SeedNamespace,
 		"coreOSImage": map[string]interface{}{
-			"sku":     b.Shoot.CloudProfile.Spec.Azure.MachineImage.Channel,
-			"version": b.Shoot.CloudProfile.Spec.Azure.MachineImage.Version,
+			"sku":     b.Shoot.Info.Spec.Cloud.Azure.MachineImage.SKU,
+			"version": b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Version,
 		},
 		"cloudConfig": map[string]interface{}{
 			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),

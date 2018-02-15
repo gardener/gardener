@@ -12,6 +12,12 @@ spec:
         versions:
         - 1.9.3
         - 1.8.8
+      machineImages:
+      - name: CoreOS
+        publisher: CoreOS
+        offer: CoreOS
+        sku: Stable
+        version: 1576.5.0
       machineTypes:
       - name: Standard_DS2_v2
         cpu: "2"
@@ -29,10 +35,6 @@ spec:
         cpu: "16"
         gpu: "0"
         memory: 56Gi
-      - name: Standard_F1s
-        cpu: "1"
-        gpu: "0"
-        memory: 2Gi
       - name: Standard_F2s
         cpu: "2"
         gpu: "0"
@@ -64,6 +66,3 @@ spec:
       count: 2
     - region: eastus
       count: 2
-    machineImage:
-      channel: Stable
-      version: 1576.5.0

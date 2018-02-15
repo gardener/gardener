@@ -161,6 +161,17 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
+						MachineImages: []garden.AWSMachineImageMapping{
+							{
+								Name: garden.MachineImageCoreOS,
+								Regions: []garden.AWSRegionalMachineImage{
+									{
+										Name: "europe",
+										AMI:  "ami-12345678",
+									},
+								},
+							},
+						},
 						MachineTypes: []garden.MachineType{
 							{
 								Name:   "machine-type-1",
@@ -184,12 +195,6 @@ var _ = Describe("validator", func() {
 								Region: "asia",
 								Names:  []string{"asia-a"},
 							},
-						},
-					},
-					MachineImages: []garden.AWSMachineImage{
-						{
-							Region: "europe",
-							AMI:    "ami-12345678",
 						},
 					},
 				}
@@ -284,6 +289,22 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
+			It("should reject due to an invalid machine image", func() {
+				shoot.Spec.Cloud.AWS.MachineImage = &garden.AWSMachineImage{
+					Name: garden.MachineImageName("not-supported"),
+					AMI:  "not-supported",
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
 			It("should reject due to an invalid machine type", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
@@ -363,6 +384,15 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
+						MachineImages: []garden.AzureMachineImage{
+							{
+								Name:      garden.MachineImageCoreOS,
+								Publisher: "CoreOS",
+								Offer:     "CoreOS",
+								SKU:       "Beta",
+								Version:   "1.2.3",
+							},
+						},
 						MachineTypes: []garden.MachineType{
 							{
 								Name:   "machine-type-1",
@@ -397,10 +427,6 @@ var _ = Describe("validator", func() {
 							Region: "asia",
 							Count:  1,
 						},
-					},
-					MachineImage: garden.AzureMachineImage{
-						Channel: "Beta",
-						Version: "1.2.3",
 					},
 				}
 				workers = []garden.AzureWorker{
@@ -492,6 +518,25 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
+			It("should reject due to an invalid machine image", func() {
+				shoot.Spec.Cloud.Azure.MachineImage = &garden.AzureMachineImage{
+					Name:      garden.MachineImageName("not-supported"),
+					Publisher: "not-supported",
+					Offer:     "not-supported",
+					SKU:       "not-supported",
+					Version:   "not-supported",
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
 			It("should reject due to an invalid machine type", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
@@ -570,6 +615,12 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
+						MachineImages: []garden.GCPMachineImage{
+							{
+								Name:  garden.MachineImageCoreOS,
+								Image: "core-1.2.3",
+							},
+						},
 						MachineTypes: []garden.MachineType{
 							{
 								Name:   "machine-type-1",
@@ -594,9 +645,6 @@ var _ = Describe("validator", func() {
 								Names:  []string{"asia-a"},
 							},
 						},
-					},
-					MachineImage: garden.GCPMachineImage{
-						Name: "core-1.2.3",
 					},
 				}
 				workers = []garden.GCPWorker{
@@ -690,6 +738,22 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
+			It("should reject due to an invalid machine image", func() {
+				shoot.Spec.Cloud.GCP.MachineImage = &garden.GCPMachineImage{
+					Name:  garden.MachineImageName("not-supported"),
+					Image: "not-supported",
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
 			It("should reject due to an invalid machine type", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
 					{
@@ -765,6 +829,12 @@ var _ = Describe("validator", func() {
 								Name: "haproxy",
 							},
 						},
+						MachineImages: []garden.OpenStackMachineImage{
+							{
+								Name:  garden.MachineImageCoreOS,
+								Image: "core-1.2.3",
+							},
+						},
 						MachineTypes: []garden.OpenStackMachineType{
 							{
 								MachineType: garden.MachineType{
@@ -787,9 +857,6 @@ var _ = Describe("validator", func() {
 								Names:  []string{"asia-a"},
 							},
 						},
-					},
-					MachineImage: garden.OpenStackMachineImage{
-						Name: "core-1.2.3",
 					},
 				}
 				workers = []garden.OpenStackWorker{
@@ -898,6 +965,22 @@ var _ = Describe("validator", func() {
 
 			It("should reject due to an invalid load balancer provider", func() {
 				shoot.Spec.Cloud.OpenStack.LoadBalancerProvider = "invalid-provider"
+
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid machine image", func() {
+				shoot.Spec.Cloud.OpenStack.MachineImage = &garden.OpenStackMachineImage{
+					Name:  garden.MachineImageName("not-supported"),
+					Image: "not-supported",
+				}
 
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)

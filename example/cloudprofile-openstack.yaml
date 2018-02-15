@@ -20,6 +20,9 @@ spec:
         - 1.8.8
       loadBalancerProviders:
       - name: haproxy
+      machineImages:
+      - name: CoreOS
+        image: coreos-1576.5.0
       machineTypes:
       - name: medium_2_4
         cpu: "2"
@@ -40,5 +43,3 @@ spec:
         - europe-1b
         - europe-1c
     keystoneURL: https://url-to-keystone/v3/
-    machineImage:
-      name: coreos-1520.6.0

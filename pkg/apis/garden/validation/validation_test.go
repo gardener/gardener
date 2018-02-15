@@ -142,15 +142,20 @@ var _ = Describe("validation", func() {
 							Constraints: garden.AWSConstraints{
 								DNSProviders: dnsProviderConstraint,
 								Kubernetes:   kubernetesVersionConstraint,
+								MachineImages: []garden.AWSMachineImageMapping{
+									{
+										Name: garden.MachineImageCoreOS,
+										Regions: []garden.AWSRegionalMachineImage{
+											{
+												Name: "eu-west-1",
+												AMI:  "ami-12345678",
+											},
+										},
+									},
+								},
 								MachineTypes: machineTypesConstraint,
 								VolumeTypes:  volumeTypesConstraint,
 								Zones:        zonesConstraint,
-							},
-							MachineImages: []garden.AWSMachineImage{
-								{
-									Region: "eu-west-1",
-									AMI:    "ami-12345678",
-								},
 							},
 						},
 					},
@@ -223,6 +228,138 @@ var _ = Describe("validation", func() {
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+					}))
+				})
+			})
+
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					}))
+				})
+
+				It("should forbid duplicate names in list of machine images", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+						{
+							Name: garden.MachineImageCoreOS,
+							Regions: []garden.AWSRegionalMachineImage{
+								{
+									Name: "my-region",
+									AMI:  "ami-a1b2c3d4",
+								},
+							},
+						},
+						{
+							Name: garden.MachineImageCoreOS,
+							Regions: []garden.AWSRegionalMachineImage{
+								{
+									Name: "my-region",
+									AMI:  "ami-a1b2c3d4",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images names other than CoreOS", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+						{
+							Name: garden.MachineImageName("some-unsupported-os"),
+							Regions: []garden.AWSRegionalMachineImage{
+								{
+									Name: "my-region",
+									AMI:  "ami-a1b2c3d4",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images with no regions", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+						{
+							Name:    garden.MachineImageCoreOS,
+							Regions: []garden.AWSRegionalMachineImage{},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].regions", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images with duplicate region names", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+						{
+							Name: garden.MachineImageCoreOS,
+							Regions: []garden.AWSRegionalMachineImage{
+								{
+									Name: "my-region",
+									AMI:  "ami-a1b2c3d4",
+								},
+								{
+									Name: "my-region",
+									AMI:  "ami-a1b2c3d4",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].regions[1]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images with invalid amis", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+						{
+							Name: garden.MachineImageCoreOS,
+							Regions: []garden.AWSRegionalMachineImage{
+								{
+									Name: "my-region",
+									AMI:  "invalid-ami",
+								},
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].regions[0].ami", fldPath)),
 					}))
 				})
 			})
@@ -324,41 +461,6 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
-
-			Context("machine image validation", func() {
-				It("should enforce that at least one machine image has been defined", func() {
-					awsCloudProfile.Spec.AWS.MachineImages = []garden.AWSMachineImage{}
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImages", fldPath)),
-					}))
-				})
-
-				It("should forbid machine images with unsupported format", func() {
-					awsCloudProfile.Spec.AWS.MachineImages = []garden.AWSMachineImage{
-						{
-							Region: "",
-							AMI:    "ami-of-supported-format",
-						},
-					}
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(len(errorList)).To(Equal(2))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImages[0].region", fldPath)),
-					}))
-					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImages[0].ami", fldPath)),
-					}))
-				})
-			})
 		})
 
 		Context("tests for Azure cloud profiles", func() {
@@ -375,6 +477,15 @@ var _ = Describe("validation", func() {
 							Constraints: garden.AzureConstraints{
 								DNSProviders: dnsProviderConstraint,
 								Kubernetes:   kubernetesVersionConstraint,
+								MachineImages: []garden.AzureMachineImage{
+									{
+										Name:      garden.MachineImageCoreOS,
+										Publisher: "CoreOS",
+										Offer:     "CoreOS",
+										SKU:       "Beta",
+										Version:   "coreos-1.6.4",
+									},
+								},
 								MachineTypes: machineTypesConstraint,
 								VolumeTypes:  volumeTypesConstraint,
 							},
@@ -389,10 +500,6 @@ var _ = Describe("validation", func() {
 									Region: "westeurope",
 									Count:  0,
 								},
-							},
-							MachineImage: garden.AzureMachineImage{
-								Channel: "Beta",
-								Version: "coreos-1.6.4",
 							},
 						},
 					},
@@ -447,6 +554,99 @@ var _ = Describe("validation", func() {
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+					}))
+				})
+			})
+
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					}))
+				})
+
+				It("should forbid duplicate names in list of machine images", func() {
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{
+						{
+							Name:      garden.MachineImageCoreOS,
+							Publisher: "some-name",
+							Offer:     "some-name",
+							SKU:       "some-name",
+							Version:   "some-name",
+						},
+						{
+							Name:      garden.MachineImageCoreOS,
+							Publisher: "some-name",
+							Offer:     "some-name",
+							SKU:       "some-name",
+							Version:   "some-name",
+						},
+					}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images names other than CoreOS", func() {
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{
+						{
+							Name:      garden.MachineImageName("some-unsupported-os"),
+							Publisher: "some-name",
+							Offer:     "some-name",
+							SKU:       "some-name",
+							Version:   "some-name",
+						},
+					}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images with empty image names", func() {
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{
+						{
+							Name:      garden.MachineImageCoreOS,
+							Publisher: "",
+							Offer:     "",
+							SKU:       "",
+							Version:   "",
+						},
+					}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(len(errorList)).To(Equal(4))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].publisher", fldPath)),
+					}))
+					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].offer", fldPath)),
+					}))
+					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].sku", fldPath)),
+					}))
+					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
 					}))
 				})
 			})
@@ -584,27 +784,6 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
-
-			Context("machine image validation", func() {
-				It("should forbid machine images with unsupported format", func() {
-					azureCloudProfile.Spec.Azure.MachineImage = garden.AzureMachineImage{
-						Channel: "",
-						Version: "",
-					}
-
-					errorList := ValidateCloudProfile(azureCloudProfile)
-
-					Expect(len(errorList)).To(Equal(2))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImage.channel", fldPath)),
-					}))
-					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImage.version", fldPath)),
-					}))
-				})
-			})
 		})
 
 		Context("tests for GCP cloud profiles", func() {
@@ -621,12 +800,15 @@ var _ = Describe("validation", func() {
 							Constraints: garden.GCPConstraints{
 								DNSProviders: dnsProviderConstraint,
 								Kubernetes:   kubernetesVersionConstraint,
+								MachineImages: []garden.GCPMachineImage{
+									{
+										Name:  garden.MachineImageCoreOS,
+										Image: "coreos-1.6.4",
+									},
+								},
 								MachineTypes: machineTypesConstraint,
 								VolumeTypes:  volumeTypesConstraint,
 								Zones:        zonesConstraint,
-							},
-							MachineImage: garden.GCPMachineImage{
-								Name: "coreos-1.6.4",
 							},
 						},
 					},
@@ -681,6 +863,75 @@ var _ = Describe("validation", func() {
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+					}))
+				})
+			})
+
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					}))
+				})
+
+				It("should forbid duplicate names in list of machine images", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{
+						{
+							Name:  garden.MachineImageCoreOS,
+							Image: "some-image",
+						},
+						{
+							Name:  garden.MachineImageCoreOS,
+							Image: "some-image",
+						},
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images names other than CoreOS", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{
+						{
+							Name:  garden.MachineImageName("some-unsupported-os"),
+							Image: "some-image",
+						},
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images with empty image names", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{
+						{
+							Name:  garden.MachineImageCoreOS,
+							Image: "",
+						},
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].image", fldPath)),
 					}))
 				})
 			})
@@ -782,22 +1033,6 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
-
-			Context("machine image validation", func() {
-				It("should forbid machine images with unsupported format", func() {
-					gcpCloudProfile.Spec.GCP.MachineImage = garden.GCPMachineImage{
-						Name: "",
-					}
-
-					errorList := ValidateCloudProfile(gcpCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImage.name", fldPath)),
-					}))
-				})
-			})
 		})
 
 		Context("tests for OpenStack cloud profiles", func() {
@@ -824,13 +1059,17 @@ var _ = Describe("validation", func() {
 										Name: "haproxy",
 									},
 								},
+
+								MachineImages: []garden.OpenStackMachineImage{
+									{
+										Name:  garden.MachineImageCoreOS,
+										Image: "coreos-1.6.4",
+									},
+								},
 								MachineTypes: openStackMachineTypesConstraint,
 								Zones:        zonesConstraint,
 							},
 							KeyStoneURL: "http://url-to-keystone/v3",
-							MachineImage: garden.OpenStackMachineImage{
-								Name: "coreos-1.6.4",
-							},
 						},
 					},
 				}
@@ -948,6 +1187,75 @@ var _ = Describe("validation", func() {
 				})
 			})
 
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					}))
+				})
+
+				It("should forbid duplicate names in list of machine images", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{
+						{
+							Name:  garden.MachineImageCoreOS,
+							Image: "some-image",
+						},
+						{
+							Name:  garden.MachineImageCoreOS,
+							Image: "some-image",
+						},
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[1]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images names other than CoreOS", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{
+						{
+							Name:  garden.MachineImageName("some-unsupported-os"),
+							Image: "some-image",
+						},
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid machine images with empty image names", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{
+						{
+							Name:  garden.MachineImageCoreOS,
+							Image: "",
+						},
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].image", fldPath)),
+					}))
+				})
+			})
+
 			Context("machine types validation", func() {
 				It("should enforce that at least one machine type has been defined", func() {
 					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = []garden.OpenStackMachineType{}
@@ -1020,22 +1328,6 @@ var _ = Describe("validation", func() {
 					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
-					}))
-				})
-			})
-
-			Context("machine image validation", func() {
-				It("should forbid machine images with unsupported format", func() {
-					openStackCloudProfile.Spec.OpenStack.MachineImage = garden.OpenStackMachineImage{
-						Name: "",
-					}
-
-					errorList := ValidateCloudProfile(openStackCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.machineImage.name", fldPath)),
 					}))
 				})
 			})

@@ -25,6 +25,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
@@ -115,7 +116,7 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 	}
 
 	if cloudProviderInShoot != cloudProviderInProfile {
-		return apierrors.NewBadRequest("cloud provider in c.shoot is not equal to cloud provder in profile")
+		return apierrors.NewBadRequest("cloud provider in shoot is not equal to cloud provder in profile")
 	}
 
 	// We only want to validate fields in the Shoot against the CloudProfile/Seed constraints which have changed.
@@ -126,17 +127,25 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 		oldShoot = &garden.Shoot{
 			Spec: garden.ShootSpec{
 				Cloud: garden.Cloud{
-					AWS:       &garden.AWSCloud{},
-					Azure:     &garden.AzureCloud{},
-					GCP:       &garden.GCPCloud{},
-					OpenStack: &garden.OpenStackCloud{},
+					AWS: &garden.AWSCloud{
+						MachineImage: &garden.AWSMachineImage{},
+					},
+					Azure: &garden.AzureCloud{
+						MachineImage: &garden.AzureMachineImage{},
+					},
+					GCP: &garden.GCPCloud{
+						MachineImage: &garden.GCPMachineImage{},
+					},
+					OpenStack: &garden.OpenStackCloud{
+						MachineImage: &garden.OpenStackMachineImage{},
+					},
 				},
 			},
 		}
 	} else if a.GetOperation() == admission.Update {
 		old, err := h.shootLister.Shoots(shoot.Namespace).Get(shoot.Name)
 		if err != nil {
-			return apierrors.NewInternalError(errors.New("could not fetch the old c.shoot version"))
+			return apierrors.NewInternalError(errors.New("could not fetch the old shoot version"))
 		}
 		oldShoot = old
 	}
@@ -153,12 +162,43 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 
 	switch cloudProviderInShoot {
 	case garden.CloudProviderAWS:
+		if shoot.Spec.Cloud.AWS.MachineImage == nil {
+			image, err := getAWSMachineImage(shoot, cloudProfile)
+			if err != nil {
+				return apierrors.NewBadRequest(err.Error())
+			}
+			shoot.Spec.Cloud.AWS.MachineImage = image
+		}
 		allErrs = validateAWS(validationContext)
+
 	case garden.CloudProviderAzure:
+		if shoot.Spec.Cloud.Azure.MachineImage == nil {
+			image, err := getAzureMachineImage(shoot, cloudProfile)
+			if err != nil {
+				return apierrors.NewBadRequest(err.Error())
+			}
+			shoot.Spec.Cloud.Azure.MachineImage = image
+		}
 		allErrs = validateAzure(validationContext)
+
 	case garden.CloudProviderGCP:
+		if shoot.Spec.Cloud.GCP.MachineImage == nil {
+			image, err := getGCPMachineImage(shoot, cloudProfile)
+			if err != nil {
+				return apierrors.NewBadRequest(err.Error())
+			}
+			shoot.Spec.Cloud.GCP.MachineImage = image
+		}
 		allErrs = validateGCP(validationContext)
+
 	case garden.CloudProviderOpenStack:
+		if shoot.Spec.Cloud.OpenStack.MachineImage == nil {
+			image, err := getOpenStackMachineImage(shoot, cloudProfile)
+			if err != nil {
+				return apierrors.NewBadRequest(err.Error())
+			}
+			shoot.Spec.Cloud.OpenStack.MachineImage = image
+		}
 		allErrs = validateOpenStack(validationContext)
 	}
 
@@ -192,6 +232,9 @@ func validateAWS(c *validationContext) field.ErrorList {
 	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
 	}
+	if ok, validMachineImages := validateAWSMachineImagesConstraints(c.cloudProfile.Spec.AWS.Constraints.MachineImages, c.shoot.Spec.Cloud.Region, c.shoot.Spec.Cloud.AWS.MachineImage, c.oldShoot.Spec.Cloud.AWS.MachineImage); !ok {
+		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.AWS.MachineImage, validMachineImages))
+	}
 
 	for i, worker := range c.shoot.Spec.Cloud.AWS.Workers {
 		var oldWorker = garden.AWSWorker{}
@@ -222,10 +265,6 @@ func validateAWS(c *validationContext) field.ErrorList {
 		}
 	}
 
-	if ok := validateAWSMachineImage(c.cloudProfile.Spec.AWS.MachineImages, c.shoot.Spec.Cloud.Region); !ok {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "cloud", "region"), c.shoot.Spec.Cloud.Region, "no machine image known for this region"))
-	}
-
 	return allErrs
 }
 
@@ -242,6 +281,9 @@ func validateAzure(c *validationContext) field.ErrorList {
 	}
 	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	}
+	if ok, validMachineImages := validateAzureMachineImagesConstraints(c.cloudProfile.Spec.Azure.Constraints.MachineImages, c.shoot.Spec.Cloud.Azure.MachineImage, c.oldShoot.Spec.Cloud.Azure.MachineImage); !ok {
+		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.Azure.MachineImage, validMachineImages))
 	}
 
 	for i, worker := range c.shoot.Spec.Cloud.Azure.Workers {
@@ -285,6 +327,9 @@ func validateGCP(c *validationContext) field.ErrorList {
 	}
 	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	}
+	if ok, validMachineImages := validateGCPMachineImagesConstraints(c.cloudProfile.Spec.GCP.Constraints.MachineImages, c.shoot.Spec.Cloud.GCP.MachineImage, c.oldShoot.Spec.Cloud.GCP.MachineImage); !ok {
+		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.GCP.MachineImage, validMachineImages))
 	}
 
 	for i, worker := range c.shoot.Spec.Cloud.GCP.Workers {
@@ -339,6 +384,9 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 	if ok, validLoadBalancerProviders := validateLoadBalancerProviderConstraints(c.cloudProfile.Spec.OpenStack.Constraints.LoadBalancerProviders, c.shoot.Spec.Cloud.OpenStack.LoadBalancerProvider, c.oldShoot.Spec.Cloud.OpenStack.LoadBalancerProvider); !ok {
 		allErrs = append(allErrs, field.NotSupported(path.Child("floatingPoolName"), c.shoot.Spec.Cloud.OpenStack.LoadBalancerProvider, validLoadBalancerProviders))
 	}
+	if ok, validMachineImages := validateOpenStackMachineImagesConstraints(c.cloudProfile.Spec.OpenStack.Constraints.MachineImages, c.shoot.Spec.Cloud.OpenStack.MachineImage, c.oldShoot.Spec.Cloud.OpenStack.MachineImage); !ok {
+		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.OpenStack.MachineImage, validMachineImages))
+	}
 
 	for i, worker := range c.shoot.Spec.Cloud.OpenStack.Workers {
 		var oldWorker = garden.OpenStackWorker{}
@@ -382,19 +430,16 @@ func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider
 		return true, nil
 	}
 
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, p := range constraints {
 		validValues = append(validValues, string(p.Name))
 		if p.Name == provider {
-			ok = true
+			return true, nil
 		}
 	}
 
-	return ok, validValues
+	return false, validValues
 }
 
 func validateKubernetesVersionConstraints(constraints []string, version, oldVersion string) (bool, []string) {
@@ -402,19 +447,16 @@ func validateKubernetesVersionConstraints(constraints []string, version, oldVers
 		return true, nil
 	}
 
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, v := range constraints {
 		validValues = append(validValues, v)
 		if v == version {
-			ok = true
+			return true, nil
 		}
 	}
 
-	return ok, validValues
+	return false, validValues
 }
 
 func validateMachineTypes(constraints []garden.MachineType, machineType, oldMachineType string) (bool, []string) {
@@ -422,19 +464,16 @@ func validateMachineTypes(constraints []garden.MachineType, machineType, oldMach
 		return true, nil
 	}
 
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, t := range constraints {
 		validValues = append(validValues, t.Name)
 		if t.Name == machineType {
-			ok = true
+			return true, nil
 		}
 	}
 
-	return ok, validValues
+	return false, validValues
 }
 
 func validateOpenStackMachineTypes(constraints []garden.OpenStackMachineType, machineType, oldMachineType string) (bool, []string) {
@@ -467,48 +506,33 @@ func validateVolumeTypes(constraints []garden.VolumeType, volumeType, oldVolumeT
 		return true, nil
 	}
 
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, v := range constraints {
 		validValues = append(validValues, v.Name)
 		if v.Name == volumeType {
-			ok = true
+			return true, nil
 		}
 	}
 
-	return ok, validValues
+	return false, validValues
 }
 
 func validateZones(constraints []garden.Zone, region, zone string) (bool, []string) {
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, z := range constraints {
 		if z.Region == region {
 			for _, n := range z.Names {
 				validValues = append(validValues, n)
 				if n == zone {
-					ok = true
+					return true, nil
 				}
 			}
 		}
 	}
 
-	return ok, validValues
-}
-
-func validateAWSMachineImage(images []garden.AWSMachineImage, region string) bool {
-	for _, i := range images {
-		if i.Region == region {
-			return true
-		}
-	}
-	return false
+	return false, validValues
 }
 
 func validateAzureDomainCount(count []garden.AzureDomainCount, region string) bool {
@@ -525,19 +549,16 @@ func validateFloatingPoolConstraints(pools []garden.OpenStackFloatingPool, pool,
 		return true, nil
 	}
 
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, p := range pools {
 		validValues = append(validValues, p.Name)
 		if p.Name == pool {
-			ok = true
+			return true, nil
 		}
 	}
 
-	return ok, validValues
+	return false, validValues
 }
 
 func validateLoadBalancerProviderConstraints(providers []garden.OpenStackLoadBalancerProvider, provider, oldProvider string) (bool, []string) {
@@ -545,17 +566,135 @@ func validateLoadBalancerProviderConstraints(providers []garden.OpenStackLoadBal
 		return true, nil
 	}
 
-	var (
-		validValues = []string{}
-		ok          = false
-	)
+	validValues := []string{}
 
 	for _, p := range providers {
 		validValues = append(validValues, p.Name)
 		if p.Name == provider {
-			ok = true
+			return true, nil
 		}
 	}
 
-	return ok, validValues
+	return false, validValues
+}
+
+// Machine Image Helper functions
+
+func getAWSMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.AWSMachineImage, error) {
+	machineImageMappings := cloudProfile.Spec.AWS.Constraints.MachineImages
+	if len(machineImageMappings) != 1 {
+		return nil, errors.New("must provide a value for .spec.cloud.aws.machineImage as the referenced cloud profile contains more than one")
+	}
+
+	return findAWSMachineImageForRegion(machineImageMappings[0], shoot.Spec.Cloud.Region)
+}
+
+func findAWSMachineImageForRegion(machineImageMapping garden.AWSMachineImageMapping, region string) (*garden.AWSMachineImage, error) {
+	for _, regionalMachineImage := range machineImageMapping.Regions {
+		if regionalMachineImage.Name == region {
+			return &garden.AWSMachineImage{
+				Name: machineImageMapping.Name,
+				AMI:  regionalMachineImage.AMI,
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("could not find an AMI for region %s and machine image %s", region, machineImageMapping.Name)
+}
+
+func validateAWSMachineImagesConstraints(constraints []garden.AWSMachineImageMapping, region string, image, oldImage *garden.AWSMachineImage) (bool, []string) {
+	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
+		return true, nil
+	}
+
+	validValues := []string{}
+
+	for _, v := range constraints {
+		machineImage, err := findAWSMachineImageForRegion(v, region)
+		if err != nil {
+			return false, nil
+		}
+
+		validValues = append(validValues, fmt.Sprintf("%+v", *machineImage))
+
+		if apiequality.Semantic.DeepEqual(*machineImage, *image) {
+			return true, nil
+		}
+	}
+
+	return false, validValues
+}
+
+func getAzureMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.AzureMachineImage, error) {
+	machineImages := cloudProfile.Spec.Azure.Constraints.MachineImages
+	if len(machineImages) != 1 {
+		return nil, errors.New("must provide a value for .spec.cloud.azure.machineImage as the referenced cloud profile contains more than one")
+	}
+	return &machineImages[0], nil
+}
+
+func validateAzureMachineImagesConstraints(constraints []garden.AzureMachineImage, image, oldImage *garden.AzureMachineImage) (bool, []string) {
+	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
+		return true, nil
+	}
+
+	validValues := []string{}
+
+	for _, v := range constraints {
+		validValues = append(validValues, fmt.Sprintf("%+v", v))
+		if apiequality.Semantic.DeepEqual(v, *image) {
+			return true, nil
+		}
+	}
+
+	return false, validValues
+}
+
+func getGCPMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.GCPMachineImage, error) {
+	machineImages := cloudProfile.Spec.GCP.Constraints.MachineImages
+	if len(machineImages) != 1 {
+		return nil, errors.New("must provide a value for .spec.cloud.gcp.machineImage as the referenced cloud profile contains more than one")
+	}
+	return &machineImages[0], nil
+}
+
+func validateGCPMachineImagesConstraints(constraints []garden.GCPMachineImage, image, oldImage *garden.GCPMachineImage) (bool, []string) {
+	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
+		return true, nil
+	}
+
+	validValues := []string{}
+
+	for _, v := range constraints {
+		validValues = append(validValues, fmt.Sprintf("%+v", v))
+		if apiequality.Semantic.DeepEqual(v, *image) {
+			return true, nil
+		}
+	}
+
+	return false, validValues
+}
+
+func getOpenStackMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.OpenStackMachineImage, error) {
+	machineImages := cloudProfile.Spec.OpenStack.Constraints.MachineImages
+	if len(machineImages) != 1 {
+		return nil, errors.New("must provide a value for .spec.cloud.openstack.machineImage as the referenced cloud profile contains more than one")
+	}
+	return &machineImages[0], nil
+}
+
+func validateOpenStackMachineImagesConstraints(constraints []garden.OpenStackMachineImage, image, oldImage *garden.OpenStackMachineImage) (bool, []string) {
+	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
+		return true, nil
+	}
+
+	validValues := []string{}
+
+	for _, v := range constraints {
+		validValues = append(validValues, fmt.Sprintf("%+v", v))
+		if apiequality.Semantic.DeepEqual(v, *image) {
+			return true, nil
+		}
+	}
+
+	return false, validValues
 }

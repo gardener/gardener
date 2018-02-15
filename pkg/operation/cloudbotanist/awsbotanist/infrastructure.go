@@ -59,15 +59,10 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 		vpcCIDR = string(*b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR)
 	}
 
-	machineImage, err := findAMIForRegion(b.Shoot.Info.Spec.Cloud.Region, b.Shoot.CloudProfile.Spec.AWS.MachineImages)
-	if err != nil {
-		return err
-	}
-
 	return terraformer.
 		New(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("aws-infra", b.generateTerraformInfraConfig(createVPC, createIGW, vpcID, internetGatewayID, vpcCIDR, machineImage)).
+		DefineConfig("aws-infra", b.generateTerraformInfraConfig(createVPC, createIGW, vpcID, internetGatewayID, vpcCIDR)).
 		Apply()
 }
 
@@ -91,7 +86,7 @@ func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() []map[string]
 
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vpcID, internetGatewayID, vpcCIDR string, machineImage gardenv1beta1.AWSMachineImage) map[string]interface{} {
+func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vpcID, internetGatewayID, vpcCIDR string) map[string]interface{} {
 	var (
 		sshSecret                   = b.Secrets["ssh-keypair"]
 		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
@@ -132,7 +127,7 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC, createIGW bool, vp
 			"internetGatewayID": internetGatewayID,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": machineImage.AMI,
+		"coreOSImage": b.Shoot.Info.Spec.Cloud.AWS.MachineImage.AMI,
 		"cloudConfig": map[string]interface{}{
 			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
 		},
@@ -181,15 +176,6 @@ func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 		},
 		"clusterName": b.Shoot.SeedNamespace,
 	}
-}
-
-func findAMIForRegion(region string, machineImages []gardenv1beta1.AWSMachineImage) (gardenv1beta1.AWSMachineImage, error) {
-	for _, machineImage := range machineImages {
-		if machineImage.Region == region {
-			return machineImage, nil
-		}
-	}
-	return gardenv1beta1.AWSMachineImage{}, fmt.Errorf("could not find an AMI for region %s", region)
 }
 
 // distributeWorkersOverZones distributes the worker groups over the zones equally and returns a map

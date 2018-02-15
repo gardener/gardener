@@ -95,7 +95,7 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 			"id": routerID,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": b.Shoot.CloudProfile.Spec.OpenStack.MachineImage.Name,
+		"coreOSImage": b.Shoot.Info.Spec.Cloud.OpenStack.MachineImage.Image,
 		"cloudConfig": map[string]interface{}{
 			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
 		},

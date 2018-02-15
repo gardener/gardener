@@ -28,7 +28,7 @@ var _ = Describe("utils", func() {
 			time, err := ParseMaintenanceTime("222200+0100")
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(time.String()).To(Equal("0000-01-01 22:22:00 +0100 CET"))
+			Expect(time.String()).To(ContainSubstring("22:22:00 +0100"))
 		})
 
 		It("should return an error", func() {

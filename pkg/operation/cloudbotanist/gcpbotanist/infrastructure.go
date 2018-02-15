@@ -86,7 +86,7 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 			"name": vpcName,
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"coreOSImage": b.Shoot.CloudProfile.Spec.GCP.MachineImage.Name,
+		"coreOSImage": b.Shoot.Info.Spec.Cloud.GCP.MachineImage.Image,
 		"cloudConfig": map[string]interface{}{
 			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
 		},

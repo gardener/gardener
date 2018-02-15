@@ -14,6 +14,13 @@ spec:
         - 1.8.8
         - 1.7.12
         - 1.6.13
+      machineImages:
+      - name: CoreOS
+        regions:
+        - name: eu-west-1
+          ami: ami-32d1474b
+        - name: us-east-1
+          ami: ami-e582d29f
       machineTypes:
       - name: m4.large
         cpu: "2"
@@ -67,8 +74,3 @@ spec:
         - us-east-1a
         - us-east-1b
         - us-east-1c
-    machineImages:
-    - region: eu-west-1
-      ami: ami-32d1474b
-    - region: us-east-1
-      ami: ami-e582d29f

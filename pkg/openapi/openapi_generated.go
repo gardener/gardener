@@ -33,6 +33,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Properties: map[string]spec.Schema{
+						"machineImage": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImage"),
+							},
+						},
 						"networks": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Networks holds information about the Kubernetes and infrastructure networks.",
@@ -71,7 +77,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSWorker"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSWorker"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints": {
 			Schema: spec.Schema{
@@ -95,6 +101,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints"),
+							},
+						},
+						"machineImages": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImageMapping"),
+										},
+									},
+								},
 							},
 						},
 						"machineTypes": {
@@ -137,36 +156,68 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"dnsProviders", "kubernetes", "machineTypes", "volumeTypes", "zones"},
+					Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImageMapping", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImage": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
 					Description: "AWSMachineImage defines the region and the AMI for a machine image.",
 					Properties: map[string]spec.Schema{
-						"region": {
+						"name": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Region is a region in AWS.",
+								Description: "Name is the name of the image.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 						"ami": {
 							SchemaProps: spec.SchemaProps{
-								Description: "AMI is the technical id of the image.",
+								Description: "AMI is the technical id of the image (region specific).",
 								Type:        []string{"string"},
 								Format:      "",
 							},
 						},
 					},
-					Required: []string{"region", "ami"},
+					Required: []string{"name", "ami"},
 				},
 			},
 			Dependencies: []string{},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImageMapping": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "AWSMachineImageMapping is a mapping of machine images to regions.",
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Name is the name of the image.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"regions": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Regions is a list of machine images with their regional technical id.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSRegionalMachineImage"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"name", "regions"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSRegionalMachineImage"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks": {
 			Schema: spec.Schema{
@@ -260,25 +311,36 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints"),
 							},
 						},
-						"machineImages": {
-							SchemaProps: spec.SchemaProps{
-								Description: "MachineImages is a list of AWS machine images for each region.",
-								Type:        []string{"array"},
-								Items: &spec.SchemaOrArray{
-									Schema: &spec.Schema{
-										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImage"),
-										},
-									},
-								},
-							},
-						},
 					},
-					Required: []string{"constraints", "machineImages"},
+					Required: []string{"constraints"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSMachineImage"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSRegionalMachineImage": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Name is the name of a region.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"ami": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AMI is the technical id of the image (specific for region stated in the 'Name' field).",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"name", "ami"},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSVPC": {
 			Schema: spec.Schema{
@@ -433,16 +495,22 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "AzureCloud contains the Shoot specification for Azure.",
 					Properties: map[string]spec.Schema{
-						"resourceGroup": {
+						"machineImage": {
 							SchemaProps: spec.SchemaProps{
-								Description: "ResourceGroup indicates whether to use an existing resource group or create a new one.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup"),
+								Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureMachineImage"),
 							},
 						},
 						"networks": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Networks holds information about the Kubernetes and infrastructure networks.",
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureNetworks"),
+							},
+						},
+						"resourceGroup": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ResourceGroup indicates whether to use an existing resource group or create a new one.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup"),
 							},
 						},
 						"workers": {
@@ -463,7 +531,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureWorker"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureWorker"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints": {
 			Schema: spec.Schema{
@@ -487,6 +555,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints"),
+							},
+						},
+						"machineImages": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureMachineImage"),
+										},
+									},
+								},
 							},
 						},
 						"machineTypes": {
@@ -516,11 +597,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"dnsProviders", "kubernetes", "machineTypes", "volumeTypes"},
+					Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount": {
 			Schema: spec.Schema{
@@ -552,9 +633,30 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "AzureMachineImage defines the channel and the version of the machine image in the Azure environment.",
 					Properties: map[string]spec.Schema{
-						"channel": {
+						"name": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Channel is the channel to pull images from (one of Alpha, Beta, Stable).",
+								Description: "Name is the name of the image.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"publisher": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Publisher is the publisher of the image.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"offer": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Offer is the offering of the image.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"sku": {
+							SchemaProps: spec.SchemaProps{
+								Description: "SKU is the stock keeping unit to pull images from.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -567,7 +669,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"channel", "version"},
+					Required: []string{"name", "publisher", "offer", "sku", "version"},
 				},
 			},
 			Dependencies: []string{},
@@ -662,18 +764,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
-						"machineImage": {
-							SchemaProps: spec.SchemaProps{
-								Description: "MachineImage defines the channel and the version of the machine image in the Azure environment.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureMachineImage"),
-							},
-						},
 					},
-					Required: []string{"constraints", "countUpdateDomains", "countFaultDomains", "machineImage"},
+					Required: []string{"constraints", "countUpdateDomains", "countFaultDomains"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureMachineImage"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup": {
 			Schema: spec.Schema{
@@ -1202,6 +1298,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "GCPCloud contains the Shoot specification for GCP.",
 					Properties: map[string]spec.Schema{
+						"machineImage": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage"),
+							},
+						},
 						"networks": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Networks holds information about the Kubernetes and infrastructure networks.",
@@ -1240,7 +1342,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPWorker"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPWorker"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPConstraints": {
 			Schema: spec.Schema{
@@ -1264,6 +1366,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							SchemaProps: spec.SchemaProps{
 								Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints"),
+							},
+						},
+						"machineImages": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage"),
+										},
+									},
+								},
 							},
 						},
 						"machineTypes": {
@@ -1306,11 +1421,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"dnsProviders", "kubernetes", "machineTypes", "volumeTypes", "zones"},
+					Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage": {
 			Schema: spec.Schema{
@@ -1324,8 +1439,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"image": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Image is the technical name of the image. It contains the image name and the Google Cloud project. Example: projects/coreos-cloud/global/images/coreos-stable-1576-5-0-v20180105",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
-					Required: []string{"name"},
+					Required: []string{"name", "image"},
 				},
 			},
 			Dependencies: []string{},
@@ -1394,18 +1516,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPConstraints"),
 							},
 						},
-						"machineImage": {
-							SchemaProps: spec.SchemaProps{
-								Description: "MachineImage defines the name of the machine image in the GCP environment.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage"),
-							},
-						},
 					},
-					Required: []string{"constraints", "machineImage"},
+					Required: []string{"constraints"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPConstraints"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPVPC": {
 			Schema: spec.Schema{
@@ -2225,6 +2341,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"machineImage": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage"),
+							},
+						},
 						"networks": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Networks holds information about the Kubernetes and infrastructure networks.",
@@ -2263,7 +2385,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackConstraints": {
 			Schema: spec.Schema{
@@ -2315,6 +2437,19 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								},
 							},
 						},
+						"machineImages": {
+							SchemaProps: spec.SchemaProps{
+								Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage"),
+										},
+									},
+								},
+							},
+						},
 						"machineTypes": {
 							SchemaProps: spec.SchemaProps{
 								Description: "MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.",
@@ -2342,11 +2477,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "machineTypes", "zones"},
+					Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool": {
 			Schema: spec.Schema{
@@ -2396,8 +2531,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"image": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Image is the technical name of the image.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
-					Required: []string{"name"},
+					Required: []string{"name", "image"},
 				},
 			},
 			Dependencies: []string{},
@@ -2523,18 +2665,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"machineImage": {
-							SchemaProps: spec.SchemaProps{
-								Description: "MachineImage defines the name of the machine image in the OpenStack environment.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage"),
-							},
-						},
 					},
-					Required: []string{"constraints", "keystoneURL", "machineImage"},
+					Required: []string{"constraints", "keystoneURL"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineImage"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackConstraints"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackRouter": {
 			Schema: spec.Schema{

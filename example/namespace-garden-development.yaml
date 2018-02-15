@@ -4,4 +4,4 @@ metadata:
   name: garden-development
   labels:
     garden.sapcloud.io/role: project
-    project.garden.sapcloud.io/name: core
+    project.garden.sapcloud.io/name: development
