@@ -82,18 +82,6 @@ func (c *FakeQuotas) Update(quota *v1beta1.Quota) (result *v1beta1.Quota, err er
 	return obj.(*v1beta1.Quota), err
 }
 
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeQuotas) UpdateStatus(quota *v1beta1.Quota) (*v1beta1.Quota, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(quotasResource, "status", c.ns, quota), &v1beta1.Quota{})
-
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1beta1.Quota), err
-}
-
 // Delete takes name of the quota and deletes it. Returns an error if one occurs.
 func (c *FakeQuotas) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

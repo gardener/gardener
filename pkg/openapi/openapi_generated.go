@@ -2020,18 +2020,16 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"cpus": {
+						"cpu": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CPUs is the number of CPUs for this machine type.",
-								Type:        []string{"integer"},
-								Format:      "int32",
+								Description: "CPU is the number of CPUs for this machine type.",
+								Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 							},
 						},
-						"gpus": {
+						"gpu": {
 							SchemaProps: spec.SchemaProps{
-								Description: "GPUs is the number of GPUs for this machine type.",
-								Type:        []string{"integer"},
-								Format:      "int32",
+								Description: "GPU is the number of GPUs for this machine type.",
+								Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
 							},
 						},
 						"memory": {
@@ -2041,11 +2039,77 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"name", "cpus", "gpus", "memory"},
+					Required: []string{"name", "cpu", "gpu", "memory"},
 				},
 			},
 			Dependencies: []string{
 				"k8s.io/apimachinery/pkg/api/resource.Quantity"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Maintenance contains information about the time window for maintenance operations and which operations should be performed.",
+					Properties: map[string]spec.Schema{
+						"autoUpdate": {
+							SchemaProps: spec.SchemaProps{
+								Description: "AutoUpdate contains information about which constraints should be automatically updated.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate"),
+							},
+						},
+						"timeWindow": {
+							SchemaProps: spec.SchemaProps{
+								Description: "TimeWindow contains information about the time window for maintenance operations.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceTimeWindow"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceTimeWindow"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "MaintenanceAutoUpdate contains information about which constraints should be automatically updated.",
+					Properties: map[string]spec.Schema{
+						"kubernetesVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"kubernetesVersion"},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceTimeWindow": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "MaintenanceTimeWindow contains information about the time window for maintenance operations.",
+					Properties: map[string]spec.Schema{
+						"begin": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. \"220000+0100\". If not present, a random value will be computed.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"end": {
+							SchemaProps: spec.SchemaProps{
+								Description: "End is the end of the time window in the format HHMMSS+ZONE, e.g. \"220000+0100\". If not present, the value will be computed based on the \"Begin\" value.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"begin", "end"},
+				},
+			},
+			Dependencies: []string{},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular": {
 			Schema: spec.Schema{
@@ -2258,7 +2322,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType"),
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType"),
 										},
 									},
 								},
@@ -2282,7 +2346,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool": {
 			Schema: spec.Schema{
@@ -2337,6 +2401,56 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "OpenStackMachineType contains certain properties of a machine type in OpenStack",
+					Properties: map[string]spec.Schema{
+						"name": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Name is the name of the machine type.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"cpu": {
+							SchemaProps: spec.SchemaProps{
+								Description: "CPU is the number of CPUs for this machine type.",
+								Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+							},
+						},
+						"gpu": {
+							SchemaProps: spec.SchemaProps{
+								Description: "GPU is the number of GPUs for this machine type.",
+								Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+							},
+						},
+						"memory": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Memory is the amount of memory for this machine type.",
+								Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+							},
+						},
+						"volumeType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "VolumeType is the type of that volume.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"volumeSize": {
+							SchemaProps: spec.SchemaProps{
+								Description: "VolumeSize is the amount of disk storage for this machine type.",
+								Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+							},
+						},
+					},
+					Required: []string{"name", "cpu", "gpu", "memory", "volumeType", "volumeSize"},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks": {
 			Schema: spec.Schema{
@@ -2603,17 +2717,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaSpec"),
 							},
 						},
-						"status": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Most recently observed status of the Quota constraints.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaStatus"),
-							},
-						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaSpec", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaSpec", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaList": {
 			Schema: spec.Schema{
@@ -2694,31 +2802,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 					},
 					Required: []string{"metrics", "scope"},
-				},
-			},
-			Dependencies: []string{
-				"k8s.io/apimachinery/pkg/api/resource.Quantity"},
-		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.QuotaStatus": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "QuotaStatus holds the most recently observed status of the Quota constraints.",
-					Properties: map[string]spec.Schema{
-						"metrics": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Metrics holds the current status of the constraints defined in the spec. Only used for Quotas whose scope is 'secret'.",
-								Type:        []string{"object"},
-								AdditionalProperties: &spec.SchemaOrBool{
-									Schema: &spec.Schema{
-										SchemaProps: spec.SchemaProps{
-											Ref: ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
-										},
-									},
-								},
-							},
-						},
-					},
-					Required: []string{"metrics"},
 				},
 			},
 			Dependencies: []string{
@@ -3066,12 +3149,18 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes"),
 							},
 						},
+						"maintenance": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Maintenance contains information about the time window for maintenance operations and which operations should be performed.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"),
+							},
+						},
 					},
 					Required: []string{"cloud", "dns", "kubernetes"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootStatus": {
 			Schema: spec.Schema{

@@ -22,7 +22,10 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
+
+const maintenanceTimeLayout = "150405-0700"
 
 // FuncName takes a function <f> as input and returns its name as a string. If the function is a method
 // of a struct, the struct will be also prefixed, e.g. 'Botanist.CreateNamespace'.
@@ -88,4 +91,23 @@ func FindFreePort() (int, error) {
 func TestEmail(email string) bool {
 	match, _ := regexp.MatchString(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`, email)
 	return match
+}
+
+// ComputeRandomTimeWindow computes a random time window and returns both in the format HHMMSS+ZONE.
+func ComputeRandomTimeWindow() (string, string) {
+	hour := rand.IntnRange(0, 23)
+	cet, _ := time.LoadLocation("CET")
+	t := time.Date(1970, 1, 1, hour, 0, 0, 0, cet)
+	return FormatMaintenanceTime(t), FormatMaintenanceTime(t.Add(time.Hour))
+}
+
+// FormatMaintenanceTime formats a time object to the maintenance time format.
+func FormatMaintenanceTime(t time.Time) string {
+	return t.Format(maintenanceTimeLayout)
+}
+
+// ParseMaintenanceTime parses the maintenance time and returns it as Time object. In case the parse fails, an
+// error is returned.
+func ParseMaintenanceTime(value string) (time.Time, error) {
+	return time.Parse(maintenanceTimeLayout, value)
 }

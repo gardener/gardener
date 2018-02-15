@@ -10,34 +10,34 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.9.2
-        - 1.8.7
+        - 1.9.3
+        - 1.8.8
         - 1.7.12
         - 1.6.13
       machineTypes:
       - name: n1-standard-2
-        cpus: 2
-        gpus: 0
+        cpu: "2"
+        gpu: "0"
         memory: 7500Mi
       - name: n1-standard-4
-        cpus: 4
-        gpus: 0
+        cpu: "4"
+        gpu: "0"
         memory: 15Gi
       - name: n1-standard-8
-        cpus: 8
-        gpus: 0
+        cpu: "8"
+        gpu: "0"
         memory: 30Gi
       - name: n1-standard-16
-        cpus: 16
-        gpus: 0
+        cpu: "16"
+        gpu: "0"
         memory: 60Gi
       - name: n1-standard-32
-        cpus: 32
-        gpus: 0
+        cpu: "32"
+        gpu: "0"
         memory: 120Gi
       - name: n1-standard-64
-        cpus: 64
-        gpus: 0
+        cpu: "64"
+        gpu: "0"
         memory: 240Gi
       volumeTypes:
       - name: pd-standard

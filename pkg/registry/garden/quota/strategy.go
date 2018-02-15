@@ -73,20 +73,3 @@ func (quotaStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldOb
 func (quotaStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
-
-type quotaStatusStrategy struct {
-	quotaStrategy
-}
-
-// StatusStrategy defines the storage strategy for the status subresource of Quotas.
-var StatusStrategy = quotaStatusStrategy{Strategy}
-
-func (quotaStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
-	newQuota := obj.(*garden.Quota)
-	oldQuota := old.(*garden.Quota)
-	newQuota.Spec = oldQuota.Spec
-}
-
-func (quotaStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
-	return validation.ValidateQuotaStatusUpdate(obj.(*garden.Quota), old.(*garden.Quota))
-}

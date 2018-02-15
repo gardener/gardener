@@ -10,44 +10,44 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.9.2
-        - 1.8.7
+        - 1.9.3
+        - 1.8.8
       machineTypes:
       - name: Standard_DS2_v2
-        cpus: 2
-        gpus: 0
+        cpu: "2"
+        gpu: "0"
         memory: 7Gi
       - name: Standard_DS3_v2
-        cpus: 4
-        gpus: 0
+        cpu: "4"
+        gpu: "0"
         memory: 14Gi
       - name: Standard_DS4_v2
-        cpus: 8
-        gpus: 0
+        cpu: "8"
+        gpu: "0"
         memory: 28Gi
       - name: Standard_DS5_v2
-        cpus: 16
-        gpus: 0
+        cpu: "16"
+        gpu: "0"
         memory: 56Gi
       - name: Standard_F1s
-        cpus: 1
-        gpus: 0
+        cpu: "1"
+        gpu: "0"
         memory: 2Gi
       - name: Standard_F2s
-        cpus: 2
-        gpus: 0
+        cpu: "2"
+        gpu: "0"
         memory: 4Gi
       - name: Standard_F4s
-        cpus: 4
-        gpus: 0
+        cpu: "4"
+        gpu: "0"
         memory: 8Gi
       - name: Standard_F8s
-        cpus: 8
-        gpus: 0
+        cpu: "8"
+        gpu: "0"
         memory: 16Gi
       - name: Standard_F16s
-        cpus: 16
-        gpus: 0
+        cpu: "16"
+        gpu: "0"
         memory: 32Gi
       volumeTypes:
       - name: standard

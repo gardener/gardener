@@ -62,7 +62,7 @@ var _ = admissioninitializer.WantsKubeInformerFactory(&Finder{})
 // New creates a new Finder admission plugin.
 func New() (*Finder, error) {
 	return &Finder{
-		Handler: admission.NewHandler(admission.Create),
+		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 

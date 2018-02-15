@@ -164,9 +164,9 @@ var _ = Describe("validator", func() {
 						MachineTypes: []garden.MachineType{
 							{
 								Name:   "machine-type-1",
-								CPUs:   2,
-								GPUs:   0,
-								Memory: resource.Quantity{Format: "100Gi"},
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("100Gi"),
 							},
 						},
 						VolumeTypes: []garden.VolumeType{
@@ -366,9 +366,9 @@ var _ = Describe("validator", func() {
 						MachineTypes: []garden.MachineType{
 							{
 								Name:   "machine-type-1",
-								CPUs:   2,
-								GPUs:   0,
-								Memory: resource.Quantity{Format: "100Gi"},
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("100Gi"),
 							},
 						},
 						VolumeTypes: []garden.VolumeType{
@@ -573,9 +573,9 @@ var _ = Describe("validator", func() {
 						MachineTypes: []garden.MachineType{
 							{
 								Name:   "machine-type-1",
-								CPUs:   2,
-								GPUs:   0,
-								Memory: resource.Quantity{Format: "100Gi"},
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("100Gi"),
 							},
 						},
 						VolumeTypes: []garden.VolumeType{
@@ -765,12 +765,16 @@ var _ = Describe("validator", func() {
 								Name: "haproxy",
 							},
 						},
-						MachineTypes: []garden.MachineType{
+						MachineTypes: []garden.OpenStackMachineType{
 							{
-								Name:   "machine-type-1",
-								CPUs:   2,
-								GPUs:   0,
-								Memory: resource.Quantity{Format: "100Gi"},
+								MachineType: garden.MachineType{
+									Name:   "machine-type-1",
+									CPU:    resource.MustParse("2"),
+									GPU:    resource.MustParse("0"),
+									Memory: resource.MustParse("100Gi"),
+								},
+								VolumeType: "default",
+								VolumeSize: resource.MustParse("20Gi"),
 							},
 						},
 						Zones: []garden.Zone{

@@ -350,7 +350,7 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 		}
 
 		idxPath := path.Child("workers").Index(i)
-		if ok, validMachineTypes := validateMachineTypes(c.cloudProfile.Spec.OpenStack.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
+		if ok, validMachineTypes := validateOpenStackMachineTypes(c.cloudProfile.Spec.OpenStack.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
 			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
 		}
 	}
@@ -435,6 +435,15 @@ func validateMachineTypes(constraints []garden.MachineType, machineType, oldMach
 	}
 
 	return ok, validValues
+}
+
+func validateOpenStackMachineTypes(constraints []garden.OpenStackMachineType, machineType, oldMachineType string) (bool, []string) {
+	machineTypes := []garden.MachineType{}
+	for _, t := range constraints {
+		machineTypes = append(machineTypes, t.MachineType)
+	}
+
+	return validateMachineTypes(machineTypes, machineType, oldMachineType)
 }
 
 func validateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {

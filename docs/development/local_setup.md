@@ -157,12 +157,12 @@ $ kubectl apply -f dev/secret-internal-domain.yaml
 secret "internal-domain-example-com" created
 
 $ make dev-setup
-namespace "garden-core" configured
-deployment "etcd" configured
-service "etcd" unchanged
-service "gardener-apiserver" unchanged
-endpoints "gardener-apiserver" configured
-apiservice "v1beta1.garden.sapcloud.io" configured
+namespace "garden-development" created
+deployment "etcd" created
+service "etcd" created
+service "gardener-apiserver" created
+endpoints "gardener-apiserver" created
+apiservice "v1beta1.garden.sapcloud.io" created
 ```
 
 Next, you need to run the Gardener API server and the Gardener controller manager using rules in the `Makefile`.

@@ -20,6 +20,7 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
@@ -123,8 +124,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	if spec.OpenStack != nil {
 		allErrs = append(allErrs, validateDNSProviders(spec.OpenStack.Constraints.DNSProviders, fldPath.Child("openstack", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.OpenStack.Constraints.Kubernetes, fldPath.Child("openstack", "constraints", "kubernetes"))...)
-		allErrs = append(allErrs, validateMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateZones(spec.OpenStack.Constraints.Zones, fldPath.Child("openstack", "constraints", "zones"))...)
 
 		floatingPoolPath := fldPath.Child("openstack", "constraints", "floatingPools")
 		if len(spec.OpenStack.Constraints.FloatingPools) == 0 {
@@ -153,6 +152,9 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		if len(spec.OpenStack.MachineImage.Name) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "machineImage", "name"), "must provide an image name"))
 		}
+
+		allErrs = append(allErrs, validateOpenStackMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateZones(spec.OpenStack.Constraints.Zones, fldPath.Child("openstack", "constraints", "zones"))...)
 
 		if len(spec.OpenStack.KeyStoneURL) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keyStoneURL"), "must provide the URL to KeyStone"))
@@ -214,21 +216,39 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 	for i, machineType := range machineTypes {
 		idxPath := fldPath.Index(i)
 		namePath := idxPath.Child("name")
-		cpusPath := idxPath.Child("cpus")
-		gpusPath := idxPath.Child("gpus")
-		memoryPath := idxPath.Child("memoryPath")
+		cpuPath := idxPath.Child("cpu")
+		gpuPath := idxPath.Child("gpu")
+		memoryPath := idxPath.Child("memory")
 
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 		}
-		if machineType.CPUs < 0 {
-			allErrs = append(allErrs, field.Invalid(cpusPath, machineType.CPUs, "cpus cannot be negative"))
-		}
-		if machineType.GPUs < 0 {
-			allErrs = append(allErrs, field.Invalid(gpusPath, machineType.GPUs, "gpus cannot be negative"))
-		}
+		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
 	}
+
+	return allErrs
+}
+
+func validateOpenStackMachineTypeConstraints(machineTypes []garden.OpenStackMachineType, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	types := []garden.MachineType{}
+	for i, machineType := range machineTypes {
+		types = append(types, machineType.MachineType)
+
+		idxPath := fldPath.Index(i)
+		volumeTypePath := idxPath.Child("volumeType")
+		volumeSizePath := idxPath.Child("volumeSize")
+
+		if len(machineType.VolumeType) == 0 {
+			allErrs = append(allErrs, field.Required(volumeTypePath, "must provide a volume type"))
+		}
+		allErrs = append(allErrs, validateResourceQuantityValue("volumeSize", machineType.VolumeSize, volumeSizePath)...)
+	}
+
+	allErrs = append(allErrs, validateMachineTypeConstraints(types, fldPath)...)
 
 	return allErrs
 }
@@ -550,6 +570,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateCloud(spec.Cloud, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
+	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 
 	if spec.DNS.Provider == garden.DNSUnmanaged {
 		if spec.Addons != nil && spec.Addons.Monocular != nil && spec.Addons.Monocular.Enabled {
@@ -991,6 +1012,50 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 			}
 			if len(*oidc.UsernamePrefix) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
+			}
+		}
+	}
+
+	return allErrs
+}
+
+func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if maintenance == nil {
+		allErrs = append(allErrs, field.Required(fldPath, "maintenance information is required"))
+		return allErrs
+	}
+
+	if maintenance.AutoUpdate == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("autoUpdate"), "auto update information is required"))
+	}
+
+	if maintenance.TimeWindow == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("timeWindow"), "time window information is required"))
+	} else {
+		begin, beginErr := utils.ParseMaintenanceTime(maintenance.TimeWindow.Begin)
+		if beginErr != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "begin"), maintenance.TimeWindow.Begin, "time window begin is not in the correct format (HHMMSS+ZONE)"))
+		}
+
+		end, endErr := utils.ParseMaintenanceTime(maintenance.TimeWindow.End)
+		if endErr != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "end"), maintenance.TimeWindow.End, "time window end is not in the correct format (HHMMSS+ZONE)"))
+		}
+
+		if beginErr == nil && endErr == nil {
+			if end.Sub(begin) < 0 {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window end must not be before time window begin"))
+				return allErrs
+			}
+			if end.Sub(begin) > 6*time.Hour {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window must not be greater than 6 hours"))
+				return allErrs
+			}
+			if end.Sub(begin) < 30*time.Minute {
+				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window must not be smaller than 30 minutes"))
+				return allErrs
 			}
 		}
 	}

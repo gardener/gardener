@@ -17,9 +17,7 @@ package storage
 import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/registry/garden/quota"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/generic"
 	genericregistry "k8s.io/apiserver/pkg/registry/generic/registry"
 	"k8s.io/apiserver/pkg/registry/rest"
@@ -32,22 +30,20 @@ type REST struct {
 
 // QuotaStorage implements the storage for Quotas and their status subresource.
 type QuotaStorage struct {
-	Quota  *REST
-	Status *StatusREST
+	Quota *REST
 }
 
 // NewStorage creates a new QuotaStorage object.
 func NewStorage(optsGetter generic.RESTOptionsGetter) QuotaStorage {
-	quotaRest, quotaStatusRest := NewREST(optsGetter)
+	quotaRest := NewREST(optsGetter)
 
 	return QuotaStorage{
-		Quota:  quotaRest,
-		Status: quotaStatusRest,
+		Quota: quotaRest,
 	}
 }
 
 // NewREST returns a RESTStorage object that will work with Quota objects.
-func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
+func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &garden.Quota{} },
 		NewListFunc:              func() runtime.Object { return &garden.QuotaList{} },
@@ -63,9 +59,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 		panic(err)
 	}
 
-	statusStore := *store
-	statusStore.UpdateStrategy = quota.StatusStrategy
-	return &REST{store}, &StatusREST{store: &statusStore}
+	return &REST{store}
 }
 
 // Implement ShortNamesProvider
@@ -74,24 +68,4 @@ var _ rest.ShortNamesProvider = &REST{}
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
 	return []string{}
-}
-
-// StatusREST implements the REST endpoint for changing the status of a Quota
-type StatusREST struct {
-	store *genericregistry.Store
-}
-
-// New creates a new (empty) internal Quota object.
-func (r *StatusREST) New() runtime.Object {
-	return &garden.Quota{}
-}
-
-// Get retrieves the object from the storage. It is required to support Patch.
-func (r *StatusREST) Get(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (runtime.Object, error) {
-	return r.store.Get(ctx, name, options)
-}
-
-// Update alters the status subset of an object.
-func (r *StatusREST) Update(ctx genericapirequest.Context, name string, objInfo rest.UpdatedObjectInfo, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (runtime.Object, bool, error) {
-	return r.store.Update(ctx, name, objInfo, createValidation, updateValidation)
 }

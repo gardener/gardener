@@ -51,7 +51,7 @@ var _ = admissioninitializer.WantsInternalGardenInformerFactory(&RejectShootIfQu
 // New creates a new RejectShootIfQuotaExceeded admission plugin.
 func New() (*RejectShootIfQuotaExceeded, error) {
 	return &RejectShootIfQuotaExceeded{
-		Handler: admission.NewHandler(admission.Create),
+		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 

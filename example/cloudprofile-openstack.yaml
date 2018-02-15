@@ -3,6 +3,10 @@ kind: CloudProfile
 metadata:
   name: openstack
 spec:
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
   openstack:
     constraints:
       dnsProviders:
@@ -12,19 +16,23 @@ spec:
       - name: MY-FLOATING-POOL
       kubernetes:
         versions:
-        - 1.9.2
-        - 1.8.7
+        - 1.9.3
+        - 1.8.8
       loadBalancerProviders:
       - name: haproxy
       machineTypes:
       - name: medium_2_4
-        cpus: 2
-        gpus: 0
+        cpu: "2"
+        gpu: "0"
         memory: 4Gi
+        volumeType: default
+        volumeSize: 20Gi
       - name: medium_4_8
-        cpus: 4
-        gpus: 0
+        cpu: "4"
+        gpu: "0"
         memory: 8Gi
+        volumeType: default
+        volumeSize: 40Gi
       zones:
       - region: europe-1
         names:
@@ -34,7 +42,3 @@ spec:
     keystoneURL: https://url-to-keystone/v3/
     machineImage:
       name: coreos-1520.6.0
-  caBundle: |
-    -----BEGIN CERTIFICATE-----
-    ...
-    -----END CERTIFICATE-----

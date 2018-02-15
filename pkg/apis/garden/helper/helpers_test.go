@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("helpers", func() {
+var _ = Describe("helper", func() {
 	Describe("#DetermineCloudProviderInProfile", func() {
 		It("should return cloud provider AWS", func() {
 			spec := garden.CloudProfileSpec{

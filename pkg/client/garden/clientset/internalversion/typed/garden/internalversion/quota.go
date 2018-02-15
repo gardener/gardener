@@ -19,7 +19,6 @@ type QuotasGetter interface {
 type QuotaInterface interface {
 	Create(*garden.Quota) (*garden.Quota, error)
 	Update(*garden.Quota) (*garden.Quota, error)
-	UpdateStatus(*garden.Quota) (*garden.Quota, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*garden.Quota, error)
@@ -97,22 +96,6 @@ func (c *quotas) Update(quota *garden.Quota) (result *garden.Quota, err error) {
 		Namespace(c.ns).
 		Resource("quotas").
 		Name(quota.Name).
-		Body(quota).
-		Do().
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *quotas) UpdateStatus(quota *garden.Quota) (result *garden.Quota, err error) {
-	result = &garden.Quota{}
-	err = c.client.Put().
-		Namespace(c.ns).
-		Resource("quotas").
-		Name(quota.Name).
-		SubResource("status").
 		Body(quota).
 		Do().
 		Into(result)

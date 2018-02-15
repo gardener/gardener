@@ -2,7 +2,7 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
 metadata:
   name: johndoe-os
-  namespace: garden-core
+  namespace: garden-development
 spec:
   cloud:
     profile: openstack
@@ -29,10 +29,19 @@ spec:
       loadBalancerProvider: haproxy
       floatingPoolName: MY-FLOATING-POOL
   kubernetes:
-    version: 1.9.1
+    version: 1.9.3
   dns:
     provider: aws-route53
     domain: johndoe-os.johndoe.example.com
+  backup:
+    intervalInSecond: 86400
+    maximum: 6
+  maintenance:
+    timeWindow:
+      begin: 220000+0100
+      end: 230000+0100
+    autoUpdate:
+      kubernetesVersion: true
   addons:
     cluster-autoscaler:
       enabled: true

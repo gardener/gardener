@@ -15,6 +15,7 @@
 package v1beta1
 
 import (
+	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -88,6 +89,33 @@ func SetDefaults_Shoot(obj *Shoot) {
 	trueVar := true
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
+	}
+
+	if obj.Spec.Maintenance == nil {
+		begin, end := utils.ComputeRandomTimeWindow()
+		obj.Spec.Maintenance = &Maintenance{
+			AutoUpdate: &MaintenanceAutoUpdate{
+				KubernetesVersion: trueVar,
+			},
+			TimeWindow: &MaintenanceTimeWindow{
+				Begin: begin,
+				End:   end,
+			},
+		}
+	} else {
+		if obj.Spec.Maintenance.AutoUpdate == nil {
+			obj.Spec.Maintenance.AutoUpdate = &MaintenanceAutoUpdate{
+				KubernetesVersion: trueVar,
+			}
+		}
+
+		if obj.Spec.Maintenance.TimeWindow == nil {
+			begin, end := utils.ComputeRandomTimeWindow()
+			obj.Spec.Maintenance.TimeWindow = &MaintenanceTimeWindow{
+				Begin: begin,
+				End:   end,
+			}
+		}
 	}
 }
 

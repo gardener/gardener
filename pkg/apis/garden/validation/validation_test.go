@@ -43,12 +43,20 @@ var _ = Describe("validation", func() {
 			kubernetesVersionConstraint = garden.KubernetesConstraints{
 				Versions: []string{"1.6.4"},
 			}
+			machineType = garden.MachineType{
+				Name:   "machine-type-1",
+				CPU:    resource.MustParse("2"),
+				GPU:    resource.MustParse("0"),
+				Memory: resource.MustParse("100Gi"),
+			}
 			machineTypesConstraint = []garden.MachineType{
+				machineType,
+			}
+			openStackMachineTypesConstraint = []garden.OpenStackMachineType{
 				{
-					Name:   "machine-type-1",
-					CPUs:   2,
-					GPUs:   0,
-					Memory: resource.Quantity{Format: "100Gi"},
+					MachineType: machineType,
+					VolumeType:  "default",
+					VolumeSize:  resource.MustParse("20Gi"),
 				},
 			}
 			volumeTypesConstraint = []garden.VolumeType{
@@ -69,13 +77,22 @@ var _ = Describe("validation", func() {
 					Name: garden.DNSProvider("some-unsupported-provider"),
 				},
 			}
-			invalidKubernetes   = []string{"1.6"}
+			invalidKubernetes  = []string{"1.6"}
+			invalidMachineType = garden.MachineType{
+
+				Name:   "",
+				CPU:    resource.MustParse("-1"),
+				GPU:    resource.MustParse("-1"),
+				Memory: resource.MustParse("-100Gi"),
+			}
 			invalidMachineTypes = []garden.MachineType{
+				invalidMachineType,
+			}
+			invalidOpenStackMachineTypes = []garden.OpenStackMachineType{
 				{
-					Name:   "",
-					CPUs:   -1,
-					GPUs:   -1,
-					Memory: resource.Quantity{Format: "100Gi"},
+					MachineType: invalidMachineType,
+					VolumeType:  "",
+					VolumeSize:  resource.MustParse("-100Gi"),
 				},
 			}
 			invalidVolumeTypes = []garden.VolumeType{
@@ -228,18 +245,22 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
-					Expect(len(errorList)).To(Equal(3))
+					Expect(len(errorList)).To(Equal(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
 					}))
 					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpu", fldPath)),
 					}))
 					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpu", fldPath)),
+					}))
+					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].memory", fldPath)),
 					}))
 				})
 			})
@@ -448,18 +469,18 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(3))
+					Expect(len(errorList)).To(Equal(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
 					}))
 					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpu", fldPath)),
 					}))
 					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpu", fldPath)),
 					}))
 				})
 			})
@@ -682,18 +703,22 @@ var _ = Describe("validation", func() {
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
-					Expect(len(errorList)).To(Equal(3))
+					Expect(len(errorList)).To(Equal(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
 					}))
 					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpu", fldPath)),
 					}))
 					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpu", fldPath)),
+					}))
+					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].memory", fldPath)),
 					}))
 				})
 			})
@@ -799,7 +824,7 @@ var _ = Describe("validation", func() {
 										Name: "haproxy",
 									},
 								},
-								MachineTypes: machineTypesConstraint,
+								MachineTypes: openStackMachineTypesConstraint,
 								Zones:        zonesConstraint,
 							},
 							KeyStoneURL: "http://url-to-keystone/v3",
@@ -925,7 +950,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine types validation", func() {
 				It("should enforce that at least one machine type has been defined", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = []garden.MachineType{}
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = []garden.OpenStackMachineType{}
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
@@ -937,22 +962,34 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid machine types with unsupported property values", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = invalidMachineTypes
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = invalidOpenStackMachineTypes
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
-					Expect(len(errorList)).To(Equal(3))
+					Expect(len(errorList)).To(Equal(6))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].volumeType", fldPath)),
 					}))
 					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].volumeSize", fldPath)),
 					}))
 					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
+					}))
+					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpus", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpu", fldPath)),
+					}))
+					Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpu", fldPath)),
+					}))
+					Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].memory", fldPath)),
 					}))
 				})
 			})
@@ -1124,7 +1161,7 @@ var _ = Describe("validation", func() {
 				Spec: garden.QuotaSpec{
 					Scope: garden.QuotaScopeProject,
 					Metrics: corev1.ResourceList{
-						"cpus":   resource.MustParse("200"),
+						"cpu":    resource.MustParse("200"),
 						"memory": resource.MustParse("4000Gi"),
 					},
 				},
@@ -1422,6 +1459,15 @@ var _ = Describe("validation", func() {
 								UsernameClaim:  makeStringPointer("user-claim"),
 								UsernamePrefix: makeStringPointer("user-prefix"),
 							},
+						},
+					},
+					Maintenance: &garden.Maintenance{
+						AutoUpdate: &garden.MaintenanceAutoUpdate{
+							KubernetesVersion: true,
+						},
+						TimeWindow: &garden.MaintenanceTimeWindow{
+							Begin: "220000+0100",
+							End:   "230000+0100",
 						},
 					},
 				},
@@ -2706,6 +2752,100 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.kubernetes.version"),
 			}))
+		})
+
+		Context("maintenance section", func() {
+			It("should forbid not specifying the maintenance section", func() {
+				shoot.Spec.Maintenance = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.maintenance"),
+				}))
+			})
+
+			It("should forbid not specifying the auto update section", func() {
+				shoot.Spec.Maintenance.AutoUpdate = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.maintenance.autoUpdate"),
+				}))
+			})
+
+			It("should forbid not specifying the time window section", func() {
+				shoot.Spec.Maintenance.TimeWindow = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.maintenance.timeWindow"),
+				}))
+			})
+
+			It("should forbid invalid formats for the time window begin and end values", func() {
+				shoot.Spec.Maintenance.TimeWindow.Begin = "invalidformat"
+				shoot.Spec.Maintenance.TimeWindow.End = "invalidformat"
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.maintenance.timeWindow.begin"),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.maintenance.timeWindow.end"),
+				}))
+			})
+
+			It("should forbid time windows greater than 6 hours", func() {
+				shoot.Spec.Maintenance.TimeWindow.Begin = "145000+0100"
+				shoot.Spec.Maintenance.TimeWindow.End = "215000+0100"
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.maintenance.timeWindow"),
+				}))
+			})
+
+			It("should forbid time windows smaller than 30 minutes", func() {
+				shoot.Spec.Maintenance.TimeWindow.Begin = "225000+0100"
+				shoot.Spec.Maintenance.TimeWindow.End = "231000+0100"
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.maintenance.timeWindow"),
+				}))
+			})
+
+			It("should forbid time windows where end is before begin", func() {
+				shoot.Spec.Maintenance.TimeWindow.Begin = "225000+0100"
+				shoot.Spec.Maintenance.TimeWindow.End = "224900+0100"
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.maintenance.timeWindow"),
+				}))
+			})
 		})
 	})
 })

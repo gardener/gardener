@@ -10,46 +10,46 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.9.2
-        - 1.8.7
+        - 1.9.3
+        - 1.8.8
         - 1.7.12
         - 1.6.13
       machineTypes:
       - name: m4.large
-        cpus: 2
-        gpus: 0
+        cpu: "2"
+        gpu: "0"
         memory: 8Gi
       - name: m4.xlarge
-        cpus: 4
-        gpus: 0
+        cpu: "4"
+        gpu: "0"
         memory: 16Gi
       - name: m4.2xlarge
-        cpus: 8
-        gpus: 0
+        cpu: "8"
+        gpu: "0"
         memory: 32Gi
       - name: m4.4xlarge
-        cpus: 16
-        gpus: 0
+        cpu: "16"
+        gpu: "0"
         memory: 64Gi
       - name: m4.10xlarge
-        cpus: 40
-        gpus: 0
+        cpu: "40"
+        gpu: "0"
         memory: 160Gi
       - name: m4.16xlarge
-        cpus: 64
-        gpus: 0
+        cpu: "64"
+        gpu: "0"
         memory: 256Gi
       - name: p2.xlarge
-        cpus: 4
-        gpus: 1
+        cpu: "4"
+        gpu: "1"
         memory: 61Gi
       - name: p2.8xlarge
-        cpus: 32
-        gpus: 8
+        cpu: "32"
+        gpu: "8"
         memory: 488Gi
       - name: p2.16xlarge
-        cpus: 64
-        gpus: 16
+        cpu: "64"
+        gpu: "16"
         memory: 732Gi
       volumeTypes:
       - name: gp2

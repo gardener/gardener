@@ -191,7 +191,7 @@ type OpenStackConstraints struct {
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 	LoadBalancerProviders []OpenStackLoadBalancerProvider
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
-	MachineTypes []MachineType
+	MachineTypes []OpenStackMachineType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone
 }
@@ -230,12 +230,21 @@ type KubernetesConstraints struct {
 type MachineType struct {
 	// Name is the name of the machine type.
 	Name string
-	// CPUs is the number of CPUs for this machine type.
-	CPUs int
-	// GPUs is the number of GPUs for this machine type.
-	GPUs int
+	// CPU is the number of CPUs for this machine type.
+	CPU resource.Quantity
+	// GPU is the number of GPUs for this machine type.
+	GPU resource.Quantity
 	// Memory is the amount of memory for this machine type.
 	Memory resource.Quantity
+}
+
+// OpenStackMachineType contains certain properties of a machine type in OpenStack
+type OpenStackMachineType struct {
+	MachineType
+	// VolumeType is the type of that volume.
+	VolumeType string
+	// VolumeSize is the amount of disk storage for this machine type.
+	VolumeSize resource.Quantity
 }
 
 // VolumeType contains certain properties of a volume type.
@@ -348,9 +357,6 @@ type Quota struct {
 	// Spec defines the Quota constraints.
 	// +optional
 	Spec QuotaSpec
-	// Most recently observed status of the Quota constraints.
-	// +optional
-	Status QuotaStatus
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -374,13 +380,6 @@ type QuotaSpec struct {
 	Metrics corev1.ResourceList
 	// Scope is the scope of the Quota object, either 'project' or 'secret'.
 	Scope QuotaScope
-}
-
-// QuotaStatus holds the most recently observed status of the Quota constraints.
-type QuotaStatus struct {
-	// Metrics holds the current status of the constraints defined in the spec. Only used for Quotas whose scope
-	// is 'secret'.
-	Metrics corev1.ResourceList
 }
 
 // QuotaScope is a string alias.
@@ -499,6 +498,10 @@ type ShootSpec struct {
 	DNS DNS
 	// Kubernetes contains the version and configuration settings of the control plane components.
 	Kubernetes Kubernetes
+	// Maintenance contains information about the time window for maintenance operations and which
+	// operations should be performed.
+	// +optional
+	Maintenance *Maintenance
 }
 
 // ShootStatus holds the most recently observed status of the Shoot cluster.
@@ -969,6 +972,33 @@ type KubeProxyConfig struct {
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig
+}
+
+// Maintenance contains information about the time window for maintenance operations and which
+// operations should be performed.
+type Maintenance struct {
+	// AutoUpdate contains information about which constraints should be automatically updated.
+	// +optional
+	AutoUpdate *MaintenanceAutoUpdate
+	// TimeWindow contains information about the time window for maintenance operations.
+	// +optional
+	TimeWindow *MaintenanceTimeWindow
+}
+
+// MaintenanceAutoUpdate contains information about which constraints should be automatically updated.
+type MaintenanceAutoUpdate struct {
+	// KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated.
+	KubernetesVersion bool
+}
+
+// MaintenanceTimeWindow contains information about the time window for maintenance operations.
+type MaintenanceTimeWindow struct {
+	// Begin is the beginning of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
+	// If not present, a random value will be computed.
+	Begin string
+	// End is the end of the time window in the format HHMMSS+ZONE, e.g. "220000+0100".
+	// If not present, the value will be computed based on the "Begin" value.
+	End string
 }
 
 const (

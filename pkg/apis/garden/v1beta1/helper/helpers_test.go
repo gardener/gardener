@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("helpers", func() {
+var _ = Describe("helper", func() {
 	Describe("#GetCondition", func() {
 		It("should return the found condition", func() {
 			var (

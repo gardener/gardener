@@ -65,7 +65,6 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	quotaStorage := quotastore.NewStorage(restOptionsGetter)
 	storage["quotas"] = quotaStorage.Quota
-	storage["quotas/status"] = quotaStorage.Status
 
 	shootStorage := shootstore.NewStorage(restOptionsGetter)
 	storage["shoots"] = shootStorage.Shoot

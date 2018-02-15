@@ -53,7 +53,7 @@ var _ = admissioninitializer.WantsInternalGardenInformerFactory(&SeedManager{})
 // New creates a new SeedManager admission plugin.
 func New() (*SeedManager, error) {
 	return &SeedManager{
-		Handler: admission.NewHandler(admission.Create),
+		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 
