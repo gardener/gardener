@@ -34,8 +34,7 @@ func New(k8sGardenClient kubernetes.Client, shoot *gardenv1beta1.Shoot) (*Garden
 	}
 
 	projectName := shoot.Namespace
-	name, ok := namespace.Labels[common.ProjectName]
-	if ok && len(name) > 0 {
+	if name, ok := namespace.Labels[common.ProjectName]; ok && len(name) > 0 {
 		projectName = name
 	}
 

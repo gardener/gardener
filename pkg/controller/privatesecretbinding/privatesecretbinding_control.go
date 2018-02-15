@@ -114,23 +114,6 @@ func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.Privat
 		privateSecretBindingLogger = logger.NewFieldLogger(logger.Logger, "privatesecretbinding", fmt.Sprintf("%s/%s", privateSecretBinding.Namespace, privateSecretBinding.Name))
 	)
 
-	// Add the Gardener finalizer to the referenced PrivateSecretBinding secret to protect it from deletion as long as
-	// the PrivateSecretBinding resource does exist.
-	secret, err := c.secretLister.Secrets(privateSecretBinding.Namespace).Get(privateSecretBinding.SecretRef.Name)
-	if err != nil {
-		privateSecretBindingLogger.Error(err.Error())
-		return err
-	}
-	secretFinalizers := sets.NewString(secret.Finalizers...)
-	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
-		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
-	}
-	secret.Finalizers = secretFinalizers.UnsortedList()
-	if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
-		privateSecretBindingLogger.Error(err.Error())
-		return err
-	}
-
 	// The deletionTimestamp labels a PrivateSecretBinding as intented to get deleted. Before deletion,
 	// it has to be ensured that no Shoots are depending on the PrivateSecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the PrivateSecretBinding so that it can be garbage collected.
@@ -171,5 +154,23 @@ func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.Privat
 		privateSecretBindingLogger.Infof("Can't delete PrivateSecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
 		return errors.New("PrivateSecretBinding still has references")
 	}
+
+	// Add the Gardener finalizer to the referenced PrivateSecretBinding secret to protect it from deletion as long as
+	// the PrivateSecretBinding resource does exist.
+	secret, err := c.secretLister.Secrets(privateSecretBinding.Namespace).Get(privateSecretBinding.SecretRef.Name)
+	if err != nil {
+		privateSecretBindingLogger.Error(err.Error())
+		return err
+	}
+	secretFinalizers := sets.NewString(secret.Finalizers...)
+	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
+		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
+	}
+	secret.Finalizers = secretFinalizers.UnsortedList()
+	if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
+		privateSecretBindingLogger.Error(err.Error())
+		return err
+	}
+
 	return nil
 }

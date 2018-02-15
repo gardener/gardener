@@ -32,7 +32,7 @@ import (
 
 // reconcileShoot reconciles the Shoot cluster's state.
 // It receives a Garden object <garden> which stores the Shoot object and the operation type.
-func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType, updater UpdaterInterface) *gardenv1beta1.LastError {
+func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) *gardenv1beta1.LastError {
 	// We create the botanists (which will do the actual work).
 	botanist, err := botanistpkg.New(o)
 	if err != nil {

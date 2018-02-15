@@ -114,23 +114,6 @@ func (c *defaultControl) ReconcileCrossSecretBinding(obj *gardenv1beta1.CrossSec
 		crossSecretBindingLogger = logger.NewFieldLogger(logger.Logger, "crosssecretbinding", fmt.Sprintf("%s/%s", crossSecretBinding.Namespace, crossSecretBinding.Name))
 	)
 
-	// Add the Gardener finalizer to the referenced CrossSecretBinding secret to protect it from deletion as long as
-	// the CrossSecretBinding resource does exist.
-	secret, err := c.secretLister.Secrets(crossSecretBinding.SecretRef.Namespace).Get(crossSecretBinding.SecretRef.Name)
-	if err != nil {
-		crossSecretBindingLogger.Error(err.Error())
-		return err
-	}
-	secretFinalizers := sets.NewString(secret.Finalizers...)
-	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
-		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
-	}
-	secret.Finalizers = secretFinalizers.UnsortedList()
-	if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
-		crossSecretBindingLogger.Error(err.Error())
-		return err
-	}
-
 	// The deletionTimestamp labels a CrossSecretBinding as intented to get deleted. Before deletion,
 	// it has to be ensured that no Shoots are depending on the CrossSecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the CrossSecretBinding so that it can be garbage collected.
@@ -171,5 +154,23 @@ func (c *defaultControl) ReconcileCrossSecretBinding(obj *gardenv1beta1.CrossSec
 		crossSecretBindingLogger.Infof("Can't delete CrossSecretBinding, because the following Shoots are still referencing it: %v", associatedShoots)
 		return errors.New("CrossSecretBinding still has references")
 	}
+
+	// Add the Gardener finalizer to the referenced CrossSecretBinding secret to protect it from deletion as long as
+	// the CrossSecretBinding resource does exist.
+	secret, err := c.secretLister.Secrets(crossSecretBinding.SecretRef.Namespace).Get(crossSecretBinding.SecretRef.Name)
+	if err != nil {
+		crossSecretBindingLogger.Error(err.Error())
+		return err
+	}
+	secretFinalizers := sets.NewString(secret.Finalizers...)
+	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
+		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
+	}
+	secret.Finalizers = secretFinalizers.UnsortedList()
+	if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
+		crossSecretBindingLogger.Error(err.Error())
+		return err
+	}
+
 	return nil
 }

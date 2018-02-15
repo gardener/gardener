@@ -158,7 +158,7 @@ func (t *Terraformer) execute(scriptName string) error {
 		// Create Terraform Job which executes the provided scriptName
 		err := t.deployTerraformer(values)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to deploy the Terraformer: %s", err.Error())
 		}
 
 		// Wait for the Terraform Job to be completed

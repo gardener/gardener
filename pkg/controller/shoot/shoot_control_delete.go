@@ -164,10 +164,6 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 }
 
 func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) error {
-	finalizers := sets.NewString(o.Shoot.Info.Finalizers...)
-	finalizers.Delete(gardenv1beta1.GardenerName)
-
-	o.Shoot.Info.Finalizers = finalizers.List()
 	o.Shoot.Info.Status.LastError = nil
 	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
 		Type:           gardenv1beta1.ShootLastOperationTypeDelete,
@@ -182,6 +178,17 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 		return err
 	}
 	o.Shoot.Info = newShoot
+
+	// Remove finalizer
+	finalizers := sets.NewString(o.Shoot.Info.Finalizers...)
+	finalizers.Delete(gardenv1beta1.GardenerName)
+	o.Shoot.Info.Finalizers = finalizers.List()
+	newShoot, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).Update(o.Shoot.Info)
+	if err != nil {
+		return err
+	}
+	o.Shoot.Info = newShoot
+
 	return err
 }
 

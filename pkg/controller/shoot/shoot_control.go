@@ -231,7 +231,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		shootLogger.Errorf("Could not update the Shoot status after reconciliation start: %+v", updateErr)
 		return updateErr
 	}
-	reconcileErr := c.reconcileShoot(operation, operationType, c.updater)
+	reconcileErr := c.reconcileShoot(operation, operationType)
 	if reconcileErr != nil {
 		c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.ShootEventReconcileError, "[%s] %s", operationID, reconcileErr.Description)
 		if updateErr := c.updateShootStatusReconcileError(operation, operationType, reconcileErr); updateErr != nil {

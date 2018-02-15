@@ -91,7 +91,7 @@ func (t *Terraformer) waitForJob() bool {
 		job, err := t.K8sSeedClient.GetJob(t.Namespace, t.JobName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logger.Warn("Terraform Job disappeared unexpectedly, somebody must have manually deleted it!")
+				t.Logger.Warnf("Terraform Job %s disappeared unexpectedly, somebody must have manually deleted it!", t.JobName)
 				return true, nil
 			}
 			return false, err
