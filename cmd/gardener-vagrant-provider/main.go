@@ -15,9 +15,12 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -34,47 +37,39 @@ import (
 )
 
 var (
-	port       = flag.String("port", ":3777", "The server port")
-	vagrantDir = flag.String("vagrant-dir", "vagrant", "The directory conaining the Vagrantfile")
+	port         = flag.String("port", ":3777", "The server port")
+	vagrantDir   = flag.String("vagrant-dir", "vagrant", "The directory conaining the Vagrantfile")
+	userdataPath = flag.String("userdata-path", "dev/user-data", "The path in which the user-data file will be created")
 )
 
 // server holds the absolute path of the vagrant directory
 type server struct {
-	vagrantDir string
+	vagrantDir   string
+	userdataPath string
 }
 
 // Start creates a vagrant machine from a user-data
 func (s *server) Start(ctx context.Context, in *pb.StartRequest) (*pb.StartReply, error) {
 	fmt.Println("Got start request. Creating machine")
-	cmd := exec.Command("vagrant", "up")
-	cmd.Dir = s.vagrantDir
-	absPath, _ := filepath.Abs("dev/user-data")
-	err := ioutil.WriteFile(absPath, []byte(in.Cloudconfig), 0644)
+	err := ioutil.WriteFile(s.userdataPath, []byte(in.Cloudconfig), 0644)
 	if err != nil {
 		fmt.Printf("Error writing config %v", err)
 		return nil, status.Errorf(codes.Internal, "Error writing config: %v", err)
 	}
-	output, err := cmd.CombinedOutput()
+	message, err := s.runCommand("up")
 	if err != nil {
-		fmt.Printf("Error starting machine: %s", string(output))
 		return nil, status.Errorf(codes.Internal, "Error starting machine: %v", err)
 	}
-	message := string(output)
-	fmt.Println(message)
+	fmt.Printf("created machine %s", message)
 	return &pb.StartReply{Message: message}, nil
 }
 
 // Start deltes a vagrant machine
 func (s *server) Delete(ctx context.Context, in *pb.DeleteRequest) (*pb.DeleteReply, error) {
-	cmd := exec.Command("vagrant", "destroy", "-f")
-	cmd.Dir = s.vagrantDir
-	output, err := cmd.CombinedOutput()
+	message, err := s.runCommand("destroy", "-f")
 	if err != nil {
-		fmt.Printf("Error stopping machine: %s", string(output))
-		return nil, status.Errorf(codes.Internal, "Error stopping machine: %v", err)
+		return nil, status.Errorf(codes.Internal, "Error deleting machine: %v", err)
 	}
-	message := string(output)
-	fmt.Println(message)
 	return &pb.DeleteReply{Message: message}, nil
 }
 
@@ -84,6 +79,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to get the vagrant directory: %v", err)
 	}
+	userdataAbsPath, err := filepath.Abs(*userdataPath)
+	if err != nil {
+		log.Fatalf("failed to get the user-data path: %v", err)
+	}
 	lis, err := net.Listen("tcp", *port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -91,14 +90,57 @@ func main() {
 
 	log.Printf("Listening on %s", *port)
 	log.Printf("Vagrant directory %s", absVagrantDir)
+	log.Printf("user-data path %s", userdataAbsPath)
 
 	s := grpc.NewServer()
 	pb.RegisterVagrantServer(s, &server{
-		vagrantDir: absVagrantDir,
+		vagrantDir:   absVagrantDir,
+		userdataPath: userdataAbsPath,
 	})
 	// Register reflection service on gRPC server.
 	reflection.Register(s)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func (s *server) runCommand(arguments ...string) (string, error) {
+	cmd := exec.Command("vagrant", arguments...)
+	cmd.Dir = s.vagrantDir
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return "", err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return "", err
+	}
+
+	var buffer bytes.Buffer
+
+	// Combine STDOUT and STDERR in a single stream and then duplicate it
+	// in order to to print it while outputting and then at the end.
+	reader := io.TeeReader(io.MultiReader(stdout, stderr), &buffer)
+	scanner := bufio.NewScanner(reader)
+
+	go func() {
+		for scanner.Scan() {
+			fmt.Println(scanner.Text())
+		}
+	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return "", err
+	}
+
+	waitErr := cmd.Wait()
+
+	output, err := ioutil.ReadAll(&buffer)
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), waitErr
 }
