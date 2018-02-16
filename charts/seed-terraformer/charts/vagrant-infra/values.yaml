@@ -1,5 +1,0 @@
-# sshPublicKey: sshkey-12345
-
-# workerName: vagrant
-# cloudConfig:
-#   kubeconfig: YXBpVmVyc2lvbjogdjEKY2x1c3RlcnM6Ci0gY2x1c3RlcjoKICAgIGNlcnRpZmljYXRlLW

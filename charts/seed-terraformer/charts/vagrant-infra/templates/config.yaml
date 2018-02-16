@@ -1,1 +1,0 @@
-{{- include "terraformer-common.cloud-config.user-data" .Values -}}

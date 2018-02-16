@@ -135,7 +135,11 @@ func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
 			workers = append(workers, worker.Worker)
 		}
 	case gardenv1beta1.CloudProviderVagrant:
-		workerNames = append(workerNames, "vagrant")
+		workers = append(workers, gardenv1beta1.Worker{
+			Name:          "vagrant",
+			AutoScalerMax: 1,
+			AutoScalerMin: 1,
+		})
 	}
 
 	return workers

@@ -24,5 +24,6 @@ func (b *OpenStackBotanist) GenerateCloudConfigUserDataConfig() *common.CloudCon
 		NetworkPlugin:                "cni",
 		ProvisionCloudProviderConfig: true,
 		WorkerNames:                  b.Shoot.GetWorkerNames(),
+		HostnameOverride:             true,
 	}
 }

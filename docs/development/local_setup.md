@@ -149,19 +149,10 @@ You need to have control over a domain (or subdomain) for which these records wi
 Please provide an *internal domain secret* (see [this](../../example/secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../deployment/configuration.md).
 
 ```bash
-$ mkdir -p dev
-
-$ kubectl apply -f example/namespace-garden.yaml
-namespace "garden" created
-
-$ cp example/secret-internal-domain.yaml dev/secret-internal-domain.yaml
-# <Put your credentials in dev/secret-internal-domain.yaml>
-
-$ kubectl apply -f dev/secret-internal-domain.yaml
-secret "internal-domain-example-com" created
-
 $ make dev-setup
+namespace "garden" created
 namespace "garden-development" created
+secret "internal-domain-unamanaged" created
 deployment "etcd" created
 service "etcd" created
 service "gardener-apiserver" created
@@ -182,15 +173,18 @@ In another terminal, you must launch the Gardener controller manager:
 
 ```bash
 $ make start
-time="2018-01-29T10:18:37+02:00" level=info msg="Starting Gardener controller manager..."
-time="2018-01-29T10:18:38+02:00" level=info msg="Gardener controller manager HTTP server started (serving on 0.0.0.0:2718)"
-time="2018-01-29T10:18:38+02:00" level=info msg="Found default domain secret default-domain for domain 192.168.99.100.nip.io."
-time="2018-01-29T10:18:38+02:00" level=info msg="Found internal domain secret internal-domain-nip-io for domain 192.168.99.100.nip.io."
-time="2018-01-29T10:18:38+02:00" level=info msg="Successfully bootstrapped the Gardener cluster."
-time="2018-01-29T10:18:38+02:00" level=info msg="Gardener controller manager (version 0.1.0) initialized."
-time="2018-01-29T10:18:38+02:00" level=info msg="Watching all namespaces for Shoot resources..."
-time="2018-01-29T10:18:38+02:00" level=info msg="Shoot controller initialized."
-time="2018-01-29T10:18:38+02:00" level=info msg="Seed controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="Starting Gardener controller manager..."
+time="2018-02-20T13:24:39+02:00" level=info msg="Gardener controller manager HTTP server started (serving on 0.0.0.0:2718)"
+time="2018-02-20T13:24:39+02:00" level=info msg="Found internal domain secret internal-domain-unamanaged for domain nip.io."
+time="2018-02-20T13:24:39+02:00" level=info msg="Successfully bootstrapped the Garden cluster."
+time="2018-02-20T13:24:39+02:00" level=info msg="Gardener controller manager (version 0.2.0) initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="Quota controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="CloudProfile controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="CrossSecretBinding controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="Watching all namespaces for Shoot resources..."
+time="2018-02-20T13:24:39+02:00" level=info msg="Shoot controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="Seed controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="PrivateSecretBinding controller initialized."
 ```
 
 :information_source: Your username is inferred from the user you are logged in with on your machine. The version is incremented based on the content of the `VERSION` file. The version is important for the Gardener in order to identify which Gardener version has last operated a Shoot cluster.
@@ -215,32 +209,33 @@ In a new terminal
 ```bash
 $ make dev-setup-vagrant
 cloudprofile "vagrant" created
+secret "dev-vagrant" created
 privatesecretbinding "core-vagrant" created
-secret "core-vagrant" created
 Cluster "gardener-dev" set.
 User "gardener-dev" set.
 Context "gardener-dev" modified.
 Switched to context "gardener-dev".
 secret "seed-vagrant-dev" created
 seed "vagrant-dev" created
-secret "internal-domain-unamanaged" created
 
-$ make dev-vagrant
+# Run the gardener-vagrant-provider
+$ make start-vagrant
 2018/02/14 10:53:34 Listening on :3777
 2018/02/14 10:53:34 Vagrant directory /Users/foo/go/src/github.com/gardener/gardener/vagrant
+2018/02/14 10:53:34 user-data path /Users/foo/git/go/src/github.com/gardener/gardener/dev/user-data
 ```
 
-`make dev-setup` automatically configures `minikube` to serve as a Seed cluster. You can create the Shoot cluster by running
+`make dev-setup-vagrant` automatically configures `minikube` to serve as a Seed cluster. You can create the Shoot cluster by running
 
 ```bash
-$ kubect apply -f dev/shoot-vagrant.yaml
+$ kubectl apply -f dev/shoot-vagrant.yaml
 shoot "vagrant" created
 ```
 
 When the Shoot API server is created you can download the `kubeconfig` for it and access it:
 
 ```bash
-$ kubectl --namespace shoot-garden-core-vagrant get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > shoot-kubeconfig
+$ kubectl --namespace shoot-development-vagrant get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > shoot-kubeconfig
 
 # Depending on your Internet speed, it can take some time, before your node reports a READY status.
 $ kubectl --kubeconfig shoot-kubeconfig get nodes
@@ -248,11 +243,21 @@ NAME                    STATUS    ROLES     AGE       VERSION
 192.168.99.201.nip.io   Ready     node      1m        v1.9.1
 ```
 
+> Note: It is required that your Minikube has network connectivity to the vagrant created nodes.
+
 For additional debugging on your vagrant node you can `ssh` into it
 
 ```bash
 $ cd vagrant
 $ vagrant ssh
+```
+
+To delete the shoot cluster
+
+```bash
+$ ./hack/delete-shoot vagrant garden-development
+shoot "vagrant" deleted
+shoot "vagrant" patched
 ```
 
 ## Additional information

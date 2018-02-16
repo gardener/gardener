@@ -25,6 +25,10 @@ IMAGE_TAG                          := $(shell cat VERSION)
 dev-setup:
 	@./hack/dev-setup
 
+.PHONY: dev-setup-vagrant
+dev-setup-vagrant:
+	@./hack/dev-setup-vagrant
+
 .PHONY: start-api
 start-api:
 	@go run cmd/gardener-apiserver/main.go \

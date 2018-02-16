@@ -15,13 +15,14 @@
 # limitations under the License.
 
 DEV_DIR=$(dirname "${0}")/../dev
+EXAMPLE_DIR=$(dirname "${0}")/../example
 MINIKUBE_IP=$(minikube ip)
 IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
-kubectl apply -f example/cloudprofile-vagrant.yaml
-kubectl apply -f example/privatesecretbinding-core-vagrant.yaml
-kubectl apply -f example/secret-core-vagrant.yaml
+kubectl apply -f ${EXAMPLE_DIR}/cloudprofile-vagrant.yaml
+kubectl apply -f ${EXAMPLE_DIR}/secret-dev-vagrant.yaml
+kubectl apply -f ${EXAMPLE_DIR}/privatesecretbinding-core-vagrant.yaml
 
 kubectl config set-cluster gardener-dev \
   --kubeconfig ${DEV_DIR}/vagrant-kubeconfig \
@@ -43,10 +44,19 @@ kubectl config set-context gardener-dev \
 kubectl config use-context gardener-dev \
   --kubeconfig ${DEV_DIR}/vagrant-kubeconfig
 
-kubectl delete secret -n garden seed-vagrant-dev 2> /dev/null
-kubectl create secret -n garden generic seed-vagrant-dev --from-file=kubeconfig=dev/vagrant-kubeconfig
+# It's safer to use the system-provided base64
+VAGRANT_KUBECONFIG=$(/usr/bin/base64 -b 0 ${DEV_DIR}/vagrant-kubeconfig)
 
 cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: seed-vagrant-dev
+  namespace: garden
+type: Opaque
+data:
+  kubeconfig: ${VAGRANT_KUBECONFIG}
+---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Seed
 metadata:
@@ -63,19 +73,6 @@ spec:
     nodes: 10.240.0.0/16
     pods: 10.241.128.0/17
     services: 10.241.0.0/17
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: internal-domain-unamanaged
-  namespace: garden
-  labels:
-    garden.sapcloud.io/role: internal-domain
-  annotations:
-    dns.garden.sapcloud.io/provider: unmanaged
-    dns.garden.sapcloud.io/domain: nip.io
-    dns.garden.sapcloud.io/hostedZoneID: ABCDEFG
-type: Opaque
 EOF
 
 cat <<EOF > ${DEV_DIR}/shoot-vagrant.yaml
@@ -83,7 +80,7 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
 metadata:
   name: vagrant
-  namespace: garden-core
+  namespace: garden-development
 spec:
   cloud:
     profile: vagrant
@@ -102,6 +99,12 @@ spec:
   dns:
     provider: unmanaged
     domain: ${MINIKUBE_IP}.nip.io
+  maintenance:
+    timeWindow:
+      begin: 220000+0100
+      end: 230000+0100
+    autoUpdate:
+      kubernetesVersion: true
   addons:
     cluster-autoscaler:
       enabled: false

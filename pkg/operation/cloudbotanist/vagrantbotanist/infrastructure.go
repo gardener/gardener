@@ -16,43 +16,39 @@ package vagrantbotanist
 
 import (
 	"fmt"
+
 	"path/filepath"
 
-	pb "github.com/gardener/gardener/pkg/vagrantprovider"
-
 	"github.com/gardener/gardener/pkg/client/vagrant"
-	"golang.org/x/net/context"
-
 	"github.com/gardener/gardener/pkg/operation/common"
+	pb "github.com/gardener/gardener/pkg/vagrantprovider"
+	"golang.org/x/net/context"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DeployInfrastructure talks to the gardener-vagrant-provider which creates the nodes.
 func (b *VagrantBotanist) DeployInfrastructure() error {
 
-	if err := b.Operation.InitializeSeedClients(); err != nil {
-		return nil
-	}
-
-	chart, err := b.Operation.ChartSeedRenderer.Render(
-		filepath.Join(common.ChartPath, "seed-terraformer", "charts", "vagrant-infra"),
-		"shoot-cloud-config",
-		"dummy",
-		b.generateTerraformInfraConfig())
+	// TODO: use b.Operation.ComputeDownloaderCloudConfig("vagrant")
+	// At this stage we don't have the shoot api server
+	chart, err := b.Operation.ChartSeedRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, map[string]interface{}{
+		"kubeconfig": string(b.Operation.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
+		"secretName": b.Operation.Shoot.ComputeCloudConfigSecretName("vagrant"),
+	})
 	if err != nil {
 		return err
 	}
 
 	var cloudConfig = ""
 	for fileName, chartFile := range chart.Files {
-		if fileName == "vagrant-infra/templates/config.yaml" {
+		if fileName == "downloader/templates/cloud-config.yaml" {
 			cloudConfig = chartFile
 		}
-
 	}
 
 	client, conn, err := vagrant.New(fmt.Sprintf(b.Shoot.Info.Spec.Cloud.Vagrant.Endpoint))
 	if err != nil {
-		return nil
+		return err
 	}
 	defer conn.Close()
 	_, err = client.Start(context.Background(), &pb.StartRequest{
@@ -67,31 +63,13 @@ func (b *VagrantBotanist) DeployInfrastructure() error {
 func (b *VagrantBotanist) DestroyInfrastructure() error {
 	client, conn, err := vagrant.New(fmt.Sprintf(b.Shoot.Info.Spec.Cloud.Vagrant.Endpoint))
 	if err != nil {
-		return nil
+		return err
 	}
 	defer conn.Close()
 	_, err = client.Delete(context.Background(), &pb.DeleteRequest{
 		Id: 1,
 	})
 	return nil
-}
-
-// generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
-// and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *VagrantBotanist) generateTerraformInfraConfig() map[string]interface{} {
-	var (
-		sshSecret                   = b.Secrets["ssh-keypair"]
-		cloudConfigDownloaderSecret = b.Secrets["cloud-config-downloader"]
-	)
-
-	return map[string]interface{}{
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
-		// TODO Fix this
-		"workerName": "vagrant",
-		"cloudConfig": map[string]interface{}{
-			"kubeconfig": string(cloudConfigDownloaderSecret.Data["kubeconfig"]),
-		},
-	}
 }
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.

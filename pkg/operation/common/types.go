@@ -159,4 +159,5 @@ type CloudConfigUserDataConfig struct {
 	KubeletParameters            []string
 	NetworkPlugin                string
 	WorkerNames                  []string
+	HostnameOverride             bool
 }
