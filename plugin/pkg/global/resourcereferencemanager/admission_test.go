@@ -94,6 +94,9 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName,
 					Namespace: namespace,
 				},
+				Spec: garden.QuotaSpec{
+					Scope: garden.QuotaScopeProject,
+				},
 			}
 			secretBinding = garden.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
@@ -195,6 +198,68 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should pass because exact one quota per scope is referenced", func() {
+				quotaName2 := "quota-2"
+				quota2 := garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName2,
+						Namespace: namespace,
+					},
+					Spec: garden.QuotaSpec{
+						Scope: garden.QuotaScopeSecret,
+					},
+				}
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				quota2Ref := corev1.ObjectReference{
+					Name:      quotaName2,
+					Namespace: namespace,
+				}
+				quotaRefList := crossSecretBinding.Quotas
+				quotaRefList = append(quotaRefList, quota2Ref)
+				crossSecretBinding.Quotas = quotaRefList
+
+				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because more than one quota of the same scope is referenced", func() {
+				quotaName2 := "quota-2"
+				quota2 := garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName2,
+						Namespace: namespace,
+					},
+					Spec: garden.QuotaSpec{
+						Scope: garden.QuotaScopeProject,
+					},
+				}
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				quota2Ref := corev1.ObjectReference{
+					Name:      quotaName2,
+					Namespace: namespace,
+				}
+				quotaRefList := crossSecretBinding.Quotas
+				quotaRefList = append(quotaRefList, quota2Ref)
+				crossSecretBinding.Quotas = quotaRefList
+
+				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
 
 				err := admissionHandler.Admit(attrs)
 
