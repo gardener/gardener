@@ -168,7 +168,7 @@ apiservice "v1beta1.garden.sapcloud.io" created
 Next, you need to run the Gardener API server and the Gardener controller manager using rules in the `Makefile`.
 
 ```bash
-$ make dev-apiserver
+$ make start-api
 [restful] 2018/02/01 15:39:43 log.go:33: [restful/swagger] listing is available at https:///swaggerapi
 [restful] 2018/02/01 15:39:43 log.go:33: [restful/swagger] https:///swaggerui/ is mapped to folder /swagger-ui/
 I0201 15:39:43.750573   84958 serve.go:89] Serving securely on [::]:8443
@@ -177,7 +177,7 @@ I0201 15:39:43.750573   84958 serve.go:89] Serving securely on [::]:8443
 In another terminal, you must launch the Gardener controller manager:
 
 ```bash
-$ make dev
+$ make start
 time="2018-01-29T10:18:37+02:00" level=info msg="Starting Gardener controller manager..."
 time="2018-01-29T10:18:38+02:00" level=info msg="Gardener controller manager HTTP server started (serving on 0.0.0.0:2718)"
 time="2018-01-29T10:18:38+02:00" level=info msg="Found default domain secret default-domain for domain 192.168.99.100.nip.io."
