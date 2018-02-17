@@ -16,6 +16,7 @@ type Config struct {
 	EscapeHTML                    bool
 	SortMapKeys                   bool
 	UseNumber                     bool
+	DisallowUnknownFields         bool
 	TagKey                        string
 	OnlyTaggedField               bool
 	ValidateJsonRawMessage        bool
@@ -60,30 +61,40 @@ var ConfigFastest = Config{
 
 // Froze forge API from config
 func (cfg Config) Froze() API {
-	// TODO: cache frozen config
-	frozenConfig := &frozenConfig{
+	api := &frozenConfig{
 		sortMapKeys:                   cfg.SortMapKeys,
 		indentionStep:                 cfg.IndentionStep,
 		objectFieldMustBeSimpleString: cfg.ObjectFieldMustBeSimpleString,
 		onlyTaggedField:               cfg.OnlyTaggedField,
+		disallowUnknownFields:         cfg.DisallowUnknownFields,
 		streamPool:                    make(chan *Stream, 16),
 		iteratorPool:                  make(chan *Iterator, 16),
 	}
-	frozenConfig.initCache()
+	api.initCache()
 	if cfg.MarshalFloatWith6Digits {
-		frozenConfig.marshalFloatWith6Digits()
+		api.marshalFloatWith6Digits()
 	}
 	if cfg.EscapeHTML {
-		frozenConfig.escapeHTML()
+		api.escapeHTML()
 	}
 	if cfg.UseNumber {
-		frozenConfig.useNumber()
+		api.useNumber()
 	}
 	if cfg.ValidateJsonRawMessage {
-		frozenConfig.validateJsonRawMessage()
+		api.validateJsonRawMessage()
 	}
-	frozenConfig.configBeforeFrozen = cfg
-	return frozenConfig
+	api.configBeforeFrozen = cfg
+	return api
+}
+
+func (cfg Config) frozeWithCacheReuse() *frozenConfig {
+	api := getFrozenConfigFromCache(cfg)
+	if api != nil {
+		return api
+	}
+	api = cfg.Froze().(*frozenConfig)
+	addFrozenConfigToCache(cfg, api)
+	return api
 }
 
 func (cfg *frozenConfig) validateJsonRawMessage() {
@@ -229,7 +240,7 @@ func (cfg *frozenConfig) MarshalIndent(v interface{}, prefix, indent string) ([]
 	}
 	newCfg := cfg.configBeforeFrozen
 	newCfg.IndentionStep = len(indent)
-	return newCfg.Froze().Marshal(v)
+	return newCfg.frozeWithCacheReuse().Marshal(v)
 }
 
 func (cfg *frozenConfig) UnmarshalFromString(str string, v interface{}) error {

@@ -13,6 +13,7 @@ type frozenConfig struct {
 	indentionStep                 int
 	objectFieldMustBeSimpleString bool
 	onlyTaggedField               bool
+	disallowUnknownFields         bool
 	decoderCache                  sync.Map
 	encoderCache                  sync.Map
 	extensions                    []Extension
@@ -24,7 +25,6 @@ func (cfg *frozenConfig) initCache() {
 	cfg.decoderCache = sync.Map{}
 	cfg.encoderCache = sync.Map{}
 }
-
 
 func (cfg *frozenConfig) addDecoderToCache(cacheKey reflect.Type, decoder ValDecoder) {
 	cfg.decoderCache.Store(cacheKey, decoder)
@@ -48,4 +48,18 @@ func (cfg *frozenConfig) getEncoderFromCache(cacheKey reflect.Type) ValEncoder {
 		return encoder.(ValEncoder)
 	}
 	return nil
+}
+
+var cfgCache = &sync.Map{}
+
+func getFrozenConfigFromCache(cfg Config) *frozenConfig {
+	obj, found := cfgCache.Load(cfg)
+	if found {
+		return obj.(*frozenConfig)
+	}
+	return nil
+}
+
+func addFrozenConfigToCache(cfg Config, frozenConfig *frozenConfig) {
+	cfgCache.Store(cfg, frozenConfig)
 }

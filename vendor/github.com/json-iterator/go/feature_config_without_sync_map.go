@@ -13,6 +13,7 @@ type frozenConfig struct {
 	indentionStep                 int
 	objectFieldMustBeSimpleString bool
 	onlyTaggedField               bool
+	disallowUnknownFields         bool
 	cacheLock                     *sync.RWMutex
 	decoderCache                  map[reflect.Type]ValDecoder
 	encoderCache                  map[reflect.Type]ValEncoder
@@ -51,4 +52,20 @@ func (cfg *frozenConfig) getEncoderFromCache(cacheKey reflect.Type) ValEncoder {
 	encoder, _ := cfg.encoderCache[cacheKey].(ValEncoder)
 	cfg.cacheLock.RUnlock()
 	return encoder
+}
+
+var cfgCacheLock = &sync.RWMutex{}
+var cfgCache = map[Config]*frozenConfig{}
+
+func getFrozenConfigFromCache(cfg Config) *frozenConfig {
+	cfgCacheLock.RLock()
+	frozenConfig := cfgCache[cfg]
+	cfgCacheLock.RUnlock()
+	return frozenConfig
+}
+
+func addFrozenConfigToCache(cfg Config, frozenConfig *frozenConfig) {
+	cfgCacheLock.Lock()
+	cfgCache[cfg] = frozenConfig
+	cfgCacheLock.Unlock()
 }
