@@ -53,26 +53,12 @@ images:
 - name: calico-node
   repository: quay.io/calico/node
   tag: v3.0.2
-  versions: ">= 1.7"
 - name: calico-cni
   repository: quay.io/calico/cni
   tag: v2.0.0
-  versions: ">= 1.7"
 - name: calico-typha
   repository: quay.io/calico/typha
   tag: v0.6.1
-  versions: ">= 1.7"
-- name: calico-node
-  repository: quay.io/calico/node
-  tag: v2.4.1
-  versions: "= 1.6"
-- name: calico-cni
-  repository: quay.io/calico/cni
-  tag: v1.11.0
-- name: calico-typha
-  repository: not-used
-  tag: not-used
-  versions: "= 1.6"
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.2.0"

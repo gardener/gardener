@@ -1,7 +1,3 @@
-{{- if semverCompare ">= 1.7" .Capabilities.KubeVersion.GitVersion -}}
-# TODO: update to calico 3.0
-# Calico Version v2.6.5
-# https://docs.projectcalico.org/v2.6/releases#v2.6.5
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -504,5 +500,3 @@ spec:
     kind: NetworkPolicy
     plural: networkpolicies
     singular: networkpolicy
-
-{{- end -}}

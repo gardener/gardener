@@ -23,6 +23,8 @@ import (
 )
 
 // GenerateCloudProviderConfig generates the OpenStack cloud provider config.
+// See this for more details:
+// https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/openstack/openstack.go
 func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 	cloudConfig := "cloud_config"
 	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(cloudConfig)

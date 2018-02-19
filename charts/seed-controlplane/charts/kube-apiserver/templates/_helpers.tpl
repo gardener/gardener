@@ -5,12 +5,8 @@
 {{- end -}}
 
 {{- define "kube-apiserver.runtimeConfig" }}
-{{- if semverCompare "<= 1.7" .Values.kubernetesVersion }}
-- --runtime-config=batch/v2alpha1=true,{{ if .Values.runtimeConfig }}{{ range $config, $enabled := .Values.runtimeConfig }}{{ $config }}={{ $enabled }},{{ end }}{{ end }}
-{{- else }}
 {{- if .Values.runtimeConfig }}
 - --runtime-config={{ range $config, $enabled := .Values.runtimeConfig }}{{ $config }}={{ $enabled }},{{ end }}
-{{- end }}
 {{- end }}
 {{- end -}}
 

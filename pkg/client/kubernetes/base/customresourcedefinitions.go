@@ -14,28 +14,7 @@
 
 package kubernetesbase
 
-import (
-	"encoding/json"
-
-	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
-	apiextensions_v1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-)
-
 var crdPath = []string{"apis", "apiextensions.k8s.io", "v1beta1", "customresourcedefinitions"}
-
-// GetCRD returns a CustomResourceDefinition object. For the sake of simplicity, we do not
-// use the APIExtensions client.
-func (c *Client) GetCRD(name string) (*mapping.CustomResourceDefinition, error) {
-	var crd apiextensions_v1beta1.CustomResourceDefinition
-	body, err := c.restClient.Get().AbsPath(crdPath[0], crdPath[1], crdPath[2], crdPath[3], name).Do().Raw()
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(body, &crd); err != nil {
-		return nil, err
-	}
-	return mapping.ApiextensionsV1beta1CustomResourceDefinition(crd), nil
-}
 
 // CleanupCRDs deletes all the TPRs/CRDs in the cluster other than those stored in the
 // exceptions map <exceptions>.

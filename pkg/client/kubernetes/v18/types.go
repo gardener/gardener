@@ -15,7 +15,7 @@
 package kubernetesv18
 
 import (
-	kubernetesv17 "github.com/gardener/gardener/pkg/client/kubernetes/v17"
+	kubernetesbase "github.com/gardener/gardener/pkg/client/kubernetes/base"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +28,8 @@ var (
 	}
 )
 
-// Client inherits all the attributes and methods of the v1.7 client.
+// Client inherits all the attributes and methods of the base client.
 // Please see the documentation of the base client for further details.
 type Client struct {
-	*kubernetesv17.Client
+	*kubernetesbase.Client
 }

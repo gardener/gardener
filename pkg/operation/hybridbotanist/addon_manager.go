@@ -115,8 +115,7 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 				"networkPlugin": userDataConfig.NetworkPlugin,
 				"parameters":    userDataConfig.KubeletParameters,
 			},
-			"nonMasqueradeCIDR": common.ComputeNonMasqueradeCIDR(serviceNetwork),
-			"version":           b.Shoot.Info.Spec.Kubernetes.Version,
+			"version": b.Shoot.Info.Spec.Kubernetes.Version,
 		},
 		"images": map[string]interface{}{
 			"hyperkube": hyperKube.String(),

@@ -150,11 +150,11 @@ func (m metrics) initUserCountMetric() {
 			LabelSelector: usersLabel,
 		})
 		if err != nil {
-			logger.Logger.Info("Unable to fetch user rolebindings. skip metric...")
+			logger.Logger.Info("Unable to fetch user RoleBindings. skip metric...")
 			return
 		}
 		var userCount float64
-		for _, rb := range roleBindings {
+		for _, rb := range roleBindings.Items {
 			for _, subject := range rb.Subjects {
 				if subject.Kind == "User" {
 					userCount++

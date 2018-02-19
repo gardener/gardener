@@ -14,7 +14,7 @@
 
 package kubernetesbase
 
-var daemonsetPath = []string{"apis", "extensions", "v1beta1", "daemonsets"}
+var daemonsetPath = []string{"apis", "apps", "v1beta2", "daemonsets"}
 
 // CleanupDaemonSets deletes all the DaemonSets in the Shoot cluster other than those stored in the
 // exceptions map <exceptions>.

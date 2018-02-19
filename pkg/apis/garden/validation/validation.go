@@ -814,7 +814,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	azurePath := fldPath.Child("azure")
 	if azure != nil {
 		// Currently, we will not allow deployments into existing resource groups or VNets although this functionality
-		// is already implemented, because the Azure cloud provider (v1.7.6) is not cleaning up self-created resources properly.
+		// is already implemented, because the Azure cloud provider (v1.9) is not cleaning up self-created resources properly.
 		// This resources would be orphaned when the cluster will be deleted. We block these cases thereby that the Azure shoot
 		// validation here will fail for those cases.
 		// TODO: remove the following block and uncomment below blocks once deployment into existing resource groups/vnets works properly.

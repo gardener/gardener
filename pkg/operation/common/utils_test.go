@@ -15,8 +15,6 @@
 package common_test
 
 import (
-	"net"
-
 	. "github.com/gardener/gardener/pkg/operation/common"
 
 	. "github.com/onsi/ginkgo"
@@ -70,18 +68,6 @@ var _ = Describe("common", func() {
 				result := DiskSize(size + "Gi")
 
 				Expect(result).To(Equal(sizeInt))
-			})
-		})
-
-		Describe("#ComputeNonMasqueradeCIDR", func() {
-			It("should return a CIDR with network mask 10", func() {
-				ip := "100.64.0.0"
-
-				result := ComputeNonMasqueradeCIDR(gardenv1beta1.CIDR(ip + "/13"))
-				_, _, err := net.ParseCIDR(result)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(result).To(Equal(ip + "/10"))
 			})
 		})
 

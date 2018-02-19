@@ -21,21 +21,21 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var deploymentPath = []string{"apis", "apps", "v1beta1", "deployments"}
+var deploymentPath = []string{"apis", "apps", "v1beta2", "deployments"}
 
 // GetDeployment returns a Deployment object.
 func (c *Client) GetDeployment(namespace, name string) (*mapping.Deployment, error) {
-	deployment, err := c.clientset.AppsV1beta1().Deployments(namespace).Get(name, metav1.GetOptions{})
+	deployment, err := c.Clientset().AppsV1beta2().Deployments(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return mapping.AppsV1beta1Deployment(*deployment), nil
+	return mapping.AppsV1beta2Deployment(*deployment), nil
 }
 
 // ListDeployments returns the list of Deployments in the given <namespace>.
 func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOptions) ([]*mapping.Deployment, error) {
 	var deploymentList []*mapping.Deployment
-	deployments, err := c.clientset.AppsV1beta1().Deployments(namespace).List(listOptions)
+	deployments, err := c.Clientset().AppsV1beta2().Deployments(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -43,14 +43,14 @@ func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOption
 		return deployments.Items[i].ObjectMeta.CreationTimestamp.Before(&deployments.Items[j].ObjectMeta.CreationTimestamp)
 	})
 	for _, deployment := range deployments.Items {
-		deploymentList = append(deploymentList, mapping.AppsV1beta1Deployment(deployment))
+		deploymentList = append(deploymentList, mapping.AppsV1beta2Deployment(deployment))
 	}
 	return deploymentList, nil
 }
 
 // DeleteDeployment deletes a Deployment object.
 func (c *Client) DeleteDeployment(namespace, name string) error {
-	return c.clientset.AppsV1beta1().Deployments(namespace).Delete(name, &defaultDeleteOptions)
+	return c.Clientset().AppsV1beta2().Deployments(namespace).Delete(name, &defaultDeleteOptions)
 }
 
 // CleanupDeployments deletes all the Deployments in the cluster other than those stored in the

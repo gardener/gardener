@@ -41,7 +41,7 @@ var _ = Describe("validation", func() {
 				},
 			}
 			kubernetesVersionConstraint = garden.KubernetesConstraints{
-				Versions: []string{"1.6.4"},
+				Versions: []string{"1.8.4"},
 			}
 			machineType = garden.MachineType{
 				Name:   "machine-type-1",
@@ -77,7 +77,7 @@ var _ = Describe("validation", func() {
 					Name: garden.DNSProvider("some-unsupported-provider"),
 				},
 			}
-			invalidKubernetes  = []string{"1.6"}
+			invalidKubernetes  = []string{"1.8"}
 			invalidMachineType = garden.MachineType{
 
 				Name:   "",

@@ -34,7 +34,7 @@ spec:
         command:
         - /hyperkube
         - apiserver
-        - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,{{ if semverCompare "< 1.8" .Values.kubernetesVersion }}PersistentVolumeLabel,{{ end }}DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota
+        - --admission-control=NamespaceLifecycle,LimitRanger,Initializers,ServiceAccount,NodeRestriction,DefaultStorageClass,DefaultTolerationSeconds,ResourceQuota
         - --advertise-address={{.Values.advertiseAddress}}
         - --allow-privileged=true
         - --anonymous-auth=false
@@ -58,11 +58,7 @@ spec:
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --insecure-bind-address=127.0.0.1
         - --insecure-port=8080
-        {{- if semverCompare "< 1.7" .Values.kubernetesVersion }}
-        - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP,LegacyHostIP
-        {{- else }}
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
-        {{- end }}
         # TODO: enable this once kubelet automatically generates its TLS with selfnodeserver
         # https://kubernetes.io/docs/admin/kubelet-tls-bootstrapping/
         # - "--kubelet-certificate-authority=/srv/kubernetes/apiserver-kubelet/ca.crt"

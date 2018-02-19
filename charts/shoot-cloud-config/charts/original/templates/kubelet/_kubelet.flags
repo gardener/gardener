@@ -30,9 +30,6 @@
 --kube-reserved=memory="1Gi" \
 --network-plugin="{{ required "kubernetes.kubelet.networkPlugin is required" .kubernetes.kubelet.networkPlugin }}" \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
-{{- if semverCompare "< 1.7" (required "kubernetes.version is required" .kubernetes.version)}}
---non-masquerade-cidr="{{ required "kubernetes.nonMasqueradeCIDR is required" .kubernetes.nonMasqueradeCIDR }}" \
-{{- end }}
 --require-kubeconfig=true \
 {{- range $index, $param := .kubernetes.kubelet.parameters }}
 {{$param}} \

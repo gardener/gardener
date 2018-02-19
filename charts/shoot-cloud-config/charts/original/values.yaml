@@ -16,7 +16,6 @@
 #     featureGates: {}
 #       #  CustomResourceValidation: true
 #       #  RotateKubeletServerCertificate: false
-#   nonMasqueradeCIDR: 100.64.0.0/10
 #   version: 1.8.4
 # workers:
 # - name: cpu-worker

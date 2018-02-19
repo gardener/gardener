@@ -19,6 +19,8 @@ import (
 )
 
 // GenerateCloudProviderConfig generates the GCE cloud provider config.
+// See this for more details:
+// https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/gce/gce.go
 func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 	networkName := b.VPCName
 	if networkName == "" {

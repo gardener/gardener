@@ -21,7 +21,7 @@ import (
 
 // GenerateCloudProviderConfig generates the AWS cloud provider config.
 // See this for more details:
-// https://github.com/kubernetes/kubernetes/blob/release-1.7/pkg/cloudprovider/providers/aws/aws.go#L399-L444
+// https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/aws/aws.go
 func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
 	var (
 		vpcID    = "vpc_id"

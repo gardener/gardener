@@ -102,14 +102,6 @@ func DiskSize(size string) int {
 	return i
 }
 
-// ComputeNonMasqueradeCIDR computes the CIDR range which should be non-masqueraded (this is passed as
-// command-line flag to kubelet during its start). This range is the whole service/pod network range.
-func ComputeNonMasqueradeCIDR(cidr gardenv1beta1.CIDR) string {
-	cidrSplit := strings.Split(string(cidr), "/")
-	cidrSplit[1] = "10"
-	return strings.Join(cidrSplit, "/")
-}
-
 // MachineClassHash returns the SHA256-hash value of the <val> struct's representation concatenated with the
 // provided <version>.
 func MachineClassHash(machineClassSpec map[string]interface{}, version string) string {

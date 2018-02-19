@@ -12,8 +12,6 @@ spec:
         versions:
         - 1.9.3
         - 1.8.8
-        - 1.7.12
-        - 1.6.13
       machineImages:
       - name: CoreOS
         image: projects/coreos-cloud/global/images/coreos-stable-1576-5-0-v20180105

@@ -19,8 +19,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/base"
-	"github.com/gardener/gardener/pkg/client/kubernetes/v16"
-	"github.com/gardener/gardener/pkg/client/kubernetes/v17"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v18"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v19"
 	"github.com/gardener/gardener/pkg/logger"
@@ -100,14 +98,6 @@ func newKubernetesClient(config *rest.Config, clientset *kubernetes.Clientset, c
 	}
 	gitVersion := baseClient.Version()
 
-	k8s16, err := utils.CompareVersions(gitVersion, "~", "1.6")
-	if err != nil {
-		return nil, err
-	}
-	k8s17, err := utils.CompareVersions(gitVersion, "~", "1.7")
-	if err != nil {
-		return nil, err
-	}
 	k8s18, err := utils.CompareVersions(gitVersion, "~", "1.8")
 	if err != nil {
 		return nil, err
@@ -118,16 +108,6 @@ func newKubernetesClient(config *rest.Config, clientset *kubernetes.Clientset, c
 	}
 
 	switch {
-	case k8s16:
-		k8sClient, err = kubernetesv16.New(config, clientset, clientConfig)
-		if err != nil {
-			return nil, err
-		}
-	case k8s17:
-		k8sClient, err = kubernetesv17.New(config, clientset, clientConfig)
-		if err != nil {
-			return nil, err
-		}
 	case k8s18:
 		k8sClient, err = kubernetesv18.New(config, clientset, clientConfig)
 		if err != nil {

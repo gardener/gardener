@@ -21,12 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var replicasetPath = []string{"apis", "extensions", "v1beta1", "replicasets"}
+var replicasetPath = []string{"apis", "apps", "v1beta2", "replicasets"}
 
 // ListReplicaSets returns the list of ReplicaSets in the given <namespace>.
 func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOptions) ([]*mapping.ReplicaSet, error) {
 	var replicasetList []*mapping.ReplicaSet
-	replicasets, err := c.clientset.ExtensionsV1beta1().ReplicaSets(namespace).List(listOptions)
+	replicasets, err := c.Clientset().AppsV1beta2().ReplicaSets(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -34,14 +34,14 @@ func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOption
 		return replicasets.Items[i].ObjectMeta.CreationTimestamp.Before(&replicasets.Items[j].ObjectMeta.CreationTimestamp)
 	})
 	for _, replicaset := range replicasets.Items {
-		replicasetList = append(replicasetList, mapping.ExtensionsV1beta1ReplicaSet(replicaset))
+		replicasetList = append(replicasetList, mapping.AppsV1beta2ReplicaSet(replicaset))
 	}
 	return replicasetList, nil
 }
 
 // DeleteReplicaSet deletes a ReplicaSet object.
 func (c *Client) DeleteReplicaSet(namespace, name string) error {
-	return c.clientset.ExtensionsV1beta1().ReplicaSets(namespace).Delete(name, &defaultDeleteOptions)
+	return c.Clientset().AppsV1beta2().ReplicaSets(namespace).Delete(name, &defaultDeleteOptions)
 }
 
 // CleanupReplicaSets deletes all the ReplicaSets in the cluster other than those stored in the

@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
 	batch_v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -93,11 +94,8 @@ type Client interface {
 	// Nodes
 	ListNodes(metav1.ListOptions) (*corev1.NodeList, error)
 
-	// TPRs / CRDs
-	GetCRD(string) (*mapping.CustomResourceDefinition, error)
-
 	// RoleBindings
-	ListRoleBindings(string, metav1.ListOptions) ([]*mapping.RoleBinding, error)
+	ListRoleBindings(string, metav1.ListOptions) (*rbacv1.RoleBindingList, error)
 
 	// Arbitrary manifests
 	Apply([]byte) error

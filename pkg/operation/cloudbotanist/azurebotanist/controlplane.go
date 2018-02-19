@@ -23,7 +23,8 @@ import (
 )
 
 // GenerateCloudProviderConfig returns a cloud provider config for the Azure cloud provider
-// as defined here: https://github.com/kubernetes/kubernetes/blob/release-1.7/pkg/cloudprovider/providers/azure/azure.go#L58.
+// See this for more details:
+// https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/azure/azure.go
 func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 	var (
 		resourceGroupName   = "resourceGroupName"
