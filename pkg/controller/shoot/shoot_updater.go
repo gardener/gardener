@@ -25,6 +25,7 @@ import (
 // UpdaterInterface is an interface used to update the Shoot manifest.
 // For any use other than testing, clients should create an instance using NewRealUpdater.
 type UpdaterInterface interface {
+	UpdateShootSpec(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
 	UpdateShootStatus(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
 	UpdateShootStatusIfNoOperation(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
 }
@@ -39,32 +40,42 @@ type realUpdater struct {
 	shootLister     gardenlisters.ShootLister
 }
 
+// UpdateShootSpec updates the Shoot manifest. Implementations are required to retry on conflicts,
+// but fail on other errors. If the returned error is nil Shoot's manifest has been successfully set.
+func (u *realUpdater) UpdateShootSpec(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update, func(shoot *gardenv1beta1.Shoot) bool { return false })
+}
+
 // UpdateShootStatus updates the Shoot manifest. Implementations are required to retry on conflicts,
 // but fail on other errors. If the returned error is nil Shoot's manifest has been successfully set.
 func (u *realUpdater) UpdateShootStatus(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-	return u.update(shoot, func(shoot *gardenv1beta1.Shoot) bool { return false })
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus, func(shoot *gardenv1beta1.Shoot) bool { return false })
 }
 
 // UpdateShootStatusIfNoOperation updates the Shoot manifest, but retrying is only performed when the status
 // does not indicate a running operations. If the returned error is nil Shoot's manifest has been
 // successfully set.
 func (u *realUpdater) UpdateShootStatusIfNoOperation(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-	return u.update(shoot, operationOngoing)
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus, operationOngoing)
 }
 
-func (u *realUpdater) update(shoot *gardenv1beta1.Shoot, abortRetryFunc func(shoot *gardenv1beta1.Shoot) bool) (*gardenv1beta1.Shoot, error) {
+func (u *realUpdater) update(shoot *gardenv1beta1.Shoot, updateFunc func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error), abortRetryFunc func(*gardenv1beta1.Shoot) bool) (*gardenv1beta1.Shoot, error) {
 	var (
 		newShoot  *gardenv1beta1.Shoot
+		spec      = shoot.Spec
 		status    = shoot.Status
 		updateErr error
 	)
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		shoot.Spec = spec
 		shoot.Status = status
-		newShoot, updateErr = u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus(shoot)
+
+		newShoot, updateErr = updateFunc(shoot)
 		if updateErr == nil {
 			return nil
 		}
+
 		updated, err := u.shootLister.Shoots(shoot.Namespace).Get(shoot.Name)
 		if err == nil {
 			shoot = updated.DeepCopy()

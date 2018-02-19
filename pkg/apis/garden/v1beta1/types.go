@@ -1159,6 +1159,10 @@ const (
 	ShootEventDeleted = "DeletedShoot"
 	// ShootEventDeleteError indicates that the a Delete operation failed.
 	ShootEventDeleteError = "DeleteError"
+	// ShootEventMaintenanceDone indicates that a maintenance operation has been performed.
+	ShootEventMaintenanceDone = "MaintenanceDone"
+	// ShootEventMaintenanceError indicates that a maintenance operation has failed.
+	ShootEventMaintenanceError = "MaintenanceError"
 )
 
 const (

@@ -218,6 +218,21 @@ func (s *Shoot) GetNodeNetwork() gardenv1beta1.CIDR {
 	return ""
 }
 
+// GetMachineImageName returns the name of the used machine image.
+func (s *Shoot) GetMachineImageName() gardenv1beta1.MachineImageName {
+	switch s.CloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return s.Info.Spec.Cloud.AWS.MachineImage.Name
+	case gardenv1beta1.CloudProviderAzure:
+		return s.Info.Spec.Cloud.Azure.MachineImage.Name
+	case gardenv1beta1.CloudProviderGCP:
+		return s.Info.Spec.Cloud.GCP.MachineImage.Name
+	case gardenv1beta1.CloudProviderOpenStack:
+		return s.Info.Spec.Cloud.OpenStack.MachineImage.Name
+	}
+	return ""
+}
+
 // ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.
 func (s *Shoot) ClusterAutoscalerEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.ClusterAutoscaler != nil && s.Info.Spec.Addons.ClusterAutoscaler.Enabled

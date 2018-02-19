@@ -16,8 +16,11 @@ package helper
 
 import (
 	"errors"
+	"fmt"
+	"sort"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -155,4 +158,108 @@ func GetCondition(conditions []gardenv1beta1.Condition, conditionType gardenv1be
 // ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.
 func ConditionsNeedUpdate(existingConditions, newConditions []gardenv1beta1.Condition) bool {
 	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
+}
+
+// DetermineMachineImage finds the cloud specific machine image in the <cloudProfile> for the given <name> and
+// region. In case it does not find a machine image with the <name>, it returns false. Otherwise, true and the
+// cloud-specific machine image object will be returned.
+func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv1beta1.MachineImageName, region string) (bool, interface{}, error) {
+	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
+	if err != nil {
+		return false, nil, err
+	}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		for _, image := range cloudProfile.Spec.AWS.Constraints.MachineImages {
+			if image.Name == name {
+				for _, regionMapping := range image.Regions {
+					if regionMapping.Name == region {
+						return true, &gardenv1beta1.AWSMachineImage{
+							Name: name,
+							AMI:  regionMapping.AMI,
+						}, nil
+					}
+				}
+			}
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		for _, image := range cloudProfile.Spec.Azure.Constraints.MachineImages {
+			if image.Name == name {
+				ptr := image
+				return true, &ptr, nil
+			}
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		for _, image := range cloudProfile.Spec.GCP.Constraints.MachineImages {
+			if image.Name == name {
+				ptr := image
+				return true, &ptr, nil
+			}
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		for _, image := range cloudProfile.Spec.OpenStack.Constraints.MachineImages {
+			if image.Name == name {
+				ptr := image
+				return true, &ptr, nil
+			}
+		}
+	default:
+		return false, nil, fmt.Errorf("unknown cloud provider %s", cloudProvider)
+	}
+
+	return false, nil, nil
+}
+
+// DetermineLatestKubernetesVersion finds the latest Kubernetes patch version in the <cloudProfile> compared
+// to the given <currentVersion>. In case it does not find a newer patch version, it returns false. Otherwise,
+// true and the found version will be returned.
+func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, string, error) {
+	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
+	if err != nil {
+		return false, "", err
+	}
+
+	var (
+		versions      = []string{}
+		newerVersions = []string{}
+	)
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		for _, version := range cloudProfile.Spec.AWS.Constraints.Kubernetes.Versions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		for _, version := range cloudProfile.Spec.Azure.Constraints.Kubernetes.Versions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		for _, version := range cloudProfile.Spec.GCP.Constraints.Kubernetes.Versions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		for _, version := range cloudProfile.Spec.OpenStack.Constraints.Kubernetes.Versions {
+			versions = append(versions, version)
+		}
+	default:
+		return false, "", fmt.Errorf("unknown cloud provider %s", cloudProvider)
+	}
+
+	for _, version := range versions {
+		ok, err := utils.CompareVersions(version, "~", currentVersion)
+		if err != nil {
+			return false, "", err
+		}
+		if version != currentVersion && ok {
+			newerVersions = append(newerVersions, version)
+		}
+	}
+
+	if len(newerVersions) > 0 {
+		sort.Strings(newerVersions)
+		return true, newerVersions[len(newerVersions)-1], nil
+	}
+
+	return false, "", nil
 }
