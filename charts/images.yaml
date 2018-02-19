@@ -19,9 +19,6 @@ images:
 - name: vpn-seed
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
   tag: "0.2.0"
-- name: auto-node-repair
-  repository: eu.gcr.io/gardener-project/gardener/auto-node-repair
-  tag: "0.1.0"
 - name: aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.1.0"

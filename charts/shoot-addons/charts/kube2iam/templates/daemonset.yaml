@@ -27,6 +27,7 @@ spec:
 {{- end }}
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        origin: gardener
         app: {{ template "name" . }}
         release: {{ .Release.Name }}
     spec:

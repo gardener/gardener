@@ -18,6 +18,7 @@ spec:
         checksum/configmap-sshd: {{ include (print $.Template.BasePath "/vpn-shoot-sshd-configmap.yaml") . | sha256sum }}
         checksum/secret-authorized-keys: {{ include (print $.Template.BasePath "/vpn-shoot-authorized-keys-secret.yaml") . | sha256sum }}
       labels:
+        origin: gardener
         app: vpn-shoot
     spec:
       tolerations:

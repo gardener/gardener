@@ -705,22 +705,6 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			RunsInSeed:                         false,
 		},
 
-		// Secret definition for auto-node-repair
-		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
-					Name: "auto-node-repair",
-				},
-				CommonName:   fmt.Sprintf("%s:monitoring:auto-node-repair", garden.GroupName),
-				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-				IsServerCert: false,
-			},
-			KubeconfigRequired: true,
-			RunsInSeed:         true,
-		},
-
 		// Secret definition for kube-state-metrics
 		ControlPlaneSecret{
 			TLSSecret: TLSSecret{

@@ -26,6 +26,7 @@ spec:
 {{ toYaml .Values.controller.podAnnotations | indent 8}}
       {{- end }}
       labels:
+        origin: gardener
         app: {{ template "name" . }}
         component: "{{ .Values.controller.name }}"
         release: {{ .Release.Name }}

@@ -24,6 +24,7 @@ spec:
   template:
     metadata:
       labels:
+        origin: gardener
         k8s-app: kube-dns
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''

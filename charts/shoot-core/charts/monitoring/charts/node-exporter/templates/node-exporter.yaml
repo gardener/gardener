@@ -40,6 +40,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        origin: gardener
         component: node-exporter
     spec:
       tolerations:

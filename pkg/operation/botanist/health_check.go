@@ -120,7 +120,9 @@ func (b *Botanist) CheckConditionSystemComponentsHealthy(condition *gardenv1beta
 	}
 
 	// Check whether the number of running containers matching the number of actual containers within the pods (i.e., everything is running).
-	podList, err := b.K8sShootClient.ListPods(metav1.NamespaceSystem, metav1.ListOptions{})
+	podList, err := b.K8sShootClient.ListPods(metav1.NamespaceSystem, metav1.ListOptions{
+		LabelSelector: "origin=gardener",
+	})
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchPodListFailed", err.Error())
 	}

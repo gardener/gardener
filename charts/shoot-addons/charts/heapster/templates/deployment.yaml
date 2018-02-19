@@ -15,6 +15,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        origin: gardener
         app: {{ template "fullname" . }}
     spec:
       tolerations:

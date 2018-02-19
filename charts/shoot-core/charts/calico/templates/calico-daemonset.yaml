@@ -119,6 +119,7 @@ spec:
   template:
     metadata:
       labels:
+        origin: gardener
         k8s-app: calico-node
       annotations:
         # This, along with the CriticalAddonsOnly toleration below,
@@ -317,6 +318,7 @@ spec:
   template:
     metadata:
       labels:
+        origin: gardener
         k8s-app: calico-typha
       annotations:
         # This, along with the CriticalAddonsOnly toleration below, marks the pod as a critical

@@ -19,6 +19,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/secret-kube-proxy: {{ include (print $.Template.BasePath "/kube-proxy-secret.yaml") . | sha256sum }}
       labels:
+        origin: gardener
         app: kubernetes
         role: proxy
     spec:

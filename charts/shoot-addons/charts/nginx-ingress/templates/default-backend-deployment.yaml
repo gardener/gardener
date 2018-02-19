@@ -25,6 +25,7 @@ spec:
 {{ toYaml .Values.defaultBackend.podAnnotations | indent 8 }}
     {{- end }}
       labels:
+        origin: gardener
         app: {{ template "name" . }}
         component: "{{ .Values.defaultBackend.name }}"
         release: {{ .Release.Name }}

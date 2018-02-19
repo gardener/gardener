@@ -14,6 +14,7 @@ spec:
   template:
     metadata:
       labels:
+        origin: gardener
         app: {{ template "fullname" . }}-api
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/api-config.yaml") . | sha256sum }}
