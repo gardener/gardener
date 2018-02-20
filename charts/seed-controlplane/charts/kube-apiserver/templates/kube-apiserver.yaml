@@ -53,8 +53,8 @@ spec:
         {{- end }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
-        - --etcd-servers=http://etcd-main-client:2379
-        - --etcd-servers-overrides=/events#http://etcd-events-client:2379
+        - --etcd-servers=http://$(ETCD_MAIN_CLIENT_SERVICE_HOST):$(ETCD_MAIN_CLIENT_SERVICE_PORT)
+        - --etcd-servers-overrides=/events#http://$(ETCD_EVENTS_CLIENT_SERVICE_HOST):$(ETCD_EVENTS_CLIENT_SERVICE_PORT)
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --insecure-bind-address=127.0.0.1
         - --insecure-port=8080

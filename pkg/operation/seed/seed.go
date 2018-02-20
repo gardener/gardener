@@ -92,35 +92,14 @@ func List(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.
 func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector) error {
 	const chartName = "seed-bootstrap"
 
-	kubeStateMetricsImage, err := imageVector.FindImage("kube-state-metrics", k8sGardenClient.Version())
-	if err != nil {
-		return err
-	}
-	addonResizer, err := imageVector.FindImage("addon-resizer", k8sGardenClient.Version())
-	if err != nil {
-		return err
-	}
-
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret)
 	if err != nil {
 		return err
 	}
 
-	return common.ApplyChart(
-		k8sSeedClient,
-		chartrenderer.New(k8sSeedClient),
-		filepath.Join("charts", chartName),
-		chartName,
-		metav1.NamespaceSystem,
-		nil,
-		map[string]interface{}{
-			"cloudProvider": seed.CloudProvider,
-			"images": map[string]interface{}{
-				"kube-state-metrics": kubeStateMetricsImage.String(),
-				"addon-resizer":      addonResizer.String(),
-			},
-		},
-	)
+	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, metav1.NamespaceSystem, nil, map[string]interface{}{
+		"cloudProvider": seed.CloudProvider,
+	})
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The

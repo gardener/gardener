@@ -65,19 +65,15 @@ spec:
       - name: alertmanager
         image: {{ index .Values.images "alertmanager" }}
         imagePullPolicy: IfNotPresent
-        command:
-        - "sh"
-        - "-c"
         args:
-        - /bin/alertmanager
-            -config.file=/etc/alertmanager/config/alertmanager.yaml
-            -web.listen-address=:9093
-            -web.external-url=https://{{.Values.ingress.host}}
-            -mesh.listen-address=:6783
-            -storage.path=/etc/alertmanager/data
-            -mesh.peer="alertmanager-0.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
-            -mesh.peer="alertmanager-1.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
-            -log.level=debug
+        - --config.file=/etc/alertmanager/config/alertmanager.yaml
+        - --web.listen-address=:9093
+        - --web.external-url=https://{{.Values.ingress.host}}
+        - --mesh.listen-address=:6783
+        - --storage.path=/etc/alertmanager/data
+        - --mesh.peer="alertmanager-0.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
+        - --mesh.peer="alertmanager-1.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
+        - --log.level=debug
         env:
         - name: ALERTMANAGER_NAMESPACE
           valueFrom:

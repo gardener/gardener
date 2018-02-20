@@ -740,6 +740,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "Deployment",
+  "title": "Kubernetes Deployments",
   "version": 0
 }

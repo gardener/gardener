@@ -7,7 +7,7 @@ images:
 # Seed controlplane
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.2.15
+  tag: v3.3.1
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
@@ -15,7 +15,7 @@ images:
   tag: "0.1.0"
 - name: kube-addon-manager
   repository: k8s.gcr.io/kube-addon-manager
-  tag: v6.5
+  tag: v8.5
 - name: vpn-seed
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
   tag: "0.2.0"
@@ -26,25 +26,25 @@ images:
 # Monitoring
 - name: alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.9.1
+  tag: v0.14.0
 - name: prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.0.0
+  tag: v2.1.0
 - name: configmap-reloader
   repository: quay.io/coreos/configmap-reload
   tag: v0.0.1
 - name: kube-state-metrics
   repository: quay.io/coreos/kube-state-metrics
-  tag: v1.1.0
+  tag: v1.2.0
 - name: node-exporter
   repository: quay.io/prometheus/node-exporter
-  tag: v0.14.0
+  tag: v0.15.2
 - name: grafana
   repository: grafana/grafana
-  tag: "4.1.1"
+  tag: 5.0.0-beta4
 - name: grafana-watcher
   repository: quay.io/coreos/grafana-watcher
-  tag: v0.0.4
+  tag: v0.0.8
 
 # Shoot core addons
 - name: calico-node
@@ -52,7 +52,7 @@ images:
   tag: v3.0.2
 - name: calico-cni
   repository: quay.io/calico/cni
-  tag: v2.0.0
+  tag: v2.0.1
 - name: calico-typha
   repository: quay.io/calico/typha
   tag: v0.6.1
@@ -61,13 +61,13 @@ images:
   tag: "0.2.0"
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
-  tag: "1.14.7"
+  tag: "1.14.8"
 - name: kube-dns-dnsmasq
   repository: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
-  tag: "1.14.5"
+  tag: "1.14.8"
 - name: kube-dns-sidecar
   repository: k8s.gcr.io/k8s-dns-sidecar-amd64
-  tag: "1.14.5"
+  tag: "1.14.8"
 - name: cluster-proportional-autoscaler
   repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
   tag: "1.1.2"
@@ -75,13 +75,13 @@ images:
 # Shoot optional addons
 - name: heapster
   repository: k8s.gcr.io/heapster
-  tag: v1.5.0
+  tag: v1.5.1
 - name: addon-resizer
   repository: k8s.gcr.io/addon-resizer
-  tag: "1.0"
+  tag: "2.1"
 - name: kubernetes-dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
-  tag: v1.8.2
+  tag: v1.8.3
 - name: kube-lego
   repository: jetstack/kube-lego
   tag: "0.1.5"
@@ -90,7 +90,7 @@ images:
   tag: "0.9.0"
 - name: nginx-ingress-controller
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.10.1"
+  tag: "0.10.2"
 - name: ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
   tag: "0.1.0"
@@ -99,7 +99,7 @@ images:
   tag: v0.0.3
 - name: helm-tiller
   repository: gcr.io/kubernetes-helm/tiller
-  tag: v2.7.2
+  tag: v2.8.1
 - name: monocular-api
   repository: bitnami/monocular-api
   tag: v0.3.1
@@ -116,4 +116,4 @@ images:
   tag: "0.1.0"
 - name: busybox
   repository: busybox
-  tag: "1.27"
+  tag: "1.28"

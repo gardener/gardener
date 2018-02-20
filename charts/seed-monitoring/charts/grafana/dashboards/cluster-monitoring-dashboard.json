@@ -1993,6 +1993,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "Kubernetes Cluster monitoring",
+  "title": "Node Details",
   "version": 3
 }

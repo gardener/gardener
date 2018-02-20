@@ -517,6 +517,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "Pods",
+  "title": "Kubernetes Pods",
   "version": 2
 }

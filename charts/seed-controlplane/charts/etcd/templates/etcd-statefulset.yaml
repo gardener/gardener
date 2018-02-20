@@ -33,7 +33,6 @@ metadata:
     prometheus.io/name: kube-etcd3
 spec:
   type: ClusterIP
-  clusterIP: None
   sessionAffinity: None
   selector:
     app: etcd-statefulset

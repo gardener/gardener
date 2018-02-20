@@ -799,6 +799,6 @@
     ]
   },
   "timezone": "browser",
-  "title": "All Nodes",
+  "title": "Cluster Overview",
   "version": 0
 }

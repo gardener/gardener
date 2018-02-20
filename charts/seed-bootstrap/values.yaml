@@ -1,5 +1,1 @@
 cloudProvider: aws
-
-images:
-  kube-state-metrics: image-repository:image-tag
-  addon-resizer: image-repository:image-tag
