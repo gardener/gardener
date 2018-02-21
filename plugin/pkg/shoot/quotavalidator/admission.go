@@ -15,6 +15,7 @@
 package quotavalidator
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -24,10 +25,11 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	"github.com/golang/glog"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -36,12 +38,22 @@ const (
 	PluginName = "ShootQuotaValidator"
 )
 
+var (
+	quotaMetricNames = [...]v1.ResourceName{
+		garden.QuotaMetricCPU,
+		garden.QuotaMetricGPU,
+		garden.QuotaMetricMemory,
+		garden.QuotaMetricStorageStandard,
+		garden.QuotaMetricStoragePremium,
+		garden.QuotaMetricLoadbalancer}
+)
+
 type quotaWorker struct {
 	garden.Worker
 	// VolumeType is the type of the root volumes.
 	VolumeType string
 	// VolumeSize is the size of the root volume.
-	VolumeSize string
+	VolumeSize resource.Quantity
 }
 
 // Register registers a plugin.
@@ -57,6 +69,7 @@ type RejectShootIfQuotaExceeded struct {
 	shootLister        listers.ShootLister
 	cloudProfileLister listers.CloudProfileLister
 	crossSBLister      listers.CrossSecretBindingLister
+	privateSBLister    listers.PrivateSecretBindingLister
 	quotaLister        listers.QuotaLister
 }
 
@@ -74,6 +87,7 @@ func (h *RejectShootIfQuotaExceeded) SetInternalGardenInformerFactory(f informer
 	h.shootLister = f.Garden().InternalVersion().Shoots().Lister()
 	h.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
 	h.crossSBLister = f.Garden().InternalVersion().CrossSecretBindings().Lister()
+	h.privateSBLister = f.Garden().InternalVersion().PrivateSecretBindings().Lister()
 	h.quotaLister = f.Garden().InternalVersion().Quotas().Lister()
 }
 
@@ -87,6 +101,9 @@ func (h *RejectShootIfQuotaExceeded) ValidateInitialization() error {
 	}
 	if h.crossSBLister == nil {
 		return errors.New("missing crossSecretBinding lister")
+	}
+	if h.privateSBLister == nil {
+		return errors.New("missing privateSecretBinding lister")
 	}
 	if h.quotaLister == nil {
 		return errors.New("missing quota lister")
@@ -105,179 +122,296 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	if a.GetKind().GroupKind() != garden.Kind("Shoot") {
 		return nil
 	}
+	if a.GetSubresource() != "" {
+		return nil
+	}
+
 	shoot, ok := a.GetObject().(*garden.Shoot)
 	if !ok {
 		return apierrors.NewBadRequest("could not convert resource into Shoot object")
 	}
 
-	//TODO support also PrivateSecretBindings
-	// Currently only consider quotas for CrossSecretBindings
-	if shoot.Spec.Cloud.SecretBindingRef.Kind != "CrossSecretBinding" {
-		glog.V(2).Infof("Currently quotas are not supported for %s", shoot.Spec.Cloud.SecretBindingRef.Kind)
+	// Pass if the shoot is intended to get deleted
+	if shoot.DeletionTimestamp != nil && shoot.Annotations[common.ConfirmationDeletionTimestamp] != "" {
 		return nil
 	}
 
-	// retrieve the secret binding
-	crossSBNamespaceLister := h.crossSBLister.CrossSecretBindings(a.GetNamespace())
-	usedCrossSB, err := crossSBNamespaceLister.Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+	quotaReferences, err := h.getShootsQuotaReferences(*shoot)
 	if err != nil {
-		return err
+		return apierrors.NewInternalError(err)
 	}
-	glog.V(2).Infof("CrossSecretBinding %s is referenced in shoot", shoot.Spec.Cloud.SecretBindingRef.Name)
 
-	// retrieve the quota(s) from the secret binding
-	var quotaReferences []garden.CrossReference
-	quotaReferences = usedCrossSB.Quotas
-	if len(quotaReferences) == 0 {
-		glog.V(2).Infof("The CrossSecretBinding with the name %s has no quotas referenced", shoot.Spec.Cloud.SecretBindingRef.Name)
-		return nil
-	}
-	if len(quotaReferences) > 2 {
-		return apierrors.NewBadRequest(fmt.Sprintf("The CrossSecretBinding with the name %s has more than 2 quotas referenced", shoot.Spec.Cloud.SecretBindingRef.Name))
-	}
-	glog.V(2).Infof("CrossSecretBinding has %d quotas for the secret %s", len(quotaReferences), usedCrossSB.SecretRef.Name)
-
-	var tempQuotaScope garden.QuotaScope
-	for _, quotaReference := range quotaReferences {
-
-		result, quotaScope, err := h.isReferencedQuotaExceeded(a, quotaReference.Namespace, quotaReference.Name)
+	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
+	for _, quotaRef := range quotaReferences {
+		exceededMetrics, err := h.isQuotaExceeded(*shoot, quotaRef)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
-		// check that max 1 project and 1 secret quota is referenced
-		if tempQuotaScope == "" {
-			tempQuotaScope = quotaScope
-		} else if quotaScope == tempQuotaScope {
-			return apierrors.NewInternalError(fmt.Errorf("The CrossSecretBinding with the name %s has referenced secrets with the same scope", shoot.Spec.Cloud.SecretBindingRef.Name))
-		}
-		if result {
-			return admission.NewForbidden(a, fmt.Errorf("quota limits exceeded for %v", shoot.Name))
+		if exceededMetrics != nil {
+			var message bytes.Buffer
+			for _, metric := range *exceededMetrics {
+				message.WriteString(metric.String() + " ")
+			}
+			return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message.String()))
 		}
 	}
-
 	return nil
 }
 
-func (h *RejectShootIfQuotaExceeded) isReferencedQuotaExceeded(a admission.Attributes, namespace, name string) (bool, garden.QuotaScope, error) {
-	quotaNamespaceLister := h.quotaLister.Quotas(namespace)
-	usedQuota, err := quotaNamespaceLister.Get(name)
-	if err != nil {
-		return false, "", err
+func (h *RejectShootIfQuotaExceeded) getShootsQuotaReferences(shoot garden.Shoot) ([]v1.ObjectReference, error) {
+	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
+	case "CrossSecretBinding":
+		usedCrossSB, err := h.crossSBLister.
+			CrossSecretBindings(shoot.Namespace).
+			Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+		if err != nil {
+			return nil, err
+		}
+		return usedCrossSB.Quotas, nil
+	case "PrivateSecretBinding":
+		usedPrivateSB, err := h.privateSBLister.
+			PrivateSecretBindings(shoot.Namespace).
+			Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+		if err != nil {
+			return nil, err
+		}
+		return usedPrivateSB.Quotas, nil
 	}
-
-	switch usedQuota.Spec.Scope {
-	case garden.QuotaScopeSecret:
-		result, err := h.isSecretQuotaExceeded(a, *usedQuota)
-		return result, garden.QuotaScopeSecret, err
-	case garden.QuotaScopeProject:
-		result, err := isProjectQuotaExceeded(a, *usedQuota)
-		return result, garden.QuotaScopeProject, err
-	default:
-		return false, "", fmt.Errorf("Incorrect scope %s defined in quota with the name %s in namespace %s", usedQuota.Spec.Scope, name, namespace)
-	}
+	return nil, fmt.Errorf("Unknown binding type %s", shoot.Spec.Cloud.SecretBindingRef.Kind)
 }
 
-func (h *RejectShootIfQuotaExceeded) isSecretQuotaExceeded(a admission.Attributes, quota garden.Quota) (bool, error) {
-	glog.V(2).Infof("Checking secret quota %s", quota.Name)
-
-	// get the metrics of the quota object
-	quotaMetrics := quota.Spec.Metrics
-
-	// calculate the status of the quota object dynamically
-	statusMetrics, nil := determineCurrentStatusSecretQuota(quota)
-
-	// get the metrics that the new shoot cluster will use
-	shoot, ok := a.GetObject().(*garden.Shoot)
-	if !ok {
-		return false, apierrors.NewBadRequest("could not convert resource into Shoot object")
-	}
-	cloudProfile, err := h.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
+func (h *RejectShootIfQuotaExceeded) isQuotaExceeded(shoot garden.Shoot, quotaRef v1.ObjectReference) (*[]v1.ResourceName, error) {
+	quota, err := h.quotaLister.
+		Quotas(quotaRef.Namespace).
+		Get(quotaRef.Name)
 	if err != nil {
-		return false, apierrors.NewBadRequest("could not find referenced cloud profile")
+		return nil, err
 	}
 
-	shootMetrics, err := convertShootWorkersToMetrics(shoot, cloudProfile)
+	allocatedResources, err := h.determineAllocatedResources(*quota, shoot)
 	if err != nil {
-		return false, err
+		return nil, err
+	}
+	requiredResources, err := h.determineRequiredResources(allocatedResources, shoot)
+	if err != nil {
+		return nil, err
 	}
 
-	// check all metrics that are set in the quota object
-	for quotaMetricKey, quotaMetricValue := range quotaMetrics {
-		newStatusValue := statusMetrics[quotaMetricKey]
-		newStatusValue.Add(shootMetrics[quotaMetricKey])
-		// check if new cluster would exceed the current metric
-		if quotaMetricValue.Cmp(newStatusValue) < 0 {
-			glog.V(2).Infof("The quota for %s on shoot %s exceeded; max=%s, new=%s", quotaMetricKey, shoot.Name, quotaMetricValue.String(), newStatusValue.String())
-			return true, nil
+	exceededMetrics := make([]v1.ResourceName, 0)
+	for _, metric := range quotaMetricNames {
+		if _, ok := quota.Spec.Metrics[metric]; !ok {
+			continue
+		}
+		if !hasSufficientQuota(quota.Spec.Metrics[metric], requiredResources[metric]) {
+			exceededMetrics = append(exceededMetrics, metric)
+		}
+	}
+	if len(exceededMetrics) != 0 {
+		return &exceededMetrics, nil
+	}
+	return nil, nil
+}
+
+func (h *RejectShootIfQuotaExceeded) determineAllocatedResources(quota garden.Quota, shoot garden.Shoot) (v1.ResourceList, error) {
+	shoots, err := h.findShootsReferQuota(quota, shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	// Collect the resources which are allocated according to the shoot specs
+	allocatedResources := make(v1.ResourceList)
+	for _, s := range shoots {
+		shootResources, err := h.getShootResources(s)
+		if err != nil {
+			return nil, err
+		}
+		for _, metric := range quotaMetricNames {
+			allocatedResources[metric] = sumQuantity(allocatedResources[metric], shootResources[metric])
 		}
 	}
 
-	// all quota checks passed
-	return false, nil
+	// TODO: We have to determine and add the amount of storage, which is allocated by manually created persistent volumes
+	// and the count of loadbalancer, which are created due to manually created services of type loadbalancer
+
+	return allocatedResources, nil
 }
 
-func determineCurrentStatusSecretQuota(quota garden.Quota) (v1.ResourceList, error) {
-	// TODO get the status dynamically
-	return quota.Status.Metrics, nil
+func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, shoot garden.Shoot) ([]garden.Shoot, error) {
+	var shootsReferQuota []garden.Shoot
+
+	privateSecretBindings, err := h.getPrivateSecretBindingsReferQuota(quota)
+	if err != nil {
+		return nil, err
+	}
+	crossSecretBindings, err := h.getCrossSecretBindingsReferQuota(quota)
+	if err != nil {
+		return nil, err
+	}
+
+	// Find all shoots which are referencing found PrivateSecretBindings
+	for _, binding := range privateSecretBindings {
+		shoots, err := h.shootLister.
+			Shoots(binding.Namespace).
+			List(labels.Everything())
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range shoots {
+			// exclude actual shoot from resource allocation calculation (update case)
+			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
+				continue
+			}
+			if s.Spec.Cloud.SecretBindingRef.Kind == "PrivateSecretBinding" && s.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+				shootsReferQuota = append(shootsReferQuota, *s)
+			}
+		}
+	}
+
+	// Find all shoots which are referencing found CrossSecretBindings
+	for _, binding := range crossSecretBindings {
+		shoots, err := h.shootLister.
+			Shoots(binding.Namespace).
+			List(labels.Everything())
+		if err != nil {
+			return nil, err
+		}
+		for _, s := range shoots {
+			// exclude actual shoot from resource allocation calculation (update case)
+			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
+				continue
+			}
+			if s.Spec.Cloud.SecretBindingRef.Kind == "CrossSecretBinding" && s.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+				shootsReferQuota = append(shootsReferQuota, *s)
+			}
+		}
+	}
+	return shootsReferQuota, nil
 }
 
-func isProjectQuotaExceeded(a admission.Attributes, quota garden.Quota) (bool, error) {
-	//TODO implement
-	return false, nil
+func (h *RejectShootIfQuotaExceeded) getPrivateSecretBindingsReferQuota(quota garden.Quota) ([]garden.PrivateSecretBinding, error) {
+	var privateSBsReferQuota []garden.PrivateSecretBinding
+
+	privateSBs, err := h.privateSBLister.
+		PrivateSecretBindings(v1.NamespaceAll).
+		List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, binding := range privateSBs {
+		for _, quotaRef := range binding.Quotas {
+			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
+				privateSBsReferQuota = append(privateSBsReferQuota, *binding)
+			}
+		}
+	}
+	return privateSBsReferQuota, nil
 }
 
-// This gets the metrics that the new shoot cluster will use
-// checked metrics for now are: cpu, memory, storage.standard, storage.premium
-func convertShootWorkersToMetrics(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (v1.ResourceList, error) {
-	cloudProviderInShoot, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
+func (h *RejectShootIfQuotaExceeded) getCrossSecretBindingsReferQuota(quota garden.Quota) ([]garden.CrossSecretBinding, error) {
+	var crossSBsReferQuota []garden.CrossSecretBinding
+
+	crossSBs, err := h.crossSBLister.
+		CrossSecretBindings(v1.NamespaceAll).
+		List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, binding := range crossSBs {
+		for _, quotaRef := range binding.Quotas {
+			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
+				crossSBsReferQuota = append(crossSBsReferQuota, *binding)
+			}
+		}
+	}
+	return crossSBsReferQuota, nil
+}
+
+func (h *RejectShootIfQuotaExceeded) determineRequiredResources(allocatedResources v1.ResourceList, shoot garden.Shoot) (v1.ResourceList, error) {
+	shootResources, err := h.getShootResources(shoot)
+	if err != nil {
+		return nil, err
+	}
+
+	requiredResourches := make(v1.ResourceList)
+	for _, metric := range quotaMetricNames {
+		requiredResourches[metric] = sumQuantity(allocatedResources[metric], shootResources[metric])
+	}
+	return requiredResourches, nil
+}
+
+func (h *RejectShootIfQuotaExceeded) getShootResources(shoot garden.Shoot) (v1.ResourceList, error) {
+	cloudProfile, err := h.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
+	if err != nil {
+		return nil, apierrors.NewBadRequest("could not find referenced cloud profile")
+	}
+
+	cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 	if err != nil {
 		return nil, apierrors.NewBadRequest("could not identify the cloud provider kind in the Shoot resource")
 	}
 
-	metrics := make(v1.ResourceList)
-	totalMemory := resource.Quantity{}
-	totalCPU := resource.Quantity{}
-	totalGPU := resource.Quantity{}
-	totalStandardVolume := resource.Quantity{}
-	totalPremiumVolume := resource.Quantity{}
+	var (
+		countLB      int64 = 1
+		resources          = make(v1.ResourceList)
+		workers            = getShootWorkerResources(shoot, cloudProvider, *cloudProfile)
+		machineTypes       = getMachineTypes(cloudProvider, *cloudProfile)
+		volumeTypes        = getVolumeTypes(cloudProvider, *cloudProfile)
+	)
 
-	workers := retrieveQuotaWorkersForShoot(shoot, cloudProviderInShoot)
 	for _, worker := range workers {
-		machineType, err := getMachineTypeByName(cloudProfile, cloudProviderInShoot, worker.MachineType)
-		if err != nil {
-			return nil, err
-		}
-		// for now we always use the max. amount of workers for quota calculation
-		totalMemory.Add(multiplyQuantity(machineType.Memory, worker.AutoScalerMax))
-		totalCPU.Add(*resource.NewQuantity(int64(machineType.CPUs*worker.AutoScalerMax), resource.DecimalSI))
-		totalGPU.Add(*resource.NewQuantity(int64(machineType.GPUs*worker.AutoScalerMax), resource.DecimalSI))
+		var (
+			machineType *garden.MachineType
+			volumeType  *garden.VolumeType
+		)
 
-		volumeType, err := getVolumeTypeByName(cloudProfile, cloudProviderInShoot, worker.VolumeType)
-		if err != nil {
-			return nil, err
-		}
-		volumeSize, err := resource.ParseQuantity(worker.VolumeSize)
-		if err != nil {
-			return nil, err
-		}
-		if volumeType.Class == "standard" {
-			totalStandardVolume.Add(multiplyQuantity(volumeSize, worker.AutoScalerMax))
-		} else {
-			if volumeType.Class == "premium" {
-				totalPremiumVolume.Add(multiplyQuantity(volumeSize, worker.AutoScalerMax))
+		// Get the proper machineType
+		for _, element := range machineTypes {
+			if element.Name == worker.MachineType {
+				machineType = &element
+				break
 			}
 		}
-	}
-	metrics[garden.QuotaMetricMemory] = totalMemory
-	metrics[garden.QuotaMetricCPU] = totalCPU
-	metrics[garden.QuotaMetricGPU] = totalGPU
-	metrics[garden.QuotaMetricStorageStandard] = totalStandardVolume
-	metrics[garden.QuotaMetricStoragePremium] = totalPremiumVolume
+		if machineType == nil {
+			return nil, fmt.Errorf("MachineType %s not found in CloudProfile %s", worker.MachineType, cloudProfile.Name)
+		}
 
-	return metrics, nil
+		// Get the proper VolumeType
+		for _, element := range volumeTypes {
+			if element.Name == worker.VolumeType {
+				volumeType = &element
+				break
+			}
+		}
+		if volumeType == nil {
+			return nil, fmt.Errorf("VolumeType %s not found in CloudProfile %s", worker.MachineType, cloudProfile.Name)
+		}
+
+		// For now we always use the max. amount of resources for quota calculation
+		resources[garden.QuotaMetricCPU] = multiplyQuantity(machineType.CPU, worker.AutoScalerMax)
+		resources[garden.QuotaMetricGPU] = multiplyQuantity(machineType.GPU, worker.AutoScalerMax)
+		resources[garden.QuotaMetricMemory] = multiplyQuantity(machineType.Memory, worker.AutoScalerMax)
+
+		switch volumeType.Class {
+		case garden.VolumeClassStandard:
+			resources[garden.QuotaMetricStorageStandard] = multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax)
+		case garden.VolumeClassPremium:
+			resources[garden.QuotaMetricStoragePremium] = multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax)
+		default:
+			return nil, fmt.Errorf("Unknown volumeType class %s", volumeType.Class)
+		}
+	}
+
+	if shoot.Spec.Addons != nil && shoot.Spec.Addons.NginxIngress != nil && shoot.Spec.Addons.NginxIngress.Addon.Enabled {
+		countLB++
+	}
+	resources[garden.QuotaMetricLoadbalancer] = *resource.NewQuantity(countLB, resource.DecimalSI)
+
+	return resources, nil
 }
 
-func retrieveQuotaWorkersForShoot(shoot *garden.Shoot, cloudProvider garden.CloudProvider) []quotaWorker {
+func getShootWorkerResources(shoot garden.Shoot, cloudProvider garden.CloudProvider, cloudProfile garden.CloudProfile) []quotaWorker {
 	var workers []quotaWorker
 
 	switch cloudProvider {
@@ -286,40 +420,44 @@ func retrieveQuotaWorkersForShoot(shoot *garden.Shoot, cloudProvider garden.Clou
 
 		for idx, awsWorker := range shoot.Spec.Cloud.AWS.Workers {
 			workers[idx].Worker = awsWorker.Worker
-			workers[idx].VolumeSize = awsWorker.VolumeSize
 			workers[idx].VolumeType = awsWorker.VolumeType
+			workers[idx].VolumeSize = resource.MustParse(awsWorker.VolumeSize)
 		}
 	case garden.CloudProviderAzure:
 		workers = make([]quotaWorker, len(shoot.Spec.Cloud.Azure.Workers))
 
 		for idx, azureWorker := range shoot.Spec.Cloud.Azure.Workers {
 			workers[idx].Worker = azureWorker.Worker
-			workers[idx].VolumeSize = azureWorker.VolumeSize
 			workers[idx].VolumeType = azureWorker.VolumeType
+			workers[idx].VolumeSize = resource.MustParse(azureWorker.VolumeSize)
 		}
 	case garden.CloudProviderGCP:
 		workers = make([]quotaWorker, len(shoot.Spec.Cloud.GCP.Workers))
 
 		for idx, gcpWorker := range shoot.Spec.Cloud.GCP.Workers {
 			workers[idx].Worker = gcpWorker.Worker
-			workers[idx].VolumeSize = gcpWorker.VolumeSize
 			workers[idx].VolumeType = gcpWorker.VolumeType
+			workers[idx].VolumeSize = resource.MustParse(gcpWorker.VolumeSize)
 		}
 	case garden.CloudProviderOpenStack:
 		workers = make([]quotaWorker, len(shoot.Spec.Cloud.OpenStack.Workers))
 
 		for idx, osWorker := range shoot.Spec.Cloud.OpenStack.Workers {
 			workers[idx].Worker = osWorker.Worker
-			//TODO handle volumes in cloud profile for openstack
+			for _, machineType := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
+				if osWorker.MachineType == machineType.Name {
+					workers[idx].VolumeType = machineType.MachineType.Name
+					workers[idx].VolumeSize = machineType.VolumeSize
+				}
+			}
 		}
 	}
 	return workers
 }
 
-func getMachineTypeByName(cloudProfile *garden.CloudProfile, cloudProvider garden.CloudProvider, machineTypeName string) (*garden.MachineType, error) {
+func getMachineTypes(provider garden.CloudProvider, cloudProfile garden.CloudProfile) []garden.MachineType {
 	var machineTypes []garden.MachineType
-
-	switch cloudProvider {
+	switch provider {
 	case garden.CloudProviderAWS:
 		machineTypes = cloudProfile.Spec.AWS.Constraints.MachineTypes
 	case garden.CloudProviderAzure:
@@ -327,45 +465,66 @@ func getMachineTypeByName(cloudProfile *garden.CloudProfile, cloudProvider garde
 	case garden.CloudProviderGCP:
 		machineTypes = cloudProfile.Spec.GCP.Constraints.MachineTypes
 	case garden.CloudProviderOpenStack:
-		machineTypes = cloudProfile.Spec.OpenStack.Constraints.MachineTypes
-	}
-
-	for _, machineType := range machineTypes {
-		if machineType.Name == machineTypeName {
-			return &machineType, nil
+		machineTypes = make([]garden.MachineType, 0)
+		for _, element := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
+			machineTypes = append(machineTypes, element.MachineType)
 		}
 	}
-
-	return nil, fmt.Errorf("Machine type %s doesn't exist in CloudProfile %s", machineTypeName, cloudProvider)
+	return machineTypes
 }
 
-func getVolumeTypeByName(cloudProfile *garden.CloudProfile, cloudProvider garden.CloudProvider, volumeTypeName string) (*garden.VolumeType, error) {
+func getVolumeTypes(provider garden.CloudProvider, cloudProfile garden.CloudProfile) []garden.VolumeType {
 	var volumeTypes []garden.VolumeType
-
-	switch cloudProvider {
+	switch provider {
 	case garden.CloudProviderAWS:
 		volumeTypes = cloudProfile.Spec.AWS.Constraints.VolumeTypes
 	case garden.CloudProviderAzure:
 		volumeTypes = cloudProfile.Spec.Azure.Constraints.VolumeTypes
 	case garden.CloudProviderGCP:
 		volumeTypes = cloudProfile.Spec.GCP.Constraints.VolumeTypes
-	}
+	case garden.CloudProviderOpenStack:
+		volumeTypes = make([]garden.VolumeType, 0)
+		contains := func(types []garden.VolumeType, volumeType string) bool {
+			for _, element := range types {
+				if element.Name == volumeType {
+					return true
+				}
+			}
+			return false
+		}
 
-	for _, volumeType := range volumeTypes {
-		if volumeType.Name == volumeTypeName {
-			return &volumeType, nil
+		for _, machineType := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
+			if !contains(volumeTypes, machineType.MachineType.Name) {
+				volumeTypes = append(volumeTypes, garden.VolumeType{
+					Name:  machineType.MachineType.Name,
+					Class: machineType.VolumeType,
+				})
+			}
 		}
 	}
+	return volumeTypes
+}
 
-	return nil, fmt.Errorf("Volume type %s doesn't exist in CloudProfile %s", volumeTypeName, cloudProvider)
+func hasSufficientQuota(limit, required resource.Quantity) bool {
+	compareCode := limit.Cmp(required)
+	if compareCode == -1 {
+		return false
+	}
+	return true
+}
+
+func sumQuantity(values ...resource.Quantity) resource.Quantity {
+	res := resource.Quantity{}
+	for _, v := range values {
+		res.Add(v)
+	}
+	return res
 }
 
 func multiplyQuantity(quantity resource.Quantity, multiplier int) resource.Quantity {
-	//TODO improve
-	result := resource.Quantity{}
-
+	res := resource.Quantity{}
 	for i := 0; i < multiplier; i++ {
-		result.Add(quantity)
+		res.Add(quantity)
 	}
-	return result
+	return res
 }

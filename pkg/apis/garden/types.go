@@ -296,6 +296,13 @@ type VolumeType struct {
 	Class string
 }
 
+const (
+	// VolumeClassStandard is a constant for the standard volume class.
+	VolumeClassStandard string = "standard"
+	// VolumeClassPremium is a constant for the premium volume class.
+	VolumeClassPremium string = "premium"
+)
+
 // Zone contains certain properties of an availability zone.
 type Zone struct {
 	// Region is a region name.

@@ -84,7 +84,7 @@ var _ = Describe("quotavalidator", func() {
 					Namespace: "test-namespace",
 					Name:      "test-crossSB",
 				},
-				SecretRef: garden.CrossReference{
+				SecretRef: corev1.ObjectReference{
 					Namespace: "test-trial-namespace",
 					Name:      "test-secret",
 				},
@@ -112,7 +112,7 @@ var _ = Describe("quotavalidator", func() {
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 		})
 
-		It("should allow: empty shoot (without CrossSecretBinding)", func() {
+		It("should pass because shoot has no secret binding referenced", func() {
 			shoot = garden.Shoot{}
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
@@ -121,18 +121,26 @@ var _ = Describe("quotavalidator", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should allow: shoot with private secret binding", func() {
-			// set shoot spec
-			shoot.Spec.Cloud.SecretBindingRef.Kind = "PrivateSecretBinding"
-			shoot.Spec.Cloud.SecretBindingRef.Name = "test-privateSB"
+		// TODO This is rather a test for the resourcereferencemanager admission controller
+		//It("should pass because shoot has a private secret binding referenced", func() {
+		//	shoot.Spec.Cloud.SecretBindingRef.Kind = "PrivateSecretBinding"
+		//	shoot.Spec.Cloud.SecretBindingRef.Name = "test-privateSB"
+		//
+		//	attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+		//	err := admissionHandler.Admit(attrs)
+		//
+		//	Expect(err).NotTo(HaveOccurred())
+		//})
 
+		It("should pass because referenced privateSecretBinding has no quotas", func() {
+			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should allow: shoot with cross secret binding without quotas", func() {
+		It("should pass because referenced crossSecretBinding has no quotas", func() {
 			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 			err := admissionHandler.Admit(attrs)
@@ -142,7 +150,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should bring error: shoot with cross secret binding having quota without namespace", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Name: "test-quota",
 				},
@@ -158,7 +166,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should bring error: shoot with cross secret binding having quota that doesn't exist", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Namespace: "not-existing",
 					Name:      "test-quota",
@@ -175,7 +183,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should bring error: shoot with cross secret binding having quota with invalid scope", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Namespace: "test-trial-namespace",
 					Name:      "test-quota",
@@ -194,7 +202,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should bring error: shoot with cross secret binding having quotas from different namespaces", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Namespace: "test-trial-namespace",
 					Name:      "test-quota",
@@ -221,7 +229,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should allow: shoot with cross secret binding having quota with no metrics", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Namespace: "test-trial-namespace",
 					Name:      "test-quota",
@@ -240,7 +248,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should allow: shoot with cross secret binding having quota not exceeding limits", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Namespace: "test-trial-namespace",
 					Name:      "test-quota",
@@ -275,7 +283,7 @@ var _ = Describe("quotavalidator", func() {
 
 		It("should bring error: shoot with cross secret binding having quota exceeding limits", func() {
 			// set cross SB
-			crossSB.Quotas = []garden.CrossReference{
+			crossSB.Quotas = []corev1.ObjectReference{
 				{
 					Namespace: "test-trial-namespace",
 					Name:      "test-quota",
@@ -308,5 +316,16 @@ var _ = Describe("quotavalidator", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsForbidden(err)).To(BeTrue())
 		})
+
+		It("should fail because referenced cross secret binding does not exists", func() {
+			// TODO implement
+			Expect(false).To(BeFalse())
+		})
+
+		It("should fail because referenced private secret binding does not exists", func() {
+			// TODO implement
+			Expect(false).To(BeFalse())
+		})
+
 	})
 })
