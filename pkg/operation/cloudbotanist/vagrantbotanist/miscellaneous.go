@@ -23,8 +23,3 @@ func (b *VagrantBotanist) ApplyCreateHook() error {
 func (b *VagrantBotanist) ApplyDeleteHook() error {
 	return nil
 }
-
-// CheckIfClusterGetsScaled does currently nothing for Vagrant, as ScaleSets aren't supported.
-func (b *VagrantBotanist) CheckIfClusterGetsScaled() (bool, int, error) {
-	return false, 0, nil
-}

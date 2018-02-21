@@ -69,7 +69,7 @@ func (b *VagrantBotanist) DestroyInfrastructure() error {
 	_, err = client.Delete(context.Background(), &pb.DeleteRequest{
 		Id: 1,
 	})
-	return nil
+	return err
 }
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.

@@ -14,8 +14,8 @@
 
 package vagrantbotanist
 
-// GenerateCloudProviderConfig returns a cloud provider config for the Vagrant cloud provider
-// as defined here: https://github.com/kubernetes/kubernetes/blob/release-1.7/pkg/cloudprovider/providers/azure/azure.go#L58.
+// GenerateCloudProviderConfig returns a cloud provider config for the Vagrant cloud provider.
+// Not needed on Vagrant.
 func (b *VagrantBotanist) GenerateCloudProviderConfig() (string, error) {
 	return "", nil
 }
@@ -38,26 +38,6 @@ func (b *VagrantBotanist) GenerateKubeControllerManagerConfig() (map[string]inte
 // Deployment manifest of the kube-scheduler properly.
 func (b *VagrantBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, error) {
 	return nil, nil
-}
-
-// DeployAutoNodeRepair deploys the auto-node-repair into the Seed cluster. It primary job is to repair
-// unHealthy Nodes by replacing them by newer ones - Not needed on Vagrant yet. To be implemented later
-func (b *VagrantBotanist) DeployAutoNodeRepair() error {
-	return nil
-}
-
-// GenerateEtcdBackupSecretData generates the data for the secret which is required by the etcd-operator to
-// store the backups on the ABS container, i.e. the secret contains the Vagrant storage account and the respective access key.
-func (b *VagrantBotanist) GenerateEtcdBackupSecretData() (map[string][]byte, error) {
-	return nil, nil
-}
-
-// GenerateEtcdConfig returns the etcd deployment configuration (including backup settings) for the etcd
-// Helm chart.
-func (b *VagrantBotanist) GenerateEtcdConfig(secretName string) (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"kind": "StatefulSet",
-	}, nil
 }
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.

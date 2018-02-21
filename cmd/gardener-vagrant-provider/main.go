@@ -38,7 +38,7 @@ import (
 
 var (
 	port         = flag.String("port", ":3777", "The server port")
-	vagrantDir   = flag.String("vagrant-dir", "vagrant", "The directory conaining the Vagrantfile")
+	vagrantDir   = flag.String("vagrant-dir", "vagrant", "The directory containing the Vagrantfile")
 	userdataPath = flag.String("userdata-path", "dev/user-data", "The path in which the user-data file will be created")
 )
 
@@ -50,7 +50,7 @@ type server struct {
 
 // Start creates a vagrant machine from a user-data
 func (s *server) Start(ctx context.Context, in *pb.StartRequest) (*pb.StartReply, error) {
-	fmt.Println("Got start request. Creating machine")
+	fmt.Println("Got start request. Creating machine...")
 	err := ioutil.WriteFile(s.userdataPath, []byte(in.Cloudconfig), 0644)
 	if err != nil {
 		fmt.Printf("Error writing config %v", err)
@@ -60,16 +60,18 @@ func (s *server) Start(ctx context.Context, in *pb.StartRequest) (*pb.StartReply
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error starting machine: %v", err)
 	}
-	fmt.Printf("created machine %s", message)
+	fmt.Println("\nMachine created successfuly.")
 	return &pb.StartReply{Message: message}, nil
 }
 
-// Start deltes a vagrant machine
+// Start deletes a vagrant machine
 func (s *server) Delete(ctx context.Context, in *pb.DeleteRequest) (*pb.DeleteReply, error) {
+	fmt.Println("Got delete request. Deleting machine...")
 	message, err := s.runCommand("destroy", "-f")
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error deleting machine: %v", err)
 	}
+	fmt.Println("\nMachine deleted successfuly.")
 	return &pb.DeleteReply{Message: message}, nil
 }
 
