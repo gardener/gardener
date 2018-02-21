@@ -139,3 +139,27 @@ data:
 
       relabel_configs:
 {{- include "prometheus.service-endpoints.relabel-config" . }}
+
+    - job_name: 'vpn-connection'
+      honor_labels: false
+      scrape_interval: 15s
+      scrape_timeout: 5s
+
+      metrics_path: /probe
+      params:
+        module:
+        - tcp_vpn
+        target:
+        - {{ .Values.apiserverServiceIP }}:443
+      kubernetes_sd_configs:
+      - role: pod
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: blackbox-export
+      - action: labelmap
+        regex: __meta_kubernetes_pod_label_(.+)
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod

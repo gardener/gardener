@@ -27,3 +27,4 @@ oidcConfig: {}
 images:
   hyperkube: image-repository
   vpn-seed: image-repository:image-tag
+  blackbox-exporter: image-repository:image-tag

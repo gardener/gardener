@@ -21,3 +21,4 @@ namespace:
 
 podAnnotations: {}
 replicas: 1
+apiserverServiceIP: 100.10.10.10

@@ -45,6 +45,9 @@ images:
 - name: grafana-watcher
   repository: quay.io/coreos/grafana-watcher
   tag: v0.0.8
+- name: blackbox-exporter
+  repository: quay.io/prometheus/blackbox-exporter
+  tag: v0.11.0
 
 # Shoot core addons
 - name: calico-node
