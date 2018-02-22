@@ -10,7 +10,7 @@
 --cloud-config=/var/lib/kubelet/cloudprovider.conf \
 {{- end }}
 --cluster-dns="{{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}" \
---cluster-domain=cluster.local \
+--cluster-domain={{ required "kubernetes.domain is required" .kubernetes.domain }} \
 {{- if eq .kubernetes.kubelet.networkPlugin "cni" -}}
 --cni-bin-dir=/opt/cni/bin/ \
 --cni-conf-dir=/etc/cni/net.d/ \

@@ -1,4 +1,5 @@
 clusterDNS: 100.64.0.10
+domain: cluster.local
 images:
   kube-dns: image-repository:image-tag
   kube-dns-dnsmasq: image-repository:image-tag
