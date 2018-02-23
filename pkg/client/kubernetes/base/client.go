@@ -26,7 +26,6 @@ import (
 func (c *Client) DiscoverAPIGroups() error {
 	apiResourceList, err := c.clientset.Discovery().ServerResources()
 	c.apiResourceList = apiResourceList
-	c.apiDiscoveryFetchNum++
 	return err
 }
 

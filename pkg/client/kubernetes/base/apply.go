@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -121,41 +124,57 @@ func (c *Client) BuildPath(apiVersion, kind, namespace string) (string, error) {
 		namespace = metav1.NamespaceDefault
 	}
 
-	apiGroup := apiVersion
-	apiGroupPath := "api"
+	var (
+		apiGroup     = apiVersion
+		apiGroupPath = "api"
+		apiPath      = ""
+	)
+
 	if apiGroup != "v1" {
-		apiGroupPath += "s"
+		apiGroupPath = "apis"
 	}
 	apiGroupPath = path.Join(apiGroupPath, apiVersion)
 
-	for _, apiGroup := range c.GetAPIResourceList() {
-		if apiGroup.GroupVersion == apiVersion {
-			for _, resource := range apiGroup.APIResources {
-				if resource.Kind == kind {
-					if resource.Namespaced {
-						return path.Join(apiGroupPath, "namespaces", namespace, resource.Name), nil
-					}
-					return path.Join(apiGroupPath, resource.Name), nil
-				}
-			}
-			return "", fmt.Errorf("%s is not registered in API group %s", kind, apiVersion)
-		}
-	}
-
 	// There is no clear indicator for the kube-apiserver whether it is ready to serve requests or not. We discover
 	// all the available API groups while creating the Kubernetes client, however, at that point in time it might be
-	// the case that not all API groups have been registered. Thus, we need to have some retry logic regarding the
-	// discovery.
+	// the case that not all API groups have been registered or/and the responsible APIService objects have been created.
+	// Thus, we need to have some retry logic regarding the discovery.
 	// See also: https://github.com/kubernetes/kubernetes/issues/45786
-	if c.apiDiscoveryFetchNum < 5 {
-		// Refresh Seed client API group discovery
-		if err := c.DiscoverAPIGroups(); err != nil {
-			return "", fmt.Errorf("Failure while re-discoverying the API groups (try no. %d)", c.apiDiscoveryFetchNum)
-		}
-		return c.BuildPath(apiVersion, kind, namespace)
+
+	// Perform at most five steps with the following approx. delays: +0.5s, +1.8s, +5s
+	backoff := wait.Backoff{
+		Duration: time.Second,
+		Factor:   2.5,
+		Jitter:   0.3,
+		Steps:    3,
 	}
 
-	return "", fmt.Errorf("Could not find API group %s", apiVersion)
+	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
+		for _, apiGroup := range c.GetAPIResourceList() {
+			if apiGroup.GroupVersion == apiVersion {
+				for _, resource := range apiGroup.APIResources {
+					if resource.Kind == kind {
+						if resource.Namespaced {
+							apiPath = path.Join(apiGroupPath, "namespaces", namespace, resource.Name)
+							return true, nil
+						}
+						apiPath = path.Join(apiGroupPath, resource.Name)
+						return true, nil
+					}
+				}
+				return false, fmt.Errorf("%s is not registered in API group %s", kind, apiVersion)
+			}
+		}
+		// Refresh client API discovery
+		if err := c.DiscoverAPIGroups(); err != nil {
+			return false, fmt.Errorf("Failure while re-discoverying the API groups: %v", err.Error())
+		}
+		return false, nil
+	}); err != nil {
+		return "", fmt.Errorf("Could not find API group %s", apiVersion)
+	}
+
+	return apiPath, nil
 }
 
 // get performs a HTTP GET request on the given path. It will return the result object.
