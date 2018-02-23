@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/wait"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -195,7 +197,22 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 	}
 	o.Shoot.Info = newShoot
 
-	return err
+	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
+	// operations.
+	return wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+		shoot, err := c.k8sGardenInformers.Shoots().Lister().Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		lastOperation := shoot.Status.LastOperation
+		if !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardenv1beta1.ShootLastOperationTypeDelete && lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, lastError *gardenv1beta1.LastError) error {

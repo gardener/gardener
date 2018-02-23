@@ -72,7 +72,7 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	if !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
+	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
 		shootLogger.Debug("Do not need to do anything as the Shoot does not have my finalizer")
 		c.shootQueue.Forget(key)
 		return
@@ -107,14 +107,7 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return err
 	}
 
-	// We check whether the Shoot's last operation status field indicates that the cluster has been successfully deleted.
-	lastOperation := shoot.Status.LastOperation
-	if lastOperation != nil && lastOperation.Type == gardenv1beta1.ShootLastOperationTypeDelete && lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded {
-		return nil
-	}
-
-	err = c.control.ReconcileShoot(shoot, key)
-	if err != nil {
+	if err := c.control.ReconcileShoot(shoot, key); err != nil {
 		c.shootQueue.AddAfter(key, 15*time.Second)
 	}
 	return nil
