@@ -79,7 +79,7 @@ func (c *Controller) reconcileSeedKey(key string) error {
 	seed, err := c.seedLister.Get(name)
 	if apierrors.IsNotFound(err) {
 		logger.Logger.Debugf("[SEED RECONCILE] %s - skipping because Seed has been deleted", key)
-		return err
+		return nil
 	}
 	if err != nil {
 		logger.Logger.Infof("[SEED RECONCILE] %s - unable to retrieve object from store: %v", key, err)
