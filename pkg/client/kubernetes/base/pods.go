@@ -31,8 +31,6 @@ import (
 	"k8s.io/client-go/transport/spdy"
 )
 
-var podPath = []string{"api", "v1", "pods"}
-
 // GetPod will return the Pod object for the given <name> in the given <namespace>.
 func (c *Client) GetPod(namespace, name string) (*corev1.Pod, error) {
 	return c.clientset.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
@@ -108,19 +106,6 @@ func (c *Client) CheckForwardPodPort(namespace, name string, local, remote int) 
 // DeletePod will delete a Pod with the given <name> in the given <namespace>.
 func (c *Client) DeletePod(namespace, name string) error {
 	return c.clientset.CoreV1().Pods(namespace).Delete(name, &defaultDeleteOptions)
-}
-
-// CleanupPods deletes all the Pods in the cluster other than those stored in the
-// exceptions map <exceptions>.
-func (c *Client) CleanupPods(exceptions map[string]bool) error {
-	return c.CleanupResource(exceptions, true, podPath...)
-}
-
-// CheckPodCleanup will check whether all the Pods in the cluster other than those
-// stored in the exceptions map <exceptions> have been deleted. It will return an error
-// in case it has not finished yet, and nil if all resources are gone.
-func (c *Client) CheckPodCleanup(exceptions map[string]bool) (bool, error) {
-	return c.CheckResourceCleanup(exceptions, true, podPath...)
 }
 
 func (c *Client) setupForwardPodPort(namespace, name string, local, remote int) (*portforward.PortForwarder, chan struct{}, error) {

@@ -63,7 +63,7 @@ func (c *Client) Apply(m []byte) error {
 			namespace  = newObj.GetNamespace()
 		)
 
-		absPath, e := c.BuildPath(apiVersion, kind, namespace)
+		absPath, e := c.buildPath(apiVersion, kind, namespace)
 		if e != nil {
 			return e
 		}
@@ -117,9 +117,9 @@ func (c *Client) Apply(m []byte) error {
 	return nil
 }
 
-// BuildPath creates the Kubernetes API REST URL for the given API group and kind (depending on whether the
+// buildPath creates the Kubernetes API REST URL for the given API group and kind (depending on whether the
 // kind is namespaced or not).
-func (c *Client) BuildPath(apiVersion, kind, namespace string) (string, error) {
+func (c *Client) buildPath(apiVersion, kind, namespace string) (string, error) {
 	if namespace == "" {
 		namespace = metav1.NamespaceDefault
 	}

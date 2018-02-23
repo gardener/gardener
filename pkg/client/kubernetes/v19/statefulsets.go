@@ -14,22 +14,7 @@
 
 package kubernetesv19
 
-var statefulsetPath = []string{"apis", "apps", "v1", "statefulsets"}
-
 // DeleteStatefulSet deletes a StatefulSet object.
 func (c *Client) DeleteStatefulSet(namespace, name string) error {
 	return c.Clientset().AppsV1().StatefulSets(namespace).Delete(name, &defaultDeleteOptions)
-}
-
-// CleanupStatefulSets deletes all the StatefulSets in the Shoot cluster other than those stored in the
-// exceptions map <exceptions>.
-func (c *Client) CleanupStatefulSets(exceptions map[string]bool) error {
-	return c.CleanupResource(exceptions, true, statefulsetPath...)
-}
-
-// CheckStatefulSetCleanup will check whether all the StatefulSets in the Shoot cluster other than those
-// stored in the exceptions map <exceptions> have been deleted. It will return an error
-// in case it has not finished yet, and nil if all resources are gone.
-func (c *Client) CheckStatefulSetCleanup(exceptions map[string]bool) (bool, error) {
-	return c.CheckResourceCleanup(exceptions, true, statefulsetPath...)
 }

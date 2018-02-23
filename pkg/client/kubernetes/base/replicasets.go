@@ -21,8 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var replicasetPath = []string{"apis", "apps", "v1beta2", "replicasets"}
-
 // ListReplicaSets returns the list of ReplicaSets in the given <namespace>.
 func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOptions) ([]*mapping.ReplicaSet, error) {
 	var replicasetList []*mapping.ReplicaSet
@@ -42,17 +40,4 @@ func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOption
 // DeleteReplicaSet deletes a ReplicaSet object.
 func (c *Client) DeleteReplicaSet(namespace, name string) error {
 	return c.Clientset().AppsV1beta2().ReplicaSets(namespace).Delete(name, &defaultDeleteOptions)
-}
-
-// CleanupReplicaSets deletes all the ReplicaSets in the cluster other than those stored in the
-// exceptions map <exceptions>.
-func (c *Client) CleanupReplicaSets(exceptions map[string]bool) error {
-	return c.CleanupResource(exceptions, true, replicasetPath...)
-}
-
-// CheckReplicaSetCleanup will check whether all the ReplicaSets in the cluster other than those
-// stored in the exceptions map <exceptions> have been deleted. It will return an error
-// in case it has not finished yet, and nil if all resources are gone.
-func (c *Client) CheckReplicaSetCleanup(exceptions map[string]bool) (bool, error) {
-	return c.CheckResourceCleanup(exceptions, true, replicasetPath...)
 }

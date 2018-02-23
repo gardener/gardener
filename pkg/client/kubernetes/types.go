@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -38,12 +39,19 @@ type Client interface {
 	GardenClientset() *clientset.Clientset
 	GetAPIResourceList() []*metav1.APIResourceList
 	GetConfig() *rest.Config
+	GetResourceAPIGroups() map[string][]string
 	RESTClient() rest.Interface
 	SetConfig(*rest.Config)
 	SetClientset(*kubernetes.Clientset)
 	SetGardenClientset(*clientset.Clientset)
 	SetRESTClient(rest.Interface)
+	SetResourceAPIGroups(map[string][]string)
 	MachineV1alpha1(string, string, string) *rest.Request
+
+	// Cleanup
+	ListResources(...string) (unstructured.Unstructured, error)
+	CleanupResources(map[string]map[string]bool) error
+	CheckResourceCleanup([]string, string, map[string]map[string]bool) (bool, error)
 
 	// Namespaces
 	CreateNamespace(string, bool) (*corev1.Namespace, error)
@@ -99,39 +107,9 @@ type Client interface {
 
 	// Arbitrary manifests
 	Apply([]byte) error
-	BuildPath(string, string, string) (string, error)
 
 	// Miscellaneous
 	Curl(string) (*rest.Result, error)
 	QueryVersion() (string, error)
 	Version() string
-	ListResources(bool, []string) ([]byte, error)
-
-	// Cleanup
-	CleanupResource(map[string]bool, bool, ...string) error
-	CleanupNamespaces(map[string]bool) error
-	CleanupPersistentVolumeClaims(map[string]bool) error
-	CleanupPods(map[string]bool) error
-	CleanupCRDs(map[string]bool) error
-	CleanupDaemonSets(map[string]bool) error
-	CleanupJobs(map[string]bool) error
-	CleanupReplicationControllers(map[string]bool) error
-	CleanupReplicaSets(map[string]bool) error
-	CleanupDeployments(map[string]bool) error
-	CleanupServices(map[string]bool) error
-	CleanupStatefulSets(map[string]bool) error
-
-	// Cleanup check
-	CheckResourceCleanup(map[string]bool, bool, ...string) (bool, error)
-	CheckNamespaceCleanup(map[string]bool) (bool, error)
-	CheckPersistentVolumeClaimCleanup(map[string]bool) (bool, error)
-	CheckPodCleanup(map[string]bool) (bool, error)
-	CheckCRDCleanup(map[string]bool) (bool, error)
-	CheckDaemonSetCleanup(map[string]bool) (bool, error)
-	CheckJobCleanup(map[string]bool) (bool, error)
-	CheckReplicationControllerCleanup(map[string]bool) (bool, error)
-	CheckReplicaSetCleanup(map[string]bool) (bool, error)
-	CheckDeploymentCleanup(map[string]bool) (bool, error)
-	CheckServiceCleanup(map[string]bool) (bool, error)
-	CheckStatefulSetCleanup(map[string]bool) (bool, error)
 }

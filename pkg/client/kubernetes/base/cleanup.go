@@ -15,50 +15,43 @@
 package kubernetesbase
 
 import (
-	"path"
+	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // ListResources will return a list of Kubernetes resources as JSON byte slice.
-func (c *Client) ListResources(scoped bool, absPath []string) ([]byte, error) {
-	return c.restClient.Get().AbsPath(absPath...).Do().Raw()
+func (c *Client) ListResources(absPath ...string) (unstructured.Unstructured, error) {
+	var resources unstructured.Unstructured
+	if err := c.restClient.Get().AbsPath(absPath...).Do().Into(&resources); err != nil {
+		return unstructured.Unstructured{}, err
+	}
+	return resources, nil
 }
 
-// CleanupResource will delete all resources except for those stored in the <exceptions> map.
-func (c *Client) CleanupResource(exceptions map[string]bool, scoped bool, absPath ...string) error {
-	body, err := c.ListResources(scoped, absPath)
-	if err != nil {
-		return err
-	}
-
-	outputs := utils.ConvertJSONToMap(body)
-	items, err := outputs.ArrayOfObjects("items")
-	if err != nil {
-		return err
-	}
-
-	for _, item := range items {
-		var (
-			metadata        = item["metadata"].(map[string]interface{})
-			name            = metadata["name"].(string)
-			namespace       = ""
-			exceptionScheme = name
-			absPathDelete   = append(absPath, name)
-		)
-
-		if scoped {
-			namespace = metadata["namespace"].(string)
-			exceptionScheme = path.Join(namespace, name)
-			resource := absPath[len(absPath)-1]
-			absPathDelete = append(absPath[:len(absPath)-1], "namespaces", namespace, resource, name)
+// CleanupResources will delete all resources except for those stored in the <exceptions> map.
+func (c *Client) CleanupResources(exceptions map[string]map[string]bool) error {
+	for resource, apiGroupPath := range c.resourceAPIGroups {
+		resourceList, err := c.ListResources(append(apiGroupPath, resource)...)
+		if err != nil {
+			return err
 		}
 
-		if _, ok := exceptions[exceptionScheme]; ok {
-			continue
-		}
+		if err := resourceList.EachListItem(func(o runtime.Object) error {
+			var (
+				item          = o.(*unstructured.Unstructured)
+				namespace     = item.GetNamespace()
+				name          = item.GetName()
+				absPathDelete = buildResourcePath(apiGroupPath, resource, namespace, name)
+			)
 
-		if err := c.restClient.Delete().AbsPath(absPathDelete...).Do().Error(); err != nil {
+			if mustOmitResource(exceptions, resource, namespace, name) {
+				return nil
+			}
+
+			return c.restClient.Delete().AbsPath(absPathDelete...).Do().Error()
+		}); err != nil {
 			return err
 		}
 	}
@@ -66,34 +59,47 @@ func (c *Client) CleanupResource(exceptions map[string]bool, scoped bool, absPat
 }
 
 // CheckResourceCleanup will check whether all resources except for those in the <exceptions> map have been deleted.
-func (c *Client) CheckResourceCleanup(exceptions map[string]bool, scoped bool, absPath ...string) (bool, error) {
-	body, err := c.ListResources(scoped, absPath)
+func (c *Client) CheckResourceCleanup(apiGroupPath []string, resource string, exceptions map[string]map[string]bool) (bool, error) {
+	resourceList, err := c.ListResources(append(apiGroupPath, resource)...)
 	if err != nil {
 		return false, err
 	}
 
-	outputs := utils.ConvertJSONToMap(body)
-	items, err := outputs.ArrayOfObjects("items")
-	if err != nil {
-		return false, err
-	}
-
-	for _, item := range items {
+	if err := resourceList.EachListItem(func(o runtime.Object) error {
 		var (
-			metadata        = item["metadata"].(map[string]interface{})
-			name            = metadata["name"].(string)
-			namespace       = ""
-			exceptionScheme = name
+			item      = o.(*unstructured.Unstructured)
+			name      = item.GetName()
+			namespace = item.GetNamespace()
 		)
 
-		if scoped {
-			namespace = metadata["namespace"].(string)
-			exceptionScheme = path.Join(namespace, name)
+		if mustOmitResource(exceptions, resource, namespace, name) {
+			return fmt.Errorf("waiting for '%s' (resource '%s') to be deleted", name, resource)
 		}
 
-		if _, ok := exceptions[exceptionScheme]; !ok {
-			return false, nil
-		}
+		return nil
+	}); err != nil {
+		return false, nil
 	}
 	return true, nil
+}
+
+func buildResourcePath(apiGroupPath []string, resource, namespace, name string) []string {
+	if len(namespace) > 0 {
+		apiGroupPath = append(apiGroupPath, "namespaces", namespace)
+	}
+	return append(apiGroupPath, resource, name)
+}
+
+func mustOmitResource(exceptionMap map[string]map[string]bool, resource, namespace, name string) bool {
+	if exceptions, ok := exceptionMap[resource]; ok {
+		id := name
+		if len(namespace) > 0 {
+			id = fmt.Sprintf("%s/%s", namespace, name)
+		}
+		if omit, ok := exceptions[id]; ok {
+			return omit
+		}
+		return false
+	}
+	return false
 }

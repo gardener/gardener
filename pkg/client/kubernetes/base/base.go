@@ -28,6 +28,21 @@ func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clie
 		clientset:       clientset,
 		gardenClientset: nil,
 		restClient:      clientset.Discovery().RESTClient(),
+		resourceAPIGroups: map[string][]string{
+			"cronjobs":                  []string{"apis", "batch", "v1beta1"},
+			"customresourcedefinitions": []string{"apis", "apiextensions.k8s.io", "v1beta1"},
+			"daemonsets":                []string{"apis", "apps", "v1beta2"},
+			"deployments":               []string{"apis", "apps", "v1beta2"},
+			"ingresses":                 []string{"apis", "extensions", "v1beta1"},
+			"jobs":                      []string{"apis", "batch", "v1"},
+			"namespaces":                []string{"api", "v1"},
+			"persistentvolumeclaims":    []string{"api", "v1"},
+			"pods":                   []string{"api", "v1"},
+			"replicasets":            []string{"apis", "apps", "v1beta2"},
+			"replicationcontrollers": []string{"api", "v1"},
+			"services":               []string{"api", "v1"},
+			"statefulsets":           []string{"apis", "apps", "v1beta2"},
+		},
 	}
 
 	gitVersion, err := baseClient.QueryVersion()

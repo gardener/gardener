@@ -20,8 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var namespacePath = []string{"api", "v1", "namespaces"}
-
 // CreateNamespace creates a new Namespace object.
 func (c *Client) CreateNamespace(name string, updateIfExists bool) (*corev1.Namespace, error) {
 	namespace, err := c.clientset.CoreV1().Namespaces().Create(&corev1.Namespace{
@@ -61,17 +59,4 @@ func (c *Client) DeleteNamespace(name string) error {
 		PropagationPolicy:  &propagationPolicy,
 		GracePeriodSeconds: &deleteGracePeriod,
 	})
-}
-
-// CleanupNamespaces deletes all the Namespaces in the cluster other than those stored in the
-// exceptions map <exceptions>.
-func (c *Client) CleanupNamespaces(exceptions map[string]bool) error {
-	return c.CleanupResource(exceptions, false, namespacePath...)
-}
-
-// CheckNamespaceCleanup will check whether all the Namespaces in the cluster other than those
-// stored in the exceptions map <exceptions> have been deleted. It will return an error
-// in case it has not finished yet, and nil if all resources are gone.
-func (c *Client) CheckNamespaceCleanup(exceptions map[string]bool) (bool, error) {
-	return c.CheckResourceCleanup(exceptions, false, namespacePath...)
 }
