@@ -35,7 +35,7 @@ spec:
         - /hyperkube
         - proxy
         - --cluster-cidr={{ .Values.global.podNetwork }}
-        - --conntrack-max-per-core=131072
+        - --conntrack-max-per-core=524288
         - --kubeconfig=/var/lib/kube-proxy/kubeconfig
         {{- include "kube-proxy.featureGates" . | trimSuffix "," | indent 8 }}
         - --v=2
