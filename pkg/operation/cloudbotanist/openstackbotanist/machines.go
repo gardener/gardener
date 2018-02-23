@@ -69,8 +69,8 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, [
 				"networkID":        stateVariables[networkID],
 				"securityGroups":   []string{stateVariables[securityGroupName]},
 				"tags": map[string]string{
-					fmt.Sprintf("kubernetes.io/cluster/%s", b.Shoot.SeedNamespace): "1",
-					"kubernetes.io/role/node":                                      "1",
+					fmt.Sprintf("kubernetes.io-cluster-%s", b.Shoot.SeedNamespace): "1",
+					"kubernetes.io-role-node":                                      "1",
 				},
 				"secret": map[string]interface{}{
 					"authURL":     b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL,
