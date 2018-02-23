@@ -22,6 +22,8 @@ import (
 	"strconv"
 	"time"
 
+	"k8s.io/apimachinery/pkg/util/validation"
+
 	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
@@ -673,10 +675,6 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 		if spec.DNS.SecretName != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "secretName"), spec.DNS.SecretName, fmt.Sprintf("`.spec.dns.secretName` must not be set when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
 		}
-	} else {
-		if spec.DNS.Domain == nil {
-			allErrs = append(allErrs, field.Required(fldPath.Child("dns", "domain"), fmt.Sprintf("`.spec.dns.domain` may only be empty if `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
-		}
 	}
 
 	return allErrs
@@ -1069,10 +1067,10 @@ func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 		}
 	}
 
-	if dns.Domain != nil {
-		if len(*dns.Domain) == 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("domain"), dns.Domain, "domain cannot be empty when key is provided"))
-		}
+	if dns.Domain == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("domain"), "domain cannot be empty"))
+	} else {
+		allErrs = append(allErrs, validateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
 	}
 
 	return allErrs
@@ -1234,5 +1232,14 @@ func validateWorkerVolumeType(volumeType string, fldPath *field.Path) field.Erro
 func ValidateShootStatusUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	return allErrs
+}
+
+// validateDNS1123Subdomain validates that a name is a proper DNS subdomain.
+func validateDNS1123Subdomain(value string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for _, msg := range validation.IsDNS1123Subdomain(value) {
+		allErrs = append(allErrs, field.Invalid(fldPath, value, msg))
+	}
 	return allErrs
 }

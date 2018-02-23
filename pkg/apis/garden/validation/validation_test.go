@@ -2922,15 +2922,38 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid not specifying a domain when provider not equals 'unmanaged'", func() {
+			It("should forbid specifying no domain", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 				shoot.Spec.DNS.Domain = nil
 
 				errorList := ValidateShoot(shoot)
-
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.domain"),
+				}))
+			})
+
+			It("should forbid specifying empty domain", func() {
+				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				shoot.Spec.DNS.Domain = makeStringPointer("")
+
+				errorList := ValidateShoot(shoot)
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.domain"),
+				}))
+			})
+
+			It("should forbid specifying invalid domain", func() {
+				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
+
+				errorList := ValidateShoot(shoot)
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.domain"),
 				}))
 			})

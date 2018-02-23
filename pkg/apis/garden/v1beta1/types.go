@@ -1173,6 +1173,9 @@ const (
 	// ExternalGardenerName is the value in a Kubernetes core resources `.metadata.finalizers[]` array on which the
 	// Gardener will react when performing a delete request on a resource.
 	ExternalGardenerName = "garden.sapcloud.io/gardener"
+
+	// DefaultDomain is the default value in the Shoot's '.spec.dns.domain' when '.spec.dns.provider' is 'unmanaged'
+	DefaultDomain = "cluster.local"
 )
 
 // Condition holds the information about the state of a resource.
