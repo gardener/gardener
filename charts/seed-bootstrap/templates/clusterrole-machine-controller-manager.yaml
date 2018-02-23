@@ -1,7 +1,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: system:machine-controller-manager
+  name: system:machine-controller-manager-seed
 rules:
 - apiGroups:
   - machine.sapcloud.io

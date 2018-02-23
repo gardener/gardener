@@ -12,6 +12,7 @@
 #   kubelet:
 #     kubeconfig: hugo
 #     networkPlugin: cni
+#     domain: cluster.local
 #     parameters: []
 #     featureGates: {}
 #       #  CustomResourceValidation: true
