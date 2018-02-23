@@ -135,6 +135,20 @@ spec:
           readOnly: true
         - mountPath: /etc/prometheus/rules
           name: rules
+      - name: blackbox-exporter-config-reloader
+        image: {{ index .Values.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:9115/-/reload
+        - -volume-dir=/vpn
+        resources:
+          limits:
+            cpu: 5m
+            memory: 10Mi
+        volumeMounts:
+        - mountPath: /vpn
+          name: blackbox-exporter-config
+          readOnly: true
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -159,6 +173,18 @@ spec:
           name: vpn-ssh-keypair
         - mountPath: /srv/auth
           name: kube-apiserver-basic-auth
+      - name: blackbox-exporter
+        image: {{ index .Values.images "blackbox-exporter" }}
+        args:
+        - --config.file=/vpn/blackbox.yaml
+        ports:
+        # port name must be max 15 characters long
+        - name: blackbox-export
+          containerPort: 9115
+          protocol: TCP
+        volumeMounts:
+        - name: blackbox-exporter-config
+          mountPath: /vpn
       terminationGracePeriodSeconds: 300
       volumes:
       - name: config
@@ -183,6 +209,9 @@ spec:
       - name: prometheus-kubeconfig
         secret:
           secretName: prometheus
+      - name: blackbox-exporter-config
+        configMap:
+          name: blackbox-exporter-config
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db

@@ -3,7 +3,7 @@ groups:
   rules:
   - alert: NoWorkerNodes
     expr: absent(up{job="kube-kubelet", type="shoot"}) or count(up{job="kube-kubelet", type="shoot"} == 0)
-    for: 5m
+    for: 4m
     labels:
       job: kube-kubelet
       service: kube-kubelet

@@ -17,6 +17,7 @@ spec:
       annotations:
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
+        checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -156,6 +157,18 @@ spec:
         volumeMounts:
         - name: vpn-ssh-keypair
           mountPath: /srv/ssh
+      - name: blackbox-exporter
+        image: {{ index .Values.images "blackbox-exporter" }}
+        args:
+        - --config.file=/vpn/blackbox.yaml
+        ports:
+        # port name must be max 15 characters long
+        - name: blackbox-export
+          containerPort: 9115
+          protocol: TCP
+        volumeMounts:
+        - name: blackbox-exporter-config
+          mountPath: /vpn
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -201,3 +214,6 @@ spec:
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
+      - name: blackbox-exporter-config
+        configMap:
+          name: blackbox-exporter-config

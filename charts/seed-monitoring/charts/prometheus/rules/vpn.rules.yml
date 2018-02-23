@@ -1,0 +1,24 @@
+groups:
+- name: vpn.rules
+  rules:
+  - alert: VPNShootNoPods
+    expr:  kube_deployment_status_replicas_available{deployment="vpn-shoot"} == 0
+    for: 5m
+    labels:
+      service: vpn
+      severity: blocker
+      type: shoot
+    annotations:
+      description: vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.
+      summary: VPN Shoot deployment no pods
+  - alert: VPNConnectionDown
+    expr: probe_success == 0
+    for: 5m
+    labels:
+      service: vpn
+      severity: blocker
+      type: shoot
+    annotations:
+      description: VPN connection for {{ $labels.pod }} is down. No resources of the Shoot cluster
+        can be accessed by this pod.
+      summary: VPN connection down

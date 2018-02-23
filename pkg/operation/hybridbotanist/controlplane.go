@@ -123,7 +123,11 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube", "vpn-seed": "vpn-seed"})
+	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{
+		"hyperkube":         "hyperkube",
+		"vpn-seed":          "vpn-seed",
+		"blackbox-exporter": "blackbox-exporter",
+	})
 	if err != nil {
 		return err
 	}

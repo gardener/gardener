@@ -143,7 +143,8 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 				"checksum/secret-vpn-ssh-keypair":           b.CheckSums["vpn-ssh-keypair"],
 			},
-			"replicas": replicas,
+			"replicas":           replicas,
+			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": replicas,
@@ -161,7 +162,12 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	if err != nil {
 		return err
 	}
-	prometheus, err := b.InjectImages(prometheusConfig, b.K8sSeedClient.Version(), map[string]string{"prometheus": "prometheus", "configmap-reloader": "configmap-reloader", "vpn-seed": "vpn-seed"})
+	prometheus, err := b.InjectImages(prometheusConfig, b.K8sSeedClient.Version(), map[string]string{
+		"prometheus":         "prometheus",
+		"configmap-reloader": "configmap-reloader",
+		"vpn-seed":           "vpn-seed",
+		"blackbox-exporter":  "blackbox-exporter",
+	})
 	if err != nil {
 		return err
 	}
