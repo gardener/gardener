@@ -76,7 +76,7 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 
 	// Determine the external Shoot cluster domain, i.e. the domain which will be put into the Kubeconfig handed out
 	// to the user.
-	if shoot.Spec.DNS.Domain != nil {
+	if *(shoot.Spec.DNS.Domain) != gardenv1beta1.DefaultDomain {
 		extDomain := fmt.Sprintf("api.%s", *(shoot.Spec.DNS.Domain))
 		shootObj.ExternalClusterDomain = &extDomain
 	}

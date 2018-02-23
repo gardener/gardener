@@ -117,6 +117,11 @@ func SetDefaults_Shoot(obj *Shoot) {
 			}
 		}
 	}
+
+	if obj.Spec.DNS.Provider == DNSUnmanaged && obj.Spec.DNS.Domain == nil {
+		defaultDomain := DefaultDomain
+		obj.Spec.DNS.Domain = &defaultDomain
+	}
 }
 
 // SetDefaults_Seed sets default values for Seed objects.
