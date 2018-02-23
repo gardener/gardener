@@ -77,7 +77,7 @@ spec:
           initialDelaySeconds: 3
           timeoutSeconds: 5
         args:
-        - --domain=cluster.local.
+        - --domain={{ required ".Values.domain is required" .Values.domain }}.
         - --dns-port=10053
         - --config-dir=/kube-dns-config
         - --v=2
@@ -117,7 +117,7 @@ spec:
         - -k
         - --cache-size=1000
         - --log-facility=-
-        - --server=/cluster.local/127.0.0.1#10053
+        - --server=/{{ required ".Values.domain is required" .Values.domain }}/127.0.0.1#10053
         - --server=/in-addr.arpa/127.0.0.1#10053
         - --server=/in6.arpa/127.0.0.1#10053
         ports:
@@ -148,8 +148,8 @@ spec:
         args:
         - --v=2
         - --logtostderr
-        - --probe=kubedns,127.0.0.1:10053,kubernetes.default.svc.cluster.local,5,A
-        - --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.cluster.local,5,A
+        - --probe=kubedns,127.0.0.1:10053,kubernetes.default.svc.{{ required ".Values.domain is required" .Values.domain }},5,A
+        - --probe=dnsmasq,127.0.0.1:53,kubernetes.default.svc.{{ required ".Values.domain is required" .Values.domain }},5,A
         ports:
         - containerPort: 10054
           name: metrics

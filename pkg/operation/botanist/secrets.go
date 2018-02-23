@@ -543,12 +543,13 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 	apiServerCertDNSNames := []string{
 		fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
 		fmt.Sprintf("kube-apiserver.%s.svc", b.Shoot.SeedNamespace),
-		fmt.Sprintf("kube-apiserver.%s.svc.cluster.local", b.Shoot.SeedNamespace),
+		// TODO: Determine Seed cluster's domain that is configured for kubelet and kube-dns/coredns
+		// fmt.Sprintf("kube-apiserver.%s.svc.%s", b.Shoot.SeedNamespace, seed-kube-domain),
 		"kube-apiserver",
 		"kubernetes",
 		"kubernetes.default",
 		"kubernetes.default.svc",
-		"kubernetes.default.svc.cluster.local",
+		fmt.Sprintf("kubernetes.default.svc.%s", *b.Shoot.Info.Spec.DNS.Domain),
 		b.Shoot.InternalClusterDomain,
 	}
 	if b.Shoot.ExternalClusterDomain != nil {
