@@ -2,19 +2,17 @@ groups:
 - name: kube-etcd3.rules
   rules:
 
-  # alert if another failed peer will result in an unavailable cluster
-  - alert: KubeEtcd3InsufficientPeers
-    expr: absent(up{job="kube-etcd3",role="main"})
-      or absent(up{job="kube-etcd3",role="events"})
-      or count(up{job="kube-etcd3"} == 0) by(role) > (count(up{job="kube-etcd3"}) by (role) / 2 - 1)
+  # alert if etcd is down
+  - alert: KubeEtcd3Down
+    expr: absent(up{job="kube-etcd3",role="main"}) or absent(up{job="kube-etcd3",role="events"})
     for: 3m
     labels:
       service: etcd
       severity: critical
       type: seed
     annotations:
-      description: If one more etcd3 peer goes down the etc3 cluster {{ $labels.role }} will be unavailable
-      summary: etcd3 cluster small
+      description: etc3 cluster {{ $labels.role }} is unavailable or cannot be scrapped
+      summary: etcd3 cluster down
 
   # etcd leader alerts
   - alert: KubeEtcd3NoLeader
