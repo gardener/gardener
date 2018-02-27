@@ -95,9 +95,7 @@ func TestEmail(email string) bool {
 
 // ComputeRandomTimeWindow computes a random time window and returns both in the format HHMMSS+ZONE.
 func ComputeRandomTimeWindow() (string, string) {
-	hour := rand.IntnRange(0, 23)
-	cet, _ := time.LoadLocation("CET")
-	t := time.Date(1970, 1, 1, hour, 0, 0, 0, cet)
+	t := time.Date(1970, 1, 1, rand.IntnRange(0, 23), 0, 0, 0, time.UTC)
 	return FormatMaintenanceTime(t), FormatMaintenanceTime(t.Add(time.Hour))
 }
 
