@@ -138,6 +138,10 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	// it has to be ensured that no Shoots are depending on the Seed anymore.
 	// When this happens the controller will remove the finalizers from the Seed so that it can be garbage collected.
 	if seed.DeletionTimestamp != nil {
+		if !sets.NewString(seed.Finalizers...).Has(gardenv1beta1.GardenerName) {
+			return nil
+		}
+
 		associatedShoots, err := controllerutils.DetermineShootAssociations(seed, c.shootLister)
 		if err != nil {
 			seedLogger.Error(err.Error())
@@ -149,14 +153,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 
 			// Remove finalizer from referenced secret
 			secret, err := c.secretLister.Secrets(seed.Spec.SecretRef.Namespace).Get(seed.Spec.SecretRef.Name)
-			if err != nil {
-				seedLogger.Error(err.Error())
-				return err
-			}
-			secretFinalizers := sets.NewString(secret.Finalizers...)
-			secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
-			secret.Finalizers = secretFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
+			if err == nil {
+				secretFinalizers := sets.NewString(secret.Finalizers...)
+				secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
+				secret.Finalizers = secretFinalizers.UnsortedList()
+				if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil && !apierrors.IsNotFound(err) {
+					seedLogger.Error(err.Error())
+					return err
+				}
+			} else if !apierrors.IsNotFound(err) {
 				seedLogger.Error(err.Error())
 				return err
 			}

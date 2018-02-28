@@ -48,7 +48,6 @@ type ValidateShoot struct {
 	*admission.Handler
 	cloudProfileLister listers.CloudProfileLister
 	seedLister         listers.SeedLister
-	shootLister        listers.ShootLister
 }
 
 var _ = admissioninitializer.WantsInternalGardenInformerFactory(&ValidateShoot{})
@@ -64,7 +63,6 @@ func New() (*ValidateShoot, error) {
 func (h *ValidateShoot) SetInternalGardenInformerFactory(f informers.SharedInformerFactory) {
 	h.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
 	h.seedLister = f.Garden().InternalVersion().Seeds().Lister()
-	h.shootLister = f.Garden().InternalVersion().Shoots().Lister()
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -74,9 +72,6 @@ func (h *ValidateShoot) ValidateInitialization() error {
 	}
 	if h.seedLister == nil {
 		return errors.New("missing seed lister")
-	}
-	if h.shootLister == nil {
-		return errors.New("missing c.shoot lister")
 	}
 	return nil
 }
@@ -143,9 +138,9 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 			},
 		}
 	} else if a.GetOperation() == admission.Update {
-		old, err := h.shootLister.Shoots(shoot.Namespace).Get(shoot.Name)
-		if err != nil {
-			return apierrors.NewInternalError(errors.New("could not fetch the old shoot version"))
+		old, ok := a.GetOldObject().(*garden.Shoot)
+		if !ok {
+			return apierrors.NewInternalError(errors.New("could not convert old resource into Shoot object"))
 		}
 		oldShoot = old
 	}

@@ -43,11 +43,13 @@ var _ = Describe("resourcereferencemanager", func() {
 			quotaName        = "quota-1"
 			secretName       = "secret-1"
 			shootName        = "shoot-1"
+			finalizers       = []string{garden.GardenerName}
 
 			secret = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      secretName,
-					Namespace: namespace,
+					Name:       secretName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
 				},
 			}
 
@@ -58,7 +60,8 @@ var _ = Describe("resourcereferencemanager", func() {
 			}
 			seed = garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: seedName,
+					Name:       seedName,
+					Finalizers: finalizers,
 				},
 				Spec: garden.SeedSpec{
 					Cloud: garden.SeedCloud{
@@ -78,8 +81,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			}
 			privateSecretBinding = garden.PrivateSecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      bindingName,
-					Namespace: namespace,
+					Name:       bindingName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
 				},
 				SecretRef: corev1.LocalObjectReference{
 					Name: secretName,
@@ -93,8 +97,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			}
 			crossSecretBinding = garden.CrossSecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      bindingName,
-					Namespace: namespace,
+					Name:       bindingName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
 				},
 				SecretRef: corev1.ObjectReference{
 					Name:      secretName,
@@ -109,8 +114,9 @@ var _ = Describe("resourcereferencemanager", func() {
 			}
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      shootName,
-					Namespace: namespace,
+					Name:       shootName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
 				},
 				Spec: garden.ShootSpec{
 					Cloud: garden.Cloud{

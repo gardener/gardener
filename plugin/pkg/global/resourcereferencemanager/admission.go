@@ -25,6 +25,7 @@ import (
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -100,6 +101,10 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
+func skipVerification(operation admission.Operation, metadata metav1.ObjectMeta) bool {
+	return operation == admission.Update && metadata.DeletionTimestamp != nil
+}
+
 // Admit ensures that referenced resources do actually exist.
 func (r *ReferenceManager) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
@@ -107,11 +112,16 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
+	operation := a.GetOperation()
+
 	switch a.GetKind().GroupKind() {
 	case garden.Kind("PrivateSecretBinding"):
 		binding, ok := a.GetObject().(*garden.PrivateSecretBinding)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into PrivateSecretBinding object")
+		}
+		if skipVerification(operation, binding.ObjectMeta) {
+			return nil
 		}
 		return r.ensurePrivateSecretBindingReferences(binding)
 
@@ -120,6 +130,9 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into CrossSecretBinding object")
 		}
+		if skipVerification(operation, binding.ObjectMeta) {
+			return nil
+		}
 		return r.ensureCrossSecretBindingReferences(binding)
 
 	case garden.Kind("Seed"):
@@ -127,12 +140,18 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
 		}
+		if skipVerification(operation, seed.ObjectMeta) {
+			return nil
+		}
 		return r.ensureSeedReferences(seed)
 
 	case garden.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*garden.Shoot)
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
+		}
+		if skipVerification(operation, shoot.ObjectMeta) {
+			return nil
 		}
 		return r.ensureShootReferences(shoot)
 	}

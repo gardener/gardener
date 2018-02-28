@@ -112,6 +112,10 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 	// no Shoots and Seed  are assigned to the CloudProfile anymore. If this is the case then the controlller will remove
 	// the finalizers from the CloudProfile so that it can be garbage collected.
 	if cloudProfile.DeletionTimestamp != nil {
+		if !sets.NewString(cloudProfile.Finalizers...).Has(gardenv1beta1.GardenerName) {
+			return nil
+		}
+
 		associatedShoots, err := controllerutils.DetermineShootAssociations(cloudProfile, c.shootLister)
 		if err != nil {
 			cloudProfileLogger.Error(err.Error())

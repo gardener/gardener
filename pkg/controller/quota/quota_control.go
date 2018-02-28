@@ -117,6 +117,10 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 	// it has to be ensured that no Private- and no CrossSecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {
+		if !sets.NewString(quota.Finalizers...).Has(gardenv1beta1.GardenerName) {
+			return nil
+		}
+
 		associatedPrivateSecretBindings, err := controllerutils.DeterminePrivateSecretBindingAssociations(quota, c.privateSecretBindingLister)
 		if err != nil {
 			quotaLogger.Error(err.Error())

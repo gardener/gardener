@@ -118,6 +118,10 @@ func (c *defaultControl) ReconcileCrossSecretBinding(obj *gardenv1beta1.CrossSec
 	// it has to be ensured that no Shoots are depending on the CrossSecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the CrossSecretBinding so that it can be garbage collected.
 	if crossSecretBinding.DeletionTimestamp != nil {
+		if !sets.NewString(crossSecretBinding.Finalizers...).Has(gardenv1beta1.GardenerName) {
+			return nil
+		}
+
 		associatedShoots, err := controllerutils.DetermineShootAssociations(crossSecretBinding, c.shootLister)
 		if err != nil {
 			crossSecretBindingLogger.Error(err.Error())
@@ -129,14 +133,15 @@ func (c *defaultControl) ReconcileCrossSecretBinding(obj *gardenv1beta1.CrossSec
 
 			// Remove finalizer from referenced secret
 			secret, err := c.secretLister.Secrets(crossSecretBinding.SecretRef.Namespace).Get(crossSecretBinding.SecretRef.Name)
-			if err != nil {
-				crossSecretBindingLogger.Error(err.Error())
-				return err
-			}
-			secretFinalizers := sets.NewString(secret.Finalizers...)
-			secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
-			secret.Finalizers = secretFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
+			if err == nil {
+				secretFinalizers := sets.NewString(secret.Finalizers...)
+				secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
+				secret.Finalizers = secretFinalizers.UnsortedList()
+				if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil && !apierrors.IsNotFound(err) {
+					crossSecretBindingLogger.Error(err.Error())
+					return err
+				}
+			} else if !apierrors.IsNotFound(err) {
 				crossSecretBindingLogger.Error(err.Error())
 				return err
 			}

@@ -118,6 +118,10 @@ func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.Privat
 	// it has to be ensured that no Shoots are depending on the PrivateSecretBinding anymore.
 	// When this happens the controller will remove the finalizers from the PrivateSecretBinding so that it can be garbage collected.
 	if privateSecretBinding.DeletionTimestamp != nil {
+		if !sets.NewString(privateSecretBinding.Finalizers...).Has(gardenv1beta1.GardenerName) {
+			return nil
+		}
+
 		associatedShoots, err := controllerutils.DetermineShootAssociations(privateSecretBinding, c.shootLister)
 		if err != nil {
 			privateSecretBindingLogger.Error(err.Error())
@@ -129,14 +133,15 @@ func (c *defaultControl) ReconcilePrivateSecretBinding(obj *gardenv1beta1.Privat
 
 			// Remove finalizer from referenced secret
 			secret, err := c.secretLister.Secrets(privateSecretBinding.Namespace).Get(privateSecretBinding.SecretRef.Name)
-			if err != nil {
-				privateSecretBindingLogger.Error(err.Error())
-				return err
-			}
-			secretFinalizers := sets.NewString(secret.Finalizers...)
-			secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
-			secret.Finalizers = secretFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
+			if err == nil {
+				secretFinalizers := sets.NewString(secret.Finalizers...)
+				secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
+				secret.Finalizers = secretFinalizers.UnsortedList()
+				if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil && !apierrors.IsNotFound(err) {
+					privateSecretBindingLogger.Error(err.Error())
+					return err
+				}
+			} else if !apierrors.IsNotFound(err) {
 				privateSecretBindingLogger.Error(err.Error())
 				return err
 			}
