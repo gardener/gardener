@@ -15,7 +15,9 @@
     Restart=always
     RestartSec=10
     EnvironmentFile=/etc/environment
+{{- if .kubernetes.kubelet.hostnameOverride }}
     ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
+{{- end }}
     ExecStartPre=-/bin/docker rm -f kubelet
     ExecReload=-/bin/docker restart kubelet
     ExecStart=/opt/bin/kubelet \

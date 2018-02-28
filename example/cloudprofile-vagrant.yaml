@@ -1,0 +1,9 @@
+apiVersion: garden.sapcloud.io/v1beta1
+kind: CloudProfile
+metadata:
+  name: vagrant
+spec:
+  vagrant:
+    constraints:
+      dnsProviders:
+      - name: unmanaged

@@ -25,6 +25,10 @@ IMAGE_TAG                          := $(shell cat VERSION)
 dev-setup:
 	@./hack/dev-setup
 
+.PHONY: dev-setup-vagrant
+dev-setup-vagrant:
+	@./hack/dev-setup-vagrant
+
 .PHONY: start-api
 start-api:
 	@go run cmd/gardener-apiserver/main.go \
@@ -44,6 +48,10 @@ start:
 			-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=$(shell ./hack/get-next-version)" \
 			cmd/gardener-controller-manager/main.go \
 			--config=dev/componentconfig-gardener-controller-manager.yaml
+
+.PHONY: start-vagrant
+start-vagrant:
+	@go run cmd/gardener-vagrant-provider/main.go
 
 #################################################################
 # Rules related to binary build, Docker image build and release #

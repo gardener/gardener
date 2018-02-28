@@ -2,6 +2,7 @@ cloudProvider: aws
 replicas: 1
 kubernetesVersion: 1.8.5
 advertiseAddress: 127.0.0.1
+securePort: 443
 serviceNetwork: 10.0.0.0/24
 podNetwork: 192.168.0.0/16
 nodeNetwork: 172.16.0.0/20

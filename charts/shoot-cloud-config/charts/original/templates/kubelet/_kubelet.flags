@@ -5,7 +5,7 @@
 --authentication-token-webhook \
 --authorization-mode=Webhook \
 --cgroup-root="/" \
---cloud-provider={{ required "cloudProvider.name is required" .cloudProvider.name }} \
+--cloud-provider={{ .cloudProvider.name }} \
 {{- if .cloudProvider.config }}
 --cloud-config=/var/lib/kubelet/cloudprovider.conf \
 {{- end }}

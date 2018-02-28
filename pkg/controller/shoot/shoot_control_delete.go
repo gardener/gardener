@@ -91,6 +91,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && len(podList.Items) != 0
 		defaultRetry          = 5 * time.Minute
 		cleanupRetry          = 10 * time.Minute
+		isCloud               = o.Shoot.Info.Spec.Cloud.Vagrant == nil
 
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, defaultRetry, cleanupShootResources)
@@ -126,7 +127,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		cleanupPersistentVolumeClaims     = f.AddTaskConditional(botanist.CleanupPersistentVolumeClaims, defaultRetry, cleanupShootResources, waitUntilKubeAddonManagerDeleted)
 		checkPersistentVolumeClaimCleanup = f.AddTaskConditional(botanist.CheckPersistentVolumeClaimCleanup, cleanupRetry, cleanupShootResources, cleanupPersistentVolumeClaims)
 		syncPointCleanup                  = f.AddSyncPoint(checkCRDCleanup, checkNamespaceCleanup, checkStatefulSetCleanup, checkDeploymentCleanup, checkReplicationControllerCleanup, checkReplicaSetCleanup, checkDaemonSetCleanup, checkJobCleanup, checkPodCleanup, checkServiceCleanup, checkPersistentVolumeClaimCleanup)
-		destroyMachines                   = f.AddTask(hybridBotanist.DestroyMachines, defaultRetry, syncPointCleanup)
+		destroyMachines                   = f.AddTaskConditional(hybridBotanist.DestroyMachines, defaultRetry, isCloud, syncPointCleanup)
 		destroyNginxIngressResources      = f.AddTask(botanist.DestroyNginxIngressResources, 0, syncPointCleanup)
 		destroyKube2IAMResources          = f.AddTask(shootCloudBotanist.DestroyKube2IAMResources, 0, syncPointCleanup)
 		destroyInfrastructure             = f.AddTask(shootCloudBotanist.DestroyInfrastructure, 0, syncPointCleanup, destroyMachines)

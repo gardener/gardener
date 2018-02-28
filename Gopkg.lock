@@ -76,7 +76,6 @@
     "private/protocol/query/queryutil",
     "private/protocol/rest",
     "private/protocol/xml/xmlutil",
-    "service/autoscaling",
     "service/ec2",
     "service/elb",
     "service/sts"
@@ -246,6 +245,7 @@
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -604,6 +604,8 @@
     "metadata",
     "naming",
     "peer",
+    "reflection",
+    "reflection/grpc_reflection_v1alpha",
     "resolver",
     "resolver/dns",
     "resolver/passthrough",
@@ -1031,6 +1033,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e4168a7bfa0df03f6fec4b18fcc2a810523a63214634f9e732c78bf1e5e63cc1"
+  inputs-digest = "bfa4e196f57e16b35bcb06b38a5dd3c58b32bb023a74c2c9187c03d1f1ff53c2"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -96,6 +96,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
+		"securePort":        443,
 		"nodeNetwork":       b.Shoot.GetNodeNetwork(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],

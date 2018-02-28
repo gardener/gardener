@@ -112,9 +112,10 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 			"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
 			"domain":     *b.Shoot.Info.Spec.DNS.Domain,
 			"kubelet": map[string]interface{}{
-				"kubeconfig":    string(kubeletSecret.Data["kubeconfig"]),
-				"networkPlugin": userDataConfig.NetworkPlugin,
-				"parameters":    userDataConfig.KubeletParameters,
+				"kubeconfig":       string(kubeletSecret.Data["kubeconfig"]),
+				"networkPlugin":    userDataConfig.NetworkPlugin,
+				"parameters":       userDataConfig.KubeletParameters,
+				"hostnameOverride": userDataConfig.HostnameOverride,
 			},
 			"version": b.Shoot.Info.Spec.Kubernetes.Version,
 		},

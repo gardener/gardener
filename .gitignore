@@ -13,3 +13,7 @@
 ./gardener-apiserver
 ./gardener-controller-manager
 TODO
+.vagrant
+config.ign.merged
+config.img
+config.vmdk

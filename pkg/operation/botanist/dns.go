@@ -101,6 +101,8 @@ func (b *Botanist) DestroyDNSRecord(terraformerPurpose string, purposeInternalDo
 		if err != nil {
 			return err
 		}
+	default:
+		return nil
 	}
 
 	return terraformer.

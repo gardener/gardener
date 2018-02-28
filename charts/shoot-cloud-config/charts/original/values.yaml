@@ -13,6 +13,7 @@
 #     kubeconfig: hugo
 #     networkPlugin: cni
 #     domain: cluster.local
+#     hostnameOverride: false
 #     parameters: []
 #     featureGates: {}
 #       #  CustomResourceValidation: true
