@@ -15,14 +15,16 @@
 package quotavalidator_test
 
 import (
+	"time"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -37,10 +39,90 @@ var _ = Describe("quotavalidator", func() {
 			crossSB               garden.CrossSecretBinding
 			quota                 garden.Quota
 			cloudProfile          garden.CloudProfile
+			namespace             string = "test"
+			trialNamespace        string = "trial"
+			clusterLifeTime       int    = 7
+			machineTypeName       string = "n1-standard-2"
+			volumeTypeName        string = "pd-standard"
+
+			cloudProfileGCEBase = garden.GCPProfile{
+				Constraints: garden.GCPConstraints{
+					MachineTypes: []garden.MachineType{
+						{
+							Name:   machineTypeName,
+							CPU:    resource.MustParse("2"),
+							GPU:    resource.MustParse("0"),
+							Memory: resource.MustParse("5Gi"),
+						},
+					},
+					VolumeTypes: []garden.VolumeType{
+						{
+							Name:  volumeTypeName,
+							Class: "standard",
+						},
+					},
+				},
+			}
+
+			cloudProfileBase = garden.CloudProfile{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "profile",
+				},
+				Spec: garden.CloudProfileSpec{
+					GCP: &cloudProfileGCEBase,
+				},
+			}
+
+			quotaProject = garden.Quota{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: trialNamespace,
+					Name:      "project-quota",
+				},
+				Spec: garden.QuotaSpec{
+					ClusterLifetimeDays: &clusterLifeTime,
+					Scope:               garden.QuotaScopeProject,
+					Metrics: corev1.ResourceList{
+						garden.QuotaMetricCPU:             resource.MustParse("2"),
+						garden.QuotaMetricGPU:             resource.MustParse("0"),
+						garden.QuotaMetricMemory:          resource.MustParse("5Gi"),
+						garden.QuotaMetricStorageStandard: resource.MustParse("30Gi"),
+						garden.QuotaMetricStoragePremium:  resource.MustParse("0Gi"),
+						garden.QuotaMetricLoadbalancer:    resource.MustParse("2"),
+					},
+				},
+			}
+
+			crossSBBase = garden.CrossSecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      "test-crossSB",
+				},
+				Quotas: []corev1.ObjectReference{
+					corev1.ObjectReference{
+						Namespace: trialNamespace,
+						Name:      "project-quota",
+					},
+				},
+			}
+
+			shootSpecCloudGCEBase = garden.GCPCloud{
+				Workers: []garden.GCPWorker{
+					garden.GCPWorker{
+						Worker: garden.Worker{
+							Name:          "test-worker-1",
+							MachineType:   machineTypeName,
+							AutoScalerMax: 1,
+							AutoScalerMin: 1,
+						},
+						VolumeType: volumeTypeName,
+						VolumeSize: "30Gi",
+					},
+				},
+			}
 
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-namespace",
+					Namespace: namespace,
 					Name:      "test-shoot",
 				},
 				Spec: garden.ShootSpec{
@@ -50,49 +132,8 @@ var _ = Describe("quotavalidator", func() {
 							Kind: "CrossSecretBinding",
 							Name: "test-crossSB",
 						},
-						GCP: &garden.GCPCloud{},
+						GCP: &shootSpecCloudGCEBase,
 					},
-				},
-			}
-			cloudProfileBase = garden.CloudProfile{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "profile",
-				},
-				Spec: garden.CloudProfileSpec{
-					GCP: &garden.GCPProfile{
-						Constraints: garden.GCPConstraints{
-							MachineTypes: []garden.MachineType{
-								{
-									Name:   "n1-standard-2",
-									CPUs:   2,
-									GPUs:   0,
-									Memory: resource.MustParse("7500Mi"),
-								},
-							},
-							VolumeTypes: []garden.VolumeType{
-								{
-									Name:  "pd-standard",
-									Class: "standard",
-								},
-							},
-						},
-					},
-				},
-			}
-			crossSBBase = garden.CrossSecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-namespace",
-					Name:      "test-crossSB",
-				},
-				SecretRef: corev1.ObjectReference{
-					Namespace: "test-trial-namespace",
-					Name:      "test-secret",
-				},
-			}
-			quotaBase = garden.Quota{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
 				},
 			}
 		)
@@ -102,230 +143,211 @@ var _ = Describe("quotavalidator", func() {
 		})
 
 		BeforeEach(func() {
-			shoot = shootBase
-			cloudProfile = cloudProfileBase
-			crossSB = crossSBBase
-			quota = quotaBase
-
 			admissionHandler, _ = New()
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
-		})
-
-		It("should pass because shoot has no secret binding referenced", func() {
-			shoot = garden.Shoot{}
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		// TODO This is rather a test for the resourcereferencemanager admission controller
-		//It("should pass because shoot has a private secret binding referenced", func() {
-		//	shoot.Spec.Cloud.SecretBindingRef.Kind = "PrivateSecretBinding"
-		//	shoot.Spec.Cloud.SecretBindingRef.Name = "test-privateSB"
-		//
-		//	attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-		//	err := admissionHandler.Admit(attrs)
-		//
-		//	Expect(err).NotTo(HaveOccurred())
-		//})
-
-		It("should pass because referenced privateSecretBinding has no quotas", func() {
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should pass because referenced crossSecretBinding has no quotas", func() {
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should bring error: shoot with cross secret binding having quota without namespace", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Name: "test-quota",
-				},
-			}
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsInternalError(err)).To(BeTrue())
-		})
-
-		It("should bring error: shoot with cross secret binding having quota that doesn't exist", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Namespace: "not-existing",
-					Name:      "test-quota",
-				},
-			}
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsInternalError(err)).To(BeTrue())
-		})
-
-		It("should bring error: shoot with cross secret binding having quota with invalid scope", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
-				},
-			}
-			quota.Spec.Scope = "invalid"
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsInternalError(err)).To(BeTrue())
-		})
-
-		It("should bring error: shoot with cross secret binding having quotas from different namespaces", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
-				},
-				{
-					Namespace: "other-namespace",
-					Name:      "test-quota",
-				},
-			}
-			quota2 := quotaBase
-			quota2.ObjectMeta.Namespace = "other-namespace"
-			quota2.Spec.Scope = "secret"
-			quota.Spec.Scope = "secret"
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsInternalError(err)).To(BeTrue())
-		})
-
-		It("should allow: shoot with cross secret binding having quota with no metrics", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
-				},
-			}
-			quota.Spec.Scope = "secret"
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
+			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
 
-			Expect(err).NotTo(HaveOccurred())
+			shoot = shootBase
+			cloudProfile = cloudProfileBase
+			crossSB = crossSBBase
+			quota = quotaProject
+
+			shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 1
 		})
 
-		It("should allow: shoot with cross secret binding having quota not exceeding limits", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
-				},
-			}
-			// set high enough quota
-			quota.Spec.Scope = "secret"
-			quota.Spec.Metrics = corev1.ResourceList{
-				corev1.ResourceCPU: resource.MustParse("4"),
-			}
-			// set worker at shoot
-			shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-				{
-					Worker: garden.Worker{
-						Name:          "test-worker",
-						MachineType:   "n1-standard-2",
-						AutoScalerMax: 2,
+		Context("tests for quota validation common cases", func() {
+			It("should pass because shoot is intended to get deleted", func() {
+				var now metav1.Time
+				now.Time = time.Now()
+				shoot.DeletionTimestamp = &now
+				shoot.Annotations = map[string]string{
+					common.ConfirmationDeletionTimestamp: now.Time.Format(time.RFC3339),
+				}
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass because shoots secret binding has no quotas referenced", func() {
+				crossSB.Quotas = make([]corev1.ObjectReference, 0)
+				gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass shoots secret binding having quota with no metrics", func() {
+				emptyQuotaName := "empty-quota"
+				emptyQuota := garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: trialNamespace,
+						Name:      emptyQuotaName,
 					},
-					VolumeType: "pd-standard",
-					VolumeSize: "20Gi",
-				},
-			}
-
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should bring error: shoot with cross secret binding having quota exceeding limits", func() {
-			// set cross SB
-			crossSB.Quotas = []corev1.ObjectReference{
-				{
-					Namespace: "test-trial-namespace",
-					Name:      "test-quota",
-				},
-			}
-			// set high enough quota
-			quota.Spec.Scope = "secret"
-			quota.Spec.Metrics = corev1.ResourceList{
-				corev1.ResourceCPU: resource.MustParse("1"),
-			}
-			// set worker at shoot
-			shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-				{
-					Worker: garden.Worker{
-						Name:          "test-worker",
-						MachineType:   "n1-standard-2",
-						AutoScalerMax: 2,
+					Spec: garden.QuotaSpec{
+						ClusterLifetimeDays: &clusterLifeTime,
+						Scope:               garden.QuotaScopeProject,
+						Metrics:             corev1.ResourceList{},
 					},
-					VolumeType: "pd-standard",
-					VolumeSize: "20Gi",
-				},
-			}
+				}
+				crossSB.Quotas = []corev1.ObjectReference{
+					{
+						Namespace: trialNamespace,
+						Name:      emptyQuotaName,
+					},
+				}
 
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-			err := admissionHandler.Admit(attrs)
+				gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&emptyQuota)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsForbidden(err)).To(BeTrue())
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
-		It("should fail because referenced cross secret binding does not exists", func() {
-			// TODO implement
-			Expect(false).To(BeFalse())
+		Context("tests for shoots with CrossSecretBindings, which have only one quota referenced", func() {
+			It("should pass because quota is sufficient", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should fail because quota limits are exceeded", func() {
+				shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 2
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+			})
+
 		})
 
-		It("should fail because referenced private secret binding does not exists", func() {
-			// TODO implement
-			Expect(false).To(BeFalse())
+		Context("tests for shoots with PrivateSecretBindings, which have multiple quotas referenced", func() {
+			var (
+				quota2 = garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: trialNamespace,
+						Name:      "secret-quota",
+					},
+					Spec: garden.QuotaSpec{
+						ClusterLifetimeDays: &clusterLifeTime,
+						Scope:               garden.QuotaScopeSecret,
+						Metrics: corev1.ResourceList{
+							garden.QuotaMetricCPU:             resource.MustParse("4"),
+							garden.QuotaMetricGPU:             resource.MustParse("0"),
+							garden.QuotaMetricMemory:          resource.MustParse("10Gi"),
+							garden.QuotaMetricStorageStandard: resource.MustParse("60Gi"),
+							garden.QuotaMetricStoragePremium:  resource.MustParse("0Gi"),
+							garden.QuotaMetricLoadbalancer:    resource.MustParse("4"),
+						},
+					},
+				}
+
+				privateSB = garden.PrivateSecretBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      "test-privateSB",
+					},
+					Quotas: []corev1.ObjectReference{
+						{
+							Namespace: trialNamespace,
+							Name:      "secret-quota",
+						},
+						{
+							Namespace: trialNamespace,
+							Name:      "project-quota",
+						},
+					},
+				}
+			)
+
+			BeforeEach(func() {
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
+				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
+					Kind: "PrivateSecretBinding",
+					Name: "test-privateSB",
+				}
+			})
+
+			It("should pass because all quotas are sufficient", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+
+			})
+
+			It("should fail because limits of one quota is exceeded", func() {
+				shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 2
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
+		Context("tests for OpenStack shoots, which have special logic for collecting volume and machine types", func() {
+			var (
+				machineTypeNameOpenStack = "mx-test-1"
+				cloudProfileOpenStack    = garden.OpenStackProfile{
+					Constraints: garden.OpenStackConstraints{
+						MachineTypes: []garden.OpenStackMachineType{
+							{
+								MachineType: garden.MachineType{
+									Name:   machineTypeNameOpenStack,
+									CPU:    resource.MustParse("2"),
+									GPU:    resource.MustParse("0"),
+									Memory: resource.MustParse("5Gi"),
+								},
+								VolumeType: "standard",
+								VolumeSize: resource.MustParse("30Gi"),
+							},
+						},
+					},
+				}
+				shootSpecCloudOpenStack = garden.OpenStackCloud{
+					Workers: []garden.OpenStackWorker{
+						{
+							Worker: garden.Worker{
+								Name:          "test-worker-1",
+								MachineType:   machineTypeNameOpenStack,
+								AutoScalerMax: 1,
+								AutoScalerMin: 1,
+							},
+						},
+					},
+				}
+			)
+
+			BeforeEach(func() {
+				cloudProfile.Spec.GCP = nil
+				cloudProfile.Spec.OpenStack = &cloudProfileOpenStack
+				shoot.Spec.Cloud.GCP = nil
+				shoot.Spec.Cloud.OpenStack = &shootSpecCloudOpenStack
+			})
+
+			AfterEach(func() {
+				cloudProfile.Spec.GCP = &cloudProfileGCEBase
+				cloudProfile.Spec.OpenStack = nil
+				shoot.Spec.Cloud.GCP = &shootSpecCloudGCEBase
+				shoot.Spec.Cloud.OpenStack = nil
+			})
+
+			It("should pass because quota is sufficient", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+		})
 	})
 })
