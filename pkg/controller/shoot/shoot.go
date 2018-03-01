@@ -172,7 +172,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running Shoot worker and no items left in the queues. Terminating Shoot controller...")
+			logger.Logger.Info("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
 			break
 		}
 		logger.Logger.Infof("Waiting for %d Shoot worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)

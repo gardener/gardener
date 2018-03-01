@@ -116,7 +116,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for {
 		if c.privateSecretBindingQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running PrivateSecretBinding worker and no items left in the queues. Terminating PrivateSecretBinding controller...")
+			logger.Logger.Info("No running PrivateSecretBinding worker and no items left in the queues. Terminated PrivateSecretBinding controller...")
 			break
 		}
 		logger.Logger.Infof("Waiting for %d PrivateSecretBinding worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.privateSecretBindingQueue.Len())

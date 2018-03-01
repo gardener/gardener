@@ -19,9 +19,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
@@ -144,7 +142,7 @@ func (o *Options) applyDefaults(in *componentconfig.ControllerManagerConfigurati
 	return out, nil
 }
 
-func (o *Options) run() error {
+func (o *Options) run(stopCh chan struct{}) error {
 	config := o.config
 
 	if len(o.ConfigFile) > 0 {
@@ -160,12 +158,11 @@ func (o *Options) run() error {
 		return err
 	}
 
-	stop := make(chan struct{})
-	return gardener.Run(stop)
+	return gardener.Run(stopCh)
 }
 
 // NewCommandStartGardenerControllerManager creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerControllerManager() *cobra.Command {
+func NewCommandStartGardenerControllerManager(stopCh chan struct{}) *cobra.Command {
 	opts, err := NewOptions()
 	if err != nil {
 		panic(err)
@@ -189,7 +186,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 			if err := opts.validate(args); err != nil {
 				panic(err)
 			}
-			if err := opts.run(); err != nil {
+			if err := opts.run(stopCh); err != nil {
 				panic(err)
 			}
 		},
@@ -211,7 +208,6 @@ type Gardener struct {
 	GardenerNamespace string
 	K8sGardenClient   kubernetes.Client
 	Logger            *logrus.Logger
-	RunningInCluster  bool
 	Recorder          record.EventRecorder
 	LeaderElection    *leaderelection.LeaderElectionConfig
 }
@@ -232,7 +228,6 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	var (
 		kubeconfig         = config.ClientConnection.KubeConfigFile
 		gardenerKubeConfig = config.GardenerClientConnection.KubeConfigFile
-		runningInCluster   = kubeconfig == ""
 	)
 
 	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig)
@@ -274,7 +269,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		}
 	}
 
-	identity, gardenerNamespace, err := getGardenerIdentity(k8sGardenClient, runningInCluster, config)
+	identity, gardenerNamespace, err := determineGardenerIdentity(config.Controller.WatchNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -287,27 +282,19 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		Recorder:          recorder,
 		K8sGardenClient:   k8sGardenClient,
 		LeaderElection:    leaderElectionConfig,
-		RunningInCluster:  runningInCluster,
 	}, nil
 }
 
 // Run runs the Gardener. This should never exit.
 func (g *Gardener) Run(stopCh chan struct{}) error {
-	// React on SIGTERM to allow a graceful shutdown (only when using in-cluster config)
-	if g.RunningInCluster {
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			<-c
-			close(stopCh)
-		}()
-	}
-
 	// Prepare a reusable run function.
 	run := func(stop <-chan struct{}) {
-		startControllers(g, stopCh)
+		go startControllers(g, stopCh)
 		<-stop
-		close(stopCh)
+		if _, stopChIsNotClosed := (<-stopCh); stopChIsNotClosed {
+			close(stopCh)
+		}
+		select {}
 	}
 
 	// Start HTTP server
@@ -317,7 +304,10 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
-			OnStartedLeading: run,
+			OnStartedLeading: func(stop <-chan struct{}) {
+				g.Logger.Info("Acquired leadership, starting controllers.")
+				run(stop)
+			},
 			OnStoppedLeading: func() {
 				g.Logger.Info("Lost leadership, cleaning up.")
 				close(stopCh)
@@ -331,12 +321,12 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 		return fmt.Errorf("lost lease")
 	}
 
-	// Leader election is disabled, so run inline until done.
+	// Leader election is disabled, thus run directly until done.
 	run(stopCh)
-	return fmt.Errorf("finished without leader elect")
+	panic("unreachable")
 }
 
-func startControllers(g *Gardener, stopCh <-chan struct{}) error {
+func startControllers(g *Gardener, stopCh <-chan struct{}) {
 	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), g.Config.Controller.Reconciliation.ResyncPeriod.Duration)
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 30*time.Second)
 
@@ -349,8 +339,6 @@ func startControllers(g *Gardener, stopCh <-chan struct{}) error {
 		g.GardenerNamespace,
 		g.Recorder,
 	).Run(stopCh)
-
-	select {}
 }
 
 func createRecorder(kubeClient *k8s.Clientset) record.EventRecorder {
@@ -387,47 +375,31 @@ func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration
 	}, nil
 }
 
-func getGardenerNamespace(runningInCluster bool, gardenNamespace string, watchNamespace *string) string {
-	if runningInCluster {
-		if ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
-			return string(ns)
-		}
-	}
-	if watchNamespace == nil {
-		return gardenNamespace
-	}
-	return *watchNamespace
-}
-
 // We want to determine the Docker container id of the currently running Gardener controller manager because
 // we need to identify for still ongoing operations whether another Gardener controller manager instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
-func getGardenerIdentity(k8sGardenClient kubernetes.Client, runningInCluster bool, config *componentconfig.ControllerManagerConfiguration) (*gardenv1beta1.Gardener, string, error) {
+func determineGardenerIdentity(watchNamespace *string) (*gardenv1beta1.Gardener, string, error) {
 	var (
 		gardenerID        = utils.GenerateRandomString(64)
 		gardenerName, _   = os.Hostname()
-		gardenerNamespace = getGardenerNamespace(runningInCluster, common.GardenNamespace, config.Controller.WatchNamespace)
+		gardenerNamespace = common.GardenNamespace
 	)
-	if runningInCluster {
-		gardenerID = ""
-		for {
-			if gardenerID != "" {
-				break
-			}
-			pod, err := k8sGardenClient.GetPod(gardenerNamespace, gardenerName)
-			if err != nil {
-				return nil, "", err
-			}
-			if len(pod.Status.ContainerStatuses) == 0 || !strings.HasPrefix(pod.Status.ContainerStatuses[0].ContainerID, "docker://") {
-				logger.Logger.Info("Waiting until the kubelet has propagated my Docker container id...")
-				time.Sleep(1 * time.Second)
-				continue
-			}
-			containerID := pod.Status.ContainerStatuses[0].ContainerID
-			gardenerID = strings.Split(containerID, "docker://")[1]
-		}
+
+	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
+	if cgroup, err := ioutil.ReadFile("/proc/self/cgroup"); err == nil {
+		splitByNewline := strings.Split(string(cgroup), "\n")
+		splitBySlash := strings.Split(splitByNewline[0], "/")
+		gardenerID = splitBySlash[len(splitBySlash)-1]
 	}
+
+	// If running inside a Kubernetes cluster we will have a service account mount.
+	if ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
+		gardenerNamespace = string(ns)
+	} else if watchNamespace != nil {
+		gardenerNamespace = *watchNamespace
+	}
+
 	return &gardenv1beta1.Gardener{
 		ID:      gardenerID,
 		Name:    gardenerName,

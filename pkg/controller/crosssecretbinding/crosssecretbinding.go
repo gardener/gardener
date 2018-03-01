@@ -116,7 +116,7 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for {
 		if c.crossSecretBindingQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running CrossSecretBinding worker and no items left in the queues. Terminating CrossSecretBinding controller...")
+			logger.Logger.Info("No running CrossSecretBinding worker and no items left in the queues. Terminated CrossSecretBinding controller...")
 			break
 		}
 		logger.Logger.Infof("Waiting for %d CrossSecretBinding worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.crossSecretBindingQueue.Len())
