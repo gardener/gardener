@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/version"
+	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -85,8 +86,15 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 
-	secrets, err := garden.ReadGardenSecrets(f.k8sGardenClient, common.GardenNamespace, f.config.ClientConnection.KubeConfigFile == "")
+	secrets, err := garden.ReadGardenSecrets(f.k8sInformers, f.config.ClientConnection.KubeConfigFile == "")
 	if err != nil {
+		panic(err)
+	}
+	shootList, err := f.k8sGardenInformers.Garden().V1beta1().Shoots().Lister().List(labels.Everything())
+	if err != nil {
+		panic(err)
+	}
+	if err := garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secrets[common.GardenRoleInternalDomain]); err != nil {
 		panic(err)
 	}
 

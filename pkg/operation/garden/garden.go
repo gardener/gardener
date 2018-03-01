@@ -23,7 +23,10 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	kubeinformers "k8s.io/client-go/informers"
 )
 
 // New creates a new Garden object (based on a Shoot object).
@@ -45,17 +48,22 @@ func New(k8sGardenClient kubernetes.Client, shoot *gardenv1beta1.Shoot) (*Garden
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecrets(k8sGardenClient kubernetes.Client, gardenNamespace string, runningInCluster bool) (map[string]*corev1.Secret, error) {
+func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, runningInCluster bool) (map[string]*corev1.Secret, error) {
 	var (
 		secretsMap                    = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets = 0
 	)
 
-	secrets, err := k8sGardenClient.ListSecrets(gardenNamespace, metav1.ListOptions{})
+	selector, err := labels.Parse(common.GardenRole)
 	if err != nil {
 		return nil, err
 	}
-	for _, secret := range secrets.Items {
+	secrets, err := k8sInformers.Core().V1().Secrets().Lister().Secrets(common.GardenNamespace).List(selector)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, secret := range secrets {
 		metadata := secret.ObjectMeta
 		name := metadata.Name
 		labels := metadata.Labels
@@ -70,7 +78,7 @@ func ReadGardenSecrets(k8sGardenClient kubernetes.Client, gardenNamespace string
 				continue
 			}
 			defaultDomainSecret := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = &defaultDomainSecret
+			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, domain)] = defaultDomainSecret
 			logger.Logger.Infof("Found default domain secret %s for domain %s.", name, domain)
 		}
 
@@ -83,7 +91,7 @@ func ReadGardenSecrets(k8sGardenClient kubernetes.Client, gardenNamespace string
 				continue
 			}
 			internalDomainSecret := secret
-			secretsMap[common.GardenRoleInternalDomain] = &internalDomainSecret
+			secretsMap[common.GardenRoleInternalDomain] = internalDomainSecret
 			logger.Logger.Infof("Found internal domain secret %s for domain %s.", name, domain)
 			numberOfInternalDomainSecrets++
 		}
@@ -93,7 +101,7 @@ func ReadGardenSecrets(k8sGardenClient kubernetes.Client, gardenNamespace string
 		// Only when using the in-cluster config as we do not want to configure alerts in development modus.
 		if labels[common.GardenRole] == common.GardenRoleAlertingSMTP && runningInCluster {
 			alertingSMTP := secret
-			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleAlertingSMTP, name)] = &alertingSMTP
+			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleAlertingSMTP, name)] = alertingSMTP
 			logger.Logger.Infof("Found alerting SMTP secret %s.", name)
 		}
 	}
@@ -103,6 +111,32 @@ func ReadGardenSecrets(k8sGardenClient kubernetes.Client, gardenNamespace string
 	}
 
 	return secretsMap, nil
+}
+
+// VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
+// existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
+func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Client, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
+	currentDomain := internalDomainSecret.Annotations[common.DNSDomain]
+
+	internalConfigMap, err := k8sGardenClient.GetConfigMap(common.GardenNamespace, common.ControllerManagerInternalConfigMapName)
+	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
+		if _, err := k8sGardenClient.CreateConfigMap(common.GardenNamespace, common.ControllerManagerInternalConfigMapName, map[string]string{
+			common.GardenRoleInternalDomain: currentDomain,
+		}, true); err != nil {
+			return err
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	oldDomain := internalConfigMap.Data[common.GardenRoleInternalDomain]
+	if oldDomain != currentDomain {
+		return fmt.Errorf("cannot change internal domain from '%s' to '%s' unless there are no more Shoots", oldDomain, currentDomain)
+	}
+
+	return nil
 }
 
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.

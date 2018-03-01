@@ -69,6 +69,8 @@ type Client interface {
 	DeleteSecret(string, string) error
 
 	// ConfigMaps
+	CreateConfigMap(string, string, map[string]string, bool) (*corev1.ConfigMap, error)
+	UpdateConfigMap(string, string, map[string]string) (*corev1.ConfigMap, error)
 	GetConfigMap(string, string) (*corev1.ConfigMap, error)
 	DeleteConfigMap(string, string) error
 

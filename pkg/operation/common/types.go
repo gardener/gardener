@@ -39,6 +39,10 @@ const (
 	// '.metadata.deletionTimestamp' value to trigger the deletion process of the Shoot cluster.
 	ConfirmationDeletionTimestamp = "confirmation.garden.sapcloud.io/deletionTimestamp"
 
+	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
+	// manager stores its configuration.
+	ControllerManagerInternalConfigMapName = "garden-controller-manager-internal-config"
+
 	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
 	DNSProvider = "dns.garden.sapcloud.io/provider"
