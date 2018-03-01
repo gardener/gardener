@@ -71,6 +71,32 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if len(obj.LeaderElection.LockObjectName) == 0 {
 		obj.LeaderElection.LockObjectName = ControllerManagerDefaultLockObjectName
 	}
+
+	if obj.Controllers.CloudProfile == nil {
+		obj.Controllers.CloudProfile = &CloudProfileControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.CrossSecretBinding == nil {
+		obj.Controllers.CrossSecretBinding = &CrossSecretBindingControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.PrivateSecretBinding == nil {
+		obj.Controllers.PrivateSecretBinding = &PrivateSecretBindingControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.Quota == nil {
+		obj.Controllers.Quota = &QuotaControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.Seed == nil {
+		obj.Controllers.Seed = &SeedControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
 }
 
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.

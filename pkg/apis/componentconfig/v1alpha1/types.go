@@ -18,6 +18,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ControllerManagerConfiguration defines the configuration for the Gardener controller manager.
+type ControllerManagerConfiguration struct {
+	metav1.TypeMeta `json:",inline"`
+	// ClientConnection specifies the kubeconfig file and client connection
+	// settings for the proxy server to use when communicating with the apiserver.
+	ClientConnection ClientConnectionConfiguration `json:"clientConnection"`
+	// GardenerClientConnection specifies the kubeconfig file and client connection
+	// settings for the garden-apiserver.
+	// +optional
+	GardenerClientConnection *ClientConnectionConfiguration `json:"gardenerClientConnection,omitempty"`
+	// Controllers defines the configuration of the controllers.
+	Controllers ControllerManagerControllerConfiguration `json:"controllers"`
+	// LeaderElection defines the configuration of leader election client.
+	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
+	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
+	LogLevel string `json:"logLevel"`
+	// Metrics defines the metrics configuration.
+	Metrics MetricsConfiguration `json:"metrics"`
+	// Server defines the configuration of the HTTP server.
+	Server ServerConfiguration `json:"server"`
+}
+
 // ClientConnectionConfiguration contains details for constructing a client.
 type ClientConnectionConfiguration struct {
 	// KubeConfigFile is the path to a kubeconfig file.
@@ -35,18 +59,106 @@ type ClientConnectionConfiguration struct {
 	Burst int32 `json:"burst"`
 }
 
-// ControllerReconciliationConfiguration contains details for the reconciliation
-// settings of a controller.
-type ControllerReconciliationConfiguration struct {
+// ControllerManagerControllerConfiguration defines the configuration of the controllers.
+type ControllerManagerControllerConfiguration struct {
+	// CloudProfile defines the configuration of the CloudProfile controller.
+	// +optional
+	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
+	// CrossSecretBinding defines the configuration of the CrossSecretBinding controller.
+	// +optional
+	CrossSecretBinding *CrossSecretBindingControllerConfiguration `json:"crossSecretBinding,omitempty"`
+	// PrivateSecretBinding defines the configuration of the PrivateSecretBinding controller.
+	// +optional
+	PrivateSecretBinding *PrivateSecretBindingControllerConfiguration `json:"privateSecretBinding,omitempty"`
+	// Quota defines the configuration of the Quota controller.
+	// +optional
+	Quota *QuotaControllerConfiguration `json:"quota,omitempty"`
+	// Seed defines the configuration of the Seed controller.
+	// +optional
+	Seed *SeedControllerConfiguration `json:"seed,omitempty"`
+	// Shoot defines the configuration of the Shoot controller.
+	Shoot ShootControllerConfiguration `json:"shoot"`
+	// ShootCare defines the configuration of the ShootCare controller.
+	ShootCare ShootCareControllerConfiguration `json:"shootCare"`
+	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
+	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
+}
+
+// CloudProfileControllerConfiguration defines the configuration of the CloudProfile
+// controller.
+type CloudProfileControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// ConcurrentSyncs is the duration how often the caches of existing resources
-	// are reconciled.
-	ResyncPeriod metav1.Duration `json:"resyncPeriod"`
+}
+
+// CrossSecretBindingControllerConfiguration defines the configuration of the
+// CrossSecretBinding controller.
+type CrossSecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// PrivateSecretBindingControllerConfiguration defines the configuration of the
+// PrivateSecretBinding controller.
+type PrivateSecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// QuotaControllerConfiguration defines the configuration of the Quota controller.
+type QuotaControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// SeedControllerConfiguration defines the configuration of the Seed controller.
+type SeedControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ShootControllerConfiguration defines the configuration of the CloudProfile
+// controller.
+type ShootControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
 	// RetryDuration is the maximum duration how often a reconciliation will be retried
 	// in case of errors.
-	RetryDuration *metav1.Duration `json:"retryDuration"`
+	RetryDuration metav1.Duration `json:"retryDuration"`
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// WatchNamespace defines the namespace which should be watched by the controller.
+	// +optional
+	WatchNamespace *string `json:"watchNamespace,omitempty"`
+}
+
+// ShootCareControllerConfiguration defines the configuration of the ShootCare
+// controller.
+type ShootCareControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often the health check of Shoot clusters is performed (only if no operation is
+	// already running on them).
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
+}
+
+// ShootMaintenanceControllerConfiguration defines the configuration of the
+// ShootMaintenance controller.
+type ShootMaintenanceControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// SyncPeriod is the duration how often the existing resources are reconciled (how
+	// often it is checked whether Shoot resources need maintenance).
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election
@@ -93,55 +205,6 @@ type ServerConfiguration struct {
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
 	Port int `json:"port"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// ControllerManagerConfiguration defines the configuration for the Gardener controller manager.
-type ControllerManagerConfiguration struct {
-	metav1.TypeMeta `json:",inline"`
-	// ClientConnection specifies the kubeconfig file and client connection
-	// settings for the proxy server to use when communicating with the apiserver.
-	ClientConnection ClientConnectionConfiguration `json:"clientConnection"`
-	// GardenerClientConnection specifies the kubeconfig file and client connection
-	// settings for the garden-apiserver.
-	// +optional
-	GardenerClientConnection *ClientConnectionConfiguration `json:"gardenerClientConnection,omitempty"`
-	// Controller defines the configuration of the controllers.
-	Controller ControllerManagerControllerConfiguration `json:"controller"`
-	// Images is a list of container images which are deployed by the Gardener controller manager.
-	Images []ControllerManagerImagesConfiguration `json:"images"`
-	// LeaderElection defines the configuration of leader election client.
-	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
-	// LogLevel is the level/severity for the logs. Must be one of [`info`,`debug`,
-	// `error`].
-	LogLevel string `json:"logLevel"`
-	// Metrics defines the metrics configuration.
-	Metrics MetricsConfiguration `json:"metrics"`
-	// Server defines the configuration of the HTTP server.
-	Server ServerConfiguration `json:"server"`
-}
-
-// ControllerManagerControllerConfiguration contains configuration for the controllers
-// of the Gardener controller manager. Not only the usual reconciliation configuration is reflected,
-// but also a health check period and a namespace which should be watched.
-type ControllerManagerControllerConfiguration struct {
-	// HealthCheckPeriod is the duration how often the health check of Shoot clusters
-	// is performed (only if no operation is already running on them).
-	HealthCheckPeriod metav1.Duration `json:"healthCheckPeriod"`
-	// Reconciliation defines the reconciliation settings of the controllers.
-	Reconciliation ControllerReconciliationConfiguration `json:"reconciliation"`
-	// WatchNamespace defines the namespace which should be watched by the controller.
-	WatchNamespace *string `json:"watchNamespace"`
-}
-
-// ControllerManagerImagesConfiguration contains configuration for the contaimer images and
-// tags/versions which are used by the Gardener controller manager.
-type ControllerManagerImagesConfiguration struct {
-	// Name is an alias for the image.
-	Name string `json:"name"`
-	// Image is the name of the image (registry location and used tag/version).
-	Image string `json:"image"`
 }
 
 const (

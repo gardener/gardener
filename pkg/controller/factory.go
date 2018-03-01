@@ -102,8 +102,6 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	var (
-		workerCount = f.config.Controller.Reconciliation.ConcurrentSyncs
-
 		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
 		quotaController                = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
@@ -112,12 +110,12 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		crossSecretBindingController   = crosssecretbindingcontroller.NewCrossSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 	)
 
-	go shootController.Run(workerCount, stopCh)
-	go seedController.Run(workerCount, stopCh)
-	go quotaController.Run(workerCount, stopCh)
-	go cloudProfileController.Run(workerCount, stopCh)
-	go privateSecretBindingController.Run(workerCount, stopCh)
-	go crossSecretBindingController.Run(workerCount, stopCh)
+	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, stopCh)
+	go seedController.Run(f.config.Controllers.Seed.ConcurrentSyncs, stopCh)
+	go quotaController.Run(f.config.Controllers.Quota.ConcurrentSyncs, stopCh)
+	go cloudProfileController.Run(f.config.Controllers.CloudProfile.ConcurrentSyncs, stopCh)
+	go privateSecretBindingController.Run(f.config.Controllers.PrivateSecretBinding.ConcurrentSyncs, stopCh)
+	go crossSecretBindingController.Run(f.config.Controllers.CrossSecretBinding.ConcurrentSyncs, stopCh)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 

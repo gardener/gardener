@@ -20,12 +20,17 @@ data:
       contentType: {{ required ".Values.controller.config.clientConnection.contentType is required" .Values.controller.config.clientConnection.contentType }}
       qps: {{ required ".Values.controller.config.clientConnection.qps is required" .Values.controller.config.clientConnection.qps }}
       burst: {{ required ".Values.controller.config.clientConnection.burst is required" .Values.controller.config.clientConnection.burst }}
-    controller:
-      healthCheckPeriod: {{ required ".Values.controller.config.controller.healthCheckPeriod is required" .Values.controller.config.controller.healthCheckPeriod }}
-      reconciliation:
-        concurrentSyncs: {{ required ".Values.controller.config.controller.reconciliation.concurrentSyncs is required" .Values.controller.config.controller.reconciliation.concurrentSyncs }}
-        resyncPeriod: {{ required ".Values.controller.config.controller.reconciliation.resyncPeriod is required" .Values.controller.config.controller.reconciliation.resyncPeriod }}
-        retryDuration: {{ required ".Values.controller.config.controller.reconciliation.retryDuration is required" .Values.controller.config.controller.reconciliation.retryDuration }}
+    controllers:
+      shoot:
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.shoot.concurrentSyncs is required" .Values.controller.config.controllers.shoot.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.controller.config.controllers.shoot.syncPeriod is required" .Values.controller.config.controllers.shoot.syncPeriod }}
+        retryDuration: {{ required ".Values.controller.config.controllers.shoot.retryDuration is required" .Values.controller.config.controllers.shoot.retryDuration }}
+      shootCare:
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.shootCare.concurrentSyncs is required" .Values.controller.config.controllers.shootCare.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.controller.config.controllers.shootCare.syncPeriod is required" .Values.controller.config.controllers.shootCare.syncPeriod }}
+      shootMaintenance:
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.shootMaintenance.concurrentSyncs is required" .Values.controller.config.controllers.shootMaintenance.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.controller.config.controllers.shootMaintenance.syncPeriod is required" .Values.controller.config.controllers.shootMaintenance.syncPeriod }}
     leaderElection:
       leaderElect: {{ required ".Values.controller.config.leaderElection.leaderElect is required" .Values.controller.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.controller.config.leaderElection.leaseDuration is required" .Values.controller.config.leaderElection.leaseDuration }}

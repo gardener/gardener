@@ -269,7 +269,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		}
 	}
 
-	identity, gardenerNamespace, err := determineGardenerIdentity(config.Controller.WatchNamespace)
+	identity, gardenerNamespace, err := determineGardenerIdentity(config.Controllers.Shoot.WatchNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +327,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 }
 
 func startControllers(g *Gardener, stopCh <-chan struct{}) {
-	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), g.Config.Controller.Reconciliation.ResyncPeriod.Duration)
+	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), g.Config.Controllers.Shoot.SyncPeriod.Duration)
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 30*time.Second)
 
 	controller.NewGardenControllerFactory(

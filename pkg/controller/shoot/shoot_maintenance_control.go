@@ -37,7 +37,7 @@ func (c *Controller) shootMaintenanceAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	c.shootMaintenanceQueue.AddAfter(key, 15*time.Minute)
+	c.shootMaintenanceQueue.AddAfter(key, c.config.Controllers.ShootMaintenance.SyncPeriod.Duration)
 }
 
 func (c *Controller) shootMaintenanceDelete(obj interface{}) {

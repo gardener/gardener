@@ -5,12 +5,17 @@ clientConnection:
   contentType: application/json
   qps: 100
   burst: 130
-controller:
-  healthCheckPeriod: 30s
-  reconciliation:
+controllers:
+  shoot:
     concurrentSyncs: 20
-    resyncPeriod: 10m
+    syncPeriod: 10m
     retryDuration: 1440m
+  shootCare:
+    concurrentSyncs: 5
+    syncPeriod: 30s
+  shootMaintenance:
+    concurrentSyncs: 5
+    syncPeriod: 15m
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

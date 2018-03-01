@@ -123,9 +123,9 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers int, stopCh <-chan struct{}) {
 	var (
-		watchNamespace = c.config.Controller.WatchNamespace
+		watchNamespace = c.config.Controllers.Shoot.WatchNamespace
 		waitGroup      sync.WaitGroup
 	)
 
@@ -152,9 +152,13 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	}
 	logger.Logger.Info("Shoot controller initialized.")
 
-	for i := 0; i < workers; i++ {
+	for i := 0; i < shootWorkers; i++ {
 		controllerutils.CreateWorker(c.shootQueue, "Shoot", c.reconcileShootKey, stopCh, &waitGroup, c.workerCh)
+	}
+	for i := 0; i < shootCareWorkers; i++ {
 		controllerutils.CreateWorker(c.shootCareQueue, "Shoot Care", c.reconcileShootCareKey, stopCh, &waitGroup, c.workerCh)
+	}
+	for i := 0; i < shootMaintenanceWorkers; i++ {
 		controllerutils.CreateWorker(c.shootMaintenanceQueue, "Shoot Maintenance", c.reconcileShootMaintenanceKey, stopCh, &waitGroup, c.workerCh)
 	}
 
@@ -191,7 +195,7 @@ func (c *Controller) RunningWorkers() int {
 func (c *Controller) shootNamespaceFilter(obj interface{}) bool {
 	var (
 		shoot          = obj.(*gardenv1beta1.Shoot)
-		watchNamespace = c.config.Controller.WatchNamespace
+		watchNamespace = c.config.Controllers.Shoot.WatchNamespace
 	)
 	return watchNamespace == nil || shoot.Namespace == *watchNamespace
 }

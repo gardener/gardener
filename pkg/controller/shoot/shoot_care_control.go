@@ -39,7 +39,7 @@ func (c *Controller) shootCareAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	c.shootCareQueue.AddAfter(key, c.config.Controller.HealthCheckPeriod.Duration)
+	c.shootCareQueue.AddAfter(key, c.config.Controllers.ShootCare.SyncPeriod.Duration)
 }
 
 func (c *Controller) shootCareDelete(obj interface{}) {

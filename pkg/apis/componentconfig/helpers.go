@@ -31,7 +31,7 @@ func ApplyEnvironmentToConfig(config *ControllerManagerConfiguration) {
 		config.GardenerClientConnection.KubeConfigFile = kubeconfig
 	}
 	if watchNamespace := os.Getenv("WATCH_NAMESPACE"); watchNamespace != "" {
-		config.Controller.WatchNamespace = &watchNamespace
+		config.Controllers.Shoot.WatchNamespace = &watchNamespace
 		config.LeaderElection.LockObjectNamespace = watchNamespace
 	}
 }

@@ -178,7 +178,7 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 	o.Shoot.Info = newShoot
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
-	// operations.
+	// operations (sometimes the cache is not synced fast enough).
 	return wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
 		shoot, err := c.k8sGardenInformers.Shoots().Lister().Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
 		if apierrors.IsNotFound(err) {
@@ -201,7 +201,7 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 		description = lastError.Description
 	)
 
-	if !utils.TimeElapsed(o.Shoot.Info.DeletionTimestamp, c.config.Controller.Reconciliation.RetryDuration.Duration) {
+	if !utils.TimeElapsed(o.Shoot.Info.DeletionTimestamp, c.config.Controllers.Shoot.RetryDuration.Duration) {
 		description += " Operation will be retried."
 		state = gardenv1beta1.ShootLastOperationStateError
 	} else {
