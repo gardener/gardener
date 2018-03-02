@@ -1162,6 +1162,10 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "end"), maintenance.TimeWindow.End, "time window end is not in the correct format (HHMMSS+ZONE)"))
 		}
 
+		if end.Sub(begin) < 0 {
+			end = end.Add(24 * time.Hour)
+		}
+
 		if beginErr == nil && endErr == nil {
 			if end.Sub(begin) < 0 {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window end must not be before time window begin"))

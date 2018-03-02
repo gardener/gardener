@@ -3175,6 +3175,15 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.maintenance.timeWindow"),
 				}))
 			})
+
+			It("should allow time windows which overlap over two days", func() {
+				shoot.Spec.Maintenance.TimeWindow.Begin = "230000+0100"
+				shoot.Spec.Maintenance.TimeWindow.End = "010000+0100"
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
 		})
 	})
 })
