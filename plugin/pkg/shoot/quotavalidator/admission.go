@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
@@ -142,8 +143,26 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	}
 
 	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
+	var maxShootLifetime *int
 	for _, quotaRef := range quotaReferences {
-		exceededMetrics, err := h.isQuotaExceeded(*shoot, quotaRef)
+		quota, err := h.quotaLister.
+			Quotas(quotaRef.Namespace).
+			Get(quotaRef.Name)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		// Get the max clusterLifeTime
+		if quota.Spec.ClusterLifetimeDays != nil {
+			if maxShootLifetime == nil {
+				maxShootLifetime = quota.Spec.ClusterLifetimeDays
+			}
+			if *maxShootLifetime > *quota.Spec.ClusterLifetimeDays {
+				maxShootLifetime = quota.Spec.ClusterLifetimeDays
+			}
+		}
+
+		exceededMetrics, err := h.isQuotaExceeded(*shoot, *quota)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
@@ -155,6 +174,40 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 			return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message.String()))
 		}
 	}
+
+	if lifetime, exists := shoot.Annotations[common.ClusterExpirationTime]; exists && maxShootLifetime != nil {
+		var (
+			plannedExpirationTime   time.Time
+			oldExpirationTime       time.Time
+			calulatedExpirationTime time.Time
+		)
+
+		plannedExpirationTime, err = time.Parse(time.RFC3339, lifetime)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		// Get the prior version of the Shoot
+		oldShoot, ok := a.GetOldObject().(*garden.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into Shoot object")
+		}
+
+		if lifetime, exists := oldShoot.Annotations[common.ClusterExpirationTime]; exists {
+			oldExpirationTime, err = time.Parse(time.RFC3339, lifetime)
+			if err != nil {
+				return apierrors.NewInternalError(err)
+			}
+		} else {
+			oldExpirationTime = shoot.CreationTimestamp.Time
+		}
+
+		calulatedExpirationTime = oldExpirationTime.Add(time.Duration(*maxShootLifetime*24) * time.Hour)
+		if plannedExpirationTime.After(calulatedExpirationTime) {
+			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time to long. Can only be extended by %d day(s)", *maxShootLifetime))
+		}
+	}
+
 	return nil
 }
 
@@ -180,15 +233,8 @@ func (h *RejectShootIfQuotaExceeded) getShootsQuotaReferences(shoot garden.Shoot
 	return nil, fmt.Errorf("Unknown binding type %s", shoot.Spec.Cloud.SecretBindingRef.Kind)
 }
 
-func (h *RejectShootIfQuotaExceeded) isQuotaExceeded(shoot garden.Shoot, quotaRef v1.ObjectReference) (*[]v1.ResourceName, error) {
-	quota, err := h.quotaLister.
-		Quotas(quotaRef.Namespace).
-		Get(quotaRef.Name)
-	if err != nil {
-		return nil, err
-	}
-
-	allocatedResources, err := h.determineAllocatedResources(*quota, shoot)
+func (h *RejectShootIfQuotaExceeded) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]v1.ResourceName, error) {
+	allocatedResources, err := h.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
 	}

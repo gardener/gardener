@@ -21,7 +21,7 @@ func (c *Controller) shootQuotaAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	c.shootQuotaQueue.AddAfter(key, 1*time.Hour)
+	c.shootQuotaQueue.Add(key)
 }
 
 func (c *Controller) shootQuotaDelete(obj interface{}) {
@@ -49,9 +49,12 @@ func (c *Controller) reconcileShootQuotaKey(key string) error {
 	if err != nil {
 		return err
 	}
+
 	if err := c.quotaControl.CheckQuota(shoot, key); err != nil {
 		c.shootQuotaQueue.AddAfter(key, 2*time.Minute)
+		return nil
 	}
+	c.shootQuotaQueue.AddAfter(key, time.Hour)
 	return nil
 }
 
@@ -74,11 +77,13 @@ type defaultQuotaControl struct {
 
 func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key string) error {
 	var (
-		operationID     = utils.GenerateRandomString(8)
-		shoot           = shootObj.DeepCopy()
-		shootLogger     = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
-		quotaReferences []v1.ObjectReference
-		clusterLifeTime *int
+		clusterLifeTime     *int
+		quotaReferences     []v1.ObjectReference
+		shootExpirationTime time.Time
+
+		operationID = utils.GenerateRandomString(8)
+		shoot       = shootObj.DeepCopy()
+		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
 	)
 
 	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
@@ -128,7 +133,28 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		return nil
 	}
 
-	shootExpirationTime := shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour)
+	if expirationTime, exists := shoot.Annotations[common.ClusterExpirationTime]; exists {
+		t, err := time.Parse(time.RFC3339, expirationTime)
+		if err != nil {
+			return err
+		}
+		shootExpirationTime = t.Add(time.Duration(*clusterLifeTime*24) * time.Hour)
+	} else {
+		annotations := shoot.Annotations
+		annotations[common.ClusterExpirationTime] = shoot.CreationTimestamp.Format(time.RFC3339)
+		shoot.Annotations = annotations
+
+		_, err := c.k8sGardenClient.
+			GardenClientset().
+			GardenV1beta1().
+			Shoots(shoot.Namespace).
+			Update(shoot)
+		if err != nil {
+			return err
+		}
+		shootExpirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour)
+	}
+
 	if time.Now().After(shootExpirationTime) {
 		shootLogger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
@@ -150,8 +176,8 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 			return err
 		}
 
-		// After the shoot has set a deletionTimestamp, we can use this timestamp to set the
-		// deletionTimestampConfirmation annotation to trigger the shoot deletion process.
+		// After the shoot has got a deletionTimestamp, we use this timestamp to set the
+		// deletionTimestampConfirmation annotation, which initiate the shoot deletion process.
 		annotations := shootUpdated.ObjectMeta.Annotations
 		annotations[common.ConfirmationDeletionTimestamp] = shootUpdated.DeletionTimestamp.Format(time.RFC3339)
 		shootUpdated.ObjectMeta.Annotations = annotations
