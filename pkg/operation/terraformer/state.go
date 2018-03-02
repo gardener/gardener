@@ -15,11 +15,17 @@
 package terraformer
 
 import (
+	"encoding/json"
 	"errors"
 
-	"github.com/gardener/gardener/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
+
+type terraformState struct {
+	Modules []struct {
+		Outputs map[string]map[string]interface{} `json:"outputs"`
+	} `json:"modules"`
+}
 
 // GetState returns the Terraform state as byte slice.
 func (t *Terraformer) GetState() ([]byte, error) {
@@ -33,19 +39,24 @@ func (t *Terraformer) GetState() ([]byte, error) {
 // GetStateOutputVariables returns the given <variable> from the given Terraform <stateData>.
 // In case the variable was not found, an error is returned.
 func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]string, error) {
+	var (
+		state  terraformState
+		output = make(map[string]string)
+	)
+
 	stateConfigMap, err := t.GetState()
 	if err != nil {
 		return nil, err
 	}
-	state := utils.ConvertJSONToMap(stateConfigMap)
 
-	output := make(map[string]string)
+	if err := json.Unmarshal(stateConfigMap, &state); err != nil {
+		return nil, err
+	}
+
 	for _, variable := range variables {
-		value, err := state.String("modules", "0", "outputs", variable, "value")
-		if err != nil {
-			return nil, err
+		if value, ok := state.Modules[0].Outputs[variable]["value"]; ok {
+			output[variable] = value.(string)
 		}
-		output[variable] = value
 	}
 
 	if len(output) != len(variables) {
@@ -64,6 +75,5 @@ func (t *Terraformer) IsStateEmpty() bool {
 		}
 		return false
 	}
-
 	return len(state) == 0
 }
