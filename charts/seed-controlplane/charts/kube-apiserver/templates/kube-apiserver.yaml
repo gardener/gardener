@@ -57,8 +57,6 @@ spec:
         - --etcd-servers=http://$(ETCD_MAIN_CLIENT_SERVICE_HOST):$(ETCD_MAIN_CLIENT_SERVICE_PORT)
         - --etcd-servers-overrides=/events#http://$(ETCD_EVENTS_CLIENT_SERVICE_HOST):$(ETCD_EVENTS_CLIENT_SERVICE_PORT)
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
-        - --insecure-bind-address=127.0.0.1
-        - --insecure-port=8080
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
         # TODO: enable this once kubelet automatically generates its TLS with selfnodeserver
         # https://kubernetes.io/docs/admin/kubelet-tls-bootstrapping/
@@ -84,11 +82,13 @@ spec:
         env:
 {{ toYaml .Values.environment | indent 10 }}
         livenessProbe:
-          exec:
-            command:
-            - "/bin/sh"
-            - "-ec"
-            - "if ! which curl 1>/dev/null; then apt-get update; apt-get install -y curl; fi; curl http://127.0.0.1:8080/healthz"
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: 443
+            httpHeaders:
+            - name: Authorization
+              value: Basic {{ .Values.livenessProbeCredentials }}
           successThreshold: 1
           failureThreshold: 2
           initialDelaySeconds: 30

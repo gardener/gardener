@@ -83,21 +83,26 @@ func (b *HybridBotanist) DeployCloudProviderConfig() error {
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
-	name := "kube-apiserver"
-	loadBalancer := b.Botanist.APIServerAddress
+	var (
+		name          = "kube-apiserver"
+		loadBalancer  = b.Botanist.APIServerAddress
+		basicAuthData = b.Secrets["kubecfg"].Data
+	)
+
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(loadBalancer)
 	if err != nil {
 		return err
 	}
 
 	defaultValues := map[string]interface{}{
-		"advertiseAddress":  loadBalancerIP,
-		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
-		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-		"podNetwork":        b.Shoot.GetPodNetwork(),
-		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
-		"securePort":        443,
-		"nodeNetwork":       b.Shoot.GetNodeNetwork(),
+		"advertiseAddress":         loadBalancerIP,
+		"cloudProvider":            b.ShootCloudBotanist.GetCloudProviderName(),
+		"kubernetesVersion":        b.Shoot.Info.Spec.Kubernetes.Version,
+		"podNetwork":               b.Shoot.GetPodNetwork(),
+		"serviceNetwork":           b.Shoot.GetServiceNetwork(),
+		"securePort":               443,
+		"livenessProbeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", basicAuthData["username"], basicAuthData["password"]))),
+		"nodeNetwork":              b.Shoot.GetNodeNetwork(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[name],
