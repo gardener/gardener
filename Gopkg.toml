@@ -17,10 +17,6 @@ ignored = [
   version = "kubernetes-1.9.3"
 
 [[constraint]]
-  name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.9.3"
-
-[[constraint]]
   name = "k8s.io/apimachinery"
   version = "kubernetes-1.9.3"
 
@@ -53,10 +49,6 @@ ignored = [
   version = "^1.0.0"
 
 [[constraint]]
-  name = "github.com/jmoiron/jsonq"
-  revision = "e874b168d07ecc7808bc950a17998a8aa3141d82"
-
-[[constraint]]
   name = "github.com/spf13/cobra"
   version = "^0.0.1"
 
@@ -86,10 +78,6 @@ ignored = [
 [[override]]
   name = "github.com/coreos/etcd"
   version = "3.2.13"
-
-# [[override]]
-#   name = "github.com/ugorji/go"
-#   revision = "ded73eae5db7e7a0ef6f55aace87a2873c5d2b74"
 
 [prune]
   unused-packages = true

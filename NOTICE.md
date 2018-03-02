@@ -41,11 +41,6 @@ https://git.k8s.io/api.
 Copyright 2017 The Kubernetes Authors.  
 Apache 2 license (https://git.k8s.io/api/LICENSE).  
 
-APIExtension APIServer.  
-https://git.k8s.io/apiextensions-apiserver.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/apiextensions-apiserver/LICENSE).  
-
 APIMachinery.  
 https://git.k8s.io/apimachinery.  
 Copyright 2017 The Kubernetes Authors.  
@@ -90,11 +85,6 @@ YAML marshaling and unmarshaling support for Go
 https://github.com/ghodss/yaml.  
 Copyright (c) 2014 Sam Ghods  
 MIT license (https://github.com/ghodss/yaml/blob/master/LICENSE)
-
-JSONQ  
-https://github.com/jmoiron/jsonq.  
-Copyright (c) 2012, Jason Moiron  
-MIT license (https://github.com/jmoiron/jsonq/blob/master/LICENSE)  
 
 Logrus  
 https://github.com/sirupsen/logrus.  
