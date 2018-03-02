@@ -18,7 +18,7 @@ images:
   tag: v8.5
 - name: vpn-seed
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
-  tag: "0.2.0"
+  tag: "0.3.0"
 - name: aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.1.0"
@@ -61,7 +61,7 @@ images:
   tag: v0.6.1
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
-  tag: "0.2.0"
+  tag: "0.3.0"
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
   tag: "1.14.8"

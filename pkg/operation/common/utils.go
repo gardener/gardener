@@ -139,7 +139,7 @@ func GetLoadBalancerIngress(client kubernetes.Client, namespace, name string) (s
 	serviceStatusIngress = service.Status.LoadBalancer.Ingress
 	length := len(serviceStatusIngress)
 	if length == 0 {
-		return "", nil, errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created")
+		return "", nil, errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)")
 	}
 
 	if serviceStatusIngress[length-1].IP != "" {
