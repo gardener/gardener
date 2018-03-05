@@ -3,8 +3,16 @@ This file should only be symlinked! This text should appear to be
 modified only for a file in charts/_versions.tpl
 */}}
 
-{{- define "componentconfigversion" -}}
+{{- define "schedulercomponentconfigversion" -}}
 componentconfig/v1alpha1
+{{- end -}}
+
+{{- define "proxycomponentconfigversion" -}}
+{{- if semverCompare "< 1.9" .Capabilities.KubeVersion.GitVersion -}}
+componentconfig/v1alpha1
+{{- else -}}
+kubeproxy.config.k8s.io/v1alpha1
+{{- end -}}
 {{- end -}}
 
 {{- define "rbacversion" -}}

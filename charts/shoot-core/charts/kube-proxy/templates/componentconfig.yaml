@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-proxy-config
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+data:
+  config.yaml: |-
+    ---
+    apiVersion: {{ include "proxycomponentconfigversion" . }}
+    kind: KubeProxyConfiguration
+    clientConnection:
+      kubeconfig: /var/lib/kube-proxy/kubeconfig
+    clusterCIDR: {{ .Values.global.podNetwork }}
+    conntrack:
+      maxPerCore: 524288
+    {{- if semverCompare "< 1.10" .Capabilities.KubeVersion.GitVersion }}
+    {{- include "kube-proxy.featureGates" . | trimSuffix "," | indent 4 }}
+    {{- else }}
+    {{- if .Values.featureGates }}
+    featureGates:
+{{ toYaml .Values.featureGates | indent 6 }}
+    {{- end }}
+    {{- end }}

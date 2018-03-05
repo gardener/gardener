@@ -18,6 +18,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/secret-kube-proxy: {{ include (print $.Template.BasePath "/kube-proxy-secret.yaml") . | sha256sum }}
+        checksum/configmap-componentconfig: {{ include (print $.Template.BasePath "/componentconfig.yaml") . | sha256sum }}
       labels:
         origin: gardener
         app: kubernetes
@@ -34,10 +35,7 @@ spec:
         command:
         - /hyperkube
         - proxy
-        - --cluster-cidr={{ .Values.global.podNetwork }}
-        - --conntrack-max-per-core=524288
-        - --kubeconfig=/var/lib/kube-proxy/kubeconfig
-        {{- include "kube-proxy.featureGates" . | trimSuffix "," | indent 8 }}
+        - --config=/var/lib/kube-proxy-config/config.yaml
         - --v=2
         securityContext:
           privileged: true
@@ -47,6 +45,8 @@ spec:
         volumeMounts:
         - name: kubeconfig
           mountPath: /var/lib/kube-proxy
+        - name: kube-proxy-config
+          mountPath: /var/lib/kube-proxy-config
         - name: ssl-certs-hosts
           mountPath: /etc/ssl/certs
           readOnly: true
@@ -56,6 +56,9 @@ spec:
       - name: kubeconfig
         secret:
           secretName: kube-proxy
+      - name: kube-proxy-config
+        configMap:
+          name: kube-proxy-config
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
