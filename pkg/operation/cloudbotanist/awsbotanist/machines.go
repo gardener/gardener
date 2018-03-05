@@ -85,9 +85,7 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 					"kubernetes.io/role/node":                                      "1",
 				},
 				"secret": map[string]interface{}{
-					"accessKeyID":     string(b.Shoot.Secret.Data[AccessKeyID]),
-					"secretAccessKey": string(b.Shoot.Secret.Data[SecretAccessKey]),
-					"cloudConfig":     cloudConfig.FileContent("cloud-config.yaml"),
+					"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
 				},
 				"blockDevices": []map[string]interface{}{
 					{
@@ -112,6 +110,9 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 			})
 
 			machineClassSpec["name"] = className
+			machineClassSpec["secret"].(map[string]interface{})["accessKeyID"] = string(b.Shoot.Secret.Data[AccessKeyID])
+			machineClassSpec["secret"].(map[string]interface{})["secretAccessKey"] = string(b.Shoot.Secret.Data[SecretAccessKey])
+
 			machineClasses = append(machineClasses, machineClassSpec)
 		}
 	}

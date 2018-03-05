@@ -73,11 +73,6 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, [
 					"kubernetes.io-role-node":                                      "1",
 				},
 				"secret": map[string]interface{}{
-					"authURL":     b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL,
-					"domainName":  string(b.Shoot.Secret.Data[DomainName]),
-					"tenantName":  string(b.Shoot.Secret.Data[TenantName]),
-					"username":    string(b.Shoot.Secret.Data[UserName]),
-					"password":    string(b.Shoot.Secret.Data[Password]),
 					"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
 				},
 			}
@@ -95,6 +90,12 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, [
 			})
 
 			machineClassSpec["name"] = className
+			machineClassSpec["secret"].(map[string]interface{})["authURL"] = b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL
+			machineClassSpec["secret"].(map[string]interface{})["domainName"] = string(b.Shoot.Secret.Data[DomainName])
+			machineClassSpec["secret"].(map[string]interface{})["tenantName"] = string(b.Shoot.Secret.Data[TenantName])
+			machineClassSpec["secret"].(map[string]interface{})["username"] = string(b.Shoot.Secret.Data[UserName])
+			machineClassSpec["secret"].(map[string]interface{})["password"] = string(b.Shoot.Secret.Data[Password])
+
 			machineClasses = append(machineClasses, machineClassSpec)
 		}
 	}

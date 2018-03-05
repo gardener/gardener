@@ -70,11 +70,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 				"kubernetes.io-role-node":                                      "1",
 			},
 			"secret": map[string]interface{}{
-				"clientID":       string(b.Shoot.Secret.Data[ClientID]),
-				"clientSecret":   string(b.Shoot.Secret.Data[ClientSecret]),
-				"subscriptionID": string(b.Shoot.Secret.Data[SubscriptionID]),
-				"tenantID":       string(b.Shoot.Secret.Data[TenantID]),
-				"cloudConfig":    cloudConfig.FileContent("cloud-config.yaml"),
+				"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
 			},
 			"machineType": worker.MachineType,
 			"image": map[string]interface{}{
@@ -100,6 +96,11 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 		})
 
 		machineClassSpec["name"] = className
+		machineClassSpec["secret"].(map[string]interface{})["clientID"] = string(b.Shoot.Secret.Data[ClientID])
+		machineClassSpec["secret"].(map[string]interface{})["clientSecret"] = string(b.Shoot.Secret.Data[ClientSecret])
+		machineClassSpec["secret"].(map[string]interface{})["subscriptionID"] = string(b.Shoot.Secret.Data[SubscriptionID])
+		machineClassSpec["secret"].(map[string]interface{})["tenantID"] = string(b.Shoot.Secret.Data[TenantID])
+
 		machineClasses = append(machineClasses, machineClassSpec)
 	}
 

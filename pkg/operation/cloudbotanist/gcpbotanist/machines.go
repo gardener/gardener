@@ -92,8 +92,7 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 					"preemptible":       false,
 				},
 				"secret": map[string]interface{}{
-					"serviceAccountJSON": string(b.Shoot.Secret.Data[ServiceAccountJSON]),
-					"cloudConfig":        cloudConfig.FileContent("cloud-config.yaml"),
+					"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
 				},
 				"serviceAccounts": []map[string]interface{}{
 					{
@@ -117,6 +116,8 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 			})
 
 			machineClassSpec["name"] = className
+			machineClassSpec["secret"].(map[string]interface{})["serviceAccountJSON"] = string(b.Shoot.Secret.Data[ServiceAccountJSON])
+
 			machineClasses = append(machineClasses, machineClassSpec)
 		}
 	}
