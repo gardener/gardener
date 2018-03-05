@@ -162,18 +162,15 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 		state         = gardenv1beta1.ShootLastOperationStateFailed
 		description   = lastError.Description
 		lastOperation = o.Shoot.Info.Status.LastOperation
-		progress      int
+		progress      = 1
 	)
 
 	if !utils.TimeElapsed(o.Shoot.Info.Status.OperationStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 		description += " Operation will be retried."
 		state = gardenv1beta1.ShootLastOperationStateError
 	}
-
 	if lastOperation != nil {
 		progress = lastOperation.Progress
-	} else {
-		progress = 1
 	}
 
 	o.Shoot.Info.Status.LastError = lastError
