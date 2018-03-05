@@ -700,9 +700,6 @@ type AzureNetworks struct {
 	K8SNetworks
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet
-	// Public is a CIDR of a public subnet to create (used for bastion).
-	// +optional
-	Public *CIDR
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
 	Workers CIDR
 }

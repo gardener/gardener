@@ -85,13 +85,6 @@ func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() []map[strin
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, createVNet bool, resourceGroupName, vnetName string, vnetCIDR gardenv1beta1.CIDR, countUpdateDomains, countFaultDomains gardenv1beta1.AzureDomainCount) map[string]interface{} {
-	var networks = map[string]interface{}{
-		"worker": b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers,
-	}
-	if b.Shoot.Info.Spec.Cloud.Azure.Networks.Public != nil {
-		networks["public"] = *(b.Shoot.Info.Spec.Cloud.Azure.Networks.Public)
-	}
-
 	return map[string]interface{}{
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Shoot.Secret.Data[SubscriptionID]),
@@ -112,7 +105,9 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 			},
 		},
 		"clusterName": b.Shoot.SeedNamespace,
-		"networks":    networks,
+		"networks": map[string]interface{}{
+			"worker": b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers,
+		},
 	}
 }
 

@@ -26,4 +26,3 @@
 
 # networks:
 #   worker: 10.250.0.0/19
-# #  public: 10.250.96.0/22 # optional

@@ -35,34 +35,6 @@ resource "azurerm_subnet" "workers" {
   network_security_group_id = "${azurerm_network_security_group.workers.id}"
 }
 
-{{ if .Values.networks.public -}}
-resource "azurerm_subnet" "subnet_public_utility" {
-  name                      = "{{ required "clusterName is required" .Values.clusterName }}-public-utility"
-  resource_group_name       = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
-  virtual_network_name      = "{{ required "resourceGroup.vnet.name is required" .Values.resourceGroup.vnet.name }}"
-  address_prefix            = "{{ required "networks.public is required" .Values.networks.public }}"
-  network_security_group_id = "${azurerm_network_security_group.bastion.id}"
-}
-
-resource "azurerm_network_security_group" "bastion" {
-  name                = "{{ required "clusterName is required" .Values.clusterName }}-bastion"
-  location            = "{{ required "azure.region is required" .Values.azure.region }}"
-  resource_group_name = "{{ required "resourceGroup.name is required" .Values.resourceGroup.name }}"
-
-  security_rule {
-    name                       = "ssh"
-    priority                   = 100
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "22"
-    source_address_prefix      = "Internet"
-    destination_address_prefix = "*"
-  }
-}
-{{- end}}
-
 resource "azurerm_route_table" "workers" {
   name                = "worker_route_table"
   location            = "{{ required "azure.region is required" .Values.azure.region }}"

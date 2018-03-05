@@ -700,9 +700,6 @@ type AzureNetworks struct {
 	K8SNetworks `json:",inline"`
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet `json:"vnet"`
-	// Public is a CIDR of a public subnet to create (used for bastion).
-	// +optional
-	Public *CIDR `json:"public,omitempty"`
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
 	Workers CIDR `json:"workers"`
 }

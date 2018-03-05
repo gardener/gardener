@@ -2227,14 +2227,13 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should forbid invalid network configuration", func() {
-				shoot.Spec.Cloud.Azure.Networks.Public = &invalidCIDR
 				shoot.Spec.Cloud.Azure.Networks.Workers = invalidCIDR
 				shoot.Spec.Cloud.Azure.Networks.K8SNetworks = invalidK8sNetworks
 				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{}
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(6))
+				Expect(len(errorList)).To(Equal(5))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
@@ -2252,10 +2251,6 @@ var _ = Describe("validation", func() {
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
 				}))
 				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public", fldPath)),
-				}))
-				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
 				}))

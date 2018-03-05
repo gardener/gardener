@@ -836,10 +836,6 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 
 		allErrs = append(allErrs, validateK8SNetworks(azure.Networks.K8SNetworks, azurePath.Child("networks"))...)
 
-		if azure.Networks.Public != nil {
-			allErrs = append(allErrs, validateCIDR(*azure.Networks.Public, azurePath.Child("networks", "public"))...)
-		}
-
 		allErrs = append(allErrs, validateCIDR(azure.Networks.Workers, azurePath.Child("networks", "workers"))...)
 
 		// TODO: re-enable once deployment into existing vnet works properly.
