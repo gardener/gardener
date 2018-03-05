@@ -106,8 +106,18 @@ func (c *Client) Apply(m []byte) error {
 				return e
 			}
 
-			if putErr := c.put(absPathName, manifest); putErr != nil {
-				return putErr
+			switch kind {
+			case "ServiceAccount":
+				// We do not want to override a ServiceAccount's `.secrets[]` list with PUT requests (this would result in creating a new
+				// service account token (and a new secret)). Also, we do not want to override other fields like `.imagePullSecrets` which
+				// may have been added by a user.
+				if patchErr := c.patch(absPathName, manifest); patchErr != nil {
+					return patchErr
+				}
+			default:
+				if putErr := c.put(absPathName, manifest); putErr != nil {
+					return putErr
+				}
 			}
 		}
 	}
