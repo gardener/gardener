@@ -35,11 +35,11 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /gardener-apiserver
-        - --admission-control=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
+        - --enable-admission-plugins=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator
         {{- if .Values.apiserver.etcd.useSidecar }}
         - --etcd-servers=http://localhost:2379
         {{- else }}

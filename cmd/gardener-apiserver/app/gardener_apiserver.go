@@ -38,6 +38,7 @@ import (
 	"github.com/spf13/cobra"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apiserver/pkg/admission"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	kubeinformers "k8s.io/client-go/informers"
@@ -73,23 +74,22 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 
 	flags := cmd.Flags()
 	opts.Recommended.AddFlags(flags)
-	opts.Admission.AddFlags(flags)
 	return cmd
 }
 
 // Options has all the context and parameters needed to run a Gardener API server.
 type Options struct {
-	Admission   *genericoptions.AdmissionOptions
-	Recommended *genericoptions.RecommendedOptions
-	StdOut      io.Writer
-	StdErr      io.Writer
+	Recommended           *genericoptions.RecommendedOptions
+	GardenInformerFactory gardeninformers.SharedInformerFactory
+	KubeInformerFactory   kubeinformers.SharedInformerFactory
+	StdOut                io.Writer
+	StdErr                io.Writer
 }
 
 // NewOptions returns a new Options object.
 func NewOptions(out, errOut io.Writer) *Options {
 	return &Options{
 		Recommended: genericoptions.NewRecommendedOptions(fmt.Sprintf("/registry/%s", garden.GroupName), api.Codecs.LegacyCodec(gardenv1beta1.SchemeGroupVersion)),
-		Admission:   genericoptions.NewAdmissionOptions(),
 		StdOut:      out,
 		StdErr:      errOut,
 	}
@@ -97,68 +97,78 @@ func NewOptions(out, errOut io.Writer) *Options {
 
 // validate validates all the required options.
 func (o Options) validate(args []string) error {
-	errors := []error{}
-	errors = append(errors, o.Recommended.Validate()...)
-	errors = append(errors, o.Admission.Validate()...)
-	return utilerrors.NewAggregate(errors)
-}
+	errs := []error{}
+	errs = append(errs, o.Recommended.Validate()...)
 
-func (o *Options) complete() error {
-	return nil
-}
-
-func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFactory, kubeinformers.SharedInformerFactory, error) {
 	// Require server certificate specification
 	keyCert := &o.Recommended.SecureServing.ServerCert.CertKey
 	if len(keyCert.CertFile) == 0 || len(keyCert.KeyFile) == 0 {
-		return nil, nil, nil, errors.New("need to specify --tls-cert-file and --tls-private-key-file")
+		errs = append(errs, errors.New("must specify both --tls-cert-file and --tls-private-key-file"))
 	}
 
-	// Create clientset for the garden.sapcloud.io API group
-	// Use loopback config to create a new Kubernetes client for the garden.sapcloud.io API group
-	gardenerAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
-	if err := o.Recommended.ApplyTo(gardenerAPIServerConfig); err != nil {
-		return nil, nil, nil, err
-	}
-	gardenClient, err := gardenclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+	return utilerrors.NewAggregate(errs)
+}
 
-	// Create clientset for the native Kubernetes API group
-	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
-	kubeAPIServerConfig, err := clientcmd.BuildConfigFromFlags("", o.Recommended.Authentication.RemoteKubeConfigFile)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	kubeClient, err := kubernetes.NewForConfig(kubeAPIServerConfig)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
-
+func (o *Options) complete() error {
 	// Admission plugin registration
-	resourcereferencemanager.Register(o.Admission.Plugins)
-	shootquotavalidator.Register(o.Admission.Plugins)
-	shootseedmanager.Register(o.Admission.Plugins)
-	shootdnshostedzone.Register(o.Admission.Plugins)
-	shootvalidator.Register(o.Admission.Plugins)
+	resourcereferencemanager.Register(o.Recommended.Admission.Plugins)
+	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
+	shootseedmanager.Register(o.Recommended.Admission.Plugins)
+	shootdnshostedzone.Register(o.Recommended.Admission.Plugins)
+	shootvalidator.Register(o.Recommended.Admission.Plugins)
 
+	allOrderedPlugins := []string{
+		resourcereferencemanager.PluginName,
+		shootdnshostedzone.PluginName,
+		shootquotavalidator.PluginName,
+		shootseedmanager.PluginName,
+		shootvalidator.PluginName,
+	}
+
+	recommendedPluginOrder := sets.NewString(o.Recommended.Admission.RecommendedPluginOrder...)
+	recommendedPluginOrder.Insert(allOrderedPlugins...)
+	o.Recommended.Admission.RecommendedPluginOrder = recommendedPluginOrder.List()
+
+	return nil
+}
+
+func (o *Options) config() (*apiserver.Config, error) {
 	// Enable some admission plugins by default
-	enabledPlugins := sets.NewString(o.Admission.PluginNames...)
+	enabledPlugins := sets.NewString(o.Recommended.Admission.EnablePlugins...)
 	if !enabledPlugins.Has(resourcereferencemanager.PluginName) {
 		enabledPlugins.Insert(resourcereferencemanager.PluginName)
 	}
 	if !enabledPlugins.Has(shootvalidator.PluginName) {
 		enabledPlugins.Insert(shootvalidator.PluginName)
 	}
-	o.Admission.PluginNames = enabledPlugins.List()
+	o.Recommended.Admission.EnablePlugins = enabledPlugins.List()
+
+	// Create clientset for the garden.sapcloud.io API group
+	// Use loopback config to create a new Kubernetes client for the garden.sapcloud.io API group
+	gardenerAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
+
+	// Create clientset for the native Kubernetes API group
+	// Use remote kubeconfig file (if set) or in-cluster config to create a new Kubernetes client for the native Kubernetes API groups
+	kubeAPIServerConfig, err := clientcmd.BuildConfigFromFlags("", o.Recommended.Authentication.RemoteKubeConfigFile)
+	if err != nil {
+		return nil, err
+	}
+	kubeClient, err := kubernetes.NewForConfig(kubeAPIServerConfig)
+	if err != nil {
+		return nil, err
+	}
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, kubeAPIServerConfig.Timeout)
+	o.KubeInformerFactory = kubeInformerFactory
 
 	// Initialize admission plugins
-	admissionInitializer := admissioninitializer.New(gardenInformerFactory, kubeInformerFactory)
-	if err := o.Admission.ApplyTo(&gardenerAPIServerConfig.Config, gardenerAPIServerConfig.SharedInformerFactory, gardenerAPIServerConfig.ClientConfig, api.Scheme, admissionInitializer); err != nil {
-		return nil, nil, nil, err
+	o.Recommended.ExtraAdmissionInitializers = func(c *genericapiserver.RecommendedConfig) ([]admission.PluginInitializer, error) {
+		gardenClient, err := gardenclientset.NewForConfig(gardenerAPIServerConfig.LoopbackClientConfig)
+		if err != nil {
+			return nil, err
+		}
+		gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
+		o.GardenInformerFactory = gardenInformerFactory
+		return []admission.PluginInitializer{admissioninitializer.New(gardenInformerFactory, kubeInformerFactory)}, nil
 	}
 
 	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, api.Scheme)
@@ -166,14 +176,18 @@ func (o Options) config() (*apiserver.Config, gardeninformers.SharedInformerFact
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = version.Version
 	gardenerAPIServerConfig.SwaggerConfig = genericapiserver.DefaultSwaggerConfig()
 
+	if err := o.Recommended.ApplyTo(gardenerAPIServerConfig, api.Scheme); err != nil {
+		return nil, err
+	}
+
 	return &apiserver.Config{
 		GenericConfig: gardenerAPIServerConfig,
 		ExtraConfig:   apiserver.ExtraConfig{},
-	}, gardenInformerFactory, kubeInformerFactory, nil
+	}, nil
 }
 
 func (o Options) run(stopCh <-chan struct{}) error {
-	config, gardenInformerFactory, kubeInformerFactory, err := o.config()
+	config, err := o.config()
 	if err != nil {
 		return err
 	}
@@ -184,8 +198,8 @@ func (o Options) run(stopCh <-chan struct{}) error {
 	}
 
 	server.GenericAPIServer.AddPostStartHook("start-gardener-apiserver-informers", func(context genericapiserver.PostStartHookContext) error {
-		gardenInformerFactory.Start(context.StopCh)
-		kubeInformerFactory.Start(context.StopCh)
+		o.GardenInformerFactory.Start(context.StopCh)
+		o.KubeInformerFactory.Start(context.StopCh)
 		return nil
 	})
 

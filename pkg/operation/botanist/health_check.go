@@ -82,9 +82,9 @@ func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Conditi
 	}
 	if err := machineList.EachListItem(func(o runtime.Object) error {
 		var (
-			obj                             = o.(*unstructured.Unstructured)
-			machineName                     = obj.GetName()
-			machinePhase, machinePhaseFound = unstructured.NestedString(obj.UnstructuredContent(), "status", "currentStatus", "phase")
+			obj                                = o.(*unstructured.Unstructured)
+			machineName                        = obj.GetName()
+			machinePhase, machinePhaseFound, _ = unstructured.NestedString(obj.UnstructuredContent(), "status", "currentStatus", "phase")
 		)
 
 		if !machinePhaseFound || machinePhase != "Running" {

@@ -32,14 +32,14 @@ dev-setup-vagrant:
 .PHONY: start-api
 start-api:
 	@go run cmd/gardener-apiserver/main.go \
-			--admission-control=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator \
+			--authentication-kubeconfig ~/.kube/config \
+			--authorization-kubeconfig ~/.kube/config \
+			--enable-admission-plugins=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator \
 			--etcd-servers=http://$(shell minikube ip):32379 \
+			--kubeconfig ~/.kube/config \
 			--tls-cert-file ~/.minikube/apiserver.crt \
 			--tls-private-key-file ~/.minikube/apiserver.key \
 			--secure-port=8443 \
-			--kubeconfig ~/.kube/config \
-			--authentication-kubeconfig ~/.kube/config \
-			--authorization-kubeconfig ~/.kube/config \
 			--v=2
 
 .PHONY: start

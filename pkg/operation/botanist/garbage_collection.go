@@ -54,10 +54,10 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 	}
 	return machineSetList.EachListItem(func(o runtime.Object) error {
 		var (
-			obj                                                       = o.(*unstructured.Unstructured)
-			machineSetName                                            = obj.GetName()
-			machineSetDesiredReplicas, machineSetDesiredReplicasFound = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
-			machineSetActualReplicas, machineSetActualReplicasFound   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
+			obj                                                          = o.(*unstructured.Unstructured)
+			machineSetName                                               = obj.GetName()
+			machineSetDesiredReplicas, machineSetDesiredReplicasFound, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
+			machineSetActualReplicas, machineSetActualReplicasFound, _   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
 		)
 
 		if !machineSetDesiredReplicasFound {

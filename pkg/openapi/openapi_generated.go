@@ -3845,7 +3845,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/api/core/v1.CSIPersistentVolumeSource": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "Represents storage that is managed by an external CSI volume driver",
+					Description: "Represents storage that is managed by an external CSI volume driver (Beta feature)",
 					Properties: map[string]spec.Schema{
 						"driver": {
 							SchemaProps: spec.SchemaProps{
@@ -3868,11 +3868,51 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"fsType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". Implicitly inferred to be \"ext4\" if unspecified.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"volumeAttributes": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Attributes of the volume to publish.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"controllerPublishSecretRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ControllerPublishSecretRef is a reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI ControllerPublishVolume and ControllerUnpublishVolume calls. This field is optional, and  may be empty if no secret is required. If the secret object contains more than one secret, all secrets are passed.",
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+							},
+						},
+						"nodeStageSecretRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodeStageSecretRef is a reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodeStageVolume and NodeStageVolume and NodeUnstageVolume calls. This field is optional, and  may be empty if no secret is required. If the secret object contains more than one secret, all secrets are passed.",
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+							},
+						},
+						"nodePublishSecretRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodePublishSecretRef is a reference to the secret object containing sensitive information to pass to the CSI driver to complete the CSI NodePublishVolume and NodeUnpublishVolume calls. This field is optional, and  may be empty if no secret is required. If the secret object contains more than one secret, all secrets are passed.",
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+							},
+						},
 					},
 					Required: []string{"driver", "volumeHandle"},
 				},
 			},
-			Dependencies: []string{},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.SecretReference"},
 		},
 		"k8s.io/api/core/v1.Capabilities": {
 			Schema: spec.Schema{
@@ -4242,13 +4282,27 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"data": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'.",
+								Description: "Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process.",
 								Type:        []string{"object"},
 								AdditionalProperties: &spec.SchemaOrBool{
 									Schema: &spec.Schema{
 										SchemaProps: spec.SchemaProps{
 											Type:   []string{"string"},
 											Format: "",
+										},
+									},
+								},
+							},
+						},
+						"binaryData": {
+							SchemaProps: spec.SchemaProps{
+								Description: "BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "byte",
 										},
 									},
 								},
@@ -4673,7 +4727,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 					Properties: map[string]spec.Schema{
 						"names": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Names by which this image is known. e.g. [\"gcr.io/google_containers/hyperkube:v1.0.7\", \"dockerhub.io/google_containers/hyperkube:v1.0.7\"]",
+								Description: "Names by which this image is known. e.g. [\"k8s.gcr.io/hyperkube:v1.0.7\", \"dockerhub.io/google_containers/hyperkube:v1.0.7\"]",
 								Type:        []string{"array"},
 								Items: &spec.SchemaOrArray{
 									Schema: &spec.Schema{
@@ -5234,7 +5288,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"subsets"},
 				},
 			},
 			Dependencies: []string{
@@ -5292,7 +5345,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 					Properties: map[string]spec.Schema{
 						"prefix": {
 							SchemaProps: spec.SchemaProps{
-								Description: "An optional identifer to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
+								Description: "An optional identifier to prepend to each key in the ConfigMap. Must be a C_IDENTIFIER.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -5553,7 +5606,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/api/core/v1.EventSeries": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "EventSeries contain information on series of events, i.e. thing that was/is happening continously for some time.",
+					Description: "EventSeries contain information on series of events, i.e. thing that was/is happening continuously for some time.",
 					Properties: map[string]spec.Schema{
 						"count": {
 							SchemaProps: spec.SchemaProps{
@@ -5564,7 +5617,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"lastObservedTime": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Time of the last occurence observed",
+								Description: "Time of the last occurrence observed",
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime"),
 							},
 						},
@@ -5687,6 +5740,59 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{},
+		},
+		"k8s.io/api/core/v1.FlexPersistentVolumeSource": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "FlexPersistentVolumeSource represents a generic persistent volume resource that is provisioned/attached using an exec based plugin.",
+					Properties: map[string]spec.Schema{
+						"driver": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Driver is the name of the driver to use for this volume.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"fsType": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Filesystem type to mount. Must be a filesystem type supported by the host operating system. Ex. \"ext4\", \"xfs\", \"ntfs\". The default filesystem depends on FlexVolume script.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"secretRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Optional: SecretRef is reference to the secret object containing sensitive information to pass to the plugin scripts. This may be empty if no secret object is specified. If the secret object contains more than one secret, all secrets are passed to the plugin scripts.",
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
+							},
+						},
+						"readOnly": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Optional: Defaults to false (read/write). ReadOnly here will force the ReadOnly setting in VolumeMounts.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"options": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Optional: Extra command options if any.",
+								Type:        []string{"object"},
+								AdditionalProperties: &spec.SchemaOrBool{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"driver"},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.SecretReference"},
 		},
 		"k8s.io/api/core/v1.FlexVolumeSource": {
 			Schema: spec.Schema{
@@ -7945,7 +8051,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"flexVolume": {
 							SchemaProps: spec.SchemaProps{
 								Description: "FlexVolume represents a generic volume resource that is provisioned/attached using an exec based plugin.",
-								Ref:         ref("k8s.io/api/core/v1.FlexVolumeSource"),
+								Ref:         ref("k8s.io/api/core/v1.FlexPersistentVolumeSource"),
 							},
 						},
 						"azureFile": {
@@ -8004,7 +8110,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"csi": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CSI represents storage that handled by an external CSI driver",
+								Description: "CSI represents storage that handled by an external CSI driver (Beta feature).",
 								Ref:         ref("k8s.io/api/core/v1.CSIPersistentVolumeSource"),
 							},
 						},
@@ -8012,7 +8118,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CSIPersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIPersistentVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDPersistentVolumeSource", "k8s.io/api/core/v1.ScaleIOPersistentVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource"},
+				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CSIPersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexPersistentVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIPersistentVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDPersistentVolumeSource", "k8s.io/api/core/v1.ScaleIOPersistentVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource"},
 		},
 		"k8s.io/api/core/v1.PersistentVolumeSpec": {
 			Schema: spec.Schema{
@@ -8101,7 +8207,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"flexVolume": {
 							SchemaProps: spec.SchemaProps{
 								Description: "FlexVolume represents a generic volume resource that is provisioned/attached using an exec based plugin.",
-								Ref:         ref("k8s.io/api/core/v1.FlexVolumeSource"),
+								Ref:         ref("k8s.io/api/core/v1.FlexPersistentVolumeSource"),
 							},
 						},
 						"azureFile": {
@@ -8160,7 +8266,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"csi": {
 							SchemaProps: spec.SchemaProps{
-								Description: "CSI represents storage that handled by an external CSI driver",
+								Description: "CSI represents storage that handled by an external CSI driver (Beta feature).",
 								Ref:         ref("k8s.io/api/core/v1.CSIPersistentVolumeSource"),
 							},
 						},
@@ -8186,7 +8292,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"persistentVolumeReclaimPolicy": {
 							SchemaProps: spec.SchemaProps{
-								Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default) and Recycle. Recycling must be supported by the volume plugin underlying this persistent volume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#reclaiming",
+								Description: "What happens to a persistent volume when released from its claim. Valid options are Retain (default for manually created PersistentVolumes), Delete (default for dynamically provisioned PersistentVolumes), and Recycle (deprecated). Recycle must be supported by the volume plugin underlying this PersistentVolume. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#reclaiming",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -8219,11 +8325,17 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"nodeAffinity": {
+							SchemaProps: spec.SchemaProps{
+								Description: "NodeAffinity defines constraints that limit what nodes this volume can be accessed from. This field influences the scheduling of pods that use this volume.",
+								Ref:         ref("k8s.io/api/core/v1.VolumeNodeAffinity"),
+							},
+						},
 					},
 				},
 			},
 			Dependencies: []string{
-				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CSIPersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIPersistentVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDPersistentVolumeSource", "k8s.io/api/core/v1.ScaleIOPersistentVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
+				"k8s.io/api/core/v1.AWSElasticBlockStoreVolumeSource", "k8s.io/api/core/v1.AzureDiskVolumeSource", "k8s.io/api/core/v1.AzureFilePersistentVolumeSource", "k8s.io/api/core/v1.CSIPersistentVolumeSource", "k8s.io/api/core/v1.CephFSPersistentVolumeSource", "k8s.io/api/core/v1.CinderVolumeSource", "k8s.io/api/core/v1.FCVolumeSource", "k8s.io/api/core/v1.FlexPersistentVolumeSource", "k8s.io/api/core/v1.FlockerVolumeSource", "k8s.io/api/core/v1.GCEPersistentDiskVolumeSource", "k8s.io/api/core/v1.GlusterfsVolumeSource", "k8s.io/api/core/v1.HostPathVolumeSource", "k8s.io/api/core/v1.ISCSIPersistentVolumeSource", "k8s.io/api/core/v1.LocalVolumeSource", "k8s.io/api/core/v1.NFSVolumeSource", "k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.PhotonPersistentDiskVolumeSource", "k8s.io/api/core/v1.PortworxVolumeSource", "k8s.io/api/core/v1.QuobyteVolumeSource", "k8s.io/api/core/v1.RBDPersistentVolumeSource", "k8s.io/api/core/v1.ScaleIOPersistentVolumeSource", "k8s.io/api/core/v1.StorageOSPersistentVolumeSource", "k8s.io/api/core/v1.VolumeNodeAffinity", "k8s.io/api/core/v1.VsphereVirtualDiskVolumeSource", "k8s.io/apimachinery/pkg/api/resource.Quantity"},
 		},
 		"k8s.io/api/core/v1.PersistentVolumeStatus": {
 			Schema: spec.Schema{
@@ -9045,7 +9157,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"dnsPolicy": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Set DNS policy for the pod. Defaults to \"ClusterFirst\". Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'. Note that 'None' policy is an alpha feature introduced in v1.9 and CustomPodDNS feature gate must be enabled to use it.",
+								Description: "Set DNS policy for the pod. Defaults to \"ClusterFirst\". Valid values are 'ClusterFirstWithHostNet', 'ClusterFirst', 'Default' or 'None'. DNS parameters given in DNSConfig will be merged with the policy selected with DNSPolicy. To have DNS options set along with hostNetwork, you have to specify DNS policy explicitly to 'ClusterFirstWithHostNet'.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -9109,6 +9221,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"hostIPC": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Use the host's ipc namespace. Optional: Default to false.",
+								Type:        []string{"boolean"},
+								Format:      "",
+							},
+						},
+						"shareProcessNamespace": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Share a single process namespace between all of the containers in a pod. When this is set containers will be able to view and signal processes from other containers in the same pod, and the first process in each container will not be assigned PID 1. HostPID and ShareProcessNamespace cannot both be set. Optional: Default to false. This field is alpha-level and is honored only by servers that enable the PodShareProcessNamespace feature.",
 								Type:        []string{"boolean"},
 								Format:      "",
 							},
@@ -9199,7 +9318,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"priorityClassName": {
 							SchemaProps: spec.SchemaProps{
-								Description: "If specified, indicates the pod's priority. \"SYSTEM\" is a special keyword which indicates the highest priority. Any other name must be defined by creating a PriorityClass object with that name. If not specified, the pod priority will be default or zero if there is no default.",
+								Description: "If specified, indicates the pod's priority. \"system-node-critical\" and \"system-cluster-critical\" are two special keywords which indicate the highest priorities with the former being the highest priority. Any other name must be defined by creating a PriorityClass object with that name. If not specified, the pod priority will be default or zero if there is no default.",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -9213,7 +9332,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"dnsConfig": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy. This is an alpha feature introduced in v1.9 and CustomPodDNS feature gate must be enabled to use it.",
+								Description: "Specifies the DNS parameters of a pod. Parameters specified here will be merged to the generated DNS configuration based on DNSPolicy.",
 								Ref:         ref("k8s.io/api/core/v1.PodDNSConfig"),
 							},
 						},
@@ -9269,6 +9388,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"nominatedNodeName": {
+							SchemaProps: spec.SchemaProps{
+								Description: "nominatedNodeName is set only when this pod preempts other pods on the node, but it cannot be scheduled right away as preemption victims receive their graceful termination periods. This field does not guarantee that the pod will be scheduled on this node. Scheduler may decide to place the pod elsewhere if other nodes become available sooner. Scheduler may also decide to give the resources on this node to a higher priority pod that is created after preemption. As a result, this field may be different than PodSpec.nodeName when the pod is scheduled.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 						"hostIP": {
 							SchemaProps: spec.SchemaProps{
 								Description: "IP address of the host to which the pod is assigned. Empty if not yet scheduled.",
@@ -9317,7 +9443,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"qosClass": {
 							SchemaProps: spec.SchemaProps{
-								Description: "The Quality of Service (QOS) classification assigned to the pod based on resource requirements See PodQOSClass type for available QOS classes More info: https://github.com/kubernetes/kubernetes/blob/master/docs/design/resource-qos.md",
+								Description: "The Quality of Service (QOS) classification assigned to the pod based on resource requirements See PodQOSClass type for available QOS classes More info: https://git.k8s.io/community/contributors/design-proposals/node/resource-qos.md",
 								Type:        []string{"string"},
 								Format:      "",
 							},
@@ -11865,6 +11991,23 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
+		"k8s.io/api/core/v1.VolumeNodeAffinity": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "VolumeNodeAffinity defines constraints that limit what nodes this volume can be accessed from.",
+					Properties: map[string]spec.Schema{
+						"required": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Required specifies hard node constraints that must be met.",
+								Ref:         ref("k8s.io/api/core/v1.NodeSelector"),
+							},
+						},
+					},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.NodeSelector"},
+		},
 		"k8s.io/api/core/v1.VolumeProjection": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -12131,7 +12274,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/api/core/v1.PodAffinityTerm"},
 		},
-		"k8s.io/apimachinery/pkg/api/resource.Quantity": resource.Quantity{}.OpenAPIDefinition(),
+		"k8s.io/apimachinery/pkg/api/resource.Quantity": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Type:   resource.Quantity{}.OpenAPISchemaType(),
+					Format: resource.Quantity{}.OpenAPISchemaFormat(),
+				},
+			},
+		},
 		"k8s.io/apimachinery/pkg/api/resource.int64Amount": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -13045,7 +13195,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"timeoutSeconds": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Timeout for the list/watch call.",
+								Description: "Timeout for the list/watch call. This limits the duration of the call, regardless of any activity or inactivity.",
 								Type:        []string{"integer"},
 								Format:      "int64",
 							},
@@ -13069,7 +13219,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{},
 		},
-		"k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime": v1.MicroTime{}.OpenAPIDefinition(),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.MicroTime": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Type:   v1.MicroTime{}.OpenAPISchemaType(),
+					Format: v1.MicroTime{}.OpenAPISchemaFormat(),
+				},
+			},
+		},
 		"k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
@@ -13512,7 +13669,14 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/apimachinery/pkg/apis/meta/v1.StatusCause"},
 		},
-		"k8s.io/apimachinery/pkg/apis/meta/v1.Time": v1.Time{}.OpenAPIDefinition(),
+		"k8s.io/apimachinery/pkg/apis/meta/v1.Time": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Type:   v1.Time{}.OpenAPISchemaType(),
+					Format: v1.Time{}.OpenAPISchemaFormat(),
+				},
+			},
+		},
 		"k8s.io/apimachinery/pkg/apis/meta/v1.Timestamp": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{

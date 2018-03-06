@@ -177,10 +177,10 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(machineDeployments
 		if err := machineDeploymentList.EachListItem(func(o runtime.Object) error {
 			for _, machineDeployment := range machineDeployments {
 				var (
-					obj                          = o.(*unstructured.Unstructured)
-					deploymentName               = obj.GetName()
-					deploymentDesiredReplicas, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
-					deploymentReadyReplicas, _   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
+					obj                             = o.(*unstructured.Unstructured)
+					deploymentName                  = obj.GetName()
+					deploymentDesiredReplicas, _, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
+					deploymentReadyReplicas, _, _   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
 				)
 
 				if machineDeployment.Name == deploymentName {
@@ -216,9 +216,9 @@ func (b *HybridBotanist) cleanupMachineClasses(machineClassPlural string, machin
 
 	if err := machineClassList.EachListItem(func(o runtime.Object) error {
 		var (
-			obj                               = o.(*unstructured.Unstructured)
-			className                         = obj.GetName()
-			secretRefName, secretRefNameFound = unstructured.NestedString(obj.UnstructuredContent(), "spec", "secretRef", "name")
+			obj                                  = o.(*unstructured.Unstructured)
+			className                            = obj.GetName()
+			secretRefName, secretRefNameFound, _ = unstructured.NestedString(obj.UnstructuredContent(), "spec", "secretRef", "name")
 		)
 
 		if !secretRefNameFound {
