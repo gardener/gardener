@@ -5,6 +5,7 @@ SECRET_NAME="{{ required "secretName is required" .Values.secretName }}"
 
 DIR_CLOUDCONFIG="/var/run/coreos"
 DIR_CLOUDCONFIG_DOWNLOADER="/var/lib/cloud-config-downloader"
+DIR_KUBELET="/var/lib/kubelet"
 
 PATH_YAML2JSON="$DIR_CLOUDCONFIG_DOWNLOADER/yaml2json"
 PATH_KUBECONFIG="$DIR_CLOUDCONFIG_DOWNLOADER/kubeconfig"
@@ -22,17 +23,49 @@ if ! CLOUD_CONFIG_SECRET="$(/bin/docker run \
   -v "$DIR_CLOUDCONFIG"/:"$DIR_CLOUDCONFIG" \
   -v "$DIR_CLOUDCONFIG_DOWNLOADER"/:"$DIR_CLOUDCONFIG_DOWNLOADER" \
   k8s.gcr.io/hyperkube:v1.9.2\
-  kubectl --kubeconfig="$PATH_KUBECONFIG" --namespace=kube-system get secret "$SECRET_NAME" -o jsonpath='{.metadata.resourceVersion}{"\t"}{.data.cloudconfig}')"; then
+  kubectl --kubeconfig="$PATH_KUBECONFIG" --namespace=kube-system get secret "$SECRET_NAME" -o jsonpath='{.metadata.resourceVersion}{"\t"}{.data.cloudconfig}{"\t"}{.data.bootstrapToken}')"; then
   echo "Could not retrieve the cloud config secret with name $SECRET_NAME"
   exit 1
 fi
 
 echo $CLOUD_CONFIG_SECRET | awk '{print $1}' > "$PATH_RESOURCEVERSION_CURRENT"
 echo $CLOUD_CONFIG_SECRET | awk '{print $2}' | base64 -d > "$PATH_CLOUDCONFIG"
+BOOTSTRAP_TOKEN="$(echo $CLOUD_CONFIG_SECRET | awk '{print $3}' | base64 -d)"
 
 if [ ! -f "$PATH_CLOUDCONFIG" ]; then
   echo "No cloud config file found at location $PATH_CLOUDCONFIG"
   exit 1
+fi
+
+if [[ ! -f "$DIR_KUBELET/kubeconfig-real" ]]; then
+  CLUSTER_INFO="$("$PATH_YAML2JSON" < "$PATH_KUBECONFIG" | jq -r '.clusters[0].cluster')"
+  CA_CRT="$(echo $CLUSTER_INFO | jq -r '."certificate-authority-data"')"
+  SERVER="$(echo $CLUSTER_INFO | jq -r '.server')"
+
+  cat <<EOF > "$DIR_KUBELET/kubeconfig-bootstrap"
+---
+apiVersion: v1
+kind: Config
+current-context: kubelet-bootstrap@default
+clusters:
+- cluster:
+    certificate-authority-data: $CA_CRT
+    server: $SERVER
+  name: default
+contexts:
+- context:
+    cluster: default
+    user: kubelet-bootstrap
+  name: kubelet-bootstrap@default
+users:
+- name: kubelet-bootstrap
+  user:
+    as-user-extra: {}
+    token: $BOOTSTRAP_TOKEN
+EOF
+
+else
+  rm -f "$DIR_KUBELET/kubeconfig-bootstrap"
 fi
 
 RESOURCEVERSION_CURRENT=0

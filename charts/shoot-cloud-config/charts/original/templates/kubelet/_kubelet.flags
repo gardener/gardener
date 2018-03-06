@@ -4,6 +4,7 @@
 --client-ca-file=/var/lib/kubelet/ca.crt \
 --authentication-token-webhook \
 --authorization-mode=Webhook \
+--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
 --cgroup-root="/" \
 --cloud-provider={{ .cloudProvider.name }} \
 {{- if .cloudProvider.config }}
@@ -11,7 +12,7 @@
 {{- end }}
 --cluster-dns="{{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}" \
 --cluster-domain={{ required "kubernetes.domain is required" .kubernetes.domain }} \
-{{- if eq .kubernetes.kubelet.networkPlugin "cni" -}}
+{{- if eq .kubernetes.kubelet.networkPlugin "cni" }}
 --cni-bin-dir=/opt/cni/bin/ \
 --cni-conf-dir=/etc/cni/net.d/ \
 {{- end }}
@@ -26,13 +27,13 @@
 {{- end }}
 --image-gc-high-threshold=50 \
 --image-gc-low-threshold=40 \
---kubeconfig="/var/lib/kubelet/kubeconfig" \
+--kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --kube-reserved=memory="1Gi" \
 --network-plugin="{{ required "kubernetes.kubelet.networkPlugin is required" .kubernetes.kubelet.networkPlugin }}" \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
---require-kubeconfig=true \
+--rotate-certificates=true \
 {{- range $index, $param := .kubernetes.kubelet.parameters }}
-{{$param}} \
+{{ $param }} \
 {{- end }}
 --v=2
 {{- end -}}

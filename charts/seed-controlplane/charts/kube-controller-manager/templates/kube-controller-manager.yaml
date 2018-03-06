@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kube-controller-manager
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: kubernetes
     role: controller-manager
@@ -21,11 +21,11 @@ spec:
     app: kubernetes
     role: controller-manager
 ---
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kube-controller-manager
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: kubernetes
     role: controller-manager
@@ -50,31 +50,32 @@ spec:
         operator: Exists
       containers:
       - name: kube-controller-manager
-        image: {{ index .Values.images "hyperkube" }}:v{{.Values.kubernetesVersion}}
+        image: {{ index .Values.images "hyperkube" }}:v{{ .Values.kubernetesVersion }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
         - controller-manager
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
-        - --cloud-provider={{.Values.cloudProvider}}
+        - --cloud-provider={{ .Values.cloudProvider }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
-        - --cluster-cidr={{.Values.podNetwork}}
-        - --cluster-name={{.Values.clusterName}}
+        - --cluster-cidr={{ .Values.podNetwork }}
+        - --cluster-name={{ .Values.clusterName }}
         - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt
         - --cluster-signing-key-file=/srv/kubernetes/ca/ca.key
-        - --configure-cloud-routes={{.Values.configureRoutes}}
+        - --configure-cloud-routes={{ .Values.configureRoutes }}
+        - --controllers=*,bootstrapsigner,tokencleaner
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
         - --pod-eviction-timeout=2m0s
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
-        - --service-cluster-ip-range={{.Values.serviceNetwork}}
+        - --service-cluster-ip-range={{ .Values.serviceNetwork }}
         - --use-service-account-credentials=true
         - --v=2
         {{- range $index, $param := $.Values.additionalParameters }}
-        - {{$param}}
+        - {{ $param }}
         {{- end }}
         env:
 {{ toYaml .Values.environment | indent 10 }}

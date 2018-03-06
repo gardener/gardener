@@ -1,4 +1,4 @@
-{{define "kubelet" -}}
+{{ define "kubelet" -}}
 {{/* Do not remove the indentation, this is required because this template is imported by others */ -}}
 - name: kubelet.service
   command: start

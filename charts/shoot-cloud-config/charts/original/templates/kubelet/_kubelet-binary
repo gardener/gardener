@@ -25,10 +25,6 @@
       {{ required "images.hyperkube is required" .images.hyperkube }}:v{{ required "kubernetes.version is required" .kubernetes.version }} \
       ./hyperkube kubelet \
     "$@"
-- path: /var/lib/kubelet/kubeconfig
-  permissions: 0644
-  encoding: b64
-  content: {{ ( required "kubernetes.kubelet.kubeconfig is required" .kubernetes.kubelet.kubeconfig ) | b64enc }}
 - path: /var/lib/kubelet/ca.crt
   permissions: 0644
   encoding: b64

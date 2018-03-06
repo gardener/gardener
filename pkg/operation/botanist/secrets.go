@@ -689,23 +689,6 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			RunsInSeed:                         false,
 		},
 
-		// Secret definition for kubelet
-		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
-					Name: "kubelet",
-				},
-				CommonName:   "kubelet",
-				Organization: []string{user.NodesGroup},
-				DNSNames:     nil,
-				IPAddresses:  nil,
-				IsServerCert: false,
-			},
-			KubeconfigRequired:                 true,
-			KubeconfigUseInternalClusterDomain: true,
-			RunsInSeed:                         false,
-		},
-
 		// Secret definition for kube-state-metrics
 		ControlPlaneSecret{
 			TLSSecret: TLSSecret{

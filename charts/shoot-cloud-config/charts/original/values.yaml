@@ -10,7 +10,7 @@
 #   caCert: abcd
 #   clusterDNS: 100.64.0.10
 #   kubelet:
-#     kubeconfig: hugo
+#     bootstrapToken: hugo
 #     networkPlugin: cni
 #     domain: cluster.local
 #     hostnameOverride: false
