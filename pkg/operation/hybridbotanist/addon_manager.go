@@ -110,7 +110,9 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		"kubernetes": map[string]interface{}{
 			"caCert":     string(kubeletSecret.Data["ca.crt"]),
 			"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
-			"domain":     *b.Shoot.Info.Spec.DNS.Domain,
+			// TODO: reslove conformance test issue before changing:
+			// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
+			"domain": gardenv1beta1.DefaultDomain,
 			"kubelet": map[string]interface{}{
 				"kubeconfig":       string(kubeletSecret.Data["kubeconfig"]),
 				"networkPlugin":    userDataConfig.NetworkPlugin,
@@ -153,7 +155,9 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 
 		kubeDNSConfig = map[string]interface{}{
 			"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
-			"domain":     *b.Shoot.Info.Spec.DNS.Domain,
+			// TODO: reslove conformance test issue before changing:
+			// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
+			"domain": gardenv1beta1.DefaultDomain,
 		}
 		kubeProxyConfig = map[string]interface{}{
 			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
