@@ -286,14 +286,14 @@ func (b *Botanist) createRSASecret(secret RSASecret) (*corev1.Secret, error) {
 	if err != nil {
 		return nil, err
 	}
-	publicKey, err := generateRSAPublicKey(privateKey)
+	sshAuthorizedKeys, err := generateRSAPublicKey(privateKey)
 	if err != nil {
 		return nil, err
 	}
-	publicKey = append(publicKey, []byte(" "+secret.Name)...)
+	sshAuthorizedKeys = append(sshAuthorizedKeys, []byte(" "+secret.Name)...)
 	data := map[string][]byte{
 		"id_rsa":     utils.EncodePrivateKey(privateKey),
-		"id_rsa.pub": publicKey,
+		"id_rsa.pub": sshAuthorizedKeys,
 	}
 
 	if secret.DoNotApply {
@@ -804,6 +804,14 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 		RSASecret{
 			Secret: Secret{
 				Name: "vpn-ssh-keypair",
+			},
+			Bits: 4096,
+		},
+
+		// Secret definition for service-account-key
+		RSASecret{
+			Secret: Secret{
+				Name: "service-account-key",
 			},
 			Bits: 4096,
 		},

@@ -110,6 +110,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 			"checksum/secret-vpn-ssh-keypair":           b.CheckSums["vpn-ssh-keypair"],
+			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-cloudprovider":             b.CheckSums["cloudprovider"],
 			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
 		},
@@ -155,8 +156,8 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"configureRoutes":   true,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                       b.CheckSums["ca"],
-			"checksum/secret-kube-apiserver":           b.CheckSums["kube-apiserver"],
 			"checksum/secret-kube-controller-manager":  b.CheckSums[name],
+			"checksum/secret-service-account-key":      b.CheckSums["service-account-key"],
 			"checksum/secret-cloudprovider":            b.CheckSums["cloudprovider"],
 			"checksum/configmap-cloud-provider-config": b.CheckSums["cloud-provider-config"],
 		},

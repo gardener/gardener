@@ -77,6 +77,7 @@ spec:
         {{- include "kube-apiserver.runtimeConfig" . | trimSuffix "," | indent 8 }}
         - --secure-port={{ required ".securePort is required" .Values.securePort }}
         - --service-cluster-ip-range={{.Values.serviceNetwork}}
+        - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --v=2
@@ -119,6 +120,8 @@ spec:
           mountPath: /srv/kubernetes/ca
         - name: kube-apiserver
           mountPath: /srv/kubernetes/apiserver
+        - name: service-account-key
+          mountPath: /srv/kubernetes/service-account-key
         - name: kube-apiserver-basic-auth
           mountPath: /srv/kubernetes/auth
         - name: kube-apiserver-kubelet
@@ -189,6 +192,9 @@ spec:
       - name: kube-apiserver
         secret:
           secretName: kube-apiserver
+      - name: service-account-key
+        secret:
+          secretName: service-account-key
       - name: kube-apiserver-basic-auth
         secret:
           secretName: kube-apiserver-basic-auth

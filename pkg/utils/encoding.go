@@ -56,11 +56,7 @@ func DecodePrivateKey(bytes []byte) (*rsa.PrivateKey, error) {
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		return nil, errors.New("could not decode the PEM-encoded RSA private key")
 	}
-	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return privateKey, nil
+	return x509.ParsePKCS1PrivateKey(block.Bytes)
 }
 
 // EncodeCertificate takes a certificate as a byte slice, encodes it to the PEM format, and returns
@@ -79,11 +75,7 @@ func DecodeCertificate(bytes []byte) (*x509.Certificate, error) {
 	if block == nil || block.Type != "CERTIFICATE" {
 		return nil, errors.New("could not decode the PEM-encoded certificate")
 	}
-	certificate, err := x509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	return certificate, nil
+	return x509.ParseCertificate(block.Bytes)
 }
 
 // SHA1 takes a byte slice and returns the sha1-hashed byte slice.
@@ -125,9 +117,11 @@ func ComputeSHA256Hex(in []byte) string {
 
 // HashForMap creates a hash value for a map of type map[string]interface{} and returns it.
 func HashForMap(m map[string]interface{}) string {
-	var hash string
+	var (
+		hash string
+		keys []string
+	)
 
-	var keys []string
 	for k := range m {
 		keys = append(keys, k)
 	}

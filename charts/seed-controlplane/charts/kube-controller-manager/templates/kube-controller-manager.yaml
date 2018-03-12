@@ -69,7 +69,7 @@ spec:
         - --leader-elect=true
         - --pod-eviction-timeout=2m0s
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
-        - --service-account-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
+        - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{.Values.serviceNetwork}}
         - --use-service-account-credentials=true
         - --v=2
@@ -96,8 +96,8 @@ spec:
         volumeMounts:
         - name: ca
           mountPath: /srv/kubernetes/ca
-        - name: kube-apiserver
-          mountPath: /srv/kubernetes/apiserver
+        - name: service-account-key
+          mountPath: /srv/kubernetes/service-account-key
         - name: kube-controller-manager
           mountPath: /var/lib/kube-controller-manager
         - name: cloud-provider-config
@@ -118,9 +118,9 @@ spec:
       - name: ca
         secret:
           secretName: ca
-      - name: kube-apiserver
+      - name: service-account-key
         secret:
-          secretName: kube-apiserver
+          secretName: service-account-key
       - name: kube-controller-manager
         secret:
           secretName: kube-controller-manager
