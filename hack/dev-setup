@@ -19,8 +19,6 @@
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
 MINIKUBE_IP=$(minikube ip)
-IP_ROUTE=$(ip route get 1)
-IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
 echo "After OSX sleep, minikube's time is off."
 echo "This results in x509 certificate auth to not work for shoot certificates"
@@ -80,42 +78,4 @@ spec:
   type: NodePort
 EOF
 
-cat <<EOF | kubectl apply -f -
-kind: Service
-apiVersion: v1
-metadata:
-  name: gardener-apiserver
-  namespace: garden
-spec:
-  ports:
-  - protocol: TCP
-    port: 443
-    targetPort: 8443
----
-kind: Endpoints
-apiVersion: v1
-metadata:
-  name: gardener-apiserver
-  namespace: garden
-subsets:
-- addresses:
-  - ip: ${IP_ADDRESS}
-  ports:
-  - port: 8443
-EOF
-
-cat <<EOF | kubectl apply -f -
-apiVersion: apiregistration.k8s.io/v1beta1
-kind: APIService
-metadata:
-  name: v1beta1.garden.sapcloud.io
-spec:
-  insecureSkipTLSVerify: true
-  group: garden.sapcloud.io
-  version: v1beta1
-  groupPriorityMinimum: 10000
-  versionPriority: 20
-  service:
-    name: gardener-apiserver
-    namespace: garden
-EOF
+$(dirname "${0}")/dev-setup-register-gardener

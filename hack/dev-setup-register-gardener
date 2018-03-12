@@ -1,0 +1,72 @@
+#!/bin/bash -eu
+#
+# Copyright 2018 The Gardener Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+IP_ROUTE=$(ip route get 1)
+IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
+
+APISERVICE_NAME="v1beta1.garden.sapcloud.io"
+SERVICE_NAME="gardener-apiserver"
+ENDPOINT_NAME="gardener-apiserver"
+
+if kubectl get apiservice "$APISERVICE_NAME" &> /dev/null; then
+  kubectl delete apiservice $APISERVICE_NAME
+fi
+if kubectl get service "$SERVICE_NAME" &> /dev/null; then
+  kubectl delete service $SERVICE_NAME
+fi
+if kubectl get endpoints "$ENDPOINT_NAME" &> /dev/null; then
+  kubectl delete endpoints $ENDPOINT_NAME
+fi
+
+cat <<EOF | kubectl apply -f -
+kind: Service
+apiVersion: v1
+metadata:
+  name: $SERVICE_NAME
+  namespace: garden
+spec:
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: 8443
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: $ENDPOINT_NAME
+  namespace: garden
+subsets:
+- addresses:
+  - ip: ${IP_ADDRESS}
+  ports:
+  - port: 8443
+EOF
+
+cat <<EOF | kubectl apply -f -
+apiVersion: apiregistration.k8s.io/v1beta1
+kind: APIService
+metadata:
+  name: $APISERVICE_NAME
+spec:
+  insecureSkipTLSVerify: true
+  group: garden.sapcloud.io
+  version: v1beta1
+  groupPriorityMinimum: 10000
+  versionPriority: 20
+  service:
+    name: gardener-apiserver
+    namespace: garden
+EOF
