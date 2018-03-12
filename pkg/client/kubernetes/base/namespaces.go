@@ -21,25 +21,17 @@ import (
 )
 
 // CreateNamespace creates a new Namespace object.
-func (c *Client) CreateNamespace(name string, updateIfExists bool) (*corev1.Namespace, error) {
-	namespace, err := c.clientset.CoreV1().Namespaces().Create(&corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	})
+func (c *Client) CreateNamespace(namespace *corev1.Namespace, updateIfExists bool) (*corev1.Namespace, error) {
+	res, err := c.clientset.CoreV1().Namespaces().Create(namespace)
 	if err != nil && apierrors.IsAlreadyExists(err) && updateIfExists {
-		return c.UpdateNamespace(name)
+		return c.UpdateNamespace(namespace)
 	}
-	return namespace, err
+	return res, err
 }
 
 // UpdateNamespace updates an already existing Namespace object.
-func (c *Client) UpdateNamespace(name string) (*corev1.Namespace, error) {
-	return c.clientset.CoreV1().Namespaces().Update(&corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-	})
+func (c *Client) UpdateNamespace(namespace *corev1.Namespace) (*corev1.Namespace, error) {
+	return c.clientset.CoreV1().Namespaces().Update(namespace)
 }
 
 // GetNamespace returns a Namespace object.

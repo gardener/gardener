@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,7 +29,14 @@ import (
 // components for the Shoot cluster. Moreover, the cloud provider configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
 func (b *Botanist) DeployNamespace() error {
-	namespace, err := b.K8sSeedClient.CreateNamespace(b.Operation.Shoot.SeedNamespace, true)
+	namespace, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: b.Operation.Shoot.SeedNamespace,
+			Labels: map[string]string{
+				common.GardenRole: "shoot",
+			},
+		},
+	}, true)
 	if err != nil {
 		return err
 	}

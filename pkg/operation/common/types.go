@@ -66,8 +66,7 @@ const (
 	// It is also used by the gardener-apiserver.
 	GardenNamespace = "garden"
 
-	// GardenRole is the key for an annotation on a Kubernetes Secret object whose value must be either 'seed' or
-	// 'shoot'.
+	// GardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	GardenRole = "garden.sapcloud.io/role"
 
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.

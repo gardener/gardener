@@ -19,7 +19,7 @@ import (
 
 	clientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
-	batch_v1 "k8s.io/api/batch/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,8 +54,8 @@ type Client interface {
 	CheckResourceCleanup([]string, string, map[string]map[string]bool) (bool, error)
 
 	// Namespaces
-	CreateNamespace(string, bool) (*corev1.Namespace, error)
-	UpdateNamespace(string) (*corev1.Namespace, error)
+	CreateNamespace(*corev1.Namespace, bool) (*corev1.Namespace, error)
+	UpdateNamespace(*corev1.Namespace) (*corev1.Namespace, error)
 	GetNamespace(string) (*corev1.Namespace, error)
 	ListNamespaces(metav1.ListOptions) (*corev1.NamespaceList, error)
 	DeleteNamespace(string) error
@@ -86,7 +86,7 @@ type Client interface {
 	DeleteStatefulSet(string, string) error
 
 	// Jobs
-	GetJob(string, string) (*batch_v1.Job, error)
+	GetJob(string, string) (*batchv1.Job, error)
 	DeleteJob(string, string) error
 
 	// ReplicaSets
