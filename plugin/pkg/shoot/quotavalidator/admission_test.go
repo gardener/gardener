@@ -37,7 +37,9 @@ var _ = Describe("quotavalidator", func() {
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			shoot                 garden.Shoot
 			crossSB               garden.CrossSecretBinding
+			privateSB             garden.PrivateSecretBinding
 			quota                 garden.Quota
+			quota2                garden.Quota
 			cloudProfile          garden.CloudProfile
 			namespace             string = "test"
 			trialNamespace        string = "trial"
@@ -88,6 +90,42 @@ var _ = Describe("quotavalidator", func() {
 						garden.QuotaMetricStorageStandard: resource.MustParse("30Gi"),
 						garden.QuotaMetricStoragePremium:  resource.MustParse("0Gi"),
 						garden.QuotaMetricLoadbalancer:    resource.MustParse("2"),
+					},
+				},
+			}
+
+			quotaSecret = garden.Quota{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: trialNamespace,
+					Name:      "secret-quota",
+				},
+				Spec: garden.QuotaSpec{
+					ClusterLifetimeDays: &clusterLifeTime,
+					Scope:               garden.QuotaScopeSecret,
+					Metrics: corev1.ResourceList{
+						garden.QuotaMetricCPU:             resource.MustParse("4"),
+						garden.QuotaMetricGPU:             resource.MustParse("0"),
+						garden.QuotaMetricMemory:          resource.MustParse("10Gi"),
+						garden.QuotaMetricStorageStandard: resource.MustParse("60Gi"),
+						garden.QuotaMetricStoragePremium:  resource.MustParse("0Gi"),
+						garden.QuotaMetricLoadbalancer:    resource.MustParse("4"),
+					},
+				},
+			}
+
+			privateSBBase = garden.PrivateSecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      "test-privateSB",
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Namespace: trialNamespace,
+						Name:      "secret-quota",
+					},
+					{
+						Namespace: trialNamespace,
+						Name:      "project-quota",
 					},
 				},
 			}
@@ -227,48 +265,22 @@ var _ = Describe("quotavalidator", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
+			It("should fail because other shoots exhaust quota limits", func() {
+				shoot2 := *shoot.DeepCopy()
+				shoot2.Name = "test-shoot-2"
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(&shoot2)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
 		Context("tests for shoots with PrivateSecretBindings, which have multiple quotas referenced", func() {
-			var (
-				quota2 = garden.Quota{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: trialNamespace,
-						Name:      "secret-quota",
-					},
-					Spec: garden.QuotaSpec{
-						ClusterLifetimeDays: &clusterLifeTime,
-						Scope:               garden.QuotaScopeSecret,
-						Metrics: corev1.ResourceList{
-							garden.QuotaMetricCPU:             resource.MustParse("4"),
-							garden.QuotaMetricGPU:             resource.MustParse("0"),
-							garden.QuotaMetricMemory:          resource.MustParse("10Gi"),
-							garden.QuotaMetricStorageStandard: resource.MustParse("60Gi"),
-							garden.QuotaMetricStoragePremium:  resource.MustParse("0Gi"),
-							garden.QuotaMetricLoadbalancer:    resource.MustParse("4"),
-						},
-					},
-				}
-
-				privateSB = garden.PrivateSecretBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: namespace,
-						Name:      "test-privateSB",
-					},
-					Quotas: []corev1.ObjectReference{
-						{
-							Namespace: trialNamespace,
-							Name:      "secret-quota",
-						},
-						{
-							Namespace: trialNamespace,
-							Name:      "project-quota",
-						},
-					},
-				}
-			)
-
 			BeforeEach(func() {
+				quota2 = quotaSecret
+				privateSB = privateSBBase
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
 				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
 				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
@@ -347,7 +359,57 @@ var _ = Describe("quotavalidator", func() {
 				err := admissionHandler.Admit(attrs)
 				Expect(err).NotTo(HaveOccurred())
 			})
+		})
 
+		Context("tests for extending shoots lifetime", func() {
+			var oldShoot garden.Shoot
+
+			BeforeEach(func() {
+				quota2 := quotaSecret
+				privateSB := privateSBBase
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
+				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
+					Kind: "PrivateSecretBinding",
+					Name: "test-privateSB",
+				}
+
+				annotations := map[string]string{
+					common.ClusterExpirationTime: "2018-01-01T00:00:00+00:00",
+				}
+				shoot.Annotations = annotations
+				oldShoot = *shoot.DeepCopy()
+			})
+
+			It("should pass because no quota prescribe a clusterLifetime", func() {
+				quota.Spec.ClusterLifetimeDays = nil
+				quota2.Spec.ClusterLifetimeDays = nil
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass as shoot expiration time can be extended", func() {
+				shoot.Annotations[common.ClusterExpirationTime] = "2018-01-02T00:00:00+00:00" // plus 1 day
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should fail as shoots expiration time can’t be extended, because requested time higher then quota allows", func() {
+				shoot.Annotations[common.ClusterExpirationTime] = "2018-01-09T00:00:00+00:00" // plus 8 day
+
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 	})
 })
