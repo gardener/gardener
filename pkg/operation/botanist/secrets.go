@@ -549,7 +549,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 		"kubernetes",
 		"kubernetes.default",
 		"kubernetes.default.svc",
-		fmt.Sprintf("kubernetes.default.svc.%s", *b.Shoot.Info.Spec.DNS.Domain),
+		fmt.Sprintf("kubernetes.default.svc.%s", gardenv1beta1.DefaultDomain),
 		b.Shoot.InternalClusterDomain,
 	}
 	if b.Shoot.ExternalClusterDomain != nil {
