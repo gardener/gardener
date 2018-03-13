@@ -13,6 +13,8 @@ PATH_RESOURCEVERSION_CURRENT="$DIR_CLOUDCONFIG_DOWNLOADER/current_resourceversio
 PATH_RESOURCE_LAST_APPLIED="$DIR_CLOUDCONFIG_DOWNLOADER/last_applied_resourceversion"
 PATH_CLOUDCONFIG="$DIR_CLOUDCONFIG/cloud_config.yml"
 
+mkdir -p "$DIR_CLOUDCONFIG" "$DIR_KUBELET"
+
 if [ ! -f "$PATH_YAML2JSON" ]; then
   curl -L "https://github.com/bronze1man/yaml2json/raw/master/builds/linux_amd64/yaml2json" -o "$PATH_YAML2JSON"
   chmod +x "$PATH_YAML2JSON"
@@ -20,6 +22,7 @@ fi
 
 if ! CLOUD_CONFIG_SECRET="$(/bin/docker run \
   --rm \
+  --net host \
   -v "$DIR_CLOUDCONFIG"/:"$DIR_CLOUDCONFIG" \
   -v "$DIR_CLOUDCONFIG_DOWNLOADER"/:"$DIR_CLOUDCONFIG_DOWNLOADER" \
   k8s.gcr.io/hyperkube:v1.9.2\
