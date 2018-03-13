@@ -97,8 +97,15 @@ func (c *Client) Apply(m []byte) error {
 			}
 			newObj.SetResourceVersion(oldObj.GetResourceVersion())
 
-			if kind == "Service" {
+			switch kind {
+			case "Service":
+				// We do not want to overwrite a Service's `.spec.clusterIP' or '.spec.ports[*].nodePort' values.
 				newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
+				newObj.Object["spec"].(map[string]interface{})["ports"] = oldObj.Object["spec"].(map[string]interface{})["ports"]
+			case "ServiceAccount":
+				// We do not want to overwrite a ServiceAccount's `.secrets[]` list or `.imagePullSecrets[]`.
+				newObj.Object["secrets"] = oldObj.Object["secrets"]
+				newObj.Object["imagePullSecrets"] = oldObj.Object["imagePullSecrets"]
 			}
 
 			manifest, e = json.Marshal(newObj.UnstructuredContent())
@@ -106,18 +113,8 @@ func (c *Client) Apply(m []byte) error {
 				return e
 			}
 
-			switch kind {
-			case "ServiceAccount":
-				// We do not want to override a ServiceAccount's `.secrets[]` list with PUT requests (this would result in creating a new
-				// service account token (and a new secret)). Also, we do not want to override other fields like `.imagePullSecrets` which
-				// may have been added by a user.
-				if patchErr := c.patch(absPathName, manifest); patchErr != nil {
-					return patchErr
-				}
-			default:
-				if putErr := c.put(absPathName, manifest); putErr != nil {
-					return putErr
-				}
+			if putErr := c.put(absPathName, manifest); putErr != nil {
+				return putErr
 			}
 		}
 	}
