@@ -327,7 +327,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 }
 
 func startControllers(g *Gardener, stopCh <-chan struct{}) {
-	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), g.Config.Controllers.Shoot.SyncPeriod.Duration)
+	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), 0)
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 30*time.Second)
 
 	controller.NewGardenControllerFactory(

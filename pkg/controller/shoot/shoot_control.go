@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -51,7 +52,6 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 		newShoot        = newObj.(*gardenv1beta1.Shoot)
 		oldShootJSON, _ = json.Marshal(oldShoot)
 		newShootJSON, _ = json.Marshal(newShoot)
-		shoot           = newShoot.DeepCopy()
 		shootLogger     = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace, "")
 		specChanged     = !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
 		statusChanged   = !apiequality.Semantic.DeepEqual(oldShoot.Status, newShoot.Status)
@@ -66,19 +66,7 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
-	key, err := cache.MetaNamespaceKeyFunc(newObj)
-	if err != nil {
-		logger.Logger.Errorf("Couldn't get key for object %+v: %v", newObj, err)
-		return
-	}
-
-	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
-		shootLogger.Debug("Do not need to do anything as the Shoot does not have my finalizer")
-		c.shootQueue.Forget(key)
-		return
-	}
-
-	c.shootQueue.Add(key)
+	c.shootAdd(newObj)
 }
 
 func (c *Controller) shootDelete(obj interface{}) {
@@ -107,10 +95,34 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return err
 	}
 
-	if err := c.control.ReconcileShoot(shoot, key); err != nil {
-		c.shootQueue.AddAfter(key, 15*time.Second)
+	shootLogger := logger.NewShootLogger(logger.Logger, shoot.ObjectMeta.Name, shoot.ObjectMeta.Namespace, "")
+	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
+		shootLogger.Debug("Do not need to do anything as the Shoot does not have my finalizer")
+		c.shootQueue.Forget(key)
+		return nil
 	}
+
+	var durationToNextSync time.Duration
+
+	if err := c.control.ReconcileShoot(shoot, key); err != nil {
+		durationToNextSync = 15 * time.Second
+	} else {
+		durationToNextSync = scheduleNextSync(shoot.CreationTimestamp, c.config.Controllers.Shoot.SyncPeriod)
+	}
+
+	c.shootQueue.AddAfter(key, durationToNextSync)
+	shootLogger.Infof("Scheduled next reconciliation for Shoot '%s' in %s", key, durationToNextSync)
 	return nil
+}
+
+func scheduleNextSync(creationTimestamp metav1.Time, syncPeriod metav1.Duration) time.Duration {
+	var (
+		currentTimeNano  = time.Now().UnixNano()
+		creationTimeNano = creationTimestamp.UnixNano()
+		syncPeriodNano   = syncPeriod.Nanoseconds()
+		nextSyncNano     = currentTimeNano - (currentTimeNano-creationTimeNano)%syncPeriodNano + syncPeriodNano
+	)
+	return time.Duration(nextSyncNano - currentTimeNano)
 }
 
 // ControlInterface implements the control logic for updating Shoots. It is implemented as an interface to allow
@@ -199,7 +211,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		return nil
 	}
 
-	// Re-enable reconciliation on a failed Shoot cluster resource because the specifcation has been changed.
+	// Re-enable reconciliation on a failed Shoot cluster resource because the specification has been changed.
 	if shoot.Generation != shoot.Status.ObservedGeneration {
 		if lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed {
 			shoot.Status.LastOperation.State = gardenv1beta1.ShootLastOperationStateError
