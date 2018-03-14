@@ -68,6 +68,7 @@ spec:
         # - "--kubelet-certificate-authority=/srv/kubernetes/apiserver-kubelet/ca.crt"
         - --kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt
         - --kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key
+        - --insecure-port=0
         {{- include "kube-apiserver.oidcConfig" . | indent 8 }}
         - --proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt
         - --proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key
@@ -147,24 +148,28 @@ spec:
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         env:
+        - name: MAIN_VPN_SEED
+          value: "true"
         - name: IDENTITY_FILE
           value: /srv/ssh/id_rsa
         - name: USER
           value: root
         - name: SERVICE_NETWORK
-          value: {{.Values.serviceNetwork}}
+          value: {{ .Values.serviceNetwork }}
         - name: POD_NETWORK
-          value: {{.Values.podNetwork}}
+          value: {{ .Values.podNetwork }}
         - name: NODE_NETWORK
-          value: {{.Values.nodeNetwork}}
+          value: {{ .Values.nodeNetwork }}
         securityContext:
           privileged: true
           capabilities:
             add:
-            - "NET_ADMIN"
+            - NET_ADMIN
         volumeMounts:
         - name: vpn-ssh-keypair
           mountPath: /srv/ssh
+        - name: kube-apiserver-basic-auth
+          mountPath: /srv/auth
       - name: blackbox-exporter
         image: {{ index .Values.images "blackbox-exporter" }}
         args:
