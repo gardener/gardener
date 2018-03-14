@@ -91,7 +91,7 @@ spec:
           httpGet:
             scheme: HTTPS
             path: /healthz
-            port: 443
+            port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
               value: Basic {{ .Values.livenessProbeCredentials }}
