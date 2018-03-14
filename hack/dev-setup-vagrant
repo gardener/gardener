@@ -21,6 +21,7 @@ IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
 
+kubectl create namespace garden-development 2> /dev/null
 kubectl apply -f ${EXAMPLE_DIR}/cloudprofile-vagrant.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secret-dev-vagrant.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secretbinding-core-vagrant.yaml
@@ -93,7 +94,7 @@ spec:
         nodes: 10.250.0.0/19
         pods: 100.96.0.0/11
         services: 100.64.0.0/13
-      endpoint: localhost:3777
+      endpoint: ${IP_ADDRESS}:3777
   kubernetes:
     version: 1.9.1
   dns:
