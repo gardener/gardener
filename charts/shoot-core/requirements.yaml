@@ -1,9 +1,0 @@
-dependencies:
-- name: calico
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: calico.enabled
-- name: rbac
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: rbac.enabled

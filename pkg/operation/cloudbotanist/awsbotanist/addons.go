@@ -144,14 +144,6 @@ func (b *AWSBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, 
 	}, nil
 }
 
-// GenerateCalicoConfig generates values which are required to render the chart calico properly.
-func (b *AWSBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"cloudProvider": b.Shoot.CloudProvider,
-		"enabled":       true,
-	}, nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AWSBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(map[string]interface{}{

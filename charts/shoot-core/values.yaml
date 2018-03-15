@@ -17,13 +17,10 @@ vpn-shoot:
   images:
     vpn-shoot: image-repository:image-tag
 calico:
-  enabled: true
   cloudProvider: aws
   images:
     calico-node: image-repository:image-tag
     calico-cni:  image-repository:image-tag
-rbac:
-  enabled: false
 monitoring:
   node-exporter:
     images:

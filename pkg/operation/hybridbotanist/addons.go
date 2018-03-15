@@ -33,8 +33,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		global           = map[string]interface{}{
 			"podNetwork": b.Shoot.GetPodNetwork(),
 		}
-		rbac = map[string]interface{}{
-			"enabled": b.Shoot.CloudProvider == gardenv1beta1.CloudProviderGCP,
+		calicoConfig = map[string]interface{}{
+			"cloudProvider": b.Shoot.CloudProvider,
 		}
 
 		kubeDNSConfig = map[string]interface{}{
@@ -55,11 +55,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
 	if proxyConfig != nil {
 		kubeProxyConfig["featureGates"] = proxyConfig.FeatureGates
-	}
-
-	calicoConfig, err := b.ShootCloudBotanist.GenerateCalicoConfig()
-	if err != nil {
-		return nil, err
 	}
 
 	calico, err := b.Botanist.InjectImages(calicoConfig, b.K8sShootClient.Version(), map[string]string{"calico-node": "calico-node", "calico-cni": "calico-cni", "calico-typha": "calico-typha"})
@@ -89,7 +84,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"kube-proxy": kubeProxy,
 		"vpn-shoot":  vpnShoot,
 		"calico":     calico,
-		"rbac":       rbac,
 		"monitoring": map[string]interface{}{
 			"node-exporter": nodeExporter,
 		},

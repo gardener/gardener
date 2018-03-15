@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Fixes issue on GCE that configmaps can be created in shoot cluster, adds missing rolebindings. See https://github.com/kubernetes/kubeadm/issues/425
-name: rbac
-version: 0.1.0

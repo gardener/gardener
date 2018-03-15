@@ -61,40 +61,6 @@ resource "google_compute_firewall" "rule-allow-internal-access" {
   }
 }
 
-// Allow traffic between Kubernetes services.
-resource "google_compute_firewall" "rule-allow-cluster-ips" {
-  name          = "{{ required "clusterName is required" .Values.clusterName }}-allow-cluster-ips"
-  network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"
-  source_ranges = ["{{ required "networks.services is required" .Values.networks.services }}"]
-
-  allow {
-    protocol = "tcp"
-    ports    = ["1-65535"]
-  }
-
-  allow {
-    protocol = "udp"
-    ports    = ["1-65535"]
-  }
-}
-
-// Allow traffic between Kubernetes pods.
-resource "google_compute_firewall" "rule-allow-pod-cidr" {
-  name          = "{{ required "clusterName is required" .Values.clusterName }}-allow-pod-cidr"
-  network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"
-  source_ranges = ["{{ required "networks.pods is required" .Values.networks.pods }}"]
-
-  allow {
-    protocol = "tcp"
-    ports    = ["1-65535"]
-  }
-
-  allow {
-    protocol = "udp"
-    ports    = ["1-65535"]
-  }
-}
-
 resource "google_compute_firewall" "rule-allow-external-access" {
   name          = "{{ required "clusterName is required" .Values.clusterName }}-allow-external-access"
   network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"

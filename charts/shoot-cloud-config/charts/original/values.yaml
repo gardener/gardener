@@ -11,7 +11,6 @@
 #   clusterDNS: 100.64.0.10
 #   kubelet:
 #     bootstrapToken: hugo
-#     networkPlugin: cni
 #     domain: cluster.local
 #     hostnameOverride: false
 #     parameters: []

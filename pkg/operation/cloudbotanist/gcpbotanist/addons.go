@@ -55,14 +55,6 @@ func (b *GCPBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, 
 	}, nil
 }
 
-// GenerateCalicoConfig - Not needed on GCP
-func (b *GCPBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"cloudProvider": b.Shoot.CloudProvider,
-		"enabled":       false,
-	}, nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *GCPBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil

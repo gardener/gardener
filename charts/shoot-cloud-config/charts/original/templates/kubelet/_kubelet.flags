@@ -12,10 +12,8 @@
 {{- end }}
 --cluster-dns="{{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}" \
 --cluster-domain={{ required "kubernetes.domain is required" .kubernetes.domain }} \
-{{- if eq .kubernetes.kubelet.networkPlugin "cni" }}
 --cni-bin-dir=/opt/cni/bin/ \
 --cni-conf-dir=/etc/cni/net.d/ \
-{{- end }}
 --enable-debugging-handlers=true \
 --eviction-hard="memory.available<100Mi,nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
 --eviction-soft="memory.available<200Mi,nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
@@ -29,7 +27,7 @@
 --image-gc-low-threshold=40 \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --kube-reserved=memory="1Gi" \
---network-plugin="{{ required "kubernetes.kubelet.networkPlugin is required" .kubernetes.kubelet.networkPlugin }}" \
+--network-plugin=cni \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
 --rotate-certificates=true \
 {{- range $index, $param := .kubernetes.kubelet.parameters }}

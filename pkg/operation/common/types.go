@@ -160,7 +160,6 @@ const (
 type CloudConfigUserDataConfig struct {
 	ProvisionCloudProviderConfig bool
 	KubeletParameters            []string
-	NetworkPlugin                string
 	WorkerNames                  []string
 	HostnameOverride             bool
 }

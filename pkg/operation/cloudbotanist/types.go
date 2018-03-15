@@ -47,7 +47,6 @@ type CloudBotanist interface {
 	DestroyKube2IAMResources() error
 	GenerateKube2IAMConfig() (map[string]interface{}, error)
 	GenerateAdmissionControlConfig() (map[string]interface{}, error)
-	GenerateCalicoConfig() (map[string]interface{}, error)
 	GenerateNginxIngressConfig() (map[string]interface{}, error)
 
 	// Hooks

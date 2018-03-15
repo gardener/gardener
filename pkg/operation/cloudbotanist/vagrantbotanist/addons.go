@@ -50,14 +50,6 @@ func (b *VagrantBotanist) GenerateAdmissionControlConfig() (map[string]interface
 	}, nil
 }
 
-// GenerateCalicoConfig generates values which are required to render the chart calico properly.
-func (b *VagrantBotanist) GenerateCalicoConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"cloudProvider": b.Shoot.CloudProvider,
-		"enabled":       true,
-	}, nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *VagrantBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.NginxIngress.Enabled), nil

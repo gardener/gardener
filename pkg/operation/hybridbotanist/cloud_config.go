@@ -77,7 +77,6 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 			"domain": gardenv1beta1.DefaultDomain,
 			"kubelet": map[string]interface{}{
 				"bootstrapToken":   fmt.Sprintf("%s.%s", bootstrapTokenSecretData[bootstraptokenapi.BootstrapTokenIDKey], bootstrapTokenSecretData[bootstraptokenapi.BootstrapTokenSecretKey]),
-				"networkPlugin":    userDataConfig.NetworkPlugin,
 				"parameters":       userDataConfig.KubeletParameters,
 				"hostnameOverride": userDataConfig.HostnameOverride,
 			},
