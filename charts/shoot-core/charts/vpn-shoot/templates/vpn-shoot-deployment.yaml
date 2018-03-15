@@ -30,6 +30,11 @@ spec:
       - name: vpn-shoot
         image: {{ index .Values.images "vpn-shoot" }}
         imagePullPolicy: IfNotPresent
+        env:
+        - name: CONFIG_FILE
+          value: /var/vpn-shoot/ssh/sshd_config
+        - name: AUTHORIZED_KEYS_FILE
+          value: /root/.ssh/configmap/authorized_keys
         securityContext:
           privileged: true
           capabilities:
@@ -40,10 +45,9 @@ spec:
             cpu: 100m
         volumeMounts:
         - name: vpn-ssh-authorized-keys
-          mountPath: /root/.ssh
+          mountPath: /root/.ssh/configmap
         - name: vpn-sshd-config
-          mountPath: /etc/ssh/sshd_config
-          subPath: sshd_config
+          mountPath: /var/vpn-shoot/ssh
       volumes:
       - name: vpn-ssh-authorized-keys
         secret:

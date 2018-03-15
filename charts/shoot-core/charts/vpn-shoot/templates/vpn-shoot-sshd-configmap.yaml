@@ -9,7 +9,7 @@ metadata:
 data:
   sshd_config: |
     Subsystem sftp /usr/lib/ssh/sftp-server
-    AuthorizedKeysFile .ssh/authorized_keys /etc/authorized_keys/%u
+    AuthorizedKeysFile %h/.ssh/authorized_keys
     Port 22
     UsePrivilegeSeparation sandbox
     UseDNS no
