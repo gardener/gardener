@@ -1,33 +1,4 @@
 {{- define "kubelet-binary" -}}
-- path: /opt/bin/kubelet
-  permissions: 0755
-  content: |
-    #!/bin/bash
-    docker run \
-      --net=host \
-      --pid=host \
-      --privileged \
-      --name=kubelet \
-      --restart=on-failure:5 \
-      -v /dev:/dev:rw \
-      -v /etc/cni:/etc/cni:ro \
-      -v /opt/cni:/opt/cni:ro \
-      -v /etc/ssl:/etc/ssl:ro \
-      -v /usr/share/ca-certificates:/usr/share/ca-certificates:ro \
-      -v /etc/resolv.conf:/etc/resolv.conf \
-      -v /sys:/sys:ro \
-      -v /var/lib/docker:/var/lib/docker:rw,shared \
-      -v /var/log:/var/log:rw \
-      -v /var/lib/cni:/var/lib/cni:shared \
-      -v /var/run:/var/run:rw \
-      -v /var/lib/kubelet:/var/lib/kubelet:shared \
-      -v /etc/os-release:/etc/os-release:ro \
-      -v /:/rootfs:ro,shared \
-      -v /run/docker/:/run/docker/:rw \
-      -v /run/docker.sock:/run/docker.sock:rw \
-      {{ required "images.hyperkube is required" .images.hyperkube }}:v{{ required "kubernetes.version is required" .kubernetes.version }} \
-      ./hyperkube kubelet \
-    "$@"
 - path: /var/lib/kubelet/ca.crt
   permissions: 0644
   encoding: b64
