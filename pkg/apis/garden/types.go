@@ -405,6 +405,7 @@ type SeedNetworks struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Quota holds certain information about resource usage limitations and lifetime for Shoot objects.
 type Quota struct {
 	metav1.TypeMeta
 	// Standard object metadata.
@@ -436,13 +437,6 @@ type QuotaSpec struct {
 	Metrics corev1.ResourceList
 	// Scope is the scope of the Quota object, either 'project' or 'secret'.
 	Scope QuotaScope
-}
-
-// QuotaStatus holds the most recently observed status of the Quota constraints.
-type QuotaStatus struct {
-	// Metrics holds the current status of the constraints defined in the spec. Only used for Quotas whose scope
-	// is 'secret'.
-	Metrics corev1.ResourceList
 }
 
 const (

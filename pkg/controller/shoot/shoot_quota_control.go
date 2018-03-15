@@ -9,7 +9,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,9 +43,11 @@ func (c *Controller) reconcileShootQuotaKey(key string) error {
 
 	shoot, err := c.shootLister.Shoots(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
+		logger.Logger.Debugf("[SHOOT QUOTA] %s - skipping because Shoot has been deleted", key)
 		return nil
 	}
 	if err != nil {
+		logger.Logger.Infof("[SHOOT QUOTA] %s - unable to retrieve object from store: %v", key, err)
 		return err
 	}
 
@@ -54,7 +55,7 @@ func (c *Controller) reconcileShootQuotaKey(key string) error {
 		c.shootQuotaQueue.AddAfter(key, 2*time.Minute)
 		return nil
 	}
-	c.shootQuotaQueue.AddAfter(key, time.Hour)
+	c.shootQuotaQueue.AddAfter(key, c.config.Controllers.ShootQuota.SyncPeriod.Duration)
 	return nil
 }
 
@@ -81,28 +82,19 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		quotaReferences     []v1.ObjectReference
 		shootExpirationTime time.Time
 
-		operationID = utils.GenerateRandomString(8)
 		shoot       = shootObj.DeepCopy()
-		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
+		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
 	)
 
 	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
 	case "PrivateSecretBinding":
-		psb, err := c.k8sGardenInformers.
-			PrivateSecretBindings().
-			Lister().
-			PrivateSecretBindings(shoot.Namespace).
-			Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+		psb, err := c.k8sGardenInformers.PrivateSecretBindings().Lister().PrivateSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
 		if err != nil {
 			return err
 		}
 		quotaReferences = psb.Quotas
 	case "CrossSecretBinding":
-		csb, err := c.k8sGardenInformers.
-			CrossSecretBindings().
-			Lister().
-			CrossSecretBindings(shoot.Namespace).
-			Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+		csb, err := c.k8sGardenInformers.CrossSecretBindings().Lister().CrossSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
 		if err != nil {
 			return err
 		}
@@ -112,11 +104,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 	}
 
 	for _, quotaRef := range quotaReferences {
-		quota, err := c.k8sGardenInformers.
-			Quotas().
-			Lister().
-			Quotas(quotaRef.Namespace).
-			Get(quotaRef.Name)
+		quota, err := c.k8sGardenInformers.Quotas().Lister().Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return err
 		}
@@ -133,7 +121,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		return nil
 	}
 
-	if expirationTime, exists := shoot.Annotations[common.ClusterExpirationTime]; exists {
+	if expirationTime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; exists {
 		t, err := time.Parse(time.RFC3339, expirationTime)
 		if err != nil {
 			return err
@@ -141,14 +129,10 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		shootExpirationTime = t.Add(time.Duration(*clusterLifeTime*24) * time.Hour)
 	} else {
 		annotations := shoot.Annotations
-		annotations[common.ClusterExpirationTime] = shoot.CreationTimestamp.Format(time.RFC3339)
+		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Format(time.RFC3339)
 		shoot.Annotations = annotations
 
-		_, err := c.k8sGardenClient.
-			GardenClientset().
-			GardenV1beta1().
-			Shoots(shoot.Namespace).
-			Update(shoot)
+		_, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err
 		}
@@ -159,19 +143,11 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		shootLogger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
 		// We have to delete the shoot, because only apiserver can set a deletionTimestamp
-		err := c.k8sGardenClient.
-			GardenClientset().
-			GardenV1beta1().
-			Shoots(shoot.Namespace).
-			Delete(shoot.Name, &metav1.DeleteOptions{})
+		err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{})
 		if err != nil {
 			return err
 		}
-		shootUpdated, err := c.k8sGardenClient.
-			GardenClientset().
-			GardenV1beta1().
-			Shoots(shoot.Namespace).
-			Get(shoot.Name, metav1.GetOptions{})
+		shootUpdated, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Get(shoot.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -182,11 +158,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		annotations[common.ConfirmationDeletionTimestamp] = shootUpdated.DeletionTimestamp.Format(time.RFC3339)
 		shootUpdated.ObjectMeta.Annotations = annotations
 
-		_, err = c.k8sGardenClient.
-			GardenClientset().
-			GardenV1beta1().
-			Shoots(shootUpdated.Namespace).
-			Update(shootUpdated)
+		_, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shootUpdated.Namespace).Update(shootUpdated)
 		if err != nil {
 			return err
 		}

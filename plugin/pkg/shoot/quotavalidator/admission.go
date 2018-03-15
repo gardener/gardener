@@ -15,7 +15,6 @@
 package quotavalidator
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -40,7 +39,7 @@ const (
 )
 
 var (
-	quotaMetricNames = [...]v1.ResourceName{
+	quotaMetricNames = [6]v1.ResourceName{
 		garden.QuotaMetricCPU,
 		garden.QuotaMetricGPU,
 		garden.QuotaMetricMemory,
@@ -145,9 +144,7 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
 	var maxShootLifetime *int
 	for _, quotaRef := range quotaReferences {
-		quota, err := h.quotaLister.
-			Quotas(quotaRef.Namespace).
-			Get(quotaRef.Name)
+		quota, err := h.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
@@ -167,15 +164,15 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 			return apierrors.NewInternalError(err)
 		}
 		if exceededMetrics != nil {
-			var message bytes.Buffer
+			message := ""
 			for _, metric := range *exceededMetrics {
-				message.WriteString(metric.String() + " ")
+				message = message + metric.String() + " "
 			}
-			return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message.String()))
+			return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message))
 		}
 	}
 
-	if lifetime, exists := shoot.Annotations[common.ClusterExpirationTime]; exists && maxShootLifetime != nil {
+	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; exists && maxShootLifetime != nil {
 		var (
 			plannedExpirationTime   time.Time
 			oldExpirationTime       time.Time
@@ -193,7 +190,7 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
 
-		if lifetime, exists := oldShoot.Annotations[common.ClusterExpirationTime]; exists {
+		if lifetime, exists := oldShoot.Annotations[common.ShootExpirationTimestamp]; exists {
 			oldExpirationTime, err = time.Parse(time.RFC3339, lifetime)
 			if err != nil {
 				return apierrors.NewInternalError(err)
@@ -214,17 +211,13 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 func (h *RejectShootIfQuotaExceeded) getShootsQuotaReferences(shoot garden.Shoot) ([]v1.ObjectReference, error) {
 	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
 	case "CrossSecretBinding":
-		usedCrossSB, err := h.crossSBLister.
-			CrossSecretBindings(shoot.Namespace).
-			Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+		usedCrossSB, err := h.crossSBLister.CrossSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
 		if err != nil {
 			return nil, err
 		}
 		return usedCrossSB.Quotas, nil
 	case "PrivateSecretBinding":
-		usedPrivateSB, err := h.privateSBLister.
-			PrivateSecretBindings(shoot.Namespace).
-			Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+		usedPrivateSB, err := h.privateSBLister.PrivateSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -315,9 +308,7 @@ func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, sh
 
 	// Find all shoots which are referencing found CrossSecretBindings
 	for _, binding := range crossSecretBindings {
-		shoots, err := h.shootLister.
-			Shoots(binding.Namespace).
-			List(labels.Everything())
+		shoots, err := h.shootLister.Shoots(binding.Namespace).List(labels.Everything())
 		if err != nil {
 			return nil, err
 		}
@@ -337,9 +328,7 @@ func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, sh
 func (h *RejectShootIfQuotaExceeded) getPrivateSecretBindingsReferQuota(quota garden.Quota) ([]garden.PrivateSecretBinding, error) {
 	var privateSBsReferQuota []garden.PrivateSecretBinding
 
-	privateSBs, err := h.privateSBLister.
-		PrivateSecretBindings(v1.NamespaceAll).
-		List(labels.Everything())
+	privateSBs, err := h.privateSBLister.PrivateSecretBindings(v1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
@@ -357,9 +346,7 @@ func (h *RejectShootIfQuotaExceeded) getPrivateSecretBindingsReferQuota(quota ga
 func (h *RejectShootIfQuotaExceeded) getCrossSecretBindingsReferQuota(quota garden.Quota) ([]garden.CrossSecretBinding, error) {
 	var crossSBsReferQuota []garden.CrossSecretBinding
 
-	crossSBs, err := h.crossSBLister.
-		CrossSecretBindings(v1.NamespaceAll).
-		List(labels.Everything())
+	crossSBs, err := h.crossSBLister.CrossSecretBindings(v1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}

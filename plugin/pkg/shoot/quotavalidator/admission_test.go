@@ -375,7 +375,7 @@ var _ = Describe("quotavalidator", func() {
 				}
 
 				annotations := map[string]string{
-					common.ClusterExpirationTime: "2018-01-01T00:00:00+00:00",
+					common.ShootExpirationTimestamp: "2018-01-01T00:00:00+00:00",
 				}
 				shoot.Annotations = annotations
 				oldShoot = *shoot.DeepCopy()
@@ -394,7 +394,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should pass as shoot expiration time can be extended", func() {
-				shoot.Annotations[common.ClusterExpirationTime] = "2018-01-02T00:00:00+00:00" // plus 1 day
+				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-02T00:00:00+00:00" // plus 1 day
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
 
@@ -403,7 +403,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should fail as shoots expiration time can’t be extended, because requested time higher then quota allows", func() {
-				shoot.Annotations[common.ClusterExpirationTime] = "2018-01-09T00:00:00+00:00" // plus 8 day
+				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-09T00:00:00+00:00" // plus 8 day
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
 

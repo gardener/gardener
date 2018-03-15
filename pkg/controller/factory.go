@@ -115,7 +115,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		secretBindingController = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 	)
 
-	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, stopCh)
+	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs, stopCh)
 	go seedController.Run(f.config.Controllers.Seed.ConcurrentSyncs, stopCh)
 	go quotaController.Run(f.config.Controllers.Quota.ConcurrentSyncs, stopCh)
 	go cloudProfileController.Run(f.config.Controllers.CloudProfile.ConcurrentSyncs, stopCh)

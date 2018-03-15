@@ -79,6 +79,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootCare ShootCareControllerConfiguration
 	// ShootMaintenance defines the configuration of the ShootMaintenance controller.
 	ShootMaintenance ShootMaintenanceControllerConfiguration
+	// ShootQuota defines the configuration of the ShootQuota controller.
+	ShootQuota ShootQuotaControllerConfiguration
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -147,6 +149,17 @@ type ShootMaintenanceControllerConfiguration struct {
 	ConcurrentSyncs int
 	// SyncPeriod is the duration how often the existing resources are reconciled (how
 	// often it is checked whether Shoot resources need maintenance).
+	SyncPeriod metav1.Duration
+}
+
+// ShootQuotaControllerConfiguration defines the configuration of the
+// ShootQuota controller.
+type ShootQuotaControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// SyncPeriod is the duration how often the existing resources are reconciled
+	// (how often Shoots referenced Quota is checked).
 	SyncPeriod metav1.Duration
 }
 

@@ -35,11 +35,6 @@ const (
 	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
 	CloudPurposeSeed = "seed"
 
-	// ClusterExpirationTime is an annotation on a Shoot resource whose value represent the time when the Shoot lifetime
-	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
-	// of referenced quotas.
-	ClusterExpirationTime = "expiration.garden.sapcloud.io/expirationTimestamp"
-
 	// ConfirmationDeletionTimestamp is an annotation on a Shoot resource whose value must be set equal to the Shoot's
 	// '.metadata.deletionTimestamp' value to trigger the deletion process of the Shoot cluster.
 	ConfirmationDeletionTimestamp = "confirmation.garden.sapcloud.io/deletionTimestamp"
@@ -154,6 +149,11 @@ const (
 
 	// TerraformerPurposeIngress is a constant for the complete Terraform setup with purpose 'ingress'.
 	TerraformerPurposeIngress = "ingress"
+
+	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
+	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
+	// of referenced quotas.
+	ShootExpirationTimestamp = "shoot.garden.sapcloud.io/expirationTimestamp"
 
 	// ShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.

@@ -135,7 +135,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers, shootQuotaWorkers int, stopCh <-chan struct{}) {
 	var (
 		watchNamespace = c.config.Controllers.Shoot.WatchNamespace
 		waitGroup      sync.WaitGroup
@@ -172,6 +172,8 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 	}
 	for i := 0; i < shootMaintenanceWorkers; i++ {
 		controllerutils.CreateWorker(c.shootMaintenanceQueue, "Shoot Maintenance", c.reconcileShootMaintenanceKey, stopCh, &waitGroup, c.workerCh)
+	}
+	for i := 0; i < shootQuotaWorkers; i++ {
 		controllerutils.CreateWorker(c.shootQuotaQueue, "Shoot Quota", c.reconcileShootQuotaKey, stopCh, &waitGroup, c.workerCh)
 	}
 
