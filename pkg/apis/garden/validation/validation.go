@@ -1013,9 +1013,24 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, fldPath *field.
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones, openStackPath.Child("zones"))...)
 	}
 
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
-
+	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+
+	return allErrs
+}
+
+func validateDNSUpdate(new, old garden.DNS, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if new.Provider != old.Provider {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Provider, old.Provider, fldPath.Child("provider"))...)
+	}
+	if new.HostedZoneID != old.HostedZoneID {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.HostedZoneID, old.HostedZoneID, fldPath.Child("hostedZoneID"))...)
+	}
+	if new.Domain != old.Domain {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
+	}
 
 	return allErrs
 }

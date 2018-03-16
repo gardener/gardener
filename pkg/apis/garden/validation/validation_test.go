@@ -2994,19 +2994,52 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid updating the dns section", func() {
+			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")
-				newShoot.Spec.DNS.HostedZoneID = makeStringPointer("another-hosted-zone")
-				newShoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns"),
+					"Field": Equal("spec.dns.domain"),
 				}))
+			})
+
+			It("should forbid updating the dns hosted zone id", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.HostedZoneID = makeStringPointer("another-hosted-zone")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.hostedZoneID"),
+				}))
+			})
+
+			It("should forbid updating the dns provider", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.Provider = garden.DNSGoogleCloudDNS
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.provider"),
+				}))
+			})
+
+			It("should allow updating the dns domain", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.DNS.SecretName = makeStringPointer("my-dns-secret")
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(0))
 			})
 		})
 
