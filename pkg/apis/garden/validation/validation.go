@@ -599,6 +599,29 @@ func ValidateCrossSecretBindingUpdate(newBinding, oldBinding *garden.CrossSecret
 	return allErrs
 }
 
+// ValidateSecretBinding validates a SecretBinding object.
+func ValidateSecretBinding(binding *garden.SecretBinding) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&binding.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(binding.SecretRef, field.NewPath("secretRef"))...)
+	for i, quota := range binding.Quotas {
+		allErrs = append(allErrs, validateObjectReferenceOptionalNamespace(quota, field.NewPath("quotas").Index(i))...)
+	}
+
+	return allErrs
+}
+
+// ValidateSecretBindingUpdate validates a SecretBinding object before an update.
+func ValidateSecretBindingUpdate(newBinding, oldBinding *garden.SecretBinding) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBinding.ObjectMeta, &oldBinding.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateSecretBinding(newBinding)...)
+
+	return allErrs
+}
+
 func validateLocalObjectReference(ref corev1.LocalObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -617,6 +640,16 @@ func validateObjectReference(ref corev1.ObjectReference, fldPath *field.Path) fi
 	}
 	if len(ref.Namespace) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
+	}
+
+	return allErrs
+}
+
+func validateObjectReferenceOptionalNamespace(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(ref.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
 	}
 
 	return allErrs
@@ -744,8 +777,8 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	if len(cloud.Region) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must specify a region"))
 	}
-	if cloud.SecretBindingRef.Kind != "PrivateSecretBinding" && cloud.SecretBindingRef.Kind != "CrossSecretBinding" {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("secretBindingRef", "kind"), cloud.SecretBindingRef.Kind, []string{"PrivateSecretBinding", "CrossSecretBinding"}))
+	if cloud.SecretBindingRef.Kind != "" && cloud.SecretBindingRef.Kind != "PrivateSecretBinding" && cloud.SecretBindingRef.Kind != "CrossSecretBinding" {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("secretBindingRef", "kind"), cloud.SecretBindingRef.Kind, []string{"", "PrivateSecretBinding", "CrossSecretBinding"}))
 	}
 	if len(cloud.SecretBindingRef.Name) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("secretBindingRef", "name"), "must specify a name"))

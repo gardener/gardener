@@ -17,24 +17,32 @@ package initializer
 import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 )
 
-// WantsInternalGardenInformerFactory defines a function which sets InformerFactory for admission plugins that need it
+// WantsInternalGardenInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsInternalGardenInformerFactory interface {
 	SetInternalGardenInformerFactory(gardeninformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
-// WantsKubeInformerFactory defines a function which sets InformerFactory for admission plugins that need it
+// WantsKubeInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsKubeInformerFactory interface {
 	SetKubeInformerFactory(kubeinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsAuthorizer defines a function which sets an authorizer for admission plugins that need it.
+type WantsAuthorizer interface {
+	SetAuthorizer(authorizer.Authorizer)
 	admission.InitializationValidator
 }
 
 type pluginInitializer struct {
 	gardenInformers gardeninformers.SharedInformerFactory
 	kubeInformers   kubeinformers.SharedInformerFactory
+	authorizer      authorizer.Authorizer
 }
 
 var _ admission.PluginInitializer = pluginInitializer{}

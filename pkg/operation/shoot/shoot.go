@@ -43,6 +43,15 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 
 	bindingRef := shoot.Spec.Cloud.SecretBindingRef
 	switch bindingRef.Kind {
+	case "", "SecretBinding":
+		binding, err := k8sGardenInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(bindingRef.Name)
+		if err != nil {
+			return nil, err
+		}
+		secret, err = k8sGardenClient.GetSecret(binding.SecretRef.Namespace, binding.SecretRef.Name)
+		if err != nil {
+			return nil, err
+		}
 	case "PrivateSecretBinding":
 		binding, err := k8sGardenInformers.PrivateSecretBindings().Lister().PrivateSecretBindings(shoot.Namespace).Get(bindingRef.Name)
 		if err != nil {

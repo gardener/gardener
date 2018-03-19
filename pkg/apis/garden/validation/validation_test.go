@@ -1620,6 +1620,64 @@ var _ = Describe("validation", func() {
 		})
 	})
 
+	Describe("#ValidateSecretBinding", func() {
+		var secretBinding *garden.SecretBinding
+
+		BeforeEach(func() {
+			secretBinding = &garden.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "profile",
+					Namespace: "garden",
+				},
+				SecretRef: corev1.ObjectReference{
+					Name:      "my-secret",
+					Namespace: "my-namespace",
+				},
+			}
+		})
+
+		It("should not return any errors", func() {
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(len(errorList)).To(Equal(0))
+		})
+
+		It("should forbid empty SecretBinding resources", func() {
+			secretBinding.ObjectMeta = metav1.ObjectMeta{}
+			secretBinding.SecretRef = corev1.ObjectReference{}
+
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(len(errorList)).To(Equal(3))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.name"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.namespace"),
+			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("secretRef.name"),
+			}))
+		})
+
+		It("should forbid empty stated Quota names", func() {
+			secretBinding.Quotas = []corev1.ObjectReference{
+				{},
+			}
+
+			errorList := ValidateSecretBinding(secretBinding)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("quotas[0].name"),
+			}))
+		})
+	})
+
 	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *garden.Shoot

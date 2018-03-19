@@ -8,7 +8,6 @@ spec:
     profile: openstack
     region: europe-1
     secretBindingRef:
-      kind: PrivateSecretBinding
       name: core-openstack
     openstack:
       networks:

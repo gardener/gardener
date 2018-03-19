@@ -8,7 +8,6 @@ spec:
     profile: vagrant
     region: local
     secretBindingRef:
-      kind: PrivateSecretBinding
       name: core-vagrant
     vagrant:
       networks:

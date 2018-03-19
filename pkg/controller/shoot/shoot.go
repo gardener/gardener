@@ -53,6 +53,7 @@ type Controller struct {
 	shootSynced                cache.InformerSynced
 	seedSynced                 cache.InformerSynced
 	cloudProfileSynced         cache.InformerSynced
+	secretBindingSynced        cache.InformerSynced
 	privateSecretBindingSynced cache.InformerSynced
 	crossSecretBindingSynced   cache.InformerSynced
 
@@ -116,6 +117,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 	shootController.shootSynced = shootInformer.Informer().HasSynced
 	shootController.seedSynced = gardenv1beta1Informer.Seeds().Informer().HasSynced
 	shootController.cloudProfileSynced = gardenv1beta1Informer.CloudProfiles().Informer().HasSynced
+	shootController.secretBindingSynced = gardenv1beta1Informer.SecretBindings().Informer().HasSynced
 	shootController.privateSecretBindingSynced = gardenv1beta1Informer.PrivateSecretBindings().Informer().HasSynced
 	shootController.crossSecretBindingSynced = gardenv1beta1Informer.CrossSecretBindings().Informer().HasSynced
 
@@ -129,7 +131,7 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		waitGroup      sync.WaitGroup
 	)
 
-	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.privateSecretBindingSynced, c.crossSecretBindingSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.privateSecretBindingSynced, c.crossSecretBindingSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

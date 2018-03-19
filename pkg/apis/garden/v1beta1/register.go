@@ -55,6 +55,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&PrivateSecretBindingList{},
 		&CrossSecretBinding{},
 		&CrossSecretBindingList{},
+		&SecretBinding{},
+		&SecretBindingList{},
 		&Quota{},
 		&QuotaList{},
 		&Shoot{},

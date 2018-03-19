@@ -41,7 +41,7 @@ The secrets are determined based on labels with key `garden.sapcloud.io/role`. P
 
 The Seed cluster which is used to deploy the control plane of a Shoot cluster can be specified by the user in the Shoot manifest (see [here](../../example/shoot-azure.yaml#L10)). If it is not specified, the Gardener will try to find an adequate Seed cluster (one deployed in the same region at the same cloud provider) automatically.
 
-The cloud provider secrets can be stored in any namespace. With [`PrivateSecretBindings`](../../example/privatesecretbinding-core-aws.yaml) one can reference a secret in the same namespace, whereas one has to use [`CrossSecretBindings`](../../example/crosssecretbinding-default-my-aws-secret.yaml) when referencing a secret in another namespace.
+The cloud provider secrets can be stored in any namespace. With [`SecretBindings`](../../example/secretbinding-core-aws.yaml) one can reference a secret in the same or in another namespace. These binding objects can also be used to reference `Quotas` for the specific secret.
 
 ## Configuration file for Gardener controller manager
 The Gardener controller manager does only support one command line flag which should be a path to a valid configuration file.

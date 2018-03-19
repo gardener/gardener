@@ -15,6 +15,7 @@ type GardenV1beta1Interface interface {
 	CrossSecretBindingsGetter
 	PrivateSecretBindingsGetter
 	QuotasGetter
+	SecretBindingsGetter
 	SeedsGetter
 	ShootsGetter
 }
@@ -38,6 +39,10 @@ func (c *GardenV1beta1Client) PrivateSecretBindings(namespace string) PrivateSec
 
 func (c *GardenV1beta1Client) Quotas(namespace string) QuotaInterface {
 	return newQuotas(c, namespace)
+}
+
+func (c *GardenV1beta1Client) SecretBindings(namespace string) SecretBindingInterface {
+	return newSecretBindings(c, namespace)
 }
 
 func (c *GardenV1beta1Client) Seeds() SeedInterface {

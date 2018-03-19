@@ -442,7 +442,7 @@ const (
 )
 
 ////////////////////////////////////////////////////
-//                 SECRET BINDINGS                //
+//                 SECRET BINDINGS (DEPRECATED)   //
 ////////////////////////////////////////////////////
 
 // +genclient
@@ -499,6 +499,37 @@ type CrossSecretBindingList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	// Items is the list of CrossSecretBindings.
 	Items []CrossSecretBinding `json:"items"`
+}
+
+////////////////////////////////////////////////////
+//                 SECRET BINDINGS                //
+////////////////////////////////////////////////////
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+type SecretBinding struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// SecretRef is a reference to a secret object in the same or another namespace.
+	SecretRef corev1.ObjectReference `json:"secretRef"`
+	// Quotas is a list of references to Quota objects in the same or another namespace.
+	// +optional
+	Quotas []corev1.ObjectReference `json:"quotas,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// SecretBindingList is a collection of SecretBindings.
+type SecretBindingList struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard list object metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+	// Items is the list of SecretBindings.
+	Items []SecretBinding `json:"items"`
 }
 
 ////////////////////////////////////////////////////

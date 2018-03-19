@@ -16,6 +16,8 @@ type Interface interface {
 	PrivateSecretBindings() PrivateSecretBindingInformer
 	// Quotas returns a QuotaInformer.
 	Quotas() QuotaInformer
+	// SecretBindings returns a SecretBindingInformer.
+	SecretBindings() SecretBindingInformer
 	// Seeds returns a SeedInformer.
 	Seeds() SeedInformer
 	// Shoots returns a ShootInformer.
@@ -51,6 +53,11 @@ func (v *version) PrivateSecretBindings() PrivateSecretBindingInformer {
 // Quotas returns a QuotaInformer.
 func (v *version) Quotas() QuotaInformer {
 	return &quotaInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// SecretBindings returns a SecretBindingInformer.
+func (v *version) SecretBindings() SecretBindingInformer {
+	return &secretBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Seeds returns a SeedInformer.

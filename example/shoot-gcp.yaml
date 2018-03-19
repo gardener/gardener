@@ -9,7 +9,6 @@ spec:
     region: europe-west1
     seed: gcp-dev
     secretBindingRef:
-      kind: PrivateSecretBinding
       name: core-gcp
     gcp:
       networks:

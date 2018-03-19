@@ -10,6 +10,8 @@ type PrivateSecretBindingExpansion interface{}
 
 type QuotaExpansion interface{}
 
+type SecretBindingExpansion interface{}
+
 type SeedExpansion interface{}
 
 type ShootExpansion interface{}

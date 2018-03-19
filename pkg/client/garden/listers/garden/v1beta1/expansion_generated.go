@@ -30,6 +30,14 @@ type QuotaListerExpansion interface{}
 // QuotaNamespaceLister.
 type QuotaNamespaceListerExpansion interface{}
 
+// SecretBindingListerExpansion allows custom methods to be added to
+// SecretBindingLister.
+type SecretBindingListerExpansion interface{}
+
+// SecretBindingNamespaceListerExpansion allows custom methods to be added to
+// SecretBindingNamespaceLister.
+type SecretBindingNamespaceListerExpansion interface{}
+
 // SeedListerExpansion allows custom methods to be added to
 // SeedLister.
 type SeedListerExpansion interface{}

@@ -64,6 +64,9 @@ type ControllerManagerControllerConfiguration struct {
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
+	// SecretBinding defines the configuration of the SecretBinding controller.
+	// +optional
+	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
 	// CrossSecretBinding defines the configuration of the CrossSecretBinding controller.
 	// +optional
 	CrossSecretBinding *CrossSecretBindingControllerConfiguration `json:"crossSecretBinding,omitempty"`
@@ -87,6 +90,14 @@ type ControllerManagerControllerConfiguration struct {
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// SecretBindingControllerConfiguration defines the configuration of the
+// SecretBinding controller.
+type SecretBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

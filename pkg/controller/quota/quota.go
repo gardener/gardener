@@ -40,6 +40,7 @@ type Controller struct {
 	quotaQueue  workqueue.RateLimitingInterface
 	quotaSynced cache.InformerSynced
 
+	secretBindingLister        gardenlisters.SecretBindingLister
 	privateSecretBindingLister gardenlisters.PrivateSecretBindingLister
 	crossSecretBindingLister   gardenlisters.CrossSecretBindingLister
 
@@ -56,6 +57,7 @@ func NewQuotaController(k8sGardenClient kubernetes.Client, gardenInformerFactory
 
 		quotaInformer              = gardenv1beta1Informer.Quotas()
 		quotaLister                = quotaInformer.Lister()
+		secretBindingLister        = gardenv1beta1Informer.SecretBindings().Lister()
 		privateSecretBindingLister = gardenv1beta1Informer.PrivateSecretBindings().Lister()
 		crossSecretBindingLister   = gardenv1beta1Informer.CrossSecretBindings().Lister()
 	)
@@ -63,10 +65,11 @@ func NewQuotaController(k8sGardenClient kubernetes.Client, gardenInformerFactory
 	quotaController := &Controller{
 		k8sGardenClient:            k8sGardenClient,
 		k8sGardenInformers:         gardenInformerFactory,
-		control:                    NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, privateSecretBindingLister, crossSecretBindingLister),
+		control:                    NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretBindingLister, privateSecretBindingLister, crossSecretBindingLister),
 		recorder:                   recorder,
 		quotaLister:                quotaLister,
 		quotaQueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),
+		secretBindingLister:        secretBindingLister,
 		privateSecretBindingLister: privateSecretBindingLister,
 		crossSecretBindingLister:   crossSecretBindingLister,
 		workerCh:                   make(chan int),

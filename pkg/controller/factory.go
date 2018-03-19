@@ -26,6 +26,7 @@ import (
 	crosssecretbindingcontroller "github.com/gardener/gardener/pkg/controller/crosssecretbinding"
 	privatesecretbindingcontroller "github.com/gardener/gardener/pkg/controller/privatesecretbinding"
 	quotacontroller "github.com/gardener/gardener/pkg/controller/quota"
+	secretbindingcontroller "github.com/gardener/gardener/pkg/controller/secretbinding"
 	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
@@ -69,6 +70,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		cloudProfileInformer         = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
 		privateSecretBindingInformer = f.k8sGardenInformers.Garden().V1beta1().PrivateSecretBindings().Informer()
 		crossSecretBindingInformer   = f.k8sGardenInformers.Garden().V1beta1().CrossSecretBindings().Informer()
+		secretBindingInformer        = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
 		quotaInformer                = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
 		seedInformer                 = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
 		shootInformer                = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
@@ -77,7 +79,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	)
 
 	f.k8sGardenInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(make(<-chan struct{}), cloudProfileInformer.HasSynced, privateSecretBindingInformer.HasSynced, crossSecretBindingInformer.HasSynced, quotaInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
+	if !cache.WaitForCacheSync(make(<-chan struct{}), cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, privateSecretBindingInformer.HasSynced, crossSecretBindingInformer.HasSynced, quotaInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
 	}
 
@@ -116,6 +118,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		cloudProfileController         = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
 		privateSecretBindingController = privatesecretbindingcontroller.NewPrivateSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 		crossSecretBindingController   = crosssecretbindingcontroller.NewCrossSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
+		secretBindingController        = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 	)
 
 	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, stopCh)
@@ -124,6 +127,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	go cloudProfileController.Run(f.config.Controllers.CloudProfile.ConcurrentSyncs, stopCh)
 	go privateSecretBindingController.Run(f.config.Controllers.PrivateSecretBinding.ConcurrentSyncs, stopCh)
 	go crossSecretBindingController.Run(f.config.Controllers.CrossSecretBinding.ConcurrentSyncs, stopCh)
+	go secretBindingController.Run(f.config.Controllers.SecretBinding.ConcurrentSyncs, stopCh)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 
@@ -137,6 +141,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 			seedController.RunningWorkers() == 0 &&
 			quotaController.RunningWorkers() == 0 &&
 			cloudProfileController.RunningWorkers() == 0 &&
+			secretBindingController.RunningWorkers() == 0 &&
 			privateSecretBindingController.RunningWorkers() == 0 &&
 			crossSecretBindingController.RunningWorkers() == 0 {
 

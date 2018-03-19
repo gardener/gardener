@@ -23,7 +23,7 @@ MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
 
 kubectl apply -f ${EXAMPLE_DIR}/cloudprofile-vagrant.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secret-dev-vagrant.yaml
-kubectl apply -f ${EXAMPLE_DIR}/privatesecretbinding-core-vagrant.yaml
+kubectl apply -f ${EXAMPLE_DIR}/secretbinding-core-vagrant.yaml
 
 kubectl config set-cluster gardener-dev \
   --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
@@ -87,7 +87,6 @@ spec:
     profile: vagrant
     region: local
     secretBindingRef:
-      kind: PrivateSecretBinding
       name: core-vagrant
     vagrant:
       networks:

@@ -51,13 +51,14 @@ var _ = Describe("quotavalidator", func() {
 				},
 				Data: map[string][]byte{},
 			}
-			privateSecretBinding = garden.PrivateSecretBinding{
+			secretBinding = garden.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretBindingName,
 					Namespace: namespace,
 				},
-				SecretRef: corev1.LocalObjectReference{
-					Name: cloudProviderSecretName,
+				SecretRef: corev1.ObjectReference{
+					Name:      cloudProviderSecretName,
+					Namespace: namespace,
 				},
 			}
 			referencedSecret = corev1.Secret{
@@ -76,7 +77,6 @@ var _ = Describe("quotavalidator", func() {
 				Spec: garden.ShootSpec{
 					Cloud: garden.Cloud{
 						SecretBindingRef: corev1.ObjectReference{
-							Kind: "PrivateSecretBinding",
 							Name: secretBindingName,
 						},
 					},
@@ -163,7 +163,7 @@ var _ = Describe("quotavalidator", func() {
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
-					gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 					err := admissionHandler.Admit(attrs)
@@ -179,7 +179,7 @@ var _ = Describe("quotavalidator", func() {
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
-					gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 					err := admissionHandler.Admit(attrs)
@@ -199,7 +199,7 @@ var _ = Describe("quotavalidator", func() {
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
-					gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 					err := admissionHandler.Admit(attrs)
@@ -217,7 +217,7 @@ var _ = Describe("quotavalidator", func() {
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
-					gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 					err := admissionHandler.Admit(attrs)

@@ -28,6 +28,10 @@ func (c *FakeGarden) Quotas(namespace string) internalversion.QuotaInterface {
 	return &FakeQuotas{c, namespace}
 }
 
+func (c *FakeGarden) SecretBindings(namespace string) internalversion.SecretBindingInterface {
+	return &FakeSecretBindings{c, namespace}
+}
+
 func (c *FakeGarden) Seeds() internalversion.SeedInterface {
 	return &FakeSeeds{c}
 }

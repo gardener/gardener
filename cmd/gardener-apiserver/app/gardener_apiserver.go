@@ -168,7 +168,7 @@ func (o *Options) config() (*apiserver.Config, error) {
 		}
 		gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 		o.GardenInformerFactory = gardenInformerFactory
-		return []admission.PluginInitializer{admissioninitializer.New(gardenInformerFactory, kubeInformerFactory)}, nil
+		return []admission.PluginInitializer{admissioninitializer.New(gardenInformerFactory, kubeInformerFactory, gardenerAPIServerConfig.Authorization.Authorizer)}, nil
 	}
 
 	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, api.Scheme)

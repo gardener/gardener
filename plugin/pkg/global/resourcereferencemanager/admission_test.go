@@ -21,11 +21,25 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+type fakeAuthorizerType struct{}
+
+func (fakeAuthorizerType) Authorize(a authorizer.Attributes) (authorizer.Decision, string, error) {
+	username := a.GetUser().GetName()
+
+	if username == "allowed-user" {
+		return authorizer.DecisionAllow, "", nil
+	}
+
+	return authorizer.DecisionDeny, "", nil
+}
 
 var _ = Describe("resourcereferencemanager", func() {
 	Describe("#Admit", func() {
@@ -33,6 +47,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			admissionHandler      *ReferenceManager
 			kubeInformerFactory   kubeinformers.SharedInformerFactory
 			gardenInformerFactory gardeninformers.SharedInformerFactory
+			fakeAuthorizer        fakeAuthorizerType
 
 			shoot garden.Shoot
 
@@ -43,6 +58,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			quotaName        = "quota-1"
 			secretName       = "secret-1"
 			shootName        = "shoot-1"
+			allowedUser      = "allowed-user"
 			finalizers       = []string{garden.GardenerName}
 
 			secret = corev1.Secret{
@@ -77,6 +93,23 @@ var _ = Describe("resourcereferencemanager", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      quotaName,
 					Namespace: namespace,
+				},
+			}
+			secretBinding = garden.SecretBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       bindingName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
+				},
+				SecretRef: corev1.ObjectReference{
+					Name:      secretName,
+					Namespace: namespace,
+				},
+				Quotas: []corev1.ObjectReference{
+					{
+						Name:      quotaName,
+						Namespace: namespace,
+					},
 				},
 			}
 			privateSecretBinding = garden.PrivateSecretBinding{
@@ -123,7 +156,6 @@ var _ = Describe("resourcereferencemanager", func() {
 						Profile: cloudProfileName,
 						Seed:    &seedName,
 						SecretBindingRef: corev1.ObjectReference{
-							Kind: "PrivateSecretBinding",
 							Name: bindingName,
 						},
 					},
@@ -137,8 +169,70 @@ var _ = Describe("resourcereferencemanager", func() {
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+			fakeAuthorizer = fakeAuthorizerType{}
+			admissionHandler.SetAuthorizer(fakeAuthorizer)
 
 			shoot = shootBase
+		})
+
+		Context("tests for SecretBinding objects", func() {
+			It("should accept because all referenced objects have been found", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because the referenced secret does not exist", func() {
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the user is not allowed to read the referenced secret", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because one of the referenced quotas does not exist", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the user is not allowed to read the referenced quota", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+
+				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
 		Context("tests for PrivateSecretBinding objects", func() {
@@ -244,7 +338,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should accept because all referenced objects have been found", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 

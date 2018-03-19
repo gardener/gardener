@@ -22,6 +22,7 @@ import (
 	crosssecretbinding "github.com/gardener/gardener/pkg/registry/garden/crosssecretbinding/storage"
 	privatesecretbinding "github.com/gardener/gardener/pkg/registry/garden/privatesecretbinding/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
+	secretbinding "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
 	shootstore "github.com/gardener/gardener/pkg/registry/garden/shoot/storage"
 	"k8s.io/apiserver/pkg/registry/generic"
@@ -62,6 +63,9 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 
 	crossSecretBindingStorage := crosssecretbinding.NewStorage(restOptionsGetter)
 	storage["crosssecretbindings"] = crossSecretBindingStorage.CrossSecretBinding
+
+	secretBindingStorage := secretbinding.NewStorage(restOptionsGetter)
+	storage["secretbindings"] = secretBindingStorage.SecretBinding
 
 	quotaStorage := quotastore.NewStorage(restOptionsGetter)
 	storage["quotas"] = quotaStorage.Quota

@@ -2950,6 +2950,101 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			Dependencies: []string{
 				"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SecretBinding": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard object metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							},
+						},
+						"secretRef": {
+							SchemaProps: spec.SchemaProps{
+								Description: "SecretRef is a reference to a secret object in the same or another namespace.",
+								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+							},
+						},
+						"quotas": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Quotas is a list of references to Quota objects in the same or another namespace.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("k8s.io/api/core/v1.ObjectReference"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"secretRef"},
+				},
+			},
+			Dependencies: []string{
+				"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SecretBindingList": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "SecretBindingList is a collection of SecretBindings.",
+					Properties: map[string]spec.Schema{
+						"kind": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"apiVersion": {
+							SchemaProps: spec.SchemaProps{
+								Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"metadata": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Standard list object metadata.",
+								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+							},
+						},
+						"items": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Items is the list of SecretBindings.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.SecretBinding"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"items"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SecretBinding", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Seed": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{

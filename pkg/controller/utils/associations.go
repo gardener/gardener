@@ -45,6 +45,11 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 			if shoot.Spec.Cloud.Seed != nil && *shoot.Spec.Cloud.Seed == seed.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
+		case *gardenv1beta1.SecretBinding:
+			binding := obj.(*gardenv1beta1.SecretBinding)
+			if shoot.Spec.Cloud.SecretBindingRef.Kind == "" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
+			}
 		case *gardenv1beta1.PrivateSecretBinding:
 			binding := obj.(*gardenv1beta1.PrivateSecretBinding)
 			if shoot.Spec.Cloud.SecretBindingRef.Kind == "PrivateSecretBinding" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
@@ -60,6 +65,25 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 		}
 	}
 	return associatedShoots, nil
+}
+
+// DetermineSecretBindingAssociations gets a <bindingLister> to determine the SecretBinding
+// resources which are associated to given Quota <obj>.
+func DetermineSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.SecretBindingLister) ([]string, error) {
+	var associatedBindings []string
+	bindings, err := bindingLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+
+	for _, binding := range bindings {
+		for _, quotaRef := range binding.Quotas {
+			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
+				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))
+			}
+		}
+	}
+	return associatedBindings, nil
 }
 
 // DeterminePrivateSecretBindingAssociations gets a <bindingLister> to determine the PrivateSecretBinding

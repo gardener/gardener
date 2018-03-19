@@ -90,14 +90,15 @@ type ControlInterface interface {
 // implements the documented semantics for Quotas. updater is the UpdaterInterface used
 // to update the status of Quotas. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, privateSecretBindingLister gardenlisters.PrivateSecretBindingLister, crossSecretBindingLister gardenlisters.CrossSecretBindingLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, privateSecretBindingLister, crossSecretBindingLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister, privateSecretBindingLister gardenlisters.PrivateSecretBindingLister, crossSecretBindingLister gardenlisters.CrossSecretBindingLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretBindingLister, privateSecretBindingLister, crossSecretBindingLister}
 }
 
 type defaultControl struct {
 	k8sGardenClient            kubernetes.Client
 	k8sGardenInformers         gardeninformers.SharedInformerFactory
 	recorder                   record.EventRecorder
+	secretBindingLister        gardenlisters.SecretBindingLister
 	privateSecretBindingLister gardenlisters.PrivateSecretBindingLister
 	crossSecretBindingLister   gardenlisters.CrossSecretBindingLister
 }
@@ -114,13 +115,18 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 	)
 
 	// The deletionTimestamp labels a Quota as intented to get deleted. Before deletion,
-	// it has to be ensured that no Private- and no CrossSecretBindings are depending on the Quota anymore.
+	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {
 		if !sets.NewString(quota.Finalizers...).Has(gardenv1beta1.GardenerName) {
 			return nil
 		}
 
+		associatedSecretBindings, err := controllerutils.DetermineSecretBindingAssociations(quota, c.secretBindingLister)
+		if err != nil {
+			quotaLogger.Error(err.Error())
+			return err
+		}
 		associatedPrivateSecretBindings, err := controllerutils.DeterminePrivateSecretBindingAssociations(quota, c.privateSecretBindingLister)
 		if err != nil {
 			quotaLogger.Error(err.Error())
@@ -131,10 +137,11 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 			quotaLogger.Error(err.Error())
 			return err
 		}
-		associatedBindings := append(associatedPrivateSecretBindings, associatedCrossSecretBindings...)
+		associatedBindings := append(associatedSecretBindings, associatedPrivateSecretBindings...)
+		associatedBindings = append(associatedSecretBindings, associatedCrossSecretBindings...)
 
 		if len(associatedBindings) == 0 {
-			quotaLogger.Info("No Private- or CrossSecretBindings are referencing the Quota. Deletion accepted.")
+			quotaLogger.Info("No SecretBindings are referencing the Quota. Deletion accepted.")
 
 			// Remove finalizer from Quota
 			quotaFinalizers := sets.NewString(quota.Finalizers...)
@@ -146,7 +153,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 			}
 			return nil
 		}
-		quotaLogger.Infof("Can't delete Quota, because the following Private- or CrossSecretBindings are still referencing it: %v", associatedBindings)
+		quotaLogger.Infof("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedBindings)
 		return errors.New("Quota still has references")
 	}
 	return nil

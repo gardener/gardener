@@ -9,7 +9,6 @@ spec:
     region: westeurope
     seed: azure-dev
     secretBindingRef:
-      kind: PrivateSecretBinding
       name: core-azure
     azure:
       # resourceGroup:

@@ -20,6 +20,7 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
@@ -27,6 +28,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 )
@@ -46,9 +48,11 @@ func Register(plugins *admission.Plugins) {
 // ReferenceManager contains listers and and admission handler.
 type ReferenceManager struct {
 	*admission.Handler
+	authorizer                 authorizer.Authorizer
 	secretLister               kubecorev1listers.SecretLister
 	cloudProfileLister         gardenlisters.CloudProfileLister
 	seedLister                 gardenlisters.SeedLister
+	secretBindingLister        gardenlisters.SecretBindingLister
 	privateSecretBindingLister gardenlisters.PrivateSecretBindingLister
 	crossSecretBindingLister   gardenlisters.CrossSecretBindingLister
 	quotaLister                gardenlisters.QuotaLister
@@ -56,6 +60,7 @@ type ReferenceManager struct {
 
 var _ = admissioninitializer.WantsInternalGardenInformerFactory(&ReferenceManager{})
 var _ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
+var _ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
 
 // New creates a new ReferenceManager admission plugin.
 func New() (*ReferenceManager, error) {
@@ -64,10 +69,16 @@ func New() (*ReferenceManager, error) {
 	}, nil
 }
 
+// SetAuthorizer gets the authorizer.
+func (r *ReferenceManager) SetAuthorizer(authorizer authorizer.Authorizer) {
+	r.authorizer = authorizer
+}
+
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
 func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
 	r.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
 	r.seedLister = f.Garden().InternalVersion().Seeds().Lister()
+	r.secretBindingLister = f.Garden().InternalVersion().SecretBindings().Lister()
 	r.privateSecretBindingLister = f.Garden().InternalVersion().PrivateSecretBindings().Lister()
 	r.crossSecretBindingLister = f.Garden().InternalVersion().CrossSecretBindings().Lister()
 	r.quotaLister = f.Garden().InternalVersion().Quotas().Lister()
@@ -80,6 +91,9 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (r *ReferenceManager) ValidateInitialization() error {
+	if r.authorizer == nil {
+		return errors.New("missing authorizer")
+	}
 	if r.secretLister == nil {
 		return errors.New("missing secret lister")
 	}
@@ -88,6 +102,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if r.secretBindingLister == nil {
+		return errors.New("missing secret binding lister")
 	}
 	if r.privateSecretBindingLister == nil {
 		return errors.New("missing private secret binding lister")
@@ -112,9 +129,22 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
-	operation := a.GetOperation()
+	var (
+		err       error
+		operation = a.GetOperation()
+	)
 
 	switch a.GetKind().GroupKind() {
+	case garden.Kind("SecretBinding"):
+		binding, ok := a.GetObject().(*garden.SecretBinding)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
+		}
+		if skipVerification(operation, binding.ObjectMeta) {
+			return nil
+		}
+		err = r.ensureSecretBindingReferences(a, binding)
+
 	case garden.Kind("PrivateSecretBinding"):
 		binding, ok := a.GetObject().(*garden.PrivateSecretBinding)
 		if !ok {
@@ -123,7 +153,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if skipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
-		return r.ensurePrivateSecretBindingReferences(binding)
+		err = r.ensurePrivateSecretBindingReferences(binding)
 
 	case garden.Kind("CrossSecretBinding"):
 		binding, ok := a.GetObject().(*garden.CrossSecretBinding)
@@ -133,7 +163,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if skipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
-		return r.ensureCrossSecretBindingReferences(binding)
+		err = r.ensureCrossSecretBindingReferences(binding)
 
 	case garden.Kind("Seed"):
 		seed, ok := a.GetObject().(*garden.Seed)
@@ -143,7 +173,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if skipVerification(operation, seed.ObjectMeta) {
 			return nil
 		}
-		return r.ensureSeedReferences(seed)
+		err = r.ensureSeedReferences(seed)
 
 	case garden.Kind("Shoot"):
 		shoot, ok := a.GetObject().(*garden.Shoot)
@@ -153,10 +183,49 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if skipVerification(operation, shoot.ObjectMeta) {
 			return nil
 		}
-		return r.ensureShootReferences(shoot)
+		err = r.ensureShootReferences(shoot)
 	}
 
+	if err != nil {
+		return admission.NewForbidden(a, err)
+	}
 	return nil
+}
+
+func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.Attributes, binding *garden.SecretBinding) error {
+	readAttributes := authorizer.AttributesRecord{
+		User:            attributes.GetUserInfo(),
+		Verb:            "get",
+		APIGroup:        "",
+		APIVersion:      "v1",
+		Resource:        "secrets",
+		Namespace:       binding.SecretRef.Namespace,
+		Name:            binding.SecretRef.Name,
+		ResourceRequest: true,
+	}
+	if decision, _, _ := r.authorizer.Authorize(readAttributes); decision != authorizer.DecisionAllow {
+		return errors.New("SecretBinding cannot reference a secret you are not allowed to read")
+	}
+
+	for _, quotaRef := range binding.Quotas {
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        gardenv1beta1.SchemeGroupVersion.Group,
+			APIVersion:      gardenv1beta1.SchemeGroupVersion.Version,
+			Resource:        "quotas",
+			Subresource:     "",
+			Namespace:       quotaRef.Namespace,
+			Name:            quotaRef.Name,
+			ResourceRequest: true,
+			Path:            "",
+		}
+		if decision, _, _ := r.authorizer.Authorize(readAttributes); decision != authorizer.DecisionAllow {
+			return errors.New("SecretBinding cannot reference a quota you are not allowed to read")
+		}
+	}
+
+	return r.ensureBindingReferences(binding.SecretRef.Namespace, binding.SecretRef.Name, binding.Quotas)
 }
 
 func (r *ReferenceManager) ensurePrivateSecretBindingReferences(binding *garden.PrivateSecretBinding) error {
@@ -205,6 +274,10 @@ func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
 	}
 
 	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
+	case "", "SecretBinding":
+		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
+			return err
+		}
 	case "PrivateSecretBinding":
 		if _, err := r.privateSecretBindingLister.PrivateSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
 			return err

@@ -228,7 +228,7 @@ Next, you need to configure `minikube` to work as the Gardener and as the Seed c
 $ make dev-setup-vagrant
 cloudprofile "vagrant" created
 secret "dev-vagrant" created
-privatesecretbinding "core-vagrant" created
+secretbinding "core-vagrant" created
 Cluster "gardener-dev" set.
 User "gardener-dev" set.
 Context "gardener-dev" modified.

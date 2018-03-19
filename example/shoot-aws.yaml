@@ -8,7 +8,6 @@ spec:
     profile: aws
     region: eu-west-1
     secretBindingRef:
-      kind: CrossSecretBinding
       name: default-my-aws-secret
     aws:
       networks:

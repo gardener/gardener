@@ -141,6 +141,7 @@ rules:
   - garden.sapcloud.io
   resources:
   - shoots
+  - secretbindings
   - privatesecretbindings
   - quotas
   verbs:
