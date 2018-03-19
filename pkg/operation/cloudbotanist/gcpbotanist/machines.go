@@ -101,6 +101,7 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 					},
 				},
 				"tags": []string{
+					b.Shoot.SeedNamespace,
 					fmt.Sprintf("kubernetes-io-cluster-%s", b.Shoot.SeedNamespace),
 					"kubernetes-io-role-node",
 				},
