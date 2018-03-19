@@ -7,7 +7,7 @@ images:
 # Seed controlplane
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.1
+  tag: v3.3.2
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
@@ -29,7 +29,7 @@ images:
   tag: v0.14.0
 - name: prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.1.0
+  tag: v2.2.1
 - name: configmap-reloader
   repository: quay.io/coreos/configmap-reload
   tag: v0.0.1
@@ -41,24 +41,24 @@ images:
   tag: v0.15.2
 - name: grafana
   repository: grafana/grafana
-  tag: 5.0.0-beta4
+  tag: "5.0.3"
 - name: grafana-watcher
   repository: quay.io/coreos/grafana-watcher
   tag: v0.0.8
 - name: blackbox-exporter
   repository: quay.io/prometheus/blackbox-exporter
-  tag: v0.11.0
+  tag: v0.12.0
 
 # Shoot core addons
 - name: calico-node
   repository: quay.io/calico/node
-  tag: v3.0.2
+  tag: v3.0.3
 - name: calico-cni
   repository: quay.io/calico/cni
-  tag: v2.0.1
+  tag: v2.0.2
 - name: calico-typha
   repository: quay.io/calico/typha
-  tag: v0.6.1
+  tag: v0.6.2
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.8.0"
@@ -93,7 +93,7 @@ images:
   tag: "0.9.0"
 - name: nginx-ingress-controller
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.10.2"
+  tag: "0.12.0"
 - name: ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
   tag: "0.2.0"
@@ -102,7 +102,7 @@ images:
   tag: v0.0.3
 - name: helm-tiller
   repository: gcr.io/kubernetes-helm/tiller
-  tag: v2.8.1
+  tag: v2.8.2
 - name: monocular-api
   repository: bitnami/monocular-api
   tag: v0.3.1
