@@ -100,7 +100,10 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 						"scopes": []string{"https://www.googleapis.com/auth/compute"},
 					},
 				},
-				"tags": []string{b.Shoot.SeedNamespace},
+				"tags": []string{
+					fmt.Sprintf("kubernetes-io-cluster-%s", b.Shoot.SeedNamespace),
+					"kubernetes-io-role-node",
+				},
 			}
 
 			var (
