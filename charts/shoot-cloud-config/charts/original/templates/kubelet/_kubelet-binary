@@ -9,4 +9,91 @@
   encoding: b64
   content: {{ .cloudProvider.config | b64enc }}
 {{- end }}
+{{- if semverCompare ">= 1.10" .kubernetes.version }}
+- path: /var/lib/kubelet/config/kubelet
+  permissions: 0644
+  content: |
+    apiVersion: {{ include "kubeletcomponentconfigversion" . }}
+    kind: KubeletConfiguration
+    configTrialDuration: 10m0s
+    syncFrequency: 1m0s
+    fileCheckFrequency: 20s
+    httpCheckFrequency: 20s
+    enableServer: true
+    authentication:
+      x509:
+        clientCAFile: /var/lib/kubelet/ca.crt
+      webhook:
+        enabled: true
+        cacheTTL: 2m0s
+      anonymous:
+        enabled: false
+    authorization:
+      mode: Webhook
+      webhook:
+        cacheAuthorizedTTL: 5m0s
+        cacheUnauthorizedTTL: 30s
+    hostNetworkSources:
+    - "*"
+    hostPIDSources:
+    - "*"
+    hostIPCSources:
+    - "*"
+    registryPullQPS: 5
+    registryBurst: 10
+    eventRecordQPS: 5
+    eventBurst: 10
+    clusterDomain: {{ required "kubernetes.domain is required" .kubernetes.domain }}
+    clusterDNS:
+    - {{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}
+    nodeStatusUpdateFrequency: 10s
+    imageMinimumGCAge: 2m0s
+    imageGCHighThresholdPercent: 50
+    imageGCLowThresholdPercent: 40
+    volumeStatsAggPeriod: 1m0s
+    cgroupRoot: "/"
+    cgroupsPerQOS: true
+    cgroupDriver: cgroupfs
+    cpuManagerPolicy: none
+    cpuManagerReconcilePeriod: 10s
+{{- if .kubernetes.kubelet.featureGates }}
+    featureGates:
+{{ .kubernetes.kubelet.featureGates | indent 6 }}
+{{- end }}
+    runtimeRequestTimeout: 2m0s
+    hairpinMode: promiscuous-bridge
+    maxPods: 110
+    resolvConf: /etc/resolv.conf
+    cpuCFSQuota: true
+    maxOpenFiles: 1000000
+    serializeImagePulls: true
+    evictionHard:
+      imagefs.available: 5%
+      imagefs.inodesFree: 5%
+      memory.available: 100Mi
+      nodefs.available: 5%
+      nodefs.inodesFree: 5%
+    evictionSoft:
+      imagefs.available: 10%
+      imagefs.inodesFree: 10%
+      memory.available: 200Mi
+      nodefs.available: 10%
+      nodefs.inodesFree: 10%
+    evictionSoftGracePeriod:
+      imagefs.available: 1m30s
+      imagefs.inodesFree: 1m30s
+      memory.available: 1m30s
+      nodefs.available: 1m30s
+      nodefs.inodesFree: 1m30s
+    evictionPressureTransitionPeriod: 4m0s
+    evictionMaxPodGracePeriod: 90
+    evictionMinimumReclaim: null
+    podsPerCore: 0
+    enableControllerAttachDetach: true
+    failSwapOn: true
+    kubeReserved:
+      memory: 1Gi
+    enforceNodeAllocatable:
+    - pods
+{{- end }}
 {{- end -}}

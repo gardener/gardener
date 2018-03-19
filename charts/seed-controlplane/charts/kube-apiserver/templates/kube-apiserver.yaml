@@ -38,7 +38,7 @@ spec:
         {{- if semverCompare "< 1.10" .Values.kubernetesVersion }}
         - --admission-control=NamespaceLifecycle,LimitRanger,Initializers,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,ResourceQuota
         {{- else }}
-        - --enable-admission-plugins=Initializers,NamespaceLifecycle,imitRanger,ServiceAccount,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,StorageObjectInUseProtection,{{ if semverCompare ">= 1.9" .Values.kubernetesVersion }}MutatingAdmissionWebhook,{{ end }}ValidatingAdmissionWebhook,ResourceQuota,PodPreset
+        - --enable-admission-plugins=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,StorageObjectInUseProtection,{{ if semverCompare ">= 1.9" .Values.kubernetesVersion }}MutatingAdmissionWebhook,{{ end }}ValidatingAdmissionWebhook,ResourceQuota,PodPreset
         {{- end }}
         - --advertise-address={{.Values.advertiseAddress}}
         - --allow-privileged=true

@@ -1,4 +1,5 @@
 {{- define "kubelet-flags" -}}
+{{- if semverCompare "< 1.10" .kubernetes.version -}}
 --allow-privileged=true \
 --anonymous-auth=false \
 --client-ca-file=/var/lib/kubelet/ca.crt \
@@ -34,4 +35,24 @@
 {{ $param }} \
 {{- end }}
 --v=2
+{{- else }}
+--allow-privileged=true \
+--bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
+--cloud-provider={{ .cloudProvider.name }} \
+{{- if .cloudProvider.config }}
+--cloud-config=/var/lib/kubelet/cloudprovider.conf \
+{{- end }}
+--config=/var/lib/kubelet/config/kubelet \
+--cni-bin-dir=/opt/cni/bin/ \
+--cni-conf-dir=/etc/cni/net.d/ \
+--enable-debugging-handlers=true \
+--kubeconfig=/var/lib/kubelet/kubeconfig-real \
+--network-plugin=cni \
+--node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
+--rotate-certificates=true \
+{{- range $index, $param := .kubernetes.kubelet.parameters }}
+{{ $param }} \
+{{- end }}
+--v=2
+{{- end }}
 {{- end -}}
