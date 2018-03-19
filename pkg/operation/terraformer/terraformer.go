@@ -46,7 +46,7 @@ func New(o *operation.Operation, purpose string) *Terraformer {
 		ConfigName:    prefix + common.TerraformerConfigSuffix,
 		VariablesName: prefix + common.TerraformerVariablesSuffix,
 		StateName:     prefix + common.TerraformerStateSuffix,
-		PodName:       prefix + common.TerraformerPodSuffix,
+		PodName:       prefix + common.TerraformerPodSuffix + "-" + utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5],
 		JobName:       prefix + common.TerraformerJobSuffix,
 	}
 }
