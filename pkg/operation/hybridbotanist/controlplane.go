@@ -49,13 +49,18 @@ func (b *HybridBotanist) DeployETCD() error {
 		etcdConfig["backup"] = backupConfigData
 	}
 
-	etcd, err := b.Botanist.InjectImages(etcdConfig, b.K8sSeedClient.Version(), map[string]string{"etcd": "etcd"})
+	etcd, err := b.Botanist.InjectImages(etcdConfig, b.K8sSeedClient.Version(), map[string]string{"etcd": "etcd", "etcd-backup-restore": "etcd-backup-restore"})
 	if err != nil {
 		return err
 	}
 
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
 		etcd["role"] = role
+		if role == common.EtcdRoleEvents {
+			etcd["backup"] = map[string]interface{}{
+				"storageProvider": "", //No storage provider means no backup
+			}
+		}
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), fmt.Sprintf("etcd-%s", role), b.Shoot.SeedNamespace, nil, etcd); err != nil {
 			return err
 		}

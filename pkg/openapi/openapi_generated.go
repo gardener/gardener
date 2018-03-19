@@ -864,13 +864,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup": {
 			Schema: spec.Schema{
 				SchemaProps: spec.SchemaProps{
-					Description: "Backup holds information about the backup interval and maximum.",
+					Description: "Backup holds information about the backup schedule and maximum.",
 					Properties: map[string]spec.Schema{
-						"intervalInSecond": {
+						"schedule": {
 							SchemaProps: spec.SchemaProps{
-								Description: "IntervalInSecond defines the interval in seconds how often a backup is taken from etcd.",
-								Type:        []string{"integer"},
-								Format:      "int32",
+								Description: "schedule defines the cron schedule according to which a backup is taken from etcd.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"maximum": {
@@ -881,7 +881,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"intervalInSecond", "maximum"},
+					Required: []string{"schedule", "maximum"},
 				},
 			},
 			Dependencies: []string{},

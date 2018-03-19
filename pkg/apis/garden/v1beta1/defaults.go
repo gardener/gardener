@@ -27,8 +27,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.Backup == nil {
 		obj.Spec.Backup = &Backup{
-			IntervalInSecond: DefaultETCDBackupIntervalSeconds,
-			Maximum:          DefaultETCDBackupMaximum,
+			Schedule: DefaultETCDBackupSchedule,
+			Maximum:  DefaultETCDBackupMaximum,
 		}
 	}
 

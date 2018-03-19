@@ -105,13 +105,32 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 	}
 
 	backupConfigData := map[string]interface{}{
-		"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
-		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
-		"storageType":            "ABS",
-		"abs": map[string]interface{}{
-			"absContainer": stateVariables[containerName],
-			"absSecret":    common.BackupSecretName,
+		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
+		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"storageProvider":  "", //TODO: Replace this with ABS
+		"backupSecret":     common.BackupSecretName,
+		"storageContainer": stateVariables[containerName],
+		"env": []map[string]interface{}{
+			map[string]interface{}{
+				"name": "STORAGE_ACCOUNT",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  "storage-account",
+					},
+				},
+			},
+			map[string]interface{}{
+				"name": "STORAGE_KEY",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  "storage-key",
+					},
+				},
+			},
 		},
+		"volumeMount": []map[string]interface{}{},
 	}
 
 	return secretData, backupConfigData, nil

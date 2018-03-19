@@ -134,7 +134,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		seedLogger  = logger.NewFieldLogger(logger.Logger, "seed", seed.Name)
 	)
 
-	// The deletionTimestamp labels a Seed as intented to get deleted. Before deletion,
+	// The deletionTimestamp labels a Seed as intended to get deleted. Before deletion,
 	// it has to be ensured that no Shoots are depending on the Seed anymore.
 	// When this happens the controller will remove the finalizers from the Seed so that it can be garbage collected.
 	if seed.DeletionTimestamp != nil {

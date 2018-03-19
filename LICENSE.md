@@ -277,6 +277,11 @@ https://github.com/Masterminds/semver.
 Copyright (C) 2014-2015, Matt Butcher and Matt Farina  
 MIT license (https://github.com/Masterminds/semver/blob/master/LICENSE.txt)
 
+Cron.  
+https://github.com/robfig/cron.  
+Copyright (C) 2012 Rob Figueiredo.  
+MIT license (https://github.com/robfig/cron/blob/master/LICENSE)
+
 ------
 ## MIT License
 

@@ -747,7 +747,7 @@ func Convert_garden_AzureWorker_To_v1beta1_AzureWorker(in *garden.AzureWorker, o
 }
 
 func autoConvert_v1beta1_Backup_To_garden_Backup(in *Backup, out *garden.Backup, s conversion.Scope) error {
-	out.IntervalInSecond = in.IntervalInSecond
+	out.Schedule = in.Schedule
 	out.Maximum = in.Maximum
 	return nil
 }
@@ -758,7 +758,7 @@ func Convert_v1beta1_Backup_To_garden_Backup(in *Backup, out *garden.Backup, s c
 }
 
 func autoConvert_garden_Backup_To_v1beta1_Backup(in *garden.Backup, out *Backup, s conversion.Scope) error {
-	out.IntervalInSecond = in.IntervalInSecond
+	out.Schedule = in.Schedule
 	out.Maximum = in.Maximum
 	return nil
 }

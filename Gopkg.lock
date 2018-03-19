@@ -165,8 +165,7 @@
 [[projects]]
   name = "github.com/evanphx/json-patch"
   packages = ["."]
-  revision = "afac545df32f2287a079e2dfb7ba2745a643747e"
-  version = "v3.0.0"
+  revision = "ed7cfbae1fffc071f71e068df27bf4f0521402d8"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -322,7 +321,7 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+  revision = "f594efddfa171111dc4349cd6e78e8f61dc7936f"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -417,7 +416,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
+  revision = "e4aa40a9169a88835b849a6efb71e05dc04b88f0"
 
 [[projects]]
   branch = "master"
@@ -428,7 +427,12 @@
     "nfs",
     "xfs"
   ]
-  revision = "780932d4fbbe0e69b84c34c20f5c8d0981e109ea"
+  revision = "54d17b57dd7d4a3aa092476596b3f8a933bde349"
+
+[[projects]]
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  revision = "2315d5715e36303a941d907f038da7f7c44c773b"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
@@ -474,7 +478,7 @@
     "ssh",
     "ssh/terminal"
   ]
-  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
+  revision = "c3a3ad6d03f7a915c0f7e194b7152974bb73d287"
 
 [[projects]]
   branch = "master"
@@ -492,7 +496,7 @@
     "trace",
     "websocket"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 
 [[projects]]
   branch = "master"
@@ -501,7 +505,7 @@
     "unix",
     "windows"
   ]
-  revision = "13d03a9a82fba647c21a0ef8fba44a795d0f0835"
+  revision = "01acb38716e021ed1fc03a602bdb5838e1358c5e"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -550,13 +554,13 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "77106db15f689a60e7d4e085d967ac557b918fb2"
+  revision = "96caea41033df6f8c3974c845ab094f8ec3bd345"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "ab0870e398d5dd054b868c0db1481ab029b9a9f2"
+  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -1010,6 +1014,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b88757efadb022694286e86ea8a8a37144c766720c7d31366cb6ed893b692197"
+  inputs-digest = "eb1c735cf4cfcf9f96ea2f96be98a384ace3491105e17f3d1f0d45f9f2a2e202"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -31,7 +31,7 @@ func (t *Terraformer) SetVariablesEnvironment(tfvarsEnvironment []map[string]int
 
 // DefineConfig creates a ConfigMap for the tf state (if it does not exist, otherwise it won't update it),
 // as well as a ConfigMap for the tf configuration (if it does not exist, otherwise it will update it).
-// The tfvars are stored in a Secret as the contain confidental information like credentials.
+// The tfvars are stored in a Secret as the contain confidential information like credentials.
 func (t *Terraformer) DefineConfig(chartName string, values map[string]interface{}) *Terraformer {
 	values["names"] = map[string]interface{}{
 		"configuration": t.ConfigName,

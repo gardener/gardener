@@ -110,12 +110,17 @@ region = ` + b.Seed.Info.Spec.Cloud.Region
 	}
 
 	backupConfigData := map[string]interface{}{
-		"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
-		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
-		"storageType":            "S3",
-		"s3": map[string]interface{}{
-			"s3Bucket":  stateVariables[bucketName],
-			"awsSecret": common.BackupSecretName,
+		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
+		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"storageProvider":  "S3",
+		"storageContainer": stateVariables[bucketName],
+		"backupSecret":     common.BackupSecretName,
+		"env":              []map[string]interface{}{},
+		"volumeMount": []map[string]interface{}{
+			map[string]interface{}{
+				"mountPath": "/root/.aws/",
+				"name":      common.BackupSecretName,
+			},
 		},
 	}
 

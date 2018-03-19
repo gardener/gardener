@@ -24,7 +24,7 @@ import (
 type ControllerManagerConfiguration struct {
 	metav1.TypeMeta
 	// ClientConnection specifies the kubeconfig file and client connection
-	// settings for the proxy server to use when communicating with the apiserver.
+	// settings for the proxy server to use when communicating with the garden-apiserver.
 	ClientConnection ClientConnectionConfiguration
 	// GardenerClientConnection specifies the kubeconfig file and client connection
 	// settings for the garden-apiserver.

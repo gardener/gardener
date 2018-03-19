@@ -60,6 +60,10 @@ ignored = [
   name = "github.com/Masterminds/semver"
   version = "~1.4.0"
 
+[[constraint]]
+  name = "github.com/robfig/cron"
+  revision = "2315d5715e36303a941d907f038da7f7c44c773b"
+
 # Dependencies for testing purposes only
 [[constraint]]
   name = "github.com/onsi/gomega"
