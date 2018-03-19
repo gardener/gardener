@@ -131,8 +131,16 @@ func HashForMap(m map[string]interface{}) string {
 		switch v := m[k].(type) {
 		case string:
 			hash += ComputeSHA256Hex([]byte(v))
+		case []string:
+			for _, val := range v {
+				hash += ComputeSHA256Hex([]byte(val))
+			}
 		case map[string]interface{}:
 			hash += HashForMap(v)
+		case []map[string]interface{}:
+			for _, val := range v {
+				hash += HashForMap(val)
+			}
 		}
 	}
 

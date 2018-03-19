@@ -96,8 +96,10 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 				},
 				"serviceAccounts": []map[string]interface{}{
 					{
-						"email":  stateVariables[serviceAccountEmail],
-						"scopes": []string{"https://www.googleapis.com/auth/compute"},
+						"email": stateVariables[serviceAccountEmail],
+						"scopes": []string{
+							"https://www.googleapis.com/auth/compute",
+						},
 					},
 				},
 				"tags": []string{
