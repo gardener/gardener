@@ -1918,14 +1918,13 @@ var _ = Describe("validation", func() {
 			newShoot.Spec.Cloud.Profile = "another-profile"
 			newShoot.Spec.Cloud.Region = "another-region"
 			newShoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
-				Kind: "PrivateSecretBinding",
 				Name: "another-reference",
 			}
 			newShoot.Spec.Cloud.Seed = makeStringPointer("another-seed")
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
-			Expect(len(errorList)).To(Equal(4))
+			Expect(len(errorList)).To(Equal(3))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.cloud.profile"),
@@ -1935,10 +1934,6 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.cloud.region"),
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.cloud.secretBindingRef"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.cloud.seed"),
 			}))
