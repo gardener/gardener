@@ -1493,133 +1493,6 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidatePrivateSecretBinding", func() {
-		var secretBinding *garden.PrivateSecretBinding
-
-		BeforeEach(func() {
-			secretBinding = &garden.PrivateSecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "profile",
-					Namespace: "garden",
-				},
-				SecretRef: corev1.LocalObjectReference{
-					Name: "my-secret",
-				},
-			}
-		})
-
-		It("should not return any errors", func() {
-			errorList := ValidatePrivateSecretBinding(secretBinding)
-
-			Expect(len(errorList)).To(Equal(0))
-		})
-
-		It("should forbid empty PrivateSecretBinding resources", func() {
-			secretBinding.ObjectMeta = metav1.ObjectMeta{}
-			secretBinding.SecretRef = corev1.LocalObjectReference{}
-
-			errorList := ValidatePrivateSecretBinding(secretBinding)
-
-			Expect(len(errorList)).To(Equal(3))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("secretRef.name"),
-			}))
-		})
-
-		It("should forbid empty stated Quota names", func() {
-			secretBinding.Quotas = []corev1.ObjectReference{
-				{},
-			}
-
-			errorList := ValidatePrivateSecretBinding(secretBinding)
-
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("quotas[0].name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("quotas[0].namespace"),
-			}))
-		})
-	})
-
-	Describe("#ValidateCrossSecretBinding", func() {
-		var secretBinding *garden.CrossSecretBinding
-
-		BeforeEach(func() {
-			secretBinding = &garden.CrossSecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "profile",
-					Namespace: "garden",
-				},
-				SecretRef: corev1.ObjectReference{
-					Name:      "my-secret",
-					Namespace: "my-namespace",
-				},
-			}
-		})
-
-		It("should not return any errors", func() {
-			errorList := ValidateCrossSecretBinding(secretBinding)
-
-			Expect(len(errorList)).To(Equal(0))
-		})
-
-		It("should forbid empty CrossSecretBinding resources", func() {
-			secretBinding.ObjectMeta = metav1.ObjectMeta{}
-			secretBinding.SecretRef = corev1.ObjectReference{}
-
-			errorList := ValidateCrossSecretBinding(secretBinding)
-
-			Expect(len(errorList)).To(Equal(4))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("secretRef.name"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("secretRef.namespace"),
-			}))
-		})
-
-		It("should forbid empty stated Quota names", func() {
-			secretBinding.Quotas = []corev1.ObjectReference{
-				{},
-			}
-
-			errorList := ValidateCrossSecretBinding(secretBinding)
-
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("quotas[0].name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("quotas[0].namespace"),
-			}))
-		})
-	})
-
 	Describe("#ValidateSecretBinding", func() {
 		var secretBinding *garden.SecretBinding
 
@@ -1769,8 +1642,7 @@ var _ = Describe("validation", func() {
 					Cloud: garden.Cloud{
 						Profile: "aws-profile",
 						Region:  "eu-west-1",
-						SecretBindingRef: corev1.ObjectReference{
-							Kind: "PrivateSecretBinding",
+						SecretBindingRef: corev1.LocalObjectReference{
 							Name: "my-secret",
 						},
 						AWS: &garden.AWSCloud{
@@ -1882,15 +1754,14 @@ var _ = Describe("validation", func() {
 		It("should forbid unsupported cloud specification (provider independent)", func() {
 			shoot.Spec.Cloud.Profile = ""
 			shoot.Spec.Cloud.Region = ""
-			shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
-				Kind: "unsupported",
+			shoot.Spec.Cloud.SecretBindingRef = corev1.LocalObjectReference{
 				Name: "",
 			}
 			shoot.Spec.Cloud.Seed = makeStringPointer("")
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(5))
+			Expect(len(errorList)).To(Equal(4))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.cloud.profile"),
@@ -1900,14 +1771,10 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.cloud.region"),
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.cloud.secretBindingRef.kind"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.cloud.secretBindingRef.name"),
 			}))
-			Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.cloud.seed"),
 			}))
@@ -1917,7 +1784,7 @@ var _ = Describe("validation", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.Cloud.Profile = "another-profile"
 			newShoot.Spec.Cloud.Region = "another-region"
-			newShoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
+			newShoot.Spec.Cloud.SecretBindingRef = corev1.LocalObjectReference{
 				Name: "another-reference",
 			}
 			newShoot.Spec.Cloud.Seed = makeStringPointer("another-seed")

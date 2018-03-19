@@ -10,10 +10,6 @@ import (
 type Interface interface {
 	// CloudProfiles returns a CloudProfileInformer.
 	CloudProfiles() CloudProfileInformer
-	// CrossSecretBindings returns a CrossSecretBindingInformer.
-	CrossSecretBindings() CrossSecretBindingInformer
-	// PrivateSecretBindings returns a PrivateSecretBindingInformer.
-	PrivateSecretBindings() PrivateSecretBindingInformer
 	// Quotas returns a QuotaInformer.
 	Quotas() QuotaInformer
 	// SecretBindings returns a SecretBindingInformer.
@@ -38,16 +34,6 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // CloudProfiles returns a CloudProfileInformer.
 func (v *version) CloudProfiles() CloudProfileInformer {
 	return &cloudProfileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// CrossSecretBindings returns a CrossSecretBindingInformer.
-func (v *version) CrossSecretBindings() CrossSecretBindingInformer {
-	return &crossSecretBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// PrivateSecretBindings returns a PrivateSecretBindingInformer.
-func (v *version) PrivateSecretBindings() PrivateSecretBindingInformer {
-	return &privateSecretBindingInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Quotas returns a QuotaInformer.

@@ -442,66 +442,6 @@ const (
 )
 
 ////////////////////////////////////////////////////
-//                 SECRET BINDINGS (DEPRECATED)   //
-////////////////////////////////////////////////////
-
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type PrivateSecretBinding struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object metadata.
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// SecretRef is a reference to a secret object in the same namespace.
-	// +optional
-	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty"`
-	// Quotas is a list of references to Quota objects in other namespaces.
-	// +optional
-	Quotas []corev1.ObjectReference `json:"quotas,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// PrivateSecretBindingList is a collection of PrivateSecretBindings.
-type PrivateSecretBindingList struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard list object metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
-	// Items is the list of PrivateSecretBindings.
-	Items []PrivateSecretBinding `json:"items"`
-}
-
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-type CrossSecretBinding struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard object metadata.
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	// SecretRef is a reference to a secret object in another namespace.
-	// +optional
-	SecretRef corev1.ObjectReference `json:"secretRef,omitempty"`
-	// Quotas is a list of references to Quota objects in other namespaces.
-	// +optional
-	Quotas []corev1.ObjectReference `json:"quotas,omitempty"`
-}
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// CrossSecretBindingList is a collection of CrossSecretBindings.
-type CrossSecretBindingList struct {
-	metav1.TypeMeta `json:",inline"`
-	// Standard list object metadata.
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
-	// Items is the list of CrossSecretBindings.
-	Items []CrossSecretBinding `json:"items"`
-}
-
-////////////////////////////////////////////////////
 //                 SECRET BINDINGS                //
 ////////////////////////////////////////////////////
 
@@ -621,8 +561,8 @@ type Cloud struct {
 	Profile string `json:"profile"`
 	// Region is a name of a cloud provider region.
 	Region string `json:"region"`
-	// SecretBindingRef is a reference to a PrivateSecretBinding or a CrossSecretBinding object.
-	SecretBindingRef corev1.ObjectReference `json:"secretBindingRef"`
+	// SecretBindingRef is a reference to a SecretBinding object.
+	SecretBindingRef corev1.LocalObjectReference `json:"secretBindingRef"`
 	// Seed is the name of a Seed object.
 	// +optional
 	Seed *string `json:"seed,omitempty"`

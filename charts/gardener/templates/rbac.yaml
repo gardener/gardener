@@ -142,7 +142,6 @@ rules:
   resources:
   - shoots
   - secretbindings
-  - privatesecretbindings
   - quotas
   verbs:
   - create
@@ -157,7 +156,6 @@ rules:
   - garden.sapcloud.io
   resources:
   - cloudprofiles
-  - crosssecretbindings
   verbs:
   - get
   - list

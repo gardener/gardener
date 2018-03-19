@@ -112,39 +112,6 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
-			privateSecretBinding = garden.PrivateSecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       bindingName,
-					Namespace:  namespace,
-					Finalizers: finalizers,
-				},
-				SecretRef: corev1.LocalObjectReference{
-					Name: secretName,
-				},
-				Quotas: []corev1.ObjectReference{
-					{
-						Name:      quotaName,
-						Namespace: namespace,
-					},
-				},
-			}
-			crossSecretBinding = garden.CrossSecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       bindingName,
-					Namespace:  namespace,
-					Finalizers: finalizers,
-				},
-				SecretRef: corev1.ObjectReference{
-					Name:      secretName,
-					Namespace: namespace,
-				},
-				Quotas: []corev1.ObjectReference{
-					{
-						Name:      quotaName,
-						Namespace: namespace,
-					},
-				},
-			}
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       shootName,
@@ -155,7 +122,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Cloud: garden.Cloud{
 						Profile: cloudProfileName,
 						Seed:    &seedName,
-						SecretBindingRef: corev1.ObjectReference{
+						SecretBindingRef: corev1.LocalObjectReference{
 							Name: bindingName,
 						},
 					},
@@ -235,72 +202,6 @@ var _ = Describe("resourcereferencemanager", func() {
 			})
 		})
 
-		Context("tests for PrivateSecretBinding objects", func() {
-			It("should accept because all referenced objects have been found", func() {
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-
-				attrs := admission.NewAttributesRecord(&privateSecretBinding, nil, garden.Kind("PrivateSecretBinding").WithVersion("version"), privateSecretBinding.Namespace, privateSecretBinding.Name, garden.Resource("privatesecretbindings").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should reject because the referenced secret does not exist", func() {
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-
-				attrs := admission.NewAttributesRecord(&privateSecretBinding, nil, garden.Kind("PrivateSecretBinding").WithVersion("version"), privateSecretBinding.Namespace, privateSecretBinding.Name, garden.Resource("privatesecretbindings").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should reject because one of the referenced quotas does not exist", func() {
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
-
-				attrs := admission.NewAttributesRecord(&privateSecretBinding, nil, garden.Kind("PrivateSecretBinding").WithVersion("version"), privateSecretBinding.Namespace, privateSecretBinding.Name, garden.Resource("privatesecretbindings").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
-		Context("tests for CrossSecretBinding objects", func() {
-			It("should accept because all referenced objects have been found", func() {
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-
-				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should reject because the referenced secret does not exist", func() {
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-
-				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should reject because one of the referenced quotas does not exist", func() {
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
-
-				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).To(HaveOccurred())
-			})
-		})
-
 		Context("tests for Seed objects", func() {
 			It("should accept because all referenced objects have been found", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
@@ -349,7 +250,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because the referenced cloud profile does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
@@ -360,7 +261,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because the referenced seed does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSecretBinding)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
@@ -369,38 +270,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			It("should reject because the referenced private secret binding does not exist", func() {
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should reject because the referenced cross secret binding does not exist", func() {
-				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
-					Kind: "CrossSecretBinding",
-					Name: bindingName,
-				}
-
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).To(HaveOccurred())
-			})
-
-			It("should reject because the referenced secret binding kind is unknown", func() {
-				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
-					Kind: "doesnotexist",
-				}
-
+			It("should reject because the referenced secret binding does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 

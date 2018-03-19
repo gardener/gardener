@@ -10,8 +10,6 @@ import (
 type GardenInterface interface {
 	RESTClient() rest.Interface
 	CloudProfilesGetter
-	CrossSecretBindingsGetter
-	PrivateSecretBindingsGetter
 	QuotasGetter
 	SecretBindingsGetter
 	SeedsGetter
@@ -25,14 +23,6 @@ type GardenClient struct {
 
 func (c *GardenClient) CloudProfiles() CloudProfileInterface {
 	return newCloudProfiles(c)
-}
-
-func (c *GardenClient) CrossSecretBindings(namespace string) CrossSecretBindingInterface {
-	return newCrossSecretBindings(c, namespace)
-}
-
-func (c *GardenClient) PrivateSecretBindings(namespace string) PrivateSecretBindingInterface {
-	return newPrivateSecretBindings(c, namespace)
 }
 
 func (c *GardenClient) Quotas(namespace string) QuotaInterface {

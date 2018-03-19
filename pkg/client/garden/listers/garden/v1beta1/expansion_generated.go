@@ -6,22 +6,6 @@ package v1beta1
 // CloudProfileLister.
 type CloudProfileListerExpansion interface{}
 
-// CrossSecretBindingListerExpansion allows custom methods to be added to
-// CrossSecretBindingLister.
-type CrossSecretBindingListerExpansion interface{}
-
-// CrossSecretBindingNamespaceListerExpansion allows custom methods to be added to
-// CrossSecretBindingNamespaceLister.
-type CrossSecretBindingNamespaceListerExpansion interface{}
-
-// PrivateSecretBindingListerExpansion allows custom methods to be added to
-// PrivateSecretBindingLister.
-type PrivateSecretBindingListerExpansion interface{}
-
-// PrivateSecretBindingNamespaceListerExpansion allows custom methods to be added to
-// PrivateSecretBindingNamespaceLister.
-type PrivateSecretBindingNamespaceListerExpansion interface{}
-
 // QuotaListerExpansion allows custom methods to be added to
 // QuotaLister.
 type QuotaListerExpansion interface{}

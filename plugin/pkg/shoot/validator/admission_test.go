@@ -79,7 +79,7 @@ var _ = Describe("validator", func() {
 						Profile: "profile",
 						Region:  "europe",
 						Seed:    &seedName,
-						SecretBindingRef: corev1.ObjectReference{
+						SecretBindingRef: corev1.LocalObjectReference{
 							Name: "my-secret",
 						},
 					},

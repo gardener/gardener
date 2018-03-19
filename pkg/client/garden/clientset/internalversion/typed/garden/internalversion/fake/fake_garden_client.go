@@ -16,14 +16,6 @@ func (c *FakeGarden) CloudProfiles() internalversion.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }
 
-func (c *FakeGarden) CrossSecretBindings(namespace string) internalversion.CrossSecretBindingInterface {
-	return &FakeCrossSecretBindings{c, namespace}
-}
-
-func (c *FakeGarden) PrivateSecretBindings(namespace string) internalversion.PrivateSecretBindingInterface {
-	return &FakePrivateSecretBindings{c, namespace}
-}
-
 func (c *FakeGarden) Quotas(namespace string) internalversion.QuotaInterface {
 	return &FakeQuotas{c, namespace}
 }

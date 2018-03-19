@@ -12,8 +12,6 @@ import (
 type GardenV1beta1Interface interface {
 	RESTClient() rest.Interface
 	CloudProfilesGetter
-	CrossSecretBindingsGetter
-	PrivateSecretBindingsGetter
 	QuotasGetter
 	SecretBindingsGetter
 	SeedsGetter
@@ -27,14 +25,6 @@ type GardenV1beta1Client struct {
 
 func (c *GardenV1beta1Client) CloudProfiles() CloudProfileInterface {
 	return newCloudProfiles(c)
-}
-
-func (c *GardenV1beta1Client) CrossSecretBindings(namespace string) CrossSecretBindingInterface {
-	return newCrossSecretBindings(c, namespace)
-}
-
-func (c *GardenV1beta1Client) PrivateSecretBindings(namespace string) PrivateSecretBindingInterface {
-	return newPrivateSecretBindings(c, namespace)
 }
 
 func (c *GardenV1beta1Client) Quotas(namespace string) QuotaInterface {

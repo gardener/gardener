@@ -19,8 +19,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
-	crosssecretbinding "github.com/gardener/gardener/pkg/registry/garden/crosssecretbinding/storage"
-	privatesecretbinding "github.com/gardener/gardener/pkg/registry/garden/privatesecretbinding/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
 	secretbinding "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
@@ -57,12 +55,6 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	seedStorage := seedstore.NewStorage(restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
-
-	privateSecretBindingStorage := privatesecretbinding.NewStorage(restOptionsGetter)
-	storage["privatesecretbindings"] = privateSecretBindingStorage.PrivateSecretBinding
-
-	crossSecretBindingStorage := crosssecretbinding.NewStorage(restOptionsGetter)
-	storage["crosssecretbindings"] = crossSecretBindingStorage.CrossSecretBinding
 
 	secretBindingStorage := secretbinding.NewStorage(restOptionsGetter)
 	storage["secretbindings"] = secretBindingStorage.SecretBinding

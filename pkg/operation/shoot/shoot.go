@@ -15,7 +15,6 @@
 package shoot
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Masterminds/semver"
@@ -41,37 +40,13 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 		return nil, err
 	}
 
-	bindingRef := shoot.Spec.Cloud.SecretBindingRef
-	switch bindingRef.Kind {
-	case "", "SecretBinding":
-		binding, err := k8sGardenInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(bindingRef.Name)
-		if err != nil {
-			return nil, err
-		}
-		secret, err = k8sGardenClient.GetSecret(binding.SecretRef.Namespace, binding.SecretRef.Name)
-		if err != nil {
-			return nil, err
-		}
-	case "PrivateSecretBinding":
-		binding, err := k8sGardenInformers.PrivateSecretBindings().Lister().PrivateSecretBindings(shoot.Namespace).Get(bindingRef.Name)
-		if err != nil {
-			return nil, err
-		}
-		secret, err = k8sGardenClient.GetSecret(binding.Namespace, binding.SecretRef.Name)
-		if err != nil {
-			return nil, err
-		}
-	case "CrossSecretBinding":
-		binding, err := k8sGardenInformers.CrossSecretBindings().Lister().CrossSecretBindings(shoot.Namespace).Get(bindingRef.Name)
-		if err != nil {
-			return nil, err
-		}
-		secret, err = k8sGardenClient.GetSecret(binding.SecretRef.Namespace, binding.SecretRef.Name)
-		if err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("cannot create new shoot object: unknown secret binding reference kind")
+	binding, err := k8sGardenInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+	if err != nil {
+		return nil, err
+	}
+	secret, err = k8sGardenClient.GetSecret(binding.SecretRef.Namespace, binding.SecretRef.Name)
+	if err != nil {
+		return nil, err
 	}
 
 	shootObj := &Shoot{

@@ -39,10 +39,6 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=garden.sapcloud.io, Version=v1beta1
 	case v1beta1.SchemeGroupVersion.WithResource("cloudprofiles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().V1beta1().CloudProfiles().Informer()}, nil
-	case v1beta1.SchemeGroupVersion.WithResource("crosssecretbindings"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().V1beta1().CrossSecretBindings().Informer()}, nil
-	case v1beta1.SchemeGroupVersion.WithResource("privatesecretbindings"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().V1beta1().PrivateSecretBindings().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("quotas"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().V1beta1().Quotas().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("secretbindings"):

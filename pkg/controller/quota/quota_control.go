@@ -90,17 +90,15 @@ type ControlInterface interface {
 // implements the documented semantics for Quotas. updater is the UpdaterInterface used
 // to update the status of Quotas. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister, privateSecretBindingLister gardenlisters.PrivateSecretBindingLister, crossSecretBindingLister gardenlisters.CrossSecretBindingLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretBindingLister, privateSecretBindingLister, crossSecretBindingLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretBindingLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient            kubernetes.Client
-	k8sGardenInformers         gardeninformers.SharedInformerFactory
-	recorder                   record.EventRecorder
-	secretBindingLister        gardenlisters.SecretBindingLister
-	privateSecretBindingLister gardenlisters.PrivateSecretBindingLister
-	crossSecretBindingLister   gardenlisters.CrossSecretBindingLister
+	k8sGardenClient     kubernetes.Client
+	k8sGardenInformers  gardeninformers.SharedInformerFactory
+	recorder            record.EventRecorder
+	secretBindingLister gardenlisters.SecretBindingLister
 }
 
 func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) error {
@@ -127,20 +125,8 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 			quotaLogger.Error(err.Error())
 			return err
 		}
-		associatedPrivateSecretBindings, err := controllerutils.DeterminePrivateSecretBindingAssociations(quota, c.privateSecretBindingLister)
-		if err != nil {
-			quotaLogger.Error(err.Error())
-			return err
-		}
-		associatedCrossSecretBindings, err := controllerutils.DetermineCrossSecretBindingAssociations(quota, c.crossSecretBindingLister)
-		if err != nil {
-			quotaLogger.Error(err.Error())
-			return err
-		}
-		associatedBindings := append(associatedSecretBindings, associatedPrivateSecretBindings...)
-		associatedBindings = append(associatedSecretBindings, associatedCrossSecretBindings...)
 
-		if len(associatedBindings) == 0 {
+		if len(associatedSecretBindings) == 0 {
 			quotaLogger.Info("No SecretBindings are referencing the Quota. Deletion accepted.")
 
 			// Remove finalizer from Quota
@@ -153,7 +139,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 			}
 			return nil
 		}
-		quotaLogger.Infof("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedBindings)
+		quotaLogger.Infof("Can't delete Quota, because the following SecretBindings are still referencing it: %v", associatedSecretBindings)
 		return errors.New("Quota still has references")
 	}
 	return nil

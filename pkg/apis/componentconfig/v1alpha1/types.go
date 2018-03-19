@@ -67,12 +67,6 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
-	// CrossSecretBinding defines the configuration of the CrossSecretBinding controller.
-	// +optional
-	CrossSecretBinding *CrossSecretBindingControllerConfiguration `json:"crossSecretBinding,omitempty"`
-	// PrivateSecretBinding defines the configuration of the PrivateSecretBinding controller.
-	// +optional
-	PrivateSecretBinding *PrivateSecretBindingControllerConfiguration `json:"privateSecretBinding,omitempty"`
 	// Quota defines the configuration of the Quota controller.
 	// +optional
 	Quota *QuotaControllerConfiguration `json:"quota,omitempty"`
@@ -98,22 +92,6 @@ type CloudProfileControllerConfiguration struct {
 // SecretBindingControllerConfiguration defines the configuration of the
 // SecretBinding controller.
 type SecretBindingControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs int `json:"concurrentSyncs"`
-}
-
-// CrossSecretBindingControllerConfiguration defines the configuration of the
-// CrossSecretBinding controller.
-type CrossSecretBindingControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
-	ConcurrentSyncs int `json:"concurrentSyncs"`
-}
-
-// PrivateSecretBindingControllerConfiguration defines the configuration of the
-// PrivateSecretBinding controller.
-type PrivateSecretBindingControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

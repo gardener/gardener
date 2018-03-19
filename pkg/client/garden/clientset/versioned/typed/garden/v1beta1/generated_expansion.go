@@ -4,10 +4,6 @@ package v1beta1
 
 type CloudProfileExpansion interface{}
 
-type CrossSecretBindingExpansion interface{}
-
-type PrivateSecretBindingExpansion interface{}
-
 type QuotaExpansion interface{}
 
 type SecretBindingExpansion interface{}

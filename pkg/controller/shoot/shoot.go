@@ -50,12 +50,10 @@ type Controller struct {
 	shootCareQueue        workqueue.RateLimitingInterface
 	shootMaintenanceQueue workqueue.RateLimitingInterface
 
-	shootSynced                cache.InformerSynced
-	seedSynced                 cache.InformerSynced
-	cloudProfileSynced         cache.InformerSynced
-	secretBindingSynced        cache.InformerSynced
-	privateSecretBindingSynced cache.InformerSynced
-	crossSecretBindingSynced   cache.InformerSynced
+	shootSynced         cache.InformerSynced
+	seedSynced          cache.InformerSynced
+	cloudProfileSynced  cache.InformerSynced
+	secretBindingSynced cache.InformerSynced
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -118,8 +116,6 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 	shootController.seedSynced = gardenv1beta1Informer.Seeds().Informer().HasSynced
 	shootController.cloudProfileSynced = gardenv1beta1Informer.CloudProfiles().Informer().HasSynced
 	shootController.secretBindingSynced = gardenv1beta1Informer.SecretBindings().Informer().HasSynced
-	shootController.privateSecretBindingSynced = gardenv1beta1Informer.PrivateSecretBindings().Informer().HasSynced
-	shootController.crossSecretBindingSynced = gardenv1beta1Informer.CrossSecretBindings().Informer().HasSynced
 
 	return shootController
 }
@@ -131,7 +127,7 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		waitGroup      sync.WaitGroup
 	)
 
-	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.privateSecretBindingSynced, c.crossSecretBindingSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}

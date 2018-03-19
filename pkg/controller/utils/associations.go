@@ -47,17 +47,7 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 			}
 		case *gardenv1beta1.SecretBinding:
 			binding := obj.(*gardenv1beta1.SecretBinding)
-			if shoot.Spec.Cloud.SecretBindingRef.Kind == "" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
-				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
-			}
-		case *gardenv1beta1.PrivateSecretBinding:
-			binding := obj.(*gardenv1beta1.PrivateSecretBinding)
-			if shoot.Spec.Cloud.SecretBindingRef.Kind == "PrivateSecretBinding" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
-				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
-			}
-		case *gardenv1beta1.CrossSecretBinding:
-			binding := obj.(*gardenv1beta1.CrossSecretBinding)
-			if shoot.Spec.Cloud.SecretBindingRef.Kind == "CrossSecretBinding" && shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+			if shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:
@@ -73,46 +63,6 @@ func DetermineSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingListe
 	var associatedBindings []string
 	bindings, err := bindingLister.List(labels.Everything())
 	if err != nil {
-		return nil, err
-	}
-
-	for _, binding := range bindings {
-		for _, quotaRef := range binding.Quotas {
-			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
-				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))
-			}
-		}
-	}
-	return associatedBindings, nil
-}
-
-// DeterminePrivateSecretBindingAssociations gets a <bindingLister> to determine the PrivateSecretBinding
-// resources which are associated to given Quota <obj>.
-func DeterminePrivateSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.PrivateSecretBindingLister) ([]string, error) {
-	var associatedBindings []string
-	bindings, err := bindingLister.List(labels.Everything())
-	if err != nil {
-		logger.Logger.Info(err.Error())
-		return nil, err
-	}
-
-	for _, binding := range bindings {
-		for _, quotaRef := range binding.Quotas {
-			if quotaRef.Name == quota.Name && quotaRef.Namespace == quota.Namespace {
-				associatedBindings = append(associatedBindings, fmt.Sprintf("%s/%s", binding.Namespace, binding.Name))
-			}
-		}
-	}
-	return associatedBindings, nil
-}
-
-// DetermineCrossSecretBindingAssociations gets a <bindingLister> to determine the CrossSecretBinding
-// resources which are associated to given Quota <obj>.
-func DetermineCrossSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.CrossSecretBindingLister) ([]string, error) {
-	var associatedBindings []string
-	bindings, err := bindingLister.List(labels.Everything())
-	if err != nil {
-		logger.Logger.Info(err.Error())
 		return nil, err
 	}
 

@@ -195,11 +195,10 @@ time="2018-02-20T13:24:39+02:00" level=info msg="Successfully bootstrapped the G
 time="2018-02-20T13:24:39+02:00" level=info msg="Gardener controller manager (version 0.2.0) initialized."
 time="2018-02-20T13:24:39+02:00" level=info msg="Quota controller initialized."
 time="2018-02-20T13:24:39+02:00" level=info msg="CloudProfile controller initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="CrossSecretBinding controller initialized."
+time="2018-02-20T13:24:39+02:00" level=info msg="SecretBinding controller initialized."
 time="2018-02-20T13:24:39+02:00" level=info msg="Watching all namespaces for Shoot resources..."
 time="2018-02-20T13:24:39+02:00" level=info msg="Shoot controller initialized."
 time="2018-02-20T13:24:39+02:00" level=info msg="Seed controller initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="PrivateSecretBinding controller initialized."
 [...]
 ```
 

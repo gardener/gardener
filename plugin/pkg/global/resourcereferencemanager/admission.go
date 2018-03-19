@@ -16,7 +16,6 @@ package resourcereferencemanager
 
 import (
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -24,7 +23,6 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -48,14 +46,12 @@ func Register(plugins *admission.Plugins) {
 // ReferenceManager contains listers and and admission handler.
 type ReferenceManager struct {
 	*admission.Handler
-	authorizer                 authorizer.Authorizer
-	secretLister               kubecorev1listers.SecretLister
-	cloudProfileLister         gardenlisters.CloudProfileLister
-	seedLister                 gardenlisters.SeedLister
-	secretBindingLister        gardenlisters.SecretBindingLister
-	privateSecretBindingLister gardenlisters.PrivateSecretBindingLister
-	crossSecretBindingLister   gardenlisters.CrossSecretBindingLister
-	quotaLister                gardenlisters.QuotaLister
+	authorizer          authorizer.Authorizer
+	secretLister        kubecorev1listers.SecretLister
+	cloudProfileLister  gardenlisters.CloudProfileLister
+	seedLister          gardenlisters.SeedLister
+	secretBindingLister gardenlisters.SecretBindingLister
+	quotaLister         gardenlisters.QuotaLister
 }
 
 var _ = admissioninitializer.WantsInternalGardenInformerFactory(&ReferenceManager{})
@@ -79,8 +75,6 @@ func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.Sh
 	r.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
 	r.seedLister = f.Garden().InternalVersion().Seeds().Lister()
 	r.secretBindingLister = f.Garden().InternalVersion().SecretBindings().Lister()
-	r.privateSecretBindingLister = f.Garden().InternalVersion().PrivateSecretBindings().Lister()
-	r.crossSecretBindingLister = f.Garden().InternalVersion().CrossSecretBindings().Lister()
 	r.quotaLister = f.Garden().InternalVersion().Quotas().Lister()
 }
 
@@ -105,12 +99,6 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.secretBindingLister == nil {
 		return errors.New("missing secret binding lister")
-	}
-	if r.privateSecretBindingLister == nil {
-		return errors.New("missing private secret binding lister")
-	}
-	if r.crossSecretBindingLister == nil {
-		return errors.New("missing cross secret binding lister")
 	}
 	if r.quotaLister == nil {
 		return errors.New("missing quota lister")
@@ -144,26 +132,6 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 			return nil
 		}
 		err = r.ensureSecretBindingReferences(a, binding)
-
-	case garden.Kind("PrivateSecretBinding"):
-		binding, ok := a.GetObject().(*garden.PrivateSecretBinding)
-		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into PrivateSecretBinding object")
-		}
-		if skipVerification(operation, binding.ObjectMeta) {
-			return nil
-		}
-		err = r.ensurePrivateSecretBindingReferences(binding)
-
-	case garden.Kind("CrossSecretBinding"):
-		binding, ok := a.GetObject().(*garden.CrossSecretBinding)
-		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into CrossSecretBinding object")
-		}
-		if skipVerification(operation, binding.ObjectMeta) {
-			return nil
-		}
-		err = r.ensureCrossSecretBindingReferences(binding)
 
 	case garden.Kind("Seed"):
 		seed, ok := a.GetObject().(*garden.Seed)
@@ -207,6 +175,10 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		return errors.New("SecretBinding cannot reference a secret you are not allowed to read")
 	}
 
+	if _, err := r.secretLister.Secrets(binding.SecretRef.Namespace).Get(binding.SecretRef.Name); err != nil {
+		return err
+	}
+
 	for _, quotaRef := range binding.Quotas {
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
@@ -223,25 +195,7 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		if decision, _, _ := r.authorizer.Authorize(readAttributes); decision != authorizer.DecisionAllow {
 			return errors.New("SecretBinding cannot reference a quota you are not allowed to read")
 		}
-	}
 
-	return r.ensureBindingReferences(binding.SecretRef.Namespace, binding.SecretRef.Name, binding.Quotas)
-}
-
-func (r *ReferenceManager) ensurePrivateSecretBindingReferences(binding *garden.PrivateSecretBinding) error {
-	return r.ensureBindingReferences(binding.Namespace, binding.SecretRef.Name, binding.Quotas)
-}
-
-func (r *ReferenceManager) ensureCrossSecretBindingReferences(binding *garden.CrossSecretBinding) error {
-	return r.ensureBindingReferences(binding.SecretRef.Namespace, binding.SecretRef.Name, binding.Quotas)
-}
-
-func (r *ReferenceManager) ensureBindingReferences(secretNamespace, secretName string, quotaRefs []corev1.ObjectReference) error {
-	if _, err := r.secretLister.Secrets(secretNamespace).Get(secretName); err != nil {
-		return err
-	}
-
-	for _, quotaRef := range quotaRefs {
 		if _, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name); err != nil {
 			return err
 		}
@@ -273,21 +227,8 @@ func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
 		}
 	}
 
-	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
-	case "", "SecretBinding":
-		if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
-			return err
-		}
-	case "PrivateSecretBinding":
-		if _, err := r.privateSecretBindingLister.PrivateSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
-			return err
-		}
-	case "CrossSecretBinding":
-		if _, err := r.crossSecretBindingLister.CrossSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("unknown secret binding reference kind '%s'", shoot.Spec.Cloud.SecretBindingRef.Kind)
+	if _, err := r.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name); err != nil {
+		return err
 	}
 
 	return nil

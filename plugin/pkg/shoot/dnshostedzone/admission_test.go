@@ -76,7 +76,7 @@ var _ = Describe("quotavalidator", func() {
 				},
 				Spec: garden.ShootSpec{
 					Cloud: garden.Cloud{
-						SecretBindingRef: corev1.ObjectReference{
+						SecretBindingRef: corev1.LocalObjectReference{
 							Name: secretBindingName,
 						},
 					},

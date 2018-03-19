@@ -40,9 +40,7 @@ type Controller struct {
 	quotaQueue  workqueue.RateLimitingInterface
 	quotaSynced cache.InformerSynced
 
-	secretBindingLister        gardenlisters.SecretBindingLister
-	privateSecretBindingLister gardenlisters.PrivateSecretBindingLister
-	crossSecretBindingLister   gardenlisters.CrossSecretBindingLister
+	secretBindingLister gardenlisters.SecretBindingLister
 
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -55,24 +53,20 @@ func NewQuotaController(k8sGardenClient kubernetes.Client, gardenInformerFactory
 	var (
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 
-		quotaInformer              = gardenv1beta1Informer.Quotas()
-		quotaLister                = quotaInformer.Lister()
-		secretBindingLister        = gardenv1beta1Informer.SecretBindings().Lister()
-		privateSecretBindingLister = gardenv1beta1Informer.PrivateSecretBindings().Lister()
-		crossSecretBindingLister   = gardenv1beta1Informer.CrossSecretBindings().Lister()
+		quotaInformer       = gardenv1beta1Informer.Quotas()
+		quotaLister         = quotaInformer.Lister()
+		secretBindingLister = gardenv1beta1Informer.SecretBindings().Lister()
 	)
 
 	quotaController := &Controller{
-		k8sGardenClient:            k8sGardenClient,
-		k8sGardenInformers:         gardenInformerFactory,
-		control:                    NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretBindingLister, privateSecretBindingLister, crossSecretBindingLister),
-		recorder:                   recorder,
-		quotaLister:                quotaLister,
-		quotaQueue:                 workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),
-		secretBindingLister:        secretBindingLister,
-		privateSecretBindingLister: privateSecretBindingLister,
-		crossSecretBindingLister:   crossSecretBindingLister,
-		workerCh:                   make(chan int),
+		k8sGardenClient:     k8sGardenClient,
+		k8sGardenInformers:  gardenInformerFactory,
+		control:             NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, secretBindingLister),
+		recorder:            recorder,
+		quotaLister:         quotaLister,
+		quotaQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Quota"),
+		secretBindingLister: secretBindingLister,
+		workerCh:            make(chan int),
 	}
 
 	quotaInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

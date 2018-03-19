@@ -82,16 +82,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
-	if obj.Controllers.CrossSecretBinding == nil {
-		obj.Controllers.CrossSecretBinding = &CrossSecretBindingControllerConfiguration{
-			ConcurrentSyncs: 5,
-		}
-	}
-	if obj.Controllers.PrivateSecretBinding == nil {
-		obj.Controllers.PrivateSecretBinding = &PrivateSecretBindingControllerConfiguration{
-			ConcurrentSyncs: 5,
-		}
-	}
 	if obj.Controllers.Quota == nil {
 		obj.Controllers.Quota = &QuotaControllerConfiguration{
 			ConcurrentSyncs: 5,
