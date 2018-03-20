@@ -136,13 +136,37 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		return nil
 	}
 
+	var (
+		oldShoot         *garden.Shoot
+		maxShootLifetime *int
+		checkLifetime    = false
+		checkQuota       = false
+	)
+
+	if a.GetOperation() == admission.Create {
+		checkQuota = true
+	}
+
+	if a.GetOperation() == admission.Update {
+		oldShoot, ok = a.GetOldObject().(*garden.Shoot)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into Shoot object")
+		}
+		cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
+		if err != nil {
+			return apierrors.NewInternalError(err)
+		}
+
+		checkQuota = quotaVerificationNeeded(*shoot, *oldShoot, cloudProvider)
+		checkLifetime = lifetimeVerificationNeeded(*shoot, *oldShoot)
+	}
+
 	quotaReferences, err := h.getShootsQuotaReferences(*shoot)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
 
 	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
-	var maxShootLifetime *int
 	for _, quotaRef := range quotaReferences {
 		quota, err := h.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
@@ -150,7 +174,7 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		}
 
 		// Get the max clusterLifeTime
-		if quota.Spec.ClusterLifetimeDays != nil {
+		if checkLifetime && quota.Spec.ClusterLifetimeDays != nil {
 			if maxShootLifetime == nil {
 				maxShootLifetime = quota.Spec.ClusterLifetimeDays
 			}
@@ -159,20 +183,23 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 			}
 		}
 
-		exceededMetrics, err := h.isQuotaExceeded(*shoot, *quota)
-		if err != nil {
-			return apierrors.NewInternalError(err)
-		}
-		if exceededMetrics != nil {
-			message := ""
-			for _, metric := range *exceededMetrics {
-				message = message + metric.String() + " "
+		if checkQuota {
+			exceededMetrics, err := h.isQuotaExceeded(*shoot, *quota)
+			if err != nil {
+				return apierrors.NewInternalError(err)
 			}
-			return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message))
+			if exceededMetrics != nil {
+				message := ""
+				for _, metric := range *exceededMetrics {
+					message = message + metric.String() + " "
+				}
+				return admission.NewForbidden(a, fmt.Errorf("Quota limits exceeded. Unable to allocate further %s", message))
+			}
 		}
 	}
 
-	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; exists && maxShootLifetime != nil {
+	// Admit Shoot lifetime changes
+	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
 		var (
 			plannedExpirationTime   time.Time
 			oldExpirationTime       time.Time
@@ -182,12 +209,6 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		plannedExpirationTime, err = time.Parse(time.RFC3339, lifetime)
 		if err != nil {
 			return apierrors.NewInternalError(err)
-		}
-
-		// Get the prior version of the Shoot
-		oldShoot, ok := a.GetOldObject().(*garden.Shoot)
-		if !ok {
-			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
 
 		if lifetime, exists := oldShoot.Annotations[common.ShootExpirationTimestamp]; exists {
@@ -536,6 +557,97 @@ func getVolumeTypes(provider garden.CloudProvider, cloudProfile garden.CloudProf
 		}
 	}
 	return volumeTypes
+}
+
+func lifetimeVerificationNeeded(new, old garden.Shoot) bool {
+	oldLifetime, exits := old.Annotations[common.ShootExpirationTimestamp]
+	if !exits {
+		oldLifetime = old.CreationTimestamp.String()
+	}
+	if oldLifetime != new.Annotations[common.ShootExpirationTimestamp] {
+		return true
+	}
+	return false
+}
+
+func quotaVerificationNeeded(new, old garden.Shoot, provider garden.CloudProvider) bool {
+	// Check for diff on addon nginx-ingress (addon requires to deploy a load balancer)
+	if old.Spec.Addons.NginxIngress.Enabled == false && new.Spec.Addons.NginxIngress.Enabled == true {
+		return true
+	}
+
+	// Check for diffs on workers
+	switch provider {
+	case garden.CloudProviderAWS:
+		for _, worker := range new.Spec.Cloud.AWS.Workers {
+			oldHasWorker := false
+			for _, oldWorker := range old.Spec.Cloud.AWS.Workers {
+				if worker.Name == oldWorker.Name {
+					oldHasWorker = true
+					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
+						return true
+					}
+				}
+			}
+			if !oldHasWorker {
+				return true
+			}
+		}
+	case garden.CloudProviderAzure:
+		for _, worker := range new.Spec.Cloud.Azure.Workers {
+			oldHasWorker := false
+			for _, oldWorker := range old.Spec.Cloud.Azure.Workers {
+				if worker.Name == oldWorker.Name {
+					oldHasWorker = true
+					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
+						return true
+					}
+				}
+			}
+			if !oldHasWorker {
+				return true
+			}
+		}
+	case garden.CloudProviderGCP:
+		for _, worker := range new.Spec.Cloud.GCP.Workers {
+			oldHasWorker := false
+			for _, oldWorker := range old.Spec.Cloud.GCP.Workers {
+				if worker.Name == oldWorker.Name {
+					oldHasWorker = true
+					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
+						return true
+					}
+				}
+			}
+			if !oldHasWorker {
+				return true
+			}
+		}
+	case garden.CloudProviderOpenStack:
+		for _, worker := range new.Spec.Cloud.OpenStack.Workers {
+			oldHasWorker := false
+			for _, oldWorker := range old.Spec.Cloud.OpenStack.Workers {
+				if worker.Name == oldWorker.Name {
+					oldHasWorker = true
+					if hasWorkerDiff(worker.Worker, oldWorker.Worker) {
+						return true
+					}
+				}
+			}
+			if !oldHasWorker {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func hasWorkerDiff(new, old garden.Worker) bool {
+	if new.MachineType != old.MachineType || new.AutoScalerMax != old.AutoScalerMax {
+		return true
+	}
+	return false
 }
 
 func hasSufficientQuota(limit, required resource.Quantity) bool {

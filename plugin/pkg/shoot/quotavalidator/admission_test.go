@@ -36,6 +36,7 @@ var _ = Describe("quotavalidator", func() {
 			admissionHandler      *RejectShootIfQuotaExceeded
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			shoot                 garden.Shoot
+			oldShoot              garden.Shoot
 			crossSB               garden.CrossSecretBinding
 			privateSB             garden.PrivateSecretBinding
 			quota                 garden.Quota
@@ -61,6 +62,12 @@ var _ = Describe("quotavalidator", func() {
 						{
 							Name:  volumeTypeName,
 							Class: "standard",
+						},
+					},
+					Kubernetes: garden.KubernetesConstraints{
+						Versions: []string{
+							"1.8.8",
+							"1.9.3",
 						},
 					},
 				},
@@ -172,6 +179,16 @@ var _ = Describe("quotavalidator", func() {
 						},
 						GCP: &shootSpecCloudGCEBase,
 					},
+					Kubernetes: garden.Kubernetes{
+						Version: "1.8.8",
+					},
+					Addons: &garden.Addons{
+						NginxIngress: &garden.NginxIngress{
+							Addon: garden.Addon{
+								Enabled: true,
+							},
+						},
+					},
 				},
 			}
 		)
@@ -188,12 +205,12 @@ var _ = Describe("quotavalidator", func() {
 			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
 
-			shoot = shootBase
-			cloudProfile = cloudProfileBase
-			crossSB = crossSBBase
-			quota = quotaProject
+			shoot = *shootBase.DeepCopy()
+			cloudProfile = *cloudProfileBase.DeepCopy()
+			crossSB = *crossSBBase.DeepCopy()
+			quota = *quotaProject.DeepCopy()
 
-			shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 1
+			//shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 1
 		})
 
 		Context("tests for quota validation common cases", func() {
@@ -275,12 +292,24 @@ var _ = Describe("quotavalidator", func() {
 				err := admissionHandler.Admit(attrs)
 				Expect(err).To(HaveOccurred())
 			})
+
+			It("should pass because can update non worker property although quota is exceeded", func() {
+				oldShoot = *shoot.DeepCopy()
+				quota.Spec.Metrics[garden.QuotaMetricCPU] = resource.MustParse("1")
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+
+				shoot.Spec.Kubernetes.Version = "1.9.3"
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 
 		Context("tests for shoots with PrivateSecretBindings, which have multiple quotas referenced", func() {
 			BeforeEach(func() {
-				quota2 = quotaSecret
-				privateSB = privateSBBase
+				quota2 = *quotaSecret.DeepCopy()
+				privateSB = *privateSBBase.DeepCopy()
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
 				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
 				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
@@ -362,11 +391,9 @@ var _ = Describe("quotavalidator", func() {
 		})
 
 		Context("tests for extending shoots lifetime", func() {
-			var oldShoot garden.Shoot
-
 			BeforeEach(func() {
-				quota2 := quotaSecret
-				privateSB := privateSBBase
+				quota2 := *quotaSecret.DeepCopy()
+				privateSB := *privateSBBase.DeepCopy()
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
 				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
 				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
@@ -395,7 +422,6 @@ var _ = Describe("quotavalidator", func() {
 
 			It("should pass as shoot expiration time can be extended", func() {
 				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-02T00:00:00+00:00" // plus 1 day
-
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
 
 				err := admissionHandler.Admit(attrs)
@@ -403,8 +429,7 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should fail as shoots expiration time can’t be extended, because requested time higher then quota allows", func() {
-				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-09T00:00:00+00:00" // plus 8 day
-
+				shoot.Annotations[common.ShootExpirationTimestamp] = "2018-01-09T00:00:00+00:00" // plus 8 days
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
 
 				err := admissionHandler.Admit(attrs)
