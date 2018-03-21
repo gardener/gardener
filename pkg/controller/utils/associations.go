@@ -47,7 +47,7 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 			}
 		case *gardenv1beta1.SecretBinding:
 			binding := obj.(*gardenv1beta1.SecretBinding)
-			if shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+			if shoot.Spec.Cloud.SecretBindingRef.Name == binding.Name && shoot.Namespace == binding.Namespace {
 				associatedShoots = append(associatedShoots, fmt.Sprintf("%s/%s", shoot.Namespace, shoot.Name))
 			}
 		default:
