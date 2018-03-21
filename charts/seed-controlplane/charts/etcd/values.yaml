@@ -15,13 +15,13 @@ backup:
   volumeMount: [] #volume-mount-spec-list 
   
 # Aws S3 storage configuration
-# No environment variable needed
+# Note: No environment variable needed
 # volumeMount:
-#		-	name: etcd-backup-secret
+#		-	name: etcd-backup
 #     mountPath: "/root/.aws/"
   
 # Azure ABS storage configuration
-# No volumeMounts needed
+# Note: No volumeMounts needed
 #	env:
 # -	name: "STORAGE_ACCOUNT"
 # 	valueFrom: 
@@ -31,5 +31,13 @@ backup:
 #	- name: "STORAGE_KEY"
 #		valueFrom: 
 #			secretKeyRef:
-#				name: etcd-backup-secret
+#				name: etcd-backup
 #				key:  "storage-key"
+
+# Google Cloud storage configuration
+#	env:
+# -	name: "GOOGLE_APPLICATION_CREDENTIALS"
+# 	value: "/root/.gcp/serviceaccount.json"
+# volumeMount:
+#		-	name: etcd-backup
+#     mountPath: "/root/.gcp/"

@@ -15,8 +15,11 @@
 package gcpbotanist
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -85,11 +88,45 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // TODO: implement backup functionality for GCP
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
-	return nil
+	return terraformer.
+		New(b.Operation, common.TerraformerPurposeBackup).
+		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
+		DefineConfig("gcp-backup", b.generateTerraformBackupConfig()).
+		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 // TODO: implement backup functionality for GCP
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
-	return nil
+	return terraformer.
+		New(b.Operation, common.TerraformerPurposeBackup).
+		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
+		Destroy()
+}
+
+// generateTerraformBackupVariablesEnvironment generates the environment containing the credentials which
+// are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *GCPBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
+	return []map[string]interface{}{
+		{
+			"name":  "TF_VAR_SERVICEACCOUNT",
+			"value": b.MinifiedServiceAccount,
+		},
+	}
+}
+
+// generateTerraformBackupConfig creates the Terraform variables and the Terraform config (for the backup)
+// and returns them.
+func (b *GCPBotanist) generateTerraformBackupConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"google": map[string]interface{}{
+			"region":  b.Seed.Info.Spec.Cloud.Region,
+			"project": b.Project,
+		},
+		"bucket": map[string]interface{}{
+			"name": fmt.Sprintf("%s-%s", b.Shoot.SeedNamespace, utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))[:5]),
+		},
+		"clusterName": b.Shoot.SeedNamespace,
+	}
 }

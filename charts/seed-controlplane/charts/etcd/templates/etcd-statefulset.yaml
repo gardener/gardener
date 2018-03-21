@@ -73,7 +73,25 @@ spec:
         command:
         - /bin/sh
         - -ec
-        - 'while true; do wget http://localhost:8080/initialization/status -S -O status; STATUS=`cat status`; case $STATUS in "New") wget http://localhost:8080/initialization/start -S -O - ;; "Progress") sleep 1; continue;; "Failed") continue;; "Successful") etcd --data-dir=/var/etcd/data; break; ;; esac; done'
+        - 'while true; do
+wget http://localhost:8080/initialization/status -S -O status;
+STATUS=`cat status`;
+case $STATUS in
+  "New")        wget http://localhost:8080/initialization/start -S -O - ;;
+  "Progress")   sleep 1;
+                continue;;
+  "Failed")     continue;;
+  "Successful") exec etcd --data-dir=/var/etcd/data
+                --name=etcd-{{.Values.role}}
+                --advertise-client-urls=http://0.0.0.0:2379
+                --listen-peer-urls=http://0.0.0.0:2380
+                --listen-client-urls=http://0.0.0.0:2379
+                --initial-advertise-peer-urls=http://0.0.0.0:2380
+                --initial-cluster=etcd-{{.Values.role}}=http://0.0.0.0:2380
+                --initial-cluster-state=new
+                --initial-cluster-token=new;;
+esac;
+done'
         livenessProbe:
           httpGet:
             path: /metrics
@@ -129,14 +147,14 @@ spec:
 {{toYaml .Values.backup.env | indent 8}}
 {{- end }}
         volumeMounts:
+        - mountPath: /var/etcd
+          name: etcd-{{.Values.role}}
 {{- if .Values.backup.volumeMount }}
 {{toYaml .Values.backup.volumeMount | indent 8}}
 {{- end }}
-        - mountPath: /var/etcd
-          name: etcd-{{.Values.role}}
 {{- if .Values.backup.storageProvider}}
       volumes:
-        - name: etcd-backup
+        - name: {{.Values.backup.backupSecret}}
           secret:
             secretName: {{.Values.backup.backupSecret}}
             defaultMode: 0420

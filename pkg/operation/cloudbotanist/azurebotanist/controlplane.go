@@ -107,7 +107,7 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 	backupConfigData := map[string]interface{}{
 		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
 		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
-		"storageProvider":  "", //TODO: Replace this with ABS
+		"storageProvider":  "ABS",
 		"backupSecret":     common.BackupSecretName,
 		"storageContainer": stateVariables[containerName],
 		"env": []map[string]interface{}{
