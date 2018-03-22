@@ -54,10 +54,10 @@ aadClientSecret: ` + string(b.Shoot.Secret.Data[ClientSecret]) + `
 cloudProviderBackoff: true
 cloudProviderBackoffRetries: 6
 cloudProviderBackoffExponent: 1.5
-cloudProviderBackoffDuration: 120
+cloudProviderBackoffDuration: 5
 cloudProviderBackoffJitter: 1.0
 cloudProviderRateLimit: true
-cloudProviderRateLimitQPS: 0.5
+cloudProviderRateLimitQPS: 1.0
 cloudProviderRateLimitBucket: 5`, nil
 }
 
