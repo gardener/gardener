@@ -145,11 +145,11 @@ The commands below will configure your `minikube` with the absolute minimum reso
 
 #### Start `minikube`
 
-First, start `minikube` with at least Kubernetes v1.8.0, e.g. via `minikube  --kubernetes-version=v1.8.0`
+First, start `minikube` with at least Kubernetes v1.9.6, e.g. via `minikube --kubernetes-version=v1.9.6`
 
 ```bash
-$ minikube start --kubernetes-version=v1.8.0
-Starting local Kubernetes v1.8.0 cluster...
+$ minikube start --kubernetes-version=v1.9.6
+Starting local Kubernetes v1.9.6 cluster...
 [...]
 kubectl is now configured to use the cluster.
 ```
