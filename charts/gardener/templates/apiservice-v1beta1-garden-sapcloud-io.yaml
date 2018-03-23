@@ -10,7 +10,10 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
+  insecureSkipTLSVerify: {{ .Values.apiserver.insecureSkipTLSVerify }}
+  {{- if not .Values.apiserver.insecureSkipTLSVerify }}
   caBundle: {{ required ".Values.apiserver.caBundle is required" (b64enc .Values.apiserver.caBundle) }}
+  {{- end }}
   group: garden.sapcloud.io
   version: v1beta1
   groupPriorityMinimum: {{ required ".Values.apiserver.groupPriorityMinimum is required" .Values.apiserver.groupPriorityMinimum }}

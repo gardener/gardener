@@ -27,6 +27,9 @@ spec:
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
+        {{- if .Values.apiserver.etcd.useSidecar }}
+        sidecar: etcd
+        {{- end }}
     spec:
       serviceAccountName: {{ required ".Values.apiserver.serviceAccountName is required" .Values.apiserver.serviceAccountName }}
       containers:
@@ -66,7 +69,7 @@ spec:
           mountPath: /etc/garden/audit
       {{- if .Values.apiserver.etcd.useSidecar }}
       - name: etcd
-        image: quay.io/coreos/etcd:v3.2
+        image: quay.io/coreos/etcd:v3.1.12
         imagePullPolicy: IfNotPresent
         command:
         - /usr/local/bin/etcd
