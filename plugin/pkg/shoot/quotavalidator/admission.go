@@ -66,11 +66,10 @@ func Register(plugins *admission.Plugins) {
 // RejectShootIfQuotaExceeded contains listers and and admission handler.
 type RejectShootIfQuotaExceeded struct {
 	*admission.Handler
-	shootLister        listers.ShootLister
-	cloudProfileLister listers.CloudProfileLister
-	crossSBLister      listers.CrossSecretBindingLister
-	privateSBLister    listers.PrivateSecretBindingLister
-	quotaLister        listers.QuotaLister
+	shootLister         listers.ShootLister
+	cloudProfileLister  listers.CloudProfileLister
+	secretBindingLister listers.SecretBindingLister
+	quotaLister         listers.QuotaLister
 }
 
 var _ = admissioninitializer.WantsInternalGardenInformerFactory(&RejectShootIfQuotaExceeded{})
@@ -86,8 +85,7 @@ func New() (*RejectShootIfQuotaExceeded, error) {
 func (h *RejectShootIfQuotaExceeded) SetInternalGardenInformerFactory(f informers.SharedInformerFactory) {
 	h.shootLister = f.Garden().InternalVersion().Shoots().Lister()
 	h.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
-	h.crossSBLister = f.Garden().InternalVersion().CrossSecretBindings().Lister()
-	h.privateSBLister = f.Garden().InternalVersion().PrivateSecretBindings().Lister()
+	h.secretBindingLister = f.Garden().InternalVersion().SecretBindings().Lister()
 	h.quotaLister = f.Garden().InternalVersion().Quotas().Lister()
 }
 
@@ -99,11 +97,8 @@ func (h *RejectShootIfQuotaExceeded) ValidateInitialization() error {
 	if h.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
 	}
-	if h.crossSBLister == nil {
-		return errors.New("missing crossSecretBinding lister")
-	}
-	if h.privateSBLister == nil {
-		return errors.New("missing privateSecretBinding lister")
+	if h.secretBindingLister == nil {
+		return errors.New("missing secretBinding lister")
 	}
 	if h.quotaLister == nil {
 		return errors.New("missing quota lister")
@@ -161,13 +156,13 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		checkLifetime = lifetimeVerificationNeeded(*shoot, *oldShoot)
 	}
 
-	quotaReferences, err := h.getShootsQuotaReferences(*shoot)
+	secretBinding, err := h.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
 
 	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
-	for _, quotaRef := range quotaReferences {
+	for _, quotaRef := range secretBinding.Quotas {
 		quota, err := h.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return apierrors.NewInternalError(err)
@@ -229,24 +224,6 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	return nil
 }
 
-func (h *RejectShootIfQuotaExceeded) getShootsQuotaReferences(shoot garden.Shoot) ([]v1.ObjectReference, error) {
-	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
-	case "CrossSecretBinding":
-		usedCrossSB, err := h.crossSBLister.CrossSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
-		if err != nil {
-			return nil, err
-		}
-		return usedCrossSB.Quotas, nil
-	case "PrivateSecretBinding":
-		usedPrivateSB, err := h.privateSBLister.PrivateSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
-		if err != nil {
-			return nil, err
-		}
-		return usedPrivateSB.Quotas, nil
-	}
-	return nil, fmt.Errorf("Unknown binding type %s", shoot.Spec.Cloud.SecretBindingRef.Kind)
-}
-
 func (h *RejectShootIfQuotaExceeded) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]v1.ResourceName, error) {
 	allocatedResources, err := h.determineAllocatedResources(quota, shoot)
 	if err != nil {
@@ -297,89 +274,38 @@ func (h *RejectShootIfQuotaExceeded) determineAllocatedResources(quota garden.Qu
 }
 
 func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, shoot garden.Shoot) ([]garden.Shoot, error) {
-	var shootsReferQuota []garden.Shoot
+	var (
+		shootsReferQuota []garden.Shoot
+		secretBindings   []garden.SecretBinding
+	)
 
-	privateSecretBindings, err := h.getPrivateSecretBindingsReferQuota(quota)
+	allSecrerBindings, err := h.secretBindingLister.SecretBindings(v1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
-	crossSecretBindings, err := h.getCrossSecretBindingsReferQuota(quota)
-	if err != nil {
-		return nil, err
-	}
-
-	// Find all shoots which are referencing found PrivateSecretBindings
-	for _, binding := range privateSecretBindings {
-		shoots, err := h.shootLister.
-			Shoots(binding.Namespace).
-			List(labels.Everything())
-		if err != nil {
-			return nil, err
-		}
-		for _, s := range shoots {
-			// exclude actual shoot from resource allocation calculation (update case)
-			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
-				continue
-			}
-			if s.Spec.Cloud.SecretBindingRef.Kind == "PrivateSecretBinding" && s.Spec.Cloud.SecretBindingRef.Name == binding.Name {
-				shootsReferQuota = append(shootsReferQuota, *s)
+	for _, binding := range allSecrerBindings {
+		for _, quotaRef := range binding.Quotas {
+			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
+				secretBindings = append(secretBindings, *binding)
 			}
 		}
 	}
 
-	// Find all shoots which are referencing found CrossSecretBindings
-	for _, binding := range crossSecretBindings {
+	for _, binding := range secretBindings {
 		shoots, err := h.shootLister.Shoots(binding.Namespace).List(labels.Everything())
 		if err != nil {
 			return nil, err
 		}
 		for _, s := range shoots {
-			// exclude actual shoot from resource allocation calculation (update case)
 			if shoot.Namespace == s.Namespace && shoot.Name == s.Name {
 				continue
 			}
-			if s.Spec.Cloud.SecretBindingRef.Kind == "CrossSecretBinding" && s.Spec.Cloud.SecretBindingRef.Name == binding.Name {
+			if s.Spec.Cloud.SecretBindingRef.Name == binding.Name {
 				shootsReferQuota = append(shootsReferQuota, *s)
 			}
 		}
 	}
 	return shootsReferQuota, nil
-}
-
-func (h *RejectShootIfQuotaExceeded) getPrivateSecretBindingsReferQuota(quota garden.Quota) ([]garden.PrivateSecretBinding, error) {
-	var privateSBsReferQuota []garden.PrivateSecretBinding
-
-	privateSBs, err := h.privateSBLister.PrivateSecretBindings(v1.NamespaceAll).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, binding := range privateSBs {
-		for _, quotaRef := range binding.Quotas {
-			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
-				privateSBsReferQuota = append(privateSBsReferQuota, *binding)
-			}
-		}
-	}
-	return privateSBsReferQuota, nil
-}
-
-func (h *RejectShootIfQuotaExceeded) getCrossSecretBindingsReferQuota(quota garden.Quota) ([]garden.CrossSecretBinding, error) {
-	var crossSBsReferQuota []garden.CrossSecretBinding
-
-	crossSBs, err := h.crossSBLister.CrossSecretBindings(v1.NamespaceAll).List(labels.Everything())
-	if err != nil {
-		return nil, err
-	}
-
-	for _, binding := range crossSBs {
-		for _, quotaRef := range binding.Quotas {
-			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
-				crossSBsReferQuota = append(crossSBsReferQuota, *binding)
-			}
-		}
-	}
-	return crossSBsReferQuota, nil
 }
 
 func (h *RejectShootIfQuotaExceeded) determineRequiredResources(allocatedResources v1.ResourceList, shoot garden.Shoot) (v1.ResourceList, error) {

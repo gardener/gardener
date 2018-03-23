@@ -1,7 +1,6 @@
 package shoot
 
 import (
-	"fmt"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -9,7 +8,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
@@ -79,31 +77,17 @@ type defaultQuotaControl struct {
 func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key string) error {
 	var (
 		clusterLifeTime     *int
-		quotaReferences     []v1.ObjectReference
 		shootExpirationTime time.Time
 
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
 	)
 
-	switch shoot.Spec.Cloud.SecretBindingRef.Kind {
-	case "PrivateSecretBinding":
-		psb, err := c.k8sGardenInformers.PrivateSecretBindings().Lister().PrivateSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
-		if err != nil {
-			return err
-		}
-		quotaReferences = psb.Quotas
-	case "CrossSecretBinding":
-		csb, err := c.k8sGardenInformers.CrossSecretBindings().Lister().CrossSecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
-		if err != nil {
-			return err
-		}
-		quotaReferences = csb.Quotas
-	default:
-		return fmt.Errorf("Unknown Binding type %s", shoot.Spec.Cloud.SecretBindingRef.Kind)
+	secretBinding, err := c.k8sGardenInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+	if err != nil {
+		return err
 	}
-
-	for _, quotaRef := range quotaReferences {
+	for _, quotaRef := range secretBinding.Quotas {
 		quota, err := c.k8sGardenInformers.Quotas().Lister().Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return err

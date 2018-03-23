@@ -179,16 +179,16 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		return err
 	}
 
+	var (
+		secretQuotaCount  int
+		projectQuotaCount int
+	)
+
 	for _, quotaRef := range binding.Quotas {
 		quota, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return err
 		}
-
-		var (
-			secretQuotaCount  int
-			projectQuotaCount int
-		)
 
 		if quota.Spec.Scope == garden.QuotaScopeProject {
 			projectQuotaCount++

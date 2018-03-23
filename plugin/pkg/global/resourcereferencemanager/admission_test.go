@@ -216,19 +216,20 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				}
 
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
-
 				quota2Ref := corev1.ObjectReference{
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := crossSecretBinding.Quotas
+				quotaRefList := secretBinding.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				crossSecretBinding.Quotas = quotaRefList
+				secretBinding.Quotas = quotaRefList
 
-				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -247,19 +248,20 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				}
 
-				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
-
 				quota2Ref := corev1.ObjectReference{
 					Name:      quotaName2,
 					Namespace: namespace,
 				}
-				quotaRefList := crossSecretBinding.Quotas
+				quotaRefList := secretBinding.Quotas
 				quotaRefList = append(quotaRefList, quota2Ref)
-				crossSecretBinding.Quotas = quotaRefList
+				secretBinding.Quotas = quotaRefList
 
-				attrs := admission.NewAttributesRecord(&crossSecretBinding, nil, garden.Kind("CrossSecretBinding").WithVersion("version"), crossSecretBinding.Namespace, crossSecretBinding.Name, garden.Resource("crosssecretbindings").WithVersion("version"), "", admission.Create, nil)
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
 
 				err := admissionHandler.Admit(attrs)
 

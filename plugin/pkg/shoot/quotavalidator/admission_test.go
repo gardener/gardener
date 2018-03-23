@@ -37,14 +37,12 @@ var _ = Describe("quotavalidator", func() {
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			shoot                 garden.Shoot
 			oldShoot              garden.Shoot
-			crossSB               garden.CrossSecretBinding
-			privateSB             garden.PrivateSecretBinding
-			quota                 garden.Quota
-			quota2                garden.Quota
+			secretBinding         garden.SecretBinding
+			quotaProject          garden.Quota
+			quotaSecret           garden.Quota
 			cloudProfile          garden.CloudProfile
 			namespace             string = "test"
 			trialNamespace        string = "trial"
-			clusterLifeTime       int    = 7
 			machineTypeName       string = "n1-standard-2"
 			volumeTypeName        string = "pd-standard"
 
@@ -66,8 +64,8 @@ var _ = Describe("quotavalidator", func() {
 					},
 					Kubernetes: garden.KubernetesConstraints{
 						Versions: []string{
-							"1.8.8",
-							"1.9.3",
+							"1.0.1",
+							"1.1.1",
 						},
 					},
 				},
@@ -82,13 +80,14 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
-			quotaProject = garden.Quota{
+			quotaProjectLifetime = 1
+			quotaProjectBase     = garden.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: trialNamespace,
 					Name:      "project-quota",
 				},
 				Spec: garden.QuotaSpec{
-					ClusterLifetimeDays: &clusterLifeTime,
+					ClusterLifetimeDays: &quotaProjectLifetime,
 					Scope:               garden.QuotaScopeProject,
 					Metrics: corev1.ResourceList{
 						garden.QuotaMetricCPU:             resource.MustParse("2"),
@@ -101,13 +100,14 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
-			quotaSecret = garden.Quota{
+			quotaSecretLifetime = 7
+			quotaSecretBase     = garden.Quota{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: trialNamespace,
 					Name:      "secret-quota",
 				},
 				Spec: garden.QuotaSpec{
-					ClusterLifetimeDays: &clusterLifeTime,
+					ClusterLifetimeDays: &quotaSecretLifetime,
 					Scope:               garden.QuotaScopeSecret,
 					Metrics: corev1.ResourceList{
 						garden.QuotaMetricCPU:             resource.MustParse("4"),
@@ -120,32 +120,19 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
-			privateSBBase = garden.PrivateSecretBinding{
+			secretBindingBase = garden.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
-					Name:      "test-privateSB",
+					Name:      "test-binding",
 				},
 				Quotas: []corev1.ObjectReference{
+					{
+						Namespace: trialNamespace,
+						Name:      "project-quota",
+					},
 					{
 						Namespace: trialNamespace,
 						Name:      "secret-quota",
-					},
-					{
-						Namespace: trialNamespace,
-						Name:      "project-quota",
-					},
-				},
-			}
-
-			crossSBBase = garden.CrossSecretBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      "test-crossSB",
-				},
-				Quotas: []corev1.ObjectReference{
-					corev1.ObjectReference{
-						Namespace: trialNamespace,
-						Name:      "project-quota",
 					},
 				},
 			}
@@ -173,14 +160,13 @@ var _ = Describe("quotavalidator", func() {
 				Spec: garden.ShootSpec{
 					Cloud: garden.Cloud{
 						Profile: "profile",
-						SecretBindingRef: corev1.ObjectReference{
-							Kind: "CrossSecretBinding",
-							Name: "test-crossSB",
+						SecretBindingRef: corev1.LocalObjectReference{
+							Name: "test-binding",
 						},
 						GCP: &shootSpecCloudGCEBase,
 					},
 					Kubernetes: garden.Kubernetes{
-						Version: "1.8.8",
+						Version: "1.0.1",
 					},
 					Addons: &garden.Addons{
 						NginxIngress: &garden.NginxIngress{
@@ -198,83 +184,30 @@ var _ = Describe("quotavalidator", func() {
 		})
 
 		BeforeEach(func() {
+			shoot = *shootBase.DeepCopy()
+			cloudProfile = *cloudProfileBase.DeepCopy()
+			secretBinding = *secretBindingBase.DeepCopy()
+			quotaProject = *quotaProjectBase.DeepCopy()
+			quotaSecret = *quotaSecretBase.DeepCopy()
+
 			admissionHandler, _ = New()
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-			gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-
-			shoot = *shootBase.DeepCopy()
-			cloudProfile = *cloudProfileBase.DeepCopy()
-			crossSB = *crossSBBase.DeepCopy()
-			quota = *quotaProject.DeepCopy()
-
-			//shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 1
+			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
+			gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaSecret)
+			gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBindingBase)
 		})
 
-		Context("tests for quota validation common cases", func() {
-			It("should pass because shoot is intended to get deleted", func() {
-				var now metav1.Time
-				now.Time = time.Now()
-				shoot.DeletionTimestamp = &now
-				shoot.Annotations = map[string]string{
-					common.ConfirmationDeletionTimestamp: now.Time.Format(time.RFC3339),
-				}
-
+		Context("tests for Shoots, which have at least one Quota referenced", func() {
+			It("should pass because all quotas limits are sufficient", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 				err := admissionHandler.Admit(attrs)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("should pass because shoots secret binding has no quotas referenced", func() {
-				crossSB.Quotas = make([]corev1.ObjectReference, 0)
-				gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should pass shoots secret binding having quota with no metrics", func() {
-				emptyQuotaName := "empty-quota"
-				emptyQuota := garden.Quota{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: trialNamespace,
-						Name:      emptyQuotaName,
-					},
-					Spec: garden.QuotaSpec{
-						ClusterLifetimeDays: &clusterLifeTime,
-						Scope:               garden.QuotaScopeProject,
-						Metrics:             corev1.ResourceList{},
-					},
-				}
-				crossSB.Quotas = []corev1.ObjectReference{
-					{
-						Namespace: trialNamespace,
-						Name:      emptyQuotaName,
-					},
-				}
-
-				gardenInformerFactory.Garden().InternalVersion().CrossSecretBindings().Informer().GetStore().Add(&crossSB)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&emptyQuota)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
-		Context("tests for shoots with CrossSecretBindings, which have only one quota referenced", func() {
-			It("should pass because quota is sufficient", func() {
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
-
-				err := admissionHandler.Admit(attrs)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("should fail because quota limits are exceeded", func() {
+			It("should fail because the limits of at least one quota are exceeded", func() {
 				shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 2
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
@@ -295,10 +228,10 @@ var _ = Describe("quotavalidator", func() {
 
 			It("should pass because can update non worker property although quota is exceeded", func() {
 				oldShoot = *shoot.DeepCopy()
-				quota.Spec.Metrics[garden.QuotaMetricCPU] = resource.MustParse("1")
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				quotaProject.Spec.Metrics[garden.QuotaMetricCPU] = resource.MustParse("1")
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
 
-				shoot.Spec.Kubernetes.Version = "1.9.3"
+				shoot.Spec.Kubernetes.Version = "1.1.1"
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
 
 				err := admissionHandler.Admit(attrs)
@@ -306,36 +239,60 @@ var _ = Describe("quotavalidator", func() {
 			})
 		})
 
-		Context("tests for shoots with PrivateSecretBindings, which have multiple quotas referenced", func() {
-			BeforeEach(func() {
-				quota2 = *quotaSecret.DeepCopy()
-				privateSB = *privateSBBase.DeepCopy()
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
-				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
-				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
-					Kind: "PrivateSecretBinding",
-					Name: "test-privateSB",
+		Context("tests for Quota validation corner cases", func() {
+			It("should pass because shoot is intended to get deleted", func() {
+				var now metav1.Time
+				now.Time = time.Now()
+				shoot.DeletionTimestamp = &now
+				shoot.Annotations = map[string]string{
+					common.ConfirmationDeletionTimestamp: now.Time.Format(time.RFC3339),
 				}
-			})
 
-			It("should pass because all quotas are sufficient", func() {
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 				err := admissionHandler.Admit(attrs)
 				Expect(err).NotTo(HaveOccurred())
-
 			})
 
-			It("should fail because limits of one quota is exceeded", func() {
-				shoot.Spec.Cloud.GCP.Workers[0].AutoScalerMax = 2
+			It("should pass because shoots secret binding has no quotas referenced", func() {
+				secretBinding.Quotas = make([]corev1.ObjectReference, 0)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 				err := admissionHandler.Admit(attrs)
-				Expect(err).To(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass shoots secret binding having quota with no metrics", func() {
+				emptyQuotaName := "empty-quota"
+				emptyQuota := garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: trialNamespace,
+						Name:      emptyQuotaName,
+					},
+					Spec: garden.QuotaSpec{
+						ClusterLifetimeDays: &quotaProjectLifetime,
+						Scope:               garden.QuotaScopeProject,
+						Metrics:             corev1.ResourceList{},
+					},
+				}
+				secretBinding.Quotas = []corev1.ObjectReference{
+					{
+						Namespace: trialNamespace,
+						Name:      emptyQuotaName,
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&emptyQuota)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
-		Context("tests for OpenStack shoots, which have special logic for collecting volume and machine types", func() {
+		Context("tests for OpenStack Shoots, which have special logic for collecting volume and machine types", func() {
 			var (
 				machineTypeNameOpenStack = "mx-test-1"
 				cloudProfileOpenStack    = garden.OpenStackProfile{
@@ -369,17 +326,10 @@ var _ = Describe("quotavalidator", func() {
 			)
 
 			BeforeEach(func() {
-				cloudProfile.Spec.GCP = nil
 				cloudProfile.Spec.OpenStack = &cloudProfileOpenStack
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				shoot.Spec.Cloud.GCP = nil
 				shoot.Spec.Cloud.OpenStack = &shootSpecCloudOpenStack
-			})
-
-			AfterEach(func() {
-				cloudProfile.Spec.GCP = &cloudProfileGCEBase
-				cloudProfile.Spec.OpenStack = nil
-				shoot.Spec.Cloud.GCP = &shootSpecCloudGCEBase
-				shoot.Spec.Cloud.OpenStack = nil
 			})
 
 			It("should pass because quota is sufficient", func() {
@@ -390,17 +340,8 @@ var _ = Describe("quotavalidator", func() {
 			})
 		})
 
-		Context("tests for extending shoots lifetime", func() {
+		Context("tests for extending the lifetime of a Shoot", func() {
 			BeforeEach(func() {
-				quota2 := *quotaSecret.DeepCopy()
-				privateSB := *privateSBBase.DeepCopy()
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
-				gardenInformerFactory.Garden().InternalVersion().PrivateSecretBindings().Informer().GetStore().Add(&privateSB)
-				shoot.Spec.Cloud.SecretBindingRef = corev1.ObjectReference{
-					Kind: "PrivateSecretBinding",
-					Name: "test-privateSB",
-				}
-
 				annotations := map[string]string{
 					common.ShootExpirationTimestamp: "2018-01-01T00:00:00+00:00",
 				}
@@ -409,10 +350,10 @@ var _ = Describe("quotavalidator", func() {
 			})
 
 			It("should pass because no quota prescribe a clusterLifetime", func() {
-				quota.Spec.ClusterLifetimeDays = nil
-				quota2.Spec.ClusterLifetimeDays = nil
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
-				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+				quotaProject.Spec.ClusterLifetimeDays = nil
+				quotaSecret.Spec.ClusterLifetimeDays = nil
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaSecret)
 
 				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
 
