@@ -1,5 +1,5 @@
 {{- if .Values.apiserver.enabled }}
-apiVersion: apiregistration.k8s.io/v1beta1
+apiVersion: {{ include "apiserviceversion" . }}
 kind: APIService
 metadata:
   name: v1beta1.garden.sapcloud.io

@@ -46,3 +46,11 @@ apps/v1
 apps/v1beta2
 {{- end -}}
 {{- end -}}
+
+{{- define "apiserviceversion" -}}
+{{- if semverCompare ">= 1.10" .Capabilities.KubeVersion.GitVersion -}}
+apiregistration.k8s.io/v1
+{{- else -}}
+apiregistration.k8s.io/v1beta1
+{{- end -}}
+{{- end -}}
