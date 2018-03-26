@@ -57,7 +57,7 @@ func determineErrorCode(message string) error {
 	var code gardenv1beta1.ErrorCode
 
 	switch {
-	case strings.Contains(message, "UnauthorizedOperation") || strings.Contains(message, "SignatureDoesNotMatch"):
+	case strings.Contains(message, "UnauthorizedOperation") || strings.Contains(message, "InvalidClientTokenId") || strings.Contains(message, "SignatureDoesNotMatch"):
 		code = gardenv1beta1.ErrorInfraUnauthorized
 	case strings.Contains(message, "LimitExceeded"):
 		code = gardenv1beta1.ErrorInfraQuotaExceeded
