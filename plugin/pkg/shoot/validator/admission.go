@@ -125,7 +125,7 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 	// name.
 	var (
 		projectName = shoot.Namespace
-		lengthLimit = 13
+		lengthLimit = 23
 	)
 	if projectNameLabel, ok := namespace.Labels[common.ProjectName]; ok {
 		projectName = projectNameLabel
