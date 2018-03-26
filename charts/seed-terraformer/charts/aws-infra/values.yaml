@@ -3,7 +3,6 @@
 
 # create:
 #   vpc: true
-#   igw: true
 
 # sshPublicKey: sshkey-12345
 
