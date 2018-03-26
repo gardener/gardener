@@ -24,11 +24,11 @@
   entity=""
   if cloud == "aws":
     entity="AWS account"
-  elif cloud == "azure":
+  elif cloud == "azure" or cloud == "az":
     entity="Azure subscription"
   elif cloud == "gcp":
     entity="GCP project"
-  elif cloud == "openstack":
+  elif cloud == "openstack" or cloud == "os":
     entity="OpenStack tenant"
 %># SecretBindings bind a secret from the same or another namespace together with Quotas from the same or other namespaces.
 ---

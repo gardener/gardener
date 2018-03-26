@@ -24,11 +24,11 @@
   region=""
   if cloud == "aws":
     region="eu-west-1"
-  elif cloud == "azure":
+  elif cloud == "azure" or cloud == "az":
     region="westeurope"
   elif cloud == "gcp":
     region="europe-west1"
-  elif cloud == "openstack":
+  elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "vagrant":
     region="local"
@@ -71,7 +71,7 @@ spec:
       % endif
       zones: ${value("spec.cloud.aws.zones", ["eu-west-1a"])}
     % endif
-    % if cloud == "azure":
+    % if cloud == "azure" or cloud == "az":
     azure: <% resourceGroupName = value("spec.cloud.azure.resourceGroup.name", "") %>
       % if resourceGroupName != "":
       resourceGroup:
@@ -126,7 +126,7 @@ spec:
       % endif
       zones: ${value("spec.cloud.gcp.zones", ["europe-west1-b"])}
     % endif
-    % if cloud == "openstack":
+    % if cloud == "openstack" or cloud == "os":
     openstack:
       loadBalancerProvider: ${value("spec.cloud.openstack.loadBalancerProvider", "haproxy")}
       floatingPoolName: ${value("spec.cloud.openstack.floatingPoolName", "MY-FLOATING-POOL")}

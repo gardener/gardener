@@ -24,11 +24,11 @@
   region=""
   if cloud == "aws":
     region="eu-west-1"
-  elif cloud == "azure":
+  elif cloud == "azure" or cloud == "az":
     region="westeurope"
   elif cloud == "gcp":
     region="europe-west1"
-  elif cloud == "openstack":
+  elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "vagrant":
     region="local"
@@ -141,7 +141,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - us-east-1c
       % endif
   % endif
-  % if cloud == "azure":
+  % if cloud == "azure" or cloud == "az":
   azure:
     constraints:
       dnsProviders:<% dnsProviders=value("spec.azure.constraints.dnsProviders", []) %>
@@ -312,7 +312,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - us-east1-d
     % endif
   % endif
-  % if cloud == "openstack":
+  % if cloud == "openstack" or cloud == "os":
   openstack:
     constraints:
       dnsProviders:<% dnsProviders=value("spec.openstack.constraints.dnsProviders", []) %>

@@ -24,11 +24,11 @@
   region=""
   if cloud == "aws":
     region="eu-west-1"
-  elif cloud == "azure":
+  elif cloud == "azure" or cloud == "az":
     region="westeurope"
   elif cloud == "gcp":
     region="europe-west1"
-  elif cloud == "openstack":
+  elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "vagrant":
     region="local"

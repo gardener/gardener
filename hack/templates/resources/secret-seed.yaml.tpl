@@ -24,11 +24,11 @@
   entity=""
   if cloud == "aws":
     entity="AWS account"
-  elif cloud == "azure":
+  elif cloud == "azure" or cloud == "az":
     entity="Azure subscription"
   elif cloud == "gcp":
     entity="GCP project"
-  elif cloud == "openstack":
+  elif cloud == "openstack" or cloud == "os":
     entity="OpenStack tenant"
 %>---<% if entity != "": print("# Secret containing cloud provider credentials for " + entity + " into which the Seed cluster have been provisioned.") %>
 apiVersion: v1
@@ -42,7 +42,7 @@ data:
   accessKeyID: ${value("data.accessKeyID", "base64(access-key-id)")}
   secretAccessKey: ${value("data.secretAccessKey", "base64(secret-access-key)")}
   % endif
-  % if cloud == "azure":
+  % if cloud == "azure" or cloud == "az":
   tenantID: ${value("data.tenantID", "base64(tenant-id)")}
   subscriptionID: ${value("data.subscriptionID", "base64(subscription-id)")}
   clientID: ${value("data.clientID", "base64(client-id)")}
@@ -51,7 +51,7 @@ data:
   % if cloud == "gcp":
   serviceaccount.json: ${value("data.serviceaccountjson", "base64(serviceaccount-json)")}
   % endif
-  % if cloud == "openstack":
+  % if cloud == "openstack" or cloud == "os":
   domainName: ${value("data.domainName", "base64(domain-name)")}
   tenantName: ${value("data.tenantName", "base64(tenant-name)")}
   username: ${value("data.username", "base64(username)")}
