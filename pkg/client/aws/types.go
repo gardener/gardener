@@ -23,7 +23,6 @@ import (
 // ClientInterface is an interface which must be implemented by AWS clients.
 type ClientInterface interface {
 	GetAccountID() (string, error)
-	CheckIfVPCExists(string) (bool, error)
 	GetInternetGateway(string) (string, error)
 	GetELB(string) (*elb.DescribeLoadBalancersOutput, error)
 	UpdateELBHealthCheck(string, string) error
