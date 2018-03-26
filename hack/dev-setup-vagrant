@@ -21,7 +21,7 @@ IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
 
-kubectl create namespace garden-development 2> /dev/null
+kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/cloudprofile-vagrant.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secret-dev-vagrant.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secretbinding-core-vagrant.yaml
@@ -82,7 +82,7 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
 metadata:
   name: vagrant
-  namespace: garden-development
+  namespace: garden-dev
 spec:
   cloud:
     profile: vagrant

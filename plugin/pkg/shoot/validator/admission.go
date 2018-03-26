@@ -25,10 +25,13 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 const (
@@ -48,9 +51,11 @@ type ValidateShoot struct {
 	*admission.Handler
 	cloudProfileLister listers.CloudProfileLister
 	seedLister         listers.SeedLister
+	namespaceLister    kubecorev1listers.NamespaceLister
 }
 
 var _ = admissioninitializer.WantsInternalGardenInformerFactory(&ValidateShoot{})
+var _ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 
 // New creates a new ValidateShoot admission plugin.
 func New() (*ValidateShoot, error) {
@@ -65,6 +70,11 @@ func (h *ValidateShoot) SetInternalGardenInformerFactory(f informers.SharedInfor
 	h.seedLister = f.Garden().InternalVersion().Seeds().Lister()
 }
 
+// SetKubeInformerFactory gets Lister from SharedInformerFactory.
+func (h *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+	h.namespaceLister = f.Core().V1().Namespaces().Lister()
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (h *ValidateShoot) ValidateInitialization() error {
 	if h.cloudProfileLister == nil {
@@ -72,6 +82,9 @@ func (h *ValidateShoot) ValidateInitialization() error {
 	}
 	if h.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if h.namespaceLister == nil {
+		return errors.New("missing namespace lister")
 	}
 	return nil
 }
@@ -99,6 +112,26 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 	seed, err := h.seedLister.Get(*shoot.Spec.Cloud.Seed)
 	if err != nil {
 		return apierrors.NewBadRequest("could not find referenced seed")
+	}
+	namespace, err := h.namespaceLister.Get(shoot.Namespace)
+	if err != nil {
+		return apierrors.NewBadRequest("could not find referenced namespace")
+	}
+
+	// We use the identifier "shoot-<project-name>-<shoot-name> in nearly all places: when creating infrastructure
+	// resources, Kubernetes resources, DNS names, etc. Some infrastructure resources have length constraints that
+	// this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed this limit.
+	// The project name is a label on the namespace. If it is not found, the namespace name itself is used as project
+	// name.
+	var (
+		projectName = shoot.Namespace
+		lengthLimit = 13
+	)
+	if projectNameLabel, ok := namespace.Labels[common.ProjectName]; ok {
+		projectName = projectNameLabel
+	}
+	if len(projectName+shoot.Name) > lengthLimit {
+		return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, projectName, shoot.Name))
 	}
 
 	cloudProviderInShoot, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)

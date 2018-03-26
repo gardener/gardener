@@ -17,12 +17,14 @@ package validator_test
 import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
+	kubeinformers "k8s.io/client-go/informers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,9 +34,11 @@ var _ = Describe("validator", func() {
 	Describe("#Admit", func() {
 		var (
 			admissionHandler      *ValidateShoot
+			kubeInformerFactory   kubeinformers.SharedInformerFactory
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			cloudProfile          garden.CloudProfile
 			seed                  garden.Seed
+			namespace             corev1.Namespace
 			shoot                 garden.Shoot
 
 			podCIDR     = garden.CIDR("100.96.0.0/11")
@@ -46,6 +50,13 @@ var _ = Describe("validator", func() {
 				Nodes:    &nodesCIDR,
 			}
 			seedName = "seed"
+
+			namespaceName = "my-ns"
+			namespaceBase = corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespaceName,
+				},
+			}
 
 			cloudProfileBase = garden.CloudProfile{
 				ObjectMeta: metav1.ObjectMeta{
@@ -72,7 +83,7 @@ var _ = Describe("validator", func() {
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "shoot",
-					Namespace: "my-namespace",
+					Namespace: namespaceName,
 				},
 				Spec: garden.ShootSpec{
 					Cloud: garden.Cloud{
@@ -94,11 +105,14 @@ var _ = Describe("validator", func() {
 		)
 
 		BeforeEach(func() {
+			namespace = namespaceBase
 			cloudProfile = cloudProfileBase
 			seed = seedBase
 			shoot = shootBase
 
 			admissionHandler, _ = New()
+			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
+			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 		})
@@ -115,6 +129,52 @@ var _ = Describe("validator", func() {
 			shoot.Spec.Cloud.OpenStack = nil
 		})
 
+		It("should reject Shoot resources with not fulfilling the length constraints (w/o project label on namespace)", func() {
+			tooLongName := "too-long-namespace"
+			namespace.ObjectMeta = metav1.ObjectMeta{
+				Name: tooLongName,
+			}
+			shoot.ObjectMeta = metav1.ObjectMeta{
+				Name:      "too-long-name",
+				Namespace: tooLongName,
+			}
+
+			kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
+			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+			err := admissionHandler.Admit(attrs)
+
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+		})
+
+		It("should forbid Shoot resources with not fulfilling the length constraints (w/ project label on namespace)", func() {
+			shortName := "short"
+			projectName := "too-long-label"
+			namespace.ObjectMeta = metav1.ObjectMeta{
+				Name: shortName,
+				Labels: map[string]string{
+					common.ProjectName: projectName,
+				},
+			}
+			shoot.ObjectMeta = metav1.ObjectMeta{
+				Name:      shortName,
+				Namespace: shortName,
+			}
+
+			kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
+			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+			err := admissionHandler.Admit(attrs)
+
+			Expect(err).To(HaveOccurred())
+			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+		})
+
 		It("should reject because the referenced cloud profile was not found", func() {
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
@@ -125,6 +185,7 @@ var _ = Describe("validator", func() {
 		})
 
 		It("should reject because the referenced seed was not found", func() {
+			kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
@@ -138,6 +199,7 @@ var _ = Describe("validator", func() {
 			cloudProfile.Spec.GCP = &garden.GCPProfile{}
 			shoot.Spec.Cloud.AWS = &garden.AWSCloud{}
 
+			kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 			gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -226,6 +288,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot node and the seed node networks intersect", func() {
 				shoot.Spec.Cloud.AWS.Networks.Nodes = &seedNodesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -239,6 +302,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
 				shoot.Spec.Cloud.AWS.Networks.Pods = &seedPodsCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -252,6 +316,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.AWS.Networks.Services = &seedServicesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -265,6 +330,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid dns provider", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -278,6 +344,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.2.3"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -294,6 +361,7 @@ var _ = Describe("validator", func() {
 					AMI:  "not-supported",
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -313,6 +381,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -333,6 +402,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -346,6 +416,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid zone", func() {
 				shoot.Spec.Cloud.AWS.Zones = []string{"invalid-zone"}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -360,6 +431,7 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Cloud.Region = "asia"
 				shoot.Spec.Cloud.AWS.Zones = []string{"asia-a"}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -455,6 +527,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot node and the seed node networks intersect", func() {
 				shoot.Spec.Cloud.Azure.Networks.Nodes = &seedNodesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -468,6 +541,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
 				shoot.Spec.Cloud.Azure.Networks.Pods = &seedPodsCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -481,6 +555,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.Azure.Networks.Services = &seedServicesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -494,6 +569,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid dns provider", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -507,6 +583,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.2.3"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -526,6 +603,7 @@ var _ = Describe("validator", func() {
 					Version:   "not-supported",
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -545,6 +623,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -565,6 +644,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -578,6 +658,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid region where no fault domain count has been specified", func() {
 				shoot.Spec.Cloud.Region = "asia"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -591,6 +672,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid region where no update domain count has been specified", func() {
 				shoot.Spec.Cloud.Region = "australia"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -675,6 +757,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot node and the seed node networks intersect", func() {
 				shoot.Spec.Cloud.GCP.Networks.Nodes = &seedNodesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -688,6 +771,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
 				shoot.Spec.Cloud.GCP.Networks.Pods = &seedPodsCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -701,6 +785,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.GCP.Networks.Services = &seedServicesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -714,6 +799,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid dns provider", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -727,6 +813,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.2.3"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -743,6 +830,7 @@ var _ = Describe("validator", func() {
 					Image: "not-supported",
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -762,6 +850,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -782,6 +871,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -795,6 +885,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid zone", func() {
 				shoot.Spec.Cloud.GCP.Zones = []string{"invalid-zone"}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -887,6 +978,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot node and the seed node networks intersect", func() {
 				shoot.Spec.Cloud.OpenStack.Networks.Nodes = &seedNodesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -900,6 +992,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
 				shoot.Spec.Cloud.OpenStack.Networks.Pods = &seedPodsCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -913,6 +1006,7 @@ var _ = Describe("validator", func() {
 			It("should reject because the shoot service and the seed service networks intersect", func() {
 				shoot.Spec.Cloud.OpenStack.Networks.Services = &seedServicesCIDR
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -926,6 +1020,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid dns provider", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -939,6 +1034,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid floating pool name", func() {
 				shoot.Spec.Cloud.OpenStack.FloatingPoolName = "invalid-pool"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -952,6 +1048,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.2.3"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -965,6 +1062,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid load balancer provider", func() {
 				shoot.Spec.Cloud.OpenStack.LoadBalancerProvider = "invalid-provider"
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -981,6 +1079,7 @@ var _ = Describe("validator", func() {
 					Image: "not-supported",
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -1000,6 +1099,7 @@ var _ = Describe("validator", func() {
 					},
 				}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
@@ -1013,6 +1113,7 @@ var _ = Describe("validator", func() {
 			It("should reject due to an invalid zone", func() {
 				shoot.Spec.Cloud.OpenStack.Zones = []string{"invalid-zone"}
 
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)

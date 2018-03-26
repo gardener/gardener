@@ -40,7 +40,7 @@ gardener-apiserver-d5989f856-swgbg             2/2       Running   0          32
 gardener-controller-manager-6f7bd556d6-p98fx   1/1       Running   0          32s
 
 $ make dev-setup-vagrant
-namespace "garden-development" created
+namespace "garden-dev" created
 cloudprofile "vagrant" created
 [..]
 ```
