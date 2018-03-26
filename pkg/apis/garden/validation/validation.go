@@ -866,13 +866,6 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			return allErrs
 		}
 
-		// Disable multi-zone deployments due to an issue with PVCs and volume bindings over multiple zones by the default class
-		// https://github.com/kubernetes/kubernetes/issues/50115
-		// TODO: remove the following block and uncomment below blocks once the issue is fixed.
-		if zoneCount != 1 {
-			allErrs = append(allErrs, field.Forbidden(gcpPath.Child("zones"), "cannot specify more than once zone currently"))
-		}
-
 		allErrs = append(allErrs, validateK8SNetworks(gcp.Networks.K8SNetworks, gcpPath.Child("networks"))...)
 
 		if len(gcp.Networks.Workers) != zoneCount {
