@@ -868,7 +868,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 					Properties: map[string]spec.Schema{
 						"schedule": {
 							SchemaProps: spec.SchemaProps{
-								Description: "schedule defines the cron schedule according to which a backup is taken from etcd.",
+								Description: "Schedule defines the cron schedule according to which a backup is taken from etcd.",
 								Type:        []string{"string"},
 								Format:      "",
 							},

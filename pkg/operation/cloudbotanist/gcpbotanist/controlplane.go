@@ -91,13 +91,13 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 		"storageProvider":  "GCS",
 		"storageContainer": stateVariables[bucketName],
 		"env": []map[string]interface{}{
-			map[string]interface{}{
+			{
 				"name":  "GOOGLE_APPLICATION_CREDENTIALS",
 				"value": path.Join(mountPath, ServiceAccountJSON),
 			},
 		},
 		"volumeMount": []map[string]interface{}{
-			map[string]interface{}{
+			{
 				"mountPath": mountPath,
 				"name":      common.BackupSecretName,
 			},

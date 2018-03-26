@@ -912,7 +912,7 @@ type Kube2IAMRole struct {
 
 // Backup holds information about the backup schedule and maximum.
 type Backup struct {
-	// schedule defines the cron schedule according to which a backup is taken from etcd.
+	// Schedule defines the cron schedule according to which a backup is taken from etcd.
 	Schedule string
 	// Maximum indicates how many backups should be kept at maximum.
 	Maximum int

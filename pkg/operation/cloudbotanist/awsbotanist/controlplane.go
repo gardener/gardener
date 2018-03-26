@@ -117,7 +117,7 @@ region = ` + b.Seed.Info.Spec.Cloud.Region
 		"backupSecret":     common.BackupSecretName,
 		"env":              []map[string]interface{}{},
 		"volumeMount": []map[string]interface{}{
-			map[string]interface{}{
+			{
 				"mountPath": "/root/.aws/",
 				"name":      common.BackupSecretName,
 			},

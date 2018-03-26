@@ -111,7 +111,7 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 		"backupSecret":     common.BackupSecretName,
 		"storageContainer": stateVariables[containerName],
 		"env": []map[string]interface{}{
-			map[string]interface{}{
+			{
 				"name": "STORAGE_ACCOUNT",
 				"valueFrom": map[string]interface{}{
 					"secretKeyRef": map[string]interface{}{
@@ -120,7 +120,7 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 					},
 				},
 			},
-			map[string]interface{}{
+			{
 				"name": "STORAGE_KEY",
 				"valueFrom": map[string]interface{}{
 					"secretKeyRef": map[string]interface{}{

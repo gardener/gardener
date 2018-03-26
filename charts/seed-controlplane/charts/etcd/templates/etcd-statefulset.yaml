@@ -129,7 +129,6 @@ done'
         - --storage-provider={{.Values.backup.storageProvider}}  
         - --store-prefix=etcd-{{.Values.role}}
         image: {{index .Values.images "etcd-backup-restore"}}    # change image here
-        imagePullPolicy: Always
         livenessProbe:
           httpGet:  
             path: /metrics

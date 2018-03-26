@@ -28,9 +28,6 @@ spec:
   dns:
     provider: aws-route53
     domain: johndoe-openstack.garden-dev.example.com
-  backup:
-    schedule: "*/5 * * * *"
-    maximum: 6
   maintenance:
     timeWindow:
       begin: 220000+0100
@@ -38,7 +35,7 @@ spec:
     autoUpdate:
       kubernetesVersion: true
   backup:
-    intervalInSecond: 86400
+    schedule: */5 * * * *
     maximum: 7
   addons:
     heapster:
