@@ -1,16 +1,18 @@
+# Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
+---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Seed
 metadata:
-  name: aws-dev
+  name: aws
 spec:
   cloud:
     profile: aws
     region: eu-west-1
   secretRef:
-    name: seed-aws-dev
+    name: seed-aws
     namespace: garden
   ingressDomain: dev.aws.seed.example.com
-  networks:
+  networks: # Seed and Shoot networks must be disjunct
     nodes: 10.240.0.0/16
     pods: 10.241.128.0/17
     services: 10.241.0.0/17

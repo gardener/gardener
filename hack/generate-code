@@ -76,3 +76,5 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=k8s.io/apimachinery/pkg/runtime \
   --output-package=github.com/gardener/gardener/pkg/openapi \
   -h <(headers)
+
+echo "CAUTION: Consider updating the example manifests by modifying `./$(dirname "${0}")/templates/resources` and running `generate-examples`.

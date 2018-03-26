@@ -1,3 +1,4 @@
+---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: CloudProfile
 metadata:
@@ -16,8 +17,8 @@ spec:
       - name: MY-FLOATING-POOL
       kubernetes:
         versions:
-        - 1.9.3
-        - 1.8.8
+        - 1.9.6
+        - 1.8.10
       loadBalancerProviders:
       - name: haproxy
       machineImages:

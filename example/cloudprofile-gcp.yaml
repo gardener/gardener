@@ -1,8 +1,13 @@
+---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: CloudProfile
 metadata:
   name: gcp
 spec:
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
   gcp:
     constraints:
       dnsProviders:
@@ -10,8 +15,8 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.9.3
-        - 1.8.8
+        - 1.9.6
+        - 1.8.10
       machineImages:
       - name: CoreOS
         image: projects/coreos-cloud/global/images/coreos-stable-1576-5-0-v20180105

@@ -23,8 +23,8 @@ MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
 
 kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/cloudprofile-vagrant.yaml
-kubectl apply -f ${EXAMPLE_DIR}/secret-dev-vagrant.yaml
-kubectl apply -f ${EXAMPLE_DIR}/secretbinding-core-vagrant.yaml
+kubectl apply -f ${EXAMPLE_DIR}/secret-cloudprovider-vagrant.yaml
+kubectl apply -f ${EXAMPLE_DIR}/secretbinding-cloudprovider-vagrant.yaml
 
 kubectl config set-cluster gardener-dev \
   --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
@@ -49,72 +49,14 @@ kubectl config use-context gardener-dev \
 # Different base64 implementations have different flags
 MINIKUBE_SEED_KUBECONFIG_B64=$(base64 ${MINIKUBE_SEED_KUBECONFIG} | tr -d '\r\n')
 
-cat <<EOF | kubectl apply -f -
-apiVersion: v1
-kind: Secret
-metadata:
-  name: seed-vagrant-dev
-  namespace: garden
-type: Opaque
-data:
-  kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}
----
-apiVersion: garden.sapcloud.io/v1beta1
-kind: Seed
-metadata:
-  name: vagrant-dev
-spec:
-  cloud:
-    profile: vagrant
-    region: local
-  secretRef:
-    name: seed-vagrant-dev
-    namespace: garden
-  ingressDomain: ${MINIKUBE_IP}.nip.io
-  networks:
-    nodes: 10.240.0.0/16
-    pods: 10.241.128.0/17
-    services: 10.241.0.0/17
-EOF
+yaml2json < example/secret-seed-vagrant.yaml | \
+  jq -r ".data.kubeconfig=\"${MINIKUBE_SEED_KUBECONFIG_B64}\"" | \
+  json2yaml | kubectl apply -f -
 
-cat <<EOF > ${DEV_DIR}/shoot-vagrant.yaml
-apiVersion: garden.sapcloud.io/v1beta1
-kind: Shoot
-metadata:
-  name: vagrant
-  namespace: garden-dev
-spec:
-  cloud:
-    profile: vagrant
-    region: local
-    secretBindingRef:
-      name: core-vagrant
-    vagrant:
-      networks:
-        nodes: 10.250.0.0/19
-        pods: 100.96.0.0/11
-        services: 100.64.0.0/13
-      endpoint: ${IP_ADDRESS}:3777
-  kubernetes:
-    version: 1.9.1
-  dns:
-    provider: unmanaged
-    domain: ${MINIKUBE_IP}.nip.io
-  maintenance:
-    timeWindow:
-      begin: 220000+0100
-      end: 230000+0100
-    autoUpdate:
-      kubernetesVersion: true
-  addons:
-    cluster-autoscaler:
-      enabled: false
-    heapster:
-      enabled: false
-    kubernetes-dashboard:
-      enabled: true
-    monocular:
-      enabled: false
-    nginx-ingress:
-      enabled: false
-EOF
+yaml2json < example/seed-vagrant.yaml | \
+  jq -r ".spec.ingressDomain=\"${MINIKUBE_IP}.nip.io\"" | \
+  json2yaml | kubectl apply -f -
+
+yaml2json < example/shoot-vagrant.yaml | \
+  jq -r ".metadata.name=\"vagrant\" | .spec.dns.domain=\"${MINIKUBE_IP}.nip.io\" | .spec.cloud.vagrant.endpoint=\"${IP_ADDRESS}:3777\"" | \
+  json2yaml > ${DEV_DIR}/shoot-vagrant.yaml

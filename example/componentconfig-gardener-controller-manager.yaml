@@ -1,3 +1,4 @@
+---
 apiVersion: componentconfig.sapcloud.io/v1alpha1
 kind: ControllerManagerConfiguration
 clientConnection:

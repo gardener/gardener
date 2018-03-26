@@ -33,7 +33,7 @@ kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secret-internal-domain-unmanaged.yaml
 
 cat <<EOF | kubectl apply -f -
-apiVersion: apps/v1beta2
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: etcd
@@ -49,7 +49,7 @@ spec:
         run: etcd
     spec:
       containers:
-      - image: quay.io/coreos/etcd:v3.1.10
+      - image: quay.io/coreos/etcd:v3.3.2
         name: etcd
         command:
         - etcd

@@ -1,0 +1,18 @@
+# Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
+---
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Seed
+metadata:
+  name: vagrant
+spec:
+  cloud:
+    profile: vagrant
+    region: local
+  secretRef:
+    name: seed-vagrant
+    namespace: garden
+  ingressDomain: <minikube-ip>.nip.io
+  networks: # Seed and Shoot networks must be disjunct
+    nodes: 192.168.99.100/24
+    pods: 172.17.0.0/16
+    services: 10.96.0.0/13

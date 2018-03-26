@@ -1,0 +1,20 @@
+#!/bin/bash -eu
+
+# install python requirements if needed
+if ! pip list 2>&1 | grep Mako &>/dev/null; then
+  pip install Mako
+fi
+
+PATH_TEMPLATES="$(dirname $0)/templates/resources"
+PATH_EXAMPLES="$(dirname $0)/../example"
+
+mkdir -p "$PATH_EXAMPLES"
+
+for cloud in aws azure gcp openstack vagrant; do
+  echo "* Rendering manifests for cloud '$cloud':"
+  for resource in cloudprofile seed secret-seed secret-cloudprovider secretbinding-cloudprovider shoot; do
+    echo "  * Template '$resource' rendered."
+    mako-render --var cloud="$cloud" "$PATH_TEMPLATES/$resource.yaml.tpl" > "$PATH_EXAMPLES/$resource-$cloud.yaml"
+  done
+  echo
+done

@@ -1,8 +1,13 @@
+---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: CloudProfile
 metadata:
   name: azure
 spec:
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
   azure:
     constraints:
       dnsProviders:
@@ -10,14 +15,13 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.9.3
-        - 1.8.8
+        - 1.8.10
       machineImages:
       - name: CoreOS
         publisher: CoreOS
         offer: CoreOS
         sku: Stable
-        version: 1576.5.0
+        version: 1632.3.0
       machineTypes:
       - name: Standard_DS2_v2
         cpu: "2"
