@@ -159,6 +159,10 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	// Update Shoot status
 	c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 
+	// Mark Shoot as healthy/unhealthy
+	healthy := shoot.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && shoot.Status.LastError == nil && conditionControlPlaneHealthy.Status == corev1.ConditionTrue && conditionEveryNodeReady.Status == corev1.ConditionTrue && conditionSystemComponentsHealthy.Status == corev1.ConditionTrue
+	c.labelShoot(shoot, healthy)
+
 	return nil
 }
 
@@ -171,7 +175,18 @@ func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, condi
 
 	_, err := c.updater.UpdateShootStatusIfNoOperation(shoot)
 	if err != nil {
-		logger.Logger.Errorf("Could not update the Seed status: %+v", err)
+		logger.Logger.Errorf("Could not update the Shoot status: %+v", err)
+	}
+
+	return err
+}
+
+func (c *defaultCareControl) labelShoot(shoot *gardenv1beta1.Shoot, healthy bool) error {
+	shoot.Labels = computeLabelsWithShootHealthiness(shoot, healthy)
+
+	_, err := c.updater.UpdateShoot(shoot)
+	if err != nil {
+		logger.Logger.Errorf("Could not update the Shoot metadata: %s", err.Error())
 	}
 
 	return err

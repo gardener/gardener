@@ -153,6 +153,10 @@ const (
 	// ShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	ShootUseAsSeed = "shoot.garden.sapcloud.io/use-as-seed"
+
+	// ShootUnhealthy is a constant for a label on a Shoot resource indicating the the Shoot is unhealthy. It is set and unset by the
+	// Shoot Care controller and can be used to easily identify Shoot clusters with issues.
+	ShootUnhealthy = "shoot.garden.sapcloud.io/unhealthy"
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

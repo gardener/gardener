@@ -221,5 +221,11 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}
+
+	o.Shoot.Info.Labels = computeLabelsWithShootHealthiness(o.Shoot.Info, false)
+	newShootAfterLabel, err := c.updater.UpdateShoot(o.Shoot.Info)
+	if err == nil {
+		o.Shoot.Info = newShootAfterLabel
+	}
 	return err
 }

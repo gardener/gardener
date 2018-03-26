@@ -114,3 +114,18 @@ func shootUpdateValidationRequired(lastOperation *gardenv1beta1.LastOperation) b
 	}
 	return true
 }
+
+func computeLabelsWithShootHealthiness(shoot *gardenv1beta1.Shoot, healthy bool) map[string]string {
+	labels := shoot.Labels
+	if labels == nil {
+		labels = map[string]string{}
+	}
+
+	if !healthy {
+		labels[common.ShootUnhealthy] = "true"
+	} else {
+		delete(labels, common.ShootUnhealthy)
+	}
+
+	return labels
+}

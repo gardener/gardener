@@ -29,7 +29,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -53,15 +52,14 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 		oldShootJSON, _ = json.Marshal(oldShoot)
 		newShootJSON, _ = json.Marshal(newShoot)
 		shootLogger     = logger.NewShootLogger(logger.Logger, newShoot.ObjectMeta.Name, newShoot.ObjectMeta.Namespace, "")
-		specChanged     = !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec)
-		statusChanged   = !apiequality.Semantic.DeepEqual(oldShoot.Status, newShoot.Status)
 	)
 	shootLogger.Debugf(string(oldShootJSON))
 	shootLogger.Debugf(string(newShootJSON))
 
-	// If the .spec field has not changed, but the .status field has, then the Update event was triggerd by the
-	// Gardener itself as it has updated the .status field. In this case, we do not need to do anything.
-	if !specChanged && statusChanged {
+	// If the generation did not change for an update event (i.e., no changes to the .spec section have
+	// been made), we do not want to add the Shoot to th queue. The period reconciliation is handled
+	// elsewhere by adding the Shoot to the queue to dedicated times.
+	if newShoot.Generation == newShoot.Status.ObservedGeneration {
 		shootLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}

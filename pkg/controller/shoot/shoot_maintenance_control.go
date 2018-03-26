@@ -172,7 +172,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		}
 
 		// Update the Shoot resource object.
-		if _, err := c.updater.UpdateShootSpec(shoot); err != nil {
+		if _, err := c.updater.UpdateShoot(shoot); err != nil {
 			handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
 			return nil
 		}
