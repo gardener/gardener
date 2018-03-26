@@ -2,7 +2,7 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
 metadata:
   name: johndoe-gcp
-  namespace: garden-development
+  namespace: garden-dev
 spec:
   cloud:
     profile: gcp

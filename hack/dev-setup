@@ -29,7 +29,7 @@ mkdir -p ${DEV_DIR}
 cp ${EXAMPLE_DIR}/componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
 
 kubectl apply -f ${EXAMPLE_DIR}/namespace-garden.yaml
-kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-development.yaml
+kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secret-internal-domain-unmanaged.yaml
 
 cat <<EOF | kubectl apply -f -

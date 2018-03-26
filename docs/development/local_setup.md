@@ -163,7 +163,7 @@ Please provide an *internal domain secret* (see [this](../../example/secret-inte
 ```bash
 $ make dev-setup
 namespace "garden" created
-namespace "garden-development" created
+namespace "garden-dev" created
 secret "internal-domain-unmanaged" created
 deployment "etcd" created
 service "etcd" created
@@ -289,7 +289,7 @@ shoot "vagrant" created
 When the Shoot API server is created you can download the `kubeconfig` for it and access it:
 
 ```bash
-$ kubectl --namespace shoot-development-vagrant get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
+$ kubectl --namespace shoot-garden-dev-vagrant get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
 
 # Depending on your Internet speed, it can take some time, before your node reports a READY status.
 $ kubectl --kubeconfig dev/shoot-kubeconfig get nodes
@@ -309,7 +309,7 @@ $ vagrant ssh
 To delete the Shoot cluster
 
 ```bash
-$ ./hack/delete-shoot vagrant garden-development
+$ ./hack/delete-shoot vagrant garden-dev
 shoot "vagrant" deleted
 shoot "vagrant" patched
 ```

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: garden-development
+  name: garden-dev
   labels:
     garden.sapcloud.io/role: project
-    project.garden.sapcloud.io/name: development
+    project.garden.sapcloud.io/name: dev
