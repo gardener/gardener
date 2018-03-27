@@ -13,7 +13,7 @@ spec:
     vagrant:
       endpoint: localhost:3777 # endpoint service pointing to gardener-vagrant-provider
   kubernetes:
-    version: 1.9.6
+    version: 1.10.0
   dns:
     provider: unmanaged
     domain: <minikube-ip>.nip.io

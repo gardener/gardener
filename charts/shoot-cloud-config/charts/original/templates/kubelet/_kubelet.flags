@@ -35,7 +35,7 @@
 {{ $param }} \
 {{- end }}
 --v=2
-{{- else }}
+{{- else -}}
 --allow-privileged=true \
 --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
 --cloud-provider={{ .cloudProvider.name }} \

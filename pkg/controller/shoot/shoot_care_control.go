@@ -157,7 +157,9 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = healthCheck(botanist, cloudBotanist, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
 
 	// Update Shoot status
-	c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
+	if newShoot, _ := c.updateShootStatus(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy); newShoot != nil {
+		shoot = newShoot
+	}
 
 	// Mark Shoot as healthy/unhealthy
 	healthy := shoot.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && shoot.Status.LastError == nil && conditionControlPlaneHealthy.Status == corev1.ConditionTrue && conditionEveryNodeReady.Status == corev1.ConditionTrue && conditionSystemComponentsHealthy.Status == corev1.ConditionTrue
@@ -166,19 +168,19 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	return nil
 }
 
-func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions ...gardenv1beta1.Condition) error {
+func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions ...gardenv1beta1.Condition) (*gardenv1beta1.Shoot, error) {
 	if !helper.ConditionsNeedUpdate(shoot.Status.Conditions, conditions) {
-		return nil
+		return shoot, nil
 	}
 
 	shoot.Status.Conditions = conditions
 
-	_, err := c.updater.UpdateShootStatusIfNoOperation(shoot)
+	newShoot, err := c.updater.UpdateShootStatusIfNoOperation(shoot)
 	if err != nil {
 		logger.Logger.Errorf("Could not update the Shoot status: %+v", err)
 	}
 
-	return err
+	return newShoot, err
 }
 
 func (c *defaultCareControl) labelShoot(shoot *gardenv1beta1.Shoot, healthy bool) error {

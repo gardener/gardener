@@ -27,7 +27,7 @@ spec:
         autoScalerMax: 2
       zones: ['eu-west-1a']
   kubernetes:
-    version: 1.9.6
+    version: 1.10.0
   dns:
     provider: aws-route53
     domain: johndoe-aws.garden-dev.example.com

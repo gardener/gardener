@@ -1,0 +1,18 @@
+# Quota object limiting the resources consumed by Shoot clusters either per cloud provider secret or per project/namespace.
+---
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Quota
+metadata:
+  name: trial-quota
+  namespace: garden-trial
+spec:
+  scope: secret
+# clusterLifetimeDays: 14
+  metrics:
+    cpu: "200"
+    gpu: "20"
+    memory: 4000Gi
+    storage.basic: 8000Gi
+    storage.standard: 8000Gi
+    storage.premium: 2000Gi
+    loadbalancer: "100"

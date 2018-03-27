@@ -61,6 +61,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
+        - 1.10.0
         - 1.9.6
         - 1.8.10
         % endif
@@ -248,6 +249,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
+        - 1.10.0
         - 1.9.6
         - 1.8.10
         % endif

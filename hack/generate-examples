@@ -10,6 +10,7 @@ PATH_EXAMPLES="$(dirname $0)/../example"
 
 mkdir -p "$PATH_EXAMPLES"
 
+# render cloud-specific templates
 for cloud in aws azure gcp openstack vagrant; do
   echo "* Rendering manifests for cloud '$cloud':"
   for resource in cloudprofile seed secret-seed secret-cloudprovider secretbinding-cloudprovider shoot; do
@@ -17,4 +18,10 @@ for cloud in aws azure gcp openstack vagrant; do
     mako-render --var cloud="$cloud" "$PATH_TEMPLATES/$resource.yaml.tpl" > "$PATH_EXAMPLES/$resource-$cloud.yaml"
   done
   echo
+done
+
+# render cloud-independent templates
+for template in quota; do
+  echo "* Template '$template' rendered."
+  mako-render "$PATH_TEMPLATES/$template.yaml.tpl" > "$PATH_EXAMPLES/$template.yaml"
 done

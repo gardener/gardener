@@ -58,7 +58,7 @@
     cpuManagerReconcilePeriod: 10s
 {{- if .kubernetes.kubelet.featureGates }}
     featureGates:
-{{ .kubernetes.kubelet.featureGates | indent 6 }}
+{{ toYaml .kubernetes.kubelet.featureGates | indent 6 }}
 {{- end }}
     runtimeRequestTimeout: 2m0s
     hairpinMode: promiscuous-bridge
