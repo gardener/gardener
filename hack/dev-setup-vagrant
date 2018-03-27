@@ -49,14 +49,12 @@ kubectl config use-context gardener-dev \
 # Different base64 implementations have different flags
 MINIKUBE_SEED_KUBECONFIG_B64=$(base64 ${MINIKUBE_SEED_KUBECONFIG} | tr -d '\r\n')
 
-yaml2json < example/secret-seed-vagrant.yaml | \
-  jq -r ".data.kubeconfig=\"${MINIKUBE_SEED_KUBECONFIG_B64}\"" | \
-  json2yaml | kubectl apply -f -
+sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}/g" example/secret-seed-vagrant.yaml | \
+  kubectl apply -f -
 
-yaml2json < example/seed-vagrant.yaml | \
-  jq -r ".spec.ingressDomain=\"${MINIKUBE_IP}.nip.io\"" | \
-  json2yaml | kubectl apply -f -
+sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP}.nip.io/g" example/seed-vagrant.yaml | \
+  kubectl apply -f -
 
-yaml2json < example/shoot-vagrant.yaml | \
-  jq -r ".metadata.name=\"vagrant\" | .spec.dns.domain=\"${MINIKUBE_IP}.nip.io\" | .spec.cloud.vagrant.endpoint=\"${IP_ADDRESS}:3777\"" | \
-  json2yaml > ${DEV_DIR}/shoot-vagrant.yaml
+sed -e "s/domain: <minikube-ip>.nip.io/domain: ${MINIKUBE_IP}.nip.io/g" example/shoot-vagrant.yaml | \
+  sed -e "s/endpoint: localhost:3777/endpoint: ${IP_ADDRESS}:3777/g" | \
+  sed -e "s/name: johndoe-vagrant/name: vagrant/g" >${DEV_DIR}/shoot-vagrant.yaml
