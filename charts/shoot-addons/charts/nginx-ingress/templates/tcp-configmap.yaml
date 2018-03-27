@@ -11,6 +11,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "fullname" . }}-tcp
+  namespace: kube-system
 data:
 {{ toYaml .Values.tcp | indent 2 }}
 {{- end }}

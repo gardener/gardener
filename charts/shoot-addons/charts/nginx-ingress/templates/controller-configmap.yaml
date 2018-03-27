@@ -10,6 +10,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "controller.fullname" . }}
+  namespace: kube-system
 data:
   enable-vts-status: "{{ .Values.controller.stats.enabled }}"
 {{- if .Values.controller.config }}

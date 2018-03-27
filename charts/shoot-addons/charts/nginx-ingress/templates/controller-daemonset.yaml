@@ -11,6 +11,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "controller.fullname" . }}
+  namespace: kube-system
 spec:
   template:
     metadata:

@@ -16,6 +16,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "fullname" . }}
+  namespace: kube-system
 spec:
   rules:
   {{- range .Values.ingress.hosts }}

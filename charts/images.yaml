@@ -15,7 +15,7 @@ images:
   tag: "0.2.0"
 - name: kube-addon-manager
   repository: k8s.gcr.io/kube-addon-manager
-  tag: v8.5
+  tag: v8.6
 - name: vpn-seed
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
   tag: "0.8.0"
@@ -52,13 +52,13 @@ images:
 # Shoot core addons
 - name: calico-node
   repository: quay.io/calico/node
-  tag: v3.0.3
+  tag: v3.0.4
 - name: calico-cni
   repository: quay.io/calico/cni
-  tag: v2.0.2
+  tag: v2.0.3
 - name: calico-typha
   repository: quay.io/calico/typha
-  tag: v0.6.2
+  tag: v0.7.0
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.8.0"

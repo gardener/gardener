@@ -15,6 +15,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "defaultBackend.fullname" . }}
+  namespace: kube-system
 spec:
 {{- if .Values.defaultBackend.service.clusterIP }}
   clusterIP: "{{ .Values.defaultBackend.service.clusterIP }}"

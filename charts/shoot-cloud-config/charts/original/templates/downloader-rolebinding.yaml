@@ -2,6 +2,7 @@ apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
   name: cloud-config-downloader
+  namespace: kube-system
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 roleRef:

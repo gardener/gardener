@@ -11,6 +11,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "defaultBackend.fullname" . }}
+  namespace: kube-system
 spec:
   replicas: {{ .Values.defaultBackend.replicaCount }}
   selector:

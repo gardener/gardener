@@ -10,6 +10,7 @@ metadata:
     {{ $key }}: {{ $value }}
     {{- end }}
   name: {{ template "fullname" . }}-nanny
+  namespace: kube-system
 rules:
 - apiGroups:
   - extensions
@@ -29,6 +30,7 @@ apiVersion: {{include "rbacversion" .}}
 kind: RoleBinding
 metadata:
   name: {{ template "fullname" . }}-nanny
+  namespace: kube-system
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     app: {{ template "fullname" . }}

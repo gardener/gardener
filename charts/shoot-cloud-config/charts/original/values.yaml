@@ -9,9 +9,9 @@
 # kubernetes:
 #   caCert: abcd
 #   clusterDNS: 100.64.0.10
+#   domain: cluster.local
 #   kubelet:
 #     bootstrapToken: hugo
-#     domain: cluster.local
 #     hostnameOverride: false
 #     parameters: []
 #     featureGates: {}

@@ -15,6 +15,7 @@ metadata:
     # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "controller.fullname" . }}-stats
+  namespace: kube-system
 spec:
 {{- if .Values.controller.stats.service.clusterIP }}
   clusterIP: "{{ .Values.controller.stats.service.clusterIP }}"
