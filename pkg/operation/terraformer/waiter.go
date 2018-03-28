@@ -96,14 +96,14 @@ func (t *Terraformer) waitForJob() bool {
 			}
 			return false, err
 		}
-		// Check whether the Job has been successful (at least one succeeded Pod)
-		if job.Status.Succeeded >= 1 {
-			succeeded = true
-			return true, nil
-		}
-		// Check whether the Job is still running at all
+		// Check the job conditions to identifiy whether the job has been completed or failed.
 		for _, cond := range job.Status.Conditions {
-			if cond.Type == batchv1.JobComplete || cond.Type == batchv1.JobFailed {
+			if cond.Type == batchv1.JobComplete && cond.Status == corev1.ConditionTrue {
+				succeeded = true
+				return true, nil
+			}
+			if cond.Type == batchv1.JobFailed && cond.Status == corev1.ConditionTrue {
+				t.Logger.Errorf("Terraform Job %s failed for reason '%s': '%s'", t.JobName, cond.Reason, cond.Message)
 				return true, nil
 			}
 		}

@@ -2,15 +2,15 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{.Values.names.job}}
-  namespace: {{.Release.Namespace}}
+  name: {{ .Values.names.job }}
+  namespace: {{ .Release.Namespace }}
 spec:
-  activeDeadlineSeconds: 1800
-  backoffLimit: 30
+  activeDeadlineSeconds: 3600
+  backoffLimit: 3
   template:
     metadata:
-      name: {{.Values.names.job}}
-      namespace: {{.Release.Namespace}}
+      name: {{ .Values.names.job }}
+      namespace: {{ .Release.Namespace }}
     spec:
-{{include "terraformer.podSpec" . | indent 6}}
+{{ include "terraformer.podSpec" . | indent 6 }}
 {{- end }}

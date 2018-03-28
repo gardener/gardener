@@ -8,7 +8,7 @@ containers:
   command:
   - sh
   - -c
-  - sh /terraform.sh {{.Values.script}}{{if ne .Values.script "validate"}} 2>&1; [[ -f /success ]] && exit 0 || exit 1{{end}}
+  - sh /terraform.sh {{ .Values.script }}{{ if ne .Values.script "validate" }} 2>&1; [[ -f /success ]] && exit 0 || exit 1{{ end }}
   resources:
     requests:
       cpu: 100m
@@ -16,7 +16,7 @@ containers:
   terminationMessagePolicy: File
   env:
   - name: TF_STATE_CONFIG_MAP_NAME
-    value: {{.Values.names.state}}
+    value: {{ .Values.names.state }}
 {{- if .Values.terraformVariablesEnvironment }}
 {{ toYaml .Values.terraformVariablesEnvironment | indent 2 }}
 {{- end }}
@@ -30,11 +30,11 @@ containers:
 volumes:
 - name: tf
   configMap:
-    name: {{.Values.names.configuration}}
+    name: {{ .Values.names.configuration }}
 - name: tfvars
   secret:
-    secretName: {{.Values.names.variables}}
+    secretName: {{ .Values.names.variables }}
 - name: tfstate
   configMap:
-    name: {{.Values.names.state}}
+    name: {{ .Values.names.state }}
 {{- end -}}
