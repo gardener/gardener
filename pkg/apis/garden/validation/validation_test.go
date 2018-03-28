@@ -2528,19 +2528,6 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid specifying more than one zone", func() {
-				shoot.Spec.Cloud.GCP.Zones = []string{"zone1", "zone2"}
-				shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"10.250.0.0/16", "10.250.0.0/16"}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
-				}))
-			})
-
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				cidr := garden.CIDR("255.255.255.255/32")
