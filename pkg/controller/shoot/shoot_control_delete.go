@@ -89,12 +89,12 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 
 	var (
 		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && len(podList.Items) != 0
-		defaultRetry          = 5 * time.Minute
-		cleanupRetry          = 10 * time.Minute
+		defaultRetry          = 30 * time.Second
+		cleanupRetry          = 2 * time.Minute
 		isCloud               = o.Shoot.Info.Spec.Cloud.Vagrant == nil
 
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
-		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, defaultRetry, cleanupShootResources)
+		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources)
 		applyDeleteHook                  = f.AddTask(shootCloudBotanist.ApplyDeleteHook, defaultRetry, initializeShootClients)
 		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, applyDeleteHook)
 		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, applyDeleteHook)

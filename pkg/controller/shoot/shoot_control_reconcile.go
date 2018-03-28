@@ -52,7 +52,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	}
 
 	var (
-		defaultRetry = 5 * time.Minute
+		defaultRetry = 30 * time.Second
 		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
 		isCloud      = o.Shoot.Info.Spec.Cloud.Vagrant == nil
 
@@ -71,7 +71,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		_                                    = f.AddTask(hybridBotanist.DeployKubeControllerManager, defaultRetry, deployCloudProviderConfig, deployKubeAPIServer)
 		_                                    = f.AddTask(hybridBotanist.DeployKubeScheduler, defaultRetry, deployKubeAPIServer)
 		waitUntilKubeAPIServerIsReady        = f.AddTask(botanist.WaitUntilKubeAPIServerIsReady, 0, deployKubeAPIServer)
-		initializeShootClients               = f.AddTask(botanist.InitializeShootClients, defaultRetry, waitUntilKubeAPIServerIsReady)
+		initializeShootClients               = f.AddTask(botanist.InitializeShootClients, 2*time.Minute, waitUntilKubeAPIServerIsReady)
 		deployMachineControllerManager       = f.AddTaskConditional(botanist.DeployMachineControllerManager, defaultRetry, isCloud, initializeShootClients)
 		deployMachines                       = f.AddTaskConditional(hybridBotanist.DeployMachines, defaultRetry, isCloud, deployMachineControllerManager, deployInfrastructure, initializeShootClients)
 		deployKubeAddonManager               = f.AddTask(hybridBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients, deployInfrastructure)
