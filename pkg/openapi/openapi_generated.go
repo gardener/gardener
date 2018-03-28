@@ -3248,9 +3248,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError"),
 							},
 						},
-						"operationStartTime": {
+						"retryCycleStartTime": {
 							SchemaProps: spec.SchemaProps{
-								Description: "OperationStartTime is the start time of the last operation (used to determine how often it should be retried)",
+								Description: "RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation must be retried until we give up).",
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 							},
 						},
@@ -8928,6 +8928,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int64",
 							},
 						},
+						"runAsGroup": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in SecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence for that container.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
+						},
 						"runAsNonRoot": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in SecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
@@ -10916,6 +10923,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int64",
 							},
 						},
+						"runAsGroup": {
+							SchemaProps: spec.SchemaProps{
+								Description: "The GID to run the entrypoint of the container process. Uses runtime default if unset. May also be set in PodSecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
+						},
 						"runAsNonRoot": {
 							SchemaProps: spec.SchemaProps{
 								Description: "Indicates that the container must run as a non-root user. If true, the Kubelet will validate the image at runtime to ensure that it does not run as UID 0 (root) and fail to start the container if it does. If unset or false, no such validation will be performed. May also be set in PodSecurityContext.  If set in both SecurityContext and PodSecurityContext, the value specified in SecurityContext takes precedence.",
@@ -11887,7 +11901,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 						"mountPropagation": {
 							SchemaProps: spec.SchemaProps{
-								Description: "mountPropagation determines how mounts are propagated from the host to container and the other way around. When not set, MountPropagationHostToContainer is used. This field is alpha in 1.8 and can be reworked or removed in a future release.",
+								Description: "mountPropagation determines how mounts are propagated from the host to container and the other way around. When not set, MountPropagationHostToContainer is used. This field is beta in 1.10.",
 								Type:        []string{"string"},
 								Format:      "",
 							},

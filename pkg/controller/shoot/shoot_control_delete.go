@@ -133,6 +133,15 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 }
 
 func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) error {
+	var (
+		status = o.Shoot.Info.Status
+		now    = metav1.Now()
+	)
+
+	if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardenv1beta1.ShootLastOperationTypeDelete) {
+		o.Shoot.Info.Status.RetryCycleStartTime = &now
+	}
+
 	o.Shoot.Info.Status.Gardener = *o.GardenerInfo
 	o.Shoot.Info.Status.Conditions = nil
 	o.Shoot.Info.Status.ObservedGeneration = o.Shoot.Info.Generation
@@ -152,6 +161,7 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 }
 
 func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) error {
+	o.Shoot.Info.Status.RetryCycleStartTime = nil
 	o.Shoot.Info.Status.LastError = nil
 	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
 		Type:           gardenv1beta1.ShootLastOperationTypeDelete,
@@ -201,15 +211,16 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 		description = lastError.Description
 	)
 
-	if !utils.TimeElapsed(o.Shoot.Info.DeletionTimestamp, c.config.Controllers.Shoot.RetryDuration.Duration) {
+	if !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 		description += " Operation will be retried."
 		state = gardenv1beta1.ShootLastOperationStateError
 	} else {
 		delete(o.Shoot.Info.Annotations, common.ConfirmationDeletionTimestamp)
+		o.Shoot.Info.Status.RetryCycleStartTime = nil
 	}
 
-	o.Shoot.Info.Status.LastError = lastError
 	o.Shoot.Info.Status.Gardener = *o.GardenerInfo
+	o.Shoot.Info.Status.LastError = lastError
 	o.Shoot.Info.Status.LastOperation.Type = gardenv1beta1.ShootLastOperationTypeDelete
 	o.Shoot.Info.Status.LastOperation.State = state
 	o.Shoot.Info.Status.LastOperation.Description = description

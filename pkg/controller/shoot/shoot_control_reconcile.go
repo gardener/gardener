@@ -118,8 +118,8 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 	if len(status.UID) == 0 {
 		o.Shoot.Info.Status.UID = o.Shoot.Info.UID
 	}
-	if status.OperationStartTime == nil || (status.LastOperation != nil && status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded) {
-		o.Shoot.Info.Status.OperationStartTime = &now
+	if status.RetryCycleStartTime == nil {
+		o.Shoot.Info.Status.RetryCycleStartTime = &now
 	}
 
 	o.Shoot.Info.Status.Conditions = nil
@@ -141,6 +141,7 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 }
 
 func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
+	o.Shoot.Info.Status.RetryCycleStartTime = nil
 	o.Shoot.Info.Status.LastError = nil
 	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
 		Type:           operationType,
@@ -165,10 +166,13 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 		progress      = 1
 	)
 
-	if !utils.TimeElapsed(o.Shoot.Info.Status.OperationStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
+	if !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 		description += " Operation will be retried."
 		state = gardenv1beta1.ShootLastOperationStateError
+	} else {
+		o.Shoot.Info.Status.RetryCycleStartTime = nil
 	}
+
 	if lastOperation != nil {
 		progress = lastOperation.Progress
 	}

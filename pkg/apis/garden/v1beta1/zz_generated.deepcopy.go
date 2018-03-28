@@ -2366,8 +2366,8 @@ func (in *ShootStatus) DeepCopyInto(out *ShootStatus) {
 			(*in).DeepCopyInto(*out)
 		}
 	}
-	if in.OperationStartTime != nil {
-		in, out := &in.OperationStartTime, &out.OperationStartTime
+	if in.RetryCycleStartTime != nil {
+		in, out := &in.RetryCycleStartTime, &out.RetryCycleStartTime
 		if *in == nil {
 			*out = nil
 		} else {

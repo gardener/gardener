@@ -77,4 +77,5 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --output-package=github.com/gardener/gardener/pkg/openapi \
   -h <(headers)
 
-echo "CAUTION: Consider updating the example manifests by modifying `./$(dirname "${0}")/templates/resources` and running `generate-examples`.
+echo
+echo "NOTE: If you changed the API then consider updating the example manifests by modifying '$(dirname $0)/templates/resources/*.yaml.tpl' and running '$(dirname $0)/generate-examples'".

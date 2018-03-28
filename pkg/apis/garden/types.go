@@ -537,10 +537,10 @@ type ShootStatus struct {
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
 	LastError *LastError
-	// OperationStartTime is the start time of the last operation (used to determine how often it should
-	// be retried)
+	// RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation
+	// must be retried until we give up).
 	// +optional
-	OperationStartTime *metav1.Time
+	RetryCycleStartTime *metav1.Time
 	// ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the
 	// Shoot's generation, which is updated on mutation by the API Server.
 	// +optional
