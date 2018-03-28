@@ -16,6 +16,7 @@ package validation_test
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
@@ -3119,6 +3120,36 @@ var _ = Describe("validation", func() {
 
 				Expect(len(errorList)).To(Equal(0))
 			})
+		})
+
+		It("should forbid updating the spec for shoots with deletion timestamp", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			deletionTimestamp := metav1.NewTime(time.Now())
+			shoot.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			newShoot.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			newShoot.Spec.Maintenance.AutoUpdate.KubernetesVersion = false
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec"),
+			}))
+		})
+
+		It("should allow updating the metadata for shoots with deletion timestamp", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			deletionTimestamp := metav1.NewTime(time.Now())
+			shoot.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			newShoot.ObjectMeta.DeletionTimestamp = &deletionTimestamp
+			newShoot.ObjectMeta.Labels = map[string]string{
+				"new-key": "new-value",
+			}
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(0))
 		})
 	})
 })
