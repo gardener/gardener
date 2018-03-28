@@ -118,7 +118,7 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 	if len(status.UID) == 0 {
 		o.Shoot.Info.Status.UID = o.Shoot.Info.UID
 	}
-	if status.RetryCycleStartTime == nil {
+	if status.RetryCycleStartTime == nil || o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration {
 		o.Shoot.Info.Status.RetryCycleStartTime = &now
 	}
 
