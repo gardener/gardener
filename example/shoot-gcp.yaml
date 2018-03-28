@@ -11,11 +11,11 @@ spec:
     secretBindingRef:
       name: core-gcp
     gcp:
-      networks: 
+      networks:
       # vpc:
       #   name: my-vpc
         workers: ['10.250.0.0/19']
-      workers: 
+      workers:
       - name: cpu-worker
         machineType: n1-standard-4
         volumeType: pd-standard

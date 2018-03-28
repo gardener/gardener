@@ -10,7 +10,7 @@ spec:
     region: westeurope
     secretBindingRef:
       name: core-azure
-    azure: 
+    azure:
     # resourceGroup:
     #   name: mygroup
       networks:
@@ -18,7 +18,7 @@ spec:
         # name: my-vnet
           cidr: 10.250.0.0/16
         workers: 10.250.0.0/19
-      workers: 
+      workers:
       - name: cpu-worker
         machineType: Standard_DS1_v2
         volumeType: standard

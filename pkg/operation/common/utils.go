@@ -21,12 +21,14 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
@@ -164,4 +166,20 @@ func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap ma
 		})
 	}
 	return m
+}
+
+// CheckConfirmationDeletionTimestampValid checks whether an annotation with the key of the constant <ConfirmationDeletionTimestamp>
+// variable exists on the provided <shoot> object and if yes, whether its value is equal to the Shoot's
+// '.metadata.deletionTimestamp' value. In that case, it returns true, otherwise false.
+func CheckConfirmationDeletionTimestampValid(objectMeta metav1.ObjectMeta) bool {
+	deletionTimestamp := objectMeta.DeletionTimestamp
+	if !metav1.HasAnnotation(objectMeta, ConfirmationDeletionTimestamp) || deletionTimestamp == nil {
+		return false
+	}
+	timestamp, err := time.Parse(time.RFC3339, objectMeta.Annotations[ConfirmationDeletionTimestamp])
+	if err != nil {
+		return false
+	}
+	confirmationDeletionTimestamp := metav1.NewTime(timestamp)
+	return confirmationDeletionTimestamp.Equal(deletionTimestamp)
 }

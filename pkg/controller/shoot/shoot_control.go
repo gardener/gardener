@@ -175,18 +175,24 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		return err
 	}
 
+	// We check whether the Shoot's last operation status field indicates that the last operation failed (i.e. the operation
+	// will not be retried unless the shoot generation changes).
+	if lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration {
+		shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
+		return nil
+	}
+
 	// When a Shoot clusters deletion timestamp is set we need to delete the cluster and must not trigger a new reconciliation operation.
 	if shoot.DeletionTimestamp != nil {
 		// In order to protect users from accidential/undesired deletion we check whether there is an annotation whose value is equal to the
 		// deletion timestamp itself. If the annotation is missing or the value does not match the deletion timestamp then we skip the deletion
 		// until it gets confirmed (by correctly putting the annotation).
-		if !metav1.HasAnnotation(shoot.ObjectMeta, common.ConfirmationDeletionTimestamp) || !checkConfirmationDeletionTimestampValid(shoot) {
+		if !metav1.HasAnnotation(shoot.ObjectMeta, common.ConfirmationDeletionTimestamp) || !common.CheckConfirmationDeletionTimestampValid(shoot.ObjectMeta) {
 			shootLogger.Infof("Shoot cluster's deletionTimestamp is set but the confirmation annotation '%s' is missing. Skipping.", common.ConfirmationDeletionTimestamp)
 		} else {
 			// If we reach this line then the deletion timestamp is set, the confirmation annotation exists and its value matches the deletion
 			// timestamp itself. Consequently, it's safe to trigger the Shoot cluster deletion here.
 			c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.ShootEventDeleting, "[%s] Deleting Shoot cluster", operationID)
-			shootLogger.Infof("Detected valid annotation '%s' confirming the Shoot deletion.", common.ConfirmationDeletionTimestamp)
 			if updateErr := c.updateShootStatusDeleteStart(operation); updateErr != nil {
 				shootLogger.Errorf("Could not update the Shoot status after deletion start: %+v", updateErr)
 				return updateErr
@@ -207,13 +213,6 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 			}
 		}
 
-		return nil
-	}
-
-	// We check whether the Shoot's last operation status field indicates that the last operation failed (i.e. the operation
-	// will not be retried unless the shoot generation changes).
-	if lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration {
-		shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
 		return nil
 	}
 

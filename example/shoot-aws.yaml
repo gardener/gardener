@@ -18,7 +18,7 @@ spec:
         internal: ['10.250.112.0/22']
         public: ['10.250.96.0/22']
         workers: ['10.250.0.0/19']
-      workers: 
+      workers:
       - name: cpu-worker
         machineType: m4.large
         volumeType: gp2
@@ -43,7 +43,7 @@ spec:
   addons:
     kube2iam:
       enabled: true
-      roles: 
+      roles:
       - name: ecr
         description: "Allow access to ECR repositories beginning with 'my-images/', and creation of new repositories"
         policy: |

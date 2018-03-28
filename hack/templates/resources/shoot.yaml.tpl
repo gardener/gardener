@@ -53,7 +53,7 @@ spec:
     % if cloud == "aws":
     aws:
       networks:
-        vpc: <% vpcID = value("spec.cloud.aws.networks.vpc.id", ""); vpcCIDR = value("spec.cloud.aws.networks.vpc.cidr", "10.250.0.0/16") %># specify either 'id' or 'cidr'
+        vpc:<% vpcID = value("spec.cloud.aws.networks.vpc.id", ""); vpcCIDR = value("spec.cloud.aws.networks.vpc.cidr", "10.250.0.0/16") %> # specify either 'id' or 'cidr'
           % if vpcID != "":
           id: ${vpcID}
         # cidr: 10.250.0.0/16
@@ -64,7 +64,7 @@ spec:
         internal: ${value("spec.cloud.aws.networks.internal", ["10.250.112.0/22"])}
         public: ${value("spec.cloud.aws.networks.public", ["10.250.96.0/22"])}
         workers: ${value("spec.cloud.aws.networks.workers", ["10.250.0.0/19"])}
-      workers: <% workers=value("spec.cloud.aws.workers", []) %>
+      workers:<% workers=value("spec.cloud.aws.workers", []) %>
       % if workers != []:
       ${yaml.dump(workers, width=10000)}
       % else:
@@ -78,7 +78,7 @@ spec:
       zones: ${value("spec.cloud.aws.zones", ["eu-west-1a"])}
     % endif
     % if cloud == "azure" or cloud == "az":
-    azure: <% resourceGroupName = value("spec.cloud.azure.resourceGroup.name", "") %>
+    azure:<% resourceGroupName = value("spec.cloud.azure.resourceGroup.name", "") %>
       % if resourceGroupName != "":
       resourceGroup:
         name: ${resourceGroup}
@@ -87,7 +87,7 @@ spec:
     #   name: mygroup
       % endif
       networks:
-        vnet: <% vnetName = value("spec.cloud.azure.networks.vnet.name", ""); vnetCIDR = value("spec.cloud.azure.networks.vnet.cidr", "10.250.0.0/16") %># specify either 'name' or 'cidr'
+        vnet:<% vnetName = value("spec.cloud.azure.networks.vnet.name", ""); vnetCIDR = value("spec.cloud.azure.networks.vnet.cidr", "10.250.0.0/16") %> # specify either 'name' or 'cidr'
           % if vnetName != "":
           name: ${vnetName}
         # cidr: 10.250.0.0/16
@@ -96,7 +96,7 @@ spec:
           cidr: ${vnetCIDR}
           % endif
         workers: ${value("spec.cloud.azure.networks.workers", "10.250.0.0/19")}
-      workers: <% workers=value("spec.cloud.azure.workers", []) %>
+      workers:<% workers=value("spec.cloud.azure.workers", []) %>
       % if workers != []:
       ${yaml.dump(workers, width=10000)}
       % else:
@@ -110,7 +110,7 @@ spec:
     % endif
     % if cloud == "gcp":
     gcp:
-      networks: <% vpcName = value("spec.cloud.gcp.networks.vpc.name", "") %>
+      networks:<% vpcName = value("spec.cloud.gcp.networks.vpc.name", "") %>
       % if vpcName != "":
         vpc:
           name: ${vpcName}
@@ -119,7 +119,7 @@ spec:
       #   name: my-vpc
       % endif
         workers: ${value("spec.cloud.gcp.networks.workers", ["10.250.0.0/19"])}
-      workers: <% workers=value("spec.cloud.gcp.workers", []) %>
+      workers:<% workers=value("spec.cloud.gcp.workers", []) %>
       % if workers != []:
       ${yaml.dump(workers, width=10000)}
       % else:
@@ -136,7 +136,7 @@ spec:
     openstack:
       loadBalancerProvider: ${value("spec.cloud.openstack.loadBalancerProvider", "haproxy")}
       floatingPoolName: ${value("spec.cloud.openstack.floatingPoolName", "MY-FLOATING-POOL")}
-      networks: <% routerID = value("spec.cloud.openstack.networks.router.id", "") %>
+      networks:<% routerID = value("spec.cloud.openstack.networks.router.id", "") %>
       % if routerID != "":
         router:
           id: ${routerID}
@@ -145,7 +145,7 @@ spec:
       #   id: 1234
       % endif
         workers: ${value("spec.cloud.openstack.networks.workers", ["10.250.0.0/19"])}
-      workers: <% workers=value("spec.cloud.openstack.workers", []) %>
+      workers:<% workers=value("spec.cloud.openstack.workers", []) %>
       % if workers != []:
       ${yaml.dump(workers, width=10000)}
       % else:
@@ -180,7 +180,7 @@ spec:
   % if cloud == "aws":
     kube2iam:
       enabled: ${value("spec.addons.kube2iam.enabled", "true")}
-      roles: <% roles=value("spec.addons.kube2iam.roles", []) %>
+      roles:<% roles=value("spec.addons.kube2iam.roles", []) %>
       % if roles != []:
       ${yaml.dump(roles, width=10000)}
       % else:

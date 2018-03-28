@@ -17,6 +17,4 @@
 NAME="$1"
 NAMESPACE="${2:-$(id -u -n)}"
 
-kubectl --namespace "$NAMESPACE" delete shoot "$NAME"
-deletionTimestamp="$(kubectl --namespace "$NAMESPACE" get shoot "$NAME" -o jsonpath --template={.metadata.deletionTimestamp})"
-kubectl --namespace "$NAMESPACE" patch shoot "$NAME" --type=merge -p "{\"metadata\": {\"annotations\": {\"confirmation.garden.sapcloud.io/deletionTimestamp\": \"$deletionTimestamp\"}}}"
+kubectl --namespace "$NAMESPACE" patch shoot "$NAME" --type=merge -p "{\"metadata\": {\"annotations\": {\"shoot.garden.sapcloud.io/operation\": \"retry\"}}}"

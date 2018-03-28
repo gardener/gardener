@@ -13,11 +13,11 @@ spec:
     openstack:
       loadBalancerProvider: haproxy
       floatingPoolName: MY-FLOATING-POOL
-      networks: 
+      networks:
       # router:
       #   id: 1234
         workers: ['10.250.0.0/19']
-      workers: 
+      workers:
       - name: cpu-worker
         machineType: medium_2_4
         autoScalerMin: 2

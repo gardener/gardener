@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
+	"github.com/gardener/gardener/pkg/operation/common"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
@@ -58,9 +59,35 @@ func (shootStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old ru
 	oldShoot := old.(*garden.Shoot)
 	newShoot.Status = oldShoot.Status
 
-	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
+	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
+
+	if newShoot.Annotations != nil {
+		delete(newShoot.Annotations, common.ShootOperation)
+	}
+}
+
+func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
+	// The Shoot specification changes.
+	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
+		return true
+	}
+
+	// The deletion timestamp and the special confirmation annotation was set.
+	if !common.CheckConfirmationDeletionTimestampValid(oldShoot.ObjectMeta) && common.CheckConfirmationDeletionTimestampValid(newShoot.ObjectMeta) {
+		return true
+	}
+
+	// The shoot state was failed but the retry annotation was set.
+	lastOperation := newShoot.Status.LastOperation
+	if lastOperation != nil && lastOperation.State == garden.ShootLastOperationStateFailed {
+		if val, ok := newShoot.Annotations[common.ShootOperation]; ok && val == "retry" {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (shootStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
