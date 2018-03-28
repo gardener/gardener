@@ -1,0 +1,85 @@
+{{- define "kubelet-config" -}}
+apiVersion: {{ include "kubeletcomponentconfigversion" . }}
+kind: KubeletConfiguration
+authentication:
+  x509:
+    clientCAFile: /var/lib/kubelet/ca.crt
+  webhook:
+    enabled: true
+    cacheTTL: 2m0s
+  anonymous:
+    enabled: false
+authorization:
+  mode: Webhook
+  webhook:
+    cacheAuthorizedTTL: 5m0s
+    cacheUnauthorizedTTL: 30s
+cgroupRoot: "/"
+cgroupsPerQOS: true
+cgroupDriver: cgroupfs
+clusterDomain: {{ required "kubernetes.domain is required" .kubernetes.domain }}
+clusterDNS:
+- {{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}
+configTrialDuration: 10m0s
+cpuCFSQuota: true
+cpuManagerPolicy: none
+cpuManagerReconcilePeriod: 10s
+enableControllerAttachDetach: true
+enableServer: true
+enforceNodeAllocatable:
+- pods
+eventRecordQPS: 5
+eventBurst: 10
+evictionHard:
+  imagefs.available: 5%
+  imagefs.inodesFree: 5%
+  memory.available: 100Mi
+  nodefs.available: 5%
+  nodefs.inodesFree: 5%
+evictionSoft:
+  imagefs.available: 10%
+  imagefs.inodesFree: 10%
+  memory.available: 200Mi
+  nodefs.available: 10%
+  nodefs.inodesFree: 10%
+evictionSoftGracePeriod:
+  imagefs.available: 1m30s
+  imagefs.inodesFree: 1m30s
+  memory.available: 1m30s
+  nodefs.available: 1m30s
+  nodefs.inodesFree: 1m30s
+evictionPressureTransitionPeriod: 4m0s
+evictionMaxPodGracePeriod: 90
+evictionMinimumReclaim: null
+failSwapOn: true
+{{- if .kubernetes.kubelet.featureGates }}
+featureGates:
+{{ toYaml .kubernetes.kubelet.featureGates | indent 6 }}
+{{- end }}
+fileCheckFrequency: 20s
+imageMinimumGCAge: 2m0s
+imageGCHighThresholdPercent: 50
+imageGCLowThresholdPercent: 40
+kubeReserved:
+  memory: 1Gi
+hairpinMode: promiscuous-bridge
+hostNetworkSources:
+- "*"
+hostPIDSources:
+- "*"
+hostIPCSources:
+- "*"
+httpCheckFrequency: 20s
+maxOpenFiles: 1000000
+maxPods: 110
+nodeStatusUpdateFrequency: 10s
+podsPerCore: 0
+readOnlyPort: 10255
+registryPullQPS: 5
+registryBurst: 10
+resolvConf: /etc/resolv.conf
+runtimeRequestTimeout: 2m0s
+serializeImagePulls: true
+syncFrequency: 1m0s
+volumeStatsAggPeriod: 1m0s
+{{- end -}}

@@ -24,15 +24,52 @@
       sleep 120
       local -r max_seconds=10
       local output=""
+
+      function kubectl {
+        /opt/bin/hyperkube kubectl --kubeconfig /var/lib/kubelet/kubeconfig-real "$@"
+      }
+
+      timeframe=600
+      toggle_threshold=5
+      count_kubelet_alternating_between_ready_and_not_ready_within_timeframe=0
+      time_kubelet_not_ready_first_occurrence=0
+      last_kubelet_ready_state="True"
+
       while [ 1 ]; do
         if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10255/healthz 2>&1); then
           echo $output
           echo "Kubelet is unhealthy!"
           pkill kubelet
           sleep 60
-        else
-          sleep $SLEEP_SECONDS
+          continue
         fi
+
+        # Check whether kubelet ready status toggles between true and false and reboot VM if happened too often.
+        if status="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json | jq -r '.items[0].status.conditions[] | select(.type=="Ready") | .status')"; then
+          if [[ "$status" != "True" ]]; then
+            if [[ $time_kubelet_not_ready_first_occurrence == 0 ]]; then
+              time_kubelet_not_ready_first_occurrence=$(date +%s)
+            fi
+          else
+            if [[ $time_kubelet_not_ready_first_occurrence != 0 ]]; then
+              if [[ "$last_kubelet_ready_state" != "$status" ]]; then
+                count_kubelet_alternating_between_ready_and_not_ready_within_timeframe=$((count_kubelet_alternating_between_ready_and_not_ready_within_timeframe+1))
+                if [[ $count_kubelet_alternating_between_ready_and_not_ready_within_timeframe -ge $toggle_threshold ]]; then
+                  sudo reboot
+                fi
+              fi
+            fi
+          fi
+
+          if [[ $time_kubelet_not_ready_first_occurrence != 0 && $(($(date +%s)-$time_kubelet_not_ready_first_occurrence)) -ge $timeframe ]]; then
+            count_kubelet_alternating_between_ready_and_not_ready_within_timeframe=0
+            time_kubelet_not_ready_first_occurrence=0
+          fi
+
+          last_kubelet_ready_state="$status"
+        fi
+
+        sleep $SLEEP_SECONDS
       done
     }
     SLEEP_SECONDS=10
