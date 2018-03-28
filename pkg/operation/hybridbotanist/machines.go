@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation"
@@ -101,8 +102,6 @@ func (b *HybridBotanist) DestroyMachines() error {
 
 		labels := obj.GetLabels()
 		labels["force-deletion"] = "True"
-		// obj.SetAPIVersion("machine.sapcloud.io/v1alpha1")
-		// obj.SetKind("Machine")
 		obj.SetLabels(labels)
 
 		body, err := json.Marshal(obj.UnstructuredContent())
@@ -125,6 +124,11 @@ func (b *HybridBotanist) DestroyMachines() error {
 	}
 	if _, err := b.cleanupMachineClasses(machineClassPlural, emptyMachineDeployments); err != nil {
 		return fmt.Errorf("Cleaning up machine classes failed: %s", err.Error())
+	}
+
+	// Wait until all machine resources have been properly deleted.
+	if err := b.waitUntilMachineResourcesDeleted(machineClassPlural); err != nil {
+		return fmt.Errorf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error())
 	}
 
 	return nil
@@ -198,6 +202,52 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(machineDeployments
 			return true, nil
 		}
 		return false, nil
+	})
+}
+
+// waitUntilMachineResourcesDeleted waits for a maximum of 30 minutes until all machine resoures have been properly
+// deleted by the machine-controller-manager. It polls the status every 10 seconds.
+func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) error {
+	var (
+		resources         = []string{classKind, "machinedeployments", "machinesets", "machines"}
+		numberOfResources = map[string]int{}
+	)
+
+	for _, resource := range resources {
+		numberOfResources[resource] = -1
+	}
+
+	return wait.Poll(5*time.Second, 1800*time.Second, func() (bool, error) {
+		for _, resource := range resources {
+			if numberOfResources[resource] == 0 {
+				continue
+			}
+
+			var list unstructured.Unstructured
+			if err := b.K8sSeedClient.MachineV1alpha1("GET", resource, b.Shoot.SeedNamespace).Do().Into(&list); err != nil {
+				return false, err
+			}
+
+			if field, ok := list.Object["items"]; ok {
+				if items, ok := field.([]interface{}); ok {
+					numberOfResources[resource] = len(items)
+				}
+			}
+		}
+
+		msg := ""
+		for resource, count := range numberOfResources {
+			if numberOfResources[resource] != 0 {
+				msg += fmt.Sprintf("%d %s, ", count, resource)
+				return false, nil
+			}
+		}
+
+		if msg != "" {
+			b.Logger.Infof("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
+			return false, nil
+		}
+		return true, nil
 	})
 }
 
