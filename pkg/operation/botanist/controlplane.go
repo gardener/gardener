@@ -64,6 +64,15 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 	})
 }
 
+// DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
+func (b *Botanist) DeleteKubeAPIServer() error {
+	err := b.K8sSeedClient.DeleteDeployment(b.Operation.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
 // DeleteKubeAddonManager deletes the kube-addon-manager deployment in the Seed cluster which holds the Shoot's control plane. It
 // needs to be deleted before trying to remove any resources in the Shoot cluster, othwewise it will automatically recreate
 // them and block the infrastructure deletion.

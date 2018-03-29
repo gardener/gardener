@@ -71,7 +71,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 	}
 	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
 	if err != nil {
-		return formatError("Failed to create a Shoot CloudBotanist", err)
+		return formatError("Failed to create a HybridBotanist", err)
 	}
 
 	// We check whether the Shoot namespace in the Seed cluster is already in a terminating state, i.e. whether
@@ -80,15 +80,22 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 	// We also check whether the kube-apiserver pod exists in the Shoot namespace within the Seed cluster. If it does not,
 	// then we assume that it has never been deployed successfully. We follow that no resources can have been deployed
 	// at all in the Shoot cluster, thus there is nothing to delete at all.
+	kubeAPIServerFound := false
 	podList, err := botanist.K8sSeedClient.ListPods(o.Shoot.SeedNamespace, metav1.ListOptions{
 		LabelSelector: "app=kubernetes,role=apiserver",
 	})
 	if err != nil {
 		return formatError("Failed to retrieve the list of pods running in the Shoot namespace in the Seed cluster", err)
 	}
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp == nil {
+			kubeAPIServerFound = true
+			break
+		}
+	}
 
 	var (
-		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && len(podList.Items) != 0
+		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && kubeAPIServerFound
 		defaultRetry          = 30 * time.Second
 		cleanupRetry          = 2 * time.Minute
 		isCloud               = o.Shoot.Info.Spec.Cloud.Vagrant == nil
@@ -112,8 +119,9 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		destroyExternalDomainDNSRecord      = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, waitUntilKubernetesResourcesCleaned)
 		destroyBackupInfrastructure         = f.AddTask(seedCloudBotanist.DestroyBackupInfrastructure, 0, waitUntilKubernetesResourcesCleaned)
 		syncPointTerraformers               = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord, destroyBackupInfrastructure)
+		deleteKubeAPIServer                 = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
 		destroyInternalDomainDNSRecord      = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointTerraformers)
-		deleteNamespace                     = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord)
+		deleteNamespace                     = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, deleteKubeAPIServer)
 		_                                   = f.AddTask(botanist.WaitUntilNamespaceDeleted, 0, deleteNamespace)
 		_                                   = f.AddTask(botanist.DeleteGardenSecrets, defaultRetry, deleteNamespace)
 	)

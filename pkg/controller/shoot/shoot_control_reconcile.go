@@ -48,7 +48,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	}
 	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
 	if err != nil {
-		return formatError("Failed to create a Shoot CloudBotanist", err)
+		return formatError("Failed to create a HybridBotanist", err)
 	}
 
 	var (
