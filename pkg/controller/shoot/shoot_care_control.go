@@ -162,7 +162,11 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	}
 
 	// Mark Shoot as healthy/unhealthy
-	healthy := shoot.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && shoot.Status.LastError == nil && conditionControlPlaneHealthy.Status == corev1.ConditionTrue && conditionEveryNodeReady.Status == corev1.ConditionTrue && conditionSystemComponentsHealthy.Status == corev1.ConditionTrue
+	var (
+		lastOperation = shoot.Status.LastOperation
+		lastError     = shoot.Status.LastError
+		healthy       = lastOperation == nil || (lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && lastError == nil && conditionControlPlaneHealthy.Status == corev1.ConditionTrue && conditionEveryNodeReady.Status == corev1.ConditionTrue && conditionSystemComponentsHealthy.Status == corev1.ConditionTrue)
+	)
 	c.labelShoot(shoot, healthy)
 
 	return nil
