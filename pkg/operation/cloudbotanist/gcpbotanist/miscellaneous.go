@@ -18,8 +18,3 @@ package gcpbotanist
 func (b *GCPBotanist) ApplyCreateHook() error {
 	return nil
 }
-
-// ApplyDeleteHook does currently nothing for GCP.
-func (b *GCPBotanist) ApplyDeleteHook() error {
-	return nil
-}

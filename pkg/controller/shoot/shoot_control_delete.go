@@ -95,9 +95,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources)
-		applyDeleteHook                  = f.AddTask(shootCloudBotanist.ApplyDeleteHook, defaultRetry, initializeShootClients)
-		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, applyDeleteHook)
-		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, applyDeleteHook)
+		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, initializeShootClients)
+		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, initializeShootClients)
 		waitUntilKubeAddonManagerDeleted = f.AddTask(botanist.WaitUntilKubeAddonManagerDeleted, 0, deleteKubeAddonManager)
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as
 		// LoadBalancers, volumes, ...). We do that by deleting all namespaces other than the three standard

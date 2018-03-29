@@ -18,8 +18,3 @@ package vagrantbotanist
 func (b *VagrantBotanist) ApplyCreateHook() error {
 	return nil
 }
-
-// ApplyDeleteHook does currently nothing for Vagrant.
-func (b *VagrantBotanist) ApplyDeleteHook() error {
-	return nil
-}

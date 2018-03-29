@@ -18,8 +18,3 @@ package openstackbotanist
 func (b *OpenStackBotanist) ApplyCreateHook() error {
 	return nil
 }
-
-// ApplyDeleteHook does currently nothing for OpenStack.
-func (b *OpenStackBotanist) ApplyDeleteHook() error {
-	return nil
-}

@@ -51,5 +51,4 @@ type CloudBotanist interface {
 
 	// Hooks
 	ApplyCreateHook() error
-	ApplyDeleteHook() error
 }

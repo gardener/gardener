@@ -18,8 +18,3 @@ package azurebotanist
 func (b *AzureBotanist) ApplyCreateHook() error {
 	return nil
 }
-
-// ApplyDeleteHook does currently nothing for Azure.
-func (b *AzureBotanist) ApplyDeleteHook() error {
-	return nil
-}

@@ -48,8 +48,3 @@ func (b *AWSBotanist) ApplyCreateHook() error {
 	targetPort := (*elb.LoadBalancerDescriptions[0].HealthCheck.Target)[4:]
 	return b.AWSClient.UpdateELBHealthCheck(loadBalancerName, targetPort)
 }
-
-// ApplyDeleteHook does currently nothing for AWS.
-func (b *AWSBotanist) ApplyDeleteHook() error {
-	return nil
-}
