@@ -25,9 +25,9 @@ IMAGE_TAG                          := $(shell cat VERSION)
 dev-setup:
 	@./hack/dev-setup
 
-.PHONY: dev-setup-vagrant
-dev-setup-vagrant:
-	@./hack/dev-setup-vagrant
+.PHONY: dev-setup-local
+dev-setup-local:
+	@./hack/dev-setup-local
 
 .PHONY: start-api
 start-api:
@@ -49,9 +49,9 @@ start:
 			cmd/gardener-controller-manager/main.go \
 			--config=dev/componentconfig-gardener-controller-manager.yaml
 
-.PHONY: start-vagrant
-start-vagrant:
-	@go run cmd/gardener-vagrant-provider/main.go
+.PHONY: start-local
+start-local:
+	@go run cmd/gardener-local-provider/main.go
 
 #################################################################
 # Rules related to binary build, Docker image build and release #

@@ -11,7 +11,7 @@ metadata:
     app: kubernetes
     role: apiserver
 spec:
-  type: {{ if eq .Values.cloudProvider "vagrant" }}NodePort{{ else }}LoadBalancer{{ end }}
+  type: {{ if eq .Values.cloudProvider "local" }}NodePort{{ else }}LoadBalancer{{ end }}
   selector:
     app: kubernetes
     role: apiserver
@@ -19,7 +19,7 @@ spec:
   - name: kube-apiserver
     protocol: TCP
     port: 443
-    targetPort: {{ if eq .Values.cloudProvider "vagrant" }}31443{{ else }}443{{ end }}
-{{- if eq .Values.cloudProvider "vagrant" }}
+    targetPort: {{ if eq .Values.cloudProvider "local" }}31443{{ else }}443{{ end }}
+{{- if eq .Values.cloudProvider "local" }}
     nodePort: 31443
 {{- end -}}

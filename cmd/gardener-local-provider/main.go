@@ -33,7 +33,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "github.com/gardener/gardener/pkg/vagrantprovider"
+	pb "github.com/gardener/gardener/pkg/localprovider"
 )
 
 var (
@@ -95,7 +95,7 @@ func main() {
 	log.Printf("user-data path %s", userdataAbsPath)
 
 	s := grpc.NewServer()
-	pb.RegisterVagrantServer(s, &server{
+	pb.RegisterLocalServer(s, &server{
 		vagrantDir:   absVagrantDir,
 		userdataPath: userdataAbsPath,
 	})

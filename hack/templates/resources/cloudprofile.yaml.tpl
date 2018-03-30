@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,openstack,vagrant} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,openstack,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -30,7 +30,7 @@
     region="europe-west1"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
-  elif cloud == "vagrant":
+  elif cloud == "local":
     region="local"
 %>---
 apiVersion: garden.sapcloud.io/v1beta1
@@ -383,10 +383,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     dnsServers: ${dnsServers}
     % endif
   % endif
-  % if cloud == "vagrant":
-  vagrant:
+  % if cloud == "local":
+  local:
     constraints:
-      dnsProviders:<% dnsProviders=value("spec.vagrant.constraints.dnsProviders", []) %>
+      dnsProviders:<% dnsProviders=value("spec.local.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
       ${yaml.dump(dnsProviders, width=10000)}
       % else:

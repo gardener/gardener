@@ -12,28 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrantbotanist
+package localbotanist
 
 import (
 	"fmt"
 
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/client/vagrant"
+	"github.com/gardener/gardener/pkg/client/local"
+	pb "github.com/gardener/gardener/pkg/localprovider"
 	"github.com/gardener/gardener/pkg/operation/common"
-	pb "github.com/gardener/gardener/pkg/vagrantprovider"
 	"golang.org/x/net/context"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployInfrastructure talks to the gardener-vagrant-provider which creates the nodes.
-func (b *VagrantBotanist) DeployInfrastructure() error {
+// DeployInfrastructure talks to the gardener-local-provider which creates the nodes.
+func (b *LocalBotanist) DeployInfrastructure() error {
 
-	// TODO: use b.Operation.ComputeDownloaderCloudConfig("vagrant")
+	// TODO: use b.Operation.ComputeDownloaderCloudConfig("local")
 	// At this stage we don't have the shoot api server
 	chart, err := b.Operation.ChartSeedRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, map[string]interface{}{
 		"kubeconfig": string(b.Operation.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
-		"secretName": b.Operation.Shoot.ComputeCloudConfigSecretName("vagrant"),
+		"secretName": b.Operation.Shoot.ComputeCloudConfigSecretName("local"),
 	})
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (b *VagrantBotanist) DeployInfrastructure() error {
 		}
 	}
 
-	client, conn, err := vagrant.New(fmt.Sprintf(b.Shoot.Info.Spec.Cloud.Vagrant.Endpoint))
+	client, conn, err := local.New(fmt.Sprintf(b.Shoot.Info.Spec.Cloud.Local.Endpoint))
 	if err != nil {
 		return err
 	}
@@ -59,9 +59,9 @@ func (b *VagrantBotanist) DeployInfrastructure() error {
 	return err
 }
 
-// DestroyInfrastructure talks to the gardener-vagrant-provider which destroys the nodes.
-func (b *VagrantBotanist) DestroyInfrastructure() error {
-	client, conn, err := vagrant.New(fmt.Sprintf(b.Shoot.Info.Spec.Cloud.Vagrant.Endpoint))
+// DestroyInfrastructure talks to the gardener-local-provider which destroys the nodes.
+func (b *LocalBotanist) DestroyInfrastructure() error {
+	client, conn, err := local.New(fmt.Sprintf(b.Shoot.Info.Spec.Cloud.Local.Endpoint))
 	if err != nil {
 		return err
 	}
@@ -73,11 +73,11 @@ func (b *VagrantBotanist) DestroyInfrastructure() error {
 }
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
-func (b *VagrantBotanist) DeployBackupInfrastructure() error {
+func (b *LocalBotanist) DeployBackupInfrastructure() error {
 	return nil
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
-func (b *VagrantBotanist) DestroyBackupInfrastructure() error {
+func (b *LocalBotanist) DestroyBackupInfrastructure() error {
 	return nil
 }

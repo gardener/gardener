@@ -109,7 +109,7 @@ In case you have to create a new release or a new hotfix of the Gardener you hav
 
 ## Installing `Vagrant`
 
-In case you want to run the `gardener-vagrant-provider` and test the creation of Shoot clusters on your machine you have to [install](https://www.vagrantup.com/downloads.html) Vagrant.
+In case you want to run the `gardener-local-provider` and test the creation of Shoot clusters on your machine you have to [install](https://www.vagrantup.com/downloads.html) Vagrant.
 
 Please make sure that the executable `bsdtar` is available on your system.
 
@@ -145,11 +145,11 @@ The commands below will configure your `minikube` with the absolute minimum reso
 
 #### Start `minikube`
 
-First, start `minikube` with at least Kubernetes v1.9.x, e.g. via `minikube --kubernetes-version=v1.9.3`
+First, start `minikube` with at least Kubernetes v1.9.x, e.g. via `minikube --kubernetes-version=v1.9.0`
 
 ```bash
-$ minikube start --kubernetes-version=v1.9.3
-Starting local Kubernetes v1.9.3 cluster...
+$ minikube start --kubernetes-version=v1.9.0
+Starting local Kubernetes v1.9.0 cluster...
 [...]
 kubectl is now configured to use the cluster.
 ```
@@ -217,23 +217,23 @@ to operate against your local running Gardener API server.
 
 #### Configure `minikube` to act as Gardener and Seed Cluster
 
-The Gardener Vagrant Provider gives you the ability to create Shoot clusters on your local machine without the need to have an account on a Cloud Provider. Please make sure that Vagrant is installed (see section [Installing Vagrant](#installing-vagrant))
+The Gardener Local Provider gives you the ability to create Shoot clusters on your local machine without the need to have an account on a Cloud Provider. Please make sure that Vagrant is installed (see section [Installing Vagrant](#installing-vagrant))
 
 Make sure that you already run `make dev-setup` and that the Gardener API server and the Gardener controller manager are running via `make start-api` and `make start` as described before.
 
 Next, you need to configure `minikube` to work as the Gardener and as the Seed cluster in such a way that it uses the local Vagrant installation to create the Shoot clusters.
 
 ```bash
-$ make dev-setup-vagrant
-cloudprofile "vagrant" created
-secret "dev-vagrant" created
-secretbinding "core-vagrant" created
+$ make dev-setup-local
+cloudprofile "local" created
+secret "dev-local" created
+secretbinding "core-local" created
 Cluster "gardener-dev" set.
 User "gardener-dev" set.
 Context "gardener-dev" modified.
 Switched to context "gardener-dev".
-secret "seed-vagrant-dev" created
-seed "vagrant-dev" created
+secret "seed-local-dev" created
+seed "local-dev" created
 ```
 
 #### Check Vagrant setup
@@ -260,36 +260,36 @@ $ vagrant destroy --force
 $ cd $GOPATH/src/github.com/gardener/gardener
 ```
 
-#### Start the Gardener Vagrant Provider
+#### Start the Gardener Local Provider
 
-The Seed cluster provides the possibility to create Shoot clusters on several cloud provider. The Gardener Provider implements a common interface to all supported cloud providers. Here, the corresponding Gardener Provider for Vagrant is used.
+The Seed cluster provides the possibility to create Shoot clusters on several cloud provider. The Gardener Provider implements a common interface to all supported cloud providers. Here, the corresponding Gardener Provider for Local is used.
 
 By executing
 
 ```bash
-$ make start-vagrant
+$ make start-local
 2018/02/14 10:53:34 Listening on :3777
 2018/02/14 10:53:34 Vagrant directory /Users/foo/go/src/github.com/gardener/gardener/vagrant
 2018/02/14 10:53:34 user-data path /Users/foo/git/go/src/github.com/gardener/gardener/dev/user-data
 ```
 
-the Gardener Vagrant Provider is started.
+the Gardener Local Provider is started.
 
-At this point three processes should run in an individual terminal, the Gardener API server, the Gardener controller manager and finally the Gardener Vagrant Provider.
+At this point three processes should run in an individual terminal, the Gardener API server, the Gardener controller manager and finally the Gardener Local Provider.
 
 #### Create, access and delete a Shoot Cluster
 
 Now, you can create a Shoot cluster by running
 
 ```bash
-$ kubectl apply -f dev/shoot-vagrant.yaml
-shoot "vagrant" created
+$ kubectl apply -f dev/shoot-local.yaml
+shoot "local" created
 ```
 
 When the Shoot API server is created you can download the `kubeconfig` for it and access it:
 
 ```bash
-$ kubectl --namespace shoot-garden-dev-vagrant get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
+$ kubectl --namespace shoot-dev-local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
 
 # Depending on your Internet speed, it can take some time, before your node reports a READY status.
 $ kubectl --kubeconfig dev/shoot-kubeconfig get nodes
@@ -309,9 +309,9 @@ $ vagrant ssh
 To delete the Shoot cluster
 
 ```bash
-$ ./hack/delete-shoot vagrant garden-dev
-shoot "vagrant" deleted
-shoot "vagrant" patched
+$ ./hack/delete-shoot local garden-dev
+shoot "local" deleted
+shoot "local" patched
 ```
 
 #### Limitations

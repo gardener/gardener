@@ -2,13 +2,13 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: CloudProfile
 metadata:
-  name: vagrant
+  name: local
 spec:
 # caBundle: |
 #   -----BEGIN CERTIFICATE-----
 #   ...
 #   -----END CERTIFICATE-----
-  vagrant:
+  local:
     constraints:
       dnsProviders:
       - name: unmanaged

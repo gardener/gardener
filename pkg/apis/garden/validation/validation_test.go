@@ -125,7 +125,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.aws/azure/gcp/openstack/vagrant"),
+				"Field": Equal("spec.aws/azure/gcp/openstack/local"),
 			}))
 		})
 
@@ -1721,7 +1721,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.cloud.aws/azure/gcp/openstack/vagrant"),
+				"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
 			}))
 		})
 
@@ -2071,7 +2071,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/vagrant"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
 				}))
 			})
 		})
@@ -2354,7 +2354,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/vagrant"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
 				}))
 			})
 		})
@@ -2565,7 +2565,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/vagrant"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
 				}))
 			})
 		})
@@ -2794,7 +2794,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/vagrant"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
 				}))
 			})
 		})

@@ -1,4 +1,4 @@
-# Vagrant specific values which override values.yaml
+# Local specific values which override values.yaml
 
 # Gardener API server configuration values
 apiserver:

@@ -12,20 +12,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrant
+syntax = "proto3";
 
-import (
-	pb "github.com/gardener/gardener/pkg/vagrantprovider"
+package localprovider;
 
-	"google.golang.org/grpc"
-)
+// The local service definition.
+service Local {
+  // Starts a VM
+  rpc Start (StartRequest) returns (StartReply) {}
+  // Deletes a VM
+  rpc Delete (DeleteRequest) returns (DeleteReply) {}
+}
 
-// New creates a new Vagrant client and connection.
-// The connection MUST be closed after usage.
-func New(address string) (pb.VagrantClient, *grpc.ClientConn, error) {
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
-	if err != nil {
-		return nil, nil, err
-	}
-	return pb.NewVagrantClient(conn), conn, nil
+// The request cloudconfig containing cloud-config data.
+message StartRequest {
+  string cloudconfig = 1;
+  int32 id = 2;
+}
+
+// The response message containing the message of the creation operation.
+message StartReply {
+  string message = 1;
+}
+
+// The request containing the id of the machine to delete.
+message DeleteRequest {
+  int32 id = 1;
+}
+
+// The response message containing the message of the delete operation.
+message DeleteReply {
+  string message = 1;
 }

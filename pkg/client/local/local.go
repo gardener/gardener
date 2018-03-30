@@ -12,9 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrantbotanist
+package local
 
-// ApplyCreateHook does currently nothing for Vagrant.
-func (b *VagrantBotanist) ApplyCreateHook() error {
-	return nil
+import (
+	pb "github.com/gardener/gardener/pkg/localprovider"
+
+	"google.golang.org/grpc"
+)
+
+// New creates a new local client and connection.
+// The connection MUST be closed after usage.
+func New(address string) (pb.LocalClient, *grpc.ClientConn, error) {
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	if err != nil {
+		return nil, nil, err
+	}
+	return pb.NewLocalClient(conn), conn, nil
 }

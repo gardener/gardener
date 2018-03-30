@@ -12,35 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
+package localbotanist
 
-package vagrantprovider;
-
-// The vagrant service definition.
-service Vagrant {
-  // Starts a VM
-  rpc Start (StartRequest) returns (StartReply) {}
-  // Deletes a VM
-  rpc Delete (DeleteRequest) returns (DeleteReply) {}
-}
-
-// The request cloudconfig containing cloud-config data.
-message StartRequest {
-  string cloudconfig = 1;
-  int32 id = 2;
-}
-
-// The response message containing the message of the creation operation.
-message StartReply {
-  string message = 1;
-}
-
-// The request containing the id of the machine to delete.
-message DeleteRequest {
-  int32 id = 1;
-}
-
-// The response message containing the message of the delete operation.
-message DeleteReply {
-  string message = 1;
+// ApplyCreateHook does currently nothing for Local.
+func (b *LocalBotanist) ApplyCreateHook() error {
+	return nil
 }

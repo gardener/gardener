@@ -3,13 +3,13 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Seed
 metadata:
-  name: vagrant
+  name: local
 spec:
   cloud:
-    profile: vagrant
+    profile: local
     region: local
   secretRef:
-    name: seed-vagrant
+    name: seed-local
     namespace: garden
   ingressDomain: <minikube-ip>.nip.io
   networks: # Seed and Shoot networks must be disjunct

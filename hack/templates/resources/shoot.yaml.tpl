@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,openstack,vagrant} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,openstack,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -35,7 +35,7 @@
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
     kubernetesVersion="1.9.6"
-  elif cloud == "vagrant":
+  elif cloud == "local":
     region="local"
     kubernetesVersion="1.10.0"
 %>---
@@ -156,22 +156,24 @@ spec:
       % endif
       zones: ${value("spec.cloud.openstack.zones", ["europe-1a"])}
     % endif
-    % if cloud == "vagrant":
-    vagrant:
-      endpoint: ${value("spec.cloud.vagrant.endpoint", "localhost:3777")} # endpoint service pointing to gardener-vagrant-provider
+    % if cloud == "local":
+    local:
+      endpoint: ${value("spec.cloud.local.endpoint", "localhost:3777")} # endpoint service pointing to gardener-local-provider
+      networks:
+        workers: ${value("spec.cloud.local.networks.workers", ["192.168.99.100/24"])}
     % endif
   kubernetes:
     version: ${value("spec.kubernetes.version", kubernetesVersion)}
   dns:
-    provider: ${value("spec.dns.provider", "aws-route53") if cloud != "vagrant" else "unmanaged"}
-    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "vagrant" else "<minikube-ip>.nip.io"}
+    provider: ${value("spec.dns.provider", "aws-route53") if cloud != "local" else "unmanaged"}
+    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<minikube-ip>.nip.io"}
   maintenance:
     timeWindow:
       begin: ${value("spec.maintenance.timeWindow.begin", "220000+0100")}
       end: ${value("spec.maintenance.timeWindow.end", "230000+0100")}
     autoUpdate:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
-  % if cloud != "vagrant":
+  % if cloud != "local":
   backup:
     schedule: ${value("backup.schedule", "\"*/5 * * * *\"")}
     maximum: ${value("backup.maximum", "7")}
