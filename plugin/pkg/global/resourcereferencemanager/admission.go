@@ -20,6 +20,7 @@ import (
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
@@ -185,6 +186,22 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 	)
 
 	for _, quotaRef := range binding.Quotas {
+		readAttributes := authorizer.AttributesRecord{
+			User:            attributes.GetUserInfo(),
+			Verb:            "get",
+			APIGroup:        gardenv1beta1.SchemeGroupVersion.Group,
+			APIVersion:      gardenv1beta1.SchemeGroupVersion.Version,
+			Resource:        "quotas",
+			Subresource:     "",
+			Namespace:       quotaRef.Namespace,
+			Name:            quotaRef.Name,
+			ResourceRequest: true,
+			Path:            "",
+		}
+		if decision, _, _ := r.authorizer.Authorize(readAttributes); decision != authorizer.DecisionAllow {
+			return errors.New("SecretBinding cannot reference a quota you are not allowed to read")
+		}
+
 		quota, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return err

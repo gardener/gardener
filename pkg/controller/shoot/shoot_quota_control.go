@@ -76,11 +76,9 @@ type defaultQuotaControl struct {
 
 func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key string) error {
 	var (
-		clusterLifeTime     *int
-		shootExpirationTime time.Time
-
-		shoot       = shootObj.DeepCopy()
-		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
+		clusterLifeTime *int
+		shoot           = shootObj.DeepCopy()
+		shootLogger     = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
 	)
 
 	secretBinding, err := c.k8sGardenInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
@@ -101,29 +99,31 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		}
 	}
 
+	// If the Shoot has no Quotas referenced (anymore) or if the referenced Quotas does not have a clusterLifetime,
+	// then we will not check for cluster lifetime expiration, even if the Shoot has a clusterLifetime timestamp already annotated.
 	if clusterLifeTime == nil {
 		return nil
 	}
 
-	if expirationTime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; exists {
-		t, err := time.Parse(time.RFC3339, expirationTime)
-		if err != nil {
-			return err
-		}
-		shootExpirationTime = t.Add(time.Duration(*clusterLifeTime*24) * time.Hour)
-	} else {
+	expirationTime, exits := shoot.Annotations[common.ShootExpirationTimestamp]
+	if !exits {
 		annotations := shoot.Annotations
-		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Format(time.RFC3339)
+		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		shoot.Annotations = annotations
 
 		_, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err
 		}
-		shootExpirationTime = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour)
+
+		expirationTime = annotations[common.ShootExpirationTimestamp]
+	}
+	expirationTimeParsed, err := time.Parse(time.RFC3339, expirationTime)
+	if err != nil {
+		return err
 	}
 
-	if time.Now().After(shootExpirationTime) {
+	if time.Now().After(expirationTimeParsed) {
 		shootLogger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
 		// We have to delete the shoot, because only apiserver can set a deletionTimestamp

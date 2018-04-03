@@ -127,7 +127,7 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	}
 
 	// Pass if the shoot is intended to get deleted
-	if shoot.DeletionTimestamp != nil && shoot.Annotations[common.ConfirmationDeletionTimestamp] != "" {
+	if shoot.DeletionTimestamp != nil {
 		return nil
 	}
 
@@ -196,9 +196,9 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	// Admit Shoot lifetime changes
 	if lifetime, exists := shoot.Annotations[common.ShootExpirationTimestamp]; checkLifetime && exists && maxShootLifetime != nil {
 		var (
-			plannedExpirationTime   time.Time
-			oldExpirationTime       time.Time
-			calulatedExpirationTime time.Time
+			plannedExpirationTime     time.Time
+			oldExpirationTime         time.Time
+			maxPossibleExpirationTime time.Time
 		)
 
 		plannedExpirationTime, err = time.Parse(time.RFC3339, lifetime)
@@ -206,17 +206,19 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 			return apierrors.NewInternalError(err)
 		}
 
-		if lifetime, exists := oldShoot.Annotations[common.ShootExpirationTimestamp]; exists {
-			oldExpirationTime, err = time.Parse(time.RFC3339, lifetime)
-			if err != nil {
-				return apierrors.NewInternalError(err)
-			}
-		} else {
-			oldExpirationTime = shoot.CreationTimestamp.Time
+		oldLifetime, exists := oldShoot.Annotations[common.ShootExpirationTimestamp]
+		if !exists {
+			// The old version of the Shoot has no clusterLifetime annotation yet.
+			// Therefore we have to calculate the lifetime based on the maxShootLifetime.
+			oldLifetime = oldShoot.CreationTimestamp.Time.Add(time.Duration(*maxShootLifetime*24) * time.Hour).Format(time.RFC3339)
+		}
+		oldExpirationTime, err = time.Parse(time.RFC3339, oldLifetime)
+		if err != nil {
+			return apierrors.NewInternalError(err)
 		}
 
-		calulatedExpirationTime = oldExpirationTime.Add(time.Duration(*maxShootLifetime*24) * time.Hour)
-		if plannedExpirationTime.After(calulatedExpirationTime) {
+		maxPossibleExpirationTime = oldExpirationTime.Add(time.Duration(*maxShootLifetime*24) * time.Hour)
+		if plannedExpirationTime.After(maxPossibleExpirationTime) {
 			return admission.NewForbidden(a, fmt.Errorf("Requested shoot expiration time to long. Can only be extended by %d day(s)", *maxShootLifetime))
 		}
 	}
@@ -279,11 +281,11 @@ func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, sh
 		secretBindings   []garden.SecretBinding
 	)
 
-	allSecrerBindings, err := h.secretBindingLister.SecretBindings(v1.NamespaceAll).List(labels.Everything())
+	allSecretBindings, err := h.secretBindingLister.SecretBindings(v1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
-	for _, binding := range allSecrerBindings {
+	for _, binding := range allSecretBindings {
 		for _, quotaRef := range binding.Quotas {
 			if quota.Name == quotaRef.Name && quota.Namespace == quotaRef.Namespace {
 				secretBindings = append(secretBindings, *binding)
@@ -498,7 +500,20 @@ func lifetimeVerificationNeeded(new, old garden.Shoot) bool {
 
 func quotaVerificationNeeded(new, old garden.Shoot, provider garden.CloudProvider) bool {
 	// Check for diff on addon nginx-ingress (addon requires to deploy a load balancer)
-	if old.Spec.Addons.NginxIngress.Enabled == false && new.Spec.Addons.NginxIngress.Enabled == true {
+	var (
+		oldNginxIngressEnabled bool
+		newNginxIngressEnabled bool
+	)
+
+	if old.Spec.Addons != nil && old.Spec.Addons.NginxIngress != nil {
+		oldNginxIngressEnabled = old.Spec.Addons.NginxIngress.Enabled
+	}
+
+	if new.Spec.Addons != nil && new.Spec.Addons.NginxIngress != nil {
+		newNginxIngressEnabled = new.Spec.Addons.NginxIngress.Enabled
+	}
+
+	if oldNginxIngressEnabled == false && newNginxIngressEnabled == true {
 		return true
 	}
 
