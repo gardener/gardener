@@ -212,7 +212,7 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 	})
 }
 
-func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, lastError *gardenv1beta1.LastError) error {
+func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, lastError *gardenv1beta1.LastError) (gardenv1beta1.ShootLastOperationState, error) {
 	var (
 		state       = gardenv1beta1.ShootLastOperationStateFailed
 		description = lastError.Description
@@ -244,5 +244,5 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}
-	return err
+	return state, err
 }

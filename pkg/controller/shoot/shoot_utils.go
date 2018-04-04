@@ -51,3 +51,10 @@ func computeLabelsWithShootHealthiness(shoot *gardenv1beta1.Shoot, healthy bool)
 
 	return labels
 }
+
+func computeOperationType(lastOperation *gardenv1beta1.LastOperation) gardenv1beta1.ShootLastOperationType {
+	if lastOperation == nil || (lastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate && lastOperation.State != gardenv1beta1.ShootLastOperationStateSucceeded) {
+		return gardenv1beta1.ShootLastOperationTypeCreate
+	}
+	return gardenv1beta1.ShootLastOperationTypeReconcile
+}

@@ -158,7 +158,7 @@ func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operatio
 	return err
 }
 
-func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType, lastError *gardenv1beta1.LastError) error {
+func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType, lastError *gardenv1beta1.LastError) (gardenv1beta1.ShootLastOperationState, error) {
 	var (
 		state         = gardenv1beta1.ShootLastOperationStateFailed
 		description   = lastError.Description
@@ -198,5 +198,5 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}
-	return err
+	return state, err
 }
