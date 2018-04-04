@@ -296,6 +296,13 @@ type VolumeType struct {
 	Class string
 }
 
+const (
+	// VolumeClassStandard is a constant for the standard volume class.
+	VolumeClassStandard string = "standard"
+	// VolumeClassPremium is a constant for the premium volume class.
+	VolumeClassPremium string = "premium"
+)
+
 // Zone contains certain properties of an availability zone.
 type Zone struct {
 	// Region is a region name.
@@ -398,6 +405,7 @@ type SeedNetworks struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// Quota holds certain information about resource usage limitations and lifetime for Shoot objects.
 type Quota struct {
 	metav1.TypeMeta
 	// Standard object metadata.
@@ -430,6 +438,21 @@ type QuotaSpec struct {
 	// Scope is the scope of the Quota object, either 'project' or 'secret'.
 	Scope QuotaScope
 }
+
+const (
+	// QuotaMetricCPU is the constraint for the amount of CPUs
+	QuotaMetricCPU corev1.ResourceName = corev1.ResourceCPU
+	// QuotaMetricGPU is the constraint for the amount of GPUs (e.g. from Nvidia)
+	QuotaMetricGPU corev1.ResourceName = "gpu"
+	// QuotaMetricMemory is the constraint for the amount of memory
+	QuotaMetricMemory corev1.ResourceName = corev1.ResourceMemory
+	// QuotaMetricStorageStandard is the constraint for the size of a standard disk
+	QuotaMetricStorageStandard corev1.ResourceName = corev1.ResourceStorage + ".standard"
+	// QuotaMetricStoragePremium is the constraint for the size of a premium disk (e.g. SSD)
+	QuotaMetricStoragePremium corev1.ResourceName = corev1.ResourceStorage + ".premium"
+	// QuotaMetricLoadbalancer is the constraint for the amount of loadbalancers
+	QuotaMetricLoadbalancer corev1.ResourceName = "loadbalancer"
+)
 
 // QuotaScope is a string alias.
 type QuotaScope string

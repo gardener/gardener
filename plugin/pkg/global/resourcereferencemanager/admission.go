@@ -16,6 +16,7 @@ package resourcereferencemanager
 
 import (
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -179,6 +180,11 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 		return err
 	}
 
+	var (
+		secretQuotaCount  int
+		projectQuotaCount int
+	)
+
 	for _, quotaRef := range binding.Quotas {
 		readAttributes := authorizer.AttributesRecord{
 			User:            attributes.GetUserInfo(),
@@ -196,8 +202,19 @@ func (r *ReferenceManager) ensureSecretBindingReferences(attributes admission.At
 			return errors.New("SecretBinding cannot reference a quota you are not allowed to read")
 		}
 
-		if _, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name); err != nil {
+		quota, err := r.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
+		if err != nil {
 			return err
+		}
+
+		if quota.Spec.Scope == garden.QuotaScopeProject {
+			projectQuotaCount++
+		}
+		if quota.Spec.Scope == garden.QuotaScopeSecret {
+			secretQuotaCount++
+		}
+		if projectQuotaCount > 1 || secretQuotaCount > 1 {
+			return fmt.Errorf("Only one quota per scope (%s or %s) can be assigned", garden.QuotaScopeProject, garden.QuotaScopeSecret)
 		}
 	}
 

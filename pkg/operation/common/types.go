@@ -150,6 +150,11 @@ const (
 	// TerraformerPurposeIngress is a constant for the complete Terraform setup with purpose 'ingress'.
 	TerraformerPurposeIngress = "ingress"
 
+	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
+	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
+	// of referenced quotas.
+	ShootExpirationTimestamp = "shoot.garden.sapcloud.io/expirationTimestamp"
+
 	// ShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	ShootUseAsSeed = "shoot.garden.sapcloud.io/use-as-seed"

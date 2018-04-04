@@ -94,6 +94,9 @@ var _ = Describe("resourcereferencemanager", func() {
 					Name:      quotaName,
 					Namespace: namespace,
 				},
+				Spec: garden.QuotaSpec{
+					Scope: garden.QuotaScopeProject,
+				},
 			}
 			secretBinding = garden.SecretBinding{
 				ObjectMeta: metav1.ObjectMeta{
@@ -194,6 +197,70 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should pass because exact one quota per scope is referenced", func() {
+				quotaName2 := "quota-2"
+				quota2 := garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName2,
+						Namespace: namespace,
+					},
+					Spec: garden.QuotaSpec{
+						Scope: garden.QuotaScopeSecret,
+					},
+				}
+
+				quota2Ref := corev1.ObjectReference{
+					Name:      quotaName2,
+					Namespace: namespace,
+				}
+				quotaRefList := secretBinding.Quotas
+				quotaRefList = append(quotaRefList, quota2Ref)
+				secretBinding.Quotas = quotaRefList
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject because more than one quota of the same scope is referenced", func() {
+				quotaName2 := "quota-2"
+				quota2 := garden.Quota{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      quotaName2,
+						Namespace: namespace,
+					},
+					Spec: garden.QuotaSpec{
+						Scope: garden.QuotaScopeProject,
+					},
+				}
+
+				quota2Ref := corev1.ObjectReference{
+					Name:      quotaName2,
+					Namespace: namespace,
+				}
+				quotaRefList := secretBinding.Quotas
+				quotaRefList = append(quotaRefList, quota2Ref)
+				secretBinding.Quotas = quotaRefList
+
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
+
+				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
 
 				err := admissionHandler.Admit(attrs)
