@@ -91,6 +91,9 @@ controller:
       shootMaintenance:
         concurrentSyncs: 5
         syncPeriod: 15m
+      shootQuota:
+        concurrentSyncs: 5
+        syncPeriod: 60m
     leaderElection:
       leaderElect: true
       leaseDuration: 15s
