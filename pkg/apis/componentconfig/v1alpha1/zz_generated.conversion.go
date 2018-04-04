@@ -24,6 +24,7 @@ import (
 	unsafe "unsafe"
 
 	componentconfig "github.com/gardener/gardener/pkg/apis/componentconfig"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -375,7 +376,9 @@ func Convert_componentconfig_ShootCareControllerConfiguration_To_v1alpha1_ShootC
 
 func autoConvert_v1alpha1_ShootControllerConfiguration_To_componentconfig_ShootControllerConfiguration(in *ShootControllerConfiguration, out *componentconfig.ShootControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = in.RetryDuration
+	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
 	out.WatchNamespace = (*string)(unsafe.Pointer(in.WatchNamespace))
 	return nil
@@ -388,7 +391,9 @@ func Convert_v1alpha1_ShootControllerConfiguration_To_componentconfig_ShootContr
 
 func autoConvert_componentconfig_ShootControllerConfiguration_To_v1alpha1_ShootControllerConfiguration(in *componentconfig.ShootControllerConfiguration, out *ShootControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = in.RetryDuration
+	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
 	out.WatchNamespace = (*string)(unsafe.Pointer(in.WatchNamespace))
 	return nil

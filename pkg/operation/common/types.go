@@ -165,6 +165,10 @@ const (
 
 	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that the operation should be retried.
 	ShootOperation = "shoot.garden.sapcloud.io/operation"
+
+	// ShootSyncPeriod is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
+	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m.
+	ShootSyncPeriod = "shoot.garden.sapcloud.io/sync-period"
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

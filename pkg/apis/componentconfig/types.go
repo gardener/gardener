@@ -119,9 +119,17 @@ type ShootControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
+	// RespectSyncPeriodOverwrite determines whether a sync period overwrite of a
+	// Shoot (via annotation) is respected or not. Defaults to false.
+	// +optional
+	RespectSyncPeriodOverwrite *bool
 	// RetryDuration is the maximum duration how often a reconciliation will be retried
 	// in case of errors.
 	RetryDuration metav1.Duration
+	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
+	// readded to the queue so that the operation can be retried. Defaults to 15s.
+	// +optional
+	RetrySyncPeriod *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
 	// WatchNamespace defines the namespace which should be watched by the controller.

@@ -100,25 +100,42 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return nil
 	}
 
-	var durationToNextSync time.Duration
-	if err := c.control.ReconcileShoot(shoot, key); err != nil {
-		durationToNextSync = 15 * time.Second
-	} else {
-		durationToNextSync = scheduleNextSync(shoot.CreationTimestamp, c.config.Controllers.Shoot.SyncPeriod)
-	}
+	var (
+		reconcileErr       = c.control.ReconcileShoot(shoot, key)
+		durationToNextSync = scheduleNextSync(shoot.ObjectMeta, reconcileErr != nil, c.config.Controllers.Shoot)
+	)
 
 	c.shootQueue.AddAfter(key, durationToNextSync)
 	shootLogger.Infof("Scheduled next reconciliation for Shoot '%s' in %s", key, durationToNextSync)
 	return nil
 }
 
-func scheduleNextSync(creationTimestamp metav1.Time, syncPeriod metav1.Duration) time.Duration {
+func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccured bool, config componentconfig.ShootControllerConfiguration) time.Duration {
+	if errorOccured {
+		return (*config.RetrySyncPeriod).Duration
+	}
+
 	var (
+		syncPeriod                 = config.SyncPeriod
+		respectSyncPeriodOverwrite = *config.RespectSyncPeriodOverwrite
+
 		currentTimeNano  = time.Now().UnixNano()
-		creationTimeNano = creationTimestamp.UnixNano()
-		syncPeriodNano   = syncPeriod.Nanoseconds()
-		nextSyncNano     = currentTimeNano - (currentTimeNano-creationTimeNano)%syncPeriodNano + syncPeriodNano
+		creationTimeNano = objectMeta.CreationTimestamp.UnixNano()
 	)
+
+	if syncPeriodOverwrite, ok := objectMeta.Annotations[common.ShootSyncPeriod]; ok && respectSyncPeriodOverwrite {
+		if syncPeriodAnnotation, err := time.ParseDuration(syncPeriodOverwrite); err == nil {
+			if syncPeriodAnnotation >= time.Minute {
+				syncPeriod = metav1.Duration{Duration: syncPeriodAnnotation}
+			}
+		}
+	}
+
+	var (
+		syncPeriodNano = syncPeriod.Nanoseconds()
+		nextSyncNano   = currentTimeNano - (currentTimeNano-creationTimeNano)%syncPeriodNano + syncPeriodNano
+	)
+
 	return time.Duration(nextSyncNano - currentTimeNano)
 }
 
