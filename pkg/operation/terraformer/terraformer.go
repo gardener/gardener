@@ -163,6 +163,7 @@ func (t *Terraformer) execute(scriptName string) error {
 
 		// Wait for the Terraform Job to be completed
 		succeeded = t.waitForJob()
+		t.Logger.Infof("Terraform '%s' finished.", t.JobName)
 	}
 
 	// Retrieve the logs of the Pods belonging to the completed Job
@@ -172,6 +173,7 @@ func (t *Terraformer) execute(scriptName string) error {
 		jobPodList = &corev1.PodList{}
 	}
 
+	t.Logger.Infof("Fetching the logs for all pods belonging to the Terraform job '%s'...", t.JobName)
 	logList, err := t.retrievePodLogs(jobPodList)
 	if err != nil {
 		t.Logger.Errorf("Could not retrieve the logs of the pods belonging to Terraform job '%s': %s", t.JobName, err.Error())
@@ -182,14 +184,16 @@ func (t *Terraformer) execute(scriptName string) error {
 	}
 
 	// Delete the Terraform Job and all its belonging Pods
+	t.Logger.Infof("Cleaning up pods created by Terraform job '%s'...", t.JobName)
 	err = t.cleanupJob(jobPodList)
 	if err != nil {
 		return err
 	}
 
 	// Evaluate whether the execution was successful or not
+	t.Logger.Infof("Terraformer execution for job '%s' has been completed.", t.JobName)
 	if !succeeded {
-		errorMessage := "Terraform execution job could not be completed."
+		errorMessage := fmt.Sprintf("Terraform execution job '%s' could not be completed.", t.JobName)
 		terraformErrors := retrieveTerraformErrors(logList)
 		if terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))

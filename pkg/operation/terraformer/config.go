@@ -40,9 +40,9 @@ func (t *Terraformer) DefineConfig(chartName string, values map[string]interface
 	}
 	values["initializeEmptyState"] = t.IsStateEmpty()
 
-	err := utils.Retry(t.Logger, 60*time.Second, func() (bool, error) {
+	err := utils.Retry(t.Logger, 30*time.Second, func() (bool, error) {
 		if err := t.ApplyChartSeed(filepath.Join(chartPath, chartName), chartName, t.Namespace, nil, values); err != nil {
-			t.Logger.Infof("could not create Terraform ConfigMaps/Secrets: %s", err.Error())
+			t.Logger.Errorf("could not create Terraform ConfigMaps/Secrets: %s", err.Error())
 			return false, nil
 		}
 		return true, nil
