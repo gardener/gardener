@@ -65,25 +65,41 @@ func (b *Botanist) RegisterAsSeed() error {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
 
-	var (
-		secretData      = b.Shoot.Secret.Data
-		secretName      = fmt.Sprintf("seed-%s", b.Shoot.Info.Name)
-		secretNamespace = common.GardenNamespace
-	)
-	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
-
-	if _, err := b.K8sGardenClient.CreateSecret(secretNamespace, secretName, corev1.SecretTypeOpaque, secretData, true); err != nil {
-		return err
-	}
-
 	k8sNetworks := b.Shoot.GetK8SNetworks()
 	if k8sNetworks == nil {
 		return errors.New("could not retrieve K8SNetworks from the Shoot resource")
 	}
 
+	var (
+		secretData      = b.Shoot.Secret.Data
+		secretName      = fmt.Sprintf("seed-%s", b.Shoot.Info.Name)
+		secretNamespace = common.GardenNamespace
+		controllerKind  = gardenv1beta1.SchemeGroupVersion.WithKind("Seed")
+	)
+	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
+
+	ownerReferences := []metav1.OwnerReference{
+		*metav1.NewControllerRef(b.Shoot.Info, controllerKind),
+	}
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            secretName,
+			Namespace:       secretNamespace,
+			OwnerReferences: ownerReferences,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: secretData,
+	}
+
+	if _, err := b.K8sGardenClient.CreateSecretObject(secret, true); err != nil {
+		return err
+	}
+
 	seed := &gardenv1beta1.Seed{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.Info.Name,
+			Name:            b.Shoot.Info.Name,
+			OwnerReferences: ownerReferences,
 		},
 		Spec: gardenv1beta1.SeedSpec{
 			Cloud: gardenv1beta1.SeedCloud{

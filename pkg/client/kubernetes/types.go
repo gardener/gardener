@@ -62,6 +62,7 @@ type Client interface {
 
 	// Secrets
 	CreateSecret(string, string, corev1.SecretType, map[string][]byte, bool) (*corev1.Secret, error)
+	CreateSecretObject(*corev1.Secret, bool) (*corev1.Secret, error)
 	UpdateSecret(string, string, corev1.SecretType, map[string][]byte) (*corev1.Secret, error)
 	UpdateSecretObject(*corev1.Secret) (*corev1.Secret, error)
 	ListSecrets(string, metav1.ListOptions) (*corev1.SecretList, error)
