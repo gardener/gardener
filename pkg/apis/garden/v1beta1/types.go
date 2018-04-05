@@ -324,6 +324,7 @@ const (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Seed holds certain properties about a Seed cluster.
+// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAME:.metadata.name,DOMAIN:.spec.ingressDomain,CLOUDPROFILE:.spec.cloud.profile,REGION:.spec.cloud.profile,READY:.status.conditions[?(@.type == 'Available')].status
 type Seed struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -482,6 +483,7 @@ type SecretBindingList struct {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
+// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.cloud.seed,DOMAIN:.spec.dns.domain,VERSION:.spec.kubernetes.version,CONTROL:.status.conditions[?(@.type == 'ControlPlaneHealthy')].status,NODES:.status.conditions[?(@.type == 'EveryNodeReady')].status,SYSTEM:.status.conditions[?(@.type == 'SystemComponentsHealthy')].status,LATEST:.status.lastOperation.state
 type Shoot struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.

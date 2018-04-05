@@ -2910,6 +2910,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						},
 					},
 				},
+				VendorExtensible: spec.VendorExtensible{
+					Extensions: spec.Extensions{
+						"x-kubernetes-print-columns": "custom-columns=NAME:.metadata.name,DOMAIN:.spec.ingressDomain,CLOUDPROFILE:.spec.cloud.profile,REGION:.spec.cloud.profile,READY:.status.conditions[?(@.type == 'Available')].status",
+					},
+				},
 			},
 			Dependencies: []string{
 				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedSpec", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
@@ -3127,6 +3132,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootStatus"),
 							},
 						},
+					},
+				},
+				VendorExtensible: spec.VendorExtensible{
+					Extensions: spec.Extensions{
+						"x-kubernetes-print-columns": "custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.cloud.seed,DOMAIN:.spec.dns.domain,VERSION:.spec.kubernetes.version,CONTROL:.status.conditions[?(@.type == 'ControlPlaneHealthy')].status,NODES:.status.conditions[?(@.type == 'EveryNodeReady')].status,SYSTEM:.status.conditions[?(@.type == 'SystemComponentsHealthy')].status,LATEST:.status.lastOperation.state",
 					},
 				},
 			},
