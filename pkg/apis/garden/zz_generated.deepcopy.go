@@ -1874,6 +1874,11 @@ func (in *OpenStackNetworks) DeepCopy() *OpenStackNetworks {
 func (in *OpenStackProfile) DeepCopyInto(out *OpenStackProfile) {
 	*out = *in
 	in.Constraints.DeepCopyInto(&out.Constraints)
+	if in.DNSServers != nil {
+		in, out := &in.DNSServers, &out.DNSServers
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

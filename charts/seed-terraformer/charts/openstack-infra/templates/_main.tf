@@ -35,7 +35,11 @@ resource "openstack_networking_subnet_v2" "cluster" {
   cidr            = "{{ required "networks.worker is required" .Values.networks.worker }}"
   network_id      = "${openstack_networking_network_v2.cluster.id}"
   ip_version      = 4
+  {{- if .Values.dnsServers }}
+  dns_nameservers = [{{- include "openstack-infra.dnsServers" . | trimSuffix ", " }}]
+  {{- else }}
   dns_nameservers = []
+  {{- end }}
 }
 
 resource "openstack_networking_router_interface_v2" "router_nodes" {

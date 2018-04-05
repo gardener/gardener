@@ -2578,6 +2578,20 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"dnsServers": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSServers is a list of IPs of DNS servers used while creating subnets.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
 					},
 					Required: []string{"constraints", "keystoneURL"},
 				},

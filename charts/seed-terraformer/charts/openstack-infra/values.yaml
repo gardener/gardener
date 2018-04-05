@@ -14,6 +14,9 @@
 # router:
 #   id: ${openstack_networking_router_v2.router.id}
 
+# dnsServers:
+# - 8.8.8.8
+
 # clusterName: test-namespace
 
 # names:

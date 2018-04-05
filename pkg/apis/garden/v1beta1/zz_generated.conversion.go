@@ -1971,6 +1971,7 @@ func autoConvert_v1beta1_OpenStackProfile_To_garden_OpenStackProfile(in *OpenSta
 		return err
 	}
 	out.KeyStoneURL = in.KeyStoneURL
+	out.DNSServers = *(*[]string)(unsafe.Pointer(&in.DNSServers))
 	return nil
 }
 
@@ -1984,6 +1985,7 @@ func autoConvert_garden_OpenStackProfile_To_v1beta1_OpenStackProfile(in *garden.
 		return err
 	}
 	out.KeyStoneURL = in.KeyStoneURL
+	out.DNSServers = *(*[]string)(unsafe.Pointer(&in.DNSServers))
 	return nil
 }
 

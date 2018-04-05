@@ -378,7 +378,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - europe-1b
         - europe-1c
       % endif
-    keystoneURL: ${value("spec.openstack.keyStoneURL", "https://url-to-keystone/v3/")}
+    keystoneURL: ${value("spec.openstack.keyStoneURL", "https://url-to-keystone/v3/")}<% dnsServers=value("spec.openstack.dnsServers", []) %>
+    % if dnsServers != []:
+    dnsServers: ${dnsServers}
+    % endif
   % endif
   % if cloud == "vagrant":
   vagrant:

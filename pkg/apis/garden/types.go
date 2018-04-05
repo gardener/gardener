@@ -203,6 +203,9 @@ type OpenStackProfile struct {
 	Constraints OpenStackConstraints
 	// KeyStoneURL is the URL for auth{n,z} in OpenStack (pointing to KeyStone).
 	KeyStoneURL string
+	// DNSServers is a list of IPs of DNS servers used while creating subnets.
+	// +optional
+	DNSServers []string
 }
 
 // OpenStackConstraints is an object containing constraints for certain values in the Shoot specification.

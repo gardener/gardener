@@ -72,6 +72,7 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 		"create": map[string]interface{}{
 			"router": createRouter,
 		},
+		"dnsServers":   b.Shoot.CloudProfile.Spec.OpenStack.DNSServers,
 		"sshPublicKey": string(b.Secrets["ssh-keypair"].Data["id_rsa.pub"]),
 		"router": map[string]interface{}{
 			"id": routerID,
