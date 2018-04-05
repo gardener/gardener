@@ -130,11 +130,6 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		return e
 	}
 
-	// Unregister the Shoot as Seed if it was annotated properly.
-	if err := botanist.UnregisterAsSeed(); err != nil {
-		o.Logger.Errorf("Could not unregister '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
-	}
-
 	o.Logger.Infof("Successfully deleted Shoot cluster '%s'", o.Shoot.Info.Name)
 	return nil
 }

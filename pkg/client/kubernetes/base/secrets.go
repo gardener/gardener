@@ -37,6 +37,16 @@ func (c *Client) CreateSecret(namespace, name string, secretType corev1.SecretTy
 	return secret, err
 }
 
+// CreateSecretObject creates a new Secret object.
+func (c *Client) CreateSecretObject(secret *corev1.Secret, updateIfExists bool) (*corev1.Secret, error) {
+
+	secret, err := c.clientset.CoreV1().Secrets(secret.Namespace).Create(secret)
+	if err != nil && apierrors.IsAlreadyExists(err) && updateIfExists {
+		return c.UpdateSecretObject(secret)
+	}
+	return secret, err
+}
+
 // UpdateSecret updates an already existing Secret object.
 func (c *Client) UpdateSecret(namespace, name string, secretType corev1.SecretType, data map[string][]byte) (*corev1.Secret, error) {
 	return c.clientset.CoreV1().Secrets(namespace).Update(&corev1.Secret{
