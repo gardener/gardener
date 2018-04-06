@@ -33,7 +33,7 @@ go get -u github.com/golang/lint/golint
 
 ###############################################################################
 
-PACKAGES="$(go list -e ./... | grep -vE '/vendor/|/pkg/apis|/pkg/client/garden|/pkg/openapi|/pkg/vagrantprovider')"
+PACKAGES="$(go list -e ./... | grep -vE '/tmp/|/vendor/|/pkg/apis|/pkg/client/garden|/pkg/openapi|/pkg/vagrantprovider')"
 LINT_FOLDERS="$(echo ${PACKAGES} | sed "s|github.com/gardener/gardener|.|g")"
 
 # Execute static code checks.
