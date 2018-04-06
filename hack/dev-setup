@@ -16,6 +16,8 @@
 
 #!/bin/sh
 
+set -e
+
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
 MINIKUBE_IP=$(minikube ip)
@@ -28,6 +30,7 @@ mkdir -p ${DEV_DIR}
 
 cp ${EXAMPLE_DIR}/componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
 
+kubectl config use-context minikube
 kubectl apply -f ${EXAMPLE_DIR}/namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/secret-internal-domain-unmanaged.yaml
