@@ -19,36 +19,8 @@ resource "google_storage_bucket" "bucket" {
 }
 
 //=====================================================================
-//= Service Account
-//=====================================================================
-
-resource "google_service_account" "etcdBackup" {
-  account_id   = "{{ required "clusterName is required" .Values.clusterName }}-b"
-  display_name = "{{ required "clusterName is required" .Values.clusterName }}-b"
-}
-
-resource "google_service_account_key" "serviceAccountKey" {
-  service_account_id = "${google_service_account.etcdBackup.id}"
-}
-
-//=====================================================================
-//= GCP iam policy
-//=====================================================================
-
-resource "google_storage_bucket_iam_member" "memberRole" {
- bucket  = "${google_storage_bucket.bucket.name}"
- role    = "roles/storage.admin"
- member  = "serviceAccount:${google_service_account.etcdBackup.email}",
-}
-
-//=====================================================================
 //= Output variables
 //=====================================================================
-
-output "serviceAccountJson" {
-  value = "${base64decode(google_service_account_key.serviceAccountKey.private_key)}"
-  sensitive = true
-}
 
 output "bucketName" {
   value = "${google_storage_bucket.bucket.name}"

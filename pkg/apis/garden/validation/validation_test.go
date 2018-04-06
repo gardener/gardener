@@ -1569,7 +1569,7 @@ var _ = Describe("validation", func() {
 			invalidCIDR = garden.CIDR("invalid-cidr")
 
 			invalidBackup = &garden.Backup{
-				Schedule: "* * 31 2 *",
+				Schedule: "76 * * * *",
 				Maximum:  0,
 			}
 			addon = garden.Addon{
@@ -1854,7 +1854,7 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.Schedule"),
+					"Field": Equal("spec.backup.schedule"),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),

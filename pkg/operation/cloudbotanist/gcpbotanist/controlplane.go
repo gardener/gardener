@@ -75,15 +75,14 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 // TODO: implement backup functionality for GCP
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	mountPath := "/root/.gcp/"
-	serviceAccountJSON := "serviceAccountJson"
 	bucketName := "bucketName"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(serviceAccountJSON, bucketName)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	secretData := map[string][]byte{
-		ServiceAccountJSON: []byte(stateVariables[serviceAccountJSON]),
+		ServiceAccountJSON: []byte(b.MinifiedServiceAccount),
 	}
 	backupConfigData := map[string]interface{}{
 		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,

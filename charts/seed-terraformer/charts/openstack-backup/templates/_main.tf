@@ -18,29 +18,10 @@ resource "openstack_objectstorage_container_v1" "container" {
   name   = "{{ required "container.name is required" .Values.container.name }}"
 }
 
-/*resource "openstack_identity_user_v3" "user" {
-  name =  "{{ required "clusterName is required" .Values.clusterName }}-etcd-backup" 
-  description = "{{ required "clusterName is required" .Values.clusterName }}-backup user"
-  ignore_change_password_upon_first_use = true
-  ignore_password_expiry = true
-  multi_factor_auth_enabled = false
-  password = "password123"
-}
-
 //=====================================================================
 //= Output variables
 //=====================================================================
 
-/*
-output "username" {
-  value =  "${openstack_identity_user_v3.user.name}"
-}
-
-output "password" {
-  sensitive = true
-  value     = "${openstack_identity_user_v3.user.password}"
-}
-*/
 output "containerName" {
   value = "${openstack_objectstorage_container_v1.container.name}"
 }

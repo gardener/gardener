@@ -64,7 +64,7 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	containerName := "containerName"
 	authURL := "authURL"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables( /*UserName, Password, */ containerName)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(containerName)
 	if err != nil {
 		return nil, nil, err
 	}

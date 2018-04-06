@@ -92,14 +92,14 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	bucketName := "bucketName"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(AccessKeyID, SecretAccessKey, bucketName)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	credentials := `[default]
-aws_access_key_id = ` + stateVariables[AccessKeyID] + `
-aws_secret_access_key = ` + stateVariables[SecretAccessKey]
+aws_access_key_id = ` + string(b.Seed.Secret.Data[AccessKeyID]) + `
+aws_secret_access_key = ` + string(b.Seed.Secret.Data[SecretAccessKey])
 
 	config := `[default]
 region = ` + b.Seed.Info.Spec.Cloud.Region
