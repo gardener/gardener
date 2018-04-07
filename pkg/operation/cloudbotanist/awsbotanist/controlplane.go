@@ -96,17 +96,10 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	if err != nil {
 		return nil, nil, err
 	}
-
-	credentials := `[default]
-aws_access_key_id = ` + string(b.Seed.Secret.Data[AccessKeyID]) + `
-aws_secret_access_key = ` + string(b.Seed.Secret.Data[SecretAccessKey])
-
-	config := `[default]
-region = ` + b.Seed.Info.Spec.Cloud.Region
-
 	secretData := map[string][]byte{
-		"credentials": []byte(credentials),
-		"config":      []byte(config),
+		Region:          []byte(b.Seed.Info.Spec.Cloud.Region),
+		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
+		SecretAccessKey: b.Seed.Secret.Data[SecretAccessKey],
 	}
 
 	backupConfigData := map[string]interface{}{
@@ -115,13 +108,36 @@ region = ` + b.Seed.Info.Spec.Cloud.Region
 		"storageProvider":  "S3",
 		"storageContainer": stateVariables[bucketName],
 		"backupSecret":     common.BackupSecretName,
-		"env":              []map[string]interface{}{},
-		"volumeMount": []map[string]interface{}{
+		"env": []map[string]interface{}{
 			{
-				"mountPath": "/root/.aws/",
-				"name":      common.BackupSecretName,
+				"name": "AWS_REGION",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  Region,
+					},
+				},
+			},
+			{
+				"name": "AWS_SECRET_ACCESS_KEY",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  SecretAccessKey,
+					},
+				},
+			},
+			{
+				"name": "AWS_ACCESS_KEY_ID",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AccessKeyID,
+					},
+				},
 			},
 		},
+		"volumeMount": []map[string]interface{}{},
 	}
 
 	return secretData, backupConfigData, nil

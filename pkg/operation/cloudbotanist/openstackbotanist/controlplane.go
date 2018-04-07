@@ -63,7 +63,6 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	containerName := "containerName"
-	authURL := "authURL"
 	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(containerName)
 	if err != nil {
 		return nil, nil, err
@@ -73,7 +72,7 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 		UserName:   b.Seed.Secret.Data[UserName],
 		Password:   b.Seed.Secret.Data[Password],
 		TenantName: b.Seed.Secret.Data[TenantName],
-		authURL:    []byte(b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL),
+		AuthURL:    []byte(b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL),
 		DomainName: b.Seed.Secret.Data[DomainName],
 	}
 	backupConfigData := map[string]interface{}{
@@ -87,7 +86,7 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 				"valueFrom": map[string]interface{}{
 					"secretKeyRef": map[string]interface{}{
 						"name": common.BackupSecretName,
-						"key":  authURL,
+						"key":  AuthURL,
 					},
 				},
 			},

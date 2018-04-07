@@ -41,7 +41,6 @@ func (b *VagrantBotanist) GenerateKubeSchedulerConfig() (map[string]interface{},
 }
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
-// TODO: implement backup functionality for Vagrant
 func (b *VagrantBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	backupConfigData := map[string]interface{}{
 		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,

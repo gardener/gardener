@@ -86,7 +86,6 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 }
 
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
-// TODO: implement backup functionality for GCP
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
 	return terraformer.
 		New(b.Operation, common.TerraformerPurposeBackup).
@@ -96,7 +95,6 @@ func (b *GCPBotanist) DeployBackupInfrastructure() error {
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
-// TODO: implement backup functionality for GCP
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
 	return terraformer.
 		New(b.Operation, common.TerraformerPurposeBackup).

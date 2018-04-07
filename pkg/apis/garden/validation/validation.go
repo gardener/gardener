@@ -729,8 +729,7 @@ func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, f
 	if backup == nil {
 		return allErrs
 	}
-	_, err := cron.ParseStandard(backup.Schedule)
-	if err != nil {
+	if _, err := cron.ParseStandard(backup.Schedule); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), backup.Schedule, "schedule must be in standard cron format"))
 	}
 	if backup.Maximum <= 0 {

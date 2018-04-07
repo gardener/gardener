@@ -38,7 +38,7 @@ spec:
     autoUpdate:
       kubernetesVersion: true
   backup:
-    schedule: */5 * * * *
+    schedule: "*/5 * * * *"
     maximum: 7
   addons:
     kube2iam:
