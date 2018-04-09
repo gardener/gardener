@@ -101,7 +101,7 @@ spec:
       ${yaml.dump(workers, width=10000)}
       % else:
       - name: cpu-worker
-        machineType: Standard_DS1_v2
+        machineType: Standard_DS2_v2
         volumeType: standard
         volumeSize: 35Gi # must be at least 35Gi for Azure VMs
         autoScalerMin: 2
