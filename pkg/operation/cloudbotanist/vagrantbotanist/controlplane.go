@@ -45,7 +45,7 @@ func (b *VagrantBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[str
 	backupConfigData := map[string]interface{}{
 		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
 		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
-		"storageProvider":  "Local",
+		"storageProvider":  "",
 		"storageContainer": "/var/etcd/default.bkp",
 		"env":              []map[string]interface{}{},
 		"volumeMount":      []map[string]interface{}{},

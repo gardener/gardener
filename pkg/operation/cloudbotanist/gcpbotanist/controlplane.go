@@ -94,7 +94,7 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 				"value": path.Join(mountPath, ServiceAccountJSON),
 			},
 		},
-		"volumeMount": []map[string]interface{}{
+		"volumeMounts": []map[string]interface{}{
 			{
 				"mountPath": mountPath,
 				"name":      common.BackupSecretName,

@@ -62,6 +62,8 @@ spec:
       role: {{ .Values.role }}
   template:
     metadata:
+      annotations:
+        checksum/configmap-etcd-bootstrap-config: {{ include (print $.Template.BasePath "/configmap-etcd-bootstrap.yaml") . | sha256sum }}
       labels:
         app: etcd-statefulset
         role: {{ .Values.role }}
@@ -71,27 +73,7 @@ spec:
         image: {{ index .Values.images "etcd" }}
         imagePullPolicy: IfNotPresent
         command:
-        - /bin/sh
-        - -ec
-        - 'while true; do
-wget http://localhost:8080/initialization/status -S -O status;
-STATUS=`cat status`;
-case $STATUS in
-  "New")        wget http://localhost:8080/initialization/start -S -O - ;;
-  "Progress")   sleep 1;
-                continue;;
-  "Failed")     continue;;
-  "Successful") exec etcd --data-dir=/var/etcd/data
-                --name=etcd-{{ .Values.role }}
-                --advertise-client-urls=http://0.0.0.0:2379
-                --listen-peer-urls=http://0.0.0.0:2380
-                --listen-client-urls=http://0.0.0.0:2379
-                --initial-advertise-peer-urls=http://0.0.0.0:2380
-                --initial-cluster=etcd-{{ .Values.role }}=http://0.0.0.0:2380
-                --initial-cluster-state=new
-                --initial-cluster-token=new;;
-esac;
-done'
+        - /bootstrap/bootstrap.sh
         livenessProbe:
           httpGet:
             path: /metrics
@@ -118,7 +100,9 @@ done'
             cpu: 200m
         volumeMounts:
         - name: etcd-{{ .Values.role }}
-          mountPath: /var/etcd
+          mountPath: /var/etcd/data
+        - name: etcd-bootstrap
+          mountPath: /bootstrap
       - name: backup-restore
         command:
         - etcdbrctl
@@ -146,13 +130,17 @@ done'
 {{ toYaml .Values.backup.env | indent 8 }}
 {{- end }}
         volumeMounts:
-        - mountPath: /var/etcd
+        - mountPath: /var/etcd/data
           name: etcd-{{ .Values.role }}
 {{- if .Values.backup.volumeMounts }}
 {{ toYaml .Values.backup.volumeMounts | indent 8 }}
 {{- end }}
-{{- if .Values.backup.storageProvider }}
       volumes:
+        - name: etcd-bootstrap
+          configMap:
+            name: etcd-bootstrap-{{ .Values.role }}
+            defaultMode: 0356
+{{- if .Values.backup.storageProvider }}
         - name: {{ .Values.backup.backupSecret }}
           secret:
             secretName: {{ .Values.backup.backupSecret }}

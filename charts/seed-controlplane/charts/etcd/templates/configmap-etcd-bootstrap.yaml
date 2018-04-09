@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: etcd-bootstrap-{{ .Values.role }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: etcd
+data:
+  bootstrap.sh: |-
+    #!/bin/sh
+    while true;
+    do
+      wget http://localhost:8080/initialization/status -S -O status;
+      STATUS=`cat status`;
+      case $STATUS in
+      "New")
+            wget http://localhost:8080/initialization/start -S -O - ;;
+      "Progress")
+            sleep 1;
+            continue;;
+      "Failed")
+            continue;;
+      "Successful")
+            exec etcd --data-dir=/var/etcd/data \
+                      --name=etcd-{{.Values.role}} \
+                      --advertise-client-urls=http://0.0.0.0:2379 \
+                      --listen-client-urls=http://0.0.0.0:2379 \
+                      --initial-cluster-state=new \
+                      --initial-cluster-token=new;;
+      esac;
+    done

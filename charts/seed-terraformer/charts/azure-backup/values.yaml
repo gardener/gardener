@@ -3,6 +3,7 @@
 #   tenantID: e9ec4533-d130-4d00-a7c3-d85f1c750c5a
 #   region: westeurope
 #   storageAccountName: my-storage-account
+#   resourceGroupName: resource-group-name
 
 # clusterName: test-namespace
 
