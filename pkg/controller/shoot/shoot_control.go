@@ -94,6 +94,11 @@ func (c *Controller) reconcileShootKey(key string) error {
 	}
 
 	shootLogger := logger.NewShootLogger(logger.Logger, shoot.ObjectMeta.Name, shoot.ObjectMeta.Namespace, "")
+	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
+		shootLogger.Info("Skipping reconciliation because Shoot is marked as 'to-be-ignored'.")
+		return nil
+	}
+
 	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
 		shootLogger.Debug("Do not need to do anything as the Shoot does not have my finalizer")
 		c.shootQueue.Forget(key)
@@ -140,6 +145,11 @@ func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccured bool, config co
 	)
 
 	return true, time.Duration(nextSyncNano - currentTimeNano)
+}
+
+func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
+	_, ignore := annotations[common.ShootIgnore]
+	return respectSyncPeriodOverwrite != nil && ignore && *respectSyncPeriodOverwrite
 }
 
 // ControlInterface implements the control logic for updating Shoots. It is implemented as an interface to allow
