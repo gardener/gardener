@@ -339,7 +339,7 @@ RESULT_DIR="$(dirname $0)"
 SHOOT_KUBECONFIG="${RESULT_DIR}/${CLOUD_PROVIDER}_kubeconfig.yaml"
 
 # Echo conformance test result
-if ! run_conformance_tests ; then
+if run_conformance_tests ; then
   echo "INFO: Conformance test SUCCESSFULLY finished"
   exit 0
 else
