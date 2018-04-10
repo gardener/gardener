@@ -17,3 +17,8 @@ TODO
 config.ign.merged
 config.img
 config.vmdk
+
+# Virtual go & fuse
+.virtualgo
+.fuse_hidden*
+
