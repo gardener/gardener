@@ -76,14 +76,20 @@ data:
     - job_name: 'cadvisor-shoot'
 {{- include "prometheus.kubelet-shoot" (dict "Path" "metrics/cadvisor" "Namespace" .Release.Namespace "JobName" "cadvisor") }}
 
-    # We fetch kubelet metrics from seed's nodes and filter only the metrics in
-    # shoot's namespace
+    # We fetch kubelet metrics from seed's kube-system Prometheus and filter
+    # the metrics in shoot's namespace
     - job_name: 'kube-kubelet-seed'
-{{- include "prometheus.kubelet-seed" (dict "Path" "metrics" "Namespace" .Release.Namespace "JobName" "kube-kubelet") }}
-
-    # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
-    - job_name: 'cadvisor-seed'
-{{- include "prometheus.kubelet-seed" (dict "Path" "metrics/cadvisor" "Namespace" .Release.Namespace "JobName" "cadvisor") }}
+      metrics_path: /federate
+      params:
+        'match[]':
+        - '{namespace="{{ .Release.Namespace }}"}'
+      static_configs:
+      - targets:
+        - prometheus-web.kube-system.svc
+      metric_relabel_configs:
+      # we make the shoot's pods in the shoot's namepsace to apear in as its in the kube-system
+      - target_label: namespace
+        replacement: kube-system
 
     - job_name: 'kube-state-metrics'
       scheme: http

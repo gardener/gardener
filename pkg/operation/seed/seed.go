@@ -97,8 +97,21 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
+	prometheusVersion, err := imageVector.FindImage("prometheus", k8sGardenClient.Version())
+	if err != nil {
+		return err
+	}
+	configMapReloader, err := imageVector.FindImage("configmap-reloader", k8sGardenClient.Version())
+	if err != nil {
+		return err
+	}
+
 	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, metav1.NamespaceSystem, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
+		"images": map[string]interface{}{
+			"prometheus":         prometheusVersion.String(),
+			"configmap-reloader": configMapReloader.String(),
+		},
 	})
 }
 
