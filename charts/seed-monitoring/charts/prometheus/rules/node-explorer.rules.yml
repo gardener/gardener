@@ -26,6 +26,7 @@ groups:
 
   - alert: K8SNodeMemoryPressure
     expr: kube_node_status_condition{condition="MemoryPressure", status="true"} == 1
+    for: 4m
     labels:
       service: node-exporter
       severity: warning
@@ -36,6 +37,7 @@ groups:
 
   - alert: K8SNodeDiskPressure
     expr: kube_node_status_condition{condition="DiskPressure", status="true"} == 1
+    for: 4m
     labels:
       service: node-exporter
       severity: warning
