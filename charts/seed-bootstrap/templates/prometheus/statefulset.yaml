@@ -1,0 +1,114 @@
+apiVersion: {{include "statefulsetversion" .}}
+kind: StatefulSet
+metadata:
+  name: prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: prometheus
+    role: monitoring
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: prometheus
+      role: monitoring
+  serviceName: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+        role: monitoring
+    spec:
+      # used to talk to Seed's API server.
+      serviceAccountName: prometheus
+      containers:
+      - name: prometheus
+        image: {{ index .Values.images "prometheus" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config.file=/etc/prometheus/config/prometheus.yaml
+        - --storage.tsdb.path=/var/prometheus/data
+        - --storage.tsdb.no-lockfile
+        - --storage.tsdb.retention=48h
+        - --web.route-prefix=/
+        - --web.enable-lifecycle
+        # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
+        # data volume needs to be mounted with the same permissions,
+        # otherwise we will have Permission denied problems
+        securityContext:
+          runAsUser: 0
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /status
+            port: web
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        ports:
+        - containerPort: 9090
+          name: web
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /status
+            port: web
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        resources:
+          limits:
+            memory: 1400Mi
+          requests:
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
+        - mountPath: /var/prometheus/data
+          name: prometheus-db
+          subPath: prometheus-
+      - name: prometheus-config-reloader
+        image: {{ index .Values.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:9090/-/reload
+        - -volume-dir=/etc/prometheus/config
+        - -volume-dir=/etc/prometheus/rules
+        resources:
+          limits:
+            cpu: 5m
+            memory: 10Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+      terminationGracePeriodSeconds: 300
+      volumes:
+      - name: config
+        configMap:
+          defaultMode: 420
+          name: prometheus-config
+      - name: rules
+        configMap:
+          defaultMode: 420
+          name: prometheus-rules
+  volumeClaimTemplates:
+  - metadata:
+      name: prometheus-db
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
