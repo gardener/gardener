@@ -2,6 +2,7 @@ apiVersion: {{include "deploymentversion" .}}
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}-ui
+  namespace: kube-system
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     # TODO: use label values and contribute it back
