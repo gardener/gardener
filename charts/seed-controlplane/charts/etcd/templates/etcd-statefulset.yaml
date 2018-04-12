@@ -1,18 +1,18 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: etcd-{{.Values.role}}
-  namespace: {{.Release.Namespace}}
+  name: etcd-{{ .Values.role }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: etcd-statefulset
-    role: {{.Values.role}}
+    role: {{ .Values.role }}
 spec:
   type: ClusterIP
   clusterIP: None
   sessionAffinity: None
   selector:
     app: etcd-statefulset
-    role: {{.Values.role}}
+    role: {{ .Values.role }}
   ports:
   - name: discovery
     protocol: TCP
@@ -22,11 +22,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: etcd-{{.Values.role}}-client
-  namespace: {{.Release.Namespace}}
+  name: etcd-{{ .Values.role }}-client
+  namespace: {{ .Release.Namespace }}
   labels:
     app: etcd-statefulset
-    role: {{.Values.role}}
+    role: {{ .Values.role }}
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "2379"
@@ -36,21 +36,21 @@ spec:
   sessionAffinity: None
   selector:
     app: etcd-statefulset
-    role: {{.Values.role}}
+    role: {{ .Values.role }}
   ports:
   - name: client
     protocol: TCP
     port: 2379
     targetPort: 2379
 ---
-apiVersion: {{include "statefulsetversion" .}}
+apiVersion: {{ include "statefulsetversion" . }}
 kind: StatefulSet
 metadata:
-  name: etcd-{{.Values.role}}
-  namespace: {{.Release.Namespace}}
+  name: etcd-{{ .Values.role }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: etcd-statefulset
-    role: {{.Values.role}}
+    role: {{ .Values.role }}
 spec:
   updateStrategy:
     type: RollingUpdate
@@ -59,50 +59,96 @@ spec:
   selector:
     matchLabels:
       app: etcd-statefulset
-      role: {{.Values.role}}
+      role: {{ .Values.role }}
   template:
     metadata:
+      annotations:
+        checksum/configmap-etcd-bootstrap-config: {{ include (print $.Template.BasePath "/configmap-etcd-bootstrap.yaml") . | sha256sum }}
       labels:
         app: etcd-statefulset
-        role: {{.Values.role}}
+        role: {{ .Values.role }}
     spec:
       containers:
-      - name: etcd-container
+      - name: etcd
         image: {{ index .Values.images "etcd" }}
         imagePullPolicy: IfNotPresent
         command:
-        - "/usr/local/bin/etcd"
-        - "--data-dir=/var/etcd/data"
-        - "--name=etcd-{{.Values.role}}"
-        - "--advertise-client-urls=http://etcd-{{.Values.role}}-0.etcd-{{.Values.role}}:2379"
-        - "--listen-peer-urls=http://0.0.0.0:2380"
-        - "--listen-client-urls=http://0.0.0.0:2379"
-        - "--initial-advertise-peer-urls=http://etcd-{{.Values.role}}-0.etcd-{{.Values.role}}:2380"
-        - "--initial-cluster=etcd-{{.Values.role}}=http://etcd-{{.Values.role}}-0.etcd-{{.Values.role}}:2380"
-        - "--initial-cluster-state=new"
-        - "--initial-cluster-token=new"
+        - /bootstrap/bootstrap.sh
         livenessProbe:
+          httpGet:
+            path: /metrics
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        readinessProbe:
           exec:
             command:
-            - "/bin/sh"
-            - "-ec"
-            - "ETCDCTL_API=3 etcdctl get foo"
-          initialDelaySeconds: 15
-          timeoutSeconds: 15
+            - /bin/sh
+            - -ec
+            - ETCDCTL_API=3 etcdctl get foo
+          initialDelaySeconds: 5
+          periodSeconds: 5
         ports:
-        - name: serverport
-          containerPort: 2380
-        - name: clientport
-          containerPort: 2379
+        - containerPort: 2380
+          name: serverport
+          protocol: TCP
+        - containerPort: 2379
+          name: clientport
+          protocol: TCP
         resources:
           requests:
             cpu: 200m
         volumeMounts:
-        - name: etcd-{{.Values.role}}
+        - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
+        - name: etcd-bootstrap
+          mountPath: /bootstrap
+      - name: backup-restore
+        command:
+        - etcdbrctl
+        - server
+        - --schedule={{ .Values.backup.schedule }}
+        - --max-backups={{ .Values.backup.maxBackups }}
+        - --data-dir=/var/etcd/data
+        - --storage-provider={{ .Values.backup.storageProvider }}  
+        - --store-prefix=etcd-{{ .Values.role }}
+        image: {{ index .Values.images "etcd-backup-restore" }} 
+        livenessProbe:
+          httpGet:  
+            path: /metrics
+            port: server
+          initialDelaySeconds: 15
+          periodSeconds: 15
+        ports:
+        - containerPort: 8080
+          name: server
+          protocol: TCP
+        env:
+        - name: STORAGE_CONTAINER
+          value: {{ .Values.backup.storageContainer }}
+{{- if .Values.backup.env }}
+{{ toYaml .Values.backup.env | indent 8 }}
+{{- end }}
+        volumeMounts:
+        - mountPath: /var/etcd/data
+          name: etcd-{{ .Values.role }}
+{{- if .Values.backup.volumeMounts }}
+{{ toYaml .Values.backup.volumeMounts | indent 8 }}
+{{- end }}
+      volumes:
+        - name: etcd-bootstrap
+          configMap:
+            name: etcd-bootstrap-{{ .Values.role }}
+            defaultMode: 0356
+{{- if .Values.backup.storageProvider }}
+        - name: {{ .Values.backup.backupSecret }}
+          secret:
+            secretName: {{ .Values.backup.backupSecret }}
+            defaultMode: 0420
+{{- end }}
   volumeClaimTemplates:
   - metadata:
-      name: etcd-{{.Values.role}}
+      name: etcd-{{ .Values.role }}
     spec:
       accessModes:
       - "ReadWriteOnce"

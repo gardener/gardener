@@ -39,7 +39,7 @@ func New(o *operation.Operation, purpose string) (CloudBotanist, error) {
 	case common.CloudPurposeSeed:
 		cloudProvider = o.Seed.CloudProvider
 	default:
-		return nil, errors.New("unspported cloud botanist purpose")
+		return nil, errors.New("unsupported cloud botanist purpose")
 	}
 
 	switch cloudProvider {

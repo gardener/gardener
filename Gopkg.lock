@@ -16,14 +16,14 @@
 [[projects]]
   name = "github.com/Masterminds/semver"
   packages = ["."]
-  revision = "15d8430ab86497c5c0da827b748823945e1cf1e1"
-  version = "v1.4.0"
+  revision = "8d82589cda2d7b5b9167396841975c4535c9bec6"
+  version = "v1.4.1"
 
 [[projects]]
   name = "github.com/Masterminds/sprig"
   packages = ["."]
-  revision = "b217b9c388de2cacde4354c536e520c52c055563"
-  version = "v2.14.1"
+  revision = "6b2a58267f6a8b1dc8e2eb5519b984008fa85e8c"
+  version = "v2.15.0"
 
 [[projects]]
   name = "github.com/NYTimes/gziphandler"
@@ -105,8 +105,8 @@
     "pkg/types",
     "version"
   ]
-  revision = "c9d46ab3799b7f2174268e75f72d01e6d6aac953"
-  version = "v3.3.2"
+  revision = "e348b1aedd9167360c466ae98f7343d3e22281f8"
+  version = "v3.3.3"
 
 [[projects]]
   name = "github.com/coreos/go-semver"
@@ -165,8 +165,7 @@
 [[projects]]
   name = "github.com/evanphx/json-patch"
   packages = ["."]
-  revision = "afac545df32f2287a079e2dfb7ba2745a643747e"
-  version = "v3.0.0"
+  revision = "ed7cfbae1fffc071f71e068df27bf4f0521402d8"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -177,8 +176,8 @@
 [[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
-  revision = "6333e38ac20b8949a8dd68baa3650f4dee8f39f0"
-  version = "v1.33.0"
+  revision = "5e9692864e22d02ac79e2fa499cffb00520b4fea"
+  version = "v1.34.0"
 
 [[projects]]
   branch = "master"
@@ -196,13 +195,13 @@
   branch = "master"
   name = "github.com/go-openapi/spec"
   packages = ["."]
-  revision = "9acd88844bc186c3ec7f318cd3d56f1114b4ab99"
+  revision = "370d9e047557906322be8396e77cb0376be6cb96"
 
 [[projects]]
   branch = "master"
   name = "github.com/go-openapi/swag"
   packages = ["."]
-  revision = "ceb469cb0fdf2d792f28d771bc05da6c606f55e5"
+  revision = "811b1089cde9dad18d4d0c2d09fbdbf28dbd27a5"
 
 [[projects]]
   name = "github.com/gobwas/glob"
@@ -261,6 +260,12 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
+  name = "github.com/google/uuid"
+  packages = ["."]
+  revision = "064e2069ce9c359c118179501254f67d7d37ba24"
+  version = "0.2"
+
+[[projects]]
   name = "github.com/googleapis/gnostic"
   packages = [
     "OpenAPIv2",
@@ -294,8 +299,8 @@
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "163f41321a19dd09362d4c63cc2489db2015f1f4"
-  version = "0.3.2"
+  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
+  version = "v0.3.4"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -322,7 +327,7 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+  revision = "f594efddfa171111dc4349cd6e78e8f61dc7936f"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -417,7 +422,7 @@
     "internal/bitbucket.org/ww/goautoneg",
     "model"
   ]
-  revision = "38c53a9f4bfcd932d1b00bfc65e256a7fba6b37a"
+  revision = "e4aa40a9169a88835b849a6efb71e05dc04b88f0"
 
 [[projects]]
   branch = "master"
@@ -428,7 +433,12 @@
     "nfs",
     "xfs"
   ]
-  revision = "780932d4fbbe0e69b84c34c20f5c8d0981e109ea"
+  revision = "54d17b57dd7d4a3aa092476596b3f8a933bde349"
+
+[[projects]]
+  name = "github.com/robfig/cron"
+  packages = ["."]
+  revision = "2315d5715e36303a941d907f038da7f7c44c773b"
 
 [[projects]]
   name = "github.com/satori/go.uuid"
@@ -445,8 +455,8 @@
 [[projects]]
   name = "github.com/spf13/cobra"
   packages = ["."]
-  revision = "7b2c5ac9fc04fc5efafb60700713d4fa609b777b"
-  version = "v0.0.1"
+  revision = "a1f051bc3eba734da4772d60e2d677f47cf93ef4"
+  version = "v0.0.2"
 
 [[projects]]
   name = "github.com/spf13/pflag"
@@ -474,7 +484,7 @@
     "ssh",
     "ssh/terminal"
   ]
-  revision = "88942b9c40a4c9d203b82b3731787b672d6e809b"
+  revision = "c3a3ad6d03f7a915c0f7e194b7152974bb73d287"
 
 [[projects]]
   branch = "master"
@@ -492,7 +502,7 @@
     "trace",
     "websocket"
   ]
-  revision = "6078986fec03a1dcc236c34816c71b0e05018fda"
+  revision = "24dd3780ca4f75fed9f321890729414a4b5d3f13"
 
 [[projects]]
   branch = "master"
@@ -501,7 +511,7 @@
     "unix",
     "windows"
   ]
-  revision = "13d03a9a82fba647c21a0ef8fba44a795d0f0835"
+  revision = "01acb38716e021ed1fc03a602bdb5838e1358c5e"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -550,13 +560,13 @@
     "go/ast/astutil",
     "imports"
   ]
-  revision = "77106db15f689a60e7d4e085d967ac557b918fb2"
+  revision = "96caea41033df6f8c3974c845ab094f8ec3bd345"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "ab0870e398d5dd054b868c0db1481ab029b9a9f2"
+  revision = "f8c8703595236ae70fdf8789ecb656ea0bcdcf46"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -588,8 +598,8 @@
     "tap",
     "transport"
   ]
-  revision = "8e4536a86ab602859c20df5ebfd0bd4228d08655"
-  version = "v1.10.0"
+  revision = "d89cded64628466c4ab532d1f0ba5c220459ebe8"
+  version = "v1.11.2"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -606,8 +616,8 @@
 [[projects]]
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "86f5ed62f8a0ee96bd888d2efdfd6d4fb100a4eb"
-  version = "v2.2.0"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [[projects]]
   name = "k8s.io/api"
@@ -931,7 +941,7 @@
     "util/workqueue"
   ]
   revision = "23781f4d6632d88e869066eaebb743857aa1ef9b"
-  version = "kubernetes-1.10.0"
+  version = "v7.0.0"
 
 [[projects]]
   name = "k8s.io/code-generator"
@@ -1005,11 +1015,11 @@
     "pkg/util",
     "pkg/util/proto"
   ]
-  revision = "50ae88d24ede7b8bad68e23c805b5d3da5c8abaf"
+  revision = "cd0308977f05a0de033c0e8ce1860b317e360dca"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b88757efadb022694286e86ea8a8a37144c766720c7d31366cb6ed893b692197"
+  inputs-digest = "eb1c735cf4cfcf9f96ea2f96be98a384ace3491105e17f3d1f0d45f9f2a2e202"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -173,7 +173,7 @@ spec:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
   % if cloud != "vagrant":
   backup:
-    intervalInSecond: ${value("backup.intervalInSecond", "86400")}
+    schedule: ${value("backup.schedule", "\"*/5 * * * *\"")}
     maximum: ${value("backup.maximum", "7")}
   % endif
   addons:

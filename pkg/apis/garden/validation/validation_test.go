@@ -1569,8 +1569,8 @@ var _ = Describe("validation", func() {
 			invalidCIDR = garden.CIDR("invalid-cidr")
 
 			invalidBackup = &garden.Backup{
-				IntervalInSecond: 0,
-				Maximum:          0,
+				Schedule: "76 * * * *",
+				Maximum:  0,
 			}
 			addon = garden.Addon{
 				Enabled: true,
@@ -1641,8 +1641,8 @@ var _ = Describe("validation", func() {
 						},
 					},
 					Backup: &garden.Backup{
-						IntervalInSecond: 1,
-						Maximum:          2,
+						Schedule: "*/1 * * * *",
+						Maximum:  2,
 					},
 					Cloud: garden.Cloud{
 						Profile: "aws-profile",
@@ -1854,7 +1854,7 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.intervalInSecond"),
+					"Field": Equal("spec.backup.schedule"),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
@@ -2117,7 +2117,7 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.intervalInSecond"),
+					"Field": Equal("spec.backup.schedule"),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),

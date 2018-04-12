@@ -61,7 +61,73 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 }
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
-// TODO: implement backup functionality for OpenStack
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	return nil, nil, nil
+	containerName := "containerName"
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(containerName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secretData := map[string][]byte{
+		UserName:   b.Seed.Secret.Data[UserName],
+		Password:   b.Seed.Secret.Data[Password],
+		TenantName: b.Seed.Secret.Data[TenantName],
+		AuthURL:    []byte(b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL),
+		DomainName: b.Seed.Secret.Data[DomainName],
+	}
+	backupConfigData := map[string]interface{}{
+		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
+		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"storageProvider":  "Swift",
+		"storageContainer": stateVariables[containerName],
+		"env": []map[string]interface{}{
+			{
+				"name": "OS_AUTH_URL",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AuthURL,
+					},
+				},
+			},
+			{
+				"name": "OS_DOMAIN_NAME",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  DomainName,
+					},
+				},
+			},
+			{
+				"name": "OS_USERNAME",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  UserName,
+					},
+				},
+			},
+			{
+				"name": "OS_PASSWORD",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  Password,
+					},
+				},
+			},
+			{
+				"name": "OS_TENANT_NAME",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  TenantName,
+					},
+				},
+			},
+		},
+		"volumeMount": []map[string]interface{}{},
+	}
+	return secretData, backupConfigData, nil
 }

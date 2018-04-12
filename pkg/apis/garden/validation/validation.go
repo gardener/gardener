@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -728,9 +729,8 @@ func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, f
 	if backup == nil {
 		return allErrs
 	}
-
-	if backup.IntervalInSecond <= 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("intervalInSecond"), backup.IntervalInSecond, "interval must be greater than zero"))
+	if _, err := cron.ParseStandard(backup.Schedule); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), backup.Schedule, "schedule must be in standard cron format"))
 	}
 	if backup.Maximum <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), backup.Maximum, "maximum number must be greater than zero"))

@@ -28,8 +28,10 @@ type AWSBotanist struct {
 }
 
 const (
-	// AccessKeyID is a constant for the key in a cloud provider secret that holds the AWS access key id.
+	// AccessKeyID is a constant for the key in a cloud provider secret and backup secret that holds the AWS access key id.
 	AccessKeyID = "accessKeyID"
-	// SecretAccessKey is a constant for the key in a cloud provider secret that holds the AWS secret access key.
+	// SecretAccessKey is a constant for the key in a cloud provider secret and backup secret that holds the AWS secret access key.
 	SecretAccessKey = "secretAccessKey"
+	// Region is a constant for the key in a backup secret that holds the AWS region.
+	Region = "region"
 )

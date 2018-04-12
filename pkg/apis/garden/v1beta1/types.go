@@ -889,10 +889,10 @@ type Kube2IAMRole struct {
 	Policy string `json:"policy"`
 }
 
-// Backup holds information about the backup interval and maximum.
+// Backup holds information about the backup schedule and maximum.
 type Backup struct {
-	// IntervalInSecond defines the interval in seconds how often a backup is taken from etcd.
-	IntervalInSecond int `json:"intervalInSecond"`
+	// Schedule defines the cron schedule according to which a backup is taken from etcd.
+	Schedule string `json:"schedule"`
 	// Maximum indicates how many backups should be kept at maximum.
 	Maximum int `json:"maximum"`
 }
@@ -1066,8 +1066,8 @@ const (
 	DefaultPodNetworkCIDR = CIDR("100.96.0.0/11")
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
 	DefaultServiceNetworkCIDR = CIDR("100.64.0.0/13")
-	// DefaultETCDBackupIntervalSeconds is a constant for the default interval to take backups of a Shoot cluster (24 hours).
-	DefaultETCDBackupIntervalSeconds = 60 * 60 * 24
+	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (5 minutes).
+	DefaultETCDBackupSchedule = "*/5 * * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
 	DefaultETCDBackupMaximum = 7
 )

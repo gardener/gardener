@@ -40,7 +40,7 @@ In order to perform linting on the Go source code, please install [Golint](https
 $ go get -u github.com/golang/lint/golint
 ```
 
-### Ginko and Gomega
+### Ginkgo and Gomega
 
 In order to perform tests on the Go source code, please install [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](http://onsi.github.io/gomega/). Please make yourself familiar with both frameworks and read their introductions after installation:
 
@@ -320,7 +320,7 @@ Currently, there are some limitations in the local Shoot setup which need to be 
 
 - The cloud provider allows to choose from a various list of different machine types. This flexibility is not available in this setup on a single local machine. However, it is possible to specify the Shoot nodes resources (cpu and memory) used by Vagrant in this [configuration file](../../vagrant/Vagrantfile). In the Shoot creation process the Machine Controller Manager plays a central role. Due to the limitation in this setup this component is not used.
 - It is not yet possible to create Shoot clusters consisting of more than one worker node. Cluster Autoscaling therefore is not supported
-- It it not yet possible to create two or more Shoot clusters in parallel
+- It is not yet possible to create two or more Shoot clusters in parallel
 - The Shoot API Server is exposed via a NodePort. In a cloud setup a LoadBalancer would be used
 - The communication between the Seed and the Shoot Clusters uses VPN tunnel. In this setup tunnels are not needed since all components run on localhost
 

@@ -141,12 +141,14 @@ func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() []map[stri
 // generateTerraformBackupConfig creates the Terraform variables and the Terraform config (for the backup)
 // and returns them.
 func (b *AzureBotanist) generateTerraformBackupConfig() map[string]interface{} {
+	shootUIDSha := utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))
 	return map[string]interface{}{
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Seed.Secret.Data[SubscriptionID]),
 			"tenantID":           string(b.Seed.Secret.Data[TenantID]),
 			"region":             b.Seed.Info.Spec.Cloud.Region,
-			"storageAccountName": fmt.Sprintf("bkp%s", utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))[:15]),
+			"storageAccountName": fmt.Sprintf("bkp%s", shootUIDSha[:15]),
+			"resourceGroupName":  fmt.Sprintf("%s-backup-%s", b.Shoot.SeedNamespace, shootUIDSha[:15]),
 		},
 		"clusterName": b.Shoot.SeedNamespace,
 	}

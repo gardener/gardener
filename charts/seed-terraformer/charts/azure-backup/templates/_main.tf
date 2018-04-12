@@ -7,7 +7,7 @@ provider "azurerm" {
 }
 
 resource "azurerm_resource_group" "rg" {
-  name     = "{{ required "clusterName is required" .Values.clusterName }}-backup"
+  name     = "{{ required "azure.resourceGroupName is required" .Values.azure.resourceGroupName }}"
   location = "{{ required "azure.region is required" .Values.azure.region }}"
 }
 

@@ -41,7 +41,15 @@ func (b *VagrantBotanist) GenerateKubeSchedulerConfig() (map[string]interface{},
 }
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
-// TODO: implement backup functionality for Vagrant
 func (b *VagrantBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	return nil, nil, nil
+	backupConfigData := map[string]interface{}{
+		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
+		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"storageProvider":  "",
+		"storageContainer": "/var/etcd/default.bkp",
+		"env":              []map[string]interface{}{},
+		"volumeMount":      []map[string]interface{}{},
+	}
+
+	return nil, backupConfigData, nil
 }

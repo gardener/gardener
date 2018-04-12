@@ -1,0 +1,4 @@
+apiVersion: v1
+description: GCP chart for backup infrastructure
+name: gcp-backup
+version: 0.1.0

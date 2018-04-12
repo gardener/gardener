@@ -1,0 +1,15 @@
+# google:
+#   project: my-project
+#   region: eu-west-1
+
+# bucket:
+#   name: test-bucket-1
+
+# clusterName: test-namespace
+
+# names:
+#   configuration: shoot.tf-config
+#   variables: shoot.tf-vars
+#   state: shoot.tf-state
+
+# initializeEmptyState: true

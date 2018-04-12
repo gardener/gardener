@@ -37,7 +37,7 @@ spec:
     autoUpdate:
       kubernetesVersion: true
   backup:
-    intervalInSecond: 86400
+    schedule: "*/5 * * * *"
     maximum: 7
   addons:
     heapster:

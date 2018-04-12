@@ -92,31 +92,52 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	bucketName := "bucketName"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(AccessKeyID, SecretAccessKey, bucketName)
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
 	if err != nil {
 		return nil, nil, err
 	}
-
-	credentials := `[default]
-aws_access_key_id = ` + stateVariables[AccessKeyID] + `
-aws_secret_access_key = ` + stateVariables[SecretAccessKey]
-
-	config := `[default]
-region = ` + b.Seed.Info.Spec.Cloud.Region
-
 	secretData := map[string][]byte{
-		"credentials": []byte(credentials),
-		"config":      []byte(config),
+		Region:          []byte(b.Seed.Info.Spec.Cloud.Region),
+		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
+		SecretAccessKey: b.Seed.Secret.Data[SecretAccessKey],
 	}
 
 	backupConfigData := map[string]interface{}{
-		"backupIntervalInSecond": b.Shoot.Info.Spec.Backup.IntervalInSecond,
-		"maxBackups":             b.Shoot.Info.Spec.Backup.Maximum,
-		"storageType":            "S3",
-		"s3": map[string]interface{}{
-			"s3Bucket":  stateVariables[bucketName],
-			"awsSecret": common.BackupSecretName,
+		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
+		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"storageProvider":  "S3",
+		"storageContainer": stateVariables[bucketName],
+		"backupSecret":     common.BackupSecretName,
+		"env": []map[string]interface{}{
+			{
+				"name": "AWS_REGION",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  Region,
+					},
+				},
+			},
+			{
+				"name": "AWS_SECRET_ACCESS_KEY",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  SecretAccessKey,
+					},
+				},
+			},
+			{
+				"name": "AWS_ACCESS_KEY_ID",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AccessKeyID,
+					},
+				},
+			},
 		},
+		"volumeMount": []map[string]interface{}{},
 	}
 
 	return secretData, backupConfigData, nil

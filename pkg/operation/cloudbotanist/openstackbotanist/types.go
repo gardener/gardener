@@ -23,12 +23,14 @@ type OpenStackBotanist struct {
 }
 
 const (
-	// DomainName is a constant for the key in a cloud provider secret that holds the OpenStack domain name.
+	// DomainName is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack domain name.
 	DomainName = "domainName"
-	// TenantName is a constant for the key in a cloud provider secret that holds the OpenStack tenant name.
+	// TenantName is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack tenant name.
 	TenantName = "tenantName"
-	// UserName is a constant for the key in a cloud provider secret that holds the OpenStack username.
+	// UserName is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack username.
 	UserName = "username"
-	// Password is a constant for the key in a cloud provider secret that holds the OpenStack password.
+	// Password is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack password.
 	Password = "password"
+	// AuthURL is a constant for the key in a backup secret that holds the OpenStack authentication URL.
+	AuthURL = "authURL"
 )

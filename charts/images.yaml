@@ -23,6 +23,11 @@ images:
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.1.0"
 
+# Shoot backup
+- name: etcd-backup-restore
+  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
+  tag: "0.2.1"
+
 # Monitoring
 - name: alertmanager
   repository: quay.io/prometheus/alertmanager

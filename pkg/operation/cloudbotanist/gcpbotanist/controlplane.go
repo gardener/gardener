@@ -16,6 +16,10 @@ package gcpbotanist
 
 import (
 	"fmt"
+	"path"
+
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 // GenerateCloudProviderConfig generates the GCE cloud provider config.
@@ -68,7 +72,35 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 }
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
-// TODO: implement backup functionality for GCP
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	return nil, nil, nil
+	mountPath := "/root/.gcp/"
+	bucketName := "bucketName"
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secretData := map[string][]byte{
+		ServiceAccountJSON: []byte(b.MinifiedServiceAccount),
+	}
+	backupConfigData := map[string]interface{}{
+		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
+		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"storageProvider":  "GCS",
+		"storageContainer": stateVariables[bucketName],
+		"env": []map[string]interface{}{
+			{
+				"name":  "GOOGLE_APPLICATION_CREDENTIALS",
+				"value": path.Join(mountPath, ServiceAccountJSON),
+			},
+		},
+		"volumeMounts": []map[string]interface{}{
+			{
+				"mountPath": mountPath,
+				"name":      common.BackupSecretName,
+			},
+		},
+	}
+
+	return secretData, backupConfigData, nil
 }
