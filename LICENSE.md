@@ -1,3 +1,4 @@
+```
                                  Apache License
                            Version 2.0, January 2004
                         http://www.apache.org/licenses/
@@ -199,3 +200,104 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+```
+
+## APIs
+
+This project may include APIs to SAP or third party products or services. The use of these APIs, products and services may be subject to additional agreements. In no event shall the application of the Apache Software License, v.2 to this project grant any rights in or to these APIs, products or services that would alter, expand, be inconsistent with, or supersede any terms of these additional agreements. API means application programming interfaces, as well as their respective specifications and implementing code that allows other software products to communicate with or call on SAP or third party products or services (for example, SAP Enterprise Services, BAPIs, Idocs, RFCs and ABAP calls or other user exits) and may be made available through SAP or third party products, SDKs, documentation or other media.
+
+## Subcomponents
+
+This project includes the following subcomponents that are subject to separate license terms. 
+Your use of these subcomponents is subject to the separate license terms applicable to
+each subcomponent.
+
+API.  
+https://git.k8s.io/api.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/api/LICENSE).  
+
+APIMachinery.  
+https://git.k8s.io/apimachinery.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/apimachinery/LICENSE).  
+
+APIServer.  
+https://git.k8s.io/apiserver.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/apiserver/LICENSE).  
+
+Client-Go.  
+https://git.k8s.io/client-go.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/client-go/LICENSE).  
+
+Code-Generator.  
+https://git.k8s.io/code-generator.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/code-generator/LICENSE)  
+
+Gengo.  
+https://git.k8s.io/gengo.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/gengo/LICENSE)  
+
+Helm.  
+https://git.k8s.io/helm.  
+Copyright 2017 The Kubernetes Authors.  
+Apache 2 license (https://git.k8s.io/helm/LICENSE)  
+
+AWS SDK Go.  
+https://github.com/aws/aws-sdk-go.  
+Copyright 2017 Amazon.com, Inc. or its affiliates.  
+Apache 2 license (https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)  
+
+Cobra  
+https://github.com/spf13/cobra.  
+Copyright 2015 Steve Francia.  
+Apache 2 license (https://github.com/spf13/cobra/blob/master/LICENSE.txt)  
+
+YAML marshaling and unmarshaling support for Go  
+https://github.com/ghodss/yaml.  
+Copyright (c) 2014 Sam Ghods  
+MIT license (https://github.com/ghodss/yaml/blob/master/LICENSE)
+
+Logrus  
+https://github.com/sirupsen/logrus.  
+Copyright (c) 2014 Simon Eskildsen  
+MIT license (https://github.com/sirupsen/logrus/blob/master/LICENSE)  
+
+Prometheus Go Client Library.  
+https://github.com/prometheus/client_golang.  
+Copyright 2015 The Prometheus Authors.  
+Apache 2 license (https://github.com/prometheus/client_golang/blob/master/LICENSE)  
+
+SemVer  
+https://github.com/Masterminds/semver.  
+Copyright (C) 2014-2015, Matt Butcher and Matt Farina  
+MIT license (https://github.com/Masterminds/semver/blob/master/LICENSE.txt)
+
+------
+## MIT License
+
+    The MIT License (MIT)
+
+    Copyright (c) <year> <owner>
+
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in
+    all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+    THE SOFTWARE.

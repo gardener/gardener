@@ -1,6 +1,5 @@
 ## Gardener  
 Copyright (c) 2017-2018 SAP SE or an SAP affiliate company. All rights reserved.     
-[Apache 2 license](./LICENSE.md ).
 
 ## Seed Source
 
@@ -30,77 +29,6 @@ The following charts of the [`charts`](charts) directory were seeded based on a 
 * [git.k8s.io/charts/stable/prometheus](https://git.k8s.io/charts/stable/prometheus)
 * [git.k8s.io/charts/stable/kubernetes-dashboard](https://git.k8s.io/charts/stable/kubernetes-dashboard)
 * [github.com/kubernetes-helm/monocular](https://github.com/kubernetes-helm/monocular/tree/master/deployment)
-
-
-## Dependencies
-
-The Gardener includes the following components:
-
-API.  
-https://git.k8s.io/api.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/api/LICENSE).  
-
-APIMachinery.  
-https://git.k8s.io/apimachinery.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/apimachinery/LICENSE).  
-
-APIServer.  
-https://git.k8s.io/apiserver.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/apiserver/LICENSE).  
-
-Client-Go.  
-https://git.k8s.io/client-go.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/client-go/LICENSE).  
-
-Code-Generator.  
-https://git.k8s.io/code-generator.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/code-generator/LICENSE)  
-
-Gengo.  
-https://git.k8s.io/gengo.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/gengo/LICENSE)  
-
-Helm.  
-https://git.k8s.io/helm.  
-Copyright 2017 The Kubernetes Authors.  
-Apache 2 license (https://git.k8s.io/helm/LICENSE)  
-
-AWS SDK Go.  
-https://github.com/aws/aws-sdk-go.  
-Copyright 2017 Amazon.com, Inc. or its affiliates.  
-Apache 2 license (https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)  
-
-Cobra  
-https://github.com/spf13/cobra.  
-Copyright 2015 Steve Francia.  
-Apache 2 license (https://github.com/spf13/cobra/blob/master/LICENSE.txt)  
-
-YAML marshaling and unmarshaling support for Go  
-https://github.com/ghodss/yaml.  
-Copyright (c) 2014 Sam Ghods  
-MIT license (https://github.com/ghodss/yaml/blob/master/LICENSE)
-
-Logrus  
-https://github.com/sirupsen/logrus.  
-Copyright (c) 2014 Simon Eskildsen  
-MIT license (https://github.com/sirupsen/logrus/blob/master/LICENSE)  
-
-Prometheus Go Client Library.  
-https://github.com/prometheus/client_golang.  
-Copyright 2015 The Prometheus Authors.  
-Apache 2 license (https://github.com/prometheus/client_golang/blob/master/LICENSE)  
-
-SemVer  
-https://github.com/Masterminds/semver.  
-Copyright (C) 2014-2015, Matt Butcher and Matt Farina  
-MIT license (https://github.com/Masterminds/semver/blob/master/LICENSE.txt)
-
 
 ## Container Images
 
