@@ -1,4 +1,4 @@
-# Deploying the Gardener into a Minikube with Vagrant Provider
+# Deploying the Gardener into a Minikube with Local Provider
 
 ## Prerequisites
 
@@ -8,7 +8,7 @@ Make sure that you have completed the following steps:
 - [Installing `kubectl` and `helm`](../development/local_setup.md#installing-kubectl-and-helm)
 - [Installing Minikube](../development/local_setup.md#installing-minikube)
 - [Installing iproute2](../development/local_setup.md#installing-iproute2)
-- [Installing `Vagrant`](../development/local_setup.md#installing-vagrant)
+- [Installing `Local`](../development/local_setup.md#installing-local)
 - [Installing `Virtualbox`](../development/local_setup.md#installing-virtualbox)
 - [Get the sources](../development/local_setup.md#get-the-sources)
 
@@ -26,12 +26,12 @@ $ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-a
 # Start Helm's Tiller
 $ helm init
 
-# Deploy Gardener with vagrant specific configuration
+# Deploy Gardener with local specific configuration
 $ helm install charts/gardener \
   --name gardener \
   --namespace garden \
   --values=charts/gardener/values.yaml \
-  --values=charts/gardener/vagrant-local-values.yaml
+  --values=charts/gardener/local-values.yaml
 
 # Check that everything is deployed successfuly and running without a problem
 $ kubectl -n garden get pods
@@ -39,10 +39,10 @@ NAME                                           READY     STATUS    RESTARTS   AG
 gardener-apiserver-d5989f856-swgbg             2/2       Running   0          32s
 gardener-controller-manager-6f7bd556d6-p98fx   1/1       Running   0          32s
 
-$ make dev-setup-vagrant
+$ make dev-setup-local
 namespace "garden-dev" created
-cloudprofile "vagrant" created
+cloudprofile "local" created
 [..]
 ```
 
-You can now continue with [Check Vagrant Setup](../development/local_setup.md#check-vagrant-setup)
+You can now continue with [Check Local Setup](../development/local_setup.md#check-local-setup)

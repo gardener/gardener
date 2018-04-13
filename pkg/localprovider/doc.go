@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate protoc -I . --go_out=plugins=grpc:. ./vagrant.proto
+//go:generate protoc -I . --go_out=plugins=grpc:. ./local.proto
 
-package vagrantprovider
+package localprovider

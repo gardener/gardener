@@ -54,7 +54,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	var (
 		defaultRetry = 30 * time.Second
 		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
-		isCloud      = o.Shoot.Info.Spec.Cloud.Vagrant == nil
+		isCloud      = o.Shoot.Info.Spec.Cloud.Local == nil
 
 		f                                    = flow.New("Shoot cluster creation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		deployNamespace                      = f.AddTask(botanist.DeployNamespace, defaultRetry)

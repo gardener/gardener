@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrantbotanist
+package localbotanist
 
 import (
 	"errors"
@@ -22,13 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 )
 
-// New takes an operation object <o> and creates a new VagrantBotanist object.
-func New(o *operation.Operation) (*VagrantBotanist, error) {
-	if o.Shoot.Info.Spec.Cloud.Vagrant == nil {
-		return nil, errors.New("cannot instantiate an Vagrant botanist if `.spec.cloud.vagrant` is nil")
+// New takes an operation object <o> and creates a new LocalBotanist object.
+func New(o *operation.Operation) (*LocalBotanist, error) {
+	if o.Shoot.Info.Spec.Cloud.Local == nil {
+		return nil, errors.New("cannot instantiate an Local botanist if `.spec.cloud.local` is nil")
 	}
 
-	vb := &VagrantBotanist{
+	vb := &LocalBotanist{
 		Operation: o,
 		// empty string for no cloud provider
 		CloudProviderName: "",
@@ -40,6 +40,6 @@ func New(o *operation.Operation) (*VagrantBotanist, error) {
 }
 
 // GetCloudProviderName returns the Kubernetes cloud provider name for this cloud.
-func (b *VagrantBotanist) GetCloudProviderName() string {
+func (b *LocalBotanist) GetCloudProviderName() string {
 	return b.CloudProviderName
 }

@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,openstack,vagrant} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,openstack,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -57,6 +57,6 @@ data:
   username: ${value("data.username", "base64(username)")}
   password: ${value("data.password", "base64(password)")}
   % endif
-  % if cloud == "vagrant":
+  % if cloud == "local":
   % endif
   kubeconfig: ${value("data.kubeconfig", "base64(kubeconfig-for-seed-cluster)")}

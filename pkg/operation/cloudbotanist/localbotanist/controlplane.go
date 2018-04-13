@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrantbotanist
+package localbotanist
 
-// GenerateCloudProviderConfig returns a cloud provider config for the Vagrant cloud provider.
-// Not needed on Vagrant.
-func (b *VagrantBotanist) GenerateCloudProviderConfig() (string, error) {
+// GenerateCloudProviderConfig returns a cloud provider config for the Local cloud provider.
+// Not needed on Local.
+func (b *LocalBotanist) GenerateCloudProviderConfig() (string, error) {
 	return "", nil
 }
 
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
-func (b *VagrantBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+func (b *LocalBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"securePort": 31443,
 	}, nil
@@ -30,18 +30,18 @@ func (b *VagrantBotanist) GenerateKubeAPIServerConfig() (map[string]interface{},
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
-func (b *VagrantBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
+func (b *LocalBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
 	return nil, nil
 }
 
 // GenerateKubeSchedulerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-scheduler properly.
-func (b *VagrantBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, error) {
+func (b *LocalBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, error) {
 	return nil, nil
 }
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
-func (b *VagrantBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
+func (b *LocalBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	backupConfigData := map[string]interface{}{
 		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
 		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,

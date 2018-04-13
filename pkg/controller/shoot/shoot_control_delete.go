@@ -98,7 +98,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && kubeAPIServerFound
 		defaultRetry          = 30 * time.Second
 		cleanupRetry          = 2 * time.Minute
-		isCloud               = o.Shoot.Info.Spec.Cloud.Vagrant == nil
+		isCloud               = o.Shoot.Info.Spec.Cloud.Local == nil
 
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources)

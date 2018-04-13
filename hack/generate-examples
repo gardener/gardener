@@ -11,7 +11,7 @@ PATH_EXAMPLES="$(dirname $0)/../example"
 mkdir -p "$PATH_EXAMPLES"
 
 # render cloud-specific templates
-for cloud in aws azure gcp openstack vagrant; do
+for cloud in aws azure gcp openstack local; do
   echo "* Rendering manifests for cloud '$cloud':"
   for resource in cloudprofile seed secret-seed secret-cloudprovider secretbinding-cloudprovider shoot; do
     echo "  * Template '$resource' rendered."

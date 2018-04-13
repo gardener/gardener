@@ -12,32 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrantbotanist
+package localbotanist
 
 import "github.com/gardener/gardener/pkg/operation/common"
 
-// DeployKube2IAMResources - Not needed on Vagrant
-func (b *VagrantBotanist) DeployKube2IAMResources() error {
+// DeployKube2IAMResources - Not needed on Local.
+func (b *LocalBotanist) DeployKube2IAMResources() error {
 	return nil
 }
 
-// DestroyKube2IAMResources - Not needed on Vagrant.
-func (b *VagrantBotanist) DestroyKube2IAMResources() error {
+// DestroyKube2IAMResources - Not needed on Local.
+func (b *LocalBotanist) DestroyKube2IAMResources() error {
 	return nil
 }
 
-// GenerateKube2IAMConfig - Not needed on Vagrant.
-func (b *VagrantBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
+// GenerateKube2IAMConfig - Not needed on Local.
+func (b *LocalBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateClusterAutoscalerConfig - Not needed on Vagrant.
-func (b *VagrantBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
+// GenerateClusterAutoscalerConfig - Not needed on Local.
+func (b *LocalBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
 // GenerateAdmissionControlConfig generates values which are required to render the chart admissions-controls properly.
-func (b *VagrantBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
+func (b *LocalBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"StorageClasses": []map[string]interface{}{
 			{
@@ -51,6 +51,6 @@ func (b *VagrantBotanist) GenerateAdmissionControlConfig() (map[string]interface
 }
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
-func (b *VagrantBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
+func (b *LocalBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.NginxIngress.Enabled), nil
 }

@@ -2,16 +2,18 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
 metadata:
-  name: johndoe-vagrant
+  name: johndoe-local
   namespace: garden-dev
 spec:
   cloud:
-    profile: vagrant
+    profile: local
     region: local
     secretBindingRef:
-      name: core-vagrant
-    vagrant:
-      endpoint: localhost:3777 # endpoint service pointing to gardener-vagrant-provider
+      name: core-local
+    local:
+      endpoint: localhost:3777 # endpoint service pointing to gardener-local-provider
+      networks:
+        workers: ['192.168.99.100/24']
   kubernetes:
     version: 1.10.0
   dns:

@@ -69,7 +69,7 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	allErrs := field.ErrorList{}
 
 	if _, err := helper.DetermineCloudProviderInProfile(*spec); err != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/openstack/vagrant"), "cloud profile must only contain exactly one field of aws/azure/gcp/openstack"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/openstack/local"), "cloud profile must only contain exactly one field of aws/azure/gcp/openstack"))
 		return allErrs
 	}
 
@@ -660,7 +660,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	cloudPath := fldPath.Child("cloud")
 	provider, err := helper.DetermineCloudProviderInShoot(spec.Cloud)
 	if err != nil {
-		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/openstack/vagrant"), "cloud section must only contain exactly one field of aws/azure/gcp/openstack/vagrant"))
+		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/openstack/local"), "cloud section must only contain exactly one field of aws/azure/gcp/openstack/local"))
 		return allErrs
 	}
 

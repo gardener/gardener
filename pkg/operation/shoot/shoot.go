@@ -118,9 +118,9 @@ func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
 		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
 			workers = append(workers, worker.Worker)
 		}
-	case gardenv1beta1.CloudProviderVagrant:
+	case gardenv1beta1.CloudProviderLocal:
 		workers = append(workers, gardenv1beta1.Worker{
-			Name:          "vagrant",
+			Name:          "local",
 			AutoScalerMax: 1,
 			AutoScalerMin: 1,
 		})
@@ -164,7 +164,7 @@ func (s *Shoot) GetNodeCount() int {
 		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
 			nodeCount += worker.AutoScalerMax
 		}
-	case gardenv1beta1.CloudProviderVagrant:
+	case gardenv1beta1.CloudProviderLocal:
 		nodeCount = 1
 	}
 
@@ -182,8 +182,8 @@ func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 		return &s.Info.Spec.Cloud.GCP.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderOpenStack:
 		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderVagrant:
-		return &s.Info.Spec.Cloud.Vagrant.Networks.K8SNetworks
+	case gardenv1beta1.CloudProviderLocal:
+		return &s.Info.Spec.Cloud.Local.Networks.K8SNetworks
 	}
 	return nil
 }

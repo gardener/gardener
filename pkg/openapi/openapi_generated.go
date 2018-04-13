@@ -942,10 +942,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud"),
 							},
 						},
-						"vagrant": {
+						"local": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Vagrant contains the Shoot specification for the Vagrant local provider.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantLocal"),
+								Description: "Local contains the Shoot specification for the Local local provider.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local"),
 							},
 						},
 					},
@@ -953,7 +953,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantLocal", "k8s.io/api/core/v1.LocalObjectReference"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "k8s.io/api/core/v1.LocalObjectReference"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfile": {
 			Schema: spec.Schema{
@@ -1066,10 +1066,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"),
 							},
 						},
-						"vagrant": {
+						"local": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Vagrant is the profile specification for the Vagrant provider.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantProfile"),
+								Description: "Local is the profile specification for the Local provider.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile"),
 							},
 						},
 						"caBundle": {
@@ -1083,7 +1083,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantProfile"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler": {
 			Schema: spec.Schema{
@@ -2036,6 +2036,120 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "Local contains the Shoot specification for local provider.",
+					Properties: map[string]spec.Schema{
+						"networks": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Networks holds information about the Kubernetes and infrastructure networks.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"),
+							},
+						},
+						"endpoint": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Endpoint of the local service.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+					},
+					Required: []string{"networks", "endpoint"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LocalConstraints is an object containing constraints for certain values in the Shoot specification.",
+					Properties: map[string]spec.Schema{
+						"dnsProviders": {
+							SchemaProps: spec.SchemaProps{
+								Description: "DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"),
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"dnsProviders"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LocalNetworks holds information about the Kubernetes and infrastructure networks.",
+					Properties: map[string]spec.Schema{
+						"nodes": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Nodes is the CIDR of the node network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"pods": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Pods is the CIDR of the pod network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"services": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Services is the CIDR of the service network.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
+						"workers": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Workers is a CIDR of a worker subnet (private) to create (used for the VMs).",
+								Type:        []string{"array"},
+								Items: &spec.SchemaOrArray{
+									Schema: &spec.Schema{
+										SchemaProps: spec.SchemaProps{
+											Type:   []string{"string"},
+											Format: "",
+										},
+									},
+								},
+							},
+						},
+					},
+					Required: []string{"workers"},
+				},
+			},
+			Dependencies: []string{},
+		},
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile": {
+			Schema: spec.Schema{
+				SchemaProps: spec.SchemaProps{
+					Description: "LocalProfile defines constraints and definitions for the local development.",
+					Properties: map[string]spec.Schema{
+						"constraints": {
+							SchemaProps: spec.SchemaProps{
+								Description: "Constraints is an object containing constraints for certain values in the Shoot specification.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints"),
+							},
+						},
+					},
+					Required: []string{"constraints"},
+				},
+			},
+			Dependencies: []string{
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType": {
 			Schema: spec.Schema{
@@ -3298,105 +3412,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 			},
 			Dependencies: []string{
 				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantConstraints": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "VagrantConstraints is an object containing constraints for certain values in the Shoot specification.",
-					Properties: map[string]spec.Schema{
-						"dnsProviders": {
-							SchemaProps: spec.SchemaProps{
-								Description: "DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.",
-								Type:        []string{"array"},
-								Items: &spec.SchemaOrArray{
-									Schema: &spec.Schema{
-										SchemaProps: spec.SchemaProps{
-											Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"),
-										},
-									},
-								},
-							},
-						},
-					},
-					Required: []string{"dnsProviders"},
-				},
-			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"},
-		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantLocal": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "VagrantLocal contains the Shoot specification for local Vagrant provider.",
-					Properties: map[string]spec.Schema{
-						"networks": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Networks holds information about the Kubernetes and infrastructure networks.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantNetworks"),
-							},
-						},
-						"endpoint": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Endpoint of the local vagrant service.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-					},
-					Required: []string{"networks", "endpoint"},
-				},
-			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantNetworks"},
-		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantNetworks": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "VagrantNetworks holds information about the Kubernetes and infrastructure networks.",
-					Properties: map[string]spec.Schema{
-						"nodes": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Nodes is the CIDR of the node network.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"pods": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Pods is the CIDR of the pod network.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-						"services": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Services is the CIDR of the service network.",
-								Type:        []string{"string"},
-								Format:      "",
-							},
-						},
-					},
-				},
-			},
-			Dependencies: []string{},
-		},
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantProfile": {
-			Schema: spec.Schema{
-				SchemaProps: spec.SchemaProps{
-					Description: "VagrantProfile defines constraints and definitions for the Vagrant local development.",
-					Properties: map[string]spec.Schema{
-						"constraints": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Constraints is an object containing constraints for certain values in the Shoot specification.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantConstraints"),
-							},
-						},
-					},
-					Required: []string{"constraints"},
-				},
-			},
-			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VagrantConstraints"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType": {
 			Schema: spec.Schema{

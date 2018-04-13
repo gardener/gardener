@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package vagrantbotanist
+package localbotanist
 
-import "github.com/gardener/gardener/pkg/operation"
+import (
+	"github.com/gardener/gardener/pkg/operation/common"
+)
 
-// VagrantBotanist is a struct which has methods that perform Vagrant cloud-specific operations for a Shoot cluster.
-type VagrantBotanist struct {
-	*operation.Operation
-	CloudProviderName string
+// GenerateCloudConfigUserDataConfig generates values which are required to render the chart shoot-cloud-config properly.
+func (b *LocalBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
+	return &common.CloudConfigUserDataConfig{
+		WorkerNames: b.Shoot.GetWorkerNames(),
+	}
 }
