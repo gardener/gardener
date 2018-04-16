@@ -1346,6 +1346,20 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
+
+			Context("dhcp domain validation", func() {
+				It("should forbid not specifying a value when the key is present", func() {
+					openStackCloudProfile.Spec.OpenStack.DHCPDomain = makeStringPointer("")
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.dhcpDomain", fldPath)),
+					}))
+				})
+			})
 		})
 	})
 

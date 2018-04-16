@@ -206,6 +206,10 @@ type OpenStackProfile struct {
 	// DNSServers is a list of IPs of DNS servers used while creating subnets.
 	// +optional
 	DNSServers []string `json:"dnsServers,omitempty"`
+	// DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for
+	// Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.
+	// +optional
+	DHCPDomain *string `json:"dhcpDomain,omitempty"`
 }
 
 // OpenStackConstraints is an object containing constraints for certain values in the Shoot specification.

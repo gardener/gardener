@@ -26,12 +26,45 @@ import (
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/openstack/openstack.go
 func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
-	cloudConfig := "cloud_config"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(cloudConfig)
+	var (
+		floatingNetworkID = "floating_network_id"
+		subnetID          = "subnet_id"
+	)
+
+	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(floatingNetworkID, subnetID)
 	if err != nil {
 		return "", err
 	}
-	return stateVariables[cloudConfig], nil
+
+	cloudProviderConfig := `
+[Global]
+auth-url=` + b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL + `
+domain-name=` + string(b.Shoot.Secret.Data[DomainName]) + `
+tenant-name=` + string(b.Shoot.Secret.Data[TenantName]) + `
+username=` + string(b.Shoot.Secret.Data[UserName]) + `
+password=` + string(b.Shoot.Secret.Data[Password]) + `
+[LoadBalancer]
+lb-version=v2
+lb-provider=` + b.Shoot.Info.Spec.Cloud.OpenStack.LoadBalancerProvider + `
+floating-network-id=` + stateVariables[floatingNetworkID] + `
+subnet-id=` + stateVariables[subnetID] + `
+create-monitor=true
+monitor-delay=60s
+monitor-timeout=30s
+monitor-max-retries=5`
+
+	k8s1101, err := utils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "^", "1.10.1")
+	if err != nil {
+		return "", err
+	}
+
+	if k8s1101 && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil {
+		cloudProviderConfig += `
+[Metadata]
+dhcp-domain=` + *b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain
+	}
+
+	return cloudProviderConfig, nil
 }
 
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the

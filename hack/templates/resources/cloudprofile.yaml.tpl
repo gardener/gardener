@@ -378,9 +378,14 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - europe-1b
         - europe-1c
       % endif
-    keystoneURL: ${value("spec.openstack.keyStoneURL", "https://url-to-keystone/v3/")}<% dnsServers=value("spec.openstack.dnsServers", []) %>
+    keystoneURL: ${value("spec.openstack.keyStoneURL", "https://url-to-keystone/v3/")}<% dnsServers=value("spec.openstack.dnsServers", []) %><% dhcpDomain=value("spec.openstack.dhcpDomain", "") %>
     % if dnsServers != []:
     dnsServers: ${dnsServers}
+    % endif
+    % if dhcpDomain != "":
+    dhcpDomain: ${dhcpDomain}
+    % else:
+  # dhcpDomain: nova.local # DHCP domain of OpenStack system (only meaningful for Kubernetes 1.10.1, see https://github.com/kubernetes/kubernetes/pull/61890 for details)
     % endif
   % endif
   % if cloud == "local":

@@ -239,7 +239,6 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 		for resource, count := range numberOfResources {
 			if numberOfResources[resource] != 0 {
 				msg += fmt.Sprintf("%d %s, ", count, resource)
-				return false, nil
 			}
 		}
 

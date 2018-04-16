@@ -2068,6 +2068,7 @@ func autoConvert_v1beta1_OpenStackProfile_To_garden_OpenStackProfile(in *OpenSta
 	}
 	out.KeyStoneURL = in.KeyStoneURL
 	out.DNSServers = *(*[]string)(unsafe.Pointer(&in.DNSServers))
+	out.DHCPDomain = (*string)(unsafe.Pointer(in.DHCPDomain))
 	return nil
 }
 
@@ -2082,6 +2083,7 @@ func autoConvert_garden_OpenStackProfile_To_v1beta1_OpenStackProfile(in *garden.
 	}
 	out.KeyStoneURL = in.KeyStoneURL
 	out.DNSServers = *(*[]string)(unsafe.Pointer(&in.DNSServers))
+	out.DHCPDomain = (*string)(unsafe.Pointer(in.DHCPDomain))
 	return nil
 }
 

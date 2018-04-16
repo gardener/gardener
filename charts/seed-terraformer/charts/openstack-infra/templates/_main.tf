@@ -101,23 +101,11 @@ output "security_group_name" {
   value = "${openstack_networking_secgroup_v2.cluster.name}"
 }
 
-output "cloud_config" {
-  value = <<EOF
-[Global]
-auth-url={{ required "openstack.authURL is required" .Values.openstack.authURL }}
-domain-name={{ required "openstack.domainName is required" .Values.openstack.domainName }}
-tenant-name={{ required "openstack.tenantName is required" .Values.openstack.tenantName }}
-username=${var.USER_NAME}
-password=${var.PASSWORD}
-[LoadBalancer]
-lb-version=v2
-lb-provider={{ required "openstack.loadBalancerProvider is required" .Values.openstack.loadBalancerProvider }}
-floating-network-id=${data.openstack_networking_network_v2.fip.id}
-subnet-id=${openstack_networking_subnet_v2.cluster.id}
-create-monitor=true
-monitor-delay=60s
-monitor-timeout=30s
-monitor-max-retries=5
-EOF
+output "floating_network_id" {
+  value = "${data.openstack_networking_network_v2.fip.id}"
+}
+
+output "subnet_id" {
+  value = "${openstack_networking_subnet_v2.cluster.id}"
 }
 {{- end -}}
