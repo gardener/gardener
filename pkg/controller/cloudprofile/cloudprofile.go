@@ -110,10 +110,10 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for {
 		if c.cloudProfileQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running CloudProfile worker and no items left in the queues. Terminated CloudProfile controller...")
+			logger.Logger.Debug("No running CloudProfile worker and no items left in the queues. Terminated CloudProfile controller...")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d CloudProfile worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.cloudProfileQueue.Len())
+		logger.Logger.Debugf("Waiting for %d CloudProfile worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.cloudProfileQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

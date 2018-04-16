@@ -30,16 +30,14 @@ func main() {
 
 	// Setup signal handler if running inside a Kubernetes cluster
 	stopCh := make(chan struct{})
-	if _, err := os.Stat("/var/run/secrets/kubernetes.io/serviceaccount/token"); err == nil {
-		c := make(chan os.Signal, 2)
-		signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-		go func() {
-			<-c
-			close(stopCh)
-			<-c
-			os.Exit(1)
-		}()
-	}
+	c := make(chan os.Signal, 2)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		<-c
+		close(stopCh)
+		<-c
+		os.Exit(1)
+	}()
 
 	command := app.NewCommandStartGardenerControllerManager(stopCh)
 	if err := command.Execute(); err != nil {

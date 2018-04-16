@@ -119,10 +119,10 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for {
 		if c.seedQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running Seed worker and no items left in the queues. Terminated Seed controller...")
+			logger.Logger.Debug("No running Seed worker and no items left in the queues. Terminated Seed controller...")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d Seed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.seedQueue.Len())
+		logger.Logger.Debugf("Waiting for %d Seed worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.seedQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

@@ -116,10 +116,10 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for {
 		if c.secretBindingQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running SecretBinding worker and no items left in the queues. Terminated SecretBinding controller...")
+			logger.Logger.Debug("No running SecretBinding worker and no items left in the queues. Terminated SecretBinding controller...")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d SecretBinding worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.secretBindingQueue.Len())
+		logger.Logger.Debugf("Waiting for %d SecretBinding worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.secretBindingQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

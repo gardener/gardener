@@ -111,10 +111,10 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for {
 		if c.quotaQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running Quota worker and no items left in the queues. Terminated Quota controller...")
+			logger.Logger.Debug("No running Quota worker and no items left in the queues. Terminated Quota controller...")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d Quota worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.quotaQueue.Len())
+		logger.Logger.Debugf("Waiting for %d Quota worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.quotaQueue.Len())
 		time.Sleep(5 * time.Second)
 	}
 

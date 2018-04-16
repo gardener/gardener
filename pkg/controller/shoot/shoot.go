@@ -193,10 +193,10 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Info("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
+			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
 			break
 		}
-		logger.Logger.Infof("Waiting for %d Shoot worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)
+		logger.Logger.Debugf("Waiting for %d Shoot worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, queueLengths)
 		time.Sleep(5 * time.Second)
 	}
 
