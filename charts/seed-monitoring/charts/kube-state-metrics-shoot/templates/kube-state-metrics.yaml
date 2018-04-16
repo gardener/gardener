@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kube-state-metrics
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     component: kube-state-metrics
     type: shoot
@@ -17,11 +17,11 @@ spec:
     component: kube-state-metrics
     type: shoot
 ---
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kube-state-metrics
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     component: kube-state-metrics
     type: shoot
@@ -49,10 +49,9 @@ spec:
         command:
         - /kube-state-metrics
         - --port=8080
-        - --in-cluster=false
         - --kubeconfig=/etc/kube-state-metrics/config/kubeconfig
         - --namespace=kube-system
-        - --collectors=daemonsets,deployments,jobs,limitranges,nodes,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
+        - --collectors=cronjobs,daemonsets,deployments,jobs,limitranges,nodes,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
         volumeMounts:
         - name: kubeconfig
           mountPath: /etc/kube-state-metrics/config

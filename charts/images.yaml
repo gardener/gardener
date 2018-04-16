@@ -7,7 +7,7 @@ images:
 # Seed controlplane
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.2
+  tag: v3.3.3
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
@@ -40,13 +40,13 @@ images:
   tag: v0.0.1
 - name: kube-state-metrics
   repository: quay.io/coreos/kube-state-metrics
-  tag: v1.2.0
+  tag: v1.3.1
 - name: node-exporter
   repository: quay.io/prometheus/node-exporter
   tag: v0.15.2
 - name: grafana
   repository: grafana/grafana
-  tag: "5.0.3"
+  tag: "5.0.4"
 - name: grafana-watcher
   repository: quay.io/coreos/grafana-watcher
   tag: v0.0.8
@@ -57,25 +57,25 @@ images:
 # Shoot core addons
 - name: calico-node
   repository: quay.io/calico/node
-  tag: v3.0.4
+  tag: v3.1.0
 - name: calico-cni
   repository: quay.io/calico/cni
-  tag: v2.0.3
+  tag: v3.1.0
 - name: calico-typha
   repository: quay.io/calico/typha
-  tag: v0.7.0
+  tag: v0.7.1
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.8.0"
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
-  tag: "1.14.8"
+  tag: "1.14.9"
 - name: kube-dns-dnsmasq
   repository: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
-  tag: "1.14.8"
+  tag: "1.14.9"
 - name: kube-dns-sidecar
   repository: k8s.gcr.io/k8s-dns-sidecar-amd64
-  tag: "1.14.8"
+  tag: "1.14.9"
 - name: cluster-proportional-autoscaler
   repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
   tag: "1.1.2"
@@ -83,7 +83,7 @@ images:
 # Shoot optional addons
 - name: heapster
   repository: k8s.gcr.io/heapster
-  tag: v1.5.1
+  tag: v1.5.2
 - name: addon-resizer
   repository: k8s.gcr.io/addon-resizer
   tag: "2.1"
