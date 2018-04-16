@@ -28,6 +28,7 @@ type UpdaterInterface interface {
 	UpdateShoot(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
 	UpdateShootStatus(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
 	UpdateShootStatusIfNoOperation(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)
+	UpdateShootLabels(shoot *gardenv1beta1.Shoot, computeLabelsFunc func(map[string]string) map[string]string) (*gardenv1beta1.Shoot, error)
 }
 
 // NewRealUpdater returns a UpdaterInterface that updates the Shoot manifest, using the supplied client and shootLister.
@@ -40,39 +41,48 @@ type realUpdater struct {
 	shootLister     gardenlisters.ShootLister
 }
 
-// UpdateShoot updates the Shoot manifest. Implementations are required to retry on conflicts,
+var retryUpdates = func(shoot *gardenv1beta1.Shoot) bool { return false }
+
+// UpdateShoot updates the Shoot spec. Implementations are required to retry on conflicts,
 // but fail on other errors. If the returned error is nil Shoot's manifest has been successfully set.
 func (u *realUpdater) UpdateShoot(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update, func(shoot *gardenv1beta1.Shoot) bool { return false })
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update, retryUpdates, true, nil)
 }
 
-// UpdateShootStatus updates the Shoot manifest. Implementations are required to retry on conflicts,
+// UpdateShootStatus updates the Shoot status. Implementations are required to retry on conflicts,
 // but fail on other errors. If the returned error is nil Shoot's manifest has been successfully set.
 func (u *realUpdater) UpdateShootStatus(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus, func(shoot *gardenv1beta1.Shoot) bool { return false })
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus, retryUpdates, false, nil)
 }
 
-// UpdateShootStatusIfNoOperation updates the Shoot manifest, but retrying is only performed when the status
+// UpdateShootStatusIfNoOperation updates the Shoot status, but retrying is only performed when the status
 // does not indicate a running operations. If the returned error is nil Shoot's manifest has been
 // successfully set.
 func (u *realUpdater) UpdateShootStatusIfNoOperation(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus, operationOngoing)
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).UpdateStatus, operationOngoing, false, nil)
 }
 
-func (u *realUpdater) update(shoot *gardenv1beta1.Shoot, updateFunc func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error), abortRetryFunc func(*gardenv1beta1.Shoot) bool) (*gardenv1beta1.Shoot, error) {
+// UpdateShootLabels updates the Shoot labels. Implementations are required to retry on conflicts,
+// but fail on other errors. If the returned error is nil Shoot's manifest has been successfully set.
+func (u *realUpdater) UpdateShootLabels(shoot *gardenv1beta1.Shoot, computeLabelsFunc func(existingLabels map[string]string) map[string]string) (*gardenv1beta1.Shoot, error) {
+	return u.update(shoot, u.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update, retryUpdates, false, computeLabelsFunc)
+}
+
+func (u *realUpdater) update(shoot *gardenv1beta1.Shoot, updateFunc func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error), abortRetryFunc func(*gardenv1beta1.Shoot) bool, updateSpec bool, computeLabelsFunc func(existingLabels map[string]string) map[string]string) (*gardenv1beta1.Shoot, error) {
 	var (
-		newShoot    *gardenv1beta1.Shoot
-		labels      = shoot.Labels
-		annotations = shoot.Annotations
-		spec        = shoot.Spec
-		status      = shoot.Status
-		updateErr   error
+		newShoot  *gardenv1beta1.Shoot
+		spec      = shoot.Spec
+		status    = shoot.Status
+		updateErr error
 	)
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		shoot.Labels = labels
-		shoot.Annotations = annotations
-		shoot.Spec = spec
+		if updateSpec {
+			shoot.Spec = spec
+		}
+		if computeLabelsFunc != nil {
+			shoot.Labels = computeLabelsFunc(shoot.Labels)
+		}
 		shoot.Status = status
 
 		newShoot, updateErr = updateFunc(shoot)

@@ -195,8 +195,7 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 		o.Shoot.Info = newShoot
 	}
 
-	o.Shoot.Info.Labels = computeLabelsWithShootHealthiness(o.Shoot.Info, false)
-	newShootAfterLabel, err := c.updater.UpdateShoot(o.Shoot.Info)
+	newShootAfterLabel, err := c.updater.UpdateShootLabels(o.Shoot.Info, computeLabelsWithShootHealthiness(false))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}

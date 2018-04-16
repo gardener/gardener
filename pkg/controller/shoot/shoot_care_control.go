@@ -188,13 +188,10 @@ func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, condi
 }
 
 func (c *defaultCareControl) labelShoot(shoot *gardenv1beta1.Shoot, healthy bool) error {
-	shoot.Labels = computeLabelsWithShootHealthiness(shoot, healthy)
-
-	_, err := c.updater.UpdateShoot(shoot)
+	_, err := c.updater.UpdateShootLabels(shoot, computeLabelsWithShootHealthiness(healthy))
 	if err != nil {
 		logger.Logger.Errorf("Could not update the Shoot metadata: %s", err.Error())
 	}
-
 	return err
 }
 

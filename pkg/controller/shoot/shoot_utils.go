@@ -37,19 +37,21 @@ func formatError(message string, err error) *gardenv1beta1.LastError {
 	}
 }
 
-func computeLabelsWithShootHealthiness(shoot *gardenv1beta1.Shoot, healthy bool) map[string]string {
-	labels := shoot.Labels
-	if labels == nil {
-		labels = map[string]string{}
-	}
+func computeLabelsWithShootHealthiness(healthy bool) func(map[string]string) map[string]string {
+	return func(existingLabels map[string]string) map[string]string {
+		labels := existingLabels
+		if labels == nil {
+			labels = map[string]string{}
+		}
 
-	if !healthy {
-		labels[common.ShootUnhealthy] = "true"
-	} else {
-		delete(labels, common.ShootUnhealthy)
-	}
+		if !healthy {
+			labels[common.ShootUnhealthy] = "true"
+		} else {
+			delete(labels, common.ShootUnhealthy)
+		}
 
-	return labels
+		return labels
+	}
 }
 
 func computeOperationType(lastOperation *gardenv1beta1.LastOperation) gardenv1beta1.ShootLastOperationType {
