@@ -17,6 +17,8 @@ package utils
 import (
 	"fmt"
 	"time"
+
+	"github.com/gardener/gardener/pkg/logger"
 )
 
 // NeverStop is a channel that is always open. Can be used for never stopping a Retry computation.
@@ -84,13 +86,15 @@ func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc)
 			}
 
 			lastError = err
+			logger.Logger.Error(err)
 		} else if success {
 			return nil
 		}
 
-		_, open := <-stopCh
-		if !open {
+		select {
+		case <-stopCh:
 			return &TimedOut{LastError: lastError, WaitTime: time.Since(startTime)}
+		default:
 		}
 
 		time.Sleep(interval)

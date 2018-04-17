@@ -16,9 +16,12 @@ package awsbotanist
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	"github.com/gardener/gardener/pkg/utils/flow"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -59,9 +62,25 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 	if err != nil {
 		return err
 	}
-	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		Destroy()
+
+	var (
+		g = flow.NewGraph("AWS infrastructure destruction")
+
+		destroyKubernetesLoadBalancersAndSecurityGroups = g.Add(flow.Task{
+			Name: "Destroying Kubernetes load balancers and security groups",
+			Fn:   flow.TaskFn(b.destroyKubernetesLoadBalancersAndSecurityGroups).RetryUntilTimeout(10*time.Second, 5*time.Minute),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Destroying Shoot infrastructure",
+			Fn:           flow.TaskFn(tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).Destroy),
+			Dependencies: flow.NewTaskIDs(destroyKubernetesLoadBalancersAndSecurityGroups),
+		})
+
+		f = g.Compile()
+	)
+
+	return f.Run(flow.Opts{Logger: b.Logger})
 }
 
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
@@ -116,6 +135,51 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 		"clusterName": b.Shoot.SeedNamespace,
 		"zones":       zones,
 	}
+}
+
+func (b *AWSBotanist) destroyKubernetesLoadBalancersAndSecurityGroups() error {
+	t, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+
+	if _, err := t.GetState(); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	vpcIDKey := "vpc_id"
+	stateVariables, err := t.GetStateOutputVariables(vpcIDKey)
+	if err != nil {
+		return err
+	}
+	vpcID := stateVariables[vpcIDKey]
+
+	// Find load balancers and security groups.
+	loadBalancers, err := b.AWSClient.ListKubernetesELBs(vpcID, b.Shoot.SeedNamespace)
+	if err != nil {
+		return err
+	}
+	securityGroups, err := b.AWSClient.ListKubernetesSecurityGroups(vpcID, b.Shoot.SeedNamespace)
+	if err != nil {
+		return err
+	}
+
+	// Destroy load balancers and security groups.
+	for _, loadBalancerName := range loadBalancers {
+		if err := b.AWSClient.DeleteELB(loadBalancerName); err != nil {
+			return err
+		}
+	}
+	for _, securityGroupID := range securityGroups {
+		if err := b.AWSClient.DeleteSecurityGroup(securityGroupID); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.

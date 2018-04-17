@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -106,4 +107,90 @@ func (c *Client) UpdateELBHealthCheck(loadBalancerName string, targetPort string
 	}
 	_, err := c.ELB.ConfigureHealthCheck(configureHealthCheckInput)
 	return err
+}
+
+// The following functions are only temporary needed due to https://github.com/gardener/gardener/issues/129.
+
+// ListKubernetesELBs returns the list of load balancers in the given <vpcID> tagged with <clusterName>.
+func (c *Client) ListKubernetesELBs(vpcID, clusterName string) ([]string, error) {
+	output, err := c.ELB.DescribeLoadBalancers(&elb.DescribeLoadBalancersInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	results := []string{}
+	for _, lb := range output.LoadBalancerDescriptions {
+		if lb.VPCId != nil && *lb.VPCId == vpcID {
+			tags, err := c.ELB.DescribeTags(&elb.DescribeTagsInput{
+				LoadBalancerNames: []*string{lb.LoadBalancerName},
+			})
+			if err != nil {
+				return nil, err
+			}
+
+			for _, description := range tags.TagDescriptions {
+				for _, tag := range description.Tags {
+					if tag.Key != nil && *tag.Key == fmt.Sprintf("kubernetes.io/cluster/%s", clusterName) && tag.Value != nil && *tag.Value == "owned" {
+						results = append(results, *lb.LoadBalancerName)
+					}
+				}
+			}
+		}
+	}
+
+	return results, nil
+}
+
+// DeleteELB deletes the load balancer with the specific <name>. If it does not exist,
+// no error is returned.
+func (c *Client) DeleteELB(name string) error {
+	if _, err := c.ELB.DeleteLoadBalancer(&elb.DeleteLoadBalancerInput{LoadBalancerName: aws.String(name)}); err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == elb.ErrCodeAccessPointNotFoundException {
+			return nil
+		}
+		return err
+	}
+	return nil
+}
+
+// ListKubernetesSecurityGroups returns the list of security groups in the given <vpcID> tagged with <clusterName>.
+func (c *Client) ListKubernetesSecurityGroups(vpcID, clusterName string) ([]string, error) {
+	groups, err := c.EC2.DescribeSecurityGroups(&ec2.DescribeSecurityGroupsInput{
+		Filters: []*ec2.Filter{
+			{
+				Name:   aws.String("vpc-id"),
+				Values: []*string{aws.String(vpcID)},
+			},
+			{
+				Name:   aws.String("tag-key"),
+				Values: []*string{aws.String(fmt.Sprintf("kubernetes.io/cluster/%s", clusterName))},
+			},
+			{
+				Name:   aws.String("tag-value"),
+				Values: []*string{aws.String("owned")},
+			},
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	results := []string{}
+	for _, group := range groups.SecurityGroups {
+		results = append(results, *group.GroupId)
+	}
+
+	return results, nil
+}
+
+// DeleteSecurityGroup deletes the security group with the specific <id>. If it does not exist,
+// no error is returned.
+func (c *Client) DeleteSecurityGroup(id string) error {
+	if _, err := c.EC2.DeleteSecurityGroup(&ec2.DeleteSecurityGroupInput{GroupId: aws.String(id)}); err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == "InvalidGroup.NotFound" {
+			return nil
+		}
+		return err
+	}
+	return nil
 }

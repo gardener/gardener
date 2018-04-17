@@ -15,12 +15,15 @@
 package utils_test
 
 import (
+	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils"
 
 	"errors"
+	"io/ioutil"
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 var (
@@ -51,7 +54,13 @@ var _ = Describe("utils", func() {
 	})
 
 	Context("#Retry", func() {
+		BeforeSuite(func() {
+			logger.NewLogger("")
+			logger.Logger.Out = ioutil.Discard
+		})
+
 		It("should fail due to a timeout containing the last error", func() {
+
 			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
 				return false, false, testErr
 			})
