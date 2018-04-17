@@ -80,7 +80,7 @@ spec:
         livenessProbe:
           failureThreshold: 10
           httpGet:
-            path: /status
+            path: /-/healthy
             port: web
             scheme: HTTP
           initialDelaySeconds: 300
@@ -94,7 +94,7 @@ spec:
         readinessProbe:
           failureThreshold: 6
           httpGet:
-            path: /status
+            path: /-/ready
             port: web
             scheme: HTTP
           periodSeconds: 5
