@@ -229,7 +229,7 @@ func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]st
 			}
 			logList[name] = logsBuffer.String()
 		}
-		logChan <- map[string]string{}
+		logChan <- logList
 	}()
 
 	select {
