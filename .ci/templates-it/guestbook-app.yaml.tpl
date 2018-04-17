@@ -43,11 +43,11 @@ spec:
         - containerPort: 8080
         env:
         - name: REDIS_SERVICE_NAME
-          value: redis-master
+          value: redis-redis
         - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: redis
+              name: redis-redis
               key: redis-password
 ---
 kind: Service

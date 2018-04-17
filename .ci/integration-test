@@ -549,12 +549,12 @@ function execute() {
       sleep 5
     done
 
-    while [[ ! "$(exec_helm "${shoot_cluster_kubeconfig}" --namespace ${helm_deploy_ns} redis | grep -E 'DEPLOYED')" ]]; do
+    while [[ ! "$(exec_helm "${shoot_cluster_kubeconfig}" ls --namespace ${helm_deploy_ns} redis | grep -E 'DEPLOYED')" ]]; do
       echo -e "Redis deployment not ready. Waiting..."
       sleep 5
     done
     echo -e "$(ok Redis chart deployed)"
-    wait_for_running_pod_state 'redis-master-.*'
+    wait_for_running_pod_state 'redis-redis-.*'
 
     # Create application
     guestbook_manifests="$(mako-render --var namespace=${helm_deploy_ns} --var shootDnsHost=${shoot_dns_name_suffix} ${template_dir}/guestbook-app.yaml.tpl)"
