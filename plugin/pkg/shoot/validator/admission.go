@@ -234,6 +234,16 @@ func (h *ValidateShoot) Admit(a admission.Attributes) error {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
 
+	// Add createdBy annotation to Shoot
+	if a.GetOperation() == admission.Create {
+		annotations := shoot.Annotations
+		if annotations == nil {
+			annotations = map[string]string{}
+		}
+		annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
+		shoot.Annotations = annotations
+	}
+
 	return nil
 }
 

@@ -87,6 +87,10 @@ const (
 	//GardenRoleProject is the value of GardenRole key indicating type 'project'.
 	GardenRoleProject = "project"
 
+	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
+	// of the user that created the resource.
+	GardenCreatedBy = "garden.sapcloud.io/createdBy"
+
 	// GardenOperatedBy is the key for an annotation of a Shoot cluster whose value must be a valid email address and
 	// is used to send alerts to.
 	GardenOperatedBy = "garden.sapcloud.io/operatedBy"
