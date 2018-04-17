@@ -541,21 +541,20 @@ function execute() {
   # Check whether we should only test the cluster creation/deletion
   if ! ${cluster_only}; then
     # Create service
-    max_retry_time=1200 # we need to wait for some time before the seed VPN builds up the VPN connection to the shoot VPN after it became available (the seed VPN retries every 5 seconds to reach the shoot VPN) as helm needs port forwarding to reach tiller via the API server (-> VPN)
-                       # also, sometimes Helm fails with either "net/http: TLS handshake timeout" or "Error: forwarding ports: error upgrading connection: error sending request: Post: unexpected EOF" and a retry resolves the issue
+    max_retry_time=1200
     retry_stop=$(($(date +%s) + max_retry_time))
-    helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" install -n redis --namespace "${helm_deploy_ns}" stable/redis 2>&1 || true)"
-    while [[ "$helm_response" != *"STATUS: DEPLOYED"* ]] && [[ $(date +%s) -lt $retry_stop ]]; do
-      echo -e "$(debug Redis deployment failed. Waiting...)"
+    exec_helm "${shoot_cluster_kubeconfig}" init &> /dev/null
+    while [[ ! "$(exec_helm "${shoot_cluster_kubeconfig}" install --namespace ${helm_deploy_ns} --name redis stable/redis)" ]]; do
+      echo -e "Redis deployment failed. Retry..."
       sleep 5
-      helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" install -n redis --namespace "${helm_deploy_ns}" stable/redis 2>&1 || true)"
     done
 
-    if [[ "$helm_response" != *"STATUS: DEPLOYED"* ]]; then
-      echo -e "$(error Redis deployment failed: "${helm_response}")"
-      return 1
-    fi
-    wait_for_running_pod_state 'redis-redis-.*'
+    while [[ ! "$(exec_helm "${shoot_cluster_kubeconfig}" --namespace ${helm_deploy_ns} redis | grep -E 'DEPLOYED')" ]]; do
+      echo -e "Redis deployment not ready. Waiting..."
+      sleep 5
+    done
+    echo -e "$(ok Redis chart deployed)"
+    wait_for_running_pod_state 'redis-master-.*'
 
     # Create application
     guestbook_manifests="$(mako-render --var namespace=${helm_deploy_ns} --var shootDnsHost=${shoot_dns_name_suffix} ${template_dir}/guestbook-app.yaml.tpl)"
