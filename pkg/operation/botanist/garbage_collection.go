@@ -24,30 +24,8 @@ import (
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
-// i.e., it deletes old replica sets which have a desired=actual=0 replica count.
+// i.e., it deletes old machine sets which have a desired=actual=0 replica count.
 func (b *Botanist) PerformGarbageCollectionSeed() error {
-	replicaSetList, err := b.K8sSeedClient.ListReplicaSets(b.Shoot.SeedNamespace, metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, replicaSet := range replicaSetList {
-		var (
-			name            = replicaSet.Name
-			desiredReplicas = replicaSet.Spec.Replicas
-			actualReplicas  = replicaSet.Status.Replicas
-		)
-		if desiredReplicas != nil && *desiredReplicas == int32(0) && actualReplicas == int32(0) {
-			b.Logger.Debugf("Deleting Replicaset %s as the number of desired and actual replicas is 0.", name)
-			err := b.K8sSeedClient.DeleteReplicaSet(b.Shoot.SeedNamespace, name)
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	var machineSetList unstructured.Unstructured
 	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machinesets", b.Shoot.SeedNamespace).Do().Into(&machineSetList); err != nil {
 		return err

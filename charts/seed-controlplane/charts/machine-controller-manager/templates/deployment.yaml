@@ -8,6 +8,7 @@ metadata:
     app: kubernetes
     role: machine-controller-manager
 spec:
+  revisionHistoryLimit: 0
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:

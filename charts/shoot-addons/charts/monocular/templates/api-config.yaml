@@ -8,7 +8,6 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
 data:
   monocular.yaml: |-

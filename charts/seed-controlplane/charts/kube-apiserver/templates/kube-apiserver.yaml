@@ -1,12 +1,13 @@
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kube-apiserver
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: kubernetes
     role: apiserver
 spec:
+  revisionHistoryLimit: 0
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
@@ -30,7 +31,7 @@ spec:
         operator: Exists
       containers:
       - name: kube-apiserver
-        image: {{ index .Values.images "hyperkube" }}:v{{.Values.kubernetesVersion}}
+        image: {{ index .Values.images "hyperkube" }}:v{{ .Values.kubernetesVersion }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
@@ -40,7 +41,7 @@ spec:
         {{- else }}
         - --enable-admission-plugins=Initializers,NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,StorageObjectInUseProtection,{{ if semverCompare ">= 1.9" .Values.kubernetesVersion }}MutatingAdmissionWebhook,{{ end }}ValidatingAdmissionWebhook,ResourceQuota,PodPreset
         {{- end }}
-        - --advertise-address={{.Values.advertiseAddress}}
+        - --advertise-address={{ .Values.advertiseAddress }}
         - --allow-privileged=true
         - --anonymous-auth=false
         - --apiserver-count={{ .Values.replicas }}
@@ -54,7 +55,7 @@ spec:
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
         {{- if semverCompare "< 1.9" .Values.kubernetesVersion }}
-        - --cloud-provider={{.Values.cloudProvider}}
+        - --cloud-provider={{ .Values.cloudProvider }}
         {{- end }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
@@ -75,7 +76,7 @@ spec:
         - --requestheader-username-headers=X-Remote-User
         {{- include "kube-apiserver.runtimeConfig" . | trimSuffix "," | indent 8 }}
         - --secure-port={{ required ".securePort is required" .Values.securePort }}
-        - --service-cluster-ip-range={{.Values.serviceNetwork}}
+        - --service-cluster-ip-range={{ .Values.serviceNetwork }}
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key

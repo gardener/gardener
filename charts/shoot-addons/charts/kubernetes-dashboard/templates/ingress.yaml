@@ -13,7 +13,6 @@ metadata:
     heritage: "{{ .Release.Service }}"
     release: "{{ .Release.Name }}"
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "fullname" . }}
   namespace: kube-system

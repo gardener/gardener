@@ -1,5 +1,5 @@
 {{- if eq .Values.controller.kind "Deployment" }}
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   labels:
@@ -8,11 +8,11 @@ metadata:
     component: "{{ .Values.controller.name }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "controller.fullname" . }}
   namespace: kube-system
 spec:
+  revisionHistoryLimit: 0
   replicas: {{ .Values.controller.replicaCount }}
   selector:
     matchLabels:

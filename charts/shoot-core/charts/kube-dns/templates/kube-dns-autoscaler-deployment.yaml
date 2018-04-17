@@ -1,5 +1,5 @@
 ---
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kube-dns-autoscaler
@@ -10,6 +10,7 @@ metadata:
     k8s-app: kube-dns-autoscaler
     kubernetes.io/cluster-service: "true"
 spec:
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       k8s-app: kube-dns-autoscaler

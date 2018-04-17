@@ -1,13 +1,13 @@
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: {{ template "fullname" . }}-api
   namespace: kube-system
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
+  revisionHistoryLimit: 0
   replicas: {{ .Values.api.replicaCount }}
   selector:
     matchLabels:

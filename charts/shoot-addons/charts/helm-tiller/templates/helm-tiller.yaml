@@ -4,8 +4,8 @@ metadata:
   name: tiller
   namespace: kube-system
   labels:
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
+
 ---
 apiVersion: v1
 kind: Service
@@ -27,8 +27,9 @@ spec:
     name: tiller
   sessionAffinity: None
   type: ClusterIP
+
 ---
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   labels:
@@ -38,6 +39,7 @@ metadata:
   name: tiller-deploy
   namespace: kube-system
 spec:
+  revisionHistoryLimit: 0
   replicas: 1
   selector:
     matchLabels:
@@ -87,13 +89,11 @@ spec:
         operator: Exists
 
 ---
-
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: tiller
   labels:
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io

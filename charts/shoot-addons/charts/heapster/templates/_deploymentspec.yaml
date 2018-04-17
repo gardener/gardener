@@ -1,5 +1,6 @@
 {{- define "deploymentspec" -}}
 spec:
+  revisionHistoryLimit: 0
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:

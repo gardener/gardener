@@ -1,4 +1,4 @@
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   labels:
@@ -6,10 +6,10 @@ metadata:
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "fullname" . }}
 spec:
+  revisionHistoryLimit: 0
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:

@@ -1,5 +1,5 @@
 ---
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: kube-dns
@@ -10,6 +10,7 @@ metadata:
     k8s-app: kube-dns
     kubernetes.io/cluster-service: "true"
 spec:
+  revisionHistoryLimit: 0
   # replicas: not specified here:
   # 1. In order to make Addon Manager do not reconcile this replicas parameter.
   # 2. Default is 1.

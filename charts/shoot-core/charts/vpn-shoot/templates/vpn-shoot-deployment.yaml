@@ -1,5 +1,5 @@
 ---
-apiVersion: {{include "deploymentversion" .}}
+apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: vpn-shoot
@@ -7,6 +7,7 @@ metadata:
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
+  revisionHistoryLimit: 0
   replicas: 1
   selector:
     matchLabels:

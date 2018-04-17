@@ -9,7 +9,6 @@ metadata:
     release: "{{ .Release.Name }}"
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     kubernetes.io/cluster-service: "true"
-    # TODO: use label values and contribute it back
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
   type: {{ .Values.serviceType }}
