@@ -1,0 +1,48 @@
+gardener:
+  template: 'default'
+  base_definition:
+    repo: ~
+    traits:
+      version:
+        preprocess:
+          'inject-commit-hash'
+        inject_effective_version: true
+      publish:
+        dockerimages:
+          apiserver:
+            inputs:
+              repos:
+                source: ~ # default
+              steps:
+                build: ~
+            registry: 'gcr-readwrite'
+            image: 'eu.gcr.io/gardener-project/gardener/apiserver'
+            dockerfile: 'build/gardener-apiserver/Dockerfile'
+          controller-manager:
+            inputs:
+              repos:
+                source: ~ # default
+              steps:
+                build: ~
+            registry: 'gcr-readwrite'
+            image: 'eu.gcr.io/gardener-project/gardener/controller-manager'
+            dockerfile: 'build/gardener-controller-manager/Dockerfile'
+    steps:
+      check:
+        image: 'golang:1.9.4'
+      test:
+        image: 'golang:1.9.4'
+      build:
+        image: 'golang:1.9.4'
+        output_dir: 'binary'
+  variants:
+    head-update: ~
+    pull-request:
+      traits:
+        pull-request: ~
+    release:
+      traits:
+        version:
+          preprocess: 'finalise'
+        release:
+          nextversion: 'bump_minor'
