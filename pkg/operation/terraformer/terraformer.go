@@ -217,20 +217,27 @@ func (t *Terraformer) listJobPods() (*corev1.PodList, error) {
 // retrievePodLogs fetches the logs of the created Pods by the Terraform Job and returns them as a map whose
 // keys are pod names and whose values are the corresponding logs.
 func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]string, error) {
-	var logList = map[string]string{}
-	for _, jobPod := range jobPodList.Items {
-		name := jobPod.ObjectMeta.Name
-		namespace := jobPod.ObjectMeta.Namespace
-
-		logsBuffer, err := t.K8sSeedClient.GetPodLogs(namespace, name, &corev1.PodLogOptions{})
-		if err != nil {
-			t.Logger.Warnf("Could not retrieve the logs of Terraform job pod %s: '%v'", name, err)
-			continue
+	logChan := make(chan map[string]string, 1)
+	go func() {
+		var logList = map[string]string{}
+		for _, jobPod := range jobPodList.Items {
+			name := jobPod.Name
+			logsBuffer, err := t.K8sSeedClient.GetPodLogs(jobPod.Namespace, name, &corev1.PodLogOptions{})
+			if err != nil {
+				t.Logger.Warnf("Could not retrieve the logs of Terraform job pod %s: '%v'", name, err)
+				continue
+			}
+			logList[name] = logsBuffer.String()
 		}
+		logChan <- map[string]string{}
+	}()
 
-		logList[name] = logsBuffer.String()
+	select {
+	case result := <-logChan:
+		return result, nil
+	case <-time.After(2 * time.Minute):
+		return nil, fmt.Errorf("Timeout when reading the logs of all pds created by Terraform job '%s'", t.JobName)
 	}
-	return logList, nil
 }
 
 // cleanupJob deletes the Terraform Job and all belonging Pods from the Garden cluster.
