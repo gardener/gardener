@@ -16,7 +16,7 @@ shoot_cluster_kubeconfig=""
 watch_namespace="garden"
 gardener_namespace="garden"
 shoot_cluster_name_prefix="it"
-shoot_cluster_name_suffix="$(printf '%x' "$(date +%s)")"
+shoot_cluster_name_suffix="$(printf '%x' "$(date +%s)" | cut -c 5-)"
 wait_for_cluster_deletion=false
 shoot_manifest_template="${own_dir}/../hack/templates/resources/shoot.yaml.tpl"
 rc_cleanup_error=100
@@ -326,7 +326,7 @@ function wait_for_dns_entry() {
 
 # Ensure that this script's runtime dependencies are met, fail early if not
 function check_runtime_dependencies() {
-  required_executables=(jq helm kubectl mako-render)
+  required_executables=(jq helm kubectl mako-render pip3)
   for executable in "${required_executables[@]}"; do
     if ! _="$(which ${executable})" ; then
       fail "${executable} not found in PATH"
@@ -341,6 +341,14 @@ function validate_command_line_arguments() {
     fail "no kubeconfig file provided"
   else
     ensure_file_exists "${garden_cluster_kubeconfig}"
+  fi
+
+  if [[ -z "$cloud_provider" ]]; then
+    fail "No cloud provider provided"
+  fi
+
+  if [[ -z "$shoot_domain_suffix" ]]; then
+    fail "No shoot domain suffix specified"
   fi
 }
 
@@ -359,6 +367,7 @@ function retrieve_ci_utils_if_absent() {
   else
     GIT_WORK_TREE="${ci_utils_dir}" GIT_DIR="${ci_utils_dir}/.git" git pull -f --rebase origin
   fi
+  pip3 install -r "${ci_utils_dir}/requirements.txt"
 }
 
 # ------------------
@@ -423,16 +432,12 @@ function execute() {
   validate_command_line_arguments
   retrieve_ci_utils_if_absent
 
-  shoot_cluster_name="${shoot_cluster_name_prefix}${shoot_cluster_name_suffix}"
+  shoot_cluster_name="${shoot_cluster_name_prefix}${shoot_cluster_name_suffix}${cloud_provider}"
 
   # Sanity check: the sum of shoot cluster name and watch namespace lengths must not exceed 24 characters, as they
   # are concatenated to DNS entries, which impose a length restriction
   if [[ $(( ${#shoot_cluster_name} + ${#watch_namespace} )) -gt 23 ]]; then
     fail "The concatenated length of shoot cluster name and watch namespace exceeds the allowed 23 characters"
-  fi
-
-  if [[ -z "$shoot_domain_suffix" ]]; then
-    fail "No shoot domain suffix specified"
   fi
   shoot_dns_name_suffix="${shoot_cluster_name}.${watch_namespace}.${shoot_domain_suffix}"
 
