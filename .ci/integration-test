@@ -241,7 +241,7 @@ function wait_for_running_pod_state() {
     exec_kubectl "${shoot_cluster_kubeconfig}" get nodes
     exec_kubectl "${shoot_cluster_kubeconfig}" get pods --all-namespaces | grep -E "$1"
     set -e
-    echo -e "$(error Pod reached no running state within "${max_wait_time seconds}".)"
+    echo -e "$(error Pod reached no running state within $max_wait_time seconds.)"
     return 1
   fi
 }
@@ -367,7 +367,7 @@ function retrieve_ci_utils_if_absent() {
   else
     GIT_WORK_TREE="${ci_utils_dir}" GIT_DIR="${ci_utils_dir}/.git" git pull -f --rebase origin
   fi
-  pip3 install -r "${ci_utils_dir}/requirements.txt"
+  pip3 install -r "${ci_utils_dir}/requirements.txt" &> /dev/null
 }
 
 # ------------------
@@ -548,7 +548,7 @@ function execute() {
     while [[ "$helm_response" != *"STATUS: DEPLOYED"* ]] && [[ $(date +%s) -lt $retry_stop ]]; do
       echo -e "$(debug Redis deployment failed. Waiting...)"
       sleep 5
-      helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" install -n redis stable/redis 2>&1 || true)"
+      helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" install -n redis --namespace "${helm_deploy_ns}" stable/redis 2>&1 || true)"
     done
 
     if [[ "$helm_response" != *"STATUS: DEPLOYED"* ]]; then
