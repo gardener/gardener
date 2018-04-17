@@ -28,8 +28,7 @@ groups:
 
   # alert if there are lots of leader changes
   - alert: KubeEtcd3HighNumberOfLeaderChanges
-    expr: increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[1h]) >
-      3
+    expr: increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[1h]) > 3
     labels:
       service: etcd
       severity: warning
@@ -39,14 +38,13 @@ groups:
         within the last hour
       summary: a high number of leader changes within the etcd3 cluster are happening
 
-  ### HTTP requests alerts ###
+  ### GRPC requests alerts ###
   - record: etcd3:failed_client_requests_ratio:sum
-    expr: sum(rate(grpc_server_handled_total{grpc_code!="OK",grpc_type="unary",job="kube-etcd3"}[5m]))
-      BY (grpc_service) / sum(rate(grpc_server_started_total{grpc_type="unary",job="kube-etcd3"}[5m]))
-      BY (grpc_service)
+    expr: sum by(grpc_method) (rate(etcd_grpc_requests_failed_total{job="kube-etcd3"}[5m]))
+      / sum by(grpc_method) (rate(etcd_grpc_total{job="kube-etcd3"}[5m]))
 
   # alert if more than 1% of requests to GRPC have failed
-  - alert: KubeEtcd3HighNumberOfFailedHTTPRequests
+  - alert: KubeEtcd3HighNumberOfFailedGRPCRequests
     expr: etcd3:failed_client_requests_ratio:sum > 0.01
     for: 10m
     labels:
@@ -54,11 +52,11 @@ groups:
       severity: warning
       type: seed
     annotations:
-      description: '{{ $value * 100 }}% of requests for {{ $labels.grpc_service }}
-        failed on etcd3 pod {{ $labels.pod }}'
+      description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed on etcd3 pod {{ $labels.pod }}'
       summary: a high number of etcd3 GRPC requests are failing
+
   # alert if more than 5% of requests to GRPC have failed
-  - alert: KubeEtcd3HighNumberOfFailedHTTPRequests
+  - alert: KubeEtcd3HighNumberOfFailedGRPCRequests
     expr: etcd3:failed_client_requests_ratio:sum > 0.05
     for: 5m
     labels:
@@ -66,24 +64,21 @@ groups:
       severity: critical
       type: seed
     annotations:
-      description: '{{ $value * 100 }}% of requests for {{ $labels.method }} failed
-        on etcd3 pod {{ $labels.pod }}'
+      description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed on etcd3 pod {{ $labels.pod }}'
       summary: a high number of etcd3 GRPC requests are failing
 
-  # alert if the 99th percentile of HTTP requests take more than 150ms
+  # alert if the 99th percentile of GRPC requests take more than 150ms
   # etcd3 must be configured with --metrics="extensive" for histogram
-  - alert: KubeEtcd3HTTPRequestsSlow
-    expr: histogram_quantile(0.99, sum(rate(grpc_server_handling_seconds_bucket{grpc_type="unary",job="kube-etcd3"}[5m]))
-      BY (grpc_service, le)) > 0.15
+  - alert: KubeEtcd3GRPCRequestsSlow
+    expr: histogram_quantile(0.99, rate(etcd_grpc_unary_requests_duration_seconds_bucket[5m])) > 0.15
     for: 10m
     labels:
       service: etcd
       severity: warning
       type: seed
     annotations:
-      description: on ectd3 instance {{ $labels.instance }} HTTP requests to {{ $label.grpc_service
-        }} are slow
-      summary: slow HTTP requests
+      description: on ectd3 instance {{ $labels.instance }} GRPC requests to {{ $label.grpc_method }} are slow
+      summary: slow GRPC requests
 
   ### etcd proposal alerts ###
 
@@ -103,8 +98,7 @@ groups:
 
   # alert if 99th percentile of fsync durations is higher than 500ms
   - alert: KubeEtcd3HighFsyncDurations
-    expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
-      > 0.5
+    expr: histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m])) > 0.5
     for: 10m
     labels:
       service: etcd

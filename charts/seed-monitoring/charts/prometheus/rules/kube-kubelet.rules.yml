@@ -33,8 +33,7 @@ groups:
         to the limit of 110
       summary: Kubelet is close to pod limit
   - alert: KubeKubeletContainerReboot
-    expr: increase(container_last_seen{container_label_io_kubernetes_container_hash!=""}[30s])
-      < 25
+    expr: increase(container_last_seen{container_name!="POD"}[1m]) < 50
     labels:
       service: kube-kubelet
       severity: warning
@@ -44,8 +43,7 @@ groups:
         }} times lately.'
       summary: High container reboot count
   - alert: KubeKubeletPodRestartingTooMuch
-    expr: rate(kube_pod_container_status_restarts{namespace=~"^(?:kube-system|monitoring)$"}[1m])
-      > 12
+    expr: rate(kube_pod_container_status_restarts_total[1m]) > 12
     for: 30m
     labels:
       service: kube-kubelet
