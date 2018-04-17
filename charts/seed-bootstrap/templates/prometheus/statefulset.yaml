@@ -41,7 +41,7 @@ spec:
         livenessProbe:
           failureThreshold: 10
           httpGet:
-            path: /status
+            path: /-/healthy
             port: web
             scheme: HTTP
           initialDelaySeconds: 300
@@ -55,7 +55,7 @@ spec:
         readinessProbe:
           failureThreshold: 6
           httpGet:
-            path: /status
+            path: /-/ready
             port: web
             scheme: HTTP
           periodSeconds: 5
@@ -63,9 +63,9 @@ spec:
           timeoutSeconds: 3
         resources:
           limits:
-            memory: 1400Mi
+            memory: 2400Mi
           requests:
-            memory: 100Mi
+            memory: 500Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
