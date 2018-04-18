@@ -39,7 +39,7 @@ readonly TRUE=0
 readonly FALSE=1
 
 # Max. time to wait for creation/deletion of shoot
-MAX_RETRY_TIME=$((30 * 60)) # 30min 
+MAX_RETRY_TIME=$((60 * 60)) # 60min 
 MAX_TEST_TIME=$((60 * 60)) # 60min 
 
 # Read environment variables
