@@ -39,12 +39,11 @@ func (c *Client) CreateSecret(namespace, name string, secretType corev1.SecretTy
 
 // CreateSecretObject creates a new Secret object.
 func (c *Client) CreateSecretObject(secret *corev1.Secret, updateIfExists bool) (*corev1.Secret, error) {
-
-	secret, err := c.clientset.CoreV1().Secrets(secret.Namespace).Create(secret)
+	updatedSecret, err := c.clientset.CoreV1().Secrets(secret.Namespace).Create(secret)
 	if err != nil && apierrors.IsAlreadyExists(err) && updateIfExists {
 		return c.UpdateSecretObject(secret)
 	}
-	return secret, err
+	return updatedSecret, err
 }
 
 // UpdateSecret updates an already existing Secret object.
