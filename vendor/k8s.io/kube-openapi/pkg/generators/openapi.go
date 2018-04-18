@@ -55,6 +55,7 @@ var tempPatchTags = [...]string{
 var tagToExtension = map[string]string{
 	"patchMergeKey": "x-kubernetes-patch-merge-key",
 	"patchStrategy": "x-kubernetes-patch-strategy",
+	"listAttribute": "x-kubernetes-list-attribute",
 }
 
 func getOpenAPITagValue(comments []string) []string {
