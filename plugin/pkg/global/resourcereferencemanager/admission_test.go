@@ -83,7 +83,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Cloud: garden.SeedCloud{
 						Profile: cloudProfileName,
 					},
-					SecretRef: corev1.ObjectReference{
+					SecretRef: corev1.SecretReference{
 						Name:      secretName,
 						Namespace: namespace,
 					},
@@ -104,7 +104,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					Namespace:  namespace,
 					Finalizers: finalizers,
 				},
-				SecretRef: corev1.ObjectReference{
+				SecretRef: corev1.SecretReference{
 					Name:      secretName,
 					Namespace: namespace,
 				},

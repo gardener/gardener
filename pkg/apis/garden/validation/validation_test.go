@@ -1377,7 +1377,7 @@ var _ = Describe("validation", func() {
 						Region:  "eu-west-1",
 					},
 					IngressDomain: "ingress.my-seed-1.example.com",
-					SecretRef: corev1.ObjectReference{
+					SecretRef: corev1.SecretReference{
 						Name:      "seed-aws",
 						Namespace: "garden",
 					},
@@ -1411,7 +1411,7 @@ var _ = Describe("validation", func() {
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
 			seed.Spec.IngressDomain = "invalid-domain-name"
-			seed.Spec.SecretRef = corev1.ObjectReference{}
+			seed.Spec.SecretRef = corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
 				Nodes:    garden.CIDR("invalid-cidr"),
 				Pods:     garden.CIDR("300.300.300.300/300"),
@@ -1521,7 +1521,7 @@ var _ = Describe("validation", func() {
 					Name:      "profile",
 					Namespace: "garden",
 				},
-				SecretRef: corev1.ObjectReference{
+				SecretRef: corev1.SecretReference{
 					Name:      "my-secret",
 					Namespace: "my-namespace",
 				},
@@ -1536,7 +1536,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid empty SecretBinding resources", func() {
 			secretBinding.ObjectMeta = metav1.ObjectMeta{}
-			secretBinding.SecretRef = corev1.ObjectReference{}
+			secretBinding.SecretRef = corev1.SecretReference{}
 
 			errorList := ValidateSecretBinding(secretBinding)
 
