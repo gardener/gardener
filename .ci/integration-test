@@ -22,6 +22,8 @@ shoot_manifest_template="${own_dir}/../hack/templates/resources/shoot.yaml.tpl"
 rc_cleanup_error=100
 minimal_log_level="warning"
 ci_cli=""
+kubectl_binary_path="kubectl"
+helm_binary_path="helm"
 
 # Script variables
 # busybox' output for 'date -Iseconds' does not contain a colon character in TZ offset (fix with sed)
@@ -113,7 +115,7 @@ function exec_kubectl() {
   if ! ensure_file_exists "${1}"; then
     fail "provided kubeconfig file ${1} does not exist"
   fi
-  kubectl --kubeconfig "${1}" "${@:2}"
+  "${kubectl_binary_path}" --kubeconfig "${1}" "${@:2}"
 }
 
 # Run helm command
@@ -122,7 +124,7 @@ function exec_helm() {
   if ! ensure_file_exists "${1}"; then
     fail "provided kubeconfig file ${1} does not exist"
   fi
-  KUBECONFIG="${1}" helm "${@:2}"
+  KUBECONFIG="${1}" "${helm_binary_path}" "${@:2}"
 }
 
 # Create cluster
@@ -543,18 +545,21 @@ function execute() {
     # Create service
     max_retry_time=1200
     retry_stop=$(($(date +%s) + max_retry_time))
-    exec_helm "${shoot_cluster_kubeconfig}" init &> /dev/null
-    while [[ ! "$(exec_helm "${shoot_cluster_kubeconfig}" install --namespace ${helm_deploy_ns} --name redis stable/redis)" ]]; do
-      echo -e "Redis deployment failed. Retry..."
+    exec_helm "${shoot_cluster_kubeconfig}" init --client-only > /dev/null
+    exec_helm "${shoot_cluster_kubeconfig}" install -n redis --namespace "${helm_deploy_ns}" stable/redis > /dev/null
+    helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" status redis 2>&1 || true)"
+    while [[ "$helm_response" != *"STATUS: DEPLOYED"* ]] && [[ $(date +%s) -lt $retry_stop ]]; do
+      echo -e "$(debug Redis deployment not ready. Waiting...)"
       sleep 5
+      helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" status redis 2>&1 || true)"
     done
 
-    while [[ ! "$(exec_helm "${shoot_cluster_kubeconfig}" ls --namespace ${helm_deploy_ns} redis | grep -E 'DEPLOYED')" ]]; do
-      echo -e "Redis deployment not ready. Waiting..."
-      sleep 5
-    done
+    if [[ "$helm_response" != *"STATUS: DEPLOYED"* ]]; then
+      echo -e "$(error Redis deployment failed: "${helm_response}")"
+      return 1
+    fi
     echo -e "$(ok Redis chart deployed)"
-    wait_for_running_pod_state 'redis-redis-.*'
+    wait_for_running_pod_state 'redis-master-.*'
 
     # Create application
     guestbook_manifests="$(mako-render --var namespace=${helm_deploy_ns} --var shootDnsHost=${shoot_dns_name_suffix} ${template_dir}/guestbook-app.yaml.tpl)"
@@ -636,6 +641,10 @@ function help() {
                                                        DEFAULT: hex-encoded unix timestamp"
   echo -e "       [-p <prefix>|--shoot-cluster-name-prefix <pf>]  Shoot cluster name prefix.
                                                        DEFAULT: ci"
+  echo -e "       [--kubectl-path <path>]              Path to kubectl binary.
+                                                       DEFAULT: kubectl (assumed \$PATH contains kubectl)"
+  echo -e "       [--helm-path <path>]                 Path to helm binary.
+                                                       DEFAULT: helm (assumed \$PATH contains helm)"
   echo -e "       [--wait-for-cluster-deletion] . . . . . . . . . Waits for garden-controller-manager to delete shoot cluster.
                                                        Required if garden-controller-manager is deleted after this script returns,
                                                        as done in ci-pipeline."
@@ -654,6 +663,8 @@ function dispatch() {
     "--minimal-log-level") minimal_log_level="$2"; dispatch "${@:3}";;
     "--shoot-spec") shoot_spec="$2"; dispatch "${@:3}";;
     "--cloud-provider") cloud_provider="$2"; dispatch "${@:3}";;
+    "--kubectl-path") kubectl_binary_path="$2" ;dispatch "${@:3}";;
+    "--helm-path") helm_binary_path="$2" ;dispatch "${@:3}";;
     "-d"|"--domain-suffix") shoot_domain_suffix="$2"; dispatch "${@:3}";;
     "-s"|"--shoot-cluster-name-suffix") shoot_cluster_name_suffix="$2"; dispatch "${@:3}";;
     "-p"|"--shoot-cluster-name-prefix") shoot_cluster_name_prefix="$2"; dispatch "${@:3}";;
