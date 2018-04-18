@@ -19,9 +19,9 @@ data "openstack_networking_network_v2" "fip" {
 
 {{ if .Values.create.router -}}
 resource "openstack_networking_router_v2" "router" {
-  name             = "{{ required "clusterName is required" .Values.clusterName }}"
-  region           = "{{ required "openstack.region is required" .Values.openstack.region }}"
-  external_gateway = "${data.openstack_networking_network_v2.fip.id}"
+  name                = "{{ required "clusterName is required" .Values.clusterName }}"
+  region              = "{{ required "openstack.region is required" .Values.openstack.region }}"
+  external_network_id = "${data.openstack_networking_network_v2.fip.id}"
 }
 {{- end}}
 
@@ -83,6 +83,18 @@ resource "openstack_networking_secgroup_rule_v2" "cluster_tcp_all" {
 resource "openstack_compute_keypair_v2" "ssh_key" {
   name       = "{{ required "clusterName is required" .Values.clusterName }}"
   public_key = "{{ required "sshPublicKey is required" .Values.sshPublicKey }}"
+}
+
+// In commit c438ccebf70b001b60bf277295b68b10366e9cb5 we have introduced two new
+// output variables. However, they are not applied for existing OpenStack cluster
+// as Terraform won't detect a diff when we run `terraform plan`.
+// Workaround: Providing a null-resource for letting Terraform think that there are
+// differences, enabling the Gardener to start an actual `terraform apply` job.
+// TODO(@rfranzke): Remove in Gardener version 0.4.0.
+resource "null_resource" "outputs" {
+  triggers = {
+    compute = "outputs"
+  }
 }
 
 //=====================================================================
