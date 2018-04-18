@@ -85,9 +85,9 @@ data:
         - '{namespace="{{ .Release.Namespace }}"}'
       static_configs:
       - targets:
-        - prometheus-web.kube-system.svc
+        - prometheus-web.garden.svc
       metric_relabel_configs:
-      # we make the shoot's pods in the shoot's namepsace to apear in as its in the kube-system
+      # we make the shoot's pods in the shoot's namespace to appear in as its in the kube-system
       - target_label: namespace
         replacement: kube-system
 

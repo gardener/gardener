@@ -1,4 +1,4 @@
-apiVersion: {{include "statefulsetversion" .}}
+apiVersion: {{ include "statefulsetversion" . }}
 kind: StatefulSet
 metadata:
   name: prometheus
@@ -58,14 +58,14 @@ spec:
             path: /-/ready
             port: web
             scheme: HTTP
-          periodSeconds: 5
+          periodSeconds: 60
           successThreshold: 1
           timeoutSeconds: 3
         resources:
           limits:
             memory: 2400Mi
           requests:
-            memory: 500Mi
+            memory: 2400Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config

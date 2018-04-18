@@ -1,6 +1,5 @@
-# Required for monitoring
 ---
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: prometheus

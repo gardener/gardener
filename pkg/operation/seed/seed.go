@@ -97,6 +97,15 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
+	gardenNamespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: common.GardenNamespace,
+		},
+	}
+	if _, err := k8sSeedClient.CreateNamespace(gardenNamespace, true); err != nil {
+		return err
+	}
+
 	prometheusVersion, err := imageVector.FindImage("prometheus", k8sGardenClient.Version())
 	if err != nil {
 		return err
@@ -106,7 +115,7 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, metav1.NamespaceSystem, nil, map[string]interface{}{
+	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"images": map[string]interface{}{
 			"prometheus":         prometheusVersion.String(),
