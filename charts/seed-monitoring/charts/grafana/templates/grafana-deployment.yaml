@@ -24,7 +24,7 @@ spec:
       initContainers:
       - name: init-prometheus
         image: {{ index .Values.images "busybox" }}
-        command: ['sh', '-c', 'until wget -T 5 -qO- http://prometheus-web:8080/status > /dev/null; do echo waiting for Prometheus; sleep 2; done;']
+        command: ['sh', '-c', 'until wget -T 5 -qO- http://prometheus-web/-/healthy > /dev/null; do echo waiting for Prometheus; sleep 2; done;']
       containers:
       - name: grafana
         image: {{ index .Values.images "grafana" }}

@@ -31,36 +31,33 @@ spec:
         - --storage.tsdb.path=/var/prometheus/data
         - --storage.tsdb.no-lockfile
         - --storage.tsdb.retention=48h
-        - --web.route-prefix=/
+        - --web.listen-address=0.0.0.0:{{ .Values.prometheusPort }}
         - --web.enable-lifecycle
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
         # data volume needs to be mounted with the same permissions,
         # otherwise we will have Permission denied problems
         securityContext:
           runAsUser: 0
-        livenessProbe:
-          failureThreshold: 10
-          httpGet:
-            path: /-/healthy
-            port: web
-            scheme: HTTP
-          initialDelaySeconds: 300
-          periodSeconds: 5
-          successThreshold: 1
-          timeoutSeconds: 3
-        ports:
-        - containerPort: 9090
-          name: web
-          protocol: TCP
-        readinessProbe:
-          failureThreshold: 6
-          httpGet:
-            path: /-/ready
-            port: web
-            scheme: HTTP
-          periodSeconds: 60
-          successThreshold: 1
-          timeoutSeconds: 3
+        # TODO: enable those checks when v2.2.2 is released
+        # livenessProbe:
+        #   failureThreshold: 10
+        #   httpGet:
+        #     path: /-/healthy
+        #     port: {{ .Values.prometheusPort }}
+        #     scheme: HTTP
+        #   initialDelaySeconds: 300
+        #   periodSeconds: 5
+        #   successThreshold: 1
+        #   timeoutSeconds: 3
+        # readinessProbe:
+        #   failureThreshold: 6
+        #   httpGet:
+        #     path: /-/ready
+        #     port: {{ .Values.prometheusPort }}
+        #     scheme: HTTP
+        #   periodSeconds: 60
+        #   successThreshold: 1
+        #   timeoutSeconds: 3
         resources:
           limits:
             memory: 2400Mi

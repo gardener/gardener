@@ -1,1 +1,2 @@
 cloudProvider: aws
+prometheusPort: 9090
