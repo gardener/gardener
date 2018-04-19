@@ -97,7 +97,6 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 	var (
 		cleanupShootResources = namespace.Status.Phase != corev1.NamespaceTerminating && kubeAPIServerFound
 		defaultRetry          = 30 * time.Second
-		cleanupRetry          = 2 * time.Minute
 		isCloud               = o.Shoot.Info.Spec.Cloud.Local == nil
 
 		f                                = flow.New("Shoot cluster deletion").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
@@ -108,22 +107,22 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as
 		// LoadBalancers, volumes, ...). We do that by deleting all namespaces other than the three standard
 		// namespaces which cannot be deleted (kube-system, default, kube-public). In those three namespaces
-		// we delete all TPR/CRD data, workload, services and PVCs. Only if none of those resources remain, we
-		// go ahead and trigger the infrastructure deletion.
-		cleanKubernetesResources            = f.AddTaskConditional(botanist.CleanKubernetesResources, defaultRetry, cleanupShootResources, waitUntilKubeAddonManagerDeleted)
-		waitUntilKubernetesResourcesCleaned = f.AddTaskConditional(botanist.WaitUntilKubernetesResourcesCleaned, cleanupRetry, cleanupShootResources, cleanKubernetesResources)
-		destroyMachines                     = f.AddTaskConditional(hybridBotanist.DestroyMachines, defaultRetry, isCloud, waitUntilKubernetesResourcesCleaned)
-		destroyNginxIngressResources        = f.AddTask(botanist.DestroyNginxIngressResources, 0, waitUntilKubernetesResourcesCleaned)
-		destroyKube2IAMResources            = f.AddTask(shootCloudBotanist.DestroyKube2IAMResources, 0, waitUntilKubernetesResourcesCleaned)
-		destroyInfrastructure               = f.AddTask(shootCloudBotanist.DestroyInfrastructure, 0, waitUntilKubernetesResourcesCleaned, destroyMachines)
-		destroyExternalDomainDNSRecord      = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, waitUntilKubernetesResourcesCleaned)
-		syncPointTerraformers               = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord)
-		deleteKubeAPIServer                 = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
-		destroyBackupInfrastructure         = f.AddTask(seedCloudBotanist.DestroyBackupInfrastructure, 0, deleteKubeAPIServer)
-		destroyInternalDomainDNSRecord      = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointTerraformers)
-		deleteNamespace                     = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, destroyBackupInfrastructure, deleteKubeAPIServer)
-		_                                   = f.AddTask(botanist.WaitUntilNamespaceDeleted, 0, deleteNamespace)
-		_                                   = f.AddTask(botanist.DeleteGardenSecrets, defaultRetry, deleteNamespace)
+		// we delete all CRDs, workload, services and PVCs. Only if none of those resources remain, we go
+		// ahead and trigger the infrastructure deletion.
+		cleanCustomResourceDefinitions = f.AddTaskConditional(botanist.CleanCustomResourceDefinitions, 5*time.Minute, cleanupShootResources, waitUntilKubeAddonManagerDeleted)
+		cleanKubernetesResources       = f.AddTaskConditional(botanist.CleanKubernetesResources, 5*time.Minute, cleanupShootResources, cleanCustomResourceDefinitions)
+		destroyMachines                = f.AddTaskConditional(hybridBotanist.DestroyMachines, defaultRetry, isCloud, cleanKubernetesResources)
+		destroyNginxIngressResources   = f.AddTask(botanist.DestroyNginxIngressResources, 0, cleanKubernetesResources)
+		destroyKube2IAMResources       = f.AddTask(shootCloudBotanist.DestroyKube2IAMResources, 0, cleanKubernetesResources)
+		destroyInfrastructure          = f.AddTask(shootCloudBotanist.DestroyInfrastructure, 0, cleanKubernetesResources, destroyMachines)
+		destroyExternalDomainDNSRecord = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, cleanKubernetesResources)
+		syncPointTerraformers          = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord)
+		deleteKubeAPIServer            = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
+		destroyBackupInfrastructure    = f.AddTask(seedCloudBotanist.DestroyBackupInfrastructure, 0, deleteKubeAPIServer)
+		destroyInternalDomainDNSRecord = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointTerraformers)
+		deleteNamespace                = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, destroyBackupInfrastructure, deleteKubeAPIServer)
+		_                              = f.AddTask(botanist.WaitUntilNamespaceDeleted, 0, deleteNamespace)
+		_                              = f.AddTask(botanist.DeleteGardenSecrets, defaultRetry, deleteNamespace)
 	)
 	if e := f.Execute(); e != nil {
 		e.Description = fmt.Sprintf("Failed to delete Shoot cluster: %s", e.Description)

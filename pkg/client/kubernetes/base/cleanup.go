@@ -33,33 +33,41 @@ func (c *Client) ListResources(absPath ...string) (unstructured.Unstructured, er
 // CleanupResources will delete all resources except for those stored in the <exceptions> map.
 func (c *Client) CleanupResources(exceptions map[string]map[string]bool) error {
 	for resource, apiGroupPath := range c.resourceAPIGroups {
-		resourceList, err := c.ListResources(append(apiGroupPath, resource)...)
-		if err != nil {
-			return err
+		if resource == CustomResourceDefinitions {
+			continue
 		}
-
-		if err := resourceList.EachListItem(func(o runtime.Object) error {
-			var (
-				item          = o.(*unstructured.Unstructured)
-				namespace     = item.GetNamespace()
-				name          = item.GetName()
-				absPathDelete = buildResourcePath(apiGroupPath, resource, namespace, name)
-			)
-
-			if mustOmitResource(exceptions, resource, namespace, name) {
-				return nil
-			}
-
-			return c.restClient.Delete().AbsPath(absPathDelete...).Do().Error()
-		}); err != nil {
+		if err := c.CleanupAPIGroupResources(exceptions, resource, apiGroupPath); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
+// CleanupAPIGroupResources will clean up all resources of a single API group.
+func (c *Client) CleanupAPIGroupResources(exceptions map[string]map[string]bool, resource string, apiGroupPath []string) error {
+	resourceList, err := c.ListResources(append(apiGroupPath, resource)...)
+	if err != nil {
+		return err
+	}
+
+	return resourceList.EachListItem(func(o runtime.Object) error {
+		var (
+			item          = o.(*unstructured.Unstructured)
+			namespace     = item.GetNamespace()
+			name          = item.GetName()
+			absPathDelete = buildResourcePath(apiGroupPath, resource, namespace, name)
+		)
+
+		if mustOmitResource(exceptions, resource, namespace, name) {
+			return nil
+		}
+
+		return c.restClient.Delete().AbsPath(absPathDelete...).Do().Error()
+	})
+}
+
 // CheckResourceCleanup will check whether all resources except for those in the <exceptions> map have been deleted.
-func (c *Client) CheckResourceCleanup(apiGroupPath []string, resource string, exceptions map[string]map[string]bool) (bool, error) {
+func (c *Client) CheckResourceCleanup(exceptions map[string]map[string]bool, resource string, apiGroupPath []string) (bool, error) {
 	resourceList, err := c.ListResources(append(apiGroupPath, resource)...)
 	if err != nil {
 		return false, err
@@ -73,10 +81,10 @@ func (c *Client) CheckResourceCleanup(apiGroupPath []string, resource string, ex
 		)
 
 		if mustOmitResource(exceptions, resource, namespace, name) {
-			return fmt.Errorf("waiting for '%s' (resource '%s') to be deleted", name, resource)
+			return nil
 		}
 
-		return nil
+		return fmt.Errorf("waiting for '%s' (resource '%s') to be deleted", name, resource)
 	}); err != nil {
 		return false, nil
 	}

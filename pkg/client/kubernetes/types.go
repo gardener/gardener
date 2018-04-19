@@ -51,7 +51,8 @@ type Client interface {
 	// Cleanup
 	ListResources(...string) (unstructured.Unstructured, error)
 	CleanupResources(map[string]map[string]bool) error
-	CheckResourceCleanup([]string, string, map[string]map[string]bool) (bool, error)
+	CleanupAPIGroupResources(map[string]map[string]bool, string, []string) error
+	CheckResourceCleanup(map[string]map[string]bool, string, []string) (bool, error)
 
 	// Namespaces
 	CreateNamespace(*corev1.Namespace, bool) (*corev1.Namespace, error)
