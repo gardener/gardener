@@ -311,7 +311,7 @@ func (b *HybridBotanist) cleanupMachineDeployments(machineDeployments []operatio
 // cleanupMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
 // of the provided list <usedSecrets>.
 func (b *HybridBotanist) cleanupMachineClassSecrets(usedSecrets sets.String) error {
-	secretList, err := b.K8sShootClient.ListSecrets(metav1.NamespaceSystem, metav1.ListOptions{
+	secretList, err := b.K8sShootClient.ListSecrets(b.Shoot.SeedNamespace, metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("%s=machineclass", common.GardenPurpose),
 	})
 	if err != nil {
