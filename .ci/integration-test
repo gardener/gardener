@@ -98,14 +98,16 @@ function get_admin_password() {
 
 function delete_kubeconfig() {
   if ! ensure_file_exists "${1}"; then
-    info "provided kubeconfig file ${1} does not exist"
+    error "provided kubeconfig file ${1} does not exist"
+    return 1
   fi
   rm -f "${1}"
 }
 
 function ensure_file_exists() {
   if [[ ! -f "${1}" ]]; then
-    fail "file does not exist in expeced location: ${1}"
+    error "file does not exist in expeced location: ${1}"
+    return 1
   fi
 }
 
@@ -113,7 +115,8 @@ function ensure_file_exists() {
 # kubeconfig file $1 must exist
 function exec_kubectl() {
   if ! ensure_file_exists "${1}"; then
-    fail "provided kubeconfig file ${1} does not exist"
+    error "provided kubeconfig file ${1} does not exist"
+    return 1
   fi
   "${kubectl_binary_path}" --kubeconfig "${1}" "${@:2}"
 }
@@ -122,7 +125,8 @@ function exec_kubectl() {
 # kubeconfig file $1 must exist
 function exec_helm() {
   if ! ensure_file_exists "${1}"; then
-    fail "provided kubeconfig file ${1} does not exist"
+    error "provided kubeconfig file ${1} does not exist"
+    return 1
   fi
   KUBECONFIG="${1}" "${helm_binary_path}" "${@:2}"
 }
@@ -146,9 +150,9 @@ EOF
 
 # Delete cluster
 function delete_shoot_cluster() {
-  exec_kubectl "${garden_cluster_kubeconfig}" --namespace=${watch_namespace} delete shoot "${shoot_cluster_name}"
-  delete_timestamp=$(exec_kubectl "${garden_cluster_kubeconfig}" --namespace=${watch_namespace} get shoot "${shoot_cluster_name}" -o jsonpath --template='{.metadata.deletionTimestamp}')
-  exec_kubectl "${garden_cluster_kubeconfig}" --namespace=${watch_namespace} patch  shoot "${shoot_cluster_name}" --type=merge -p "{\"metadata\": {\"annotations\": {\"action.garden.sapcloud.io/delete\": \"${shoot_cluster_name}\", \"confirmation.garden.sapcloud.io/deletionTimestamp\": \"${delete_timestamp}\"}}}"
+  exec_kubectl "${garden_cluster_kubeconfig}" --namespace "${watch_namespace}" delete shoot "${shoot_cluster_name}"
+  deletionTimestamp="$(exec_kubectl "${garden_cluster_kubeconfig}" --namespace "${watch_namespace}" get shoot "${shoot_cluster_name}" -o jsonpath --template={.metadata.deletionTimestamp})"
+  exec_kubectl "${garden_cluster_kubeconfig}" --namespace "${watch_namespace}" patch shoot "${shoot_cluster_name}" --type=merge -p "{\"metadata\": {\"annotations\": {\"confirmation.garden.sapcloud.io/deletionTimestamp\": \"$deletionTimestamp\"}}}"
 }
 
 # Get cluster state
@@ -342,7 +346,12 @@ function validate_command_line_arguments() {
   if [[ -z "${garden_cluster_kubeconfig}" ]]; then
     fail "no kubeconfig file provided"
   else
+    set +e
     ensure_file_exists "${garden_cluster_kubeconfig}"
+    if [[ $? != 0 ]]; then
+      fail "Garden cluster kubeconfig does not exist on provided path ${garden_cluster_kubeconfig}"
+    fi
+    set -e
   fi
 
   if [[ -z "$cloud_provider" ]]; then
@@ -357,7 +366,12 @@ function validate_command_line_arguments() {
 function retrieve_ci_utils_if_absent() {
   # if --ci-cli option was given, verify it points to an existing file
   if [[ ! -z "${ci_cli}" ]]; then
+    set +e
     ensure_file_exists "${ci_cli}"
+    if [[ $? != 0 ]]; then
+      fail "cc-utils project does not exists on provided path"
+    fi
+    set -e
     return
   fi
 
@@ -392,22 +406,27 @@ function end_execution() {
   # Delete resources (if there is still something to be deleted)
   if ! "${test_execution_was_successful}"; then
     set +e
-    exec_kubectl "${shoot_cluster_kubeconfig}" delete -n "${helm_deploy_ns}" ingress guestbook
-    exec_kubectl "${shoot_cluster_kubeconfig}" delete -n "${helm_deploy_ns}" service guestbook
-    exec_kubectl "${shoot_cluster_kubeconfig}" delete -n "${helm_deploy_ns}" deployment guestbook
-    exec_helm "${shoot_cluster_kubeconfig}" delete --purge redis
+    echo -e "$(info Deleting redis helm chart and its resources...)"
+    exec_kubectl "${shoot_cluster_kubeconfig}" delete -n "${helm_deploy_ns}" ingress guestbook &> /dev/null
+    exec_kubectl "${shoot_cluster_kubeconfig}" delete -n "${helm_deploy_ns}" service guestbook &> /dev/null
+    exec_kubectl "${shoot_cluster_kubeconfig}" delete -n "${helm_deploy_ns}" deployment guestbook &> /dev/null
+    exec_helm "${shoot_cluster_kubeconfig}" delete --purge redis &> /dev/null
+    echo -e "$(info Trigger shoot deletion...)"
     delete_shoot_cluster
     if ${wait_for_cluster_deletion}; then
-      # wait for garden-controller-manager to finish deletion - required if garden-controller-manager
-      # will be deleted after this script returns (which is indicated by the caller via command-line option)
-      wait_for_desired_cluster_state "DELETE"
-      if [[ ! $? -eq 0 ]]; then
-        echo -e "\n(error FAILURE:) Could not delete all resources - manual cleanup required"
-        result="${rc_cleanup_error}"
+      # only wait for deletion if the shoot exits
+      "${kubectl_binary_path}" --kubeconfig "${garden_cluster_kubeconfig}" -n "${watch_namespace}" get shoot "${shoot_cluster_name}" &> /dev/null
+      if [[ $? -eq 0 ]]; then
+        wait_for_desired_cluster_state "DELETE"
+        if [[ ! $? -eq 0 ]]; then
+          echo -e "\n(error FAILURE:) Could not delete all resources - manual cleanup required"
+          result="${rc_cleanup_error}"
+        fi
       fi
     fi
-    delete_kubeconfig "$shoot_cluster_kubeconfig"
-    delete_kubeconfig "$seed_cluster_kubeconfig"
+    echo -e "$(info Delete Shoot and Seed kubeconfigs...)"
+    delete_kubeconfig "$shoot_cluster_kubeconfig" &> /dev/null
+    delete_kubeconfig "$seed_cluster_kubeconfig" &> /dev/null
     unset shoot_cluster_name # indicates that nothing anymore needs to be deleted
     set -e
   fi
