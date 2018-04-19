@@ -74,7 +74,7 @@ func (b *Botanist) RegisterAsSeed() error {
 		secretData      = b.Shoot.Secret.Data
 		secretName      = fmt.Sprintf("seed-%s", b.Shoot.Info.Name)
 		secretNamespace = common.GardenNamespace
-		controllerKind  = gardenv1beta1.SchemeGroupVersion.WithKind("Seed")
+		controllerKind  = gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")
 	)
 	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
 
