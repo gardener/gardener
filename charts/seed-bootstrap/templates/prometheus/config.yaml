@@ -73,3 +73,17 @@ data:
         replacement: seed
       - target_label: job
         replacement: kube-kubelet
+      # Drop metrics that are useless and high-volume
+      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
+      - source_labels: [ __name__ ]
+        regex: container_network_tcp_usage_total
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: container_tasks_state
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: container_network_udp_usage_total
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: rest_client_request_latency_seconds_bucket
+        action: drop

@@ -34,7 +34,9 @@ images:
   tag: v0.14.0
 - name: prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.2.1
+  # There is a Memory leak for k8s service discovery in v2.2.1 https://github.com/prometheus/prometheus/issues/4095
+  # Upgrade when https://github.com/prometheus/prometheus/pull/4013 is merged and fixed
+  tag: v2.2.0
 - name: configmap-reloader
   repository: quay.io/coreos/configmap-reload
   tag: v0.0.1
