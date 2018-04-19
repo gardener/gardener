@@ -369,7 +369,7 @@ type SeedSpec struct {
 	IngressDomain string
 	// SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for
 	// the account the Seed cluster has been deployed to.
-	SecretRef corev1.ObjectReference
+	SecretRef corev1.SecretReference
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks
 	// Visible labels the Seed cluster as selectable for the seedfinder admisson controller.
@@ -484,7 +484,7 @@ type SecretBinding struct {
 	// +optional
 	metav1.ObjectMeta
 	// SecretRef is a reference to a secret object in the same or another namespace.
-	SecretRef corev1.ObjectReference
+	SecretRef corev1.SecretReference
 	// Quotas is a list of references to Quota objects in the same or another namespace.
 	// +optional
 	Quotas []corev1.ObjectReference

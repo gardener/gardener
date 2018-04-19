@@ -107,7 +107,7 @@ func (b *Botanist) RegisterAsSeed() error {
 				Region:  b.Shoot.Info.Spec.Cloud.Region,
 			},
 			IngressDomain: fmt.Sprintf("%s.%s", common.IngressPrefix, *(b.Shoot.Info.Spec.DNS.Domain)),
-			SecretRef: corev1.ObjectReference{
+			SecretRef: corev1.SecretReference{
 				Name:      secretName,
 				Namespace: secretNamespace,
 			},

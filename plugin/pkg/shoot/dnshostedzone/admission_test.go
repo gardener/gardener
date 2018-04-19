@@ -56,7 +56,7 @@ var _ = Describe("quotavalidator", func() {
 					Name:      secretBindingName,
 					Namespace: namespace,
 				},
-				SecretRef: corev1.ObjectReference{
+				SecretRef: corev1.SecretReference{
 					Name:      cloudProviderSecretName,
 					Namespace: namespace,
 				},
