@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -102,7 +103,7 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 			Name: common.GardenNamespace,
 		},
 	}
-	if _, err := k8sSeedClient.CreateNamespace(gardenNamespace, true); err != nil {
+	if _, err := k8sSeedClient.CreateNamespace(gardenNamespace, false); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
