@@ -100,8 +100,29 @@ func (c *Client) Apply(m []byte) error {
 			switch kind {
 			case "Service":
 				// We do not want to overwrite a Service's `.spec.clusterIP' or '.spec.ports[*].nodePort' values.
+				oldPorts := oldObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
+				newPorts := newObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
+				ports := []map[string]interface{}{}
+
+				// Check whether ports of the newObj have also been present previously. If yes, take the nodePort
+				// of the existing object.
+				for _, newPort := range newPorts {
+					np := newPort.(map[string]interface{})
+					port := np
+
+					for _, oldPort := range oldPorts {
+						op := oldPort.(map[string]interface{})
+						if np["port"] == op["port"] {
+							if nodePort, ok := op["nodePort"]; ok {
+								port["nodePort"] = nodePort
+							}
+						}
+					}
+					ports = append(ports, port)
+				}
+
 				newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
-				newObj.Object["spec"].(map[string]interface{})["ports"] = oldObj.Object["spec"].(map[string]interface{})["ports"]
+				newObj.Object["spec"].(map[string]interface{})["ports"] = ports
 			case "ServiceAccount":
 				// We do not want to overwrite a ServiceAccount's `.secrets[]` list or `.imagePullSecrets[]`.
 				newObj.Object["secrets"] = oldObj.Object["secrets"]
