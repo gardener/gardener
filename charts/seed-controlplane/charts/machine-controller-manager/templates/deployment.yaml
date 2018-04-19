@@ -36,7 +36,7 @@ spec:
         - --control-kubeconfig=inClusterConfig
         - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
         - --namespace={{ .Release.Namespace }}
-        - --v=3
+        - --v=2
         resources:
           requests:
             cpu: 5m
