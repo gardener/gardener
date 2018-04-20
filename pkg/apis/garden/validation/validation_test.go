@@ -1677,7 +1677,7 @@ var _ = Describe("validation", func() {
 							Workers: []garden.AWSWorker{
 								{
 									Worker:     worker,
-									VolumeSize: "10Gi",
+									VolumeSize: "20Gi",
 									VolumeType: "default",
 								},
 							},
@@ -1845,7 +1845,7 @@ var _ = Describe("validation", func() {
 					Workers: []garden.AWSWorker{
 						{
 							Worker:     worker,
-							VolumeSize: "10Gi",
+							VolumeSize: "20Gi",
 							VolumeType: "default",
 						},
 					},
@@ -1968,12 +1968,12 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
 						Worker:     worker,
-						VolumeSize: "10Gi",
+						VolumeSize: "20Gi",
 						VolumeType: "default",
 					},
 					{
 						Worker:     worker,
-						VolumeSize: "10Gi",
+						VolumeSize: "20Gi",
 						VolumeType: "default",
 					},
 				}
@@ -2026,6 +2026,24 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with too less volume size", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
 				}))
 			})
 
@@ -2288,6 +2306,24 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid worker pools with too less volume size", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "30Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+			})
+
 			It("should forbid worker volume sizes smaller than 35Gi", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
@@ -2391,7 +2427,7 @@ var _ = Describe("validation", func() {
 					Workers: []garden.GCPWorker{
 						{
 							Worker:     worker,
-							VolumeSize: "10Gi",
+							VolumeSize: "20Gi",
 							VolumeType: "default",
 						},
 					},
@@ -2462,12 +2498,12 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
 					{
 						Worker:     worker,
-						VolumeSize: "10Gi",
+						VolumeSize: "20Gi",
 						VolumeType: "default",
 					},
 					{
 						Worker:     worker,
-						VolumeSize: "10Gi",
+						VolumeSize: "20Gi",
 						VolumeType: "default",
 					},
 				}
@@ -2520,6 +2556,24 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeRequired),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with too less volume size", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "19Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
 				}))
 			})
 
