@@ -71,13 +71,13 @@ images:
   tag: "0.8.0"
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
-  tag: "1.14.9"
+  tag: "1.14.10"
 - name: kube-dns-dnsmasq
   repository: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
-  tag: "1.14.9"
+  tag: "1.14.10"
 - name: kube-dns-sidecar
   repository: k8s.gcr.io/k8s-dns-sidecar-amd64
-  tag: "1.14.9"
+  tag: "1.14.10"
 - name: cluster-proportional-autoscaler
   repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
   tag: "1.1.2"
