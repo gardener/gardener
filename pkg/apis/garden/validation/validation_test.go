@@ -1611,6 +1611,12 @@ var _ = Describe("validation", func() {
 				AutoScalerMin: -1,
 				AutoScalerMax: -2,
 			}
+			invalidWorkerName = garden.Worker{
+				Name:          "not_compliant",
+				MachineType:   "large",
+				AutoScalerMin: 1,
+				AutoScalerMax: 1,
+			}
 			invalidWorkerTooLongName = garden.Worker{
 				Name:          "worker-name-is-too-long",
 				MachineType:   "large",
@@ -2000,7 +2006,7 @@ var _ = Describe("validation", func() {
 
 				Expect(len(errorList)).To(Equal(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
@@ -2055,6 +2061,24 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker:     invalidWorkerName,
+						VolumeSize: "20Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
@@ -2273,7 +2297,7 @@ var _ = Describe("validation", func() {
 
 				Expect(len(errorList)).To(Equal(8))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
@@ -2350,6 +2374,24 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     invalidWorkerName,
+						VolumeSize: "35Gi",
+						VolumeType: "ok",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
@@ -2530,7 +2572,7 @@ var _ = Describe("validation", func() {
 
 				Expect(len(errorList)).To(Equal(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
@@ -2564,7 +2606,7 @@ var _ = Describe("validation", func() {
 					{
 						Worker:     worker,
 						VolumeSize: "19Gi",
-						VolumeType: "gp2",
+						VolumeType: "default",
 					},
 				}
 
@@ -2585,6 +2627,24 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+					{
+						Worker:     invalidWorkerName,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
@@ -2777,7 +2837,7 @@ var _ = Describe("validation", func() {
 
 				Expect(len(errorList)).To(Equal(6))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
@@ -2814,6 +2874,22 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(1))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+					{
+						Worker: invalidWorkerName,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
 				}))
 			})
