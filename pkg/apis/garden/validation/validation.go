@@ -829,6 +829,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			idxPath := awsPath.Child("workers").Index(i)
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
@@ -882,18 +883,10 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			idxPath := azurePath.Child("workers").Index(i)
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 35, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
 			if worker.AutoScalerMax != worker.AutoScalerMin {
 				allErrs = append(allErrs, field.Forbidden(idxPath.Child("autoScalerMax"), "maximum value must be equal to minimum value"))
-			}
-			volumeSizeRegex, _ := regexp.Compile(`^(\d+)Gi$`)
-			minmumVolumeSize := 35
-			match := volumeSizeRegex.FindStringSubmatch(worker.VolumeSize)
-			if len(match) == 2 {
-				volSize, err := strconv.Atoi(match[1])
-				if err != nil || volSize < minmumVolumeSize {
-					allErrs = append(allErrs, field.Invalid(idxPath.Child("volumeSize"), worker.VolumeSize, fmt.Sprintf("volume size must be at least %dGi", minmumVolumeSize)))
-				}
 			}
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
@@ -932,6 +925,7 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			idxPath := gcpPath.Child("workers").Index(i)
 			allErrs = append(allErrs, validateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
@@ -1254,6 +1248,21 @@ func validateWorkerVolumeSize(volumeSize string, fldPath *field.Path) field.Erro
 	volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
 	if !volumeSizeRegex.MatchString(volumeSize) {
 		allErrs = append(allErrs, field.Invalid(fldPath, volumeSize, fmt.Sprintf("domain must match the regex %s", volumeSizeRegex)))
+	}
+
+	return allErrs
+}
+
+func validateWorkerMinimumVolumeSize(volumeSize string, minmumVolumeSize int, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	volumeSizeRegex, _ := regexp.Compile(`^(\d+)Gi$`)
+	match := volumeSizeRegex.FindStringSubmatch(volumeSize)
+	if len(match) == 2 {
+		volSize, err := strconv.Atoi(match[1])
+		if err != nil || volSize < minmumVolumeSize {
+			allErrs = append(allErrs, field.Invalid(fldPath, volumeSize, fmt.Sprintf("volume size must be at least %dGi", minmumVolumeSize)))
+		}
 	}
 
 	return allErrs
