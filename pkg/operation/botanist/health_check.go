@@ -85,10 +85,11 @@ func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Conditi
 			obj                                = o.(*unstructured.Unstructured)
 			machineName                        = obj.GetName()
 			machinePhase, machinePhaseFound, _ = unstructured.NestedString(obj.UnstructuredContent(), "status", "currentStatus", "phase")
+			lastOpDescription, _, _            = unstructured.NestedString(obj.UnstructuredContent(), "status", "lastOperation", "description")
 		)
 
 		if !machinePhaseFound || machinePhase != "Running" {
-			return fmt.Errorf("Machine %s is not running (phase: %s)", machineName, machinePhase)
+			return fmt.Errorf("Machine %s is not running (phase: %s, description: %s)", machineName, machinePhase, lastOpDescription)
 		}
 		return nil
 	}); err != nil {
