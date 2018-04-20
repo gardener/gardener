@@ -34,6 +34,9 @@ spec:
         command:
         - ./machine-controller-manager
         - --control-kubeconfig=inClusterConfig
+        - --machine-health-timeout=10
+        - --machine-drain-timeout=5
+        - --machine-set-scale-timeout=40
         - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
         - --namespace={{ .Release.Namespace }}
         - --v=2
