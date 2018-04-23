@@ -77,7 +77,7 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 	}
 
 	return terraformer.
-		New(b.Operation, terraformerPurpose).
+		NewFromOperation(b.Operation, terraformerPurpose).
 		SetVariablesEnvironment(tfvarsEnvironment).
 		DefineConfig(chartName, b.GenerateTerraformDNSConfig(name, hostedZoneID, []string{target})).
 		Apply()
@@ -106,7 +106,7 @@ func (b *Botanist) DestroyDNSRecord(terraformerPurpose string, purposeInternalDo
 	}
 
 	return terraformer.
-		New(b.Operation, terraformerPurpose).
+		NewFromOperation(b.Operation, terraformerPurpose).
 		SetVariablesEnvironment(tfvarsEnvironment).
 		Destroy()
 }

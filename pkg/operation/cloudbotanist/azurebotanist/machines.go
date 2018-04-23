@@ -47,7 +47,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 		machineClasses     = []map[string]interface{}{}
 	)
 
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(outputVariables...)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(outputVariables...)
 	if err != nil {
 		return nil, nil, err
 	}

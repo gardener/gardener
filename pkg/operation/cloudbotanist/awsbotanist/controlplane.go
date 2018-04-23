@@ -28,7 +28,7 @@ func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
 		subnetID = "subnet_public_utility_z0"
 	)
 
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(vpcID, subnetID)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(vpcID, subnetID)
 	if err != nil {
 		return "", err
 	}
@@ -92,7 +92,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	bucketName := "bucketName"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
 	if err != nil {
 		return nil, nil, err
 	}

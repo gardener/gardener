@@ -149,16 +149,15 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 
 // InjectImages injects images from the image vector into the provided <values> map.
 func (o *Operation) InjectImages(values map[string]interface{}, version string, imageMap map[string]string) (map[string]interface{}, error) {
-	if values == nil {
-		return nil, nil
-	}
+	var (
+		copy = make(map[string]interface{})
+		i    = make(map[string]interface{})
+	)
 
-	copy := make(map[string]interface{})
 	for k, v := range values {
 		copy[k] = v
 	}
 
-	i := make(map[string]interface{})
 	for keyInChart, imageName := range imageMap {
 		image, err := o.ImageVector.FindImage(imageName, version)
 		if err != nil {

@@ -75,7 +75,7 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	mountPath := "/root/.gcp/"
 	bucketName := "bucketName"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(bucketName)
 	if err != nil {
 		return nil, nil, err
 	}

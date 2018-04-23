@@ -27,12 +27,12 @@ import (
 // of the Terraformer.
 func (t *Terraformer) waitForCleanEnvironment() error {
 	return wait.PollImmediate(5*time.Second, 120*time.Second, func() (bool, error) {
-		_, err := t.K8sSeedClient.GetJob(t.Namespace, t.JobName)
+		_, err := t.k8sClient.GetJob(t.namespace, t.jobName)
 		if !apierrors.IsNotFound(err) {
 			if err != nil {
 				return false, err
 			}
-			t.Logger.Infof("Waiting until no Terraform Job with name '%s' exist any more...", t.JobName)
+			t.logger.Infof("Waiting until no Terraform Job with name '%s' exist any more...", t.jobName)
 			return false, nil
 		}
 
@@ -41,7 +41,7 @@ func (t *Terraformer) waitForCleanEnvironment() error {
 			return false, err
 		}
 		if len(jobPodList.Items) != 0 {
-			t.Logger.Infof("Waiting until no Terraform Pods with label 'job-name=%s' exist any more...", t.JobName)
+			t.logger.Infof("Waiting until no Terraform Pods with label 'job-name=%s' exist any more...", t.jobName)
 			return false, nil
 		}
 
@@ -58,10 +58,10 @@ func (t *Terraformer) waitForPod() int32 {
 	var exitCode int32 = 2
 
 	wait.PollImmediate(5*time.Second, 120*time.Second, func() (bool, error) {
-		t.Logger.Infof("Waiting for Terraform validation Pod '%s' to be completed...", t.PodName)
-		pod, err := t.K8sSeedClient.GetPod(t.Namespace, t.PodName)
+		t.logger.Infof("Waiting for Terraform validation Pod '%s' to be completed...", t.podName)
+		pod, err := t.k8sClient.GetPod(t.namespace, t.podName)
 		if apierrors.IsNotFound(err) {
-			t.Logger.Warn("Terraform validation Pod disappeared unexpectedly, somebody must have manually deleted it!")
+			t.logger.Warn("Terraform validation Pod disappeared unexpectedly, somebody must have manually deleted it!")
 			return true, nil
 		}
 		if err != nil {
@@ -87,11 +87,11 @@ func (t *Terraformer) waitForPod() int32 {
 func (t *Terraformer) waitForJob() bool {
 	var succeeded = false
 	if err := wait.Poll(5*time.Second, time.Hour, func() (bool, error) {
-		t.Logger.Infof("Waiting for Terraform Job '%s' to be completed...", t.JobName)
-		job, err := t.K8sSeedClient.GetJob(t.Namespace, t.JobName)
+		t.logger.Infof("Waiting for Terraform Job '%s' to be completed...", t.jobName)
+		job, err := t.k8sClient.GetJob(t.namespace, t.jobName)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				t.Logger.Warnf("Terraform Job %s disappeared unexpectedly, somebody must have manually deleted it!", t.JobName)
+				t.logger.Warnf("Terraform Job %s disappeared unexpectedly, somebody must have manually deleted it!", t.jobName)
 				return true, nil
 			}
 			return false, err
@@ -103,13 +103,13 @@ func (t *Terraformer) waitForJob() bool {
 				return true, nil
 			}
 			if cond.Type == batchv1.JobFailed && cond.Status == corev1.ConditionTrue {
-				t.Logger.Errorf("Terraform Job %s failed for reason '%s': '%s'", t.JobName, cond.Reason, cond.Message)
+				t.logger.Errorf("Terraform Job %s failed for reason '%s': '%s'", t.jobName, cond.Reason, cond.Message)
 				return true, nil
 			}
 		}
 		return false, nil
 	}); err != nil {
-		t.Logger.Errorf("Error while waiting for Terraform job: '%s'", err.Error())
+		t.logger.Errorf("Error while waiting for Terraform job: '%s'", err.Error())
 	}
 	return succeeded
 }
