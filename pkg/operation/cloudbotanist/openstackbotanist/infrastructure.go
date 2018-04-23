@@ -36,7 +36,7 @@ func (b *OpenStackBotanist) DeployInfrastructure() error {
 	}
 
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("openstack-infra", b.generateTerraformInfraConfig(createRouter, routerID)).
 		Apply()
@@ -45,7 +45,7 @@ func (b *OpenStackBotanist) DeployInfrastructure() error {
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *OpenStackBotanist) DestroyInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -90,7 +90,7 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *OpenStackBotanist) DeployBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("openstack-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -102,7 +102,7 @@ func (b *OpenStackBotanist) DestroyBackupInfrastructure() error {
 	//TODO: Remove this comment when backup is to be pushed on to swift container i.e.
 	// when we have next(v1.4.0) realease of https://github.com/terraform-providers/terraform-provider-openstack/releases
 	/* return terraformer.
-	New(b.Operation, common.TerraformerPurposeBackup).
+	NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 	SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 	Destroy()
 	*/

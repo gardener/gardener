@@ -36,7 +36,7 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 	}
 
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeKube2IAM).
+		NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("aws-kube2iam", values).
 		Apply()
@@ -46,7 +46,7 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 // policies.
 func (b *AWSBotanist) DestroyKube2IAMResources() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeKube2IAM).
+		NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -55,7 +55,7 @@ func (b *AWSBotanist) DestroyKube2IAMResources() error {
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1beta1.Kube2IAMRole) (map[string]interface{}, error) {
 	nodesRoleARN := "nodes_role_arn"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(nodesRoleARN)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(nodesRoleARN)
 	if err != nil {
 		return nil, err
 	}

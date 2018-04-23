@@ -21,39 +21,58 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// New takes a Operation object <o> and a string <purpose> which describes for what the
-// Terraformer is used, and returns a Terraformer struct with initialized values for the namespace
-// and the names which will be used for all the stored resources like ConfigMaps/Secrets.
-func New(o *operation.Operation, purpose string) *Terraformer {
-	prefix := fmt.Sprintf("%s.%s", o.Shoot.Info.Name, purpose)
-
-	if err := o.InitializeSeedClients(); err != nil {
-		return nil
+// NewFromOperation takes an <o> operation object and initializes the Terraformer, and a
+// string <purpose> and returns an initialized Terraformer.
+func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
+	image := ""
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
 	}
+	return New(o.Logger, o.K8sSeedClient, purpose, o.Shoot.Info.Name, o.Shoot.SeedNamespace, image)
+}
+
+// New takes a <logger>, a <k8sClient>, a string <purpose>, which describes for what the
+// Terraformer is used, a <name>, a <namespace> in which the Terraformer will run, and the
+// <image> name for the to-be-used Docke image. It returns a Terraformer struct with initialized
+// values for the namespace and the names which will be used for all the stored resources like
+// ConfigMaps/Secrets.
+func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace, image string) *Terraformer {
+	var (
+		prefix    = fmt.Sprintf("%s.%s", name, purpose)
+		podSuffix = utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5]
+	)
 
 	return &Terraformer{
-		Operation:     o,
-		Namespace:     o.Shoot.SeedNamespace,
-		Purpose:       purpose,
-		ConfigName:    prefix + common.TerraformerConfigSuffix,
-		VariablesName: prefix + common.TerraformerVariablesSuffix,
-		StateName:     prefix + common.TerraformerStateSuffix,
-		PodName:       prefix + common.TerraformerPodSuffix + "-" + utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5],
-		JobName:       prefix + common.TerraformerJobSuffix,
+		logger:        logger,
+		k8sClient:     k8sClient,
+		chartRenderer: chartrenderer.New(k8sClient),
+
+		namespace: namespace,
+		purpose:   purpose,
+		image:     image,
+
+		configName:    prefix + common.TerraformerConfigSuffix,
+		variablesName: prefix + common.TerraformerVariablesSuffix,
+		stateName:     prefix + common.TerraformerStateSuffix,
+		podName:       fmt.Sprintf("%s-%s", prefix+common.TerraformerPodSuffix, podSuffix),
+		jobName:       prefix + common.TerraformerJobSuffix,
 	}
 }
 
 // Apply executes the Terraform Job by running the 'terraform apply' command.
 func (t *Terraformer) Apply() error {
-	if !t.ConfigurationDefined {
+	if !t.configurationDefined {
 		return errors.New("Terraformer configuration has not been defined, cannot execute the Terraform scripts")
 	}
 	return t.execute("apply")
@@ -61,8 +80,7 @@ func (t *Terraformer) Apply() error {
 
 // Destroy executes the Terraform Job by running the 'terraform destroy' command.
 func (t *Terraformer) Destroy() error {
-	err := t.execute("destroy")
-	if err != nil {
+	if err := t.execute("destroy"); err != nil {
 		return err
 	}
 	return t.cleanupConfiguration()
@@ -80,24 +98,23 @@ func (t *Terraformer) execute(scriptName string) error {
 	)
 
 	// We should retry the preparation check in order to allow the kube-apiserver to actually create the ConfigMaps.
-	err := utils.Retry(t.Logger, 30*time.Second, func() (bool, error) {
+	if err := utils.Retry(t.logger, 30*time.Second, func() (bool, error) {
 		numberOfExistingResources, err := t.prepare()
 		if err != nil {
 			return false, err
 		}
 		if numberOfExistingResources == 0 {
-			t.Logger.Debug("All ConfigMaps/Secrets do not exist, can not execute the Terraform Job.")
+			t.logger.Debug("All ConfigMaps/Secrets do not exist, can not execute the Terraform Job.")
 			return true, nil
 		} else if numberOfExistingResources == 3 {
-			t.Logger.Debug("All ConfigMaps/Secrets exist, will execute the Terraform Job.")
+			t.logger.Debug("All ConfigMaps/Secrets exist, will execute the Terraform Job.")
 			execute = true
 			return true, nil
 		} else {
-			t.Logger.Error("Can not execute Terraform Job as ConfigMaps/Secrets are missing!")
+			t.logger.Error("Can not execute Terraform Job as ConfigMaps/Secrets are missing!")
 			return false, nil
 		}
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 	if !execute {
@@ -113,19 +130,22 @@ func (t *Terraformer) execute(scriptName string) error {
 		skipJob = t.IsStateEmpty()
 	}
 
-	defaultValues := map[string]interface{}{
-		"terraformVariablesEnvironment": t.VariablesEnvironment,
-		"names": map[string]interface{}{
-			"configuration": t.ConfigName,
-			"variables":     t.VariablesName,
-			"state":         t.StateName,
-			"pod":           t.PodName,
-			"job":           t.JobName,
-		},
+	if t.image == "" {
+		return fmt.Errorf("cannot execute Terraformer because the image has not been set")
 	}
-	values, err := t.InjectImages(defaultValues, t.K8sSeedClient.Version(), map[string]string{"terraformer": "terraformer"})
-	if err != nil {
-		return err
+
+	values := map[string]interface{}{
+		"images": map[string]interface{}{
+			"terraformer": t.image,
+		},
+		"terraformVariablesEnvironment": t.variablesEnvironment,
+		"names": map[string]interface{}{
+			"configuration": t.configName,
+			"variables":     t.variablesName,
+			"state":         t.stateName,
+			"pod":           t.podName,
+			"job":           t.jobName,
+		},
 	}
 
 	if !skipPod {
@@ -133,21 +153,22 @@ func (t *Terraformer) execute(scriptName string) error {
 		values["script"] = "validate"
 
 		// Create Terraform Pod which validates the Terraform configuration
-		err := t.deployTerraformer(values)
-		if err != nil {
+		if err := t.deployTerraformer(values); err != nil {
 			return err
 		}
 
 		// Wait for the Terraform validation Pod to be completed
 		exitCode = t.waitForPod()
 		skipJob = exitCode == 0 || exitCode == 1
-		if exitCode == 0 {
-			t.Logger.Debug("Terraform validation succeeded but there is no difference between state and actual resources.")
-		} else if exitCode == 1 {
-			t.Logger.Debug("Terraform validation failed, will not start the job.")
+
+		switch exitCode {
+		case 0:
+			t.logger.Debug("Terraform validation succeeded but there is no difference between state and actual resources.")
+		case 1:
+			t.logger.Debug("Terraform validation failed, will not start the job.")
 			succeeded = false
-		} else {
-			t.Logger.Debug("Terraform validation has been successful.")
+		default:
+			t.logger.Debug("Terraform validation has been successful.")
 		}
 	}
 
@@ -156,46 +177,43 @@ func (t *Terraformer) execute(scriptName string) error {
 		values["script"] = scriptName
 
 		// Create Terraform Job which executes the provided scriptName
-		err := t.deployTerraformer(values)
-		if err != nil {
+		if err := t.deployTerraformer(values); err != nil {
 			return fmt.Errorf("Failed to deploy the Terraformer: %s", err.Error())
 		}
 
 		// Wait for the Terraform Job to be completed
 		succeeded = t.waitForJob()
-		t.Logger.Infof("Terraform '%s' finished.", t.JobName)
+		t.logger.Infof("Terraform '%s' finished.", t.jobName)
 	}
 
 	// Retrieve the logs of the Pods belonging to the completed Job
 	jobPodList, err := t.listJobPods()
 	if err != nil {
-		t.Logger.Errorf("Could not retrieve list of pods belonging to Terraform job '%s': %s", t.JobName, err.Error())
+		t.logger.Errorf("Could not retrieve list of pods belonging to Terraform job '%s': %s", t.jobName, err.Error())
 		jobPodList = &corev1.PodList{}
 	}
 
-	t.Logger.Infof("Fetching the logs for all pods belonging to the Terraform job '%s'...", t.JobName)
+	t.logger.Infof("Fetching the logs for all pods belonging to the Terraform job '%s'...", t.jobName)
 	logList, err := t.retrievePodLogs(jobPodList)
 	if err != nil {
-		t.Logger.Errorf("Could not retrieve the logs of the pods belonging to Terraform job '%s': %s", t.JobName, err.Error())
+		t.logger.Errorf("Could not retrieve the logs of the pods belonging to Terraform job '%s': %s", t.jobName, err.Error())
 		logList = map[string]string{}
 	}
 	for podName, podLogs := range logList {
-		t.Logger.Infof("Logs of Pod '%s' belonging to Terraform job '%s':\n%s", podName, t.JobName, podLogs)
+		t.logger.Infof("Logs of Pod '%s' belonging to Terraform job '%s':\n%s", podName, t.jobName, podLogs)
 	}
 
 	// Delete the Terraform Job and all its belonging Pods
-	t.Logger.Infof("Cleaning up pods created by Terraform job '%s'...", t.JobName)
-	err = t.cleanupJob(jobPodList)
-	if err != nil {
+	t.logger.Infof("Cleaning up pods created by Terraform job '%s'...", t.jobName)
+	if err := t.cleanupJob(jobPodList); err != nil {
 		return err
 	}
 
 	// Evaluate whether the execution was successful or not
-	t.Logger.Infof("Terraformer execution for job '%s' has been completed.", t.JobName)
+	t.logger.Infof("Terraformer execution for job '%s' has been completed.", t.jobName)
 	if !succeeded {
-		errorMessage := fmt.Sprintf("Terraform execution job '%s' could not be completed.", t.JobName)
-		terraformErrors := retrieveTerraformErrors(logList)
-		if terraformErrors != nil {
+		errorMessage := fmt.Sprintf("Terraform execution job '%s' could not be completed.", t.jobName)
+		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
 		}
 		return determineErrorCode(errorMessage)
@@ -206,12 +224,12 @@ func (t *Terraformer) execute(scriptName string) error {
 // deployTerraformer renders the Terraformer chart which contains the Job/Pod manifest.
 func (t *Terraformer) deployTerraformer(values map[string]interface{}) error {
 	chartName := "terraformer"
-	return t.ApplyChartSeed(filepath.Join(chartPath, chartName), chartName, t.Namespace, nil, values)
+	return common.ApplyChart(t.k8sClient, t.chartRenderer, filepath.Join(chartPath, chartName), chartName, t.namespace, nil, values)
 }
 
 // listJobPods lists all pods which have a label 'job-name' whose value is equal to the Terraformer job name.
 func (t *Terraformer) listJobPods() (*corev1.PodList, error) {
-	return t.K8sSeedClient.ListPods(t.Namespace, metav1.ListOptions{LabelSelector: fmt.Sprintf("job-name=%s", t.JobName)})
+	return t.k8sClient.ListPods(t.namespace, metav1.ListOptions{LabelSelector: fmt.Sprintf("job-name=%s", t.jobName)})
 }
 
 // retrievePodLogs fetches the logs of the created Pods by the Terraform Job and returns them as a map whose
@@ -222,9 +240,9 @@ func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]st
 		var logList = map[string]string{}
 		for _, jobPod := range jobPodList.Items {
 			name := jobPod.Name
-			logsBuffer, err := t.K8sSeedClient.GetPodLogs(jobPod.Namespace, name, &corev1.PodLogOptions{})
+			logsBuffer, err := t.k8sClient.GetPodLogs(jobPod.Namespace, name, &corev1.PodLogOptions{})
 			if err != nil {
-				t.Logger.Warnf("Could not retrieve the logs of Terraform job pod %s: '%v'", name, err)
+				t.logger.Warnf("Could not retrieve the logs of Terraform job pod %s: '%v'", name, err)
 				continue
 			}
 			logList[name] = logsBuffer.String()
@@ -236,16 +254,15 @@ func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]st
 	case result := <-logChan:
 		return result, nil
 	case <-time.After(2 * time.Minute):
-		return nil, fmt.Errorf("Timeout when reading the logs of all pds created by Terraform job '%s'", t.JobName)
+		return nil, fmt.Errorf("Timeout when reading the logs of all pds created by Terraform job '%s'", t.jobName)
 	}
 }
 
 // cleanupJob deletes the Terraform Job and all belonging Pods from the Garden cluster.
 func (t *Terraformer) cleanupJob(jobPodList *corev1.PodList) error {
 	// Delete the Terraform Job
-	err := t.K8sSeedClient.DeleteJob(t.Namespace, t.JobName)
-	if err == nil {
-		t.Logger.Infof("Deleted Terraform Job '%s'", t.JobName)
+	if err := t.k8sClient.DeleteJob(t.namespace, t.jobName); err == nil {
+		t.logger.Infof("Deleted Terraform Job '%s'", t.jobName)
 	} else {
 		if !apierrors.IsNotFound(err) {
 			return err
@@ -254,9 +271,8 @@ func (t *Terraformer) cleanupJob(jobPodList *corev1.PodList) error {
 
 	// Delete the belonging Terraform Pods
 	for _, jobPod := range jobPodList.Items {
-		err = t.K8sSeedClient.DeletePod(jobPod.ObjectMeta.Namespace, jobPod.ObjectMeta.Name)
-		if err == nil {
-			t.Logger.Infof("Deleted Terraform Job Pod '%s'", jobPod.ObjectMeta.Name)
+		if err := t.k8sClient.DeletePod(jobPod.Namespace, jobPod.Name); err == nil {
+			t.logger.Infof("Deleted Terraform Job Pod '%s'", jobPod.Name)
 		} else {
 			if !apierrors.IsNotFound(err) {
 				return err

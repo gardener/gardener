@@ -45,7 +45,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 	}
 
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("aws-infra", b.generateTerraformInfraConfig(createVPC, vpcID, internetGatewayID, vpcCIDR)).
 		Apply()
@@ -54,7 +54,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AWSBotanist) DestroyInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -117,7 +117,7 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 func (b *AWSBotanist) DeployBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("aws-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -126,7 +126,7 @@ func (b *AWSBotanist) DeployBackupInfrastructure() error {
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AWSBotanist) DestroyBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

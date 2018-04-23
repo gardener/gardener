@@ -19,13 +19,20 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // SetVariablesEnvironment sets the provided <tfvarsEnvironment> on the Terraformer object.
 func (t *Terraformer) SetVariablesEnvironment(tfvarsEnvironment []map[string]interface{}) *Terraformer {
-	t.VariablesEnvironment = tfvarsEnvironment
+	t.variablesEnvironment = tfvarsEnvironment
+	return t
+}
+
+// SetImage sets the provided <image> on the Terraformer object.
+func (t *Terraformer) SetImage(image string) *Terraformer {
+	t.image = image
 	return t
 }
 
@@ -34,23 +41,22 @@ func (t *Terraformer) SetVariablesEnvironment(tfvarsEnvironment []map[string]int
 // The tfvars are stored in a Secret as the contain confidential information like credentials.
 func (t *Terraformer) DefineConfig(chartName string, values map[string]interface{}) *Terraformer {
 	values["names"] = map[string]interface{}{
-		"configuration": t.ConfigName,
-		"variables":     t.VariablesName,
-		"state":         t.StateName,
+		"configuration": t.configName,
+		"variables":     t.variablesName,
+		"state":         t.stateName,
 	}
 	values["initializeEmptyState"] = t.IsStateEmpty()
 
-	err := utils.Retry(t.Logger, 30*time.Second, func() (bool, error) {
-		if err := t.ApplyChartSeed(filepath.Join(chartPath, chartName), chartName, t.Namespace, nil, values); err != nil {
-			t.Logger.Errorf("could not create Terraform ConfigMaps/Secrets: %s", err.Error())
+	if err := utils.Retry(t.logger, 30*time.Second, func() (bool, error) {
+		if err := common.ApplyChart(t.k8sClient, t.chartRenderer, filepath.Join(chartPath, chartName), chartName, t.namespace, nil, values); err != nil {
+			t.logger.Errorf("could not create Terraform ConfigMaps/Secrets: %s", err.Error())
 			return false, nil
 		}
 		return true, nil
-	})
-	if err != nil {
-		t.Logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
+	}); err != nil {
+		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
 	} else {
-		t.ConfigurationDefined = true
+		t.configurationDefined = true
 	}
 
 	return t
@@ -62,28 +68,28 @@ func (t *Terraformer) prepare() (int, error) {
 	// Check whether the required ConfigMaps and the Secret exist
 	numberOfExistingResources := 3
 
-	_, err := t.K8sSeedClient.GetConfigMap(t.Namespace, t.StateName)
+	_, err := t.k8sClient.GetConfigMap(t.namespace, t.stateName)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return -1, err
 		}
 		numberOfExistingResources--
 	}
-	_, err = t.K8sSeedClient.GetSecret(t.Namespace, t.VariablesName)
+	_, err = t.k8sClient.GetSecret(t.namespace, t.variablesName)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return -1, err
 		}
 		numberOfExistingResources--
 	}
-	_, err = t.K8sSeedClient.GetConfigMap(t.Namespace, t.ConfigName)
+	_, err = t.k8sClient.GetConfigMap(t.namespace, t.configName)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return -1, err
 		}
 		numberOfExistingResources--
 	}
-	if t.VariablesEnvironment == nil {
+	if t.variablesEnvironment == nil {
 		return -1, errors.New("no Terraform variable environment provided")
 	}
 
@@ -92,12 +98,10 @@ func (t *Terraformer) prepare() (int, error) {
 	if err != nil {
 		return -1, err
 	}
-	err = t.cleanupJob(jobPodList)
-	if err != nil {
+	if err := t.cleanupJob(jobPodList); err != nil {
 		return -1, err
 	}
-	err = t.waitForCleanEnvironment()
-	if err != nil {
+	if err := t.waitForCleanEnvironment(); err != nil {
 		return -1, err
 	}
 	return numberOfExistingResources, nil
@@ -106,28 +110,20 @@ func (t *Terraformer) prepare() (int, error) {
 // cleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
 // the Secret which stores the Terraform variables.
 func (t *Terraformer) cleanupConfiguration() error {
-	t.Logger.Debugf("Deleting Terraform variables Secret '%s'", t.VariablesName)
-	err := t.K8sSeedClient.DeleteSecret(t.Namespace, t.VariablesName)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
+	t.logger.Debugf("Deleting Terraform variables Secret '%s'", t.variablesName)
+	if err := t.k8sClient.DeleteSecret(t.namespace, t.variablesName); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	t.Logger.Debugf("Deleting Terraform configuration ConfigMap '%s'", t.ConfigName)
-	err = t.K8sSeedClient.DeleteConfigMap(t.Namespace, t.ConfigName)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	if err != nil {
+	t.logger.Debugf("Deleting Terraform configuration ConfigMap '%s'", t.configName)
+	if err := t.k8sClient.DeleteConfigMap(t.namespace, t.configName); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
-	t.Logger.Debugf("Deleting Terraform state ConfigMap '%s'", t.StateName)
-	err = t.K8sSeedClient.DeleteConfigMap(t.Namespace, t.StateName)
-	if apierrors.IsNotFound(err) {
-		return nil
+	t.logger.Debugf("Deleting Terraform state ConfigMap '%s'", t.stateName)
+	if err := t.k8sClient.DeleteConfigMap(t.namespace, t.stateName); err != nil && !apierrors.IsNotFound(err) {
+		return err
 	}
-	return err
+
+	return nil
 }

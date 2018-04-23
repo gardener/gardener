@@ -58,7 +58,7 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 	}
 
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("azure-infra", b.generateTerraformInfraConfig(createResourceGroup, createVNet, resourceGroupName, vnetName, vnetCIDR, countUpdateDomains, countFaultDomains)).
 		Apply()
@@ -67,7 +67,7 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AzureBotanist) DestroyInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -114,7 +114,7 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *AzureBotanist) DeployBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("azure-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -123,7 +123,7 @@ func (b *AzureBotanist) DeployBackupInfrastructure() error {
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *AzureBotanist) DestroyBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

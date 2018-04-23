@@ -29,7 +29,7 @@ type terraformState struct {
 
 // GetState returns the Terraform state as byte slice.
 func (t *Terraformer) GetState() ([]byte, error) {
-	configmap, err := t.K8sSeedClient.GetConfigMap(t.Namespace, t.StateName)
+	configmap, err := t.k8sClient.GetConfigMap(t.namespace, t.stateName)
 	if err != nil {
 		return nil, err
 	}

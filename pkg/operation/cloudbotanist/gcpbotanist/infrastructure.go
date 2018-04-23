@@ -36,7 +36,7 @@ func (b *GCPBotanist) DeployInfrastructure() error {
 	}
 
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("gcp-infra", b.generateTerraformInfraConfig(createVPC, vpcName)).
 		Apply()
@@ -45,7 +45,7 @@ func (b *GCPBotanist) DeployInfrastructure() error {
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *GCPBotanist) DestroyInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeInfra).
+		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -88,7 +88,7 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("gcp-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -97,7 +97,7 @@ func (b *GCPBotanist) DeployBackupInfrastructure() error {
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
 	return terraformer.
-		New(b.Operation, common.TerraformerPurposeBackup).
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

@@ -31,7 +31,7 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 		subnetID          = "subnet_id"
 	)
 
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(floatingNetworkID, subnetID)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(floatingNetworkID, subnetID)
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +96,7 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	containerName := "containerName"
-	stateVariables, err := terraformer.New(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(containerName)
+	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(containerName)
 	if err != nil {
 		return nil, nil, err
 	}
