@@ -39,7 +39,6 @@ data:
       - target_label: job
         replacement: kube-kubelet
 
-      # Here we do the actual multi-tenancy - we only get one in specific namespace
       metric_relabel_configs:
       # get system services
       - source_labels: [id]
@@ -47,6 +46,17 @@ data:
         regex: '^/system\.slice/(.+)\.service$'
         target_label: systemd_service_name
         replacement: '${1}'
+      # Drop metrics that are useless and high-volume
+      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
+      - source_labels: [ __name__ ]
+        regex: rest_client_request_latency_seconds_bucket
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: '^etcd_.+'
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: '^reflector_.+'
+        action: drop
 
     - job_name: cadvisor-seed
       honor_labels: false
@@ -73,8 +83,10 @@ data:
         replacement: seed
       - target_label: job
         replacement: kube-kubelet
+
       # Drop metrics that are useless and high-volume
       # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
+      metric_relabel_configs:
       - source_labels: [ __name__ ]
         regex: container_network_tcp_usage_total
         action: drop
@@ -85,5 +97,5 @@ data:
         regex: container_network_udp_usage_total
         action: drop
       - source_labels: [ __name__ ]
-        regex: rest_client_request_latency_seconds_bucket
+        regex: container_cpu_load_average_10s
         action: drop
