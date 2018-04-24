@@ -30,6 +30,8 @@
 #     target namespace, e.g. garden-conf
 #   - CLOUD_PROVIDER
 #     cloud provider (az, os, gcp, aws)
+#   - GARDENER_PATH
+#     path to Gardener repo
 #   - SHOOT_SPEC_PATH
 #     detailed specification of shoot resource manifest
 #
@@ -41,9 +43,6 @@ readonly FALSE=1
 # Max. time to wait for creation/deletion of shoot
 MAX_RETRY_TIME=$((60 * 60)) # 60min 
 MAX_TEST_TIME=$((60 * 60)) # 60min 
-
-# Read environment variables
-GARDENER_PATH=$(readlink -f "${GARDENER_PATH}")
 
 # Sript parameter
 VALID_CLOUD_PROVIDERS="aws gcp os az"
@@ -322,7 +321,7 @@ set +e
 
 # Check arguments
 # - exactly one argument which has to be one of aws, os, az, gcp
-if [ "$#" -ne 5 ] ; then
+if [ "$#" -ne 6 ] ; then
   echo "ERROR: wrong number of arguments"
   help
   exit 1
@@ -333,13 +332,14 @@ GARDEN_KUBECONFIG="$1"
 SHOOT_NAME="$2"
 GARDEN_NAMESPACE="$3"
 CLOUD_PROVIDER="$4"
-SHOOT_SPEC_PATH="$5"
+GARDENER_PATH="$5"
+SHOOT_SPEC_PATH="$6"
 
 RESULT_DIR="$(dirname $0)"
 SHOOT_KUBECONFIG="${RESULT_DIR}/${CLOUD_PROVIDER}_kubeconfig.yaml"
 
 # Echo conformance test result
-if run_conformance_tests ; then
+if run_conformance_tests = "$TRUE" ; then
   echo "INFO: Conformance test SUCCESSFULLY finished"
   exit 0
 else
