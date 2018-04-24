@@ -108,17 +108,18 @@ func (c *Client) Apply(m []byte) error {
 				// of the existing object.
 				for _, newPort := range newPorts {
 					np := newPort.(map[string]interface{})
-					port := np
 
 					for _, oldPort := range oldPorts {
 						op := oldPort.(map[string]interface{})
-						if np["port"] == op["port"] {
+						// np["port"] is of type float64 (due to Helm Tiller rendering) while op["port"] is of type int64.
+						// Equality can only be checked via their string representations.
+						if fmt.Sprintf("%v", np["port"]) == fmt.Sprintf("%v", op["port"]) {
 							if nodePort, ok := op["nodePort"]; ok {
-								port["nodePort"] = nodePort
+								np["nodePort"] = nodePort
 							}
 						}
 					}
-					ports = append(ports, port)
+					ports = append(ports, np)
 				}
 
 				newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
