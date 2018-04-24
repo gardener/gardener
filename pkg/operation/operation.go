@@ -33,39 +33,54 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// New creates a new operation object.
-func New(shoot *gardenv1beta1.Shoot, shootLogger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
+// New creates a new operation object with a Shoot resource object.
+func New(shoot *gardenv1beta1.Shoot, logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
+	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, *(shoot.Spec.Cloud.Seed), shoot)
+}
+
+// NewWithoutShoot creates a new operation object without a Shoot resource object.
+func NewWithoutShoot(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, namespace, seedName string) (*Operation, error) {
+	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, namespace, seedName, nil)
+}
+
+func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, namespace, seedName string, shoot *gardenv1beta1.Shoot) (*Operation, error) {
 	secrets := make(map[string]*corev1.Secret)
 	for k, v := range secretsMap {
 		secrets[k] = v
 	}
 
-	gardenObj, err := garden.New(k8sGardenClient, shoot)
+	gardenObj, err := garden.New(k8sGardenClient, namespace)
 	if err != nil {
 		return nil, err
 	}
-	seedObj, err := seed.NewFromName(k8sGardenClient, k8sGardenInformers, *(shoot.Spec.Cloud.Seed))
-	if err != nil {
-		return nil, err
-	}
-	shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.ProjectName, constructInternalDomain(shoot.Name, gardenObj.ProjectName, secrets[common.GardenRoleInternalDomain].Annotations[common.DNSDomain]))
+	seedObj, err := seed.NewFromName(k8sGardenClient, k8sGardenInformers, seedName)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Operation{
-		Logger:              shootLogger,
+	operation := &Operation{
+		Logger:              logger,
 		GardenerInfo:        gardenerInfo,
 		Secrets:             secrets,
 		ImageVector:         imageVector,
 		CheckSums:           make(map[string]string),
 		Garden:              gardenObj,
 		Seed:                seedObj,
-		Shoot:               shootObj,
 		K8sGardenClient:     k8sGardenClient,
 		K8sGardenInformers:  k8sGardenInformers,
 		ChartGardenRenderer: chartrenderer.New(k8sGardenClient),
-	}, nil
+	}
+
+	if shoot != nil {
+		internalDomain := constructInternalDomain(shoot.Name, gardenObj.ProjectName, secretsMap[common.GardenRoleInternalDomain].Annotations[common.DNSDomain])
+		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.ProjectName, internalDomain)
+		if err != nil {
+			return nil, err
+		}
+		operation.Shoot = shootObj
+	}
+
+	return operation, nil
 }
 
 // InitializeSeedClients will use the Garden Kubernetes client to read the Seed Secret in the Garden
