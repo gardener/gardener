@@ -70,11 +70,103 @@ data:
         target_label: pod
 
     - job_name: 'kube-kubelet'
-{{- include "prometheus.kubelet-shoot" (dict "Path" "metrics" "Namespace" .Release.Namespace "JobName" "kube-kubelet") }}
+      honor_labels: false
+      scheme: https
+
+      tls_config:
+        # This is needed because the kubelets' certificates are not are generated
+        # for a specific pod IP
+        insecure_skip_verify: true
+        cert_file: /etc/prometheus/seed/prometheus.crt
+        key_file: /etc/prometheus/seed/prometheus.key
+
+      kubernetes_sd_configs:
+      - role: node
+        api_server: kube-apiserver
+        tls_config:
+          ca_file: /etc/prometheus/seed/ca.crt
+          cert_file: /etc/prometheus/seed/prometheus.crt
+          key_file: /etc/prometheus/seed/prometheus.key
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_node_address_InternalIP]
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: type
+        replacement: shoot
+
+      # get system services
+      metric_relabel_configs:
+      - source_labels: [id]
+        action: replace
+        regex: '^/system\.slice/(.+)\.service$'
+        target_label: systemd_service_name
+        replacement: '${1}'
+      # We want to keep only metrics in kube-system namespace
+      - source_labels: [namespace]
+        action: keep
+        regex: kube-system
+      # Drop metrics that are useless and high-volume
+      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
+      - source_labels: [ __name__ ]
+        regex: rest_client_request_latency_seconds_bucket
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: '^etcd_.+'
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: '^reflector_.+'
+        action: drop
 
     # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
-    - job_name: 'cadvisor-shoot'
-{{- include "prometheus.kubelet-shoot" (dict "Path" "metrics/cadvisor" "Namespace" .Release.Namespace "JobName" "cadvisor") }}
+    - job_name: 'cadvisor'
+      honor_labels: false
+      scheme: https
+      metrics_path: /metrics/cadvisor
+
+      tls_config:
+        # This is needed because the kubelets' certificates are not are generated
+        # for a specific pod IP
+        insecure_skip_verify: true
+        cert_file: /etc/prometheus/seed/prometheus.crt
+        key_file: /etc/prometheus/seed/prometheus.key
+
+      kubernetes_sd_configs:
+      - role: node
+        api_server: kube-apiserver
+        tls_config:
+          ca_file: /etc/prometheus/seed/ca.crt
+          cert_file: /etc/prometheus/seed/prometheus.crt
+          key_file: /etc/prometheus/seed/prometheus.key
+
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_node_address_InternalIP]
+        target_label: instance
+      - action: labelmap
+        regex: __meta_kubernetes_node_label_(.+)
+      - target_label: type
+        replacement: shoot
+
+      metric_relabel_configs:
+      # We want to keep only metrics in kube-system namespace
+      - source_labels: [namespace]
+        action: keep
+        regex: kube-system
+      # Drop metrics that are useless and high-volume
+      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
+      - source_labels: [ __name__ ]
+        regex: container_network_tcp_usage_total
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: container_tasks_state
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: container_network_udp_usage_total
+        action: drop
+      - source_labels: [ __name__ ]
+        regex: container_cpu_load_average_10s
+        action: drop
 
     # We fetch kubelet metrics from seed's kube-system Prometheus and filter
     # the metrics in shoot's namespace
