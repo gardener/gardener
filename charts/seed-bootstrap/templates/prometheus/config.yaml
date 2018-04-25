@@ -13,7 +13,7 @@ data:
     - /etc/prometheus/rules/*.yml
 
     scrape_configs:
-    - job_name: kube-kubelet-seed
+    - job_name: kube-kubelet
       honor_labels: false
       scheme: https
 
@@ -36,8 +36,6 @@ data:
         replacement: /api/v1/nodes/${1}/proxy/metrics
       - target_label: type
         replacement: seed
-      - target_label: job
-        replacement: kube-kubelet
 
       metric_relabel_configs:
       # get system services
@@ -58,7 +56,7 @@ data:
         regex: '^reflector_.+'
         action: drop
 
-    - job_name: cadvisor-seed
+    - job_name: cadvisor
       honor_labels: false
       scheme: https
 
@@ -81,8 +79,6 @@ data:
         replacement: /api/v1/nodes/${1}/proxy/metrics/cadvisor
       - target_label: type
         replacement: seed
-      - target_label: job
-        replacement: kube-kubelet
 
       # Drop metrics that are useless and high-volume
       # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
