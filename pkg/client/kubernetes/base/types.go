@@ -16,6 +16,7 @@ package kubernetesbase
 
 import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -44,6 +45,7 @@ type Client struct {
 	clientConfig      clientcmd.ClientConfig
 	clientset         *kubernetes.Clientset
 	gardenClientset   *gardenclientset.Clientset
+	machineClientset  *machineclientset.Clientset
 	restClient        rest.Interface
 	resourceAPIGroups map[string][]string
 	version           string

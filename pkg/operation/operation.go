@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
@@ -99,10 +100,15 @@ func (o *Operation) InitializeSeedClients() error {
 	if err != nil {
 		return err
 	}
-	chartSeedRenderer := chartrenderer.New(k8sSeedClient)
+	// Create a MachineV1alpha1Client and the respective API group scheme for the Machine API group.
+	machineClientset, err := machineclientset.NewForConfig(k8sSeedClient.GetConfig())
+	if err != nil {
+		return err
+	}
+	k8sSeedClient.SetMachineClientset(machineClientset)
 
 	o.K8sSeedClient = k8sSeedClient
-	o.ChartSeedRenderer = chartSeedRenderer
+	o.ChartSeedRenderer = chartrenderer.New(k8sSeedClient)
 	return nil
 }
 
@@ -119,10 +125,9 @@ func (o *Operation) InitializeShootClients() error {
 	if err != nil {
 		return err
 	}
-	chartShootRenderer := chartrenderer.New(k8sShootClient)
 
 	o.K8sShootClient = k8sShootClient
-	o.ChartShootRenderer = chartShootRenderer
+	o.ChartShootRenderer = chartrenderer.New(k8sShootClient)
 	return nil
 }
 
@@ -156,7 +161,12 @@ func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
-	o.Shoot.Info.Status.LastOperation.Description = fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
+	description := fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
+	if progress == 100 {
+		description = "Execution finished."
+	}
+
+	o.Shoot.Info.Status.LastOperation.Description = description
 	o.Shoot.Info.Status.LastOperation.Progress = progress
 	o.Shoot.Info.Status.LastOperation.LastUpdateTime = metav1.Now()
 
@@ -168,7 +178,12 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 // ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportBackupInfrastructureProgress(progress int, currentFunctions string) {
-	o.BackupInfrastructure.Status.LastOperation.Description = fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
+	description := fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
+	if progress == 100 {
+		description = "Execution finished."
+	}
+
+	o.BackupInfrastructure.Status.LastOperation.Description = description
 	o.BackupInfrastructure.Status.LastOperation.Progress = progress
 	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()
 

@@ -251,11 +251,11 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenerClientset, err := gardenclientset.NewForConfig(gardenerClientConfig)
+	gardenClientset, err := gardenclientset.NewForConfig(gardenerClientConfig)
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClient.SetGardenClientset(gardenerClientset)
+	k8sGardenClient.SetGardenClientset(gardenClientset)
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (
