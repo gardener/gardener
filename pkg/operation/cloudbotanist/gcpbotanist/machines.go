@@ -43,7 +43,7 @@ func (b *GCPBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
 // also generates a list of corresponding MachineDeployments. The provided worker groups will be distributed over
 // the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
-func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error) {
+func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
 		serviceAccountEmail = "service_account_email"
 		subnetNodes         = "subnet_nodes"
@@ -52,7 +52,7 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 		zones               = b.Shoot.Info.Spec.Cloud.GCP.Zones
 		zoneLen             = len(zones)
 
-		machineDeployments = []operation.MachineDeployment{}
+		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
 	)
 
@@ -128,7 +128,8 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
 				Name:      deploymentName,
 				ClassName: className,
-				Replicas:  common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
+				Minimum:   common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
+				Maximum:   common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
 			})
 
 			machineClassSpec["name"] = className

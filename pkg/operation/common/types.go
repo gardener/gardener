@@ -44,6 +44,9 @@ const (
 	// CloudPurposeSeed is a constant used while instantiating a cloud botanist for the Seed cluster.
 	CloudPurposeSeed = "seed"
 
+	// ClusterAutoscalerDeploymentName is the name of the cluster-autoscaler deployment.
+	ClusterAutoscalerDeploymentName = "cluster-autoscaler"
+
 	// ConfirmationDeletionTimestamp is an annotation on a Shoot resource whose value must be set equal to the Shoot's
 	// '.metadata.deletionTimestamp' value to trigger the deletion process of the Shoot cluster.
 	ConfirmationDeletionTimestamp = "confirmation.garden.sapcloud.io/deletionTimestamp"

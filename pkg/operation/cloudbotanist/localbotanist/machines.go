@@ -36,6 +36,6 @@ func (b *LocalBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
 // also generates a list of corresponding MachineDeployments. It returns the computed list of MachineClasses and
 // MachineDeployments.
-func (b *LocalBotanist) GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error) {
+func (b *LocalBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	return nil, nil, nil
 }

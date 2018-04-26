@@ -1,0 +1,20 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-autoscaler-{{ .Release.Namespace }}
+  ownerReferences:
+  - apiVersion: v1
+    kind: Namespace
+    name: {{ .Release.Namespace }}
+    uid: {{ .Values.namespace.uid }}
+    controller: true
+    blockOwnerDeletion: true
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:cluster-autoscaler-seed
+subjects:
+- kind: ServiceAccount
+  name: cluster-autoscaler
+  namespace: {{ .Release.Namespace }}

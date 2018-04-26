@@ -71,6 +71,7 @@ func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGa
 		K8sGardenInformers:   k8sGardenInformers,
 		ChartGardenRenderer:  chartrenderer.New(k8sGardenClient),
 		BackupInfrastructure: backupInfrastructure,
+		MachineDeployments:   MachineDeployments{},
 	}
 
 	if shoot != nil {
@@ -234,10 +235,10 @@ func constructInternalDomain(shootName, shootProject, internalDomain string) str
 	return fmt.Sprintf("api.%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
 }
 
-// NameContainedInMachineDeploymentList checks whether the <name> is part of the <machineDeployments>
+// ContainsName checks whether the <name> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.
-func NameContainedInMachineDeploymentList(name string, machineDeployments []MachineDeployment) bool {
-	for _, deployment := range machineDeployments {
+func (m MachineDeployments) ContainsName(name string) bool {
+	for _, deployment := range m {
 		if name == deployment.Name {
 			return true
 		}
@@ -245,10 +246,10 @@ func NameContainedInMachineDeploymentList(name string, machineDeployments []Mach
 	return false
 }
 
-// ClassContainedInMachineDeploymentList checks whether the <className> is part of the <machineDeployments>
+// ContainsClass checks whether the <className> is part of the <machineDeployments>
 // list, i.e. whether there is an entry whose 'ClassName' attribute matches <name>. It returns true or false.
-func ClassContainedInMachineDeploymentList(className string, machineDeployments []MachineDeployment) bool {
-	for _, deployment := range machineDeployments {
+func (m MachineDeployments) ContainsClass(className string) bool {
+	for _, deployment := range m {
 		if className == deployment.ClassName {
 			return true
 		}

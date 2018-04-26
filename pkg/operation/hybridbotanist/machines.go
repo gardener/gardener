@@ -34,15 +34,30 @@ import (
 
 var chartPathMachines = filepath.Join(common.ChartPath, "seed-machines", "charts", "machines")
 
-// DeployMachines asks the CloudBotanist to provide the specific configuration for MachineClasses and MachineDeployments.
+// ReconcileMachines asks the CloudBotanist to provide the specific configuration for MachineClasses and MachineDeployments.
 // It deploys the machine specifications, waits until it is ready and cleans old specifications.
-func (b *HybridBotanist) DeployMachines() error {
+func (b *HybridBotanist) ReconcileMachines() error {
 	machineClassKind, machineClassPlural, machineClassChartName := b.ShootCloudBotanist.GetMachineClassInfo()
 
 	// Generate machine classes configuration and list of corresponding machine deployments.
 	machineClassChartValues, machineDeployments, err := b.ShootCloudBotanist.GenerateMachineConfig()
 	if err != nil {
 		return fmt.Errorf("The CloudBotanist failed to generate the machine config: '%s'", err.Error())
+	}
+	b.MachineDeployments = machineDeployments
+
+	// Check whether new machine classes have been computed (resulting in a rolling update of the nodes).
+	existingMachineClasses, err := b.getMachineClasses(machineClassPlural)
+	if err != nil {
+		return err
+	}
+	for _, machineDeployment := range machineDeployments {
+		if !classExists(existingMachineClasses, machineDeployment.ClassName) {
+			if err := b.Botanist.DeleteClusterAutoscaler(); err != nil {
+				return err
+			}
+			break
+		}
 	}
 
 	// Deploy generated machine classes.
@@ -53,8 +68,14 @@ func (b *HybridBotanist) DeployMachines() error {
 		return fmt.Errorf("Failed to deploy the generated machine classes: '%s'", err.Error())
 	}
 
-	// Generate machien deployment configuration based on previously computed list of deployments.
-	machineDeploymentChartValues, err := b.generateMachineDeploymentConfig(machineDeployments, machineClassKind)
+	// Get the list of all existing machine deployments
+	existingMachineDeployments, err := b.getMachineDeployments()
+	if err != nil {
+		return err
+	}
+
+	// Generate machine deployment configuration based on previously computed list of deployments.
+	machineDeploymentChartValues, err := b.generateMachineDeploymentConfig(existingMachineDeployments, machineDeployments, machineClassKind)
 	if err != nil {
 		return fmt.Errorf("Failed to generate the machine deployment config: '%s'", err.Error())
 	}
@@ -70,7 +91,7 @@ func (b *HybridBotanist) DeployMachines() error {
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed by exist in the cluster).
-	if err := b.cleanupMachineDeployments(machineDeployments); err != nil {
+	if err := b.cleanupMachineDeployments(existingMachineDeployments, machineDeployments); err != nil {
 		return fmt.Errorf("Failed to cleanup the machine deployments: '%s'", err.Error())
 	}
 
@@ -119,10 +140,16 @@ func (b *HybridBotanist) DestroyMachines() error {
 
 	var (
 		_, machineClassPlural, _ = b.ShootCloudBotanist.GetMachineClassInfo()
-		emptyMachineDeployments  = []operation.MachineDeployment{}
+		emptyMachineDeployments  = operation.MachineDeployments{}
 	)
 
-	if err := b.cleanupMachineDeployments(emptyMachineDeployments); err != nil {
+	// Get the list of all existing machine deployments
+	existingMachineDeployments, err := b.getMachineDeployments()
+	if err != nil {
+		return err
+	}
+
+	if err := b.cleanupMachineDeployments(existingMachineDeployments, emptyMachineDeployments); err != nil {
 		return fmt.Errorf("Cleaning up machine deployments failed: %s", err.Error())
 	}
 	if _, err := b.cleanupMachineClasses(machineClassPlural, emptyMachineDeployments); err != nil {
@@ -162,13 +189,12 @@ func (b *HybridBotanist) RefreshMachineClassSecrets() error {
 
 // generateMachineDeploymentConfig generates the configuration values for the machine deployment Helm chart. It
 // does that based on the provided list of to-be-deployed <machineDeployments>.
-func (b *HybridBotanist) generateMachineDeploymentConfig(machineDeployments []operation.MachineDeployment, classKind string) (map[string]interface{}, error) {
+func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployments unstructured.Unstructured, machineDeployments operation.MachineDeployments, classKind string) (map[string]interface{}, error) {
 	var values = []map[string]interface{}{}
 
 	for _, deployment := range machineDeployments {
-		values = append(values, map[string]interface{}{
+		config := map[string]interface{}{
 			"name":            deployment.Name,
-			"replicas":        deployment.Replicas,
 			"minReadySeconds": 500,
 			"rollingUpdate": map[string]interface{}{
 				"maxSurge":       1,
@@ -181,7 +207,28 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(machineDeployments []op
 				"kind": classKind,
 				"name": deployment.ClassName,
 			},
-		})
+		}
+
+		var (
+			replicas        = deployment.Minimum
+			shootHibernated = b.Shoot.Hibernated
+		)
+
+		// If the Shoot gets hiberated OR the machine deployment is new OR the Shoot is woken up
+		// then we need to explicitly set the machine deployment's replicas. Otherwise, the cluster
+		// autoscaler will take care of managing the replica count (we set the existing value).
+		if !deploymentExists(existingMachineDeployments, deployment.Name) || shootIsWokenUp(shootHibernated, existingMachineDeployments) || shootHibernated {
+			replicas = deployment.Minimum
+		} else {
+			r, err := getDeploymentSpecReplicas(existingMachineDeployments, deployment.Name)
+			if err != nil {
+				return nil, err
+			}
+			replicas = int(r)
+		}
+
+		config["replicas"] = replicas
+		values = append(values, config)
 	}
 
 	return map[string]interface{}{
@@ -195,6 +242,10 @@ func (b *HybridBotanist) labelMachine(obj *unstructured.Unstructured) error {
 		labels      = obj.GetLabels()
 		machineName = obj.GetName()
 	)
+
+	if labels == nil {
+		labels = map[string]string{}
+	}
 
 	if val, ok := labels["force-deletion"]; ok && val == "True" {
 		return nil
@@ -213,31 +264,41 @@ func (b *HybridBotanist) labelMachine(obj *unstructured.Unstructured) error {
 
 // waitUntilMachineDeploymentsAvailable waits for a maximum of 30 minutes until all the desired <machineDeployments>
 // were marked as healthy/available by the machine-controller-manager. It polls the status every 10 seconds.
-func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(machineDeployments []operation.MachineDeployment) error {
+func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(machineDeployments operation.MachineDeployments) error {
 	var (
-		numReady   int64
-		numDesired int64
+		numReady              int64
+		numDesired            int64
+		numberOfAwakeMachines int64
 	)
-	return wait.Poll(5*time.Second, 1800*time.Second, func() (bool, error) {
-		numReady, numDesired = 0, 0
-		var machineDeploymentList unstructured.Unstructured
 
-		if err := b.K8sSeedClient.MachineV1alpha1("GET", "machinedeployments", b.Shoot.SeedNamespace).Do().Into(&machineDeploymentList); err != nil {
+	return wait.Poll(5*time.Second, 30*time.Minute, func() (bool, error) {
+		numReady, numDesired, numberOfAwakeMachines = 0, 0, 0
+
+		existingMachineDeployments, err := b.getMachineDeployments()
+		if err != nil {
 			return false, err
 		}
 
-		if err := machineDeploymentList.EachListItem(func(o runtime.Object) error {
-			for _, machineDeployment := range machineDeployments {
-				var (
-					obj                             = o.(*unstructured.Unstructured)
-					deploymentName                  = obj.GetName()
-					deploymentDesiredReplicas, _, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
-					deploymentReadyReplicas, _, _   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
-				)
+		if err := existingMachineDeployments.EachListItem(func(o runtime.Object) error {
+			var (
+				obj                             = o.(*unstructured.Unstructured)
+				deploymentName                  = obj.GetName()
+				deploymentDesiredReplicas, _, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
+				deploymentReadyReplicas, _, _   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "readyReplicas")
+				deploymentActualReplicas, _, _  = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
+			)
 
-				if machineDeployment.Name == deploymentName {
-					numDesired += deploymentDesiredReplicas
-					numReady += deploymentReadyReplicas
+			// If the Shoots get hibernated we want to wait until all machine deployments have been deleted entirely.
+			if b.Shoot.Hibernated {
+				numberOfAwakeMachines += deploymentActualReplicas
+				// If the Shoot is not hibernated we want to wait until all machine deployments have been as many ready
+				// replicas as desired (specified in the .spec.replicas).
+			} else {
+				for _, machineDeployment := range machineDeployments {
+					if machineDeployment.Name == deploymentName {
+						numDesired += deploymentDesiredReplicas
+						numReady += deploymentReadyReplicas
+					}
 				}
 			}
 			return nil
@@ -245,10 +306,18 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(machineDeployments
 			return false, err
 		}
 
-		b.Logger.Infof("Waiting until all machines are healthy/ready (%d/%d OK)...", numReady, numDesired)
-		if numReady >= numDesired {
-			return true, nil
+		if !b.Shoot.Hibernated {
+			b.Logger.Infof("Waiting until all machines are healthy/ready (%d/%d OK)...", numReady, numDesired)
+			if numReady >= numDesired {
+				return true, nil
+			}
+		} else {
+			if numberOfAwakeMachines == 0 {
+				return true, nil
+			}
+			b.Logger.Infof("Waiting until all machines have been hibernated (%d still awake)...", numberOfAwakeMachines)
 		}
+
 		return false, nil
 	})
 }
@@ -301,7 +370,7 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 // cleanupMachineClasses deletes all machine classes which are not part of the provided list <machineDeployments>.
 // It also computes a list of used secrets which contain the credentials and the cloud configuration. The list is
 // returned in order that its items can be deleted by the HelperBotanist.
-func (b *HybridBotanist) cleanupMachineClasses(machineClassPlural string, machineDeployments []operation.MachineDeployment) (sets.String, error) {
+func (b *HybridBotanist) cleanupMachineClasses(machineClassPlural string, machineDeployments operation.MachineDeployments) (sets.String, error) {
 	var (
 		machineClassList unstructured.Unstructured
 		usedSecrets      = sets.NewString()
@@ -323,7 +392,7 @@ func (b *HybridBotanist) cleanupMachineClasses(machineClassPlural string, machin
 		}
 
 		usedSecrets.Insert(secretRefName)
-		if !operation.ClassContainedInMachineDeploymentList(className, machineDeployments) {
+		if !machineDeployments.ContainsClass(className) {
 			return b.K8sSeedClient.MachineV1alpha1("DELETE", machineClassPlural, b.Shoot.SeedNamespace).Name(className).Do().Error()
 		}
 		return nil
@@ -336,20 +405,14 @@ func (b *HybridBotanist) cleanupMachineClasses(machineClassPlural string, machin
 
 // cleanupMachineDeployments deletes all machine deployments which are not part of the provided list
 // <machineDeployments>.
-func (b *HybridBotanist) cleanupMachineDeployments(machineDeployments []operation.MachineDeployment) error {
-	var machineDeploymentList unstructured.Unstructured
-
-	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machinedeployments", b.Shoot.SeedNamespace).Do().Into(&machineDeploymentList); err != nil {
-		return err
-	}
-
-	return machineDeploymentList.EachListItem(func(o runtime.Object) error {
+func (b *HybridBotanist) cleanupMachineDeployments(existingMachineDeployments unstructured.Unstructured, machineDeployments operation.MachineDeployments) error {
+	return existingMachineDeployments.EachListItem(func(o runtime.Object) error {
 		var (
 			obj                    = o.(*unstructured.Unstructured)
 			existingDeploymentName = obj.GetName()
 		)
 
-		if !operation.NameContainedInMachineDeploymentList(existingDeploymentName, machineDeployments) {
+		if !machineDeployments.ContainsName(existingDeploymentName) {
 			return b.K8sSeedClient.MachineV1alpha1("DELETE", "machinedeployments", b.Shoot.SeedNamespace).Name(existingDeploymentName).Do().Error()
 		}
 		return nil
@@ -380,4 +443,133 @@ func (b *HybridBotanist) cleanupMachineClassSecrets(usedSecrets sets.String) err
 	}
 
 	return nil
+}
+
+func (b *HybridBotanist) getMachineDeployments() (unstructured.Unstructured, error) {
+	var (
+		existingMachineDeployments unstructured.Unstructured
+		err                        = b.K8sSeedClient.MachineV1alpha1("GET", "machinedeployments", b.Shoot.SeedNamespace).Do().Into(&existingMachineDeployments)
+	)
+	return existingMachineDeployments, err
+}
+
+func (b *HybridBotanist) getMachineClasses(classKind string) (unstructured.Unstructured, error) {
+	var (
+		existingMachineClasses unstructured.Unstructured
+		err                    = b.K8sSeedClient.MachineV1alpha1("GET", classKind, b.Shoot.SeedNamespace).Do().Into(&existingMachineClasses)
+	)
+	return existingMachineClasses, err
+}
+
+// Helper functions
+
+func shootIsWokenUp(isHibernated bool, existingMachineDeployments unstructured.Unstructured) bool {
+	if isHibernated {
+		return false
+	}
+
+	wokenUp := true
+
+	existingMachineDeployments.EachListItem(func(o runtime.Object) error {
+		var (
+			obj                             = o.(*unstructured.Unstructured)
+			deploymentDesiredReplicas, _, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
+		)
+
+		if deploymentDesiredReplicas != 0 {
+			wokenUp = false
+		}
+
+		return nil
+	})
+
+	return wokenUp
+}
+
+func getDeploymentSpecReplicas(existingMachineDeployments unstructured.Unstructured, name string) (int64, error) {
+	var (
+		replicas int64 = -1
+		err            = existingMachineDeployments.EachListItem(func(o runtime.Object) error {
+			var (
+				obj                             = o.(*unstructured.Unstructured)
+				deploymentName                  = obj.GetName()
+				deploymentDesiredReplicas, _, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
+			)
+
+			if deploymentName == name {
+				replicas = deploymentDesiredReplicas
+			}
+
+			return nil
+		})
+	)
+
+	if err == nil && replicas == -1 {
+		err = fmt.Errorf("MachineDeployment with name '%s' not found", name)
+	}
+
+	return replicas, err
+}
+
+func getDeploymentStatusReplicas(existingMachineDeployments unstructured.Unstructured, name string) (int64, error) {
+	var (
+		replicas int64 = -1
+		err            = existingMachineDeployments.EachListItem(func(o runtime.Object) error {
+			var (
+				obj                             = o.(*unstructured.Unstructured)
+				deploymentName                  = obj.GetName()
+				deploymentDesiredReplicas, _, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
+			)
+
+			if deploymentName == name {
+				replicas = deploymentDesiredReplicas
+			}
+
+			return nil
+		})
+	)
+
+	if err == nil && replicas == -1 {
+		err = fmt.Errorf("MachineDeployment with name '%s' not found", name)
+	}
+
+	return replicas, err
+}
+
+func deploymentExists(existingMachineDeployments unstructured.Unstructured, name string) bool {
+	exists := false
+
+	existingMachineDeployments.EachListItem(func(o runtime.Object) error {
+		var (
+			obj            = o.(*unstructured.Unstructured)
+			deploymentName = obj.GetName()
+		)
+
+		if deploymentName == name {
+			exists = true
+		}
+
+		return nil
+	})
+
+	return exists
+}
+
+func classExists(existingMachineClasses unstructured.Unstructured, name string) bool {
+	exists := false
+
+	existingMachineClasses.EachListItem(func(o runtime.Object) error {
+		var (
+			obj       = o.(*unstructured.Unstructured)
+			className = obj.GetName()
+		)
+
+		if className == name {
+			exists = true
+		}
+
+		return nil
+	})
+
+	return exists
 }

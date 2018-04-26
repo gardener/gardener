@@ -8,6 +8,8 @@
 # vpn-shoot:
 #   secret: "dummy base64 encoded authorized_keys"
 
+cluster-autoscaler:
+  enabled: false
 heapster:
   enabled: false
   images:

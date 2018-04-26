@@ -41,7 +41,7 @@ type CloudBotanist interface {
 
 	// Machines
 	GetMachineClassInfo() (string, string, string)
-	GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error)
+	GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error)
 	GenerateMachineClassSecretData() map[string][]byte
 
 	// Addons

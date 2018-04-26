@@ -235,11 +235,60 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		return err
 	}
 
-	if err := b.ApplyChartShoot(filepath.Join(common.ChartPath, "shoot-machines"), name, metav1.NamespaceSystem, nil, nil); err != nil {
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values)
+}
+
+// DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
+// for automatically scaling the worker pools of the Shoot.
+func (b *Botanist) DeployClusterAutoscaler() error {
+	if !b.Shoot.ClusterAutoscalerEnabled() {
+		return b.DeleteClusterAutoscaler()
+	}
+
+	var (
+		name        = "cluster-autoscaler"
+		workerPools = []map[string]interface{}{}
+		replicas    = 1
+	)
+
+	for _, worker := range b.MachineDeployments {
+		workerPools = append(workerPools, map[string]interface{}{
+			"name": worker.Name,
+			"min":  worker.Minimum,
+			"max":  worker.Maximum,
+		})
+	}
+
+	if b.Shoot.Hibernated {
+		replicas = 0
+	}
+
+	defaultValues := map[string]interface{}{
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-cluster-autoscaler": b.CheckSums[name],
+		},
+		"namespace": map[string]interface{}{
+			"uid": b.SeedNamespaceObject.UID,
+		},
+		"replicas":    replicas,
+		"workerPools": workerPools,
+	}
+
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
+	if err != nil {
 		return err
 	}
 
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values)
+}
+
+// DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
+func (b *Botanist) DeleteClusterAutoscaler() error {
+	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.ClusterAutoscalerDeploymentName)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components

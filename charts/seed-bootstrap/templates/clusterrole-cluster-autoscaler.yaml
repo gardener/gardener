@@ -1,0 +1,24 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:cluster-autoscaler-seed
+rules:
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - awsmachineclasses
+  - azuremachineclasses
+  - gcpmachineclasses
+  - openstackmachineclasses
+  - machinedeployments
+  - machines
+  - machinesets
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
