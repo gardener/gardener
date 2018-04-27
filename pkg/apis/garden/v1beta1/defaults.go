@@ -51,8 +51,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.AWS.Networks.Services == nil {
 			obj.Spec.Cloud.AWS.Networks.Services = &defaultServiceCIDR
 		}
-		if cloud.AWS.Networks.Nodes == nil && cloud.AWS.Networks.VPC.CIDR != nil {
-			obj.Spec.Cloud.AWS.Networks.Nodes = cloud.AWS.Networks.VPC.CIDR
+		if cloud.AWS.Networks.Nodes == nil {
+			if cloud.AWS.Networks.VPC.CIDR != nil {
+				obj.Spec.Cloud.AWS.Networks.Nodes = cloud.AWS.Networks.VPC.CIDR
+			} else {
+				obj.Spec.Cloud.AWS.Networks.Nodes = &obj.Spec.Cloud.AWS.Networks.Workers[0]
+			}
 		}
 	}
 
