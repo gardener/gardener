@@ -44,6 +44,14 @@ data:
           regex: metrics
 
     scrape_configs:
+    - job_name: 'kube-etcd3'
+      scheme: https
+      tls_config:
+        ca_file: /etc/prometheus/seed/ca.crt
+        cert_file: /etc/prometheus/seed/prometheus.crt
+        key_file: /etc/prometheus/seed/prometheus.key
+      static_configs:
+      - targets: ['etcd-main-0.etcd-main:2379', 'etcd-events-0.etcd-events:2379']
     - job_name: 'kube-apiserver'
       scheme: https
 

@@ -14,30 +14,6 @@ spec:
     app: etcd-statefulset
     role: {{ .Values.role }}
   ports:
-  - name: discovery
-    protocol: TCP
-    port: 2380
-    targetPort: 2380
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: etcd-{{ .Values.role }}-client
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: etcd-statefulset
-    role: {{ .Values.role }}
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "2379"
-    prometheus.io/name: kube-etcd3
-spec:
-  type: ClusterIP
-  sessionAffinity: None
-  selector:
-    app: etcd-statefulset
-    role: {{ .Values.role }}
-  ports:
   - name: client
     protocol: TCP
     port: 2379
@@ -74,19 +50,26 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /bootstrap/bootstrap.sh
-        livenessProbe:
+        readinessProbe:
           httpGet:
-            path: /metrics
+            path: /healthz
             port: 8080
           initialDelaySeconds: 15
-          periodSeconds: 15
-        readinessProbe:
+          periodSeconds: 5
+        livenessProbe:
           exec:
             command:
             - /bin/sh
             - -ec
-            - ETCDCTL_API=3 etcdctl get foo
-          initialDelaySeconds: 5
+            - ETCDCTL_API=3 
+            - etcdctl
+            - --cert=/var/etcd/client/ssl/tls.crt
+            - --key=/var/etcd/client/ssl/tls.key
+            - --cacert=/srv/kubernetes/ca/ca.crt
+            - --endpoints=https://etcd-{{ .Values.role }}-0:2379
+            - get
+            - foo
+          initialDelaySeconds: 15
           periodSeconds: 5
         ports:
         - containerPort: 2380
@@ -107,6 +90,12 @@ spec:
           mountPath: /var/etcd/data
         - name: etcd-bootstrap
           mountPath: /bootstrap
+        - name: ca
+          mountPath: /srv/kubernetes/ca
+        - name: etcd-server-tls
+          mountPath: /var/etcd/server/ssl
+        - name: etcd-client-tls
+          mountPath: /var/etcd/client/ssl
       - name: backup-restore
         command:
         - etcdbrctl
@@ -116,13 +105,14 @@ spec:
         - --data-dir=/var/etcd/data
         - --storage-provider={{ .Values.backup.storageProvider }}
         - --store-prefix=etcd-{{ .Values.role }}
-        image: {{ index .Values.images "etcd-backup-restore" }}
-        livenessProbe:
-          httpGet:
-            path: /metrics
-            port: server
-          initialDelaySeconds: 15
-          periodSeconds: 15
+        - --cert=/var/etcd/ssl/tls.crt
+        - --key=/var/etcd/ssl/tls.key
+        - --cacert=/srv/kubernetes/ca/ca.crt
+        - --insecure-transport=false
+        - --insecure-skip-tls-verify=false
+        - --endpoints=https://etcd-{{ .Values.role }}-0:2379
+        image: {{ index .Values.images "etcd-backup-restore" }} 
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: server
@@ -141,8 +131,12 @@ spec:
 {{ toYaml .Values.backup.env | indent 8 }}
 {{- end }}
         volumeMounts:
-        - mountPath: /var/etcd/data
-          name: etcd-{{ .Values.role }}
+        - name: etcd-{{ .Values.role }}
+          mountPath: /var/etcd/data          
+        - name: ca
+          mountPath: /srv/kubernetes/ca
+        - name: etcd-client-tls
+          mountPath: /var/etcd/ssl
 {{- if .Values.backup.volumeMounts }}
 {{ toYaml .Values.backup.volumeMounts | indent 8 }}
 {{- end }}
@@ -150,12 +144,20 @@ spec:
         - name: etcd-bootstrap
           configMap:
             name: etcd-bootstrap-{{ .Values.role }}
-            defaultMode: 0356
+            defaultMode: 356
+        - name: etcd-server-tls
+          secret:
+            secretName: {{ .Values.tlsServerSecretName }}
+        - name: etcd-client-tls
+          secret:
+            secretName: {{ .Values.tlsClientSecretName }}
+        - name: ca
+          secret:
+            secretName: ca
 {{- if .Values.backup.storageProvider }}
         - name: {{ .Values.backup.backupSecret }}
           secret:
             secretName: {{ .Values.backup.backupSecret }}
-            defaultMode: 0420
 {{- end }}
   volumeClaimTemplates:
   - metadata:
