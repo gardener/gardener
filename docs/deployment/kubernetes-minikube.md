@@ -33,7 +33,7 @@ $ helm install charts/gardener \
   --values=charts/gardener/values.yaml \
   --values=charts/gardener/local-values.yaml
 
-# Check that everything is deployed successfuly and running without a problem
+# Check that everything is deployed successfully and running without a problem
 $ kubectl -n garden get pods
 NAME                                           READY     STATUS    RESTARTS   AGE
 gardener-apiserver-d5989f856-swgbg             2/2       Running   0          32s

@@ -238,7 +238,7 @@ seed "local-dev" created
 
 #### Check Vagrant setup
 
-To be sure that the Vagrant has been successfuly installed and configured, test your setup:
+To be sure that the Vagrant has been successfully installed and configured, test your setup:
 
 ```bash
 $ cd vagrant

@@ -60,7 +60,7 @@ func (s *server) Start(ctx context.Context, in *pb.StartRequest) (*pb.StartReply
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error starting machine: %v", err)
 	}
-	fmt.Println("\nMachine created successfuly.")
+	fmt.Println("\nMachine created successfully.")
 	return &pb.StartReply{Message: message}, nil
 }
 
@@ -71,7 +71,7 @@ func (s *server) Delete(ctx context.Context, in *pb.DeleteRequest) (*pb.DeleteRe
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Error deleting machine: %v", err)
 	}
-	fmt.Println("\nMachine deleted successfuly.")
+	fmt.Println("\nMachine deleted successfully.")
 	return &pb.DeleteReply{Message: message}, nil
 }
 

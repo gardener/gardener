@@ -30,7 +30,7 @@ func New(renderFunc func() (*chartrenderer.RenderedChart, error)) chartrenderer.
 	}
 }
 
-// Render renderes provided chart in struct
+// Render renders provided chart in struct
 func (r *ChartRenderer) Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*chartrenderer.RenderedChart, error) {
 	return r.renderFunc()
 }

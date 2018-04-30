@@ -64,7 +64,7 @@ type QuotaControlInterface interface {
 }
 
 // NewDefaultQuotaControl returns a new instance of the default implementation of QuotaControlInterface
-// which implements the semantics for controling the quota handling of Shoot resources.
+// which implements the semantics for controlling the quota handling of Shoot resources.
 func NewDefaultQuotaControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface) QuotaControlInterface {
 	return &defaultQuotaControl{k8sGardenClient, k8sGardenInformers}
 }
