@@ -20,7 +20,9 @@ import (
 	"strconv"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	sets "k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -30,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 )
 
 type metrics struct {
@@ -56,18 +57,23 @@ func (m metrics) initShootMetrics() {
 	metricShootState := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "garden_shoot_state",
 		Help: "State of a Shoot cluster",
-	}, []string{"name", "project", "cloud", "version", "region", "seed", "createdAt"})
+	}, []string{"name", "project", "cloud", "version", "region", "seed", "operation", "is_seed", "mail_to"})
 
 	metricShootNodeCount := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "garden_shoot_nodes_count",
 		Help: "Node count of a Shoot cluster",
 	}, []string{"name", "project"})
 
+	metricShootStateConditions := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "garden_shoot_state_conditions",
+		Help: "Conditions of a Shoot cluster",
+	}, []string{"name", "project", "condition", "status", "operation", "mail_to"})
+
 	prometheus.Register(metricShootState)
 	prometheus.Register(metricShootNodeCount)
+	prometheus.Register(metricShootStateConditions)
 
 	m.collect(func() {
-		var state float64
 		shoots, err := m.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			logger.Logger.Info("Unable to fetch shoots. skip shoot metric set...")
@@ -75,17 +81,35 @@ func (m metrics) initShootMetrics() {
 		}
 
 		for _, shoot := range shoots.Items {
-			state = 4 // unknown
+			var (
+				mailTo         string
+				nodeCount      int
+				operationState float64 = 4 // unknown
+				operationType          = "Unknown"
+				isSeed                 = "False"
+			)
+
+			if shoot.Annotations != nil {
+				mailTo = shoot.Annotations[common.GardenOperatedBy]
+
+				ok, err := strconv.ParseBool(shoot.Annotations[common.ShootUseAsSeed])
+				if err == nil && ok {
+					isSeed = "True"
+				}
+			}
+
 			if shoot.Status.LastOperation != nil {
+				operationType = string(shoot.Status.LastOperation.Type)
+
 				switch shoot.Status.LastOperation.State {
 				case gardenv1beta1.ShootLastOperationStateSucceeded:
-					state = 0
+					operationState = 0
 				case gardenv1beta1.ShootLastOperationStateProcessing:
-					state = 1
+					operationState = 1
 				case gardenv1beta1.ShootLastOperationStateError:
-					state = 2
+					operationState = 2
 				case gardenv1beta1.ShootLastOperationStateFailed:
-					state = 3
+					operationState = 3
 				}
 			}
 
@@ -95,10 +119,6 @@ func (m metrics) initShootMetrics() {
 				return
 			}
 
-			shootVar := shoot
-			shootObj := &shootpkg.Shoot{Info: &shootVar}
-			nodeCount := shootObj.GetNodeCount()
-
 			metricShootState.With(prometheus.Labels{
 				"name":      shoot.Name,
 				"project":   shoot.Namespace,
@@ -106,9 +126,47 @@ func (m metrics) initShootMetrics() {
 				"region":    shoot.Spec.Cloud.Region,
 				"version":   shoot.Spec.Kubernetes.Version,
 				"seed":      *(shoot.Spec.Cloud.Seed),
-				"createdAt": strconv.FormatInt(shoot.CreationTimestamp.UTC().Unix(), 10),
-			}).Set(state)
+				"operation": operationType,
+				"is_seed":   isSeed,
+				"mail_to":   mailTo,
+			}).Set(operationState)
 
+			for _, condition := range shoot.Status.Conditions {
+				var condidtionStatus float64
+				if condition.Status == corev1.ConditionTrue {
+					condidtionStatus = 1
+				}
+				metricShootStateConditions.With(prometheus.Labels{
+					"name":      shoot.Name,
+					"project":   shoot.Namespace,
+					"condition": string(condition.Type),
+					"status":    string(condition.Status),
+					"operation": operationType,
+					"mail_to":   mailTo,
+				}).Set(condidtionStatus)
+			}
+
+			// Collect the count of nodes
+			switch cloud {
+			case gardenv1beta1.CloudProviderAWS:
+				for _, worker := range shoot.Spec.Cloud.AWS.Workers {
+					nodeCount += worker.AutoScalerMax
+				}
+			case gardenv1beta1.CloudProviderAzure:
+				for _, worker := range shoot.Spec.Cloud.Azure.Workers {
+					nodeCount += worker.AutoScalerMax
+				}
+			case gardenv1beta1.CloudProviderGCP:
+				for _, worker := range shoot.Spec.Cloud.GCP.Workers {
+					nodeCount += worker.AutoScalerMax
+				}
+			case gardenv1beta1.CloudProviderOpenStack:
+				for _, worker := range shoot.Spec.Cloud.OpenStack.Workers {
+					nodeCount += worker.AutoScalerMax
+				}
+			case gardenv1beta1.CloudProviderLocal:
+				nodeCount = 1
+			}
 			metricShootNodeCount.With(prometheus.Labels{
 				"name":    shoot.Name,
 				"project": shoot.Namespace,
@@ -153,15 +211,15 @@ func (m metrics) initUserCountMetric() {
 			logger.Logger.Info("Unable to fetch user RoleBindings. skip metric...")
 			return
 		}
-		var userCount float64
+		users := sets.NewString()
 		for _, rb := range roleBindings.Items {
 			for _, subject := range rb.Subjects {
-				if subject.Kind == "User" {
-					userCount++
+				if subject.Kind == "User" && !users.Has(subject.Name) {
+					users.Insert(subject.Name)
 				}
 			}
 		}
-		metricUserCount.Set(userCount)
+		metricUserCount.Set(float64(users.Len()))
 	})
 }
 
