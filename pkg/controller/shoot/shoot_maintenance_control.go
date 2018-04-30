@@ -109,25 +109,15 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		}
 	)
 
-	maintenanceWindowBegin, err := utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.Begin)
+	currentTimeWithinTimeWindow, err := NowWithinTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End, time.Now())
 	if err != nil {
-		handleError(fmt.Sprintf("Could not parse the maintenance time window begin value: %s", err.Error()))
-		return nil
-	}
-	maintenanceWindowEnd, err := utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.End)
-	if err != nil {
-		handleError(fmt.Sprintf("Could not parse the maintenance time window end value: %s", err.Error()))
-		return nil
-	}
-	now, err := utils.ParseMaintenanceTime(utils.FormatMaintenanceTime(time.Now()))
-	if err != nil {
-		handleError(fmt.Sprintf("Could not parse the current time into the maintenance format: %s", err.Error()))
+		handleError(err.Error())
 		return nil
 	}
 
 	// Check if the current time is between the begin and the end of the maintenance time window.
 	// Only in this case we want to perform maintenance operations.
-	if now.After(maintenanceWindowBegin) && now.Before(maintenanceWindowEnd) {
+	if currentTimeWithinTimeWindow {
 		shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
 
 		operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
@@ -182,4 +172,33 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 	}
 
 	return nil
+}
+
+// NowWithinTimeWindow returns true in case the current time is within <begin> and <end>.
+// <begin> and <end> must be in the following format: HHMMSS+ZZZZ. In case one of the
+// times can not be parsed, an error is returned.
+func NowWithinTimeWindow(begin, end string, nowTime time.Time) (bool, error) {
+	maintenanceWindowBegin, err := utils.ParseMaintenanceTime(begin)
+	if err != nil {
+		return false, fmt.Errorf("Could not parse the maintenance time window begin value: %s", err.Error())
+	}
+	maintenanceWindowEnd, err := utils.ParseMaintenanceTime(end)
+	if err != nil {
+		return false, fmt.Errorf("Could not parse the maintenance time window end value: %s", err.Error())
+	}
+	now, err := utils.ParseMaintenanceTime(utils.FormatMaintenanceTime(nowTime))
+	if err != nil {
+		return false, fmt.Errorf("Could not parse the current time into the maintenance format: %s", err.Error())
+	}
+
+	// Handle time windows whose end is on a different day than the beginning.
+	if maintenanceWindowEnd.Sub(maintenanceWindowBegin) < 0 {
+		maintenanceWindowEnd = maintenanceWindowEnd.Add(24 * time.Hour)
+
+		if now.Sub(maintenanceWindowEnd) < 0 {
+			now = now.Add(24 * time.Hour)
+		}
+	}
+
+	return now.After(maintenanceWindowBegin) && now.Before(maintenanceWindowEnd), nil
 }
