@@ -9,6 +9,7 @@ metadata:
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "fullname" . }}
+  namespace: kube-system
 rules:
 - apiGroups:
   - ""

@@ -8,6 +8,7 @@ metadata:
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "fullname" . }}
+  namespace: kube-system
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicaCount }}
