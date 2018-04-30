@@ -98,7 +98,7 @@ type defaultControl struct {
 }
 
 func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, key string) error {
-	key, err := cache.MetaNamespaceKeyFunc(obj)
+	_, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		return err
 	}
