@@ -3,7 +3,7 @@
 # Gardener API server configuration values
 apiserver:
   image:
-    tag: 0.2.0-f15944037e1784bada87bd4bff51b5a334b3b066
+    tag: 0.3.3
   etcd:
     useSidecar: true
   # Don't care about certificates for local development scenario
@@ -65,7 +65,7 @@ apiserver:
 # Gardener controller manager configuration values
 controller:
   image:
-    tag: 0.2.0-f15944037e1784bada87bd4bff51b5a334b3b066
+    tag: 0.3.3
   internalDomain:
     provider: unmanaged
     hostedZoneID: ABCDEFGHIJ

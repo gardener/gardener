@@ -1,8 +1,8 @@
 # Gardener
 
-![](https://github.com/gardener/gardener/blob/master/logo/gardener-large.png)
+![Gardener Logo](logo/gardener-large.png)
 
-----
+[![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener)](https://goreportcard.com/report/github.com/gardener/gardener)
 
 The Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and aims to support that service on multiple Cloud providers (AWS, GCP, Azure, OpenStack). Its main principle is to use Kubernetes itself as base for its tasks.
 
