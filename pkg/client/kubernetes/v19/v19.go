@@ -30,19 +30,19 @@ func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clie
 	}
 
 	v18Client.SetResourceAPIGroups(map[string][]string{
-		kubernetesbase.CronJobs:                  []string{"apis", "batch", "v1beta1"},
-		kubernetesbase.CustomResourceDefinitions: []string{"apis", "apiextensions.k8s.io", "v1beta1"},
-		kubernetesbase.DaemonSets:                []string{"apis", "apps", "v1"},
-		kubernetesbase.Deployments:               []string{"apis", "apps", "v1"},
-		kubernetesbase.Ingresses:                 []string{"apis", "extensions", "v1beta1"},
-		kubernetesbase.Jobs:                      []string{"apis", "batch", "v1"},
-		kubernetesbase.Namespaces:                []string{"api", "v1"},
-		kubernetesbase.PersistentVolumeClaims:    []string{"api", "v1"},
-		kubernetesbase.Pods:                      []string{"api", "v1"},
-		kubernetesbase.ReplicaSets:               []string{"apis", "apps", "v1"},
-		kubernetesbase.ReplicationControllers:    []string{"api", "v1"},
-		kubernetesbase.Services:                  []string{"api", "v1"},
-		kubernetesbase.StatefulSets:              []string{"apis", "apps", "v1"},
+		kubernetesbase.CronJobs:                  {"apis", "batch", "v1beta1"},
+		kubernetesbase.CustomResourceDefinitions: {"apis", "apiextensions.k8s.io", "v1beta1"},
+		kubernetesbase.DaemonSets:                {"apis", "apps", "v1"},
+		kubernetesbase.Deployments:               {"apis", "apps", "v1"},
+		kubernetesbase.Ingresses:                 {"apis", "extensions", "v1beta1"},
+		kubernetesbase.Jobs:                      {"apis", "batch", "v1"},
+		kubernetesbase.Namespaces:                {"api", "v1"},
+		kubernetesbase.PersistentVolumeClaims:    {"api", "v1"},
+		kubernetesbase.Pods:                      {"api", "v1"},
+		kubernetesbase.ReplicaSets:               {"apis", "apps", "v1"},
+		kubernetesbase.ReplicationControllers:    {"api", "v1"},
+		kubernetesbase.Services:                  {"api", "v1"},
+		kubernetesbase.StatefulSets:              {"apis", "apps", "v1"},
 	})
 
 	return &Client{
