@@ -75,8 +75,8 @@ release: build build-local docker-images docker-login docker-push rename-binarie
 .PHONY: docker-images
 docker-images:
 	@if [[ ! -f bin/rel/gardener-apiserver || ! -f bin/rel/gardener-controller-manager ]]; then echo "No binary found. Please run 'make build'"; false; fi
-	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -f build/gardener-apiserver/Dockerfile          --rm .
-	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG) -f build/gardener-controller-manager/Dockerfile --rm .
+	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(APISERVER_IMAGE_REPOSITORY):latest         -f build/gardener-apiserver/Dockerfile          --rm .
+	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG) -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest -f build/gardener-controller-manager/Dockerfile --rm .
 
 .PHONY: docker-login
 docker-login:
@@ -87,7 +87,9 @@ docker-push:
 	@if ! docker images $(APISERVER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(APISERVER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(CONROLLER_MANAGER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(CONROLLER_MANAGER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)
+	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):latest
 	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG)
+	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest
 
 .PHONY: rename-binaries
 rename-binaries:
