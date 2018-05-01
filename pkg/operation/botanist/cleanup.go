@@ -25,7 +25,7 @@ import (
 )
 
 var exceptions = map[string]map[string]bool{
-	kubernetesbase.CustomResourceDefinitions: map[string]bool{
+	kubernetesbase.CustomResourceDefinitions: {
 		"felixconfigurations.crd.projectcalico.org":   true,
 		"bgppeers.crd.projectcalico.org":              true,
 		"bgpconfigurations.crd.projectcalico.org":     true,
@@ -35,19 +35,19 @@ var exceptions = map[string]map[string]bool{
 		"networkpolicies.crd.projectcalico.org":       true,
 		"hostendpoints.crd.projectcalico.org":         true,
 	},
-	kubernetesbase.DaemonSets: map[string]bool{
+	kubernetesbase.DaemonSets: {
 		fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem): true,
 		fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):  true,
 	},
-	kubernetesbase.Deployments: map[string]bool{
+	kubernetesbase.Deployments: {
 		fmt.Sprintf("%s/kube-dns", metav1.NamespaceSystem): true,
 	},
-	kubernetesbase.Namespaces: map[string]bool{
+	kubernetesbase.Namespaces: {
 		metav1.NamespacePublic:  true,
 		metav1.NamespaceSystem:  true,
 		metav1.NamespaceDefault: true,
 	},
-	kubernetesbase.Services: map[string]bool{
+	kubernetesbase.Services: {
 		fmt.Sprintf("%s/kubernetes", metav1.NamespaceDefault): true,
 	},
 }
