@@ -117,6 +117,22 @@ Please make sure that the executable `bsdtar` is available on your system.
 
 In this local setup a virtualizer is needed. Here, [`Virtualbox`](https://www.virtualbox.org) is used. However, Vagrant supports other virtualizers as well. Please check the [`Vagrant` documentation](https://www.vagrantup.com/docs/index.html) for further details.
 
+## Test nip.io
+
+`nip.io` is used as an unmanaged DNS implementation for the local setup. Some ISPs don't handle `nip.io` very well. Test NS resolution:
+
+```bash
+nslookup 192.168.99.201.nip.io
+Server:         8.8.8.8
+Address:        8.8.8.8#53
+
+Non-authoritative answer:
+Name:   192.168.99.201.nip.io
+Address: 192.168.99.201
+```
+
+If there is an error, switch your DNS server to `8.8.8.8` / `8.8.4.4` or `1.1.1.1`.
+
 ## Local Gardener setup
 
 This setup is only meant to be used for developing purposes, which means that only the control plane of the Gardener cluster is running on your machine.
