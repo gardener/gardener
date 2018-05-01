@@ -86,7 +86,7 @@ func findTerraformErrors(output string) string {
 		valid        = []string{}
 	)
 
-	// Strip optional explaination how Terraform behaves in case of errors.
+	// Strip optional explanation how Terraform behaves in case of errors.
 	if suffixIndex := strings.Index(errorMessage, "\n\nTerraform does not automatically rollback"); suffixIndex != -1 {
 		errorMessage = errorMessage[:suffixIndex]
 	}

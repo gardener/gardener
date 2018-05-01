@@ -112,7 +112,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 		quotaLogger = logger.NewFieldLogger(logger.Logger, "quota", fmt.Sprintf("%s/%s", quota.Namespace, quota.Name))
 	)
 
-	// The deletionTimestamp labels a Quota as intented to get deleted. Before deletion,
+	// The deletionTimestamp labels a Quota as intended to get deleted. Before deletion,
 	// it has to be ensured that no SecretBindings are depending on the Quota anymore.
 	// When this happens the controller will remove the finalizers from the Quota so that it can be garbage collected.
 	if quota.DeletionTimestamp != nil {

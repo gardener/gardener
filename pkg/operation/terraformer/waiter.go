@@ -96,7 +96,7 @@ func (t *Terraformer) waitForJob() bool {
 			}
 			return false, err
 		}
-		// Check the job conditions to identifiy whether the job has been completed or failed.
+		// Check the job conditions to identify whether the job has been completed or failed.
 		for _, cond := range job.Status.Conditions {
 			if cond.Type == batchv1.JobComplete && cond.Status == corev1.ConditionTrue {
 				succeeded = true

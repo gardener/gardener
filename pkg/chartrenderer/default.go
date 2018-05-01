@@ -78,7 +78,7 @@ func (c *RenderedChart) ManifestAsString() string {
 	return string(c.Manifest())
 }
 
-// FileContent returns explicity the content of the provided <filename>.
+// FileContent returns explicitly the content of the provided <filename>.
 func (c *RenderedChart) FileContent(filename string) string {
 	if content, ok := c.Files[fmt.Sprintf("%s/templates/%s", c.ChartName, filename)]; ok {
 		return content

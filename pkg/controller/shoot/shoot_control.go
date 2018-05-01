@@ -216,7 +216,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 
 	// When a Shoot clusters deletion timestamp is set we need to delete the cluster and must not trigger a new reconciliation operation.
 	if shoot.DeletionTimestamp != nil {
-		// In order to protect users from accidential/undesired deletion we check whether there is an annotation whose value is equal to the
+		// In order to protect users from accidental/undesired deletion we check whether there is an annotation whose value is equal to the
 		// deletion timestamp itself. If the annotation is missing or the value does not match the deletion timestamp then we skip the deletion
 		// until it gets confirmed (by correctly putting the annotation).
 		if !metav1.HasAnnotation(shoot.ObjectMeta, common.ConfirmationDeletionTimestamp) || !common.CheckConfirmationDeletionTimestampValid(shoot.ObjectMeta) {
