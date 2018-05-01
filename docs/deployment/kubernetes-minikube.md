@@ -11,6 +11,7 @@ Make sure that you have completed the following steps:
 - [Installing `Local`](../development/local_setup.md#installing-local)
 - [Installing `Virtualbox`](../development/local_setup.md#installing-virtualbox)
 - [Get the sources](../development/local_setup.md#get-the-sources)
+- [Test nip.io](../development/local_setup.md#test-nip.io)
 
 ## Running
 
