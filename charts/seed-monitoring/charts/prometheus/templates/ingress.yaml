@@ -20,5 +20,5 @@ spec:
       paths:
       - backend:
           serviceName: prometheus-web
-          servicePort: 8080
+          servicePort: 80
         path: /
