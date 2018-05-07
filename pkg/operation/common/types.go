@@ -81,6 +81,9 @@ const (
 	// GardenRoleAlertingSMTP is the value of the GardenRole key indicating type 'alerting-smtp'.
 	GardenRoleAlertingSMTP = "alerting-smtp"
 
+	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
+	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
+
 	// GardenRoleMembers ist the value of GardenRole key indicating type 'members'.
 	GardenRoleMembers = "members"
 

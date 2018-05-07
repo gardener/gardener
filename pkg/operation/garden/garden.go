@@ -49,8 +49,9 @@ func New(k8sGardenClient kubernetes.Client, namespace string) (*Garden, error) {
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
 func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, runningInCluster bool) (map[string]*corev1.Secret, error) {
 	var (
-		secretsMap                    = make(map[string]*corev1.Secret)
-		numberOfInternalDomainSecrets = 0
+		secretsMap                          = make(map[string]*corev1.Secret)
+		numberOfInternalDomainSecrets       = 0
+		numberOfOpenVPNDiffieHellmanSecrets = 0
 	)
 
 	selector, err := labels.Parse(common.GardenRole)
@@ -103,9 +104,22 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, running
 			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleAlertingSMTP, name)] = alertingSMTP
 			logger.Logger.Infof("Found alerting SMTP secret %s.", name)
 		}
+
+		// Retrieving Diffie-Hellman secret for OpenVPN based on all secrets in the Garden namespace which have
+		// a label indicating the Garden role openvpn-diffie-hellman.
+		if labels[common.GardenRole] == common.GardenRoleOpenVPNDiffieHellman {
+			openvpnDiffieHellman := secret
+			key := "dh2048.pem"
+			if _, ok := secret.Data[key]; !ok {
+				return nil, fmt.Errorf("cannot use OpenVPN Diffie Hellman secret '%s' as it does not contain key '%s' (whose value should be the actual Diffie Hellman key)", secret.Name, key)
+			}
+			secretsMap[common.GardenRoleOpenVPNDiffieHellman] = openvpnDiffieHellman
+			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", name)
+			numberOfOpenVPNDiffieHellmanSecrets++
+		}
 	}
 
-	// For each Shoot we create a LoadBalancer(LB) pointing to the api server of the Shoot. Because the technical address
+	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
 	// of the LB (ip or hostname) can change we cannot directly write it into the kubeconfig of the components
 	// which talk from outside (kube-proxy, kubelet etc.) (otherwise those kubeconfigs would be broken once ip/hostname
 	// of LB changed; and we don't have means to exchange kubeconfigs currently).
@@ -115,6 +129,15 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, running
 	// domain it should use.
 	if numberOfInternalDomainSecrets != 1 {
 		return nil, fmt.Errorf("require exactly ONE internal domain secret, but found %d", numberOfInternalDomainSecrets)
+	}
+
+	// The VPN bridge from a Shoot's control plane running in the Seed cluster to the worker nodes of the Shoots is based
+	// on OpenVPN. It requires a Diffie Hellman key. If no such key is explicitly provided as secret in the garden namespace
+	// then the Gardener will use a default one (not recommended, but useful for local development). If a secret is specified
+	// its key will be used for all Shoots. However, at most only one of such a secret is allowed to be specified (otherwise,
+	// the Gardener cannot determine which to choose).
+	if numberOfOpenVPNDiffieHellmanSecrets > 1 {
+		return nil, fmt.Errorf("can only accept at most one OpenVPN Diffie Hellman secret, but found %d", numberOfOpenVPNDiffieHellmanSecrets)
 	}
 
 	return secretsMap, nil
