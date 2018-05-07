@@ -29,9 +29,10 @@ import (
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
-		kubeProxySecret = b.Secrets["kube-proxy"]
-		vpnShootSecret  = b.Secrets["vpn-shoot"]
-		global          = map[string]interface{}{
+		kubeProxySecret  = b.Secrets["kube-proxy"]
+		vpnShootSecret   = b.Secrets["vpn-shoot"]
+		vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
+		global           = map[string]interface{}{
 			"podNetwork": b.Shoot.GetPodNetwork(),
 		}
 		calicoConfig = map[string]interface{}{
@@ -54,6 +55,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"podNetwork":     b.Shoot.GetPodNetwork(),
 			"serviceNetwork": b.Shoot.GetServiceNetwork(),
 			"nodeNetwork":    b.Shoot.GetNodeNetwork(),
+			"tlsAuth":        vpnTLSAuthSecret.Data["vpn.tlsauth"],
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
 			},

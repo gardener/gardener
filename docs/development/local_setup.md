@@ -83,6 +83,18 @@ $ brew install git
 
 On other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
+## Installing `openvpn`
+
+We use `OpenVPN` to establish network connectivity from the control plane running in the Seed cluster to the Shoot's worker nodes running in private networks.
+To harden the security we need to generate another secret to encrypt the network traffic ([details](https://openvpn.net/index.php/open-source/documentation/howto.html#security)).
+Please install the `openvpn` binary. On Mac OS run
+
+```bash
+$ brew install openvpn
+```
+
+On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
+
 ## Installing Minikube
 
 You'll need to have [minikube](https://github.com/kubernetes/minikube#installation) installed and running.

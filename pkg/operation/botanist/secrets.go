@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 	"net"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -188,6 +189,24 @@ func (b *Botanist) DeploySecrets() error {
 		return err
 	}
 	b.Secrets[name] = b.Shoot.Secret
+
+	// We create the OpenVPN TLS auth secret (which requires executing a `openvpn` command)
+	name = "vpn-seed-tlsauth"
+	if tlsAuthSecret, ok := secretsMap[name]; !ok {
+		tlsAuthKey, err := generateOpenVPNTLSAuth()
+		if err != nil {
+			return fmt.Errorf("error while creating openvpn tls auth secret: %v", err)
+		}
+		data = map[string][]byte{
+			"vpn.tlsauth": tlsAuthKey,
+		}
+		b.Secrets[name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, name, corev1.SecretTypeOpaque, data, false)
+		if err != nil {
+			return err
+		}
+	} else {
+		b.Secrets[name] = tlsAuthSecret
+	}
 
 	// Now we are prepared enough to generate the remaining secrets, i.e. server certificates, client certificates,
 	// and SSH key pairs.
@@ -492,6 +511,20 @@ func generateKubeconfig(clusterName, serverURL, caCertificate, clientCertificate
 		"ClientKey":         clientKey,
 		"ClusterName":       clusterName,
 	})
+}
+
+// generateOpenVPNTLSAuth executes the openvpn binary and generates a TLS auth secret.
+func generateOpenVPNTLSAuth() ([]byte, error) {
+	var (
+		out bytes.Buffer
+		cmd = exec.Command("openvpn", "--genkey", "--secret", "/dev/stdout")
+	)
+
+	cmd.Stdout = &out
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
 }
 
 // appendLoadBalancerIngresses takes a list of IP addresses <ipAddresses> and a list of DNS names <dnsNames>

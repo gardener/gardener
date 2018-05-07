@@ -19,7 +19,6 @@ spec:
         checksum/configmap-audit-policy: {{ include (print $.Template.BasePath "/audit-policy.yaml") . | sha256sum }}
         checksum/secret-oidc-cabundle: {{ include (print $.Template.BasePath "/oidc-ca-secret.yaml") . | sha256sum }}
         checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
-        checksum/secret-vpn-seed-tlsauth: {{ include (print $.Template.BasePath "/vpn-seed-tlsauth.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}

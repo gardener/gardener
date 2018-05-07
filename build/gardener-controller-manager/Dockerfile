@@ -14,7 +14,7 @@
 
 FROM alpine:3.7
 
-RUN apk add --update bash curl
+RUN apk add --update bash curl openvpn
 
 COPY bin/rel/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts

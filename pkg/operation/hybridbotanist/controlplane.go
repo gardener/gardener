@@ -116,6 +116,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 			"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
+			"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-cloudprovider":             b.CheckSums["cloudprovider"],
 			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
