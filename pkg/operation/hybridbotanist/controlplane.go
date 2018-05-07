@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -105,16 +106,16 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"kubernetesVersion":        b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":               b.Shoot.GetPodNetwork(),
 		"serviceNetwork":           b.Shoot.GetServiceNetwork(),
+		"nodeNetwork":              b.Shoot.GetNodeNetwork(),
 		"securePort":               443,
 		"livenessProbeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", basicAuthData["username"], basicAuthData["password"]))),
-		"nodeNetwork":              b.Shoot.GetNodeNetwork(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[name],
 			"checksum/secret-kube-aggregator":           b.CheckSums["kube-aggregator"],
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
-			"checksum/secret-vpn-ssh-keypair":           b.CheckSums["vpn-ssh-keypair"],
+			"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-cloudprovider":             b.CheckSums["cloudprovider"],
 			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
@@ -141,6 +142,11 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"blackbox-exporter": "blackbox-exporter",
 	})
 	if err != nil {
+		return err
+	}
+
+	// Delete keypair for VPN implementation based on SSH (only meaningful for old clusters).
+	if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, "vpn-ssh-keypair"); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 

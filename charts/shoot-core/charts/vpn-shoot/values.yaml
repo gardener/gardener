@@ -1,3 +1,6 @@
-authorizedKeys: dummy-base64-encoded-authorized_keys
 images:
   vpn-shoot: image-repository:image-tag
+serviceNetwork: 10.0.0.0/24
+podNetwork: 192.168.0.0/16
+nodeNetwork: 172.16.0.0/20
+podAnnotations: {}

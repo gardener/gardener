@@ -14,7 +14,10 @@ kube-dns:
     kube-dns-sidecar: image-repository:image-tag
     kube-dns-autoscaler:  image-repository:image-tag
 vpn-shoot:
-  authorizedKeys: dummy-base64-encoded-fwfewfewfewfew
+  serviceNetwork: 10.0.0.0/24
+  podNetwork: 192.168.0.0/16
+  nodeNetwork: 172.16.0.0/20
+  podAnnotations: {}
   images:
     vpn-shoot: image-repository:image-tag
 calico:

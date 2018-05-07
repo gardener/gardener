@@ -73,6 +73,7 @@ type TLSSecret struct {
 	DNSNames     []string
 	IPAddresses  []net.IP
 	IsServerCert bool
+	WantsCA      bool
 }
 
 // ControlPlaneSecret is a struct which inherits from TLSSecret and is extended with a couple of additional
@@ -220,7 +221,7 @@ func (b *Botanist) DeploySecrets() error {
 					b.Secrets[secret.Name] = val
 					err = nil
 				} else {
-					b.Secrets[secret.Name], err = b.createTLSSecret(secret, CACertificateTemplate, CAPrivateKey)
+					b.Secrets[secret.Name], err = b.createTLSSecret(secret, CACertificateTemplate, CAPrivateKey, CACertificatePEM)
 				}
 				errorChan <- err
 			}()
@@ -313,14 +314,23 @@ func (b *Botanist) createRSASecret(secret RSASecret) (*corev1.Secret, error) {
 // generates a new 2048-bit RSA private key along with a X509 certificate which will be signed by the given
 // CA. The computed secrets will be created as a Secret object in the Seed cluster and the created Secret
 // object will be returned.
-func (b *Botanist) createTLSSecret(secret TLSSecret, CACertificateTemplate *x509.Certificate, CAPrivateKey *rsa.PrivateKey) (*corev1.Secret, error) {
+func (b *Botanist) createTLSSecret(secret TLSSecret, CACertificateTemplate *x509.Certificate, CAPrivateKey *rsa.PrivateKey, CACertificatePEM []byte) (*corev1.Secret, error) {
 	privateKeyPEM, certificatePEM, err := generateCertificate(secret, CACertificateTemplate, CAPrivateKey)
 	if err != nil {
 		return nil, err
 	}
-	data := map[string][]byte{
-		"tls.key": privateKeyPEM,
-		"tls.crt": certificatePEM,
+
+	var (
+		secretType = corev1.SecretTypeTLS
+		data       = map[string][]byte{
+			"tls.key": privateKeyPEM,
+			"tls.crt": certificatePEM,
+		}
+	)
+
+	if secret.WantsCA {
+		data["ca.crt"] = CACertificatePEM
+		secretType = corev1.SecretTypeOpaque
 	}
 
 	if secret.DoNotApply {
@@ -329,11 +339,11 @@ func (b *Botanist) createTLSSecret(secret TLSSecret, CACertificateTemplate *x509
 				Name:      secret.Name,
 				Namespace: b.Shoot.SeedNamespace,
 			},
-			Type: corev1.SecretTypeTLS,
+			Type: secretType,
 			Data: data,
 		}, nil
 	}
-	return b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, secret.Name, corev1.SecretTypeTLS, data, false)
+	return b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, secret.Name, secretType, data, false)
 }
 
 // createControlPlaneSecret takes a ControlPlaneSecret object, the CA certificate template and the CA private key,
@@ -783,20 +793,38 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Bits: 4096,
 		},
 
-		// Secret definition for vpn-ssh-keypair
-		RSASecret{
-			Secret: Secret{
-				Name: "vpn-ssh-keypair",
-			},
-			Bits: 4096,
-		},
-
 		// Secret definition for service-account-key
 		RSASecret{
 			Secret: Secret{
 				Name: "service-account-key",
 			},
 			Bits: 4096,
+		},
+
+		// Secret definition for vpn-shoot (OpenVPN server side)
+		TLSSecret{
+			Secret: Secret{
+				Name: "vpn-shoot",
+			},
+			CommonName:   "vpn-shoot",
+			Organization: nil,
+			DNSNames:     []string{},
+			IPAddresses:  []net.IP{},
+			IsServerCert: true,
+			WantsCA:      true,
+		},
+
+		// Secret definition for vpn-seed (OpenVPN client side)
+		TLSSecret{
+			Secret: Secret{
+				Name: "vpn-seed",
+			},
+			CommonName:   "vpn-seed",
+			Organization: nil,
+			DNSNames:     []string{},
+			IPAddresses:  []net.IP{},
+			IsServerCert: false,
+			WantsCA:      true,
 		},
 
 		// Secret definition for alertmanager (ingress)

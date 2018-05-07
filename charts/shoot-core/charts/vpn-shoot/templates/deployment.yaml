@@ -1,0 +1,73 @@
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: vpn-shoot
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  revisionHistoryLimit: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpn-shoot
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+        checksum/secret-vpn-shoot-dh: {{ include (print $.Template.BasePath "/secret-dh.yaml") . | sha256sum }}
+        checksum/secret-vpn-shoot-tlsauth: {{ include (print $.Template.BasePath "/secret-tlsauth.yaml") . | sha256sum }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        origin: gardener
+        app: vpn-shoot
+    spec:
+      priorityClassName: system-cluster-critical
+      tolerations:
+      - effect: NoExecute
+        operator: Exists
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+      - name: vpn-shoot
+        image: {{ index .Values.images "vpn-shoot" }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: SERVICE_NETWORK
+          value: {{ .Values.serviceNetwork }}
+        - name: POD_NETWORK
+          value: {{ .Values.podNetwork }}
+        - name: NODE_NETWORK
+          value: {{ .Values.nodeNetwork }}
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - NET_ADMIN
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 512Mi
+        volumeMounts:
+        - mountPath: /srv/secrets/vpn-shoot
+          name: vpn-shoot
+        - mountPath: /srv/secrets/tlsauth
+          name: vpn-shoot-tlsauth
+        - mountPath: /srv/secrets/dh
+          name: vpn-shoot-dh
+      volumes:
+      - name: vpn-shoot
+        secret:
+          secretName: vpn-shoot
+      - name: vpn-shoot-tlsauth
+        secret:
+          secretName: vpn-shoot-tlsauth
+      - name: vpn-shoot-dh
+        secret:
+          secretName: vpn-shoot-dh

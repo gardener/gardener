@@ -20,6 +20,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,9 +29,9 @@ import (
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
-		kubeProxySecret  = b.Secrets["kube-proxy"]
-		sshKeyPairSecret = b.Secrets["vpn-ssh-keypair"]
-		global           = map[string]interface{}{
+		kubeProxySecret = b.Secrets["kube-proxy"]
+		vpnShootSecret  = b.Secrets["vpn-shoot"]
+		global          = map[string]interface{}{
 			"podNetwork": b.Shoot.GetPodNetwork(),
 		}
 		calicoConfig = map[string]interface{}{
@@ -50,7 +51,12 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			},
 		}
 		vpnShootConfig = map[string]interface{}{
-			"authorizedKeys": sshKeyPairSecret.Data["id_rsa.pub"],
+			"podNetwork":     b.Shoot.GetPodNetwork(),
+			"serviceNetwork": b.Shoot.GetServiceNetwork(),
+			"nodeNetwork":    b.Shoot.GetNodeNetwork(),
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
+			},
 		}
 		nodeExporterConfig = map[string]interface{}{}
 	)
@@ -78,6 +84,10 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	}
 	nodeExporter, err := b.Botanist.InjectImages(nodeExporterConfig, b.K8sShootClient.Version(), map[string]string{"node-exporter": "node-exporter"})
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "vpn-shoot", corev1.SecretTypeOpaque, vpnShootSecret.Data, true); err != nil {
 		return nil, err
 	}
 

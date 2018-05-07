@@ -12,7 +12,7 @@ spec:
     app: vpn-shoot
   type: LoadBalancer
   ports:
-  - name: sshd
+  - name: openvpn
     protocol: TCP
-    port: 22
-    targetPort: 22
+    port: 4314
+    targetPort: 1194
