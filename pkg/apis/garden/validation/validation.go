@@ -785,13 +785,21 @@ func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, f
 	if backup == nil {
 		return allErrs
 	}
-	if _, err := cron.ParseStandard(backup.Schedule); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), backup.Schedule, "schedule must be in standard cron format"))
+	if backup.Schedule != nil {
+		if _, err := cron.ParseStandard(*backup.Schedule); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), *backup.Schedule, "schedule must be in standard cron format"))
+		}
 	}
-	if backup.Maximum <= 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), backup.Maximum, "maximum number must be greater than zero"))
+	if backup.Maximum != nil {
+		if *backup.Maximum <= 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), *backup.Maximum, "maximum number must be greater than zero"))
+		}
 	}
-
+	if backup.GracePeriod != nil {
+		if *backup.GracePeriod <= -1 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("gracePeriod"), *backup.GracePeriod, "gracePeriod  must be greater than or equal to zero"))
+		}
+	}
 	return allErrs
 }
 
@@ -1312,6 +1320,65 @@ func validateDNS1123Subdomain(value string, fldPath *field.Path) field.ErrorList
 	for _, msg := range validation.IsDNS1123Subdomain(value) {
 		allErrs = append(allErrs, field.Invalid(fldPath, value, msg))
 	}
+
+	return allErrs
+}
+
+////////////////////////////////////////////////////
+//          BACKUP INFRASTRUCTURE                 //
+////////////////////////////////////////////////////
+
+// ValidateBackupInfrastructure validates a BackupInfrastructure object.
+func ValidateBackupInfrastructure(backupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&backupInfrastructure.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateBackupInfrastructureSpec(&backupInfrastructure.Spec, field.NewPath("spec"))...)
+
+	return allErrs
+}
+
+// ValidateBackupInfrastructureUpdate validates a BackupInfrastructure object before an update.
+func ValidateBackupInfrastructureUpdate(newBackupInfrastructure, oldBackupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBackupInfrastructure.ObjectMeta, &oldBackupInfrastructure.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateBackupInfrastructureSpecUpdate(&newBackupInfrastructure.Spec, &oldBackupInfrastructure.Spec, newBackupInfrastructure.DeletionTimestamp != nil, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateBackupInfrastructure(newBackupInfrastructure)...)
+
+	return allErrs
+}
+
+// ValidateBackupInfrastructureSpec validates the specification of a BackupInfrastructure object.
+func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(spec.Seed) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("seed"), spec.Seed, "seed name must not be empty"))
+	}
+	if spec.GracePeriod != nil {
+		if *spec.GracePeriod <= -1 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("gracePeriod"), *spec.GracePeriod, "gracePeriod  must be greater than or equal to zero"))
+		}
+	}
+	return allErrs
+}
+
+// ValidateBackupInfrastructureSpecUpdate validates the specification of a BackupInfrastructure object.
+func ValidateBackupInfrastructureSpecUpdate(newSpec, oldSpec *garden.BackupInfrastructureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)...)
+		return allErrs
+	}
+
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("seed"))...)
+	return allErrs
+}
+
+// ValidateBackupInfrastructureStatusUpdate validates the status field of a BackupInfrastructure object.
+func ValidateBackupInfrastructureStatusUpdate(newBackupInfrastructure, oldBackupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
+	allErrs := field.ErrorList{}
 
 	return allErrs
 }

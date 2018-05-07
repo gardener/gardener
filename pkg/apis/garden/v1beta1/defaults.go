@@ -179,3 +179,11 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 		}
 	}
 }
+
+// SetDefaults_BackupInfrastructure sets default values for BackupInfrastructure objects.
+func SetDefaults_BackupInfrastructure(obj *BackupInfrastructure) {
+	var defaultBackupInfrastructureGracePeriod = DefaultBackupInfrastructureGracePeriod
+	if obj.Spec.GracePeriod == nil || *obj.Spec.GracePeriod < 0 {
+		obj.Spec.GracePeriod = &defaultBackupInfrastructureGracePeriod
+	}
+}

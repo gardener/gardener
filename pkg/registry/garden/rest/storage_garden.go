@@ -18,6 +18,7 @@ import (
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	backupinfrastructurestore "github.com/gardener/gardener/pkg/registry/garden/backupinfrastructure/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
 	secretbinding "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
@@ -65,6 +66,10 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	shootStorage := shootstore.NewStorage(restOptionsGetter)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
+
+	backupInfrastructureStorage := backupinfrastructurestore.NewStorage(restOptionsGetter)
+	storage["backupinfrastructures"] = backupInfrastructureStorage.BackupInfrastructure
+	storage["backupinfrastructures/status"] = backupInfrastructureStorage.Status
 
 	return storage
 }
