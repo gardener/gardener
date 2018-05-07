@@ -32,6 +32,7 @@ func ApplyEnvironmentToConfig(config *ControllerManagerConfiguration) {
 	}
 	if watchNamespace := os.Getenv("WATCH_NAMESPACE"); watchNamespace != "" {
 		config.Controllers.Shoot.WatchNamespace = &watchNamespace
+		config.Controllers.BackupInfrastructure.WatchNamespace = &watchNamespace
 		config.LeaderElection.LockObjectNamespace = watchNamespace
 	}
 }

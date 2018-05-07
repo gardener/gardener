@@ -247,7 +247,11 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		}
 		return false, nil
 	}
-
+	/* TODO This should be part of admission controller: Discuss with Rafael
+	if operation.Seed.Info.DeletionTimestamp != nil && operationType ==gardenv1beta1.ShootLastOperationTypeCreate {
+		return true, errors.New("Could not create")
+	}
+	*/
 	// When a Shoot clusters deletion timestamp is not set we need to create/reconcile the cluster.
 	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.ShootEventReconciling, "[%s] Reconciling Shoot cluster state", operationID)
 	if updateErr := c.updateShootStatusReconcileStart(operation, operationType); updateErr != nil {

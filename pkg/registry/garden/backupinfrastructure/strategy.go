@@ -15,6 +15,9 @@
 package backupinfrastructure
 
 import (
+	"fmt"
+	"strings"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -52,6 +55,7 @@ func (backupInfrastructureStrategy) PrepareForCreate(ctx genericapirequest.Conte
 		finalizers.Insert(gardenv1beta1.GardenerName)
 	}
 	backupInfrastructure.Finalizers = finalizers.UnsortedList()
+	fmt.Println("finalizers" + strings.Join(backupInfrastructure.Finalizers, ","))
 }
 
 func (backupInfrastructureStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {

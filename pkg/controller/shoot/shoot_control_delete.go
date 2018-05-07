@@ -118,9 +118,9 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		destroyExternalDomainDNSRecord = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, cleanKubernetesResources)
 		syncPointTerraformers          = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord)
 		deleteKubeAPIServer            = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
-		destroyBackupInfrastructure    = f.AddTask(seedCloudBotanist.DestroyBackupInfrastructure, 0, deleteKubeAPIServer)
+		deleteBackupInfrastructure     = f.AddTask(botanist.DeleteBackupInfrastructure, 0, deleteKubeAPIServer)
 		destroyInternalDomainDNSRecord = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointTerraformers)
-		deleteNamespace                = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, destroyBackupInfrastructure, deleteKubeAPIServer)
+		deleteNamespace                = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer) //TODO namespace dependency for backup
 		_                              = f.AddTask(botanist.WaitUntilNamespaceDeleted, 0, deleteNamespace)
 		_                              = f.AddTask(botanist.DeleteGardenSecrets, defaultRetry, deleteNamespace)
 	)

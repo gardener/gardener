@@ -66,6 +66,18 @@ func NewShootLogger(logger *logrus.Logger, shoot, project, operationID string) *
 	return logger.WithFields(fields)
 }
 
+// NewBackupInfrastructureLogger extends an existing logrus logger and adds an additional field containing the BackupInfrastructure name
+// and the project in the Garden cluster to the output. If an <operationID> is provided it will be printed for every
+// log message.
+// Example output: time="2017-06-08T13:00:49+02:00" level=info msg="Creating namespace in seed cluster" backupinfrastructure=core/crazy-botany.
+func NewBackupInfrastructureLogger(logger *logrus.Logger, backupinfrastructure, project, operationID string) *logrus.Entry {
+	fields := constructFields("backupinfrastructure", fmt.Sprintf("%s/%s", project, backupinfrastructure))
+	if operationID != "" {
+		fields["opid"] = operationID
+	}
+	return logger.WithFields(fields)
+}
+
 // NewFieldLogger extends an existing logrus logger and adds the provided additional field.
 // Example output: time="2017-06-08T13:00:49+02:00" level=info msg="something" <fieldKey>=<fieldValue>.
 func NewFieldLogger(logger *logrus.Logger, fieldKey, fieldValue string) *logrus.Entry {

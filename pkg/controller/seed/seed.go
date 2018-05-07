@@ -59,17 +59,18 @@ func NewSeedController(k8sGardenClient kubernetes.Client, gardenInformerFactory 
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 		corev1Informer        = kubeInformerFactory.Core().V1()
 
-		seedInformer = gardenv1beta1Informer.Seeds()
-		seedLister   = seedInformer.Lister()
-		seedUpdater  = NewRealUpdater(k8sGardenClient, seedLister)
-		secretLister = corev1Informer.Secrets().Lister()
-		shootLister  = gardenv1beta1Informer.Shoots().Lister()
+		seedInformer               = gardenv1beta1Informer.Seeds()
+		seedLister                 = seedInformer.Lister()
+		seedUpdater                = NewRealUpdater(k8sGardenClient, seedLister)
+		secretLister               = corev1Informer.Secrets().Lister()
+		shootLister                = gardenv1beta1Informer.Shoots().Lister()
+		backupInfrastructureLister = gardenv1beta1Informer.BackupInfrastructures().Lister()
 	)
 
 	seedController := &Controller{
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: gardenInformerFactory,
-		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, secrets, imageVector, recorder, seedUpdater, secretLister, shootLister),
+		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, secrets, imageVector, recorder, seedUpdater, secretLister, shootLister, backupInfrastructureLister),
 		recorder:           recorder,
 		seedLister:         seedLister,
 		seedQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),

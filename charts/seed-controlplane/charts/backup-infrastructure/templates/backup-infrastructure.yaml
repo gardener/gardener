@@ -1,8 +1,8 @@
-apiVersion: garden.sapcloud.io/v1alpha1
+apiVersion: garden.sapcloud.io/v1beta1
 kind: BackupInfrastructure
 metadata:
-  name: {{ .values.name }}
+  name: {{ .Values.name }}
   namespace: {{ $.Release.Namespace }}
 spec:
-  seed: {{ .values.seed }}
-  gracePeriod: {{ .value.gracePeriod }}
+  seed: {{ .Values.seed }}
+  gracePeriod: {{ .Values.gracePeriod }}

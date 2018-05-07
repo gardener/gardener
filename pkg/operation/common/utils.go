@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
@@ -182,4 +183,20 @@ func CheckConfirmationDeletionTimestampValid(objectMeta metav1.ObjectMeta) bool 
 	}
 	confirmationDeletionTimestamp := metav1.NewTime(timestamp)
 	return confirmationDeletionTimestamp.Equal(deletionTimestamp)
+}
+
+// ExtractShootName returns Shoot resource name extracted from provided <backupInfrastructureName>.
+func ExtractShootName(backupInfrastructureName string) string {
+	tokens := strings.Split(backupInfrastructureName, "-")
+	return strings.Join(tokens[:len(tokens)-1], "-")
+}
+
+// GenerateBackupInfrastructureName returns BackupInfrastructure resource name created from provided <shootName> and <shootUID>.
+func GenerateBackupInfrastructureName(shootName string, shootUID types.UID) string {
+	return fmt.Sprintf("%s-%s", shootName, utils.ComputeSHA1Hex([]byte(shootUID))[:5])
+}
+
+// GenerateBackupNamespaceName returns Backup namespace name created from provided <backupInfrastructureName>.
+func GenerateBackupNamespaceName(backupInfrastructureName string) string {
+	return fmt.Sprintf("%s-%s", BackupNamespacePrefix, backupInfrastructureName)
 }

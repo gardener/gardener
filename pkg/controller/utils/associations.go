@@ -57,6 +57,23 @@ func DetermineShootAssociations(obj interface{}, shootLister gardenlisters.Shoot
 	return associatedShoots, nil
 }
 
+// DetermineBackupInfrastructureAssociations gets a <backupInfrastructureLister> to determine the BackupInfrastructures resources which are associated
+// to given <seed>
+func DetermineBackupInfrastructureAssociations(seed *gardenv1beta1.Seed, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ([]string, error) {
+	var associatedBackupInfrastructures []string
+	backupInfrastructures, err := backupInfrastructureLister.List(labels.Everything())
+	if err != nil {
+		logger.Logger.Info(err.Error())
+		return nil, err
+	}
+	for _, backupInfrastructure := range backupInfrastructures {
+		if backupInfrastructure.Spec.Seed == seed.Name {
+			associatedBackupInfrastructures = append(associatedBackupInfrastructures, fmt.Sprintf("%s/%s", backupInfrastructure.Namespace, backupInfrastructure.Name))
+		}
+	}
+	return associatedBackupInfrastructures, nil
+}
+
 // DetermineSecretBindingAssociations gets a <bindingLister> to determine the SecretBinding
 // resources which are associated to given Quota <obj>.
 func DetermineSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingLister gardenlisters.SecretBindingLister) ([]string, error) {

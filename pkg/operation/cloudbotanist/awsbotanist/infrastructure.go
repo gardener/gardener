@@ -19,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -116,8 +115,13 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 func (b *AWSBotanist) DeployBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("aws-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -125,8 +129,13 @@ func (b *AWSBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AWSBotanist) DestroyBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }
@@ -149,8 +158,8 @@ func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 			"region": b.Seed.Info.Spec.Cloud.Region,
 		},
 		"bucket": map[string]interface{}{
-			"name": fmt.Sprintf("%s-%s", b.Shoot.SeedNamespace, utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))[:5]),
+			"name": b.Operation.BackupInfrastructure.Name,
 		},
-		"clusterName": b.Shoot.SeedNamespace,
+		"clusterName": b.Operation.BackupInfrastructure.Name, //CHECKDIFF
 	}
 }

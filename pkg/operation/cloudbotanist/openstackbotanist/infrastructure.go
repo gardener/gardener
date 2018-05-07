@@ -89,8 +89,13 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *OpenStackBotanist) DeployBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("openstack-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -98,8 +103,16 @@ func (b *OpenStackBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *OpenStackBotanist) DestroyBackupInfrastructure() error {
+	//return nil
+	//TODO: Remove this comment when backup is to be pushed on to swift container i.e.
+	// when we have next(v1.4.0) realease of https://github.com/terraform-providers/terraform-provider-openstack/releases
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

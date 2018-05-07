@@ -94,7 +94,16 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 		storageAccessKey   = "storageAccessKey"
 		containerName      = "containerName"
 	)
-	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(storageAccountName, storageAccessKey, containerName)
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
+	backupInfrastructureName := common.GenerateBackupInfrastructureName(o.Shoot.Info.Name, o.Shoot.Info.Status.UID)
+	backupNamespace := common.GenerateBackupNamespaceName(backupInfrastructureName)
+	stateVariables, err := terraformer.
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, image).
+		GetStateOutputVariables(storageAccountName, storageAccessKey, containerName)
 	if err != nil {
 		return nil, nil, err
 	}

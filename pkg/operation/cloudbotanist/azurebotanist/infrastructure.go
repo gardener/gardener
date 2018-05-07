@@ -113,8 +113,13 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *AzureBotanist) DeployBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("azure-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -122,8 +127,13 @@ func (b *AzureBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *AzureBotanist) DestroyBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

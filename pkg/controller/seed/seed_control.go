@@ -107,19 +107,20 @@ type ControlInterface interface {
 // implements the documented semantics for Seeds. updater is the UpdaterInterface used
 // to update the status of Seeds. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, secretLister, shootLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, secretLister, shootLister, backupInfrastructureLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient    kubernetes.Client
-	k8sGardenInformers gardeninformers.SharedInformerFactory
-	secrets            map[string]*corev1.Secret
-	imageVector        imagevector.ImageVector
-	recorder           record.EventRecorder
-	updater            UpdaterInterface
-	secretLister       kubecorev1listers.SecretLister
-	shootLister        gardenlisters.ShootLister
+	k8sGardenClient            kubernetes.Client
+	k8sGardenInformers         gardeninformers.SharedInformerFactory
+	secrets                    map[string]*corev1.Secret
+	imageVector                imagevector.ImageVector
+	recorder                   record.EventRecorder
+	updater                    UpdaterInterface
+	secretLister               kubecorev1listers.SecretLister
+	shootLister                gardenlisters.ShootLister
+	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
 }
 
 func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) error {
@@ -147,8 +148,13 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			seedLogger.Error(err.Error())
 			return err
 		}
+		associatedBackupInfrastructures, err := controllerutils.DetermineBackupInfrastructureAssociations(seed, c.backupInfrastructureLister)
+		if err != nil {
+			seedLogger.Error(err.Error())
+			return err
+		}
 
-		if len(associatedShoots) == 0 {
+		if len(associatedShoots) == 0 && len(associatedBackupInfrastructures) == 0 {
 			seedLogger.Info("No Shoots are referencing the Seed. Deletion accepted.")
 
 			// Remove finalizer from referenced secret
@@ -176,7 +182,13 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			}
 			return nil
 		}
-		seedLogger.Infof("Can't delete Seed, because the following Shoots are still referencing it: %v", associatedShoots)
+		seedLogger.Infof("Can't delete Seed, because the following objects are still referencing it:")
+		if len(associatedShoots) != 0 {
+			seedLogger.Infof("Shoots: %v", associatedShoots)
+		}
+		if len(associatedBackupInfrastructures) != 0 {
+			seedLogger.Infof("BackupInfrastructure: %v", associatedBackupInfrastructures)
+		}
 		return errors.New("Seed still has references")
 	}
 

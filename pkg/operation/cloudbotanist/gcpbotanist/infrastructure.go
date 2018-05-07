@@ -87,8 +87,13 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("gcp-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -96,8 +101,13 @@ func (b *GCPBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

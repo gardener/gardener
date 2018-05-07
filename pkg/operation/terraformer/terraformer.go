@@ -44,7 +44,7 @@ func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
 
 // New takes a <logger>, a <k8sClient>, a string <purpose>, which describes for what the
 // Terraformer is used, a <name>, a <namespace> in which the Terraformer will run, and the
-// <image> name for the to-be-used Docke image. It returns a Terraformer struct with initialized
+// <image> name for the to-be-used Docker image. It returns a Terraformer struct with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
 func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace, image string) *Terraformer {

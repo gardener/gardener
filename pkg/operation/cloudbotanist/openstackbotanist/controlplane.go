@@ -96,7 +96,16 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	containerName := "containerName"
-	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).GetStateOutputVariables(containerName)
+	image := ""
+	o := b.Operation
+	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
+		image = img.String()
+	}
+	backupInfrastructureName := common.GenerateBackupInfrastructureName(o.Shoot.Info.Name, o.Shoot.Info.Status.UID)
+	backupNamespace := common.GenerateBackupNamespaceName(backupInfrastructureName)
+	stateVariables, err := terraformer.
+		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, image).
+		GetStateOutputVariables(containerName)
 	if err != nil {
 		return nil, nil, err
 	}

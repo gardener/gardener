@@ -15,8 +15,10 @@
 package botanist
 
 import (
+	"errors"
 	"time"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -67,6 +69,32 @@ func (b *Botanist) WaitUntilKubeAPIServerIsReady() error {
 			}
 		}
 		b.Logger.Info("Waiting until the kube-apiserver deployment is ready...")
+		return false, nil
+	})
+}
+
+// WaitUntilBackupInfrastructureReconciled waits until the backup infrastructure within the garden cluster has
+// been reconciled.
+func (b *Botanist) WaitUntilBackupInfrastructureReconciled() error {
+	return wait.PollImmediate(5*time.Second, 600*time.Second, func() (bool, error) {
+		backupInfrastructures, err := b.K8sGardenClient.GardenClientset().
+			GardenV1beta1().
+			BackupInfrastructures(b.Shoot.Info.Namespace).
+			Get(common.GenerateBackupInfrastructureName(b.Shoot.Info.Name, b.Shoot.Info.Status.UID), metav1.GetOptions{})
+		if err != nil {
+			return false, err
+		}
+		if backupInfrastructures.Status.Phase != nil {
+			if *backupInfrastructures.Status.Phase == gardenv1beta1.PhaseReconciled {
+				b.Logger.Info("Backup infrastructure has been successfully reconciled.")
+				return true, nil
+			}
+			if *backupInfrastructures.Status.Phase == gardenv1beta1.PhaseError || *backupInfrastructures.Status.Phase == gardenv1beta1.PhaseFailed {
+				b.Logger.Info("Backup infrastructure has been reconciled with error.")
+				return true, errors.New(backupInfrastructures.Status.LastError.Description)
+			}
+		}
+		b.Logger.Info("Waiting until the backup-infrastructure has been reconciled in the Garden cluster...")
 		return false, nil
 	})
 }

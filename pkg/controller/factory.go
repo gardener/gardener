@@ -21,6 +21,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	backupinfrastructurecontroller "github.com/gardener/gardener/pkg/controller/backup"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controller/cloudprofile"
 	quotacontroller "github.com/gardener/gardener/pkg/controller/quota"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controller/secretbinding"
@@ -64,17 +65,17 @@ func NewGardenControllerFactory(k8sGardenClient kubernetes.Client, gardenInforme
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	var (
-		cloudProfileInformer  = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
-		secretBindingInformer = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
-		quotaInformer         = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
-		seedInformer          = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
-		shootInformer         = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
-
-		secretInformer = f.k8sInformers.Core().V1().Secrets().Informer()
+		cloudProfileInformer         = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
+		secretBindingInformer        = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
+		quotaInformer                = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
+		seedInformer                 = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
+		shootInformer                = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
+		backupInfrastructureInformer = f.k8sGardenInformers.Garden().V1beta1().BackupInfrastructures().Informer()
+		secretInformer               = f.k8sInformers.Core().V1().Secrets().Informer()
 	)
 
 	f.k8sGardenInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(make(<-chan struct{}), cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced) {
+	if !cache.WaitForCacheSync(make(<-chan struct{}), cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced, backupInfrastructureInformer.HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
 	}
 
@@ -105,13 +106,13 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		return
 	}
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
-
 	var (
-		shootController         = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController          = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
-		quotaController         = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
-		cloudProfileController  = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
-		secretBindingController = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
+		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.recorder)
+		quotaController                = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
+		cloudProfileController         = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
+		secretBindingController        = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
+		backupInfrastructureController = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 	)
 
 	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs, stopCh)
@@ -119,13 +120,14 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	go quotaController.Run(f.config.Controllers.Quota.ConcurrentSyncs, stopCh)
 	go cloudProfileController.Run(f.config.Controllers.CloudProfile.ConcurrentSyncs, stopCh)
 	go secretBindingController.Run(f.config.Controllers.SecretBinding.ConcurrentSyncs, stopCh)
+	go backupInfrastructureController.Run(f.config.Controllers.BackupInfrastructure.ConcurrentSyncs, stopCh)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 
 	// Shutdown handling
 	<-stopCh
 	logger.Logger.Info("I have received a stop signal and will no longer watch events of the Garden API group.")
-	logger.Logger.Infof("Shoot workers: %d, Seed workers: %d, Quota workers: %d, CloudProfile workers: %d, SecretBinding: %d", shootController.RunningWorkers(), seedController.RunningWorkers(), quotaController.RunningWorkers(), cloudProfileController.RunningWorkers(), secretBindingController.RunningWorkers())
+	logger.Logger.Infof("Shoot workers: %d, Seed workers: %d, Quota workers: %d, CloudProfile workers: %d, SecretBinding: %d, BackupInfrastructure workers: %d", shootController.RunningWorkers(), seedController.RunningWorkers(), quotaController.RunningWorkers(), cloudProfileController.RunningWorkers(), secretBindingController.RunningWorkers(), backupInfrastructureController.RunningWorkers())
 	logger.Logger.Info("Bye bye!")
 
 	os.Exit(0)
