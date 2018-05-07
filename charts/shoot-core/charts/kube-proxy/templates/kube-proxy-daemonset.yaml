@@ -19,6 +19,9 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/secret-kube-proxy: {{ include (print $.Template.BasePath "/kube-proxy-secret.yaml") . | sha256sum }}
         checksum/configmap-componentconfig: {{ include (print $.Template.BasePath "/componentconfig.yaml") . | sha256sum }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
       labels:
         origin: gardener
         app: kubernetes

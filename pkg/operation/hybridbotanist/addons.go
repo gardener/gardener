@@ -45,6 +45,9 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		}
 		kubeProxyConfig = map[string]interface{}{
 			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
+			},
 		}
 		vpnShootConfig = map[string]interface{}{
 			"authorizedKeys": sshKeyPairSecret.Data["id_rsa.pub"],

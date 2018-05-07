@@ -3,6 +3,7 @@ global:
 kube-proxy:
   kubeconfig: dummy-add-the-data-of-a-kubernetes-secret
   featureGates: {}
+  podAnnotations: {}
   images:
     hyperkube: image-repository
 kube-dns:

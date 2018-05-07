@@ -4,3 +4,4 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository
+podAnnotations: {}
