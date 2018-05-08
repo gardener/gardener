@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"fmt"
+	"strconv"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -59,4 +60,17 @@ func computeOperationType(lastOperation *gardenv1beta1.LastOperation) gardenv1be
 		return gardenv1beta1.ShootLastOperationTypeCreate
 	}
 	return gardenv1beta1.ShootLastOperationTypeReconcile
+}
+
+func shootIsUsedAsSeed(shoot *gardenv1beta1.Shoot) bool {
+	if shoot.Namespace != common.GardenNamespace {
+		return false
+	}
+
+	if val, ok := shoot.Annotations[common.ShootUseAsSeed]; ok {
+		useAsSeed, err := strconv.ParseBool(val)
+		return err == nil && useAsSeed
+	}
+
+	return false
 }

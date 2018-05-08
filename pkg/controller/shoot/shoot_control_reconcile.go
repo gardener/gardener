@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -87,23 +86,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		return e
 	}
 
-	// Register the Shoot as Seed cluster if it was annotated properly and in the Gardener namespace
-	if o.Shoot.Info.Namespace == common.GardenNamespace {
-		registerAsSeed := false
-		if val, ok := o.Shoot.Info.Annotations[common.ShootUseAsSeed]; ok {
-			useAsSeed, err := strconv.ParseBool(val)
-			if err == nil && useAsSeed {
-				registerAsSeed = true
-			}
+	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
+	if shootIsUsedAsSeed(o.Shoot.Info) {
+		if err := botanist.RegisterAsSeed(); err != nil {
+			o.Logger.Errorf("Could not register '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
 		}
-		if registerAsSeed {
-			if err := botanist.RegisterAsSeed(); err != nil {
-				o.Logger.Errorf("Could not register '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
-			}
-		} else {
-			if err := botanist.UnregisterAsSeed(); err != nil {
-				o.Logger.Errorf("Could not unregister '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
-			}
+	} else {
+		if err := botanist.UnregisterAsSeed(); err != nil {
+			o.Logger.Errorf("Could not unregister '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
 		}
 	}
 

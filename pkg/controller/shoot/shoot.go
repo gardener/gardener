@@ -51,6 +51,7 @@ type Controller struct {
 	shootCareQueue        workqueue.RateLimitingInterface
 	shootMaintenanceQueue workqueue.RateLimitingInterface
 	shootQuotaQueue       workqueue.RateLimitingInterface
+	shootSeedQueue        workqueue.RateLimitingInterface
 
 	shootSynced         cache.InformerSynced
 	seedSynced          cache.InformerSynced
@@ -89,6 +90,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
+		shootSeedQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
 		workerCh:              make(chan int),
 	}
 
@@ -176,6 +178,9 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 	for i := 0; i < shootQuotaWorkers; i++ {
 		controllerutils.CreateWorker(c.shootQuotaQueue, "Shoot Quota", c.reconcileShootQuotaKey, stopCh, &waitGroup, c.workerCh)
 	}
+	for i := 0; i < shootWorkers/2+1; i++ {
+		controllerutils.CreateWorker(c.shootSeedQueue, "Shooted Seeds", c.reconcileShootKey, stopCh, &waitGroup, c.workerCh)
+	}
 
 	// Shutdown handling
 	<-stopCh
@@ -183,6 +188,7 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 	c.shootCareQueue.ShutDown()
 	c.shootMaintenanceQueue.ShutDown()
 	c.shootQuotaQueue.ShutDown()
+	c.shootSeedQueue.ShutDown()
 
 	for {
 		var (
@@ -190,7 +196,8 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 			shootCareQueueLength        = c.shootCareQueue.Len()
 			shootMaintenanceQueueLength = c.shootMaintenanceQueue.Len()
 			shootQuotaQueueLength       = c.shootQuotaQueue.Len()
-			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength
+			shootSeedQueueLength        = c.shootSeedQueue.Len()
+			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength + shootSeedQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
@@ -215,4 +222,11 @@ func (c *Controller) shootNamespaceFilter(obj interface{}) bool {
 		watchNamespace = c.config.Controllers.Shoot.WatchNamespace
 	)
 	return watchNamespace == nil || shoot.Namespace == *watchNamespace
+}
+
+func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
+	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok && shootIsUsedAsSeed(shoot) {
+		return c.shootSeedQueue
+	}
+	return c.shootQueue
 }

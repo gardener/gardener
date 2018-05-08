@@ -42,7 +42,7 @@ func (c *Controller) shootAdd(obj interface{}) {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
-	c.shootQueue.Add(key)
+	c.getShootQueue(obj).Add(key)
 }
 
 func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
@@ -74,7 +74,7 @@ func (c *Controller) shootDelete(obj interface{}) {
 		return
 	}
 
-	c.shootQueue.Add(key)
+	c.getShootQueue(obj).Add(key)
 }
 
 func (c *Controller) reconcileShootKey(key string) error {
@@ -101,14 +101,14 @@ func (c *Controller) reconcileShootKey(key string) error {
 
 	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
 		shootLogger.Debug("Do not need to do anything as the Shoot does not have my finalizer")
-		c.shootQueue.Forget(key)
+		c.getShootQueue(shoot).Forget(key)
 		return nil
 	}
 
 	needsRequeue, reconcileErr := c.control.ReconcileShoot(shoot, key)
 
 	if wantsResync, durationToNextSync := scheduleNextSync(shoot.ObjectMeta, reconcileErr != nil, c.config.Controllers.Shoot); wantsResync && needsRequeue {
-		c.shootQueue.AddAfter(key, durationToNextSync)
+		c.getShootQueue(shoot).AddAfter(key, durationToNextSync)
 		shootLogger.Infof("Scheduled next reconciliation for Shoot '%s' in %s", key, durationToNextSync)
 	}
 
