@@ -150,6 +150,8 @@ spec:
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         env:
+        - name: MAIN_VPN_SEED
+          value: "true"
         - name: OPENVPN_PORT
           value: "4314"
         ports:
