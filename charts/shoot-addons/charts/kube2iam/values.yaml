@@ -33,13 +33,13 @@ rbac:
   ##
   serviceAccountName: default
 
-resources: {}
-  # limits:
-  #   cpu: 4m
-  #   memory: 16Mi
-  # requests:
-  #   cpu: 4m
-  #   memory: 16Mi
+resources:
+  requests:
+    cpu: 10m
+    memory: 16Mi
+  limits:
+    cpu: 50m
+    memory: 32Mi
 
 ## Strategy for DaemonSet updates (requires Kubernetes 1.6+)
 ## Ref: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/

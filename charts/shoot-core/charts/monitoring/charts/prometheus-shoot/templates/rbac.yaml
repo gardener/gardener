@@ -1,4 +1,4 @@
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: garden.sapcloud.io:monitoring:prometheus
@@ -25,7 +25,7 @@ rules:
   verbs:
   - get
 ---
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: garden.sapcloud.io:monitoring:prometheus

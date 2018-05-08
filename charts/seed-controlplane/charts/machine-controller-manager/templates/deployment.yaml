@@ -43,7 +43,10 @@ spec:
         resources:
           requests:
             cpu: 5m
-            memory: 50Mi
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
         volumeMounts:
         - mountPath: /var/lib/machine-controller-manager
           name: machine-controller-manager

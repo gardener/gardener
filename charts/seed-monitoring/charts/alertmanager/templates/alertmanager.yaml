@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: alertmanager-client
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     component: alertmanager
     role: monitoring
@@ -23,7 +23,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: alertmanager
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     component: alertmanager
     role: monitoring
@@ -38,11 +38,11 @@ spec:
     component: alertmanager
     role: monitoring
 ---
-apiVersion: {{include "statefulsetversion" .}}
+apiVersion: {{ include "statefulsetversion" . }}
 kind: StatefulSet
 metadata:
   name: alertmanager
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     component: alertmanager
     role: monitoring
@@ -68,7 +68,7 @@ spec:
         args:
         - --config.file=/etc/alertmanager/config/alertmanager.yaml
         - --web.listen-address=:9093
-        - --web.external-url=https://{{.Values.ingress.host}}
+        - --web.external-url=https://{{ .Values.ingress.host }}
         - --mesh.listen-address=:6783
         - --storage.path=/etc/alertmanager/data
         - --mesh.peer="alertmanager-0.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
@@ -102,9 +102,11 @@ spec:
           initialDelaySeconds: 3
           failureThreshold: 10
         resources:
-          limits:
-            memory: 60Mi
           requests:
+            cpu: 5m
+            memory: 20Mi
+          limits:
+            cpu: 100m
             memory: 60Mi
         volumeMounts:
         - mountPath: /etc/alertmanager/config
@@ -120,9 +122,12 @@ spec:
         - -webhook-url=http://localhost:9093/-/reload
         - -volume-dir=/etc/alertmanager/config
         resources:
-          limits:
+          requests:
             cpu: 5m
             memory: 10Mi
+          limits:
+            cpu: 10m
+            memory: 20Mi
         volumeMounts:
         - mountPath: /etc/alertmanager/config
           name: config

@@ -52,11 +52,11 @@ spec:
           containerPort: 3000
         resources:
           requests:
-            memory: 100Mi
-            cpu: 100m
+            cpu: 10m
+            memory: 32Mi
           limits:
-            memory: 200Mi
             cpu: 200m
+            memory: 128Mi
       - name: grafana-watcher
         image: {{ index .Values.images "grafana-watcher" }}
         imagePullPolicy: IfNotPresent
@@ -79,11 +79,11 @@ spec:
           mountPath: /var/grafana-dashboards
         resources:
           requests:
-            memory: 16Mi
-            cpu: 50m
+            cpu: 5m
+            memory: 8Mi
           limits:
+            cpu: 50m
             memory: 32Mi
-            cpu: 100m
         volumeMounts:
         - name: grafana-dashboards
           mountPath: /var/grafana-dashboards

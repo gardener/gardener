@@ -21,7 +21,7 @@ spec:
   selector:
     component: node-exporter
 ---
-apiVersion: {{include "daemonsetversion" .}}
+apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
   name: node-exporter
@@ -77,12 +77,12 @@ spec:
           initialDelaySeconds: 5
           timeoutSeconds: 5
         resources:
-            limits:
-              cpu: 200m
-              memory: 50Mi
-            requests:
-              cpu: 100m
-              memory: 30Mi
+          requests:
+            cpu: 10m
+            memory: 10Mi
+          limits:
+            cpu: 100m
+            memory: 30Mi
         volumeMounts:
         - name: proc
           readOnly:  true

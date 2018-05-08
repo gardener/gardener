@@ -46,7 +46,7 @@ spec:
           httpGet:
             path: /healthz
             port: {{ .Values.api.service.internalPort }}
-          initialDelaySeconds: 30
+          initialDelaySeconds: {{ .Values.api.livenessProbe.initialDelaySeconds }}
           timeoutSeconds: 5
         volumeMounts:
           - name: cache

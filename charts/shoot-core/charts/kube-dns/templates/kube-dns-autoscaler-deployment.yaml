@@ -31,9 +31,12 @@ spec:
       - name: autoscaler
         image: {{ index .Values.images "kube-dns-autoscaler" }}
         resources:
-            requests:
-                cpu: "20m"
-                memory: "10Mi"
+          requests:
+            cpu: 20m
+            memory: 10Mi
+          limits:
+            cpu: 50m
+            memory: 32Mi
         command:
           - /cluster-proportional-autoscaler
           - --namespace=kube-system

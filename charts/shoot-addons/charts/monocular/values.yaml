@@ -17,12 +17,12 @@ api:
     externalPort: 80
     internalPort: 8081
   resources:
-    limits:
-      cpu: 100m
-      memory: 512Mi
     requests:
       cpu: 100m
       memory: 128Mi
+    limits:
+      cpu: 100m
+      memory: 512Mi
   livenessProbe:
     initialDelaySeconds: 180
   config:
@@ -53,10 +53,10 @@ ui:
     externalPort: 80
     internalPort: 80
   resources:
-    limits:
+    requests:
       cpu: 100m
       memory: 128Mi
-    requests:
+    limits:
       cpu: 100m
       memory: 128Mi
   # ui-config populate
@@ -81,6 +81,9 @@ prerender:
     requests:
       cpu: 100m
       memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
 
 ingress:
   enabled: true

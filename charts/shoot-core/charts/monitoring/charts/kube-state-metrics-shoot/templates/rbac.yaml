@@ -1,4 +1,4 @@
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: garden.sapcloud.io:monitoring:kube-state-metrics
@@ -40,7 +40,7 @@ rules:
   - list
   - watch
 ---
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: garden.sapcloud.io:monitoring:kube-state-metrics

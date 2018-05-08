@@ -80,6 +80,10 @@ spec:
         resources:
           requests:
             cpu: 100m
+            memory: 32Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
         volumeMounts:
         - name: kube-scheduler
           mountPath: /var/lib/kube-scheduler

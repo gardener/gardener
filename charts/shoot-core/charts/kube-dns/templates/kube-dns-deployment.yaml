@@ -30,6 +30,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      priorityClassName: system-cluster-critical
       affinity:
         podAntiAffinity:
           preferredDuringSchedulingIgnoredDuringExecution:
@@ -37,10 +38,10 @@ spec:
             podAffinityTerm:
               labelSelector:
                 matchExpressions:
-                  - key: k8s-app
-                    operator: In
-                    values:
-                    - kube-dns
+                - key: k8s-app
+                  operator: In
+                  values:
+                  - kube-dns
               topologyKey: kubernetes.io/hostname
       dnsPolicy: Default
       serviceAccountName: kube-dns
@@ -53,11 +54,12 @@ spec:
       - name: kubedns
         image: {{ index .Values.images "kube-dns" }}
         resources:
-          limits:
-            memory: 170Mi
           requests:
             cpu: 100m
             memory: 70Mi
+          limits:
+            cpu: 200m
+            memory: 170Mi
         livenessProbe:
           httpGet:
             path: /healthcheck/kubedns
@@ -129,6 +131,9 @@ spec:
           requests:
             cpu: 150m
             memory: 20Mi
+          limits:
+            cpu: 300m
+            memory: 40Mi
         volumeMounts:
         - name: kube-dns-config
           mountPath: /etc/k8s/dns/dnsmasq-nanny
@@ -154,5 +159,8 @@ spec:
           protocol: TCP
         resources:
           requests:
-            memory: 20Mi
             cpu: 10m
+            memory: 20Mi
+          limits:
+            cpu: 50m
+            memory: 50Mi

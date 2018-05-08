@@ -61,6 +61,13 @@ spec:
         - --tls-cert-file=/var/run/kubernetes/gardener-apiserver.crt
         - --tls-private-key-file=/var/run/kubernetes/gardener-apiserver.key
         - --v=2
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
         volumeMounts:
         - name: gardener-apiserver-cert
           mountPath: /var/run/kubernetes

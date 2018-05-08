@@ -14,12 +14,12 @@ httpsPort: 443
 serviceType: ClusterIP
 
 resources:
-  limits:
-    cpu: 500m
-    memory: 250Mi
   requests:
-    cpu: 100m
+    cpu: 50m
     memory: 50Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
 
 ingress:
   ## If true, Kubernetes Dashboard Ingress will be created.

@@ -83,6 +83,13 @@ spec:
             path: /readiness
             port: 44135
             scheme: HTTP
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
       tolerations:
       # Mark the pod as a critical add-on for rescheduling.
       - key: CriticalAddonsOnly

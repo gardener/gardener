@@ -43,8 +43,11 @@ spec:
           value: "/etc/kubernetes/addons/cloud-config/..data/.,/etc/kubernetes/addons/core/..data/.{{ if .Values.optionalAddonsContent }},/etc/kubernetes/addons/optional/..data/.{{ end }}"
         resources:
           requests:
-            cpu: 5m
-            memory: 50Mi
+            cpu: 100m
+            memory: 30Mi
+          limits:
+            cpu: 300m
+            memory: 128Mi
         volumeMounts:
         - mountPath: /etc/kubernetes/addons/cloud-config
           name: cloud-config

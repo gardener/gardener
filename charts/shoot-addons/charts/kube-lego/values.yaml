@@ -38,13 +38,13 @@ replicaCount: 1
 ## kube-lego resource limits & requests
 ## Ref: https://kubernetes.io/docs/user-guide/compute-resources/
 ##
-resources: {}
-  # limits:
-  #   cpu: 20m
-  #   memory: 8Mi
-  # requests:
-  #   cpu: 20m
-  #   memory: 8Mi
+resources:
+  requests:
+    cpu: 20m
+    memory: 8Mi
+  limits:
+    cpu: 50m
+    memory: 32Mi
 
 rbac:
   create: true

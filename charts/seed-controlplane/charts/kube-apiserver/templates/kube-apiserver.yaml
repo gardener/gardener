@@ -111,6 +111,10 @@ spec:
         resources:
           requests:
             cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: "1"
+            memory: 2048Mi
         volumeMounts:
         {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - name: audit-policy-config
@@ -177,6 +181,13 @@ spec:
         - name: blackbox-export
           containerPort: 9115
           protocol: TCP
+        resources:
+          requests:
+            cpu: 5m
+            memory: 16Mi
+          limits:
+            cpu: 50m
+            memory: 128Mi
         volumeMounts:
         - name: blackbox-exporter-config
           mountPath: /vpn

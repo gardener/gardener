@@ -60,9 +60,11 @@ spec:
         #   successThreshold: 1
         #   timeoutSeconds: 3
         resources:
-          limits:
-            memory: 2400Mi
           requests:
+            cpu: 50m
+            memory: 1200Mi
+          limits:
+            cpu: 200m
             memory: 2400Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config
@@ -82,9 +84,12 @@ spec:
         - -volume-dir=/etc/prometheus/config
         - -volume-dir=/etc/prometheus/rules
         resources:
-          limits:
+          requests:
             cpu: 5m
             memory: 10Mi
+          limits:
+            cpu: 10m
+            memory: 20Mi
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config

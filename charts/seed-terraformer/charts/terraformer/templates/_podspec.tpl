@@ -14,6 +14,13 @@ containers:
       cpu: 100m
   terminationMessagePath: /dev/termination-log
   terminationMessagePolicy: File
+  resources:
+    requests:
+      cpu: 50m
+      memory: 200Mi
+    limits:
+      cpu: 200m
+      memory: 512Mi
   env:
   - name: TF_STATE_CONFIG_MAP_NAME
     value: {{ .Values.names.state }}

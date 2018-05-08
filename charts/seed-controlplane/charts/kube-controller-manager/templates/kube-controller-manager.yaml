@@ -94,7 +94,11 @@ spec:
         terminationMessagePolicy: File
         resources:
           requests:
-            cpu: 100m
+            cpu: 200m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
         volumeMounts:
         - name: ca
           mountPath: /srv/kubernetes/ca

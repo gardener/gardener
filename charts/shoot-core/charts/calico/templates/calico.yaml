@@ -124,6 +124,10 @@ spec:
           resources:
             requests:
               cpu: 250m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 700Mi
           livenessProbe:
             httpGet:
               path: /liveness

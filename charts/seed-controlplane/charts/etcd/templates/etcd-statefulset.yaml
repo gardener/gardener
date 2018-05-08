@@ -98,6 +98,10 @@ spec:
         resources:
           requests:
             cpu: 200m
+            memory: 500Mi
+          limits:
+            cpu: 500m
+            memory: 2400Mi
         volumeMounts:
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
@@ -110,11 +114,11 @@ spec:
         - --schedule={{ .Values.backup.schedule }}
         - --max-backups={{ .Values.backup.maxBackups }}
         - --data-dir=/var/etcd/data
-        - --storage-provider={{ .Values.backup.storageProvider }}  
+        - --storage-provider={{ .Values.backup.storageProvider }}
         - --store-prefix=etcd-{{ .Values.role }}
-        image: {{ index .Values.images "etcd-backup-restore" }} 
+        image: {{ index .Values.images "etcd-backup-restore" }}
         livenessProbe:
-          httpGet:  
+          httpGet:
             path: /metrics
             port: server
           initialDelaySeconds: 15
@@ -123,6 +127,13 @@ spec:
         - containerPort: 8080
           name: server
           protocol: TCP
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 512Mi
         env:
         - name: STORAGE_CONTAINER
           value: {{ .Values.backup.storageContainer }}

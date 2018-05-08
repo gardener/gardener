@@ -96,6 +96,9 @@ spec:
           successThreshold: 1
           timeoutSeconds: 5
         resources:
-            limits:
-              cpu: 200m
-              memory: 200Mi
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 50m
+            memory: 64Mi
