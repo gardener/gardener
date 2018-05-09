@@ -353,6 +353,24 @@ const (
 
 	// TerraformerImageName is the name of the Terraformer image.
 	TerraformerImageName = "terraformer"
+
+	// ElasticsearchImageName is the name of the Elastic-Search image used for logging
+	ElasticsearchImageName = "elasticsearch-oss"
+
+	// CuratorImageName is the name of the curator image used to alter the Elastic-search logs
+	CuratorImageName = "curator-es"
+
+	// KibanaImageName is the name of the Kibana image used for logging  UI
+	KibanaImageName = "kibana-oss"
+
+	// FluentdEsImageName is the image of the Fluentd image used for logging
+	FluentdEsImageName = "fluentd-es"
+
+	// FluentBitImageName is the image of Fluent-bit image
+	FluentBitImageName = "fluent-bit"
+
+	// AlpineImageName is the name of alpine image
+	AlpineImageName = "alpine"
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

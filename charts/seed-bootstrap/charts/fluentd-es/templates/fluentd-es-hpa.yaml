@@ -1,0 +1,21 @@
+apiVersion: {{ include "hpaversion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fluentd-es
+  namespace: {{ .Release.Namespace }}
+spec:
+  maxReplicas: 10
+  minReplicas: 1
+  scaleTargetRef:
+    apiVersion: {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: fluentd-es
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      targetAverageUtilization: 70

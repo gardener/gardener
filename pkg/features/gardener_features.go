@@ -26,10 +26,10 @@ const (
 	// // alpha: v5.X
 	// MyFeature utilfeature.Feature = "MyFeature"
 
-	// CoreDNS enable CoreDNS as default DNS provider.
-	// owner: @mvladev
-	// alpha: v5.0
-	CoreDNS utilfeature.Feature = "CoreDNS"
+	// Logging enables logging stack for clusters.
+	// owner @mvladev,@vlpanov
+	// alpha: v0.13.0
+	Logging utilfeature.Feature = "Logging"
 )
 
 var (
@@ -43,7 +43,9 @@ var (
 
 	apiserverFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
 
-	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
+	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
+		Logging: {Default: false, PreRelease: utilfeature.Alpha},
+	}
 )
 
 // RegisterAPIServerFeatureGate registers the feature gates

@@ -1,0 +1,151 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: curator-hourly-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: curator
+    role: logging
+data:
+  action_file.yml: |-
+    actions:
+      1:
+        action: forcemerge
+        description: >-
+          Perform a forcemerge on selected indices to 'max_num_segments' per shard
+        options:
+          max_num_segments: 1
+          timeout_override: 21600
+          delay: 120
+          continue_if_exception: True
+          ignore_empty_list: True
+        filters:
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y.%m.%d'
+          unit: days
+          unit_count: 1
+          field:
+          stats_result:
+          epoch:
+          exclude: True
+      2:
+        action: index_settings
+        description: >-
+          Set shard replicas to 0 and remove the index from read only
+        options:
+          index_settings:
+            index:
+              blocks:
+                read_only_allow_delete: null
+          ignore_unavailable: False
+          preserve_existing: False
+          continue_if_exception: True
+          ignore_empty_list: True
+        filters:
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y.%m.%d'
+          unit: days
+          unit_count: 1
+          field:
+          stats_result:
+          epoch:
+          exclude: True
+  config.yml: |-
+    client:
+      hosts:
+        - elasticsearch-logging.{{ .Release.Namespace }}.svc
+      port: 9200
+      url_prefix:
+      use_ssl: False
+      certificate:
+      client_cert:
+      client_key:
+      ssl_no_validate: False
+      http_auth:
+      timeout: 30
+      master_only: False
+    logging:
+      loglevel: INFO
+      logfile:
+      logformat: default
+      blacklist: ['elasticsearch', 'urllib3']
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: curator-daily-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: curator
+    role: logging
+data:
+  action_file.yml: |-
+    actions:
+      1:
+        action: delete_indices
+        description: "Clean up ES by deleting old indices"
+        options:
+          timeout_override:
+          continue_if_exception: False
+          disable_action: False
+          ignore_empty_list: True
+        filters:
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y.%m.%d'
+          unit: months
+          unit_count: 1
+          field:
+          stats_result:
+          epoch:
+          exclude: False
+      2:
+        action: index_settings
+        description: >-
+          Set refresh interval and translog.durability to undices younger than a day
+        options:
+          index_settings:
+            index:
+              refresh_interval: 60s
+              translog:
+                durability: async
+              number_of_replicas: 0
+          ignore_unavailable: False
+          preserve_existing: False
+          continue_if_exception: True
+          ignore_empty_list: True
+        filters:
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y.%m.%d'
+          unit: days
+          unit_count: 1
+          field:
+          stats_result:
+          epoch:
+          exclude: True
+  config.yml: |-
+    client:
+      hosts:
+        - elasticsearch-logging.{{ .Release.Namespace }}.svc
+      port: 9200
+      url_prefix:
+      use_ssl: False
+      certificate:
+      client_cert:
+      client_key:
+      ssl_no_validate: False
+      http_auth:
+      timeout: 30
+      master_only: False
+    logging:
+      loglevel: INFO
+      logfile:
+      logformat: default
+      blacklist: ['elasticsearch', 'urllib3']

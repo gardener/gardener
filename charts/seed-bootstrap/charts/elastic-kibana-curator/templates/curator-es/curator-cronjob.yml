@@ -1,0 +1,79 @@
+apiVersion: {{ include "cronjobversion" . }}
+kind: CronJob
+metadata:
+  name: hourly-curator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: curator
+    role: logging
+spec:
+  schedule: "0 * * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: {{ index .Values.images "curator-es" }}
+            name: curator
+            command: ["/bin/sh","-c"]
+            args: ["extra-deleter --disk_threshold=1073741824; curator --config /etc/config/config.yml /etc/config/action_file.yml"]
+            volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            resources:
+              limits:
+                cpu: 10m
+                memory: 50Mi
+              requests:
+                cpu: 10m
+                memory: 30Mi
+          volumes:
+          - name: config
+            configMap:
+              name: curator-hourly-config
+          restartPolicy: OnFailure
+---
+apiVersion: {{ include "cronjobversion" . }}
+kind: CronJob
+metadata:
+  name: daily-curator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: curator
+    role: logging
+spec:
+  schedule: "5 0,6,12,18 * * *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 120
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - image: {{ index .Values.images "curator-es" }}
+            name: curator
+            args:
+            - --config
+            - /etc/config/config.yml
+            - /etc/config/action_file.yml
+            volumeMounts:
+            - name: config
+              mountPath: /etc/config
+            resources:
+              limits:
+                cpu: 10m
+                memory: 50Mi
+              requests:
+                cpu: 10m
+                memory: 30Mi
+          volumes:
+          - name: config
+            configMap:
+              name: curator-daily-config
+          restartPolicy: OnFailure

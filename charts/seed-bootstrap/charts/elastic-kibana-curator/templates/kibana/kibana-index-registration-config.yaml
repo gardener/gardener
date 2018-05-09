@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kibana-index-registration
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kibana
+    role: logging
+data:
+  register: |-
+    #/bin/sh
+
+    until curl -sS http://127.0.0.1:{{ .Values.kibanaPort }}/ > /dev/null; do
+      echo Waiting for Kibana...;
+      sleep 2;
+    done;
+
+    function register {
+      while true
+      do
+          RESULT=$(curl -sS -X$1 -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
+            'http://127.0.0.1:{{ .Values.kibanaPort }}/api/saved_objects/index-pattern/logstash-*' \
+            -d'{"attributes":{"title":"logstash-*","timeFieldName":"@timestamp"}}')
+
+          echo ${RESULT}
+          echo -e "\n"
+
+          if echo ${RESULT} | grep -v -q '"error"'
+          then
+              break
+          fi
+          echo Still waiting for Kibana...
+          sleep 2
+      done
+    }
+
+    # curl doesn't care about HTTP status codes.
+    echo "Trying to create the index pattern."
+    register POST
+
+    echo Trying to update the index pattern.
+    register PUT
+
+    echo Registred index.
+    echo Sleeping...
+    # Sleep forever
+    while sleep 3600; do :; done

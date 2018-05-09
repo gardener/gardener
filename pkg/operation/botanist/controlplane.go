@@ -424,3 +424,39 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 	_, err = b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, deploymentName, body)
 	return err
 }
+
+// DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
+func (b *Botanist) DeploySeedLogging() error {
+
+	var (
+		credentials = b.Secrets["logging-ingress-credentials"]
+		basicAuth   = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
+		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
+		replicas    = 1
+	)
+
+	if b.Shoot.IsHibernated {
+		replicas = 0
+	}
+
+	var kibanaConfig = map[string]interface{}{
+		"ingress": map[string]interface{}{
+			"basicAuthSecret": basicAuth,
+			"host":            kibanaHost,
+		},
+		"elasticsearchReplicas": replicas,
+		"kibanaReplicas":        replicas,
+	}
+
+	elasticKibanaCurator, err := b.InjectImages(kibanaConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
+		common.ElasticsearchImageName,
+		common.CuratorImageName,
+		common.KibanaImageName,
+		common.AlpineImageName,
+	)
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)
+}

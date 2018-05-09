@@ -1,0 +1,59 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: kibana-logging
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kibana-logging
+    role: logging
+spec:
+  selector:
+    matchLabels:
+      app: kibana-logging
+      role: logging
+  replicas: {{ .Values.kibanaReplicas }}
+  template:
+    metadata:
+      annotations:
+        checksum/kibana-index-registration-config: {{ include (print $.Template.BasePath "/kibana/kibana-index-registration-config.yaml") . | sha256sum }}
+      labels:
+        app: kibana-logging
+        role: logging
+    spec:
+      containers:
+      - name: kibana-logging
+        image: {{ index .Values.images "kibana-oss" }}
+        resources:
+          # need more cpu upon initialization, therefore burstable class
+          limits:
+            cpu: 1000m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        env:
+        - name: ELASTICSEARCH_URL
+          value: http://elasticsearch-logging:{{ .Values.global.elasticsearchPorts.db }}
+        ports:
+        - containerPort: {{ .Values.kibanaPort }}
+          name: ui
+          protocol: TCP
+      - image: {{ index .Values.images "kibana-oss" }}
+        name: auto-register-index
+        command:
+        - /bin/sh
+        - /gardener/register
+        volumeMounts:
+        - name: register
+          mountPath: /gardener
+        resources:
+          limits:
+            cpu: 10m
+            memory: 20Mi
+          requests:
+            cpu: 10m
+            memory: 20Mi
+      volumes:
+      - name: register
+        configMap:
+          name: kibana-index-registration
