@@ -123,7 +123,7 @@ images:
 # Miscellaenous
 - name: terraformer
   repository: eu.gcr.io/gardener-project/gardener/terraformer
-  tag: "0.5.0"
+  tag: "0.6.0"
 - name: busybox
   repository: busybox
   tag: "1.28"

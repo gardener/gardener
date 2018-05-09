@@ -14,8 +14,9 @@ provider "openstack" {
 //=====================================================================
 
 resource "openstack_objectstorage_container_v1" "container" {
-  region = "{{ required "openstack.region is required" .Values.openstack.region }}"
-  name   = "{{ required "container.name is required" .Values.container.name }}"
+  region        = "{{ required "openstack.region is required" .Values.openstack.region }}"
+  name          = "{{ required "container.name is required" .Values.container.name }}"
+  force_destroy = true
 }
 
 //=====================================================================

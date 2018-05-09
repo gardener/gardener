@@ -98,14 +98,10 @@ func (b *OpenStackBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *OpenStackBotanist) DestroyBackupInfrastructure() error {
-	return nil
-	//TODO: Remove this comment when backup is to be pushed on to swift container i.e.
-	// when we have next(v1.4.0) realease of https://github.com/terraform-providers/terraform-provider-openstack/releases
-	/* return terraformer.
-	NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
-	SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
-	Destroy()
-	*/
+	return terraformer.
+		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
+		Destroy()
 }
 
 // generateTerraformBackupVariablesEnvironment generates the environment containing the credentials which
