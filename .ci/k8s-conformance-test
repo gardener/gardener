@@ -41,8 +41,8 @@ readonly TRUE=0
 readonly FALSE=1
 
 # Max. time to wait for creation/deletion of shoot
-MAX_RETRY_TIME=$((60 * 60)) # 60min 
-MAX_TEST_TIME=$((60 * 60)) # 60min 
+MAX_RETRY_TIME=$((60*60)) # 60min 
+MAX_TEST_TIME=$((2*60*60)) # 120min 
 
 # Sript parameter
 VALID_CLOUD_PROVIDERS="aws gcp os az"
@@ -297,6 +297,9 @@ function run_conformance_tests() {
   success="$FALSE"
   if [[ $(tail -5 e2e.log) = *"SUCCESS"* ]] ; then
     success="$TRUE"
+
+    # Print test duration
+    echo "INFO: "$(grep "Ginkgo ran 1 suite in" e2e.log)
   else
     # Print the summary section of e2e.log to stdout
     sed -n '/^Summarizing/,$p' e2e.log
