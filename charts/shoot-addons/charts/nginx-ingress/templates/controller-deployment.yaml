@@ -44,6 +44,7 @@ spec:
           {{- end }}
           - --election-id={{ .Values.controller.electionID }}
           - --ingress-class={{ .Values.controller.ingressClass }}
+          - --update-status=true
           - --configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
           {{- if .Values.tcp }}
           - --tcp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-tcp
