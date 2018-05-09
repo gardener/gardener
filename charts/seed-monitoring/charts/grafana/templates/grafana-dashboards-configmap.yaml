@@ -12,7 +12,7 @@ data:
       "basicAuth": false,
       "name": "prometheus",
       "type": "prometheus",
-      "url": "http://prometheus-web:8080",
+      "url": "http://prometheus-web:80",
       "isDefault": true
     }
 
