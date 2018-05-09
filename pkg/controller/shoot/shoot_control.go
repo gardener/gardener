@@ -93,30 +93,36 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return err
 	}
 
-	shootLogger := logger.NewShootLogger(logger.Logger, shoot.ObjectMeta.Name, shoot.ObjectMeta.Namespace, "")
-	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
-		shootLogger.Info("Skipping reconciliation because Shoot is marked as 'to-be-ignored'.")
-		return nil
-	}
+	var (
+		shootLogger  = logger.NewShootLogger(logger.Logger, shoot.ObjectMeta.Name, shoot.ObjectMeta.Namespace, "")
+		needsRequeue = true
+		reconcileErr error
+	)
 
+	// Ignore Shoots which do not have the gardener finalizer.
 	if shoot.DeletionTimestamp != nil && !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) {
 		shootLogger.Debug("Do not need to do anything as the Shoot does not have my finalizer")
 		c.getShootQueue(shoot).Forget(key)
 		return nil
 	}
 
-	needsRequeue, reconcileErr := c.control.ReconcileShoot(shoot, key)
+	// Either ignore Shoots which are marked as to-be-ignored or reconcile them.
+	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
+		shootLogger.Info("Skipping reconciliation because Shoot is marked as 'to-be-ignored'.")
+	} else {
+		needsRequeue, reconcileErr = c.control.ReconcileShoot(shoot, key)
+	}
 
 	if wantsResync, durationToNextSync := scheduleNextSync(shoot.ObjectMeta, reconcileErr != nil, c.config.Controllers.Shoot); wantsResync && needsRequeue {
 		c.getShootQueue(shoot).AddAfter(key, durationToNextSync)
-		shootLogger.Infof("Scheduled next reconciliation for Shoot '%s' in %s", key, durationToNextSync)
+		shootLogger.Infof("Scheduled next queuing time for Shoot '%s' to %s", key, durationToNextSync)
 	}
 
 	return nil
 }
 
-func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccured bool, config componentconfig.ShootControllerConfiguration) (bool, time.Duration) {
-	if errorOccured {
+func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccurred bool, config componentconfig.ShootControllerConfiguration) (bool, time.Duration) {
+	if errorOccurred {
 		return true, (*config.RetrySyncPeriod).Duration
 	}
 
@@ -145,11 +151,6 @@ func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccured bool, config co
 	)
 
 	return true, time.Duration(nextSyncNano - currentTimeNano)
-}
-
-func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
-	_, ignore := annotations[common.ShootIgnore]
-	return respectSyncPeriodOverwrite != nil && ignore && *respectSyncPeriodOverwrite
 }
 
 // ControlInterface implements the control logic for updating Shoots. It is implemented as an interface to allow

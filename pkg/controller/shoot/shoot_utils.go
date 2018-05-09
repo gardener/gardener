@@ -74,3 +74,8 @@ func shootIsUsedAsSeed(shoot *gardenv1beta1.Shoot) bool {
 
 	return false
 }
+
+func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
+	_, ignore := annotations[common.ShootIgnore]
+	return respectSyncPeriodOverwrite != nil && ignore && *respectSyncPeriodOverwrite
+}

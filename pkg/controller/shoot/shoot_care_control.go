@@ -68,11 +68,20 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 		logger.Logger.Infof("[SHOOT CARE] %s - unable to retrieve object from store: %v", key, err)
 		return err
 	}
+
 	defer c.shootCareAdd(shoot)
+
 	if operationOngoing(shoot) {
 		logger.Logger.Debugf("[SHOOT CARE] %s - skipping because an operation in ongoing", key)
 		return nil
 	}
+
+	// Either ignore Shoots which are marked as to-be-ignored or execute care operations.
+	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
+		logger.Logger.Infof("[SHOOT CARE] %s - skipping because Shoot is marked as 'to-be-ignored'.", key)
+		return nil
+	}
+
 	return c.careControl.Care(shoot, key)
 }
 

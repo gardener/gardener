@@ -70,7 +70,15 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 		logger.Logger.Debugf("[SHOOT MAINTENANCE] %s - skipping because Shoot is marked as to be deleted", key)
 		return nil
 	}
+
 	defer c.shootMaintenanceAdd(shoot)
+
+	// Either ignore Shoots which are marked as to-be-ignored or execute maintenance operations.
+	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
+		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot is marked as 'to-be-ignored'.", key)
+		return nil
+	}
+
 	return c.maintenanceControl.Maintain(shoot, key)
 }
 
