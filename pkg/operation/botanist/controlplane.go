@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gardener/gardener/pkg/operation/terraformer"
+
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -44,13 +46,28 @@ func (b *Botanist) DeployNamespace() error {
 	return nil
 }
 
-// DeployBackupNamespace creates a namespace in the Seed cluster which is used to deploy all the backup infrastructure
+// DeployBackupNamespaceFromShoot creates a namespace in the Seed cluster from info in shoot object, which is used to deploy all the backup infrastructure
 // realted resources for shoot cluster. Moreover, the terraform configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
-func (b *Botanist) DeployBackupNamespace() error {
+func (b *Botanist) DeployBackupNamespaceFromShoot() error {
 	_, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: common.GenerateBackupNamespaceName(common.GenerateBackupInfrastructureName(b.Shoot.Info.Name, b.Shoot.Info.Status.UID)),
+			Name: common.GenerateBackupNamespaceName(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)),
+			Labels: map[string]string{
+				common.GardenRole: common.GardenRoleBackup,
+			},
+		},
+	}, true)
+	return err
+}
+
+// DeployBackupNamespaceFromBackupInfrastructure creates a namespace in the Seed cluster from info in shoot object, which is used to deploy all the backup infrastructure
+// realted resources for shoot cluster. Moreover, the terraform configuration and all the secrets will be
+// stored as ConfigMaps/Secrets.
+func (b *Botanist) DeployBackupNamespaceFromBackupInfrastructure() error {
+	_, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name),
 			Labels: map[string]string{
 				common.GardenRole: common.GardenRoleBackup,
 			},
@@ -59,8 +76,7 @@ func (b *Botanist) DeployBackupNamespace() error {
 	if err != nil {
 		return err
 	}
-	//b.SeedNamespaceObject = namespace //TODO: recheck the usage
-	return nil
+	return err
 }
 
 // DeleteNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
@@ -68,6 +84,16 @@ func (b *Botanist) DeployBackupNamespace() error {
 // comprises volumes and load balancers as well.
 func (b *Botanist) DeleteNamespace() error {
 	err := b.K8sSeedClient.DeleteNamespace(b.Operation.Shoot.SeedNamespace)
+	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
+		return nil
+	}
+	return err
+}
+
+// DeleteBackupNamespace deletes the namespace in the Seed cluster which holds the backup infrastructure state. The built-in
+// garbage collection in Kubernetes will automatically delete all resources which belong to this namespace.
+func (b *Botanist) DeleteBackupNamespace() error {
+	err := b.K8sSeedClient.DeleteNamespace(common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name))
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		return nil
 	}
@@ -95,10 +121,13 @@ func (b *Botanist) DeleteKubeAPIServer() error {
 // MoveTerraformResources copies the terraform resources realted to backup infrastructure creation from  a shoot's main namespace
 // in the Seed cluster to Shoot's backup namespace.
 func (b *Botanist) MoveTerraformResources() error {
-	backupInfrastructureName := common.GenerateBackupInfrastructureName(b.Shoot.Info.Name, b.Shoot.Info.Status.UID)
+	if err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).WaitForCleanEnvironment(); err != nil {
+		return err
+	}
+	backupInfrastructureName := common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
 	backupNamespace := common.GenerateBackupNamespaceName(backupInfrastructureName)
 	oldPrefix := fmt.Sprintf("%s.%s", b.Shoot.Info.Name, common.TerraformerPurposeBackup)
-	newPrefix := fmt.Sprintf("%s.%s", backupNamespace, common.TerraformerPurposeBackup)
+	newPrefix := fmt.Sprintf("%s.%s", backupInfrastructureName, common.TerraformerPurposeBackup)
 	tfConfig, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerConfigSuffix)
 	if err == nil {
 		if _, err := b.K8sSeedClient.CreateConfigMap(backupNamespace, newPrefix+common.TerraformerConfigSuffix, tfConfig.Data, true); err != nil {
@@ -143,9 +172,9 @@ func (b *Botanist) MoveTerraformResources() error {
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure() error {
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "backup-infrastructure"), "backup-infrastructure", b.Operation.Shoot.Info.Namespace, nil, map[string]interface{}{
-		"name":        common.GenerateBackupInfrastructureName(b.Shoot.Info.Name, b.Shoot.Info.Status.UID),
-		"seed":        b.Seed.Info.Name,
-		"gracePeriod": b.Shoot.Info.Spec.Backup.GracePeriod,
+		"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
+		"seed": b.Seed.Info.Name,
+		"deletionGracePeriodDays": *b.Shoot.Info.Spec.Backup.DeletionGracePeriodDays,
 	})
 }
 
@@ -155,7 +184,7 @@ func (b *Botanist) DeleteBackupInfrastructure() error {
 	err := b.K8sGardenClient.GardenClientset().
 		GardenV1beta1().
 		BackupInfrastructures(b.Shoot.Info.Namespace).
-		Delete(common.GenerateBackupInfrastructureName(b.Shoot.Info.Name, b.Shoot.Info.Status.UID), nil)
+		Delete(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), nil)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}

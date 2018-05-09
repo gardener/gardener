@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package backup
+package backupinfrastructure
 
 import (
 	"sync"
@@ -37,16 +37,16 @@ type Controller struct {
 	k8sGardenClient    kubernetes.Client
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
-	config                     *componentconfig.ControllerManagerConfiguration
-	control                    ControlInterface
-	recorder                   record.EventRecorder
-	secrets                    map[string]*corev1.Secret
-	imageVector                imagevector.ImageVector
+	config      *componentconfig.ControllerManagerConfiguration
+	control     ControlInterface
+	recorder    record.EventRecorder
+	secrets     map[string]*corev1.Secret
+	imageVector imagevector.ImageVector
+
 	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
 	backupInfrastructureQueue  workqueue.RateLimitingInterface
 	backupInfrastructureSynced cache.InformerSynced
 
-	//seedLister             gardenlisters.SeedLister
 	seedSynced             cache.InformerSynced
 	workerCh               chan int
 	numberOfRunningWorkers int
@@ -76,13 +76,10 @@ func NewBackupInfrastructureController(k8sGardenClient kubernetes.Client, garden
 		workerCh:                   make(chan int),
 	}
 
-	backupInfrastructureInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: backupInfrastructureController.backupInfrastructureNamespaceFilter,
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    backupInfrastructureController.backupInfrastructureAdd,
-			UpdateFunc: backupInfrastructureController.backupInfrastructureUpdate,
-			DeleteFunc: backupInfrastructureController.backupInfrastructureDelete,
-		},
+	backupInfrastructureInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    backupInfrastructureController.backupInfrastructureAdd,
+		UpdateFunc: backupInfrastructureController.backupInfrastructureUpdate,
+		DeleteFunc: backupInfrastructureController.backupInfrastructureDelete,
 	})
 	backupInfrastructureController.backupInfrastructureSynced = backupInfrastructureInformer.Informer().HasSynced
 	backupInfrastructureController.seedSynced = gardenv1beta1Informer.Seeds().Informer().HasSynced
@@ -92,8 +89,7 @@ func NewBackupInfrastructureController(k8sGardenClient kubernetes.Client, garden
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	var (
-		watchNamespace = c.config.Controllers.BackupInfrastructure.WatchNamespace
-		waitGroup      sync.WaitGroup
+		waitGroup sync.WaitGroup
 	)
 
 	if !cache.WaitForCacheSync(stopCh, c.backupInfrastructureSynced, c.seedSynced) {
@@ -112,11 +108,6 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 		}
 	}()
 
-	if watchNamespace == nil {
-		logger.Logger.Info("Watching all namespaces for BackupInfrastructure resources...")
-	} else {
-		logger.Logger.Infof("Watching only namespace '%s' for BackupInfrastructure resources...", *watchNamespace)
-	}
 	logger.Logger.Info("BackupInfrastructure controller initialized.")
 
 	for i := 0; i < workers; i++ {
@@ -142,13 +133,4 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 // RunningWorkers returns the number of running workers.
 func (c *Controller) RunningWorkers() int {
 	return c.numberOfRunningWorkers
-}
-
-// backupInfrastructureNamespaceFilter filters BackupInfrastructures based on their namespace and the configuration value.
-func (c *Controller) backupInfrastructureNamespaceFilter(obj interface{}) bool {
-	var (
-		backupInfrastructure = obj.(*gardenv1beta1.BackupInfrastructure)
-		watchNamespace       = c.config.Controllers.BackupInfrastructure.WatchNamespace
-	)
-	return watchNamespace == nil || backupInfrastructure.Namespace == *watchNamespace
 }

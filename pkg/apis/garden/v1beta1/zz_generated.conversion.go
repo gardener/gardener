@@ -755,9 +755,9 @@ func Convert_garden_AzureWorker_To_v1beta1_AzureWorker(in *garden.AzureWorker, o
 }
 
 func autoConvert_v1beta1_Backup_To_garden_Backup(in *Backup, out *garden.Backup, s conversion.Scope) error {
-	out.Schedule = (*string)(unsafe.Pointer(in.Schedule))
-	out.Maximum = (*int)(unsafe.Pointer(in.Maximum))
-	out.GracePeriod = (*int)(unsafe.Pointer(in.GracePeriod))
+	out.Schedule = in.Schedule
+	out.Maximum = in.Maximum
+	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
 	return nil
 }
 
@@ -767,9 +767,9 @@ func Convert_v1beta1_Backup_To_garden_Backup(in *Backup, out *garden.Backup, s c
 }
 
 func autoConvert_garden_Backup_To_v1beta1_Backup(in *garden.Backup, out *Backup, s conversion.Scope) error {
-	out.Schedule = (*string)(unsafe.Pointer(in.Schedule))
-	out.Maximum = (*int)(unsafe.Pointer(in.Maximum))
-	out.GracePeriod = (*int)(unsafe.Pointer(in.GracePeriod))
+	out.Schedule = in.Schedule
+	out.Maximum = in.Maximum
+	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
 	return nil
 }
 
@@ -854,7 +854,7 @@ func Convert_garden_BackupInfrastructureList_To_v1beta1_BackupInfrastructureList
 
 func autoConvert_v1beta1_BackupInfrastructureSpec_To_garden_BackupInfrastructureSpec(in *BackupInfrastructureSpec, out *garden.BackupInfrastructureSpec, s conversion.Scope) error {
 	out.Seed = in.Seed
-	out.GracePeriod = (*int)(unsafe.Pointer(in.GracePeriod))
+	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
 	return nil
 }
 
@@ -865,7 +865,7 @@ func Convert_v1beta1_BackupInfrastructureSpec_To_garden_BackupInfrastructureSpec
 
 func autoConvert_garden_BackupInfrastructureSpec_To_v1beta1_BackupInfrastructureSpec(in *garden.BackupInfrastructureSpec, out *BackupInfrastructureSpec, s conversion.Scope) error {
 	out.Seed = in.Seed
-	out.GracePeriod = (*int)(unsafe.Pointer(in.GracePeriod))
+	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
 	return nil
 }
 
@@ -875,15 +875,11 @@ func Convert_garden_BackupInfrastructureSpec_To_v1beta1_BackupInfrastructureSpec
 }
 
 func autoConvert_v1beta1_BackupInfrastructureStatus_To_garden_BackupInfrastructureStatus(in *BackupInfrastructureStatus, out *garden.BackupInfrastructureStatus, s conversion.Scope) error {
-	if err := Convert_v1beta1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
-		return err
-	}
-	out.Phase = (*garden.BackupInfrastructurePhase)(unsafe.Pointer(in.Phase))
+	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
 	if err := v1.Convert_int64_To_Pointer_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
 		return err
 	}
-	out.RetryCycleStartTime = (*v1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	return nil
 }
 
@@ -893,15 +889,11 @@ func Convert_v1beta1_BackupInfrastructureStatus_To_garden_BackupInfrastructureSt
 }
 
 func autoConvert_garden_BackupInfrastructureStatus_To_v1beta1_BackupInfrastructureStatus(in *garden.BackupInfrastructureStatus, out *BackupInfrastructureStatus, s conversion.Scope) error {
-	if err := Convert_garden_Gardener_To_v1beta1_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
-		return err
-	}
-	out.Phase = (*BackupInfrastructurePhase)(unsafe.Pointer(in.Phase))
+	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
 	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
 	if err := v1.Convert_Pointer_int64_To_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
 		return err
 	}
-	out.RetryCycleStartTime = (*v1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	return nil
 }
 

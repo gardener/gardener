@@ -113,13 +113,8 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *AzureBotanist) DeployBackupInfrastructure() error {
-	image := ""
-	o := b.Operation
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
 	return terraformer.
-		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("azure-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -127,13 +122,8 @@ func (b *AzureBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *AzureBotanist) DestroyBackupInfrastructure() error {
-	image := ""
-	o := b.Operation
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
 	return terraformer.
-		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }
@@ -151,16 +141,17 @@ func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() []map[stri
 // generateTerraformBackupConfig creates the Terraform variables and the Terraform config (for the backup)
 // and returns them.
 func (b *AzureBotanist) generateTerraformBackupConfig() map[string]interface{} {
-	shootUIDSha := utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))
+	//TODO: Discuss Backword incompatibility solution
+	backupSHA := utils.ComputeSHA1Hex([]byte(b.BackupInfrastructure.Name))
 	return map[string]interface{}{
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Seed.Secret.Data[SubscriptionID]),
 			"tenantID":           string(b.Seed.Secret.Data[TenantID]),
 			"region":             b.Seed.Info.Spec.Cloud.Region,
-			"storageAccountName": fmt.Sprintf("bkp%s", shootUIDSha[:15]),
-			"resourceGroupName":  fmt.Sprintf("%s-backup-%s", b.Shoot.SeedNamespace, shootUIDSha[:15]),
+			"storageAccountName": fmt.Sprintf("bkp%s", backupSHA[:15]),
+			"resourceGroupName":  fmt.Sprintf("%s-%s", common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), backupSHA[:5]),
 		},
-		"clusterName": b.Shoot.SeedNamespace,
+		"clusterName": b.BackupInfrastructure.Name,
 	}
 }
 

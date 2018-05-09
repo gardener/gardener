@@ -101,7 +101,7 @@ func (t *Terraformer) prepare() (int, error) {
 	if err := t.cleanupJob(jobPodList); err != nil {
 		return -1, err
 	}
-	if err := t.waitForCleanEnvironment(); err != nil {
+	if err := t.WaitForCleanEnvironment(); err != nil {
 		return -1, err
 	}
 	return numberOfExistingResources, nil

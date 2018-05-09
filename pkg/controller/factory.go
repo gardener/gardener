@@ -21,7 +21,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	backupinfrastructurecontroller "github.com/gardener/gardener/pkg/controller/backup"
+	backupinfrastructurecontroller "github.com/gardener/gardener/pkg/controller/backupinfrastructure"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controller/cloudprofile"
 	quotacontroller "github.com/gardener/gardener/pkg/controller/quota"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controller/secretbinding"

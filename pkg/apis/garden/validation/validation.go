@@ -785,20 +785,14 @@ func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, f
 	if backup == nil {
 		return allErrs
 	}
-	if backup.Schedule != nil {
-		if _, err := cron.ParseStandard(*backup.Schedule); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), *backup.Schedule, "schedule must be in standard cron format"))
-		}
+	if _, err := cron.ParseStandard(backup.Schedule); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), backup.Schedule, "schedule must be in standard cron format"))
 	}
-	if backup.Maximum != nil {
-		if *backup.Maximum <= 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), *backup.Maximum, "maximum number must be greater than zero"))
-		}
+	if backup.Maximum <= 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), backup.Maximum, "maximum number must be greater than zero"))
 	}
-	if backup.GracePeriod != nil {
-		if *backup.GracePeriod <= -1 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("gracePeriod"), *backup.GracePeriod, "gracePeriod  must be greater than or equal to zero"))
-		}
+	if backup.DeletionGracePeriodDays != nil && *backup.DeletionGracePeriodDays <= -1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("deletionGracePeriodDays"), *backup.DeletionGracePeriodDays, "deletionGracePeriodDays must be greater than or equal to zero"))
 	}
 	return allErrs
 }
@@ -1355,10 +1349,8 @@ func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fld
 	if len(spec.Seed) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seed"), spec.Seed, "seed name must not be empty"))
 	}
-	if spec.GracePeriod != nil {
-		if *spec.GracePeriod <= -1 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("gracePeriod"), *spec.GracePeriod, "gracePeriod  must be greater than or equal to zero"))
-		}
+	if spec.DeletionGracePeriodDays != nil && *spec.DeletionGracePeriodDays <= -1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("deletionGracePeriodDays"), *spec.DeletionGracePeriodDays, "deletionGracePeriodDays must be greater than or equal to zero"))
 	}
 	return allErrs
 }

@@ -26,25 +26,23 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
 	var (
-		defaultETCDBackupSchedule              = DefaultETCDBackupSchedule
-		defaultETCDBackupMaximum               = DefaultETCDBackupMaximum
-		defaultBackupInfrastructureGracePeriod = DefaultBackupInfrastructureGracePeriod
+		defaultBackupInfrastructureDeletionGracePeriodDays = DefaultBackupInfrastructureDeletionGracePeriodDays
 	)
 	if obj.Spec.Backup == nil {
 		obj.Spec.Backup = &Backup{
-			Schedule:    &defaultETCDBackupSchedule,
-			Maximum:     &defaultETCDBackupMaximum,
-			GracePeriod: &defaultBackupInfrastructureGracePeriod,
+			Schedule:                DefaultETCDBackupSchedule,
+			Maximum:                 DefaultETCDBackupMaximum,
+			DeletionGracePeriodDays: &defaultBackupInfrastructureDeletionGracePeriodDays,
 		}
 	}
-	if obj.Spec.Backup.Schedule == nil || len(*obj.Spec.Backup.Schedule) == 0 {
-		obj.Spec.Backup.Schedule = &defaultETCDBackupSchedule
+	if len(obj.Spec.Backup.Schedule) == 0 {
+		obj.Spec.Backup.Schedule = DefaultETCDBackupSchedule
 	}
-	if obj.Spec.Backup.Maximum == nil || *obj.Spec.Backup.Maximum <= 0 {
-		obj.Spec.Backup.Maximum = &defaultETCDBackupMaximum
+	if obj.Spec.Backup.Maximum <= 0 {
+		obj.Spec.Backup.Maximum = DefaultETCDBackupMaximum
 	}
-	if obj.Spec.Backup.GracePeriod == nil || *obj.Spec.Backup.GracePeriod < 0 {
-		obj.Spec.Backup.GracePeriod = &defaultBackupInfrastructureGracePeriod
+	if obj.Spec.Backup.DeletionGracePeriodDays == nil || *obj.Spec.Backup.DeletionGracePeriodDays < 0 {
+		obj.Spec.Backup.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
 	}
 
 	var (
@@ -172,7 +170,6 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 	if len(obj.SecretRef.Namespace) == 0 {
 		obj.SecretRef.Namespace = obj.Namespace
 	}
-
 	for i, quota := range obj.Quotas {
 		if len(quota.Namespace) == 0 {
 			obj.Quotas[i].Namespace = obj.Namespace
@@ -182,8 +179,8 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 
 // SetDefaults_BackupInfrastructure sets default values for BackupInfrastructure objects.
 func SetDefaults_BackupInfrastructure(obj *BackupInfrastructure) {
-	var defaultBackupInfrastructureGracePeriod = DefaultBackupInfrastructureGracePeriod
-	if obj.Spec.GracePeriod == nil || *obj.Spec.GracePeriod < 0 {
-		obj.Spec.GracePeriod = &defaultBackupInfrastructureGracePeriod
+	var defaultBackupInfrastructureDeletionGracePeriodDays = DefaultBackupInfrastructureDeletionGracePeriodDays
+	if obj.Spec.DeletionGracePeriodDays == nil || *obj.Spec.DeletionGracePeriodDays < 0 {
+		obj.Spec.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
 	}
 }

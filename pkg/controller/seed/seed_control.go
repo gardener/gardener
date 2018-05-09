@@ -155,7 +155,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		}
 
 		if len(associatedShoots) == 0 && len(associatedBackupInfrastructures) == 0 {
-			seedLogger.Info("No Shoots are referencing the Seed. Deletion accepted.")
+			seedLogger.Info("No Shoots or BackupInfrastructures are referencing the Seed. Deletion accepted.")
 
 			// Remove finalizer from referenced secret
 			secret, err := c.secretLister.Secrets(seed.Spec.SecretRef.Namespace).Get(seed.Spec.SecretRef.Name)
@@ -187,7 +187,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			seedLogger.Infof("Shoots: %v", associatedShoots)
 		}
 		if len(associatedBackupInfrastructures) != 0 {
-			seedLogger.Infof("BackupInfrastructure: %v", associatedBackupInfrastructures)
+			seedLogger.Infof("BackupInfrastructures: %v", associatedBackupInfrastructures)
 		}
 		return errors.New("Seed still has references")
 	}

@@ -101,15 +101,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		durationVar := metav1.Duration{Duration: 15 * time.Second}
 		obj.Controllers.Shoot.RetrySyncPeriod = &durationVar
 	}
-
-	if obj.Controllers.BackupInfrastructure.RespectSyncPeriodOverwrite == nil {
-		falseVar := false
-		obj.Controllers.BackupInfrastructure.RespectSyncPeriodOverwrite = &falseVar
-	}
-	if obj.Controllers.BackupInfrastructure.RetrySyncPeriod == nil {
-		durationVar := metav1.Duration{Duration: 15 * time.Second}
-		obj.Controllers.BackupInfrastructure.RetrySyncPeriod = &durationVar
-	}
 }
 
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.

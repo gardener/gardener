@@ -75,15 +75,10 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	mountPath := "/root/.gcp/"
 	bucketName := "bucketName"
-	image := ""
-	o := b.Operation
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
-	backupInfrastructureName := common.GenerateBackupInfrastructureName(o.Shoot.Info.Name, o.Shoot.Info.Status.UID)
+	backupInfrastructureName := common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
 	backupNamespace := common.GenerateBackupNamespaceName(backupInfrastructureName)
 	stateVariables, err := terraformer.
-		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, image).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector).
 		GetStateOutputVariables(bucketName)
 	if err != nil {
 		return nil, nil, err

@@ -115,13 +115,8 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 func (b *AWSBotanist) DeployBackupInfrastructure() error {
-	image := ""
-	o := b.Operation
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
 	return terraformer.
-		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("aws-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -129,13 +124,8 @@ func (b *AWSBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AWSBotanist) DestroyBackupInfrastructure() error {
-	image := ""
-	o := b.Operation
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
 	return terraformer.
-		New(o.Logger, o.K8sSeedClient, common.TerraformerPurposeBackup, o.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name), image).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

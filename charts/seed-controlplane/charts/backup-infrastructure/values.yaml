@@ -1,4 +1,3 @@
-role: for-test
 name: "example-backup"
 seed: "example-seed"
-gracePeriod: 30
+deletionGracePeriodDays: 30

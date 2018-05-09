@@ -132,8 +132,11 @@ func (c *Client) Apply(m []byte) error {
 				// We do not want to overwrite a ServiceAccount's `.secrets[]` list or `.imagePullSecrets[]`.
 				newObj.Object["secrets"] = oldObj.Object["secrets"]
 				newObj.Object["imagePullSecrets"] = oldObj.Object["imagePullSecrets"]
+			case "BackupInfrastructure":
+				// We do not want to overwrite a Finalizers.
+				// This should be made generic.
+				newObj.Object["metadata"].(map[string]interface{})["finalizers"] = oldObj.Object["metadata"].(map[string]interface{})["finalizers"]
 			}
-
 			manifest, e = json.Marshal(newObj.UnstructuredContent())
 			if e != nil {
 				return e

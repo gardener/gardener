@@ -40,7 +40,7 @@ spec:
   backup:
     schedule: "*/5 * * * *"
     maximum: 7
-    gracePeriod: 30
+    deletionGracePeriodDays: 30
   addons:
     kube2iam:
       enabled: true

@@ -925,14 +925,12 @@ type Kube2IAMRole struct {
 // Backup holds information about the backup schedule and maximum.
 type Backup struct {
 	// Schedule defines the cron schedule according to which a backup is taken from etcd.
-	// +optional
-	Schedule *string
+	Schedule string
 	// Maximum indicates how many backups should be kept at maximum.
+	Maximum int
+	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
 	// +optional
-	Maximum *int
-	// GracePeriod holds the time to leave in number of days the Backup Infrastructure after shoot is deleted.
-	// +optional
-	GracePeriod *int
+	DeletionGracePeriodDays *int
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
@@ -1108,8 +1106,8 @@ const (
 	DefaultETCDBackupSchedule = "*/5 * * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
 	DefaultETCDBackupMaximum = 7
-	// DefaultBackupInfrastructureGracePeriod is a constant for the default number of days the Backup Infrastructure after shoot is deleted.
-	DefaultBackupInfrastructureGracePeriod = 30
+	// DefaultBackupInfrastructureDeletionGracePeriodDays is a constant for the default number of days the Backup Infrastructure should be kept after shoot is deleted.
+	DefaultBackupInfrastructureDeletionGracePeriodDays = 30
 )
 
 ////////////////////////
@@ -1193,18 +1191,18 @@ const (
 )
 
 const (
-	// ShootEventReconciling indicates that the a Reconcile operation started.
-	ShootEventReconciling = "ReconcilingShoot"
-	// ShootEventReconciled indicates that the a Reconcile operation was successful.
-	ShootEventReconciled = "ReconciledShoot"
-	// ShootEventReconcileError indicates that the a Reconcile operation failed.
-	ShootEventReconcileError = "ReconcileError"
-	// ShootEventDeleting indicates that the a Delete operation started.
-	ShootEventDeleting = "DeletingShoot"
-	// ShootEventDeleted indicates that the a Delete operation was successful.
-	ShootEventDeleted = "DeletedShoot"
-	// ShootEventDeleteError indicates that the a Delete operation failed.
-	ShootEventDeleteError = "DeleteError"
+	// EventReconciling indicates that the a Reconcile operation started.
+	EventReconciling = "Reconciling"
+	// EventReconciled indicates that the a Reconcile operation was successful.
+	EventReconciled = "Reconciled"
+	// EventReconcileError indicates that the a Reconcile operation failed.
+	EventReconcileError = "ReconcileError"
+	// EventDeleting indicates that the a Delete operation started.
+	EventDeleting = "Deleting"
+	// EventDeleted indicates that the a Delete operation was successful.
+	EventDeleted = "Deleted"
+	// EventDeleteError indicates that the a Delete operation failed.
+	EventDeleteError = "DeleteError"
 	// ShootEventMaintenanceDone indicates that a maintenance operation has been performed.
 	ShootEventMaintenanceDone = "MaintenanceDone"
 	// ShootEventMaintenanceError indicates that a maintenance operation has failed.
@@ -1257,11 +1255,11 @@ const (
 ////////////////////////////////////////////////////
 //              Backup Infrastructure             //
 ////////////////////////////////////////////////////
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.seed,STATUS:.status.phase
 
 // BackupInfrastructure holds details about backup infrastructure
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.seed,STATUS:.status.lastOperation.state
 type BackupInfrastructure struct {
 	metav1.TypeMeta
 	// Standard object metadata.
@@ -1275,9 +1273,8 @@ type BackupInfrastructure struct {
 	Status BackupInfrastructureStatus
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
 // BackupInfrastructureList is a list of BackupInfrastructure objects.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type BackupInfrastructureList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
@@ -1291,18 +1288,16 @@ type BackupInfrastructureList struct {
 type BackupInfrastructureSpec struct {
 	// Seed is the name of a Seed object.
 	Seed string
-	// GracePeriod holds the time to leave in number of days the Backup Infrastructure after deletion timestamp is set.
+	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
 	// +optional
-	GracePeriod *int
+	DeletionGracePeriodDays *int
 }
 
 // BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.
 type BackupInfrastructureStatus struct {
-	// Gardener holds information about the Gardener which last acted on the Backup Infrastructure.
-	Gardener Gardener
-	// Phase holds information about the last operation on the Backup Infrastructure.
+	// LastOperation holds information about the last operation on the BackupInfrastructure.
 	// +optional
-	Phase *BackupInfrastructurePhase
+	LastOperation *LastOperation
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
 	LastError *LastError
@@ -1310,41 +1305,4 @@ type BackupInfrastructureStatus struct {
 	// BackupInfrastructure's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration *int64
-	// RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation
-	// must be retried until we give up).
-	// +optional
-	RetryCycleStartTime *metav1.Time
 }
-
-// BackupInfrastructurePhase holds the state of operation on backup infrastructure.
-type BackupInfrastructurePhase string
-
-const (
-	// PhaseReconciling indicates that reconciliation operation is going on
-	PhaseReconciling BackupInfrastructurePhase = "Reconciling"
-	// PhaseReconciled indicates indicates that an operation has completed successfully.
-	PhaseReconciled BackupInfrastructurePhase = "Reconciled"
-	// PhaseError indicates that an operation is completed with errors and will be retried.
-	PhaseError BackupInfrastructurePhase = "Error"
-	// PhaseFailed indicates that an operation is completed with errors and won't be retried.
-	PhaseFailed BackupInfrastructurePhase = "Failed"
-	// PhaseDeleting indicates that deletion operation is going on.
-	PhaseDeleting BackupInfrastructurePhase = "Deleting"
-	// PhaseDeleted indicates that deletion operation is successful.
-	PhaseDeleted BackupInfrastructurePhase = "Deleted"
-)
-
-const (
-	// BackupInfrastructureEventReconciling indicates that the a Reconcile operation started.
-	BackupInfrastructureEventReconciling = "ReconcilingBackupInfrastructure"
-	// BackupInfrastructureEventReconciled indicates that the a Reconcile operation was successful.
-	BackupInfrastructureEventReconciled = "ReconciledBackupInfrastructure"
-	// BackupInfrastructureEventReconcileError indicates that the a Reconcile operation failed.
-	BackupInfrastructureEventReconcileError = "ReconcileError"
-	// BackupInfrastructureEventDeleting indicates that the a Delete operation started.
-	BackupInfrastructureEventDeleting = "DeletingBackupInfrastructure"
-	// BackupInfrastructureEventDeleted indicates that the a Delete operation was successful.
-	BackupInfrastructureEventDeleted = "DeletedBackupInfrastructure"
-	// BackupInfrastructureEventDeleteError indicates that the a Delete operation failed.
-	BackupInfrastructureEventDeleteError = "DeleteError"
-)

@@ -5,4 +5,4 @@ metadata:
   namespace: {{ $.Release.Namespace }}
 spec:
   seed: {{ .Values.seed }}
-  gracePeriod: {{ .Values.gracePeriod }}
+  deletionGracePeriodDays: {{ .Values.deletionGracePeriodDays }}

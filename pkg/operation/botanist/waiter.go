@@ -80,16 +80,16 @@ func (b *Botanist) WaitUntilBackupInfrastructureReconciled() error {
 		backupInfrastructures, err := b.K8sGardenClient.GardenClientset().
 			GardenV1beta1().
 			BackupInfrastructures(b.Shoot.Info.Namespace).
-			Get(common.GenerateBackupInfrastructureName(b.Shoot.Info.Name, b.Shoot.Info.Status.UID), metav1.GetOptions{})
+			Get(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
-		if backupInfrastructures.Status.Phase != nil {
-			if *backupInfrastructures.Status.Phase == gardenv1beta1.PhaseReconciled {
+		if backupInfrastructures.Status.LastOperation != nil {
+			if backupInfrastructures.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded {
 				b.Logger.Info("Backup infrastructure has been successfully reconciled.")
 				return true, nil
 			}
-			if *backupInfrastructures.Status.Phase == gardenv1beta1.PhaseError || *backupInfrastructures.Status.Phase == gardenv1beta1.PhaseFailed {
+			if backupInfrastructures.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateError {
 				b.Logger.Info("Backup infrastructure has been reconciled with error.")
 				return true, errors.New(backupInfrastructures.Status.LastError.Description)
 			}
@@ -130,17 +130,27 @@ func (b *Botanist) WaitUntilVPNConnectionExists() error {
 	})
 }
 
-// WaitUntilNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
-func (b *Botanist) WaitUntilNamespaceDeleted() error {
+// WaitUntilSeedNamespaceDeleted waits until the namespace of the Shoot cluster within the Seed cluster is deleted.
+func (b *Botanist) WaitUntilSeedNamespaceDeleted() error {
+	return b.waitUntilNamespaceDeleted(b.Shoot.SeedNamespace)
+}
+
+// WaitUntilBackupNamespaceDeleted waits until the namespace for the backup of Shoot cluster within the Seed cluster is deleted.
+func (b *Botanist) WaitUntilBackupNamespaceDeleted() error {
+	return b.waitUntilNamespaceDeleted(common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name))
+}
+
+// WaitUntilNamespaceDeleted waits until the <namespace> within the Seed cluster is deleted.
+func (b *Botanist) waitUntilNamespaceDeleted(namespace string) error {
 	return wait.PollImmediate(5*time.Second, 900*time.Second, func() (bool, error) {
-		_, err := b.K8sSeedClient.GetNamespace(b.Shoot.SeedNamespace)
+		_, err := b.K8sSeedClient.GetNamespace(namespace)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
 			return false, err
 		}
-		b.Logger.Info("Waiting until the Shoot namespace has been cleaned up and deleted in the Seed cluster...")
+		b.Logger.Info("Waiting until the namespace has been cleaned up and deleted in the Seed cluster...")
 		return false, nil
 	})
 }

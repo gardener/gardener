@@ -72,11 +72,7 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 
 func autoConvert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentconfig_BackupInfrastructureControllerConfiguration(in *BackupInfrastructureControllerConfiguration, out *componentconfig.BackupInfrastructureControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
-	out.RetryDuration = in.RetryDuration
-	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
-	out.WatchNamespace = (*string)(unsafe.Pointer(in.WatchNamespace))
 	return nil
 }
 
@@ -87,11 +83,7 @@ func Convert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentco
 
 func autoConvert_componentconfig_BackupInfrastructureControllerConfiguration_To_v1alpha1_BackupInfrastructureControllerConfiguration(in *componentconfig.BackupInfrastructureControllerConfiguration, out *BackupInfrastructureControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
-	out.RetryDuration = in.RetryDuration
-	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
-	out.WatchNamespace = (*string)(unsafe.Pointer(in.WatchNamespace))
 	return nil
 }
 

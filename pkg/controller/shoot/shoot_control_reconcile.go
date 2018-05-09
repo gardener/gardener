@@ -63,7 +63,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		_                                       = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady)
 		_                                       = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
 		deployInfrastructure                    = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
-		deployBackupNamespace                   = f.AddTaskConditional(botanist.DeployBackupNamespace, defaultRetry, isCloud, deployNamespace)                   //TODO Remove it once we have all shoots as per new architecture
+		deployBackupNamespace                   = f.AddTaskConditional(botanist.DeployBackupNamespaceFromShoot, defaultRetry, isCloud, deployNamespace)          //TODO Remove it once we have all shoots as per new architecture
 		moveTerraformResources                  = f.AddTaskConditional(botanist.MoveTerraformResources, 0, isCloud, deployBackupNamespace)                       //TODO Remove it once we have all shoots as per new architecture
 		deployBackupInfrastructure              = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud, moveTerraformResources)                  //TODO should we remove dependency on namespaces
 		waitUntilBackupInfrastructureReconciled = f.AddTaskConditional(botanist.WaitUntilBackupInfrastructureReconciled, 0, isCloud, deployBackupInfrastructure) //TODO should we remove dependency on namespaces

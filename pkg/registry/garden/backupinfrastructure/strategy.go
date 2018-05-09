@@ -16,7 +16,6 @@ package backupinfrastructure
 
 import (
 	"fmt"
-	"strings"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
-	"github.com/gardener/gardener/pkg/operation/common"
 	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
@@ -52,10 +50,11 @@ func (backupInfrastructureStrategy) PrepareForCreate(ctx genericapirequest.Conte
 
 	finalizers := sets.NewString(backupInfrastructure.Finalizers...)
 	if !finalizers.Has(gardenv1beta1.GardenerName) {
+		fmt.Printf("Inside if finalizers :%v\n", finalizers)
 		finalizers.Insert(gardenv1beta1.GardenerName)
 	}
 	backupInfrastructure.Finalizers = finalizers.UnsortedList()
-	fmt.Println("finalizers" + strings.Join(backupInfrastructure.Finalizers, ","))
+	fmt.Printf("Ifnalizers :%v\n", finalizers)
 }
 
 func (backupInfrastructureStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
@@ -66,10 +65,6 @@ func (backupInfrastructureStrategy) PrepareForUpdate(ctx genericapirequest.Conte
 	if mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure) {
 		newBackupInfrastructure.Generation = oldBackupInfrastructure.Generation + 1
 	}
-
-	if newBackupInfrastructure.Annotations != nil {
-		delete(newBackupInfrastructure.Annotations, common.ShootOperation)
-	}
 }
 
 func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *garden.BackupInfrastructure) bool {
@@ -77,20 +72,14 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 	if !apiequality.Semantic.DeepEqual(oldBackupInfrastructure.Spec, newBackupInfrastructure.Spec) {
 		return true
 	}
-	/*
-		// The deletion timestamp and the special confirmation annotation was set.
-		if !common.CheckConfirmationDeletionTimestampValid(oldBackupInfrastructure.ObjectMeta) && common.CheckConfirmationDeletionTimestampValid(newBackupInfrastructure.ObjectMeta) {
-			return true
-		}
-	*/
-	// The backupInfrastructure state was failed but the retry annotation was set.
-	phase := newBackupInfrastructure.Status.Phase
-	if phase != nil && *phase == garden.PhaseFailed {
-		if val, ok := newBackupInfrastructure.Annotations[common.ShootOperation]; ok && val == "retry" {
-			return true
-		}
+
+	// The deletion timestamp was set.
+	if oldBackupInfrastructure.ObjectMeta.DeletionTimestamp == nil && newBackupInfrastructure.ObjectMeta.DeletionTimestamp != nil {
+		return true
 	}
 
+	// Unlike shoot, in favour of keeping backupInfrastrcture controller very lightweight, we agreed to not have failed state for backupInfrastructure and hence no need
+	// of handling it here. Hence it won't have any annotation like "operation=retry"
 	return false
 }
 

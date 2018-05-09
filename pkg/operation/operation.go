@@ -163,6 +163,18 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 	}
 }
 
+// ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
+// by the current progress of the Flow execution.
+func (o *Operation) ReportBackupInfrastructureProgress(progress int, currentFunctions string) {
+	o.BackupInfrastructure.Status.LastOperation.Description = "Currently executing " + currentFunctions
+	o.BackupInfrastructure.Status.LastOperation.Progress = progress
+	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()
+
+	if newBackupInfrastructure, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(o.BackupInfrastructure.Namespace).UpdateStatus(o.BackupInfrastructure); err == nil {
+		o.BackupInfrastructure = newBackupInfrastructure
+	}
+}
+
 // InjectImages injects images from the image vector into the provided <values> map.
 func (o *Operation) InjectImages(values map[string]interface{}, version string, imageMap map[string]string) (map[string]interface{}, error) {
 	var (

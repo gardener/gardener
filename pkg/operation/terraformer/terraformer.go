@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,11 +36,7 @@ import (
 // NewFromOperation takes an <o> operation object and initializes the Terraformer, and a
 // string <purpose> and returns an initialized Terraformer.
 func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
-	image := ""
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
-	return New(o.Logger, o.K8sSeedClient, purpose, o.Shoot.Info.Name, o.Shoot.SeedNamespace, image)
+	return New(o.Logger, o.K8sSeedClient, purpose, o.Shoot.Info.Name, o.Shoot.SeedNamespace, o.ImageVector)
 }
 
 // New takes a <logger>, a <k8sClient>, a string <purpose>, which describes for what the
@@ -47,11 +44,15 @@ func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
 // <image> name for the to-be-used Docker image. It returns a Terraformer struct with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
-func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace, image string) *Terraformer {
+func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace string, imageVector imagevector.ImageVector) *Terraformer {
 	var (
 		prefix    = fmt.Sprintf("%s.%s", name, purpose)
 		podSuffix = utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5]
+		image     string
 	)
+	if img, _ := imageVector.FindImage("terraformer", k8sClient.Version()); img != nil {
+		image = img.String()
+	}
 
 	return &Terraformer{
 		logger:        logger,

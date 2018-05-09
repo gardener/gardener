@@ -176,25 +176,10 @@ type ShootQuotaControllerConfiguration struct {
 // BackupInfrastructureControllerConfiguration defines the configuration of the BackupInfrastructure
 // controller.
 type BackupInfrastructureControllerConfiguration struct {
-	// ConcurrentSyncs is the number of workers used for the controller to work on
-	// events.
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// RespectSyncPeriodOverwrite determines whether a sync period overwrite of a
-	// BackupInfrastructure (via annotation) is respected or not. Defaults to false.
-	// +optional
-	RespectSyncPeriodOverwrite *bool `json:"respectSyncPeriodOverwrite,omitempty"`
-	// RetryDuration is the maximum duration how often a reconciliation will be retried
-	// in case of errors.
-	RetryDuration metav1.Duration `json:"retryDuration"`
-	// RetrySyncPeriod is the duration how fast BackupInfrastructure with an errornous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	// +optional
-	RetrySyncPeriod *metav1.Duration `json:"retrySyncPeriod,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
-	// WatchNamespace defines the namespace which should be watched by the controller.
-	// +optional
-	WatchNamespace *string `json:"watchNamespace,omitempty"`
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

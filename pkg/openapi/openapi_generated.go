@@ -880,9 +880,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int32",
 							},
 						},
-						"gracePeriod": {
+						"deletionGracePeriodDays": {
 							SchemaProps: spec.SchemaProps{
-								Description: "GracePeriod holds the time to leave in number of days the Backup Infrastructure after shoot is deleted.",
+								Description: "DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
@@ -929,6 +929,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupInfrastructureStatus"),
 							},
 						},
+					},
+				},
+				VendorExtensible: spec.VendorExtensible{
+					Extensions: spec.Extensions{
+						"x-kubernetes-print-columns": "custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.seed,STATUS:.status.lastOperation.state",
 					},
 				},
 			},
@@ -992,9 +997,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"gracePeriod": {
+						"deletionGracePeriodDays": {
 							SchemaProps: spec.SchemaProps{
-								Description: "GracePeriod holds the time to leave in number of days the Backup Infrastructure after deletion timestamp is set.",
+								Description: "DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.",
 								Type:        []string{"integer"},
 								Format:      "int32",
 							},
@@ -1010,17 +1015,10 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				SchemaProps: spec.SchemaProps{
 					Description: "BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.",
 					Properties: map[string]spec.Schema{
-						"gardener": {
+						"lastOperation": {
 							SchemaProps: spec.SchemaProps{
-								Description: "Gardener holds information about the Gardener which last acted on the Backup Infrastructure.",
-								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener"),
-							},
-						},
-						"phase": {
-							SchemaProps: spec.SchemaProps{
-								Description: "Phase holds information about the last operation on the Backup Infrastructure.",
-								Type:        []string{"string"},
-								Format:      "",
+								Description: "LastOperation holds information about the last operation on the BackupInfrastructure.",
+								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation"),
 							},
 						},
 						"lastError": {
@@ -1036,18 +1034,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int64",
 							},
 						},
-						"retryCycleStartTime": {
-							SchemaProps: spec.SchemaProps{
-								Description: "RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation must be retried until we give up).",
-								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-							},
-						},
 					},
-					Required: []string{"gardener"},
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud": {
 			Schema: spec.Schema{
