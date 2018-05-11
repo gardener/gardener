@@ -1352,6 +1352,9 @@ func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fld
 	if spec.DeletionGracePeriodDays != nil && *spec.DeletionGracePeriodDays <= -1 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("deletionGracePeriodDays"), *spec.DeletionGracePeriodDays, "deletionGracePeriodDays must be greater than or equal to zero"))
 	}
+	if len(spec.ShootUID) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("shootUID"), spec.Seed, "shootUID must not be empty"))
+	}
 	return allErrs
 }
 
@@ -1365,6 +1368,7 @@ func ValidateBackupInfrastructureSpecUpdate(newSpec, oldSpec *garden.BackupInfra
 	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("seed"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("shootUID"))...)
 	return allErrs
 }
 

@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
+	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -3403,6 +3404,7 @@ var _ = Describe("validation", func() {
 				Spec: garden.BackupInfrastructureSpec{
 					Seed: "aws",
 					DeletionGracePeriodDays: &validDeletionGracePeriodDays,
+					ShootUID:                types.UID(utils.ComputeSHA1Hex([]byte(fmt.Sprintf(fmt.Sprintf("shoot-%s-%s", "garden", "backup-infrastructure"))))),
 				},
 			}
 		})
@@ -3430,8 +3432,9 @@ var _ = Describe("validation", func() {
 		It("should forbid BackupInfrastructure specification with empty or invalid keys", func() {
 			backupInfrastructure.Spec.Seed = ""
 			backupInfrastructure.Spec.DeletionGracePeriodDays = &invalidDeletionGracePeriodDays
+			backupInfrastructure.Spec.ShootUID = ""
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
-			Expect(len(errorList)).To(Equal(2))
+			Expect(len(errorList)).To(Equal(3))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
@@ -3440,17 +3443,26 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.deletionGracePeriodDays"),
 			}))
+			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.shootUID"),
+			}))
 		})
 
 		It("should forbid updating some keys", func() {
 			newBackupInfrastructure := prepareBackupInfrastructureForUpdate(backupInfrastructure)
 			newBackupInfrastructure.Spec.Seed = "another-seed"
+			newBackupInfrastructure.Spec.ShootUID = "another-uid"
 
 			errorList := ValidateBackupInfrastructureUpdate(newBackupInfrastructure, backupInfrastructure)
-			Expect(len(errorList)).To(Equal(1))
+			Expect(len(errorList)).To(Equal(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.shootUID"),
 			}))
 		})
 	})

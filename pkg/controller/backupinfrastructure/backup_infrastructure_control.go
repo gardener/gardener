@@ -115,7 +115,7 @@ func scheduleNextSync(backupInfrastructure *gardenv1beta1.BackupInfrastructure, 
 	)
 
 	if !errorOccurred && backupInfrastructure.DeletionTimestamp != nil {
-		gracePeriodNano := int64(*backupInfrastructure.Spec.DeletionGracePeriodDays) * time.Minute.Nanoseconds() //TODO change it to number of days
+		gracePeriodNano := int64(*backupInfrastructure.Spec.DeletionGracePeriodDays) * time.Hour.Nanoseconds() * 24
 		actualDeletionNano := backupInfrastructure.DeletionTimestamp.UnixNano() + gracePeriodNano
 		if currentTimeNano < actualDeletionNano && currentTimeNano+durationToNextSyncNano > actualDeletionNano {
 			return time.Duration(actualDeletionNano - currentTimeNano)
@@ -182,7 +182,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	// When this happens the controller will remove the finalizer from the BackupInfrastructure so that it can be garbage collected.
 	if backupInfrastructure.DeletionTimestamp != nil {
 
-		gracePeriod := time.Minute * time.Duration(*backupInfrastructure.Spec.DeletionGracePeriodDays) //TODO update it for per day
+		gracePeriod := time.Hour * 24 * time.Duration(*backupInfrastructure.Spec.DeletionGracePeriodDays)
 		if time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
 			c.recorder.Eventf(backupInfrastructure, corev1.EventTypeNormal, gardenv1beta1.EventDeleting, "[%s] Deleting Backup Infrastructure", operationID)
 			if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateProcessing, gardenv1beta1.ShootLastOperationTypeDelete, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {

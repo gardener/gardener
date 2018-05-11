@@ -1,3 +1,4 @@
 name: "example-backup"
 seed: "example-seed"
 deletionGracePeriodDays: 30
+shootUID: "abcde-xyz"

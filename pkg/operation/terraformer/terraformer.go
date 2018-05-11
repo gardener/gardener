@@ -188,7 +188,7 @@ func (t *Terraformer) execute(scriptName string) error {
 	}
 
 	// Retrieve the logs of the Pods belonging to the completed Job
-	jobPodList, err := t.listJobPods()
+	jobPodList, err := t.ListJobPods()
 	if err != nil {
 		t.logger.Errorf("Could not retrieve list of pods belonging to Terraform job '%s': %s", t.jobName, err.Error())
 		jobPodList = &corev1.PodList{}
@@ -206,7 +206,7 @@ func (t *Terraformer) execute(scriptName string) error {
 
 	// Delete the Terraform Job and all its belonging Pods
 	t.logger.Infof("Cleaning up pods created by Terraform job '%s'...", t.jobName)
-	if err := t.cleanupJob(jobPodList); err != nil {
+	if err := t.CleanupJob(jobPodList); err != nil {
 		return err
 	}
 
@@ -228,8 +228,8 @@ func (t *Terraformer) deployTerraformer(values map[string]interface{}) error {
 	return common.ApplyChart(t.k8sClient, t.chartRenderer, filepath.Join(chartPath, chartName), chartName, t.namespace, nil, values)
 }
 
-// listJobPods lists all pods which have a label 'job-name' whose value is equal to the Terraformer job name.
-func (t *Terraformer) listJobPods() (*corev1.PodList, error) {
+// ListJobPods lists all pods which have a label 'job-name' whose value is equal to the Terraformer job name.
+func (t *Terraformer) ListJobPods() (*corev1.PodList, error) {
 	return t.k8sClient.ListPods(t.namespace, metav1.ListOptions{LabelSelector: fmt.Sprintf("job-name=%s", t.jobName)})
 }
 
@@ -259,8 +259,8 @@ func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]st
 	}
 }
 
-// cleanupJob deletes the Terraform Job and all belonging Pods from the Garden cluster.
-func (t *Terraformer) cleanupJob(jobPodList *corev1.PodList) error {
+// CleanupJob deletes the Terraform Job and all belonging Pods from the Garden cluster.
+func (t *Terraformer) CleanupJob(jobPodList *corev1.PodList) error {
 	// Delete the Terraform Job
 	if err := t.k8sClient.DeleteJob(t.namespace, t.jobName); err == nil {
 		t.logger.Infof("Deleted Terraform Job '%s'", t.jobName)

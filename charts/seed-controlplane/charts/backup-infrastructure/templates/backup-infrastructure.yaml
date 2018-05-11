@@ -6,3 +6,4 @@ metadata:
 spec:
   seed: {{ .Values.seed }}
   deletionGracePeriodDays: {{ .Values.deletionGracePeriodDays }}
+  shootUID: {{ .Values.shootUID}}

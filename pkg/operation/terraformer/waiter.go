@@ -36,7 +36,7 @@ func (t *Terraformer) WaitForCleanEnvironment() error {
 			return false, nil
 		}
 
-		jobPodList, err := t.listJobPods()
+		jobPodList, err := t.ListJobPods()
 		if err != nil {
 			return false, err
 		}

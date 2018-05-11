@@ -1270,6 +1270,9 @@ type BackupInfrastructureSpec struct {
 	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
 	// +optional
 	DeletionGracePeriodDays *int `json:"deletionGracePeriodDays,omitempty"`
+	// ShootUID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
+	// It is used to compute unique hashes.
+	ShootUID types.UID `json:"shootUID"`
 }
 
 // BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.

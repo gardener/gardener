@@ -1004,8 +1004,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int32",
 							},
 						},
+						"shootUID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ShootUID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 					},
-					Required: []string{"seed"},
+					Required: []string{"seed", "shootUID"},
 				},
 			},
 			Dependencies: []string{},

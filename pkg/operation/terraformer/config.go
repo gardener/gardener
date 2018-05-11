@@ -94,11 +94,11 @@ func (t *Terraformer) prepare() (int, error) {
 	}
 
 	// Clean up possible existing job/pod artifacts from previous runs
-	jobPodList, err := t.listJobPods()
+	jobPodList, err := t.ListJobPods()
 	if err != nil {
 		return -1, err
 	}
-	if err := t.cleanupJob(jobPodList); err != nil {
+	if err := t.CleanupJob(jobPodList); err != nil {
 		return -1, err
 	}
 	if err := t.WaitForCleanEnvironment(); err != nil {

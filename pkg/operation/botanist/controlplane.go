@@ -121,7 +121,16 @@ func (b *Botanist) DeleteKubeAPIServer() error {
 // MoveTerraformResources copies the terraform resources realted to backup infrastructure creation from  a shoot's main namespace
 // in the Seed cluster to Shoot's backup namespace.
 func (b *Botanist) MoveTerraformResources() error {
-	if err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup).WaitForCleanEnvironment(); err != nil {
+	t := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup)
+	// Clean up possible existing job/pod artifacts from previous runs
+	jobPodList, err := t.ListJobPods()
+	if err != nil {
+		return err
+	}
+	if err := t.CleanupJob(jobPodList); err != nil {
+		return err
+	}
+	if err := t.WaitForCleanEnvironment(); err != nil {
 		return err
 	}
 	backupInfrastructureName := common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
@@ -172,8 +181,9 @@ func (b *Botanist) MoveTerraformResources() error {
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure() error {
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "backup-infrastructure"), "backup-infrastructure", b.Operation.Shoot.Info.Namespace, nil, map[string]interface{}{
-		"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
-		"seed": b.Seed.Info.Name,
+		"name":                    common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
+		"seed":                    b.Seed.Info.Name,
+		"shootUID":                b.Shoot.Info.Status.UID,
 		"deletionGracePeriodDays": *b.Shoot.Info.Spec.Backup.DeletionGracePeriodDays,
 	})
 }

@@ -855,6 +855,7 @@ func Convert_garden_BackupInfrastructureList_To_v1beta1_BackupInfrastructureList
 func autoConvert_v1beta1_BackupInfrastructureSpec_To_garden_BackupInfrastructureSpec(in *BackupInfrastructureSpec, out *garden.BackupInfrastructureSpec, s conversion.Scope) error {
 	out.Seed = in.Seed
 	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
+	out.ShootUID = types.UID(in.ShootUID)
 	return nil
 }
 
@@ -866,6 +867,7 @@ func Convert_v1beta1_BackupInfrastructureSpec_To_garden_BackupInfrastructureSpec
 func autoConvert_garden_BackupInfrastructureSpec_To_v1beta1_BackupInfrastructureSpec(in *garden.BackupInfrastructureSpec, out *BackupInfrastructureSpec, s conversion.Scope) error {
 	out.Seed = in.Seed
 	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
+	out.ShootUID = types.UID(in.ShootUID)
 	return nil
 }
 
