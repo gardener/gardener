@@ -29,6 +29,15 @@ import (
 func (in *BackupInfrastructureControllerConfiguration) DeepCopyInto(out *BackupInfrastructureControllerConfiguration) {
 	*out = *in
 	out.SyncPeriod = in.SyncPeriod
+	if in.DeletionGracePeriodDays != nil {
+		in, out := &in.DeletionGracePeriodDays, &out.DeletionGracePeriodDays
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(int)
+			**out = **in
+		}
+	}
 	return
 }
 
@@ -156,7 +165,7 @@ func (in *ControllerManagerControllerConfiguration) DeepCopyInto(out *Controller
 	out.ShootCare = in.ShootCare
 	out.ShootMaintenance = in.ShootMaintenance
 	out.ShootQuota = in.ShootQuota
-	out.BackupInfrastructure = in.BackupInfrastructure
+	in.BackupInfrastructure.DeepCopyInto(&out.BackupInfrastructure)
 	return
 }
 

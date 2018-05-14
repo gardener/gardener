@@ -880,14 +880,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "int32",
 							},
 						},
-						"deletionGracePeriodDays": {
-							SchemaProps: spec.SchemaProps{
-								Description: "DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
 					},
+					Required: []string{"schedule", "maximum"},
 				},
 			},
 			Dependencies: []string{},
@@ -997,16 +991,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
-						"deletionGracePeriodDays": {
-							SchemaProps: spec.SchemaProps{
-								Description: "DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.",
-								Type:        []string{"integer"},
-								Format:      "int32",
-							},
-						},
 						"shootUID": {
 							SchemaProps: spec.SchemaProps{
-								Description: "ShootUID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
+								Description: "ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.",
 								Type:        []string{"string"},
 								Format:      "",
 							},

@@ -150,6 +150,6 @@ func (b *AWSBotanist) generateTerraformBackupConfig() map[string]interface{} {
 		"bucket": map[string]interface{}{
 			"name": b.Operation.BackupInfrastructure.Name,
 		},
-		"clusterName": b.Operation.BackupInfrastructure.Name, //CHECKDIFF
+		"clusterName": b.Operation.BackupInfrastructure.Name,
 	}
 }

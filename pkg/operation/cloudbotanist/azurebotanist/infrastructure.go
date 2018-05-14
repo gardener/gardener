@@ -141,15 +141,14 @@ func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() []map[stri
 // generateTerraformBackupConfig creates the Terraform variables and the Terraform config (for the backup)
 // and returns them.
 func (b *AzureBotanist) generateTerraformBackupConfig() map[string]interface{} {
-	//TODO: Discuss Backword incompatibility solution
-	backupSHA := utils.ComputeSHA1Hex([]byte(b.BackupInfrastructure.Spec.ShootUID))
+	shootUIDSHA := utils.ComputeSHA1Hex([]byte(b.BackupInfrastructure.Spec.ShootUID))
 	return map[string]interface{}{
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Seed.Secret.Data[SubscriptionID]),
 			"tenantID":           string(b.Seed.Secret.Data[TenantID]),
 			"region":             b.Seed.Info.Spec.Cloud.Region,
-			"storageAccountName": fmt.Sprintf("bkp%s", backupSHA[:15]),
-			"resourceGroupName":  fmt.Sprintf("%s-backup-%s", common.ExtractShootName(b.BackupInfrastructure.Name), backupSHA[:15]),
+			"storageAccountName": fmt.Sprintf("bkp%s", shootUIDSHA[:15]),
+			"resourceGroupName":  fmt.Sprintf("%s-backup-%s", common.ExtractShootName(b.BackupInfrastructure.Name), shootUIDSHA[:15]),
 		},
 		"clusterName": b.BackupInfrastructure.Name,
 	}

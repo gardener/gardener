@@ -1584,11 +1584,9 @@ var _ = Describe("validation", func() {
 			serviceCIDR = garden.CIDR("100.64.0.0/13")
 			invalidCIDR = garden.CIDR("invalid-cidr")
 
-			invalidDeletionGracePeriodDays = -1
-			invalidBackup                  = &garden.Backup{
-				Schedule:                "76 * * * *",
-				Maximum:                 0,
-				DeletionGracePeriodDays: &invalidDeletionGracePeriodDays,
+			invalidBackup = &garden.Backup{
+				Schedule: "76 * * * *",
+				Maximum:  0,
 			}
 			addon = garden.Addon{
 				Enabled: true,
@@ -1887,7 +1885,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(3))
+				Expect(len(errorList)).To(Equal(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.backup.schedule"),
@@ -1895,10 +1893,6 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.backup.maximum"),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.deletionGracePeriodDays"),
 				}))
 			})
 
@@ -2190,7 +2184,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(3))
+				Expect(len(errorList)).To(Equal(2))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.backup.schedule"),
@@ -2198,10 +2192,6 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.backup.maximum"),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.deletionGracePeriodDays"),
 				}))
 			})
 
@@ -3392,8 +3382,6 @@ var _ = Describe("validation", func() {
 
 	Describe("#ValidateBackupInfrastructure", func() {
 		var backupInfrastructure *garden.BackupInfrastructure
-		validDeletionGracePeriodDays := 10
-		invalidDeletionGracePeriodDays := -1
 
 		BeforeEach(func() {
 			backupInfrastructure = &garden.BackupInfrastructure{
@@ -3402,15 +3390,15 @@ var _ = Describe("validation", func() {
 					Namespace: "garden",
 				},
 				Spec: garden.BackupInfrastructureSpec{
-					Seed: "aws",
-					DeletionGracePeriodDays: &validDeletionGracePeriodDays,
-					ShootUID:                types.UID(utils.ComputeSHA1Hex([]byte(fmt.Sprintf(fmt.Sprintf("shoot-%s-%s", "garden", "backup-infrastructure"))))),
+					Seed:     "aws",
+					ShootUID: types.UID(utils.ComputeSHA1Hex([]byte(fmt.Sprintf(fmt.Sprintf("shoot-%s-%s", "garden", "backup-infrastructure"))))),
 				},
 			}
 		})
 
 		It("should not return any errors", func() {
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
+
 			Expect(len(errorList)).To(Equal(0))
 		})
 
@@ -3418,6 +3406,7 @@ var _ = Describe("validation", func() {
 			backupInfrastructure.ObjectMeta = metav1.ObjectMeta{}
 
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
+
 			Expect(len(errorList)).To(Equal(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
@@ -3431,19 +3420,16 @@ var _ = Describe("validation", func() {
 
 		It("should forbid BackupInfrastructure specification with empty or invalid keys", func() {
 			backupInfrastructure.Spec.Seed = ""
-			backupInfrastructure.Spec.DeletionGracePeriodDays = &invalidDeletionGracePeriodDays
 			backupInfrastructure.Spec.ShootUID = ""
+
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
-			Expect(len(errorList)).To(Equal(3))
+
+			Expect(len(errorList)).To(Equal(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
 			}))
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.deletionGracePeriodDays"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.shootUID"),
 			}))
@@ -3455,6 +3441,7 @@ var _ = Describe("validation", func() {
 			newBackupInfrastructure.Spec.ShootUID = "another-uid"
 
 			errorList := ValidateBackupInfrastructureUpdate(newBackupInfrastructure, backupInfrastructure)
+
 			Expect(len(errorList)).To(Equal(2))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),

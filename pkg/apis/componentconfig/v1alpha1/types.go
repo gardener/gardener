@@ -180,6 +180,10 @@ type BackupInfrastructureControllerConfiguration struct {
 	ConcurrentSyncs int `json:"concurrentSyncs"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
+	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately..
+	// +optional
+	DeletionGracePeriodDays *int `json:"deletionGracePeriodDays,omitempty"`
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election
@@ -234,4 +238,8 @@ const (
 
 	// ControllerManagerDefaultLockObjectName is the default lock name for leader election.
 	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
+
+	// DefaultBackupInfrastructureDeletionGracePeriodDays is a constant for the default number of days the Backup Infrastructure should be kept after shoot is deleted.
+	// By default we set this to 0 so that then BackupInfrastructureController will trigger deletion immediately.
+	DefaultBackupInfrastructureDeletionGracePeriodDays = 0
 )

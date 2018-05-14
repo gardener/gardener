@@ -180,6 +180,10 @@ type BackupInfrastructureControllerConfiguration struct {
 	ConcurrentSyncs int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
+	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
+	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately.
+	// +optional
+	DeletionGracePeriodDays *int
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

@@ -904,12 +904,9 @@ type Kube2IAMRole struct {
 // Backup holds information about the backup schedule and maximum.
 type Backup struct {
 	// Schedule defines the cron schedule according to which a backup is taken from etcd.
-	Schedule string `json:"schedule,omitempty"`
+	Schedule string `json:"schedule"`
 	// Maximum indicates how many backups should be kept at maximum.
-	Maximum int `json:"maximum,omitempty"`
-	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
-	// +optional
-	DeletionGracePeriodDays *int `json:"deletionGracePeriodDays,omitempty"`
+	Maximum int `json:"maximum"`
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
@@ -950,7 +947,7 @@ const (
 	CloudProviderAWS CloudProvider = "aws"
 	// CloudProviderAzure is a constant for the Azure cloud provider.
 	CloudProviderAzure CloudProvider = "azure"
-	// CloudProviderGCP is a constan for the GCP cloud provider.
+	// CloudProviderGCP is a constant for the GCP cloud provider.
 	CloudProviderGCP CloudProvider = "gcp"
 	// CloudProviderOpenStack is a constant for the OpenStack cloud provider.
 	CloudProviderOpenStack CloudProvider = "openstack"
@@ -1085,8 +1082,6 @@ const (
 	DefaultETCDBackupSchedule = "*/5 * * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
 	DefaultETCDBackupMaximum = 7
-	// DefaultBackupInfrastructureDeletionGracePeriodDays is a constant for the default number of days the Backup Infrastructure should be kept after shoot is deleted.
-	DefaultBackupInfrastructureDeletionGracePeriodDays = 30
 )
 
 ////////////////////////
@@ -1144,6 +1139,8 @@ const (
 	ShootLastOperationStateError ShootLastOperationState = "Error"
 	// ShootLastOperationStateFailed indicates that an operation is completed with errors and won't be retried.
 	ShootLastOperationStateFailed ShootLastOperationState = "Failed"
+	// ShootLastOperationStatePending indicates that an operation cannot be done now, but will be tried in future.
+	ShootLastOperationStatePending ShootLastOperationState = "Pending"
 )
 
 // LastError indicates the last occurred error for an operation on a Shoot cluster.
@@ -1267,11 +1264,7 @@ type BackupInfrastructureList struct {
 type BackupInfrastructureSpec struct {
 	// Seed is the name of a Seed object.
 	Seed string `json:"seed"`
-	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
-	// +optional
-	DeletionGracePeriodDays *int `json:"deletionGracePeriodDays,omitempty"`
-	// ShootUID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-	// It is used to compute unique hashes.
+	// ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.
 	ShootUID types.UID `json:"shootUID"`
 }
 

@@ -25,14 +25,10 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
-	var (
-		defaultBackupInfrastructureDeletionGracePeriodDays = DefaultBackupInfrastructureDeletionGracePeriodDays
-	)
 	if obj.Spec.Backup == nil {
 		obj.Spec.Backup = &Backup{
-			Schedule:                DefaultETCDBackupSchedule,
-			Maximum:                 DefaultETCDBackupMaximum,
-			DeletionGracePeriodDays: &defaultBackupInfrastructureDeletionGracePeriodDays,
+			Schedule: DefaultETCDBackupSchedule,
+			Maximum:  DefaultETCDBackupMaximum,
 		}
 	}
 	if len(obj.Spec.Backup.Schedule) == 0 {
@@ -40,9 +36,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 	}
 	if obj.Spec.Backup.Maximum <= 0 {
 		obj.Spec.Backup.Maximum = DefaultETCDBackupMaximum
-	}
-	if obj.Spec.Backup.DeletionGracePeriodDays == nil || *obj.Spec.Backup.DeletionGracePeriodDays < 0 {
-		obj.Spec.Backup.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
 	}
 
 	var (
@@ -170,17 +163,10 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 	if len(obj.SecretRef.Namespace) == 0 {
 		obj.SecretRef.Namespace = obj.Namespace
 	}
+
 	for i, quota := range obj.Quotas {
 		if len(quota.Namespace) == 0 {
 			obj.Quotas[i].Namespace = obj.Namespace
 		}
-	}
-}
-
-// SetDefaults_BackupInfrastructure sets default values for BackupInfrastructure objects.
-func SetDefaults_BackupInfrastructure(obj *BackupInfrastructure) {
-	var defaultBackupInfrastructureDeletionGracePeriodDays = DefaultBackupInfrastructureDeletionGracePeriodDays
-	if obj.Spec.DeletionGracePeriodDays == nil || *obj.Spec.DeletionGracePeriodDays < 0 {
-		obj.Spec.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
 	}
 }

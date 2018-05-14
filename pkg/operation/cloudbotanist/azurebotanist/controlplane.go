@@ -90,15 +90,14 @@ func (b *AzureBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	var (
-		storageAccountName = "storageAccountName"
-		storageAccessKey   = "storageAccessKey"
-		containerName      = "containerName"
+		storageAccountName       = "storageAccountName"
+		storageAccessKey         = "storageAccessKey"
+		containerName            = "containerName"
+		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID)
+		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
 	)
-	backupInfrastructureName := common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
-	backupNamespace := common.GenerateBackupNamespaceName(backupInfrastructureName)
-	stateVariables, err := terraformer.
-		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector).
-		GetStateOutputVariables(storageAccountName, storageAccessKey, containerName)
+
+	stateVariables, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector).GetStateOutputVariables(storageAccountName, storageAccessKey, containerName)
 	if err != nil {
 		return nil, nil, err
 	}

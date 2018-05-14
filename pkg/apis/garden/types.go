@@ -928,9 +928,6 @@ type Backup struct {
 	Schedule string
 	// Maximum indicates how many backups should be kept at maximum.
 	Maximum int
-	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
-	// +optional
-	DeletionGracePeriodDays *int
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
@@ -1106,8 +1103,6 @@ const (
 	DefaultETCDBackupSchedule = "*/5 * * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
 	DefaultETCDBackupMaximum = 7
-	// DefaultBackupInfrastructureDeletionGracePeriodDays is a constant for the default number of days the Backup Infrastructure should be kept after shoot is deleted.
-	DefaultBackupInfrastructureDeletionGracePeriodDays = 30
 )
 
 ////////////////////////
@@ -1288,11 +1283,7 @@ type BackupInfrastructureList struct {
 type BackupInfrastructureSpec struct {
 	// Seed is the name of a Seed object.
 	Seed string
-	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
-	// +optional
-	DeletionGracePeriodDays *int
-	// ShootUID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
-	// It is used to compute unique hashes.
+	// ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.
 	ShootUID types.UID
 }
 

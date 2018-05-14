@@ -15,8 +15,6 @@
 package backupinfrastructure
 
 import (
-	"fmt"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -50,11 +48,9 @@ func (backupInfrastructureStrategy) PrepareForCreate(ctx genericapirequest.Conte
 
 	finalizers := sets.NewString(backupInfrastructure.Finalizers...)
 	if !finalizers.Has(gardenv1beta1.GardenerName) {
-		fmt.Printf("Inside if finalizers :%v\n", finalizers)
 		finalizers.Insert(gardenv1beta1.GardenerName)
 	}
 	backupInfrastructure.Finalizers = finalizers.UnsortedList()
-	fmt.Printf("Ifnalizers :%v\n", finalizers)
 }
 
 func (backupInfrastructureStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
@@ -78,7 +74,7 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 		return true
 	}
 
-	// Unlike shoot, in favour of keeping backupInfrastrcture controller very lightweight, we agreed to not have failed state for backupInfrastructure and hence no need
+	// Unlike shoot, in favour of keeping backupInfrastructure controller very lightweight, we agreed to not have failed state for backupInfrastructure and hence no need
 	// of handling it here. Hence it won't have any annotation like "operation=retry"
 	return false
 }

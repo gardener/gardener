@@ -186,18 +186,17 @@ func CheckConfirmationDeletionTimestampValid(objectMeta metav1.ObjectMeta) bool 
 }
 
 // ExtractShootName returns Shoot resource name extracted from provided <backupInfrastructureName>.
-//TODO confirm not needed and
 func ExtractShootName(backupInfrastructureName string) string {
-	tokens := strings.Split(backupInfrastructureName, "-")
-	return strings.Join(tokens[:len(tokens)-1], "-")
+	tokens := strings.Split(backupInfrastructureName, "--")
+	return strings.Join(tokens[:len(tokens)-1], "--")
 }
 
 // GenerateBackupInfrastructureName returns BackupInfrastructure resource name created from provided <seedNamespace> and <shootUID>.
-func GenerateBackupInfrastructureName(seedNamespace string, shootUID types.UID) string {
-	return fmt.Sprintf("%s-%s", seedNamespace, utils.ComputeSHA1Hex([]byte(shootUID))[:5])
+func GenerateBackupInfrastructureName(projectName, shootName string, shootUID types.UID) string {
+	return fmt.Sprintf("shoot--%s--%s--%s", projectName, shootName, utils.ComputeSHA1Hex([]byte(shootUID))[:5])
 }
 
 // GenerateBackupNamespaceName returns Backup namespace name created from provided <backupInfrastructureName>.
 func GenerateBackupNamespaceName(backupInfrastructureName string) string {
-	return fmt.Sprintf("%s-%s", BackupNamespacePrefix, backupInfrastructureName)
+	return fmt.Sprintf("%s--%s", BackupNamespacePrefix, backupInfrastructureName)
 }

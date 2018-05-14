@@ -1,9 +1,0 @@
-apiVersion: garden.sapcloud.io/v1beta1
-kind: BackupInfrastructure
-metadata:
-  name: {{ .Values.name }}
-  namespace: {{ $.Release.Namespace }}
-spec:
-  seed: {{ .Values.seed }}
-  deletionGracePeriodDays: {{ .Values.deletionGracePeriodDays }}
-  shootUID: {{ .Values.shootUID}}

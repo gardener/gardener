@@ -73,6 +73,7 @@ func RegisterConversions(scheme *runtime.Scheme) error {
 func autoConvert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentconfig_BackupInfrastructureControllerConfiguration(in *BackupInfrastructureControllerConfiguration, out *componentconfig.BackupInfrastructureControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.SyncPeriod = in.SyncPeriod
+	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
 	return nil
 }
 
@@ -84,6 +85,7 @@ func Convert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentco
 func autoConvert_componentconfig_BackupInfrastructureControllerConfiguration_To_v1alpha1_BackupInfrastructureControllerConfiguration(in *componentconfig.BackupInfrastructureControllerConfiguration, out *BackupInfrastructureControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.SyncPeriod = in.SyncPeriod
+	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
 	return nil
 }
 

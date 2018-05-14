@@ -791,9 +791,7 @@ func validateBackup(backup *garden.Backup, cloudProvider garden.CloudProvider, f
 	if backup.Maximum <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), backup.Maximum, "maximum number must be greater than zero"))
 	}
-	if backup.DeletionGracePeriodDays != nil && *backup.DeletionGracePeriodDays <= -1 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("deletionGracePeriodDays"), *backup.DeletionGracePeriodDays, "deletionGracePeriodDays must be greater than or equal to zero"))
-	}
+
 	return allErrs
 }
 
@@ -1346,26 +1344,20 @@ func ValidateBackupInfrastructureUpdate(newBackupInfrastructure, oldBackupInfras
 // ValidateBackupInfrastructureSpec validates the specification of a BackupInfrastructure object.
 func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
 	if len(spec.Seed) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("seed"), spec.Seed, "seed name must not be empty"))
-	}
-	if spec.DeletionGracePeriodDays != nil && *spec.DeletionGracePeriodDays <= -1 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("deletionGracePeriodDays"), *spec.DeletionGracePeriodDays, "deletionGracePeriodDays must be greater than or equal to zero"))
 	}
 	if len(spec.ShootUID) == 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("shootUID"), spec.Seed, "shootUID must not be empty"))
 	}
+
 	return allErrs
 }
 
 // ValidateBackupInfrastructureSpecUpdate validates the specification of a BackupInfrastructure object.
 func ValidateBackupInfrastructureSpecUpdate(newSpec, oldSpec *garden.BackupInfrastructureSpec, deletionTimestampSet bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	if deletionTimestampSet && !apiequality.Semantic.DeepEqual(newSpec, oldSpec) {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec, oldSpec, fldPath)...)
-		return allErrs
-	}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("seed"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("shootUID"))...)

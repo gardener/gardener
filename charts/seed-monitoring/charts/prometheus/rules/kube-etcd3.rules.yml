@@ -22,8 +22,8 @@ groups:
       severity: critical
       type: seed
     annotations:
-      description: etc3 cluster {{ $labels.role }} is unavailable or cannot be scrapped
-      summary: etcd3 events cluster down
+      description: etcd3 cluster {{ $labels.role }} is unavailable or cannot be scrapped
+      summary: etcd3 cluster down
 
   # etcd leader alerts
   - alert: KubeEtcd3NoLeader

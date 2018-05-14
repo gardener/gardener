@@ -23,6 +23,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -195,7 +196,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		operationID   = utils.GenerateRandomString(8)
 		shootLogger   = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
 		lastOperation = shoot.Status.LastOperation
-		operationType = computeOperationType(lastOperation)
+		operationType = controllerutils.ComputeOperationType(lastOperation)
 	)
 
 	logger.Logger.Infof("[SHOOT RECONCILE] %s", key)
@@ -247,11 +248,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		}
 		return false, nil
 	}
-	/* TODO This should be part of admission controller: Discuss with Rafael
-	if operation.Seed.Info.DeletionTimestamp != nil && operationType ==gardenv1beta1.ShootLastOperationTypeCreate {
-		return true, errors.New("Could not create")
-	}
-	*/
+
 	// When a Shoot clusters deletion timestamp is not set we need to create/reconcile the cluster.
 	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.EventReconciling, "[%s] Reconciling Shoot cluster state", operationID)
 	if updateErr := c.updateShootStatusReconcileStart(operation, operationType); updateErr != nil {
