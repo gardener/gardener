@@ -90,6 +90,7 @@ func (h *SeedManager) Admit(a admission.Attributes) error {
 
 	// If the Shoot manifest already specifies a desired Seed cluster, then we check whether it is protected or not.
 	// In case it is protected then we only allow Shoot resources to reference it which are part of the Garden namespace.
+	// Also, we don't allow shoot to be created on the seed which is already marked to be deleted.
 	if shoot.Spec.Cloud.Seed != nil {
 		seed, err := h.seedLister.Get(*shoot.Spec.Cloud.Seed)
 		if err != nil {
@@ -98,6 +99,10 @@ func (h *SeedManager) Admit(a admission.Attributes) error {
 
 		if shoot.Namespace != common.GardenNamespace && seed.Spec.Protected != nil && *seed.Spec.Protected {
 			return admission.NewForbidden(a, errors.New("forbidden to use a protected seed"))
+		}
+
+		if a.GetOperation() == admission.Create && seed.DeletionTimestamp != nil {
+			return admission.NewForbidden(a, errors.New("forbidden to use a seed marked to be deleted"))
 		}
 
 		return nil
@@ -113,7 +118,7 @@ func (h *SeedManager) Admit(a admission.Attributes) error {
 	return nil
 }
 
-// determineSeed returns an approriate Seed cluster (or nil).
+// determineSeed returns an appropriate Seed cluster (or nil).
 func determineSeed(shoot *garden.Shoot, lister gardenlisters.SeedLister) (*garden.Seed, error) {
 	list, err := lister.List(labels.Everything())
 	if err != nil {
@@ -122,7 +127,7 @@ func determineSeed(shoot *garden.Shoot, lister gardenlisters.SeedLister) (*garde
 
 	for _, seed := range list {
 		// We return the first matching seed cluster.
-		if seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) {
 			return seed, nil
 		}
 	}
