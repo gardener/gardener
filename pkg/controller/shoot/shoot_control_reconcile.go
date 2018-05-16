@@ -113,6 +113,9 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 	if status.RetryCycleStartTime == nil || o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration {
 		o.Shoot.Info.Status.RetryCycleStartTime = &now
 	}
+	if len(status.TechnicalID) == 0 {
+		o.Shoot.Info.Status.TechnicalID = o.Shoot.SeedNamespace
+	}
 
 	o.Shoot.Info.Status.Conditions = nil
 	o.Shoot.Info.Status.Gardener = *(o.GardenerInfo)

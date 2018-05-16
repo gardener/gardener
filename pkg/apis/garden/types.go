@@ -578,6 +578,9 @@ type ShootStatus struct {
 	// Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
 	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
 	Seed string
+	// TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and
+	// basically everything that is related to this particular Shoot.
+	TechnicalID string
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes.
 	UID types.UID

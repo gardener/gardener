@@ -53,7 +53,7 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 		Info:                  shoot,
 		Secret:                secret,
 		CloudProfile:          cloudProfile,
-		SeedNamespace:         fmt.Sprintf("shoot-%s-%s", projectName, shoot.Name),
+		SeedNamespace:         ComputeTechnicalID(projectName, shoot),
 		InternalClusterDomain: internalDomain,
 		Hibernated:            true,
 	}
@@ -267,4 +267,23 @@ func (s *Shoot) MonocularEnabled() bool {
 // name itself and a hash of the minor Kubernetes version of the Shoot cluster.
 func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
 	return fmt.Sprintf("%s-%s-%s", common.CloudConfigPrefix, workerName, utils.ComputeSHA256Hex([]byte(s.KubernetesMajorMinorVersion))[:5])
+}
+
+// ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
+// namespace and for tagging all the resources created in the infrastructure.
+func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {
+	// Use the stored technical ID in the Shoot's status field if it's there.
+	if len(shoot.Status.TechnicalID) > 0 {
+		return shoot.Status.TechnicalID
+	}
+
+	// Otherwise, existing clusters definitely have set the last operation on the Shoot status.
+	// For backwards compatibility we keep the pattern as it was before we had to change it
+	// (double hyphens).
+	if shoot.Status.LastOperation != nil {
+		return fmt.Sprintf("shoot-%s-%s", projectName, shoot.Name)
+	}
+
+	// New clusters shall be created with the new technical id (double hyphens).
+	return fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)
 }

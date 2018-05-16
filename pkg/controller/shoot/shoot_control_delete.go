@@ -142,6 +142,9 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 	if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardenv1beta1.ShootLastOperationTypeDelete) {
 		o.Shoot.Info.Status.RetryCycleStartTime = &now
 	}
+	if len(status.TechnicalID) == 0 {
+		o.Shoot.Info.Status.TechnicalID = o.Shoot.SeedNamespace
+	}
 
 	o.Shoot.Info.Status.Gardener = *o.GardenerInfo
 	o.Shoot.Info.Status.Conditions = nil

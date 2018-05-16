@@ -3413,6 +3413,13 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Format:      "",
 							},
 						},
+						"technicalID": {
+							SchemaProps: spec.SchemaProps{
+								Description: "TechnicalID is the name that is used for creating the Seed namespace, the infrastructure resources, and basically everything that is related to this particular Shoot.",
+								Type:        []string{"string"},
+								Format:      "",
+							},
+						},
 						"uid": {
 							SchemaProps: spec.SchemaProps{
 								Description: "UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters. It is used to compute unique hashes.",
@@ -3421,7 +3428,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 							},
 						},
 					},
-					Required: []string{"gardener", "uid"},
+					Required: []string{"gardener", "technicalID", "uid"},
 				},
 			},
 			Dependencies: []string{

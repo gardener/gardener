@@ -2518,6 +2518,7 @@ func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out 
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*meta_v1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed
+	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
 	return nil
 }
@@ -2537,6 +2538,7 @@ func autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatu
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*meta_v1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed
+	out.TechnicalID = in.TechnicalID
 	out.UID = types.UID(in.UID)
 	return nil
 }
