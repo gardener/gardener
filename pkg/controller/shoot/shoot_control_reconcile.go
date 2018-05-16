@@ -134,6 +134,7 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 
 func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
 	o.Shoot.Info.Status.RetryCycleStartTime = nil
+	o.Shoot.Info.Status.Seed = o.Seed.Info.Name
 	o.Shoot.Info.Status.LastError = nil
 	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
 		Type:           operationType,

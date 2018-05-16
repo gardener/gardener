@@ -546,14 +546,17 @@ type ShootStatus struct {
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
 	LastError *LastError `json:"lastError,omitempty"`
-	// RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation
-	// must be retried until we give up).
-	// +optional
-	RetryCycleStartTime *metav1.Time `json:"retryCycleStartTime,omitempty"`
 	// ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the
 	// Shoot's generation, which is updated on mutation by the API Server.
 	// +optional
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation
+	// must be retried until we give up).
+	// +optional
+	RetryCycleStartTime *metav1.Time `json:"retryCycleStartTime,omitempty"`
+	// Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written
+	// after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.
+	Seed string `json:"seed,omitempty"`
 	// UID is a unique identifier for the Shoot cluster to avoid portability between Kubernetes clusters.
 	// It is used to compute unique hashes.
 	UID types.UID `json:"uid"`

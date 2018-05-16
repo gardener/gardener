@@ -2924,7 +2924,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"secretRef": {
 							SchemaProps: spec.SchemaProps{
 								Description: "SecretRef is a reference to a secret object in the same or another namespace.",
-								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 							},
 						},
 						"quotas": {
@@ -2945,7 +2945,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"k8s.io/api/core/v1.ObjectReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+				"k8s.io/api/core/v1.ObjectReference", "k8s.io/api/core/v1.SecretReference", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SecretBindingList": {
 			Schema: spec.Schema{
@@ -3163,7 +3163,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 						"secretRef": {
 							SchemaProps: spec.SchemaProps{
 								Description: "SecretRef is a reference to a Secret object containing the Kubeconfig and the cloud provider credentials for the account the Seed cluster has been deployed to.",
-								Ref:         ref("k8s.io/api/core/v1.ObjectReference"),
+								Ref:         ref("k8s.io/api/core/v1.SecretReference"),
 							},
 						},
 						"networks": {
@@ -3191,7 +3191,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 				},
 			},
 			Dependencies: []string{
-				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "k8s.io/api/core/v1.ObjectReference"},
+				"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "k8s.io/api/core/v1.SecretReference"},
 		},
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus": {
 			Schema: spec.Schema{
@@ -3393,17 +3393,24 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 								Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError"),
 							},
 						},
+						"observedGeneration": {
+							SchemaProps: spec.SchemaProps{
+								Description: "ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the Shoot's generation, which is updated on mutation by the API Server.",
+								Type:        []string{"integer"},
+								Format:      "int64",
+							},
+						},
 						"retryCycleStartTime": {
 							SchemaProps: spec.SchemaProps{
 								Description: "RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation must be retried until we give up).",
 								Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 							},
 						},
-						"observedGeneration": {
+						"seed": {
 							SchemaProps: spec.SchemaProps{
-								Description: "ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the Shoot's generation, which is updated on mutation by the API Server.",
-								Type:        []string{"integer"},
-								Format:      "int64",
+								Description: "Seed is the name of the seed cluster that runs the control plane of the Shoot. This value is only written after a successful create/reconcile operation. It will be used when control planes are moved between Seeds.",
+								Type:        []string{"string"},
+								Format:      "",
 							},
 						},
 						"uid": {
