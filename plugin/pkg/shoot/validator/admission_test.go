@@ -131,6 +131,28 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("name/project length checks (w/o project label on namespace", func() {
+			It("should reject Shoot resources with two consecutive hyphens in project name", func() {
+				twoConsecutiveHyphensName := "n--o"
+				namespace.ObjectMeta = metav1.ObjectMeta{
+					Name: twoConsecutiveHyphensName,
+				}
+				shoot.ObjectMeta = metav1.ObjectMeta{
+					Name:      "shoot",
+					Namespace: twoConsecutiveHyphensName,
+				}
+
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+				Expect(err.Error()).To(ContainSubstring("consecutive hyphens"))
+			})
+
 			It("should reject Shoot resources with not fulfilling the length constraints", func() {
 				tooLongName := "too-long-namespace"
 				namespace.ObjectMeta = metav1.ObjectMeta{
@@ -155,6 +177,32 @@ var _ = Describe("validator", func() {
 		})
 
 		Context("name/project length checks (w/ project label on namespace", func() {
+			It("should reject Shoot resources with two consecutive hyphens in project name", func() {
+				namespaceName := "default"
+				twoConsecutiveHyphensName := "n--o"
+				namespace.ObjectMeta = metav1.ObjectMeta{
+					Name: namespaceName,
+					Labels: map[string]string{
+						common.ProjectName: twoConsecutiveHyphensName,
+					},
+				}
+				shoot.ObjectMeta = metav1.ObjectMeta{
+					Name:      "shoot",
+					Namespace: namespaceName,
+				}
+
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+				Expect(err.Error()).To(ContainSubstring("consecutive hyphens"))
+			})
+
 			It("should forbid Shoot resources with not fulfilling the length constraints", func() {
 				shortName := "short"
 				projectName := "too-long-long-long-label"

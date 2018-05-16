@@ -1722,6 +1722,18 @@ var _ = Describe("validation", func() {
 			}
 		})
 
+		It("should forbid shoots containing two consecutive hyphens", func() {
+			shoot.ObjectMeta.Name = "sho--ot"
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("metadata.name"),
+			}))
+		})
+
 		It("should forbid empty Shoot resources", func() {
 			shoot := &garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{},

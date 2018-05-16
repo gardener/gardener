@@ -457,8 +457,8 @@ function execute() {
 
   # Sanity check: the sum of shoot cluster name and watch namespace lengths must not exceed 24 characters, as they
   # are concatenated to DNS entries, which impose a length restriction
-  if [[ $(( ${#shoot_cluster_name} + ${#watch_namespace} )) -gt 23 ]]; then
-    fail "The concatenated length of shoot cluster name and watch namespace exceeds the allowed 23 characters"
+  if [[ $(( ${#shoot_cluster_name} + ${#watch_namespace} )) -gt 21 ]]; then
+    fail "The concatenated length of shoot cluster name and watch namespace exceeds the allowed 21 characters"
   fi
   shoot_dns_name_suffix="${shoot_cluster_name}.${watch_namespace}.${shoot_domain_suffix}"
 
