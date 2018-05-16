@@ -139,7 +139,7 @@ var _ = Describe("quotavalidator", func() {
 
 			shootSpecCloudGCEBase = garden.GCPCloud{
 				Workers: []garden.GCPWorker{
-					garden.GCPWorker{
+					{
 						Worker: garden.Worker{
 							Name:          "test-worker-1",
 							MachineType:   machineTypeName,

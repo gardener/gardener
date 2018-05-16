@@ -2,6 +2,8 @@
 
 package v1beta1
 
+type BackupInfrastructureExpansion interface{}
+
 type CloudProfileExpansion interface{}
 
 type QuotaExpansion interface{}

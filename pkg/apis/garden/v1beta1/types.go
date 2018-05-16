@@ -904,9 +904,14 @@ type Kube2IAMRole struct {
 // Backup holds information about the backup schedule and maximum.
 type Backup struct {
 	// Schedule defines the cron schedule according to which a backup is taken from etcd.
-	Schedule string `json:"schedule"`
+	// +optional
+	Schedule *string `json:"schedule,omitempty"`
 	// Maximum indicates how many backups should be kept at maximum.
-	Maximum int `json:"maximum"`
+	// +optional
+	Maximum *int `json:"maximum,omitempty"`
+	// GracePeriod holds the time to leave in number of days the Backup Infrastructure after shoot is deleted.
+	// +optional
+	GracePeriod *int `json:"gracePeriod,omitempty"`
 }
 
 // DNS holds information about the provider, the hosted zone id and the domain.
@@ -947,7 +952,7 @@ const (
 	CloudProviderAWS CloudProvider = "aws"
 	// CloudProviderAzure is a constant for the Azure cloud provider.
 	CloudProviderAzure CloudProvider = "azure"
-	// CloudProviderGCP is a constant for the GCP cloud provider.
+	// CloudProviderGCP is a constan for the GCP cloud provider.
 	CloudProviderGCP CloudProvider = "gcp"
 	// CloudProviderOpenStack is a constant for the OpenStack cloud provider.
 	CloudProviderOpenStack CloudProvider = "openstack"
@@ -1082,6 +1087,8 @@ const (
 	DefaultETCDBackupSchedule = "*/5 * * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
 	DefaultETCDBackupMaximum = 7
+	// DefaultBackupInfrastructureGracePeriod is a constant for the default number of days the Backup Infrastructure after shoot is deleted.
+	DefaultBackupInfrastructureGracePeriod = 30
 )
 
 ////////////////////////
@@ -1224,4 +1231,99 @@ const (
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
 	// ConditionCheckError is a constant for indicating that a condition could not be checked.
 	ConditionCheckError = "ConditionCheckError"
+)
+
+////////////////////////////////////////////////////
+//              Backup Infrastructure             //
+////////////////////////////////////////////////////
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.seed,STATUS:.status.phase
+
+// BackupInfrastructure holds details about backup infrastructure
+type BackupInfrastructure struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	// Specification of the Backup Infrastructure.
+	// +optional
+	Spec BackupInfrastructureSpec `json:"spec,omitempty"`
+	// Most recently observed status of the Backup Infrastructure.
+	// +optional
+	Status BackupInfrastructureStatus `json:"status,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// BackupInfrastructureList is a list of BackupInfrastructure objects.
+type BackupInfrastructureList struct {
+	metav1.TypeMeta `json:",inline"`
+	// Standard list object metadata.
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+	// Items is the list of BackupInfrastructure.
+	Items []BackupInfrastructure `json:"items"`
+}
+
+// BackupInfrastructureSpec is the specification of a Backup Infrastructure.
+type BackupInfrastructureSpec struct {
+	// Seed is the name of a Seed object.
+	Seed string `json:"seed"`
+	// GracePeriod holds the time to leave in number of days the Backup Infrastructure after deletion timestamp is set.
+	// +optional
+	GracePeriod *int `json:"gracePeriod,omitempty"`
+}
+
+// BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.
+type BackupInfrastructureStatus struct {
+	// Gardener holds information about the Gardener which last acted on the Backup Infrastructure.
+	Gardener Gardener `json:"gardener"`
+	// Phase holds information about the last operation on the Backup Infrastructure.
+	// +optional
+	Phase *BackupInfrastructurePhase `json:"phase,omitempty"`
+	// LastError holds information about the last occurred error during an operation.
+	// +optional
+	LastError *LastError `json:"lastError,omitempty"`
+	// ObservedGeneration is the most recent generation observed for this BackupInfrastructure. It corresponds to the
+	// BackupInfrastructure's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// RetryCycleStartTime is the start time of the last retry cycle (used to determine how often an operation
+	// must be retried until we give up).
+	// +optional
+	RetryCycleStartTime *metav1.Time `json:"retryCycleStartTime,omitempty"`
+}
+
+// BackupInfrastructurePhase holds the state of operation on backup infrastructure.
+type BackupInfrastructurePhase string
+
+const (
+	// PhaseReconciling indicates that reconciliation operation is going on
+	PhaseReconciling BackupInfrastructurePhase = "Reconciling"
+	// PhaseReconciled indicates indicates that an operation has completed successfully.
+	PhaseReconciled BackupInfrastructurePhase = "Reconciled"
+	// PhaseError indicates that an operation is completed with errors and will be retried.
+	PhaseError BackupInfrastructurePhase = "Error"
+	// PhaseFailed indicates that an operation is completed with errors and won't be retried.
+	PhaseFailed BackupInfrastructurePhase = "Failed"
+	// PhaseDeleting indicates that deletion operation is going on.
+	PhaseDeleting BackupInfrastructurePhase = "Deleting"
+	// PhaseDeleted indicates that deletion operation is successful.
+	PhaseDeleted BackupInfrastructurePhase = "Deleted"
+)
+
+const (
+	// BackupInfrastructureEventReconciling indicates that the a Reconcile operation started.
+	BackupInfrastructureEventReconciling = "ReconcilingBackupInfrastructure"
+	// BackupInfrastructureEventReconciled indicates that the a Reconcile operation was successful.
+	BackupInfrastructureEventReconciled = "ReconciledBackupInfrastructure"
+	// BackupInfrastructureEventReconcileError indicates that the a Reconcile operation failed.
+	BackupInfrastructureEventReconcileError = "ReconcileError"
+	// BackupInfrastructureEventDeleting indicates that the a Delete operation started.
+	BackupInfrastructureEventDeleting = "DeletingBackupInfrastructure"
+	// BackupInfrastructureEventDeleted indicates that the a Delete operation was successful.
+	BackupInfrastructureEventDeleted = "DeletedBackupInfrastructure"
+	// BackupInfrastructureEventDeleteError indicates that the a Delete operation failed.
+	BackupInfrastructureEventDeleteError = "DeleteError"
 )

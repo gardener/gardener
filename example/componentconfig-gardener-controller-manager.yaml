@@ -20,6 +20,11 @@ controllers:
   shootQuota:
     concurrentSyncs: 5
     syncPeriod: 60m
+  backupInfrastructure:
+    concurrentSyncs: 20
+    syncPeriod: 10m
+    retryDuration: 1440m
+
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

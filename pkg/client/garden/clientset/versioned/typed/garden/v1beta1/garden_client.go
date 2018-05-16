@@ -11,6 +11,7 @@ import (
 
 type GardenV1beta1Interface interface {
 	RESTClient() rest.Interface
+	BackupInfrastructuresGetter
 	CloudProfilesGetter
 	QuotasGetter
 	SecretBindingsGetter
@@ -21,6 +22,10 @@ type GardenV1beta1Interface interface {
 // GardenV1beta1Client is used to interact with features provided by the garden.sapcloud.io group.
 type GardenV1beta1Client struct {
 	restClient rest.Interface
+}
+
+func (c *GardenV1beta1Client) BackupInfrastructures(namespace string) BackupInfrastructureInterface {
+	return newBackupInfrastructures(c, namespace)
 }
 
 func (c *GardenV1beta1Client) CloudProfiles() CloudProfileInterface {

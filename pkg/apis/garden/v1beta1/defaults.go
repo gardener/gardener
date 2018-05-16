@@ -25,17 +25,26 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
+	var (
+		defaultETCDBackupSchedule              = DefaultETCDBackupSchedule
+		defaultETCDBackupMaximum               = DefaultETCDBackupMaximum
+		defaultBackupInfrastructureGracePeriod = DefaultBackupInfrastructureGracePeriod
+	)
 	if obj.Spec.Backup == nil {
 		obj.Spec.Backup = &Backup{
-			Schedule: DefaultETCDBackupSchedule,
-			Maximum:  DefaultETCDBackupMaximum,
+			Schedule:    &defaultETCDBackupSchedule,
+			Maximum:     &defaultETCDBackupMaximum,
+			GracePeriod: &defaultBackupInfrastructureGracePeriod,
 		}
 	}
-	if len(obj.Spec.Backup.Schedule) == 0 {
-		obj.Spec.Backup.Schedule = DefaultETCDBackupSchedule
+	if obj.Spec.Backup.Schedule == nil || len(*obj.Spec.Backup.Schedule) == 0 {
+		obj.Spec.Backup.Schedule = &defaultETCDBackupSchedule
 	}
-	if obj.Spec.Backup.Maximum == 0 {
-		obj.Spec.Backup.Maximum = DefaultETCDBackupMaximum
+	if obj.Spec.Backup.Maximum == nil || *obj.Spec.Backup.Maximum <= 0 {
+		obj.Spec.Backup.Maximum = &defaultETCDBackupMaximum
+	}
+	if obj.Spec.Backup.GracePeriod == nil || *obj.Spec.Backup.GracePeriod < 0 {
+		obj.Spec.Backup.GracePeriod = &defaultBackupInfrastructureGracePeriod
 	}
 
 	var (

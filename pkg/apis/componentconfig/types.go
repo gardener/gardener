@@ -81,6 +81,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootMaintenance ShootMaintenanceControllerConfiguration
 	// ShootQuota defines the configuration of the ShootQuota controller.
 	ShootQuota ShootQuotaControllerConfiguration
+	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
+	BackupInfrastructure BackupInfrastructureControllerConfiguration
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -169,6 +171,30 @@ type ShootQuotaControllerConfiguration struct {
 	// SyncPeriod is the duration how often the existing resources are reconciled
 	// (how often Shoots referenced Quota is checked).
 	SyncPeriod metav1.Duration
+}
+
+// BackupInfrastructureControllerConfiguration defines the configuration of the BackupInfrastructure
+// controller.
+type BackupInfrastructureControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// RespectSyncPeriodOverwrite determines whether a sync period overwrite of a
+	// BackupInfrastructure (via annotation) is respected or not. Defaults to false.
+	// +optional
+	RespectSyncPeriodOverwrite *bool
+	// RetryDuration is the maximum duration how often a reconciliation will be retried
+	// in case of errors.
+	RetryDuration metav1.Duration
+	// RetrySyncPeriod is the duration how fast BackupInfrastructure with an errornous operation are
+	// re-added to the queue so that the operation can be retried. Defaults to 15s.
+	// +optional
+	RetrySyncPeriod *metav1.Duration
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration
+	// WatchNamespace defines the namespace which should be watched by the controller.
+	// +optional
+	WatchNamespace *string
 }
 
 // LeaderElectionConfiguration defines the configuration of leader election

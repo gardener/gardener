@@ -177,6 +177,7 @@ spec:
   backup:
     schedule: ${value("backup.schedule", "\"*/5 * * * *\"")}
     maximum: ${value("backup.maximum", "7")}
+    gracePeriod: ${value("backup.gracePeriod", "30")}
   % endif
   addons:
   % if cloud == "aws":

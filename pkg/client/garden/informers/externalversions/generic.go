@@ -37,6 +37,8 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=garden.sapcloud.io, Version=v1beta1
+	case v1beta1.SchemeGroupVersion.WithResource("backupinfrastructures"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().V1beta1().BackupInfrastructures().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("cloudprofiles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().V1beta1().CloudProfiles().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("quotas"):

@@ -57,6 +57,7 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&QuotaList{},
 		&Shoot{},
 		&ShootList{},
+		&BackupInfrastructureList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

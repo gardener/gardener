@@ -12,6 +12,10 @@ type FakeGardenV1beta1 struct {
 	*testing.Fake
 }
 
+func (c *FakeGardenV1beta1) BackupInfrastructures(namespace string) v1beta1.BackupInfrastructureInterface {
+	return &FakeBackupInfrastructures{c, namespace}
+}
+
 func (c *FakeGardenV1beta1) CloudProfiles() v1beta1.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }

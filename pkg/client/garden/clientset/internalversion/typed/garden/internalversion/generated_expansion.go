@@ -2,6 +2,8 @@
 
 package internalversion
 
+type BackupInfrastructureExpansion interface{}
+
 type CloudProfileExpansion interface{}
 
 type QuotaExpansion interface{}

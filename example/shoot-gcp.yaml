@@ -37,6 +37,7 @@ spec:
   backup:
     schedule: "*/5 * * * *"
     maximum: 7
+    gracePeriod: 30
   addons:
     heapster:
       enabled: true
