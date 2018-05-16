@@ -58,9 +58,15 @@ spec:
         volumeMounts:
         - name: gardener-controller-manager-config
           mountPath: /etc/gardener-controller-manager
+{{- if .Values.controller.additionalVolumeMounts }}
+{{ toYaml .Values.controller.additionalVolumeMounts | indent 8 }}
+{{- end }}
       terminationGracePeriodSeconds: 3600
       volumes:
       - name: gardener-controller-manager-config
         configMap:
           name: gardener-controller-manager-configmap
+{{- if .Values.controller.additionalVolumes }}
+{{ toYaml .Values.controller.additionalVolumes | indent 6 }}
+{{- end }}
 {{- end}}
