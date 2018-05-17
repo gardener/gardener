@@ -31,6 +31,7 @@ groups:
     labels:
       service: alertmanager
       severity: warning
+      type: seed
     annotations:
       summary: Alertmanager configuration reload has failed
       description: Reloading Alertmanager's configuration has failed for {{ $labels.pod}}.

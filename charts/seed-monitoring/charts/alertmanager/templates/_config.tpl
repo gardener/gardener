@@ -33,19 +33,25 @@ route:
     receiver: email-kubernetes-ops
 
 inhibit_rules:
+# Apply inhibition if the alertname is the same.
 - source_match:
     severity: critical
   target_match:
     severity: warning
-  # Apply inhibition if the alertname is the same.
   equal: ['alertname', 'service']
 - source_match:
     severity: critical
   target_match:
     alertname: PrometheusCantScrape
   equal: ['type', 'job']
-  # Stop warning and critical alerts, when there is a blocker -
-  # no networking, no workers etc.
+# Stop all alerts for type=shoot if no there are VPN problems
+- source_match:
+    service: vpn
+  target_match:
+    type: shoot
+  equal: ['type']
+# Stop warning and critical alerts, when there is a blocker -
+# no networking, no workers etc.
 - source_match:
     severity: blocker
   target_match_re:
