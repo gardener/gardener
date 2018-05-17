@@ -3,11 +3,12 @@ groups:
   rules:
   - alert: NoWorkerNodes
     expr: absent(up{job="kube-kubelet", type="shoot"}) or count(up{job="kube-kubelet", type="shoot"} == 0)
-    for: 4m
+    for: 5m
     labels:
       job: kube-kubelet
       service: kube-kubelet
       severity: blocker
+      type: shoot
     annotations:
       description: No kubelets are available in the shoot cluster, or all Kubelets
         have disappeared from service discovery.
@@ -19,6 +20,7 @@ groups:
       job: kube-kubelet
       service: kube-kubelet
       severity: warning
+      type: shoot
     annotations:
       description: Prometheus could not scrape a {{ $labels.job }} for more than one
         hour
