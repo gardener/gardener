@@ -133,7 +133,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 			quotaFinalizers := sets.NewString(quota.Finalizers...)
 			quotaFinalizers.Delete(gardenv1beta1.GardenerName)
 			quota.Finalizers = quotaFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil {
+			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil && !apierrors.IsNotFound(err) {
 				quotaLogger.Error(err.Error())
 				return err
 			}

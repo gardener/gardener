@@ -150,7 +150,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 			secretBindingFinalizers := sets.NewString(secretBinding.Finalizers...)
 			secretBindingFinalizers.Delete(gardenv1beta1.GardenerName)
 			secretBinding.Finalizers = secretBindingFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil {
+			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil && !apierrors.IsNotFound(err) {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}

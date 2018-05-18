@@ -170,7 +170,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			seedFinalizers := sets.NewString(seed.Finalizers...)
 			seedFinalizers.Delete(gardenv1beta1.GardenerName)
 			seed.Finalizers = seedFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Update(seed); err != nil {
+			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Update(seed); err != nil && !apierrors.IsNotFound(err) {
 				seedLogger.Error(err.Error())
 				return err
 			}
