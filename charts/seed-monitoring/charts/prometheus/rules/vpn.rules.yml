@@ -6,7 +6,7 @@ groups:
     for: 5m
     labels:
       service: vpn
-      severity: blocker
+      severity: critical
       type: shoot
     annotations:
       description: vpn-shoot deployment in Shoot cluster has 0 available pods. VPN won't work.
@@ -16,7 +16,7 @@ groups:
     for: 5m
     labels:
       service: vpn
-      severity: blocker
+      severity: critical
       type: shoot
     annotations:
       description: VPN connection for {{ $labels.pod }} is down. No resources of the Shoot cluster
