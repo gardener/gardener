@@ -19,7 +19,7 @@ groups:
     labels:
       job: kube-apiserver
       service: kube-apiserver
-      severity: blocker
+      severity: critical
       type: seed
     annotations:
       description: Prometheus failed to scrape API server(s), or all API servers have disappeared from service discovery.
