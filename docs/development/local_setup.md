@@ -5,6 +5,7 @@ Conceptionally, the Gardener is designated to run in containers within a Pod ins
 Further details could be found in
 
 1. [principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/)
+1. [Kubernetes Development Guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
 1. [architecture of the Garden](https://github.com/gardener/documentation/wiki/Architecture)
 
 This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kubernetes cluster running on a single node.
