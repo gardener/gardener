@@ -386,6 +386,24 @@ function retrieve_ci_utils_if_absent() {
   pip3 install -r "${ci_utils_dir}/requirements.txt" &> /dev/null
 }
 
+function ensure_proper_helm_version() {
+  echo -e "$(info Ensure proper helm version is installed...)"
+  local version=$(exec_helm "${shoot_cluster_kubeconfig}" version --server --short | grep -oE '(v[0-9]+\.[0-9]+\.[0-9]+)')
+  local url="https://kubernetes-helm.storage.googleapis.com/helm-${version}-linux-amd64.tar.gz"
+  local dest="$own_dir/bin"
+  local download_dest="$dest/download.tar.gz"
+  mkdir -p "$dest"
+
+  # Download the proper helm cli and unpack it
+  wget -q --no-check-certificate --no-cache "$url" -O "$download_dest"
+  tar -xf "$download_dest" -C "$dest"
+  rm -rf "$download_dest"
+
+  local helm_binary=$(readlink -f "$(find "$dest" -name helm)")
+  chmod +x "$helm_binary"
+  helm_binary_path="$helm_binary"
+}
+
 # ------------------
 # | Main Functions |
 # ------------------
@@ -561,10 +579,12 @@ function execute() {
 
   # Check whether we should only test the cluster creation/deletion
   if ! ${cluster_only}; then
+    # Ensure that a helm cli compatible tiller version is installed
+    ensure_proper_helm_version
+
     # Create service
     max_retry_time=1200
     retry_stop=$(($(date +%s) + max_retry_time))
-    exec_helm "${shoot_cluster_kubeconfig}" init --client-only > /dev/null
     exec_helm "${shoot_cluster_kubeconfig}" install -n redis --namespace "${helm_deploy_ns}" stable/redis > /dev/null
     helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" status redis 2>&1 || true)"
     while [[ "$helm_response" != *"STATUS: DEPLOYED"* ]] && [[ $(date +%s) -lt $retry_stop ]]; do
