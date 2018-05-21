@@ -51,7 +51,7 @@ func (b *Botanist) DeployNamespace() error {
 func (b *Botanist) DeployBackupNamespaceFromShoot() error {
 	_, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: common.GenerateBackupNamespaceName(common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID)),
+			Name: common.GenerateBackupNamespaceName(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)),
 			Labels: map[string]string{
 				common.GardenRole: common.GardenRoleBackup,
 			},
@@ -134,7 +134,7 @@ func (b *Botanist) MoveTerraformResources() error {
 	}
 
 	var (
-		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID)
+		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
 		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
 		oldPrefix                = fmt.Sprintf("%s.%s", b.Shoot.Info.Name, common.TerraformerPurposeBackup)
 		newPrefix                = fmt.Sprintf("%s.%s", backupInfrastructureName, common.TerraformerPurposeBackup)
@@ -182,7 +182,7 @@ func (b *Botanist) MoveTerraformResources() error {
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure() error {
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), "backup-infrastructure", b.Operation.Shoot.Info.Namespace, nil, map[string]interface{}{
-		"name":     common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID),
+		"name":     common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
 		"seed":     b.Seed.Info.Name,
 		"shootUID": b.Shoot.Info.Status.UID,
 	})
@@ -191,7 +191,7 @@ func (b *Botanist) DeployBackupInfrastructure() error {
 // DeleteBackupInfrastructure deletes the sets deletionTimestamp on the backupInfrastructure resource in the Garden namespace
 // which is responsible for actual deletion of cloud resource for Shoot's backup infrastructure.
 func (b *Botanist) DeleteBackupInfrastructure() error {
-	err := b.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Delete(common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID), nil)
+	err := b.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Delete(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), nil)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}

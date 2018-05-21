@@ -77,7 +77,7 @@ func (b *Botanist) WaitUntilKubeAPIServerIsReady() error {
 // been reconciled.
 func (b *Botanist) WaitUntilBackupInfrastructureReconciled() error {
 	return wait.PollImmediate(5*time.Second, 600*time.Second, func() (bool, error) {
-		backupInfrastructures, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Get(common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID), metav1.GetOptions{})
+		backupInfrastructures, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Get(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

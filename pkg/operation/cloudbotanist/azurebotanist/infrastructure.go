@@ -141,14 +141,25 @@ func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() []map[stri
 // generateTerraformBackupConfig creates the Terraform variables and the Terraform config (for the backup)
 // and returns them.
 func (b *AzureBotanist) generateTerraformBackupConfig() map[string]interface{} {
-	shootUIDSHA := utils.ComputeSHA1Hex([]byte(b.BackupInfrastructure.Spec.ShootUID))
+	var (
+		shootUIDSHA       = utils.ComputeSHA1Hex([]byte(b.BackupInfrastructure.Spec.ShootUID))
+		resourceGroupName string
+	)
+
+	// TODO: Remove this and use only "--" as separator, once we have all shoots deployed as per new naming conventions.
+	if common.IsFollowingNewNamingConvention(b.BackupInfrastructure.Name) {
+		resourceGroupName = fmt.Sprintf("backup--%s", b.BackupInfrastructure.Name)
+	} else {
+		resourceGroupName = fmt.Sprintf("%s-backup-%s", common.ExtractShootName(b.BackupInfrastructure.Name), shootUIDSHA[:15])
+	}
+
 	return map[string]interface{}{
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Seed.Secret.Data[SubscriptionID]),
 			"tenantID":           string(b.Seed.Secret.Data[TenantID]),
 			"region":             b.Seed.Info.Spec.Cloud.Region,
 			"storageAccountName": fmt.Sprintf("bkp%s", shootUIDSHA[:15]),
-			"resourceGroupName":  fmt.Sprintf("%s-backup-%s", common.ExtractShootName(b.BackupInfrastructure.Name), shootUIDSHA[:15]),
+			"resourceGroupName":  resourceGroupName,
 		},
 		"clusterName": b.BackupInfrastructure.Name,
 	}

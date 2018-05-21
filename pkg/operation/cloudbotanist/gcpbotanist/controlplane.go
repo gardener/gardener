@@ -76,7 +76,7 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	var (
 		mountPath                = "/root/.gcp/"
 		bucketName               = "bucketName"
-		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Garden.ProjectName, b.Shoot.Info.Name, b.Shoot.Info.Status.UID)
+		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
 		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
 	)
 
