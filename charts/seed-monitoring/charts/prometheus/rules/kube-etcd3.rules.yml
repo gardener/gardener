@@ -1,7 +1,6 @@
 groups:
 - name: kube-etcd3.rules
   rules:
-
   # alert if main etcd is down
   - alert: KubeEtcd3Down
     expr: absent(up{job="kube-etcd3",role="main"}
