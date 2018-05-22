@@ -103,7 +103,8 @@ func (shootStrategy) AllowCreateOnUpdate() bool {
 }
 
 func (shootStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
-	oldShoot, newShoot := oldObj.(*garden.Shoot), newObj.(*garden.Shoot)
+	newShoot := newObj.(*garden.Shoot)
+	oldShoot := oldObj.(*garden.Shoot)
 	return validation.ValidateShootUpdate(newShoot, oldShoot)
 }
 
@@ -125,5 +126,5 @@ func (shootStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, 
 }
 
 func (shootStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
-	return validation.ValidateShootStatusUpdate(obj.(*garden.Shoot), old.(*garden.Shoot))
+	return validation.ValidateShootStatusUpdate(obj.(*garden.Shoot).Status, old.(*garden.Shoot).Status)
 }

@@ -715,6 +715,23 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	return allErrs
 }
 
+// ValidateShootStatusUpdate validates the status field of a Shoot object.
+func ValidateShootStatusUpdate(newStatus, oldStatus garden.ShootStatus) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		fldPath = field.NewPath("status")
+	)
+
+	if len(oldStatus.UID) > 0 {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.UID, oldStatus.UID, fldPath.Child("uid"))...)
+	}
+	if len(oldStatus.TechnicalID) > 0 {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newStatus.TechnicalID, oldStatus.TechnicalID, fldPath.Child("technicalID"))...)
+	}
+
+	return allErrs
+}
+
 func validateShootName(name string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -1284,13 +1301,6 @@ func validateWorkerVolumeType(volumeType string, fldPath *field.Path) field.Erro
 	if len(volumeType) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath, "must specify a volume type"))
 	}
-
-	return allErrs
-}
-
-// ValidateShootStatusUpdate validates the status field of a Shoot object.
-func ValidateShootStatusUpdate(newShoot, oldShoot *garden.Shoot) field.ErrorList {
-	allErrs := field.ErrorList{}
 
 	return allErrs
 }

@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	. "github.com/onsi/ginkgo"
@@ -3310,6 +3311,71 @@ var _ = Describe("validation", func() {
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
 			Expect(len(errorList)).To(Equal(0))
+		})
+	})
+
+	Describe("#ValidateShootStatus, #ValidateShootStatusUpdate", func() {
+		var shoot *garden.Shoot
+
+		BeforeEach(func() {
+			shoot = &garden.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "shoot",
+					Namespace: "my-namespace",
+				},
+				Spec:   garden.ShootSpec{},
+				Status: garden.ShootStatus{},
+			}
+		})
+
+		Context("uid checks", func() {
+			It("should allow setting the uid", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Status.UID = types.UID("1234")
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid changing the uid", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Status.UID = types.UID("1234")
+				newShoot.Status.UID = types.UID("1235")
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.uid"),
+				}))
+			})
+		})
+
+		Context("technical id checks", func() {
+			It("should allow setting the technical id", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Status.TechnicalID = "shoot--foo--bar"
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid changing the technical id", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				shoot.Status.TechnicalID = "shoot-foo-bar"
+				newShoot.Status.TechnicalID = "shoot--foo--bar"
+
+				errorList := ValidateShootStatusUpdate(newShoot.Status, shoot.Status)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("status.technicalID"),
+				}))
+			})
 		})
 	})
 })
