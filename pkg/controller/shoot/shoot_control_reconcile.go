@@ -63,15 +63,15 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		_                                    = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady)
 		_                                    = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
 		deployInfrastructure                 = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
-		// Although BackupInfrastructure controller has responsibility of deploying backup namespace, for backword
-		// compatibility Shoot contoller will have to deploy backup namespace and move terraform rescourses from
-		// shoot's main seedNamespace to backup namespace.
-		// TODO: These tasks (deployBackupNamespace and moveTerraformResources) should be removed from flow, once
+		// Although BackupInfrastructure controller has responsibility of deploying backup namespace, for backward
+		// compatibility Shoot controller will have to deploy backup namespace and move terraform resources from
+		// shoot's main seed namespace to backup namespace.
+		// TODO: These tasks (deployBackupNamespace and moveBackupTerraformResources) should be removed from flow, once
 		// we have all shoots reconciled with new gardener having this change i.e. for all existing shoots, all backup
 		// infrastructure related terraform resources are present only in backup namespace.
 		deployBackupNamespace                   = f.AddTaskConditional(botanist.DeployBackupNamespaceFromShoot, defaultRetry, isCloud, deployNamespace)
-		moveTerraformResources                  = f.AddTaskConditional(botanist.MoveTerraformResources, 0, isCloud, deployBackupNamespace)
-		deployBackupInfrastructure              = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud, moveTerraformResources)
+		moveBackupTerraformResources            = f.AddTaskConditional(botanist.MoveBackupTerraformResources, 0, isCloud, deployBackupNamespace)
+		deployBackupInfrastructure              = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud, moveBackupTerraformResources)
 		waitUntilBackupInfrastructureReconciled = f.AddTaskConditional(botanist.WaitUntilBackupInfrastructureReconciled, 0, isCloud, deployBackupInfrastructure)
 		deployETCD                              = f.AddTask(hybridBotanist.DeployETCD, defaultRetry, waitUntilBackupInfrastructureReconciled)
 		deployCloudProviderConfig               = f.AddTask(hybridBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)

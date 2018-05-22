@@ -58,7 +58,7 @@ func (c *Controller) shootUpdate(oldObj, newObj interface{}) {
 	shootLogger.Debugf(string(newShootJSON))
 
 	// If the generation did not change for an update event (i.e., no changes to the .spec section have
-	// been made), we do not want to add the Shoot to th queue. The period reconciliation is handled
+	// been made), we do not want to add the Shoot to the queue. The period reconciliation is handled
 	// elsewhere by adding the Shoot to the queue to dedicated times.
 	if newShoot.Generation == newShoot.Status.ObservedGeneration {
 		shootLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")

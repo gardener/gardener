@@ -1,4 +1,4 @@
-// Copyright 2018 The Gardener Authors.
+// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,7 +33,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -53,14 +52,18 @@ func (c *Controller) backupInfrastructureAdd(obj interface{}) {
 
 func (c *Controller) backupInfrastructureUpdate(oldObj, newObj interface{}) {
 	var (
-		oldBackupInfrastructure = oldObj.(*gardenv1beta1.BackupInfrastructure)
-		newBackupInfrastructure = newObj.(*gardenv1beta1.BackupInfrastructure)
-		specChanged             = !apiequality.Semantic.DeepEqual(oldBackupInfrastructure.Spec, newBackupInfrastructure.Spec)
-		statusChanged           = !apiequality.Semantic.DeepEqual(oldBackupInfrastructure.Status, newBackupInfrastructure.Status)
+		newBackupInfrastructure    = newObj.(*gardenv1beta1.BackupInfrastructure)
+		backupInfrastructureLogger = logger.NewFieldLogger(logger.Logger, "backupinfrastructure", fmt.Sprintf("%s/%s", newBackupInfrastructure.Namespace, newBackupInfrastructure.Name))
 	)
-	if !specChanged && statusChanged {
+
+	// If the generation did not change for an update event (i.e., no changes to the .spec section have
+	// been made), we do not want to add the BackupInfrastructure to the queue. The periodic reconciliation is handled
+	// elsewhere by adding the BackupInfrastructure to the queue to dedicated times.
+	if newBackupInfrastructure.Generation == newBackupInfrastructure.Status.ObservedGeneration {
+		backupInfrastructureLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
 		return
 	}
+
 	c.backupInfrastructureAdd(newObj)
 }
 
@@ -306,7 +309,6 @@ func (c *defaultControl) updateBackupInfrastructureStatus(o *operation.Operation
 }
 
 func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
-	// Remove finalizer from BackupInfrastructure
 	backupInfrastructureFinalizers := sets.NewString(op.BackupInfrastructure.Finalizers...)
 	backupInfrastructureFinalizers.Delete(gardenv1beta1.GardenerName)
 	op.BackupInfrastructure.Finalizers = backupInfrastructureFinalizers.UnsortedList()

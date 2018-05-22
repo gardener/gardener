@@ -72,9 +72,6 @@ func (b *Botanist) DeployBackupNamespaceFromBackupInfrastructure() error {
 			},
 		},
 	}, true)
-	if err != nil {
-		return err
-	}
 	return err
 }
 
@@ -117,9 +114,9 @@ func (b *Botanist) DeleteKubeAPIServer() error {
 	return err
 }
 
-// MoveTerraformResources copies the terraform resources realted to backup infrastructure creation from  a shoot's main namespace
+// MoveBackupTerraformResources copies the terraform resources realted to backup infrastructure creation from  a shoot's main namespace
 // in the Seed cluster to Shoot's backup namespace.
-func (b *Botanist) MoveTerraformResources() error {
+func (b *Botanist) MoveBackupTerraformResources() error {
 	t := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup)
 	// Clean up possible existing job/pod artifacts from previous runs
 	jobPodList, err := t.ListJobPods()
