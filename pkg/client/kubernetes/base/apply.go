@@ -78,6 +78,10 @@ func (c *Client) Apply(m []byte) error {
 		if apierrors.IsNotFound(getErr) {
 			// Resource object was not found, i.e. it does not exist yet. We need to POST.
 			if postErr := c.post(absPath, manifest); postErr != nil {
+				// Handle race conditions in which the resource has been created in the meanwhile.
+				if apierrors.IsAlreadyExists(postErr) {
+					return c.Apply(m)
+				}
 				return postErr
 			}
 		} else {
