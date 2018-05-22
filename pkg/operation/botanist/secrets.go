@@ -614,8 +614,8 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 	etcdCertDNSNames := []string{
 		fmt.Sprintf("etcd-%s-0", common.EtcdRoleMain),
 		fmt.Sprintf("etcd-%s-0", common.EtcdRoleEvents),
-		fmt.Sprintf("etcd-%s-0.etcd-%s", common.EtcdRoleMain, common.EtcdRoleMain),
-		fmt.Sprintf("etcd-%s-0.etcd-%s", common.EtcdRoleEvents, common.EtcdRoleEvents),
+		fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
+		fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil {

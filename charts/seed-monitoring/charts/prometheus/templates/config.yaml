@@ -50,8 +50,20 @@ data:
         ca_file: /etc/prometheus/seed/ca.crt
         cert_file: /etc/prometheus/seed/prometheus.crt
         key_file: /etc/prometheus/seed/prometheus.key
-      static_configs:
-      - targets: ['etcd-main-0.etcd-main:2379', 'etcd-events-0.etcd-events:2379']
+      kubernetes_sd_configs:
+      - role: service
+        namespaces:
+          names: [{{.Release.Namespace}}]
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_label_app]
+        action: keep
+        regex: etcd-statefulset
+      - source_labels: [__meta_kubernetes_service_label_role]
+        target_label: role
+      - source_labels: [__meta_kubernetes_service_port_name]
+        action: keep
+        regex: client
+     
     - job_name: 'kube-apiserver'
       scheme: https
 

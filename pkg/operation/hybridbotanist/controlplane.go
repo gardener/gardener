@@ -102,8 +102,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":          2379,
-		"etcdMainServiceFqdn":      fmt.Sprintf("etcd-%s-0.etcd-%s", common.EtcdRoleMain, common.EtcdRoleMain),
-		"etcdEventsServiceFqdn":    fmt.Sprintf("etcd-%s-0.etcd-%s", common.EtcdRoleEvents, common.EtcdRoleEvents),
+		"etcdMainServiceFqdn":      fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
+		"etcdEventsServiceFqdn":    fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
 		"advertiseAddress":         loadBalancerIP,
 		"cloudProvider":            b.ShootCloudBotanist.GetCloudProviderName(),
 		"kubernetesVersion":        b.Shoot.Info.Spec.Kubernetes.Version,
