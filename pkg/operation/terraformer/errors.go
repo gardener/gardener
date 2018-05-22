@@ -56,7 +56,7 @@ func retrieveTerraformErrors(logList map[string]string) []string {
 func determineErrorCode(message string) error {
 	var (
 		code                         gardenv1beta1.ErrorCode
-		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch)`)
+		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed)`)
 		quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
 		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden)`)
 		dependenciesRegexp           = regexp.MustCompile(`(?i)(DependencyViolation)`)
