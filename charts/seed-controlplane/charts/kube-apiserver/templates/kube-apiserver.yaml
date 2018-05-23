@@ -196,7 +196,7 @@ spec:
             cpu: 50m
             memory: 128Mi
         volumeMounts:
-        - name: blackbox-exporter-config
+        - name: blackbox-exporter-config-apiserver
           mountPath: /vpn
       dnsPolicy: ClusterFirst
       restartPolicy: Always
@@ -249,6 +249,6 @@ spec:
       - name: ssl-certs-hosts
         hostPath:
           path: /usr/share/ca-certificates
-      - name: blackbox-exporter-config
+      - name: blackbox-exporter-config-apiserver
         configMap:
-          name: blackbox-exporter-config
+          name: blackbox-exporter-config-apiserver

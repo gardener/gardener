@@ -1,8 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: blackbox-exporter-config-apiserver
+  name: blackbox-exporter-config-prometheus
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: prometheus
+    role: monitoring
 data:
   blackbox.yaml: |
     modules:

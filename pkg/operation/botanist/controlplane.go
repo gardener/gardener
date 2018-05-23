@@ -281,6 +281,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"checksum/secret-prometheus":                b.CheckSums["prometheus"],
 				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 				"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
+				"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			},
 			"replicas":           replicas,
 			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),

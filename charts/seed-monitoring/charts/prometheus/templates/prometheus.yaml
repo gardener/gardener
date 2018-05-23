@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: prometheus
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: prometheus
     role: monitoring
@@ -11,7 +11,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prometheus-web
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: prometheus
     role: monitoring
@@ -35,7 +35,7 @@ apiVersion: {{include "statefulsetversion" .}}
 kind: StatefulSet
 metadata:
   name: prometheus
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: prometheus
     role: monitoring
@@ -50,8 +50,11 @@ spec:
   serviceName: prometheus
   template:
     metadata:
-{{- if .Values.podAnnotations }}
       annotations:
+        checksum/configmap-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+        checksum/configmap-rules: {{ include (print $.Template.BasePath "/rules.yaml") . | sha256sum }}
+        checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
+{{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
@@ -153,7 +156,7 @@ spec:
             memory: 20Mi
         volumeMounts:
         - mountPath: /vpn
-          name: blackbox-exporter-config
+          name: blackbox-exporter-config-prometheus
           readOnly: true
       - image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -203,7 +206,7 @@ spec:
             cpu: 50m
             memory: 128Mi
         volumeMounts:
-        - name: blackbox-exporter-config
+        - name: blackbox-exporter-config-prometheus
           mountPath: /vpn
       terminationGracePeriodSeconds: 300
       volumes:
@@ -231,9 +234,9 @@ spec:
       - name: prometheus-kubeconfig
         secret:
           secretName: prometheus
-      - name: blackbox-exporter-config
+      - name: blackbox-exporter-config-prometheus
         configMap:
-          name: blackbox-exporter-config
+          name: blackbox-exporter-config-prometheus
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db
