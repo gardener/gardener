@@ -56,6 +56,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&QuotaList{},
 		&Shoot{},
 		&ShootList{},
+		&BackupInfrastructure{},
+		&BackupInfrastructureList{},
 	)
 	return nil
 }

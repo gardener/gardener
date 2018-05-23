@@ -34,7 +34,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if len(obj.Spec.Backup.Schedule) == 0 {
 		obj.Spec.Backup.Schedule = DefaultETCDBackupSchedule
 	}
-	if obj.Spec.Backup.Maximum == 0 {
+	if obj.Spec.Backup.Maximum <= 0 {
 		obj.Spec.Backup.Maximum = DefaultETCDBackupMaximum
 	}
 

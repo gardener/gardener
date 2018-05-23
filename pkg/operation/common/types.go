@@ -69,6 +69,9 @@ const (
 	// GardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	GardenRole = "garden.sapcloud.io/role"
 
+	// GardenRoleShoot is the value of the GardenRole key indicating type 'shoot'.
+	GardenRoleShoot = "shoot"
+
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.
 	GardenRoleSeed = "seed"
 
@@ -89,6 +92,9 @@ const (
 
 	//GardenRoleProject is the value of GardenRole key indicating type 'project'.
 	GardenRoleProject = "project"
+
+	//GardenRoleBackup is the value of GardenRole key indicating type 'backup'.
+	GardenRoleBackup = "backup"
 
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
@@ -183,6 +189,9 @@ const (
 	// ignored completely. That means that the Shoot will never reach the reconciliation flow (independent of the operation (create/update/
 	// delete)).
 	ShootIgnore = "shoot.garden.sapcloud.io/ignore"
+
+	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
+	BackupNamespacePrefix = "backup"
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

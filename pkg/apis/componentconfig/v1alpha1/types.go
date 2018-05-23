@@ -81,6 +81,8 @@ type ControllerManagerControllerConfiguration struct {
 	ShootMaintenance ShootMaintenanceControllerConfiguration `json:"shootMaintenance"`
 	// ShootQuota defines the configuration of the ShootQuota controller.
 	ShootQuota ShootQuotaControllerConfiguration `json:"shootQuota"`
+	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
+	BackupInfrastructure BackupInfrastructureControllerConfiguration `json:"backupInfrastructure"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -171,6 +173,19 @@ type ShootQuotaControllerConfiguration struct {
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
+// BackupInfrastructureControllerConfiguration defines the configuration of the BackupInfrastructure
+// controller.
+type BackupInfrastructureControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
+	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately..
+	// +optional
+	DeletionGracePeriodDays *int `json:"deletionGracePeriodDays,omitempty"`
+}
+
 // LeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
 type LeaderElectionConfiguration struct {
@@ -223,4 +238,8 @@ const (
 
 	// ControllerManagerDefaultLockObjectName is the default lock name for leader election.
 	ControllerManagerDefaultLockObjectName = "gardener-controller-manager-leader-election"
+
+	// DefaultBackupInfrastructureDeletionGracePeriodDays is a constant for the default number of days the Backup Infrastructure should be kept after shoot is deleted.
+	// By default we set this to 0 so that then BackupInfrastructureController will trigger deletion immediately.
+	DefaultBackupInfrastructureDeletionGracePeriodDays = 0
 )

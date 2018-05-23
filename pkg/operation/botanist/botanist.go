@@ -37,7 +37,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 	}
 
 	// Determine all default domain secrets and check whether the used Shoot domain matches a default domain.
-	if o.Shoot.Info.Spec.DNS.Domain != nil {
+	if o.Shoot != nil && o.Shoot.Info.Spec.DNS.Domain != nil {
 		var (
 			prefix            = fmt.Sprintf("%s-", common.GardenRoleDefaultDomain)
 			defaultDomainKeys = o.GetSecretKeysOfRole(common.GardenRoleDefaultDomain)

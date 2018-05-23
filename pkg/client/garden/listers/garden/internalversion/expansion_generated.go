@@ -2,6 +2,14 @@
 
 package internalversion
 
+// BackupInfrastructureListerExpansion allows custom methods to be added to
+// BackupInfrastructureLister.
+type BackupInfrastructureListerExpansion interface{}
+
+// BackupInfrastructureNamespaceListerExpansion allows custom methods to be added to
+// BackupInfrastructureNamespaceLister.
+type BackupInfrastructureNamespaceListerExpansion interface{}
+
 // CloudProfileListerExpansion allows custom methods to be added to
 // CloudProfileLister.
 type CloudProfileListerExpansion interface{}

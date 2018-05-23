@@ -1186,18 +1186,18 @@ const (
 )
 
 const (
-	// ShootEventReconciling indicates that the a Reconcile operation started.
-	ShootEventReconciling = "ReconcilingShoot"
-	// ShootEventReconciled indicates that the a Reconcile operation was successful.
-	ShootEventReconciled = "ReconciledShoot"
-	// ShootEventReconcileError indicates that the a Reconcile operation failed.
-	ShootEventReconcileError = "ReconcileError"
-	// ShootEventDeleting indicates that the a Delete operation started.
-	ShootEventDeleting = "DeletingShoot"
-	// ShootEventDeleted indicates that the a Delete operation was successful.
-	ShootEventDeleted = "DeletedShoot"
-	// ShootEventDeleteError indicates that the a Delete operation failed.
-	ShootEventDeleteError = "DeleteError"
+	// EventReconciling indicates that the a Reconcile operation started.
+	EventReconciling = "Reconciling"
+	// EventReconciled indicates that the a Reconcile operation was successful.
+	EventReconciled = "Reconciled"
+	// EventReconcileError indicates that the a Reconcile operation failed.
+	EventReconcileError = "ReconcileError"
+	// EventDeleting indicates that the a Delete operation started.
+	EventDeleting = "Deleting"
+	// EventDeleted indicates that the a Delete operation was successful.
+	EventDeleted = "Deleted"
+	// EventDeleteError indicates that the a Delete operation failed.
+	EventDeleteError = "DeleteError"
 	// ShootEventMaintenanceDone indicates that a maintenance operation has been performed.
 	ShootEventMaintenanceDone = "MaintenanceDone"
 	// ShootEventMaintenanceError indicates that a maintenance operation has failed.
@@ -1246,3 +1246,57 @@ const (
 	// ConditionCheckError is a constant for indicating that a condition could not be checked.
 	ConditionCheckError = "ConditionCheckError"
 )
+
+////////////////////////////////////////////////////
+//              Backup Infrastructure             //
+////////////////////////////////////////////////////
+
+// BackupInfrastructure holds details about backup infrastructure
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,SEED:.spec.seed,STATUS:.status.lastOperation.state
+type BackupInfrastructure struct {
+	metav1.TypeMeta
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta
+	// Specification of the Backup Infrastructure.
+	// +optional
+	Spec BackupInfrastructureSpec
+	// Most recently observed status of the Backup Infrastructure.
+	// +optional
+	Status BackupInfrastructureStatus
+}
+
+// BackupInfrastructureList is a list of BackupInfrastructure objects.
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+type BackupInfrastructureList struct {
+	metav1.TypeMeta
+	// Standard list object metadata.
+	// +optional
+	metav1.ListMeta
+	// Items is the list of BackupInfrastructure.
+	Items []BackupInfrastructure
+}
+
+// BackupInfrastructureSpec is the specification of a Backup Infrastructure.
+type BackupInfrastructureSpec struct {
+	// Seed is the name of a Seed object.
+	Seed string
+	// ShootUID is a unique identifier for the Shoot cluster for which the BackupInfrastructure object is created.
+	ShootUID types.UID
+}
+
+// BackupInfrastructureStatus holds the most recently observed status of the Backup Infrastructure.
+type BackupInfrastructureStatus struct {
+	// LastOperation holds information about the last operation on the BackupInfrastructure.
+	// +optional
+	LastOperation *LastOperation
+	// LastError holds information about the last occurred error during an operation.
+	// +optional
+	LastError *LastError
+	// ObservedGeneration is the most recent generation observed for this BackupInfrastructure. It corresponds to the
+	// BackupInfrastructure's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration *int64
+}

@@ -29,24 +29,25 @@ import (
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
 type Operation struct {
-	Logger              *logrus.Entry
-	GardenerInfo        *gardenv1beta1.Gardener
-	Secrets             map[string]*corev1.Secret
-	CheckSums           map[string]string
-	ImageVector         imagevector.ImageVector
-	Garden              *garden.Garden
-	Seed                *seed.Seed
-	Shoot               *shoot.Shoot
-	K8sGardenClient     kubernetes.Client
-	K8sGardenInformers  gardeninformers.Interface
-	K8sSeedClient       kubernetes.Client
-	K8sShootClient      kubernetes.Client
-	ChartGardenRenderer chartrenderer.ChartRenderer
-	ChartSeedRenderer   chartrenderer.ChartRenderer
-	ChartShootRenderer  chartrenderer.ChartRenderer
-	APIServerIngresses  []corev1.LoadBalancerIngress
-	APIServerAddress    string
-	SeedNamespaceObject *corev1.Namespace
+	Logger               *logrus.Entry
+	GardenerInfo         *gardenv1beta1.Gardener
+	Secrets              map[string]*corev1.Secret
+	CheckSums            map[string]string
+	ImageVector          imagevector.ImageVector
+	Garden               *garden.Garden
+	Seed                 *seed.Seed
+	Shoot                *shoot.Shoot
+	K8sGardenClient      kubernetes.Client
+	K8sGardenInformers   gardeninformers.Interface
+	K8sSeedClient        kubernetes.Client
+	K8sShootClient       kubernetes.Client
+	ChartGardenRenderer  chartrenderer.ChartRenderer
+	ChartSeedRenderer    chartrenderer.ChartRenderer
+	ChartShootRenderer   chartrenderer.ChartRenderer
+	APIServerIngresses   []corev1.LoadBalancerIngress
+	APIServerAddress     string
+	SeedNamespaceObject  *corev1.Namespace
+	BackupInfrastructure *gardenv1beta1.BackupInfrastructure
 }
 
 // MachineDeployment holds insformation about the name, class, replicas of a MachineDeployment

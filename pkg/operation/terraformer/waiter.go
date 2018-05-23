@@ -23,9 +23,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// waitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
+// WaitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
 // of the Terraformer.
-func (t *Terraformer) waitForCleanEnvironment() error {
+func (t *Terraformer) WaitForCleanEnvironment() error {
 	return wait.PollImmediate(5*time.Second, 120*time.Second, func() (bool, error) {
 		_, err := t.k8sClient.GetJob(t.namespace, t.jobName)
 		if !apierrors.IsNotFound(err) {
@@ -36,7 +36,7 @@ func (t *Terraformer) waitForCleanEnvironment() error {
 			return false, nil
 		}
 
-		jobPodList, err := t.listJobPods()
+		jobPodList, err := t.ListJobPods()
 		if err != nil {
 			return false, err
 		}

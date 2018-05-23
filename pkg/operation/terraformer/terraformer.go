@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,23 +36,23 @@ import (
 // NewFromOperation takes an <o> operation object and initializes the Terraformer, and a
 // string <purpose> and returns an initialized Terraformer.
 func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
-	image := ""
-	if img, _ := o.ImageVector.FindImage("terraformer", o.K8sSeedClient.Version()); img != nil {
-		image = img.String()
-	}
-	return New(o.Logger, o.K8sSeedClient, purpose, o.Shoot.Info.Name, o.Shoot.SeedNamespace, image)
+	return New(o.Logger, o.K8sSeedClient, purpose, o.Shoot.Info.Name, o.Shoot.SeedNamespace, o.ImageVector)
 }
 
 // New takes a <logger>, a <k8sClient>, a string <purpose>, which describes for what the
 // Terraformer is used, a <name>, a <namespace> in which the Terraformer will run, and the
-// <image> name for the to-be-used Docke image. It returns a Terraformer struct with initialized
+// <image> name for the to-be-used Docker image. It returns a Terraformer struct with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
-func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace, image string) *Terraformer {
+func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace string, imageVector imagevector.ImageVector) *Terraformer {
 	var (
 		prefix    = fmt.Sprintf("%s.%s", name, purpose)
 		podSuffix = utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5]
+		image     string
 	)
+	if img, _ := imageVector.FindImage("terraformer", k8sClient.Version()); img != nil {
+		image = img.String()
+	}
 
 	return &Terraformer{
 		logger:        logger,
@@ -187,7 +188,7 @@ func (t *Terraformer) execute(scriptName string) error {
 	}
 
 	// Retrieve the logs of the Pods belonging to the completed Job
-	jobPodList, err := t.listJobPods()
+	jobPodList, err := t.ListJobPods()
 	if err != nil {
 		t.logger.Errorf("Could not retrieve list of pods belonging to Terraform job '%s': %s", t.jobName, err.Error())
 		jobPodList = &corev1.PodList{}
@@ -205,7 +206,7 @@ func (t *Terraformer) execute(scriptName string) error {
 
 	// Delete the Terraform Job and all its belonging Pods
 	t.logger.Infof("Cleaning up pods created by Terraform job '%s'...", t.jobName)
-	if err := t.cleanupJob(jobPodList); err != nil {
+	if err := t.CleanupJob(jobPodList); err != nil {
 		return err
 	}
 
@@ -227,8 +228,8 @@ func (t *Terraformer) deployTerraformer(values map[string]interface{}) error {
 	return common.ApplyChart(t.k8sClient, t.chartRenderer, filepath.Join(chartPath, chartName), chartName, t.namespace, nil, values)
 }
 
-// listJobPods lists all pods which have a label 'job-name' whose value is equal to the Terraformer job name.
-func (t *Terraformer) listJobPods() (*corev1.PodList, error) {
+// ListJobPods lists all pods which have a label 'job-name' whose value is equal to the Terraformer job name.
+func (t *Terraformer) ListJobPods() (*corev1.PodList, error) {
 	return t.k8sClient.ListPods(t.namespace, metav1.ListOptions{LabelSelector: fmt.Sprintf("job-name=%s", t.jobName)})
 }
 
@@ -258,8 +259,8 @@ func (t *Terraformer) retrievePodLogs(jobPodList *corev1.PodList) (map[string]st
 	}
 }
 
-// cleanupJob deletes the Terraform Job and all belonging Pods from the Garden cluster.
-func (t *Terraformer) cleanupJob(jobPodList *corev1.PodList) error {
+// CleanupJob deletes the Terraform Job and all belonging Pods from the Garden cluster.
+func (t *Terraformer) CleanupJob(jobPodList *corev1.PodList) error {
 	// Delete the Terraform Job
 	if err := t.k8sClient.DeleteJob(t.namespace, t.jobName); err == nil {
 		t.logger.Infof("Deleted Terraform Job '%s'", t.jobName)

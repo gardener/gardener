@@ -55,13 +55,6 @@ func computeLabelsWithShootHealthiness(healthy bool) func(map[string]string) map
 	}
 }
 
-func computeOperationType(lastOperation *gardenv1beta1.LastOperation) gardenv1beta1.ShootLastOperationType {
-	if lastOperation == nil || (lastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate && lastOperation.State != gardenv1beta1.ShootLastOperationStateSucceeded) {
-		return gardenv1beta1.ShootLastOperationTypeCreate
-	}
-	return gardenv1beta1.ShootLastOperationTypeReconcile
-}
-
 func shootIsUsedAsSeed(shoot *gardenv1beta1.Shoot) bool {
 	if shoot.Namespace != common.GardenNamespace {
 		return false

@@ -35,15 +35,15 @@ import (
 
 // New creates a new operation object with a Shoot resource object.
 func New(shoot *gardenv1beta1.Shoot, logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
-	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, *(shoot.Spec.Cloud.Seed), shoot)
+	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, *(shoot.Spec.Cloud.Seed), shoot, nil)
 }
 
-// NewWithoutShoot creates a new operation object without a Shoot resource object.
-func NewWithoutShoot(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, namespace, seedName string) (*Operation, error) {
-	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, namespace, seedName, nil)
+// NewWithBackupInfrastructure creates a new operation object without a Shoot resource object but the BackupInfrastructure resource.
+func NewWithBackupInfrastructure(backupInfrastructure *gardenv1beta1.BackupInfrastructure, logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
+	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, backupInfrastructure.Spec.Seed, nil, backupInfrastructure)
 }
 
-func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, namespace, seedName string, shoot *gardenv1beta1.Shoot) (*Operation, error) {
+func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, namespace, seedName string, shoot *gardenv1beta1.Shoot, backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*Operation, error) {
 	secrets := make(map[string]*corev1.Secret)
 	for k, v := range secretsMap {
 		secrets[k] = v
@@ -59,16 +59,17 @@ func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGa
 	}
 
 	operation := &Operation{
-		Logger:              logger,
-		GardenerInfo:        gardenerInfo,
-		Secrets:             secrets,
-		ImageVector:         imageVector,
-		CheckSums:           make(map[string]string),
-		Garden:              gardenObj,
-		Seed:                seedObj,
-		K8sGardenClient:     k8sGardenClient,
-		K8sGardenInformers:  k8sGardenInformers,
-		ChartGardenRenderer: chartrenderer.New(k8sGardenClient),
+		Logger:               logger,
+		GardenerInfo:         gardenerInfo,
+		Secrets:              secrets,
+		ImageVector:          imageVector,
+		CheckSums:            make(map[string]string),
+		Garden:               gardenObj,
+		Seed:                 seedObj,
+		K8sGardenClient:      k8sGardenClient,
+		K8sGardenInformers:   k8sGardenInformers,
+		ChartGardenRenderer:  chartrenderer.New(k8sGardenClient),
+		BackupInfrastructure: backupInfrastructure,
 	}
 
 	if shoot != nil {
@@ -159,6 +160,18 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 
 	if newShoot, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).UpdateStatus(o.Shoot.Info); err == nil {
 		o.Shoot.Info = newShoot
+	}
+}
+
+// ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
+// by the current progress of the Flow execution.
+func (o *Operation) ReportBackupInfrastructureProgress(progress int, currentFunctions string) {
+	o.BackupInfrastructure.Status.LastOperation.Description = "Currently executing " + currentFunctions
+	o.BackupInfrastructure.Status.LastOperation.Progress = progress
+	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()
+
+	if newBackupInfrastructure, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(o.BackupInfrastructure.Namespace).UpdateStatus(o.BackupInfrastructure); err == nil {
+		o.BackupInfrastructure = newBackupInfrastructure
 	}
 }
 

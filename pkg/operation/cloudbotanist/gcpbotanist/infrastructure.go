@@ -15,11 +15,8 @@
 package gcpbotanist
 
 import (
-	"fmt"
-
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -88,7 +85,7 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("gcp-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -97,7 +94,7 @@ func (b *GCPBotanist) DeployBackupInfrastructure() error {
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
 	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeBackup).
+		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }
@@ -123,8 +120,8 @@ func (b *GCPBotanist) generateTerraformBackupConfig() map[string]interface{} {
 			"project": b.Project,
 		},
 		"bucket": map[string]interface{}{
-			"name": fmt.Sprintf("%s-%s", b.Shoot.SeedNamespace, utils.ComputeSHA1Hex([]byte(b.Shoot.Info.Status.UID))[:5]),
+			"name": b.Operation.BackupInfrastructure.Name,
 		},
-		"clusterName": b.Shoot.SeedNamespace,
+		"clusterName": b.Operation.BackupInfrastructure.Name,
 	}
 }

@@ -56,6 +56,12 @@ data:
       shootQuota:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shootQuota.concurrentSyncs is required" .Values.controller.config.controllers.shootQuota.concurrentSyncs }}
         syncPeriod: {{ required ".Values.controller.config.controllers.shootQuota.syncPeriod is required" .Values.controller.config.controllers.shootQuota.syncPeriod }}
+      backupInfrastructure:
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.backupInfrastructure.concurrentSyncs is required" .Values.controller.config.controllers.backupInfrastructure.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.controller.config.controllers.backupInfrastructure.syncPeriod is required" .Values.controller.config.controllers.backupInfrastructure.syncPeriod }}
+        {{- if .Values.controller.config.controllers.backupInfrastructure.deletionGracePeriodDays }}
+        deletionGracePeriodDays: {{ .Values.controller.config.controllers.backupInfrastructure.deletionGracePeriodDays }}
+        {{- end }}
     leaderElection:
       leaderElect: {{ required ".Values.controller.config.leaderElection.leaderElect is required" .Values.controller.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.controller.config.leaderElection.leaseDuration is required" .Values.controller.config.leaderElection.leaseDuration }}

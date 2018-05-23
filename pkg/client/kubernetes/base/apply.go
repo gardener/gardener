@@ -101,6 +101,9 @@ func (c *Client) Apply(m []byte) error {
 			}
 			newObj.SetResourceVersion(oldObj.GetResourceVersion())
 
+			// We do not want to overwrite the Finalizers.
+			newObj.Object["metadata"].(map[string]interface{})["finalizers"] = oldObj.Object["metadata"].(map[string]interface{})["finalizers"]
+
 			switch kind {
 			case "Service":
 				// We do not want to overwrite a Service's `.spec.clusterIP' or '.spec.ports[*].nodePort' values.
