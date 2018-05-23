@@ -65,17 +65,29 @@ type RSASecret struct {
 // * Organization is a list of organizations used in the certificate.
 // * DNSNames is a list of DNS names for the Subject Alternate Names list.
 // * IPAddresses is a list of IP addresses for the Subject Alternate Names list.
-// * IsServerCert specifies whether the certificate should be a server certificate (if not, a client certificate
-//   will be created).
+// * CertType specifies the usages of the certificate (server, client, both).
 type TLSSecret struct {
 	Secret
 	CommonName   string
 	Organization []string
 	DNSNames     []string
 	IPAddresses  []net.IP
-	IsServerCert bool
+	CertType     certType
 	WantsCA      bool
 }
+
+type certType string
+
+const (
+	// ServerCert indicates that the certificate should have the ExtKeyUsageServerAuth usage.
+	ServerCert certType = "server"
+
+	// ClientCert indicates that the certificate should have the ExtKeyUsageClientAuth usage.
+	ClientCert certType = "client"
+
+	// ServerClientCert indicates that the certificate should have both the ExtKeyUsageServerAuth and ExtKeyUsageClientAuth usage.
+	ServerClientCert certType = "both"
+)
 
 // ControlPlaneSecret is a struct which inherits from TLSSecret and is extended with a couple of additional
 // properties. A control plane secret will always contain a client certificate and optionally a kubeconfig.
@@ -120,7 +132,7 @@ func (b *Botanist) DeploySecrets() error {
 		secretsMap[secret.ObjectMeta.Name] = &secretObj
 	}
 
-	// First we have to generate a CA certificate in order to sign the remainining server/client certificates.
+	// First we have to generate a CA certificate in order to sign the remaining server/client certificates.
 	name = "ca"
 	if val, ok := secretsMap[name]; ok {
 		b.Secrets[name] = val
@@ -141,7 +153,7 @@ func (b *Botanist) DeploySecrets() error {
 		if err != nil {
 			return err
 		}
-		CACertificateTemplate = generateCertificateTemplate("kubernetes", nil, nil, nil, true, false)
+		CACertificateTemplate = generateCertificateTemplate("kubernetes", nil, nil, nil, true, "")
 		CACertificatePEM, err = signCertificate(CACertificateTemplate, CACertificateTemplate, CAPrivateKey, CAPrivateKey)
 		if err != nil {
 			return err
@@ -424,7 +436,7 @@ func generateCertificate(secret TLSSecret, CACertificateTemplate *x509.Certifica
 		return nil, nil, err
 	}
 	privateKeyPEM := utils.EncodePrivateKey(privateKey)
-	certificateTemplate := generateCertificateTemplate(secret.CommonName, secret.Organization, secret.DNSNames, secret.IPAddresses, false, secret.IsServerCert)
+	certificateTemplate := generateCertificateTemplate(secret.CommonName, secret.Organization, secret.DNSNames, secret.IPAddresses, false, secret.CertType)
 	certificatePEM, err := signCertificate(certificateTemplate, CACertificateTemplate, privateKey, CAPrivateKey)
 	if err != nil {
 		return nil, nil, err
@@ -450,10 +462,10 @@ func generateRSAPublicKey(privateKey *rsa.PrivateKey) ([]byte, error) {
 }
 
 // generateCertificateTemplate creates a X509 Certificate object based on the provided information regarding
-// common name, organization, SANs (DNS names and IP addresses). It can create a server certificate if the
-// <isServerCert> flag is true, otherwise it creates client certificate. If <isCACert> is true, then a CA
-// certificate is being created. The certificates a valid for 10 years.
-func generateCertificateTemplate(commonName string, organization, dnsNames []string, ipAddresses []net.IP, isCA, isServerCert bool) *x509.Certificate {
+// common name, organization, SANs (DNS names and IP addresses). It can create a server or a client certificate
+// or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
+// The certificates a valid for 10 years.
+func generateCertificateTemplate(commonName string, organization, dnsNames []string, ipAddresses []net.IP, isCA bool, certType certType) *x509.Certificate {
 	serialNumber, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 	template := &x509.Certificate{
 		IsCA: isCA,
@@ -472,10 +484,13 @@ func generateCertificateTemplate(commonName string, organization, dnsNames []str
 	if isCA {
 		template.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 	} else {
-		if isServerCert {
+		switch certType {
+		case ServerCert:
 			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
-		} else {
+		case ClientCert:
 			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+		case ServerClientCert:
+			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}
 		}
 	}
 	return template
@@ -613,7 +628,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 					net.ParseIP("127.0.0.1"),
 					net.ParseIP(common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1)),
 				},
-				IsServerCert: true,
+				CertType: ServerCert,
 			},
 			KubeconfigRequired: false,
 			RunsInSeed:         true,
@@ -629,7 +644,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: false,
 			RunsInSeed:         false,
@@ -645,7 +660,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: false,
 			RunsInSeed:         false,
@@ -661,7 +676,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -677,7 +692,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -693,7 +708,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -709,7 +724,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -725,7 +740,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigUseInternalClusterDomain: true,
@@ -742,7 +757,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -758,7 +773,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -774,7 +789,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigWithBasicAuth:            true,
@@ -792,7 +807,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigWithBasicAuth:            true,
@@ -810,7 +825,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				IsServerCert: false,
+				CertType:     ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigWithBasicAuth:            false,
@@ -843,7 +858,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: nil,
 			DNSNames:     []string{},
 			IPAddresses:  []net.IP{},
-			IsServerCert: true,
+			CertType:     ServerCert,
 			WantsCA:      true,
 		},
 
@@ -856,7 +871,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: nil,
 			DNSNames:     []string{},
 			IPAddresses:  []net.IP{},
-			IsServerCert: false,
+			CertType:     ClientCert,
 			WantsCA:      true,
 		},
 
@@ -869,7 +884,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{alertManagerHost},
 			IPAddresses:  nil,
-			IsServerCert: true,
+			CertType:     ServerCert,
 		},
 
 		// Secret definition for grafana (ingress)
@@ -881,7 +896,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{grafanaHost},
 			IPAddresses:  nil,
-			IsServerCert: true,
+			CertType:     ServerCert,
 		},
 
 		// Secret definition for prometheus (ingress)
@@ -893,7 +908,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{prometheusHost},
 			IPAddresses:  nil,
-			IsServerCert: true,
+			CertType:     ServerCert,
 		},
 	}
 
@@ -908,7 +923,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: nil,
 			DNSNames:     []string{monocularHost},
 			IPAddresses:  nil,
-			IsServerCert: true,
+			CertType:     ServerCert,
 		})
 	}
 
