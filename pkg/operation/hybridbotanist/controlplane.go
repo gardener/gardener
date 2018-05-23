@@ -43,7 +43,13 @@ func (b *HybridBotanist) DeployETCD() error {
 		}
 	}
 
-	etcdConfig := map[string]interface{}{}
+	etcdConfig := map[string]interface{}{
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-ca":              b.CheckSums["ca"],
+			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
+			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
+		},
+	}
 
 	// Some cloud botanists do not yet support backup and won't return backup config data.
 	if backupConfigData != nil {
@@ -65,7 +71,11 @@ func (b *HybridBotanist) DeployETCD() error {
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), fmt.Sprintf("etcd-%s", role), b.Shoot.SeedNamespace, nil, etcd); err != nil {
 			return err
 		}
+		if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -102,8 +112,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":          2379,
-		"etcdMainServiceFqdn":      fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
-		"etcdEventsServiceFqdn":    fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
+		"etcdMainServiceFqdn":      fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
+		"etcdEventsServiceFqdn":    fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
 		"advertiseAddress":         loadBalancerIP,
 		"cloudProvider":            b.ShootCloudBotanist.GetCloudProviderName(),
 		"kubernetesVersion":        b.Shoot.Info.Spec.Kubernetes.Version,
@@ -123,6 +133,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-cloudprovider":             b.CheckSums["cloudprovider"],
 			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
+			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
 		},
 	}
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerConfig()

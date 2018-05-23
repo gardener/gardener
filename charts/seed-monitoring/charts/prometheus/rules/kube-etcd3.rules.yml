@@ -3,13 +3,8 @@ groups:
   rules:
 
   # alert if main etcd is down
-<<<<<<< HEAD
-  - alert: KubeEtcd3Down
-    expr: absent(up{job="kube-etcd3",role="main"})
-=======
   - alert: KubeEtcdMainDown
     expr: sum(up{job="kube-etcd3",role="main"}) < 1
->>>>>>> Change etcdstatefulset and apiserver to include changes to have tls transport.
     for: 3m
     labels:
       service: etcd
@@ -29,11 +24,7 @@ groups:
       type: seed
     annotations:
       description: etcd3 cluster {{ $labels.role }} is unavailable or cannot be scrapped
-<<<<<<< HEAD
-      summary: etcd3 cluster down
-=======
       summary: etcd3 events cluster down
->>>>>>> Change etcdstatefulset and apiserver to include changes to have tls transport.
 
   # etcd leader alerts
   - alert: KubeEtcd3NoLeader

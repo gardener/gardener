@@ -614,8 +614,8 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 	etcdCertDNSNames := []string{
 		fmt.Sprintf("etcd-%s-0", common.EtcdRoleMain),
 		fmt.Sprintf("etcd-%s-0", common.EtcdRoleEvents),
-		fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
-		fmt.Sprintf("etcd-%s.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
+		fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
+		fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
 	}
 
 	if b.Shoot.ExternalClusterDomain != nil {
@@ -892,7 +892,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: nil,
 			DNSNames:     etcdCertDNSNames,
 			IPAddresses:  nil,
-			IsServerCert: true,
+			CertType:     ServerClientCert,
 		},
 
 		// Secret definition for etcd server
@@ -904,7 +904,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: nil,
 			DNSNames:     nil,
 			IPAddresses:  nil,
-			IsServerCert: false,
+			CertType:     ClientCert,
 		},
 
 		// Secret definition for alertmanager (ingress)

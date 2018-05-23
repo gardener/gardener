@@ -7,7 +7,7 @@ images:
 # Seed controlplane
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.3
+  tag: v3.3.5
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
