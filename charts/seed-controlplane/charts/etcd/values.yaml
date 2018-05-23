@@ -14,6 +14,10 @@ backup:
   env: []         # Follow comments below
   volumeMounts: [] 
   
+tlsServerSecretName: etcd-server-tls
+tlsClientSecretName: etcd-client-tls
+podAnnotations: {}
+
 # Aws S3 storage configuration
 # Note: No volumeMounts variable needed
 # storageProvider: "S3"

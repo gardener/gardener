@@ -60,8 +60,11 @@ spec:
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
-        - --etcd-servers=http://$(ETCD_MAIN_CLIENT_SERVICE_HOST):$(ETCD_MAIN_CLIENT_SERVICE_PORT)
-        - --etcd-servers-overrides=/events#http://$(ETCD_EVENTS_CLIENT_SERVICE_HOST):$(ETCD_EVENTS_CLIENT_SERVICE_PORT)
+        - --etcd-cafile=/srv/kubernetes/ca/ca.crt
+        - --etcd-certfile=/srv/kubernetes/etcd/tls.crt
+        - --etcd-keyfile=/srv/kubernetes/etcd/tls.key
+        - --etcd-servers=https://{{ .Values.etcdMainServiceFqdn }}:{{ .Values.etcdServicePort }}
+        - --etcd-servers-overrides=/events#https://{{ .Values.etcdEventsServiceFqdn }}:{{ .Values.etcdServicePort }}
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
         - --kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt
@@ -122,6 +125,8 @@ spec:
         {{- end }}
         - name: ca
           mountPath: /srv/kubernetes/ca
+        - name: etcd-client-tls
+          mountPath: /srv/kubernetes/etcd
         - name: kube-apiserver
           mountPath: /srv/kubernetes/apiserver
         - name: service-account-key
@@ -214,6 +219,9 @@ spec:
       - name: kube-apiserver
         secret:
           secretName: kube-apiserver
+      - name: etcd-client-tls
+        secret:
+          secretName: etcd-client-tls
       - name: service-account-key
         secret:
           secretName: service-account-key

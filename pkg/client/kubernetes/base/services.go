@@ -23,3 +23,8 @@ import (
 func (c *Client) GetService(namespace, name string) (*corev1.Service, error) {
 	return c.clientset.CoreV1().Services(namespace).Get(name, metav1.GetOptions{})
 }
+
+// DeleteService deletes an already existing Service object.
+func (c *Client) DeleteService(namespace, name string) error {
+	return c.clientset.CoreV1().Services(namespace).Delete(name, &defaultDeleteOptions)
+}

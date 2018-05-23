@@ -610,6 +610,14 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 		fmt.Sprintf("kubernetes.default.svc.%s", gardenv1beta1.DefaultDomain),
 		b.Shoot.InternalClusterDomain,
 	}
+
+	etcdCertDNSNames := []string{
+		fmt.Sprintf("etcd-%s-0", common.EtcdRoleMain),
+		fmt.Sprintf("etcd-%s-0", common.EtcdRoleEvents),
+		fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
+		fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
+	}
+
 	if b.Shoot.ExternalClusterDomain != nil {
 		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), *(b.Shoot.ExternalClusterDomain))
 	}
@@ -873,6 +881,30 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			IPAddresses:  []net.IP{},
 			CertType:     ClientCert,
 			WantsCA:      true,
+		},
+
+		// Secret definition for etcd server
+		TLSSecret{
+			Secret: Secret{
+				Name: "etcd-server-tls",
+			},
+			CommonName:   "etcd-server",
+			Organization: nil,
+			DNSNames:     etcdCertDNSNames,
+			IPAddresses:  nil,
+			CertType:     ServerClientCert,
+		},
+
+		// Secret definition for etcd server
+		TLSSecret{
+			Secret: Secret{
+				Name: "etcd-client-tls",
+			},
+			CommonName:   "etcd-client",
+			Organization: nil,
+			DNSNames:     nil,
+			IPAddresses:  nil,
+			CertType:     ClientCert,
 		},
 
 		// Secret definition for alertmanager (ingress)

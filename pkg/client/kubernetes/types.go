@@ -78,6 +78,7 @@ type Client interface {
 
 	// Services
 	GetService(string, string) (*corev1.Service, error)
+	DeleteService(namespace, name string) error
 
 	// Deployments
 	GetDeployment(string, string) (*mapping.Deployment, error)

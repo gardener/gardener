@@ -7,7 +7,7 @@ images:
 # Seed controlplane
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.3
+  tag: v3.3.5
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
@@ -26,7 +26,7 @@ images:
 # Shoot backup
 - name: etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.2.1"
+  tag: "0.2.3"
 
 # Monitoring
 - name: alertmanager
