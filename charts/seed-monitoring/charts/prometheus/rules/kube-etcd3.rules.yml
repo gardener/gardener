@@ -3,7 +3,7 @@ groups:
   rules:
   # alert if main etcd is down
   - alert: KubeEtcd3Down
-    expr: absent(up{job="kube-etcd3",role="main"}
+    expr: absent(up{job="kube-etcd3",role="main"})
     for: 3m
     labels:
       service: etcd
