@@ -15,6 +15,7 @@
 --cluster-domain={{ required "kubernetes.domain is required" .kubernetes.domain }} \
 --cni-bin-dir=/opt/cni/bin/ \
 --cni-conf-dir=/etc/cni/net.d/ \
+--cadvisor-port=0 \
 --enable-debugging-handlers=true \
 --eviction-hard="memory.available<100Mi,nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
 --eviction-soft="memory.available<200Mi,nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
@@ -45,6 +46,9 @@
 --config=/var/lib/kubelet/config/kubelet \
 --cni-bin-dir=/opt/cni/bin/ \
 --cni-conf-dir=/etc/cni/net.d/ \
+{{- if semverCompare "< 1.12" .kubernetes.version }}
+--cadvisor-port=0 \
+{{- end }}
 --enable-debugging-handlers=true \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --network-plugin=cni \
