@@ -85,15 +85,13 @@ resource "openstack_compute_keypair_v2" "ssh_key" {
   public_key = "{{ required "sshPublicKey is required" .Values.sshPublicKey }}"
 }
 
-// In commit c438ccebf70b001b60bf277295b68b10366e9cb5 we have introduced two new
-// output variables. However, they are not applied for existing OpenStack cluster
-// as Terraform won't detect a diff when we run `terraform plan`.
+// We have introduced two new output variables. However, they are not applied for
+// existing OpenStack cluster as Terraform won't detect a diff when we run `terraform plan`.
 // Workaround: Providing a null-resource for letting Terraform think that there are
 // differences, enabling the Gardener to start an actual `terraform apply` job.
-// TODO(@rfranzke): Remove in Gardener version 0.4.0.
 resource "null_resource" "outputs" {
   triggers = {
-    compute = "outputs"
+    recompute = "outputs"
   }
 }
 
@@ -101,12 +99,20 @@ resource "null_resource" "outputs" {
 //= Output Variables
 //=====================================================================
 
+output "router_id" {
+  value = "{{ required "router.id is required" .Values.router.id }}"
+}
+
 output "network_id" {
   value = "${openstack_networking_network_v2.cluster.id}"
 }
 
 output "key_name" {
   value = "${openstack_compute_keypair_v2.ssh_key.name}"
+}
+
+output "security_group_id" {
+  value = "${openstack_networking_secgroup_v2.cluster.id}"
 }
 
 output "security_group_name" {
