@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
@@ -29,6 +30,17 @@ func (b *AzureBotanist) GetMachineClassInfo() (classKind, classPlural, classChar
 	classPlural = "azuremachineclasses"
 	classChartName = "azure-machineclass"
 	return
+}
+
+// GenerateMachineClassSecretData generates the secret data for the machine class secret (except the userData field
+// which is computed elsewhere).
+func (b *AzureBotanist) GenerateMachineClassSecretData() map[string][]byte {
+	return map[string][]byte{
+		machinev1alpha1.AzureClientID:       b.Shoot.Secret.Data[ClientID],
+		machinev1alpha1.AzureClientSecret:   b.Shoot.Secret.Data[ClientSecret],
+		machinev1alpha1.AzureSubscriptionID: b.Shoot.Secret.Data[SubscriptionID],
+		machinev1alpha1.AzureTenantID:       b.Shoot.Secret.Data[TenantID],
+	}
 }
 
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
@@ -87,6 +99,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 			machineClassSpecHash = common.MachineClassHash(machineClassSpec, b.Shoot.KubernetesMajorMinorVersion)
 			deploymentName       = fmt.Sprintf("%s-%s", b.Shoot.SeedNamespace, worker.Name)
 			className            = fmt.Sprintf("%s-%s", deploymentName, machineClassSpecHash)
+			secretData           = b.GenerateMachineClassSecretData()
 		)
 
 		machineDeployments = append(machineDeployments, operation.MachineDeployment{
@@ -96,10 +109,10 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, []ope
 		})
 
 		machineClassSpec["name"] = className
-		machineClassSpec["secret"].(map[string]interface{})["clientID"] = string(b.Shoot.Secret.Data[ClientID])
-		machineClassSpec["secret"].(map[string]interface{})["clientSecret"] = string(b.Shoot.Secret.Data[ClientSecret])
-		machineClassSpec["secret"].(map[string]interface{})["subscriptionID"] = string(b.Shoot.Secret.Data[SubscriptionID])
-		machineClassSpec["secret"].(map[string]interface{})["tenantID"] = string(b.Shoot.Secret.Data[TenantID])
+		machineClassSpec["secret"].(map[string]interface{})["clientID"] = string(secretData[machinev1alpha1.AzureClientID])
+		machineClassSpec["secret"].(map[string]interface{})["clientSecret"] = string(secretData[machinev1alpha1.AzureClientSecret])
+		machineClassSpec["secret"].(map[string]interface{})["subscriptionID"] = string(secretData[machinev1alpha1.AzureSubscriptionID])
+		machineClassSpec["secret"].(map[string]interface{})["tenantID"] = string(secretData[machinev1alpha1.AzureTenantID])
 
 		machineClasses = append(machineClasses, machineClassSpec)
 	}

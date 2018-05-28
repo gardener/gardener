@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -122,6 +123,29 @@ func (b *HybridBotanist) DestroyMachines() error {
 	// Wait until all machine resources have been properly deleted.
 	if err := b.waitUntilMachineResourcesDeleted(machineClassPlural); err != nil {
 		return fmt.Errorf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error())
+	}
+
+	return nil
+}
+
+// RefreshMachineClassSecrets updates all existing machine class secrets to reflect the latest
+// cloud provider credentials.
+func (b *HybridBotanist) RefreshMachineClassSecrets() error {
+	secretList, err := b.listMachineClassSecrets()
+	if err != nil {
+		return err
+	}
+
+	// Refresh all secrets by updating the cloud provider credentials to the latest known values.
+	for _, secret := range secretList.Items {
+		var newSecret = secret
+
+		newSecret.Data = b.ShootCloudBotanist.GenerateMachineClassSecretData()
+		newSecret.Data["userData"] = secret.Data["userData"]
+
+		if _, err := b.K8sSeedClient.UpdateSecretObject(&newSecret); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -319,12 +343,16 @@ func (b *HybridBotanist) cleanupMachineDeployments(machineDeployments []operatio
 	})
 }
 
+func (b *HybridBotanist) listMachineClassSecrets() (*corev1.SecretList, error) {
+	return b.K8sSeedClient.ListSecrets(b.Shoot.SeedNamespace, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=machineclass", common.GardenPurpose),
+	})
+}
+
 // cleanupMachineClassSecrets deletes all unused machine class secrets (i.e., those which are not part
 // of the provided list <usedSecrets>.
 func (b *HybridBotanist) cleanupMachineClassSecrets(usedSecrets sets.String) error {
-	secretList, err := b.K8sSeedClient.ListSecrets(b.Shoot.SeedNamespace, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=machineclass", common.GardenPurpose),
-	})
+	secretList, err := b.listMachineClassSecrets()
 	if err != nil {
 		return err
 	}

@@ -127,7 +127,7 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	// Shutdown handling
 	<-stopCh
 	logger.Logger.Info("I have received a stop signal and will no longer watch events of the Garden API group.")
-	logger.Logger.Infof("Shoot workers: %d, Seed workers: %d, Quota workers: %d, CloudProfile workers: %d, SecretBinding: %d, BackupInfrastructure workers: %d", shootController.RunningWorkers(), seedController.RunningWorkers(), quotaController.RunningWorkers(), cloudProfileController.RunningWorkers(), secretBindingController.RunningWorkers(), backupInfrastructureController.RunningWorkers())
+	logger.Logger.Infof("Number of remaining workers -- Shoot: %d, Seed: %d, Quota: %d, CloudProfile: %d, SecretBinding: %d, BackupInfrastructure: %d", shootController.RunningWorkers(), seedController.RunningWorkers(), quotaController.RunningWorkers(), cloudProfileController.RunningWorkers(), secretBindingController.RunningWorkers(), backupInfrastructureController.RunningWorkers())
 	logger.Logger.Info("Bye bye!")
 
 	os.Exit(0)

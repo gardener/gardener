@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
@@ -29,6 +30,15 @@ func (b *AWSBotanist) GetMachineClassInfo() (classKind, classPlural, classChartN
 	classPlural = "awsmachineclasses"
 	classChartName = "aws-machineclass"
 	return
+}
+
+// GenerateMachineClassSecretData generates the secret data for the machine class secret (except the userData field
+// which is computed elsewhere).
+func (b *AWSBotanist) GenerateMachineClassSecretData() map[string][]byte {
+	return map[string][]byte{
+		machinev1alpha1.AWSAccessKeyID:     b.Shoot.Secret.Data[AccessKeyID],
+		machinev1alpha1.AWSSecretAccessKey: b.Shoot.Secret.Data[SecretAccessKey],
+	}
 }
 
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
@@ -101,6 +111,7 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 				machineClassSpecHash = common.MachineClassHash(machineClassSpec, b.Shoot.KubernetesMajorMinorVersion)
 				deploymentName       = fmt.Sprintf("%s-%s-z%d", b.Shoot.SeedNamespace, worker.Name, zoneIndex+1)
 				className            = fmt.Sprintf("%s-%s", deploymentName, machineClassSpecHash)
+				secretData           = b.GenerateMachineClassSecretData()
 			)
 
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
@@ -110,8 +121,8 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 			})
 
 			machineClassSpec["name"] = className
-			machineClassSpec["secret"].(map[string]interface{})["accessKeyID"] = string(b.Shoot.Secret.Data[AccessKeyID])
-			machineClassSpec["secret"].(map[string]interface{})["secretAccessKey"] = string(b.Shoot.Secret.Data[SecretAccessKey])
+			machineClassSpec["secret"].(map[string]interface{})["accessKeyID"] = string(secretData[machinev1alpha1.AWSAccessKeyID])
+			machineClassSpec["secret"].(map[string]interface{})["secretAccessKey"] = string(secretData[machinev1alpha1.AWSSecretAccessKey])
 
 			machineClasses = append(machineClasses, machineClassSpec)
 		}

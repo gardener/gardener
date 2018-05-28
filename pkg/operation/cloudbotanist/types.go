@@ -41,6 +41,7 @@ type CloudBotanist interface {
 	// Machines
 	GetMachineClassInfo() (string, string, string)
 	GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error)
+	GenerateMachineClassSecretData() map[string][]byte
 
 	// Addons
 	DeployKube2IAMResources() error

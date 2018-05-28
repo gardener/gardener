@@ -20,6 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 )
 
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
@@ -29,6 +30,19 @@ func (b *OpenStackBotanist) GetMachineClassInfo() (classKind, classPlural, class
 	classPlural = "openstackmachineclasses"
 	classChartName = "openstack-machineclass"
 	return
+}
+
+// GenerateMachineClassSecretData generates the secret data for the machine class secret (except the userData field
+// which is computed elsewhere).
+func (b *OpenStackBotanist) GenerateMachineClassSecretData() map[string][]byte {
+	return map[string][]byte{
+		machinev1alpha1.OpenStackAuthURL:    []byte(b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL),
+		machinev1alpha1.OpenStackInsecure:   []byte("true"),
+		machinev1alpha1.OpenStackDomainName: b.Shoot.Secret.Data[DomainName],
+		machinev1alpha1.OpenStackTenantName: b.Shoot.Secret.Data[TenantName],
+		machinev1alpha1.OpenStackUsername:   b.Shoot.Secret.Data[UserName],
+		machinev1alpha1.OpenStackPassword:   b.Shoot.Secret.Data[Password],
+	}
 }
 
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
@@ -81,6 +95,7 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, [
 				machineClassSpecHash = common.MachineClassHash(machineClassSpec, b.Shoot.KubernetesMajorMinorVersion)
 				deploymentName       = fmt.Sprintf("%s-%s-z%d", b.Shoot.SeedNamespace, worker.Name, zoneIndex+1)
 				className            = fmt.Sprintf("%s-%s", deploymentName, machineClassSpecHash)
+				secretData           = b.GenerateMachineClassSecretData()
 			)
 
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
@@ -90,11 +105,11 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, [
 			})
 
 			machineClassSpec["name"] = className
-			machineClassSpec["secret"].(map[string]interface{})["authURL"] = b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL
-			machineClassSpec["secret"].(map[string]interface{})["domainName"] = string(b.Shoot.Secret.Data[DomainName])
-			machineClassSpec["secret"].(map[string]interface{})["tenantName"] = string(b.Shoot.Secret.Data[TenantName])
-			machineClassSpec["secret"].(map[string]interface{})["username"] = string(b.Shoot.Secret.Data[UserName])
-			machineClassSpec["secret"].(map[string]interface{})["password"] = string(b.Shoot.Secret.Data[Password])
+			machineClassSpec["secret"].(map[string]interface{})["authURL"] = string(secretData[machinev1alpha1.OpenStackAuthURL])
+			machineClassSpec["secret"].(map[string]interface{})["domainName"] = string(secretData[machinev1alpha1.OpenStackDomainName])
+			machineClassSpec["secret"].(map[string]interface{})["tenantName"] = string(secretData[machinev1alpha1.OpenStackTenantName])
+			machineClassSpec["secret"].(map[string]interface{})["username"] = string(secretData[machinev1alpha1.OpenStackUsername])
+			machineClassSpec["secret"].(map[string]interface{})["password"] = string(secretData[machinev1alpha1.OpenStackPassword])
 
 			machineClasses = append(machineClasses, machineClassSpec)
 		}

@@ -21,10 +21,16 @@ import (
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
 // contains the machine class template.
 func (b *LocalBotanist) GetMachineClassInfo() (classKind, classPlural, classChartName string) {
-	classKind = "LocalClass"
-	classPlural = "localclasses"
-	classChartName = "local-machineclass"
+	classKind = ""
+	classPlural = ""
+	classChartName = ""
 	return
+}
+
+// GenerateMachineClassSecretData generates the secret data for the machine class secret (except the userData field
+// which is computed elsewhere).
+func (b *LocalBotanist) GenerateMachineClassSecretData() map[string][]byte {
+	return map[string][]byte{}
 }
 
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
