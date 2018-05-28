@@ -28,7 +28,7 @@ resource "google_compute_network" "network" {
 resource "google_compute_subnetwork" "subnetwork-nodes" {
   name          = "{{ required "clusterName is required" .Values.clusterName }}-nodes"
   ip_cidr_range = "{{ required "networks.worker is required" .Values.networks.worker }}"
-  network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"
+  network       = "{{ required "vpc.name is required" .Values.vpc.name }}"
   region        = "{{ required "google.region is required" .Values.google.region }}"
 }
 
@@ -39,7 +39,7 @@ resource "google_compute_subnetwork" "subnetwork-nodes" {
 // Allow traffic within internal network range.
 resource "google_compute_firewall" "rule-allow-internal-access" {
   name          = "{{ required "clusterName is required" .Values.clusterName }}-allow-internal-access"
-  network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"
+  network       = "{{ required "vpc.name is required" .Values.vpc.name }}"
   source_ranges = ["10.0.0.0/8"]
 
   allow {
@@ -63,7 +63,7 @@ resource "google_compute_firewall" "rule-allow-internal-access" {
 
 resource "google_compute_firewall" "rule-allow-external-access" {
   name          = "{{ required "clusterName is required" .Values.clusterName }}-allow-external-access"
-  network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"
+  network       = "{{ required "vpc.name is required" .Values.vpc.name }}"
   source_ranges = ["0.0.0.0/0"]
 
   allow {
@@ -77,7 +77,7 @@ resource "google_compute_firewall" "rule-allow-external-access" {
 // https://cloud.google.com/compute/docs/load-balancing/network/
 resource "google_compute_firewall" "rule-allow-health-checks" {
   name          = "{{ required "clusterName is required" .Values.clusterName }}-allow-health-checks"
-  network       = "{{ required "vpc.name is required" $.Values.vpc.name }}"
+  network       = "{{ required "vpc.name is required" .Values.vpc.name }}"
   source_ranges = [
     "35.191.0.0/16",
     "209.85.204.0/22",
@@ -96,9 +96,23 @@ resource "google_compute_firewall" "rule-allow-health-checks" {
   }
 }
 
+// We have introduced new output variables. However, they are not applied for
+// existing clusters as Terraform won't detect a diff when we run `terraform plan`.
+// Workaround: Providing a null-resource for letting Terraform think that there are
+// differences, enabling the Gardener to start an actual `terraform apply` job.
+resource "null_resource" "outputs" {
+  triggers = {
+    recompute = "outputs"
+  }
+}
+
 //=====================================================================
 //= Output variables
 //=====================================================================
+
+output "vpc_name" {
+  value = "{{ required "vpc.name is required" .Values.vpc.name }}"
+}
 
 output "service_account_email" {
   value = "${google_service_account.serviceaccount.email}"

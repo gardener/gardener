@@ -85,8 +85,8 @@ resource "openstack_compute_keypair_v2" "ssh_key" {
   public_key = "{{ required "sshPublicKey is required" .Values.sshPublicKey }}"
 }
 
-// We have introduced two new output variables. However, they are not applied for
-// existing OpenStack cluster as Terraform won't detect a diff when we run `terraform plan`.
+// We have introduced new output variables. However, they are not applied for
+// existing clusters as Terraform won't detect a diff when we run `terraform plan`.
 // Workaround: Providing a null-resource for letting Terraform think that there are
 // differences, enabling the Gardener to start an actual `terraform apply` job.
 resource "null_resource" "outputs" {
