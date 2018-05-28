@@ -22,10 +22,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DeployNginxIngressResources creates the respective wildcard DNS record for the nginx-ingress-controller.
-func (b *Botanist) DeployNginxIngressResources() error {
+// EnsureIngressDNSRecord creates the respective wildcard DNS record for the nginx-ingress-controller.
+func (b *Botanist) EnsureIngressDNSRecord() error {
 	if !b.Shoot.NginxIngressEnabled() {
-		return b.DestroyNginxIngressResources()
+		return b.DestroyIngressDNSRecord()
 	}
 
 	loadBalancerIngress, _, err := common.GetLoadBalancerIngress(b.K8sShootClient, metav1.NamespaceSystem, "addons-nginx-ingress-controller")
@@ -35,8 +35,8 @@ func (b *Botanist) DeployNginxIngressResources() error {
 	return b.DeployDNSRecord("ingress", b.Shoot.GetIngressFQDN("*"), loadBalancerIngress, false)
 }
 
-// DestroyNginxIngressResources destroys the nginx-ingress resources created by Terraform.
-func (b *Botanist) DestroyNginxIngressResources() error {
+// DestroyIngressDNSRecord destroys the nginx-ingress resources created by Terraform.
+func (b *Botanist) DestroyIngressDNSRecord() error {
 	return b.DestroyDNSRecord("ingress", false)
 }
 

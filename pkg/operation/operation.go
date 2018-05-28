@@ -17,6 +17,7 @@ package operation
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -154,7 +155,7 @@ func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
-	o.Shoot.Info.Status.LastOperation.Description = "Currently executing " + currentFunctions
+	o.Shoot.Info.Status.LastOperation.Description = fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
 	o.Shoot.Info.Status.LastOperation.Progress = progress
 	o.Shoot.Info.Status.LastOperation.LastUpdateTime = metav1.Now()
 
@@ -166,13 +167,18 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 // ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportBackupInfrastructureProgress(progress int, currentFunctions string) {
-	o.BackupInfrastructure.Status.LastOperation.Description = "Currently executing " + currentFunctions
+	o.BackupInfrastructure.Status.LastOperation.Description = fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
 	o.BackupInfrastructure.Status.LastOperation.Progress = progress
 	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()
 
 	if newBackupInfrastructure, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(o.BackupInfrastructure.Namespace).UpdateStatus(o.BackupInfrastructure); err == nil {
 		o.BackupInfrastructure = newBackupInfrastructure
 	}
+}
+
+func sanitizeFunctionNames(functions string) string {
+	re := regexp.MustCompile(`\([^)]*\)\.`)
+	return re.ReplaceAllString(functions, "")
 }
 
 // InjectImages injects images from the image vector into the provided <values> map.
