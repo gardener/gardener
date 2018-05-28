@@ -39,6 +39,7 @@ spec:
           args:
           - /nginx-ingress-controller
           - --default-backend-service={{ if .Values.defaultBackend.enabled }}{{ .Release.Namespace }}/{{ template "defaultBackend.fullname" . }}{{ else }}{{ .Values.controller.defaultBackendService }}{{ end }}
+          - --enable-ssl-passthrough=true
           {{- if .Values.controller.publishService.enabled }}
           - --publish-service={{ template "controller.publishServicePath" . }}
           {{- end }}
