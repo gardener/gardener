@@ -12,25 +12,29 @@ ignored = [
   "github.com/spf13/afero/sftp"
 ]
 
-[[constraint]]
+[[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.10.3"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.10.3"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.10.3"
 
-[[constraint]]
+[[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.1"
+  version = "kubernetes-1.10.3"
+
+[[override]]
+  name = "k8s.io/code-generator"
+  version = "kubernetes-1.10.3"
 
 [[constraint]]
-  name = "k8s.io/code-generator"
-  version = "kubernetes-1.10.1"
+  name = "github.com/gardener/machine-controller-manager"
+  revision = "0be5317161d27ef7b95fa7b53844ae3b78f24c7a"
 
 [[constraint]]
   name = "k8s.io/helm"
