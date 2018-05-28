@@ -94,24 +94,17 @@ func (b *HybridBotanist) DestroyMachines() error {
 		return err
 	}
 
-	if err := machineList.EachListItem(func(o runtime.Object) error {
-		var (
-			obj         = o.(*unstructured.Unstructured)
-			machineName = obj.GetName()
-		)
-
-		labels := obj.GetLabels()
-		labels["force-deletion"] = "True"
-		obj.SetLabels(labels)
-
-		body, err := json.Marshal(obj.UnstructuredContent())
-		if err != nil {
-			return fmt.Errorf("Marshalling machine object failed: %s", err.Error())
-		}
-
-		return b.K8sSeedClient.MachineV1alpha1("PUT", "machines", b.Shoot.SeedNamespace).Name(machineName).Body(body).Do().Error()
-	}); err != nil {
-		return fmt.Errorf("Labelling machines failed: %s", err.Error())
+	var errorList []error
+	machineList.EachListItem(func(o runtime.Object) error {
+		go func(obj *unstructured.Unstructured) {
+			if err := b.labelMachine(obj); err != nil {
+				errorList = append(errorList, err)
+			}
+		}(o.(*unstructured.Unstructured))
+		return nil
+	})
+	if len(errorList) > 0 {
+		return fmt.Errorf("Labelling machines failed: %v", errorList)
 	}
 
 	var (
@@ -161,6 +154,24 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(machineDeployments []op
 	return map[string]interface{}{
 		"machineDeployments": values,
 	}, nil
+}
+
+// labelMachine labels a machine object to be forcefully deleted.
+func (b *HybridBotanist) labelMachine(obj *unstructured.Unstructured) error {
+	var (
+		labels      = obj.GetLabels()
+		machineName = obj.GetName()
+	)
+
+	labels["force-deletion"] = "True"
+	obj.SetLabels(labels)
+
+	body, err := json.Marshal(obj.UnstructuredContent())
+	if err != nil {
+		return fmt.Errorf("Marshalling machine %s object failed: %s", machineName, err.Error())
+	}
+
+	return b.K8sSeedClient.MachineV1alpha1("PUT", "machines", b.Shoot.SeedNamespace).Name(machineName).Body(body).Do().Error()
 }
 
 // waitUntilMachineDeploymentsAvailable waits for a maximum of 30 minutes until all the desired <machineDeployments>
