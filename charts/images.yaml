@@ -48,7 +48,7 @@ images:
   tag: v0.15.2
 - name: grafana
   repository: grafana/grafana
-  tag: "5.0.4"
+  tag: "5.1.3"
 - name: grafana-watcher
   repository: quay.io/coreos/grafana-watcher
   tag: v0.0.8
