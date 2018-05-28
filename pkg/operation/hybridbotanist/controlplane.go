@@ -99,13 +99,9 @@ func (b *HybridBotanist) DeployCloudProviderConfig() error {
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
-	var (
-		name          = "kube-apiserver"
-		loadBalancer  = b.Botanist.APIServerAddress
-		basicAuthData = b.Secrets["kubecfg"].Data
-	)
+	var basicAuthData = b.Secrets["kubecfg"].Data
 
-	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(loadBalancer)
+	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.Botanist.APIServerAddress)
 	if err != nil {
 		return err
 	}
@@ -124,14 +120,14 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"livenessProbeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", basicAuthData["username"], basicAuthData["password"]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
-			"checksum/secret-kube-apiserver":            b.CheckSums[name],
+			"checksum/secret-kube-apiserver":            b.CheckSums[common.KubeAPIServerDeploymentName],
 			"checksum/secret-kube-aggregator":           b.CheckSums["kube-aggregator"],
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
 			"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
 			"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
-			"checksum/secret-cloudprovider":             b.CheckSums["cloudprovider"],
+			"checksum/secret-cloudprovider":             b.CheckSums[common.CloudProviderSecretName],
 			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
 		},
@@ -165,14 +161,12 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, values, cloudValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
 }
 
 // DeployKubeControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-controller-manager deployment.
 func (b *HybridBotanist) DeployKubeControllerManager() error {
-	name := "kube-controller-manager"
-
 	defaultValues := map[string]interface{}{
 		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
 		"clusterName":       b.Shoot.SeedNamespace,
@@ -182,9 +176,9 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"configureRoutes":   true,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                       b.CheckSums["ca"],
-			"checksum/secret-kube-controller-manager":  b.CheckSums[name],
+			"checksum/secret-kube-controller-manager":  b.CheckSums[common.KubeControllerManagerDeploymentName],
 			"checksum/secret-service-account-key":      b.CheckSums["service-account-key"],
-			"checksum/secret-cloudprovider":            b.CheckSums["cloudprovider"],
+			"checksum/secret-cloudprovider":            b.CheckSums[common.CloudProviderSecretName],
 			"checksum/configmap-cloud-provider-config": b.CheckSums["cloud-provider-config"],
 		},
 	}
@@ -203,7 +197,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, values, cloudValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), common.KubeControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
 }
 
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the

@@ -29,6 +29,9 @@ const (
 	// is being downloaded from the cloud-config-downloader process)
 	CloudConfigPrefix = "cloud-config"
 
+	// CloudProviderSecretName is the name of the secret containing the cloud provider credentials.
+	CloudProviderSecretName = "cloudprovider"
+
 	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
 	CloudPurposeShoot = "shoot"
 
@@ -119,6 +122,9 @@ const (
 
 	// KubeAPIServerDeploymentName is the name of the kube-apiserver deployment.
 	KubeAPIServerDeploymentName = "kube-apiserver"
+
+	// KubeControllerManagerDeploymentName is the name of the kube-controller-manager deployment.
+	KubeControllerManagerDeploymentName = "kube-controller-manager"
 
 	// KubeAddonManagerDeploymentName is the name of the kube-addon-manager deployment.
 	KubeAddonManagerDeploymentName = "kube-addon-manager"

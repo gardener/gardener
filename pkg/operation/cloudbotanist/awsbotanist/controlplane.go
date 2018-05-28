@@ -73,7 +73,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 			"valueFrom": map[string]interface{}{
 				"secretKeyRef": map[string]interface{}{
 					"key":  AccessKeyID,
-					"name": "cloudprovider",
+					"name": common.CloudProviderSecretName,
 				},
 			},
 		},
@@ -82,7 +82,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 			"valueFrom": map[string]interface{}{
 				"secretKeyRef": map[string]interface{}{
 					"key":  SecretAccessKey,
-					"name": "cloudprovider",
+					"name": common.CloudProviderSecretName,
 				},
 			},
 		},

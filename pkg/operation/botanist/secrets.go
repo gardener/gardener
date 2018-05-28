@@ -195,12 +195,9 @@ func (b *Botanist) DeploySecrets() error {
 	}
 
 	// Third we create the cloudprovider secret which contains the credentials for the cloud provider.
-	name = "cloudprovider"
-	_, err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, name, corev1.SecretTypeOpaque, b.Shoot.Secret.Data, true)
-	if err != nil {
+	if err := b.deployCloudProviderSecret(); err != nil {
 		return err
 	}
-	b.Secrets[name] = b.Shoot.Secret
 
 	// We create the OpenVPN TLS auth secret (which requires executing a `openvpn` command)
 	name = "vpn-seed-tlsauth"
@@ -287,13 +284,36 @@ func (b *Botanist) DeploySecrets() error {
 
 	// Create kubeconfig and ssh-keypair secrets also in the project namespace in the Garden cluster
 	for key, value := range map[string]string{"kubeconfig": "kubecfg", "ssh-keypair": "ssh-keypair"} {
-		_, err = b.K8sGardenClient.CreateSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, key), corev1.SecretTypeOpaque, b.Secrets[value].Data, true)
-		if err != nil {
+		if _, err := b.K8sGardenClient.CreateSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, key), corev1.SecretTypeOpaque, b.Secrets[value].Data, true); err != nil {
 			return err
 		}
 	}
 
-	return b.computeSecretsCheckSums()
+	b.computeSecretsCheckSums()
+	return nil
+}
+
+// deployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
+// in the Seed cluster.
+func (b *Botanist) deployCloudProviderSecret() error {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.CloudProviderSecretName,
+			Namespace: b.Shoot.SeedNamespace,
+			Annotations: map[string]string{
+				"checksum/data": computeSecretCheckSum(b.Shoot.Secret.Data),
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: b.Shoot.Secret.Data,
+	}
+
+	if _, err := b.K8sSeedClient.CreateSecretObject(secret, true); err != nil {
+		return err
+	}
+
+	b.Secrets[common.CloudProviderSecretName] = b.Shoot.Secret
+	return nil
 }
 
 // DeleteGardenSecrets deletes the Shoot-specific secrets from the project namespace in the Garden cluster.
@@ -573,15 +593,18 @@ func (b *Botanist) computeAPIServerURL(runsInSeed, useInternalClusterDomain bool
 
 // computeSecretsCheckSums computes sha256 checksums for Secrets or ConfigMaps which will be injected
 // into a Pod template (to establish automatic pod restart on changes).
-func (b *Botanist) computeSecretsCheckSums() error {
+func (b *Botanist) computeSecretsCheckSums() {
 	for name, secret := range b.Secrets {
-		jsonString, err := json.Marshal(secret.Data)
-		if err != nil {
-			return err
-		}
-		b.CheckSums[name] = utils.ComputeSHA256Hex(jsonString)
+		b.CheckSums[name] = computeSecretCheckSum(secret.Data)
 	}
-	return nil
+}
+
+func computeSecretCheckSum(data map[string][]byte) string {
+	jsonString, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return utils.ComputeSHA256Hex(jsonString)
 }
 
 func generateGardenSecretName(shootName, secretName string) string {
