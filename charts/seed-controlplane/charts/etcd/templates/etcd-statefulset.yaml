@@ -63,7 +63,7 @@ spec:
             command:
             - /bin/sh
             - -ec
-            - ETCDCTL_API=3 
+            - ETCDCTL_API=3
             - etcdctl
             - --cert=/var/etcd/client/ssl/tls.crt
             - --key=/var/etcd/client/ssl/tls.key
@@ -85,8 +85,8 @@ spec:
             cpu: 200m
             memory: 500Mi
           limits:
-            cpu: 500m
-            memory: 2400Mi
+            cpu: 750m
+            memory: 2500Mi
         volumeMounts:
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
@@ -113,7 +113,7 @@ spec:
         - --insecure-transport=false
         - --insecure-skip-tls-verify=false
         - --endpoints=https://etcd-{{ .Values.role }}-0:2379
-        image: {{ index .Values.images "etcd-backup-restore" }} 
+        image: {{ index .Values.images "etcd-backup-restore" }}
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
@@ -134,7 +134,7 @@ spec:
 {{- end }}
         volumeMounts:
         - name: etcd-{{ .Values.role }}
-          mountPath: /var/etcd/data          
+          mountPath: /var/etcd/data
         - name: ca
           mountPath: /srv/kubernetes/ca
         - name: etcd-client-tls

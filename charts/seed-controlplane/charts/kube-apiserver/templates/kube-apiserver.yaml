@@ -116,8 +116,8 @@ spec:
             cpu: 200m
             memory: 512Mi
           limits:
-            cpu: "1"
-            memory: 2048Mi
+            cpu: 1500m
+            memory: 2500Mi
         volumeMounts:
         {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - name: audit-policy-config
