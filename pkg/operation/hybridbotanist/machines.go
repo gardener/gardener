@@ -187,6 +187,10 @@ func (b *HybridBotanist) labelMachine(obj *unstructured.Unstructured) error {
 		machineName = obj.GetName()
 	)
 
+	if val, ok := labels["force-deletion"]; ok && val == "True" {
+		return nil
+	}
+
 	labels["force-deletion"] = "True"
 	obj.SetLabels(labels)
 
