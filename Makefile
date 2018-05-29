@@ -34,7 +34,7 @@ start-api:
 	@go run cmd/gardener-apiserver/main.go \
 			--authentication-kubeconfig ~/.kube/config \
 			--authorization-kubeconfig ~/.kube/config \
-			--enable-admission-plugins=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator \
+			--enable-admission-plugins=DeletionConfirmation \
 			--etcd-servers=http://$(shell minikube ip):32379 \
 			--kubeconfig ~/.kube/config \
 			--tls-cert-file ~/.minikube/apiserver.crt \
