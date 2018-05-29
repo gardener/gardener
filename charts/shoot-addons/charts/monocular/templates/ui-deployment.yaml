@@ -19,6 +19,7 @@ spec:
         app: {{ template "fullname" . }}-ui
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/ui-config.yaml") . | sha256sum }}
+        checksum/vhost: {{ include (print $.Template.BasePath "/ui-vhost.yaml") . | sha256sum }}
     spec:
       containers:
       - name: {{ .Chart.Name }}
