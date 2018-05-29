@@ -66,7 +66,7 @@ function http_get() {
 # Returns the name of the namespace on the seed cluster hosting the control plane of the shoot
 function determine_shoot_namespace() {
   local shoot_namespace=$(echo ${watch_namespace} | cut -d- -f 2)
-  echo "shoot-${shoot_namespace}-${shoot_cluster_name}"
+  echo "shoot--${shoot_namespace}--${shoot_cluster_name}"
 }
 
 # Download kubeconfig for Seed cluster
