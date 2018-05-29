@@ -116,9 +116,6 @@ images:
 - name: monocular-ui
   repository: bitnami/monocular-ui
   tag: v0.3.1
-- name: monocular-prerender
-  repository: migmartri/prerender
-  tag: latest
 
 # Miscellaenous
 - name: terraformer

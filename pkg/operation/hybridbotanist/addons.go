@@ -162,7 +162,7 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-	monocular, err := b.Botanist.InjectImages(monocularConfig, b.K8sShootClient.Version(), map[string]string{"monocular-api": "monocular-api", "monocular-ui": "monocular-ui", "monocular-prerender": "monocular-prerender", "busybox": "busybox"})
+	monocular, err := b.Botanist.InjectImages(monocularConfig, b.K8sShootClient.Version(), map[string]string{"monocular-api": "monocular-api", "monocular-ui": "monocular-ui", "busybox": "busybox"})
 	if err != nil {
 		return nil, err
 	}

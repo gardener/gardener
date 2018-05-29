@@ -4,7 +4,6 @@
 images:
   monocular-api: image-repository:image-tag
   monocular-ui: image-repository:image-tag
-  monocular-prerender: image-repository:image-tag
   busybox: image-repository:image-tag
 
 api:
@@ -68,7 +67,7 @@ ui:
   # backendHostname: http://monocular-api.local
 
 prerender:
-  replicaCount: 1
+  replicaCount: 0
   image:
     pullPolicy: Always
   cacheEnabled: true
