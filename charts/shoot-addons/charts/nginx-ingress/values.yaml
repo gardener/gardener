@@ -4,7 +4,6 @@
 images:
   nginx-ingress-controller: image-repository:image-tag
   ingress-default-backend: image-repository:image-tag
-  vts-ingress-exporter: image-repository:image-tag
 
 controller:
   name: controller

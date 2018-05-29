@@ -66,24 +66,6 @@ ui:
   # e.g. API served on a different domain
   # backendHostname: http://monocular-api.local
 
-prerender:
-  replicaCount: 0
-  image:
-    pullPolicy: Always
-  cacheEnabled: true
-  service:
-    name: prerender
-    type: NodePort
-    externalPort: 80
-    internalPort: 3000
-  resources:
-    requests:
-      cpu: 100m
-      memory: 128Mi
-    limits:
-      cpu: 300m
-      memory: 512Mi
-
 ingress:
   enabled: true
   hosts:

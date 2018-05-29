@@ -104,26 +104,6 @@ spec:
               scheme: HTTP
           resources:
 {{ toYaml .Values.controller.resources | indent 12 }}
-      {{- if .Values.controller.stats.enabled }}
-        - name: {{ template "name" . }}-{{ .Values.statsExporter.name }}
-          image: {{ index .Values.images "vts-ingress-exporter" }}
-          imagePullPolicy: "{{ .Values.statsExporter.image.pullPolicy }}"
-          env:
-            - name: METRICS_ADDR
-              value: ":9913"
-            - name: METRICS_ENDPOINT
-              value: "{{ .Values.statsExporter.endpoint }}"
-            - name: METRICS_NS
-              value: "{{ .Values.statsExporter.metricsNamespace }}"
-            - name: NGINX_STATUS
-              value: "{{ .Values.statsExporter.statusPage }}"
-          ports:
-            - name: metrics
-              containerPort: 9913
-              protocol: TCP
-          resources:
-{{ toYaml .Values.statsExporter.resources | indent 12 }}
-      {{- end }}
       hostNetwork: {{ .Values.controller.hostNetwork }}
     {{- if .Values.controller.nodeSelector }}
       nodeSelector:

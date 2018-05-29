@@ -104,9 +104,6 @@ images:
 - name: ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
   tag: "0.3.0"
-- name: vts-ingress-exporter
-  repository: quay.io/cy-play/vts-nginx-exporter
-  tag: v0.0.3
 - name: helm-tiller
   repository: gcr.io/kubernetes-helm/tiller
   tag: v2.9.1
