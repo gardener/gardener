@@ -22,7 +22,6 @@ grafana:
   images:
     grafana: image-repository:image-tag
     busybox: image-repository:image-tag
-    grafana-watcher: image-repository:image-tag
 kube-state-metrics-seed:
   replicas: 1
   images:

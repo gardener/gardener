@@ -16,11 +16,12 @@ spec:
     metadata:
       annotations:
         checksum/configmap-dashboards: {{ include (print $.Template.BasePath "/grafana-dashboards-configmap.yaml") . | sha256sum }}
+        checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana-datasources-configmap.yaml") . | sha256sum }}
+        checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
         checksum/secret-auth: {{ include (print $.Template.BasePath "/grafana-secret.yaml") . | sha256sum }}
       labels:
         component: grafana
     spec:
-      # This feature requires 1.6 Kubernetes. Its needed otherwise Grafana won't fetch the needed metadata from Prometheus
       initContainers:
       - name: init-prometheus
         image: {{ index .Values.images "busybox" }}
@@ -47,6 +48,12 @@ spec:
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/grafana-storage
+        - name: grafana-dashboards
+          mountPath: /var/lib/grafana/dashboards
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboard-providers
+          mountPath: /etc/grafana/provisioning/dashboards
         ports:
         - name: web
           containerPort: 3000
@@ -57,39 +64,15 @@ spec:
           limits:
             cpu: 200m
             memory: 128Mi
-      - name: grafana-watcher
-        image: {{ index .Values.images "grafana-watcher" }}
-        imagePullPolicy: IfNotPresent
-        args:
-        - --watch-dir=/var/grafana-dashboards
-        - --grafana-url=http://localhost:3000
-        env:
-        - name: GRAFANA_USER
-          valueFrom:
-            secretKeyRef:
-              name: grafana-credentials
-              key: user
-        - name: GRAFANA_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: grafana-credentials
-              key: password
-        volumeMounts:
-        - name: grafana-dashboards
-          mountPath: /var/grafana-dashboards
-        resources:
-          requests:
-            cpu: 5m
-            memory: 8Mi
-          limits:
-            cpu: 50m
-            memory: 32Mi
-        volumeMounts:
-        - name: grafana-dashboards
-          mountPath: /var/grafana-dashboards
       volumes:
       - name: grafana-storage
         emptyDir: {}
       - name: grafana-dashboards
         configMap:
           name: grafana-dashboards
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
+      - name: grafana-dashboard-providers
+        configMap:
+          name: grafana-dashboard-providers

@@ -298,7 +298,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	if err != nil {
 		return err
 	}
-	grafana, err := b.InjectImages(grafanaConfig, b.K8sSeedClient.Version(), map[string]string{"grafana": "grafana", "busybox": "busybox", "grafana-watcher": "grafana-watcher"})
+	grafana, err := b.InjectImages(grafanaConfig, b.K8sSeedClient.Version(), map[string]string{"grafana": "grafana", "busybox": "busybox"})
 	if err != nil {
 		return err
 	}

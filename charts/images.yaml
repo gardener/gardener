@@ -49,9 +49,6 @@ images:
 - name: grafana
   repository: grafana/grafana
   tag: "5.1.3"
-- name: grafana-watcher
-  repository: quay.io/coreos/grafana-watcher
-  tag: v0.0.8
 - name: blackbox-exporter
   repository: quay.io/prometheus/blackbox-exporter
   tag: v0.12.0

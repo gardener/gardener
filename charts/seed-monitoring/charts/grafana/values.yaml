@@ -1,7 +1,6 @@
 images:
   grafana: image-repository:image-tag
   busybox: image-repository:image-tag
-  grafana-watcher: image-repository:image-tag
 
 ingress:
   host: g.seed-1.example.com

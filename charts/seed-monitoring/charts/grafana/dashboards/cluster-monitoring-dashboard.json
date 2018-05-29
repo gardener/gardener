@@ -1,37 +1,4 @@
 {
-  "__inputs": [{
-    "name": "DS_PROMETHEUS",
-    "label": "prometheus",
-    "description": "",
-    "type": "datasource",
-    "pluginId": "prometheus",
-    "pluginName": "Prometheus"
-  }],
-  "__requires": [{
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "4.1.1"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": ""
-    }
-  ],
   "annotations": {
     "list": []
   },
@@ -43,14 +10,14 @@
   "hideControls": false,
   "id": null,
   "links": [],
-  "refresh": "10s",
+  "refresh": "30s",
   "rows": [{
       "collapse": false,
       "height": "200px",
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -158,7 +125,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "editable": true,
           "error": false,
           "format": "percent",
@@ -230,7 +197,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -302,7 +269,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -376,7 +343,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -448,7 +415,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -520,7 +487,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -592,7 +559,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -664,7 +631,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -736,7 +703,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(245, 54, 54, 0.9)"
           ],
-          "datasource": "${DS_PROMETHEUS}",
+          "datasource": "prometheus",
           "decimals": 2,
           "editable": true,
           "error": false,
@@ -813,7 +780,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 3,
         "editable": true,
         "error": false,
@@ -904,7 +871,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 3,
         "editable": true,
         "error": false,
@@ -995,7 +962,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 3,
         "editable": true,
         "error": false,
@@ -1109,7 +1076,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 3,
         "editable": true,
         "error": false,
@@ -1199,7 +1166,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1289,7 +1256,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1377,7 +1344,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1484,7 +1451,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1572,7 +1539,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1672,7 +1639,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1812,7 +1779,7 @@
       "panels": [{
         "aliasColors": {},
         "bars": false,
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "decimals": 2,
         "editable": true,
         "error": false,
@@ -1914,7 +1881,7 @@
     "list": [{
         "allValue": ".*",
         "current": {},
-        "datasource": "${DS_PROMETHEUS}",
+        "datasource": "prometheus",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -1969,8 +1936,6 @@
   },
   "timepicker": {
     "refresh_intervals": [
-      "5s",
-      "10s",
       "30s",
       "1m",
       "5m",
