@@ -53,12 +53,13 @@ monitor-delay=60s
 monitor-timeout=30s
 monitor-max-retries=5`
 
-	k8s1101, err := utils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, "^", "1.10.1")
+	// https://github.com/kubernetes/kubernetes/pull/63903#issue-188306465
+	needsDHCPDomain, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.10.1, < 1.10.3")
 	if err != nil {
 		return "", err
 	}
 
-	if k8s1101 && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil {
+	if needsDHCPDomain && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil {
 		cloudProviderConfig += `
 [Metadata]
 dhcp-domain=` + *b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain
