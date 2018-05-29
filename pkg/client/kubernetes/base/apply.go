@@ -177,12 +177,12 @@ func (c *Client) buildPath(apiVersion, kind, namespace string) (string, error) {
 	// Thus, we need to have some retry logic regarding the discovery.
 	// See also: https://github.com/kubernetes/kubernetes/issues/45786
 
-	// Perform at most five steps with the following approx. delays: +0.5s, +1.8s, +5s
+	// Perform at most four tries with the following approx. delays: +0.5s, +1.8s, +5s, +11.8s, +29.5s
 	backoff := wait.Backoff{
 		Duration: time.Second,
 		Factor:   2.5,
 		Jitter:   0.3,
-		Steps:    3,
+		Steps:    5,
 	}
 
 	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
@@ -219,19 +219,19 @@ func (c *Client) get(path string) rest.Result {
 }
 
 // post performs a HTTP POST request on the given path and with the given body (must be a byte
-// slice containing valid JSON). An error will be returned if one occurrs.
+// slice containing valid JSON). An error will be returned if one occurs.
 func (c *Client) post(path string, body []byte) error {
 	return c.restClient.Post().AbsPath(path).Body(body).Do().Error()
 }
 
 // put performs a HTTP PUT request on the given path and with the given body (must be a byte
-// slice containing valid JSON). An error will be returned if one occurrs.
+// slice containing valid JSON). An error will be returned if one occurs.
 func (c *Client) put(path string, body []byte) error {
 	return c.restClient.Put().AbsPath(path).Body(body).Do().Error()
 }
 
 // patch performs a HTTP PATCH request on the given path and with the given body (must be a byte
-// slice containing valid JSON). An error will be returned if one occurrs.
+// slice containing valid JSON). An error will be returned if one occurs.
 // The patch type is merge patch.
 func (c *Client) patch(path string, body []byte) error {
 	return c.restClient.Patch(types.MergePatchType).AbsPath(path).Body(body).Do().Error()
