@@ -585,6 +585,7 @@ function execute() {
     # Create service
     max_retry_time=1200
     retry_stop=$(($(date +%s) + max_retry_time))
+    exec_helm "${shoot_cluster_kubeconfig}" init --client-only > /dev/null
     exec_helm "${shoot_cluster_kubeconfig}" install -n redis --namespace "${helm_deploy_ns}" stable/redis > /dev/null
     helm_response="$(exec_helm "${shoot_cluster_kubeconfig}" status redis 2>&1 || true)"
     while [[ "$helm_response" != *"STATUS: DEPLOYED"* ]] && [[ $(date +%s) -lt $retry_stop ]]; do
