@@ -12,6 +12,7 @@
 * [Configuration and Secrets](deployment/configuration.md)
 * [Deploying the Gardener into a Kubernetes cluster](deployment/kubernetes.md)
 * [Deploying the Gardener into a Minikube with Local Provider](deployment/kubernetes-minikube.md)
+* [Deploying the Gardener and a Seed into an AKS cluster](deployment/aks.md)
 
 ## Usage
 
