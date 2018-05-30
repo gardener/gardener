@@ -177,12 +177,12 @@ func (c *Client) buildPath(apiVersion, kind, namespace string) (string, error) {
 	// Thus, we need to have some retry logic regarding the discovery.
 	// See also: https://github.com/kubernetes/kubernetes/issues/45786
 
-	// Perform at most four tries with the following approx. delays: +0.5s, +1.8s, +5s, +11.8s, +29.5s
+	// Perform at most four tries with the following approx. delays: +0.5s, +1.8s, +5s, +11.8s
 	backoff := wait.Backoff{
 		Duration: time.Second,
 		Factor:   2.5,
 		Jitter:   0.3,
-		Steps:    5,
+		Steps:    4,
 	}
 
 	if err := wait.ExponentialBackoff(backoff, func() (bool, error) {
@@ -198,7 +198,6 @@ func (c *Client) buildPath(apiVersion, kind, namespace string) (string, error) {
 						return true, nil
 					}
 				}
-				return false, fmt.Errorf("%s is not registered in API group %s", kind, apiVersion)
 			}
 		}
 		// Refresh client API discovery
@@ -207,7 +206,7 @@ func (c *Client) buildPath(apiVersion, kind, namespace string) (string, error) {
 		}
 		return false, nil
 	}); err != nil {
-		return "", fmt.Errorf("Could not find API group %s", apiVersion)
+		return "", fmt.Errorf("Could not construct the API path for apiVersion %s and kind %s: (%v)", apiVersion, kind, err)
 	}
 
 	return apiPath, nil
