@@ -78,7 +78,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		deployKubeAPIServer                     = f.AddTask(hybridBotanist.DeployKubeAPIServer, defaultRetry, deploySecrets, deployETCD, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig)
 		_                                       = f.AddTask(hybridBotanist.DeployKubeControllerManager, defaultRetry, deploySecrets, deployCloudProviderConfig, deployKubeAPIServer)
 		_                                       = f.AddTask(hybridBotanist.DeployKubeScheduler, defaultRetry, deploySecrets, deployKubeAPIServer)
-		waitUntilKubeAPIServerIsReady           = f.AddTask(botanist.WaitUntilKubeAPIServerIsReady, 0, deployKubeAPIServer)
+		waitUntilKubeAPIServerIsReady           = f.AddTask(botanist.WaitUntilKubeAPIServerReady, 0, deployKubeAPIServer)
 		initializeShootClients                  = f.AddTask(botanist.InitializeShootClients, 2*time.Minute, waitUntilKubeAPIServerIsReady)
 		deployMachineControllerManager          = f.AddTaskConditional(botanist.DeployMachineControllerManager, defaultRetry, isCloud, initializeShootClients)
 		deployMachines                          = f.AddTaskConditional(hybridBotanist.DeployMachines, defaultRetry, isCloud, deployMachineControllerManager, deployInfrastructure, initializeShootClients)

@@ -32,6 +32,12 @@ const (
 	// CloudProviderSecretName is the name of the secret containing the cloud provider credentials.
 	CloudProviderSecretName = "cloudprovider"
 
+	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
+	CloudProviderConfigName = "cloud-provider-config"
+
+	// CloudProviderConfigMapKey is the key storing the cloud provider config as value in the cloud provider configmap.
+	CloudProviderConfigMapKey = "cloudprovider.conf"
+
 	// CloudPurposeShoot is a constant used while instantiating a cloud botanist for the Shoot cluster.
 	CloudPurposeShoot = "shoot"
 

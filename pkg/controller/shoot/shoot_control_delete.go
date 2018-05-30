@@ -106,16 +106,16 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		// need to redeploy the cloud provider config (containing the secrets for some cloud providers) as well as
 		// restart the components using the secrets (API server, controller manager). We also need to update all
 		// existing machine class secrets.
-		deploySecrets                        = f.AddTaskConditional(botanist.DeploySecrets, 0, cleanupShootResources)
-		waitUntilKubeAPIServerServiceIsReady = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, cleanupShootResources)
-		deployCloudProviderConfig            = f.AddTaskConditional(hybridBotanist.DeployCloudProviderConfig, defaultRetry, cleanupShootResources, deploySecrets)
-		deployKubeAPIServer                  = f.AddTaskConditional(hybridBotanist.DeployKubeAPIServer, defaultRetry, cleanupShootResources, deploySecrets, deployCloudProviderConfig)
-		deployKubeControllerManager          = f.AddTaskConditional(hybridBotanist.DeployKubeControllerManager, defaultRetry, cleanupShootResources, deploySecrets, deployCloudProviderConfig, deployKubeAPIServer)
-		refreshMachineClassSecrets           = f.AddTaskConditional(hybridBotanist.RefreshMachineClassSecrets, defaultRetry, cleanupShootResources, deploySecrets)
+		deploySecrets                 = f.AddTaskConditional(botanist.DeploySecrets, 0, cleanupShootResources)
+		refreshMachineClassSecrets    = f.AddTaskConditional(hybridBotanist.RefreshMachineClassSecrets, defaultRetry, cleanupShootResources, deploySecrets)
+		refreshCloudProviderConfig    = f.AddTaskConditional(hybridBotanist.RefreshCloudProviderConfig, defaultRetry, cleanupShootResources, deploySecrets)
+		refreshKubeAPIServer          = f.AddTaskConditional(botanist.RefreshKubeAPIServerChecksums, defaultRetry, cleanupShootResources, deploySecrets, refreshCloudProviderConfig)
+		refreshKubeControllerManager  = f.AddTaskConditional(botanist.RefreshKubeControllerManagerChecksums, defaultRetry, cleanupShootResources, deploySecrets, refreshCloudProviderConfig, refreshKubeAPIServer)
+		waitUntilKubeAPIServerIsReady = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerReady, 0, cleanupShootResources, refreshKubeAPIServer)
 
 		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
 		// resources).
-		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources, deploySecrets, deployCloudProviderConfig, waitUntilKubeAPIServerServiceIsReady, deployKubeAPIServer, deployKubeControllerManager, refreshMachineClassSecrets)
+		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources, deploySecrets, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshKubeAPIServer, refreshKubeControllerManager, waitUntilKubeAPIServerIsReady)
 		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, initializeShootClients)
 		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, initializeShootClients)
 		waitUntilKubeAddonManagerDeleted = f.AddTask(botanist.WaitUntilKubeAddonManagerDeleted, 0, deleteKubeAddonManager)
@@ -136,8 +136,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		deleteKubeAPIServer            = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
 
 		// Although BackupInfrastructure controller has responsibility of deploying backup namespace, for backward
-		// compatibility Shoot contoller will have to deploy backup namespace and move terraform rescourses from
-		// shoot's main seed namespace to backup namespace.
+		// compatibility Shoot controller will have to deploy backup namespace and move terraform resources from
+		// Shoot's main seed namespace to backup namespace.
 		// TODO: These tasks (deployBackupNamespace, moveBackupTerraformResources & deployBackupInfrastructure) should be
 		// removed from flow, once we have all shoots reconciled with new gardener having this change i.e. for all
 		// existing shoots, all backup infrastructure related terraform resources are present only in backup namespace.

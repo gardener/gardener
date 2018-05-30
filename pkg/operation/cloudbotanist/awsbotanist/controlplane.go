@@ -42,6 +42,14 @@ KubernetesClusterID = ` + b.Shoot.SeedNamespace + `
 Zone = ` + b.Shoot.Info.Spec.Cloud.AWS.Zones[0], nil
 }
 
+// RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
+// provider config.
+// Not needed on AWS (cloud provider config does not contain the credentials), hence, the
+// original is returned back.
+func (b *AWSBotanist) RefreshCloudProviderConfig(currentConfig map[string]string) map[string]string {
+	return currentConfig
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {

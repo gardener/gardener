@@ -78,11 +78,12 @@ type Client interface {
 
 	// Services
 	GetService(string, string) (*corev1.Service, error)
-	DeleteService(namespace, name string) error
+	DeleteService(string, string) error
 
 	// Deployments
 	GetDeployment(string, string) (*mapping.Deployment, error)
 	ListDeployments(string, metav1.ListOptions) ([]*mapping.Deployment, error)
+	PatchDeployment(string, string, []byte) (*mapping.Deployment, error)
 	DeleteDeployment(string, string) error
 
 	// StatefulSets

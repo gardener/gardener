@@ -210,3 +210,8 @@ func GenerateBackupNamespaceName(backupInfrastructureName string) string {
 func IsFollowingNewNamingConvention(seedNamespace string) bool {
 	return len(strings.Split(seedNamespace, "--")) > 2
 }
+
+// ReplaceCloudProviderConfigKey replaces a key with the new value in the given cloud provider config.
+func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
+	return regexp.MustCompile(fmt.Sprintf("%s%s(.*)\n", key, separator)).ReplaceAllString(cloudProviderConfig, fmt.Sprintf("%s%s%s\n", key, separator, value))
+}

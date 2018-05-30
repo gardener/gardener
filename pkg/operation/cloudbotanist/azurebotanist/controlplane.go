@@ -61,6 +61,25 @@ cloudProviderRateLimitQPS: 1.0
 cloudProviderRateLimitBucket: 5`, nil
 }
 
+// RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
+// provider config.
+func (b *AzureBotanist) RefreshCloudProviderConfig(currentConfig map[string]string) map[string]string {
+	var (
+		existing  = currentConfig[common.CloudProviderConfigMapKey]
+		updated   = existing
+		separator = ": "
+	)
+
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "tenantId", string(b.Shoot.Secret.Data[TenantID]))
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "subscriptionId", string(b.Shoot.Secret.Data[SubscriptionID]))
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "aadClientId", string(b.Shoot.Secret.Data[ClientID]))
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "aadClientSecret", string(b.Shoot.Secret.Data[ClientSecret]))
+
+	return map[string]string{
+		common.CloudProviderConfigMapKey: updated,
+	}
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *AzureBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {

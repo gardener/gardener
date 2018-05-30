@@ -32,7 +32,7 @@ import (
 func (b *Botanist) DeployNamespace() error {
 	namespace, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Operation.Shoot.SeedNamespace,
+			Name: b.Shoot.SeedNamespace,
 			Labels: map[string]string{
 				common.GardenRole: common.GardenRoleShoot,
 			},
@@ -79,7 +79,7 @@ func (b *Botanist) DeployBackupNamespaceFromBackupInfrastructure() error {
 // garbage collection in Kubernetes will automatically delete all resources which belong to this namespace. This
 // comprises volumes and load balancers as well.
 func (b *Botanist) DeleteNamespace() error {
-	err := b.K8sSeedClient.DeleteNamespace(b.Operation.Shoot.SeedNamespace)
+	err := b.K8sSeedClient.DeleteNamespace(b.Shoot.SeedNamespace)
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		return nil
 	}
@@ -100,24 +100,35 @@ func (b *Botanist) DeleteBackupNamespace() error {
 // kube-apiserver deployment (of the Shoot cluster). It waits until the load balancer is available and stores the address
 // on the Botanist's APIServerAddress attribute.
 func (b *Botanist) DeployKubeAPIServerService() error {
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "kube-apiserver-service"), "kube-apiserver-service", b.Operation.Shoot.SeedNamespace, nil, map[string]interface{}{
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "kube-apiserver-service"), "kube-apiserver-service", b.Shoot.SeedNamespace, nil, map[string]interface{}{
 		"cloudProvider": b.Seed.CloudProvider,
 	})
 }
 
+// RefreshKubeAPIServerChecksums updates the cloud provider checksum in the kube-apiserver pod spec template.
+func (b *Botanist) RefreshKubeAPIServerChecksums() error {
+	return b.patchDeploymentCloudProviderChecksum(common.KubeAPIServerDeploymentName)
+}
+
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Operation.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
 	return err
 }
 
+// RefreshKubeControllerManagerChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
+func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
+	return b.patchDeploymentCloudProviderChecksum(common.KubeControllerManagerDeploymentName)
+}
+
 // MoveBackupTerraformResources copies the terraform resources realted to backup infrastructure creation from  a shoot's main namespace
 // in the Seed cluster to Shoot's backup namespace.
 func (b *Botanist) MoveBackupTerraformResources() error {
 	t := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeBackup)
+
 	// Clean up possible existing job/pod artifacts from previous runs
 	jobPodList, err := t.ListJobPods()
 	if err != nil {
@@ -137,8 +148,7 @@ func (b *Botanist) MoveBackupTerraformResources() error {
 		newPrefix                = fmt.Sprintf("%s.%s", backupInfrastructureName, common.TerraformerPurposeBackup)
 	)
 
-	tfConfig, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerConfigSuffix)
-	if err == nil {
+	if tfConfig, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerConfigSuffix); err == nil {
 		if _, err := b.K8sSeedClient.CreateConfigMap(backupNamespace, newPrefix+common.TerraformerConfigSuffix, tfConfig.Data, true); err != nil {
 			return err
 		}
@@ -149,8 +159,7 @@ func (b *Botanist) MoveBackupTerraformResources() error {
 		return err
 	}
 
-	tfState, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerStateSuffix)
-	if err == nil {
+	if tfState, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerStateSuffix); err == nil {
 		if _, err := b.K8sSeedClient.CreateConfigMap(backupNamespace, newPrefix+common.TerraformerStateSuffix, tfState.Data, true); err != nil {
 			return err
 		}
@@ -161,8 +170,7 @@ func (b *Botanist) MoveBackupTerraformResources() error {
 		return err
 	}
 
-	tfVariables, err := b.K8sSeedClient.GetSecret(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerVariablesSuffix)
-	if err == nil {
+	if tfVariables, err := b.K8sSeedClient.GetSecret(b.Shoot.SeedNamespace, oldPrefix+common.TerraformerVariablesSuffix); err == nil {
 		if _, err := b.K8sSeedClient.CreateSecret(backupNamespace, newPrefix+common.TerraformerVariablesSuffix, corev1.SecretTypeOpaque, tfVariables.Data, true); err != nil {
 			return err
 		}
@@ -172,6 +180,7 @@ func (b *Botanist) MoveBackupTerraformResources() error {
 	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
+
 	return nil
 }
 
@@ -199,7 +208,7 @@ func (b *Botanist) DeleteBackupInfrastructure() error {
 // needs to be deleted before trying to remove any resources in the Shoot cluster, otherwise it will automatically recreate
 // them and block the infrastructure deletion.
 func (b *Botanist) DeleteKubeAddonManager() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Operation.Shoot.SeedNamespace, common.KubeAddonManagerDeploymentName)
+	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.KubeAddonManagerDeploymentName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -230,7 +239,7 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Operation.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values)
 }
 
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
@@ -356,23 +365,31 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		values["alertmanager"].(map[string]interface{})["email_configs"] = emailConfigs
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
 // during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
 // deleted.
 func (b *Botanist) DeleteSeedMonitoring() error {
-	err := b.K8sSeedClient.DeleteStatefulSet(b.Operation.Shoot.SeedNamespace, common.AlertManagerDeploymentName)
+	err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.AlertManagerDeploymentName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	err = b.K8sSeedClient.DeleteStatefulSet(b.Operation.Shoot.SeedNamespace, common.PrometheusDeploymentName)
+	err = b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.PrometheusDeploymentName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
+	return err
+}
+
+// patchDeployment patches the given deployment with the provided patch.
+func (b *Botanist) patchDeploymentCloudProviderChecksum(deploymentName string) error {
+	body := fmt.Sprintf(`[{"op": "replace", "path": "/spec/template/metadata/annotations/checksum~1secret-cloudprovider", "value": "%s"}]`, b.CheckSums[common.CloudProviderSecretName])
+
+	_, err := b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, deploymentName, []byte(body))
 	return err
 }

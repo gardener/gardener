@@ -68,6 +68,26 @@ dhcp-domain=` + *b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain
 	return cloudProviderConfig, nil
 }
 
+// RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
+// provider config.
+func (b *OpenStackBotanist) RefreshCloudProviderConfig(currentConfig map[string]string) map[string]string {
+	var (
+		existing  = currentConfig[common.CloudProviderConfigMapKey]
+		updated   = existing
+		separator = "="
+	)
+
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "auth-url", b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL)
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "domain-name", string(b.Shoot.Secret.Data[DomainName]))
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "tenant-name", string(b.Shoot.Secret.Data[TenantName]))
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "username", string(b.Shoot.Secret.Data[UserName]))
+	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "password", string(b.Shoot.Secret.Data[Password]))
+
+	return map[string]string{
+		common.CloudProviderConfigMapKey: updated,
+	}
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {

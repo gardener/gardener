@@ -82,18 +82,30 @@ func (b *HybridBotanist) DeployETCD() error {
 // DeployCloudProviderConfig asks the Cloud Botanist to provide the cloud specific values for the cloud
 // provider configuration. It will create a ConfigMap for it and store it in the Seed cluster.
 func (b *HybridBotanist) DeployCloudProviderConfig() error {
-	name := "cloud-provider-config"
 	cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
 	if err != nil {
 		return err
 	}
-	b.Botanist.CheckSums[name] = utils.ComputeSHA256Hex([]byte(cloudProviderConfig))
+	b.Botanist.CheckSums[common.CloudProviderConfigName] = utils.ComputeSHA256Hex([]byte(cloudProviderConfig))
 
 	defaultValues := map[string]interface{}{
 		"cloudProviderConfig": cloudProviderConfig,
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, nil, defaultValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CloudProviderConfigName), common.CloudProviderConfigName, b.Shoot.SeedNamespace, nil, defaultValues)
+}
+
+// RefreshCloudProviderConfig asks the Cloud Botanist to refresh the cloud provider config in case it stores
+// the cloud provider credentials. The Cloud Botanist is expected to return the complete updated cloud config.
+func (b *HybridBotanist) RefreshCloudProviderConfig() error {
+	currentConfig, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName)
+	if err != nil {
+		return err
+	}
+
+	newConfig := b.ShootCloudBotanist.RefreshCloudProviderConfig(currentConfig.Data)
+	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfig)
+	return err
 }
 
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the

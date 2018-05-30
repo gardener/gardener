@@ -39,6 +39,14 @@ token-url = nil
 node-tags = ` + b.Shoot.SeedNamespace, nil
 }
 
+// RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
+// provider config.
+// Not needed on GCP (cloud provider config does not contain the credentials), hence, the
+// original is returned back.
+func (b *GCPBotanist) RefreshCloudProviderConfig(currentConfig map[string]string) map[string]string {
+	return currentConfig
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {

@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // GetDeployment returns a Deployment object.
@@ -44,6 +45,15 @@ func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOption
 		deploymentList = append(deploymentList, mapping.AppsV1beta2Deployment(deployment))
 	}
 	return deploymentList, nil
+}
+
+// PatchDeployment patches a Deployment object.
+func (c *Client) PatchDeployment(namespace, name string, body []byte) (*mapping.Deployment, error) {
+	deployment, err := c.Clientset().AppsV1beta2().Deployments(namespace).Patch(name, types.JSONPatchType, body)
+	if err != nil {
+		return nil, err
+	}
+	return mapping.AppsV1beta2Deployment(*deployment), nil
 }
 
 // DeleteDeployment deletes a Deployment object.

@@ -20,6 +20,13 @@ func (b *LocalBotanist) GenerateCloudProviderConfig() (string, error) {
 	return "", nil
 }
 
+// RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
+// provider config.
+// Not needed on Local, hence, the original is returned back.
+func (b *LocalBotanist) RefreshCloudProviderConfig(currentConfig map[string]string) map[string]string {
+	return currentConfig
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *LocalBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
