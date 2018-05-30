@@ -86,7 +86,7 @@ spec:
             memory: 500Mi
           limits:
             cpu: 750m
-            memory: 2500Mi
+            memory: 2560Mi
         volumeMounts:
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
@@ -121,11 +121,11 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 10m
-            memory: 32Mi
-          limits:
             cpu: 100m
-            memory: 512Mi
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 1Gi
         env:
         - name: STORAGE_CONTAINER
           value: {{ .Values.backup.storageContainer }}
