@@ -19,10 +19,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gardener/gardener/pkg/version"
-
-	"github.com/gardener/gardener/pkg/openapi"
-
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -30,6 +26,9 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	gardenfeatures "github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/openapi"
+	"github.com/gardener/gardener/pkg/version"
 	deletionconfirmation "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
@@ -42,6 +41,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -74,6 +74,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 	}
 
 	flags := cmd.Flags()
+	utilfeature.DefaultFeatureGate.AddFlag(flags)
 	opts.Recommended.AddFlags(flags)
 	return cmd
 }
@@ -132,9 +133,9 @@ func (o *Options) complete() error {
 	recommendedPluginOrder.Insert(allOrderedPlugins...)
 	o.Recommended.Admission.RecommendedPluginOrder = recommendedPluginOrder.List()
 
-	// TODO: Temporary deletionconfirmation it as disabled by default.
-	// Enable it once the old shoot deletion mechanics is removed.
-	o.Recommended.Admission.DefaultOffPlugins.Insert(deletionconfirmation.PluginName)
+	if !gardenfeatures.APIServerFeatureGate.Enabled(gardenfeatures.DeletionConfirmation) {
+		o.Recommended.Admission.DefaultOffPlugins.Insert(deletionconfirmation.PluginName)
+	}
 	return nil
 }
 
@@ -149,6 +150,7 @@ func (o *Options) config() (*apiserver.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	kubeClient, err := kubernetes.NewForConfig(kubeAPIServerConfig)
 	if err != nil {
 		return nil, err
@@ -187,7 +189,6 @@ func (o Options) run(stopCh <-chan struct{}) error {
 	if err != nil {
 		return err
 	}
-
 	server, err := config.Complete().New()
 	if err != nil {
 		return err

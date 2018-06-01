@@ -22,7 +22,12 @@ import (
 	"syscall"
 
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
+	"github.com/gardener/gardener/pkg/features"
 )
+
+func init() {
+	features.RegisterControllerFeatureGate()
+}
 
 func main() {
 	if err := exec.Command("which", "openvpn").Run(); err != nil {

@@ -101,6 +101,13 @@ func (in *ControllerManagerConfiguration) DeepCopyInto(out *ControllerManagerCon
 	out.LeaderElection = in.LeaderElection
 	out.Metrics = in.Metrics
 	out.Server = in.Server
+	if in.FeatureGates != nil {
+		in, out := &in.FeatureGates, &out.FeatureGates
+		*out = make(map[string]bool, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
 	return
 }
 

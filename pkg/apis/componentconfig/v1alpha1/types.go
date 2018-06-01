@@ -40,6 +40,12 @@ type ControllerManagerConfiguration struct {
 	Metrics MetricsConfiguration `json:"metrics"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
+	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
+	// features. This field modifies piecemeal the built-in default values from
+	// "github.com/gardener/gardener/pkg/features/gardener_features.go".
+	// Default: nil
+	// +optional
+	FeatureGates map[string]bool `json:"featureGates,omitempty"`
 }
 
 // ClientConnectionConfiguration contains details for constructing a client.
