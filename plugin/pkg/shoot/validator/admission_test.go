@@ -228,6 +228,35 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsBadRequest(err)).To(BeTrue())
 				Expect(err.Error()).To(ContainSubstring("name must not exceed"))
 			})
+
+			It("should not testing length constraints for operations other than CREATE", func() {
+				shortName := "short"
+				projectName := "too-long-long-long-label"
+				namespace.ObjectMeta = metav1.ObjectMeta{
+					Name: shortName,
+					Labels: map[string]string{
+						common.ProjectName: projectName,
+					},
+				}
+				shoot.ObjectMeta = metav1.ObjectMeta{
+					Name:      shortName,
+					Namespace: shortName,
+				}
+
+				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
+				err := admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).NotTo(ContainSubstring("name must not exceed"))
+
+				attrs = admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, nil)
+				err = admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).NotTo(ContainSubstring("name must not exceed"))
+			})
 		})
 
 		It("should reject because the referenced cloud profile was not found", func() {
