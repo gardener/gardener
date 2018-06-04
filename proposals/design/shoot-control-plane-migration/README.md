@@ -35,7 +35,6 @@ Given such challenges and requirements, we need some mechanism to migrate/move a
 
 ### Backup and Restoration
 
-### Resources not covered by reuse
 The backup and restoration of the following resources that are currently not stored in the shoot apiserver/etcd is not covered by the reuse mentioned above. Resource such as below.
 
 * Resources from the shoot namespace in the seed.
