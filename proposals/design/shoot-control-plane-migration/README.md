@@ -41,6 +41,15 @@ But this leaves open the backup and restoration of resources that are currently 
 
 ## Proposed Solution
 
+### Backup and Restoration
+* All the additional resources listed [above](#reuse) will be backed up in the same object store as the what is used for backing up the shoot etcd.
+* The backup will be watch-based and not schedule based.
+* The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
+    * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
+
+### Migration Co-ordination
+
+
 ## Possible Variations
 
 ## Alternatives
