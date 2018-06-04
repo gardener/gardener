@@ -1,4 +1,4 @@
-#Shoot Control-plane Migration
+# Shoot Control-plane Migration
 
 ## Background
 
@@ -39,6 +39,7 @@ To be more explicit, the following scenarios should be supported.
 * The proposed mechanism need not right away implement a solution for migration across regions/availability zones.
 
 ## Reuse
+* [Machine Controller Manager](https://github.com/gardener/machine-controller-manager) already has the capability to adopt existing machines in the IaaS layer based on proper machine definitions.
 * [Etcd Backup Restore](https://github.com/gardener/etcd-backup-restore) already backs up the shoot etcd which is running in the shoot namespace of the source seed cluster. We can re-use this completely while restoring the shoot etcd on the destination seed cluster.
 
 ## Proposed Solution
@@ -58,7 +59,7 @@ All the additional resources listed above will be backed up in the same object s
 * The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
     * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
 
-#### Extensibility of backup/restore mechanism for across region scenario
+#### Extensibility of backup/restore mechanism for the across-region scenario
 
 This approach can be extended to support migration across regions by replicating the object store across regions. Such replication across regions might be required to be setup as a part of the regular backup mechanism to avoid risking the unavailibity of the backups in the case of a downtime for the object store in the source seed's region.
 
@@ -67,9 +68,13 @@ This approach can be extended to support migration across regions by replicating
 Some of the components deployed as part of the shoot control-plane such as those listed below require careful co-ordination during migration to avoid split-brain or other sorts of problems in co-ordination and race conditions.
 
 * Shoot Machine-controller-manager
-  The possibility of two machine-control-managers (in source and destination seed cluster) managing the same set of machines should be avoided.
+
+  The possibility of two machine-control-managers (in source and destination seed clusters) managing the same set of machines should be avoided.
+
 * Shoot Etcd StatefulSet
-  The possibility of two etcd statefulsets (in source and destination seed cluster) backing up data to the same object store should be avoided.
+
+  The possibility of two etcd statefulsets (in source and destination seed clusters) backing up data to the same object store should be avoided.
+
 * VPN?
 
 #### Components of the solution
@@ -79,19 +84,27 @@ Some of the components deployed as part of the shoot control-plane such as those
 Such an advertising mechanism needs to be accessible from all the seed clusters among which the shoot control-plane can be moved. This can be solved in many ways. In all the cases, the lease can be auto-renewed or changed based on the shoot YAML.
 
 1. Shoot YAML in the Garden cluster.
+
    This mechanism is already available. But is not suitable because, among other issues, this would require garden cluster to be highly available to the seed clusters and also put the garden cluster's apiserver under unnecessary load.
+   
 2. In-memory cache service on the Garden cluster.
    This is possible because the data required to be served from this service can be computed readily from the shoot YAML. This would reduce the load on the garden cluster's apiserver but would still need this service to be highly available to the seed clusters.
+   
 3. IaaS-based cache service.
-   This is similar to option 2 except the management of high-availability of the service is delegated to the IaaS layer. Such a service can be calculated based on garden cluster shoot YAML or might also be persistent and kept actively kept up-to-date by gardener.
+   This is similar to option 2 except the management of high-availability of the service is delegated to the IaaS layer. Such a service can be calculated based on garden cluster shoot YAML or might also be persistent and kept actively up-to-date by gardener.
+   
 4. A ring of highly available distributed cache among the seed clusters.
    This approach has the potential benefit of avoiding the access to garden cluster if the distributed cache can be actively kept up-to-date by gardener.
 
-For a given shoot cluster, the service should provide the name of the seed cluster which owns the current lease, the start and end timestamp (or period) of the lease.
+###### Lease data structure for a shoot
+* Owning seed cluster
+* Lease Period
+  * Lease start timestamp
+  * Lease end timestamp or interval
 
 ##### Shoot Control-plane Co-ordinator
 
-The Shoot Control-plane Co-ordinator is a pod (actually a deployment) deployed as a part of each of the shoot control-plane in the seed clusters.
+The Shoot Control-plane Co-ordinator is a pod (actually, a deployment) deployed as a part of each of the shoot control-plane in the seed clusters.
 
 It has the responsibility to monitor whether the current seed cluster where it is deployed has the lease for the given shoot using any of the mechanisms chosen [above](#advertising-current-seed-cluster-lease-for-a-shoot-cluster). The different scenarios and the actions to be taken by this co-ordinator would be as below.
 
@@ -107,15 +120,15 @@ This component should also expose a healthz endpoint which returns healthy only 
 ###### Melt-down scenario
 In the [above](#shoot-control-plane-co-ordinator) approach, there is a possibility of a melt-down-like scenario where the co-ordinator is not able to access the lease status for some long period even though it actually owns the lease during that period, but the gardener is able to access the seed cluster. In such a scenario, co-ordinator will scale down the relevant component to 0 while a gardener reconciliation will scale them back up to the original values. This cycle can potentially keep happening while the scenario persists.
 
-To address this issue, the co-ordinator can be supplied an additional source for the current lease status via some resource within the same namespace as the co-ordinator. The co-ordinator can choose to use this lease status from such a local resource or the remote/global/distributed resource depending on the actual lease period in both locations. The gardener reconciliation can update the lease status on the local resource in the namespace of the co-ordinator. The remote/global/distributed source is still required to handle the scenario where the gardener is not able to access the shoot control-plane on the seed cluster.
+To address this issue, the co-ordinator can be supplied an additional source for the current lease status via some resource within the same namespace as the co-ordinator. The co-ordinator can choose to use the lease status from such a local resource or the remote/global/distributed resource depending on the actual lease period in both locations. The gardener reconciliation can update the lease status on the local resource in the namespace of the co-ordinator. The remote/global/distributed source is still required to handle the scenario where the gardener is not able to access the shoot control-plane on the seed cluster.
 
 ### Pros
-* No changes to existing shoot control-plane components required except for additional livenessProbes.
+* No changes to existing shoot control-plane components except for additional livenessProbes.
 * Works for different mechanisms for advertising the current seed cluster lease for a shoot cluster.
 
 ### Cons
 
-* One more additional component (shoot control-plane co-ordinator) in the shoot control-plane. Garender reconciliation should be enhanced to handle the shoot control-plane co-ordinator.
+* One more additional component (shoot control-plane co-ordinator) in the shoot control-plane. Gardener reconciliation should be enhanced to handle the shoot control-plane co-ordinator.
 * Needs some sort of mechanism to advertise current seed cluster lease for a shoot cluster which need to be actively or passively kept up-to-date with changes to the shoot YAML in the garden cluster.
 
 ### Changes Required in Gardener Reconciliation
@@ -129,6 +142,6 @@ On movement of seed for a shoot control-plane,
 
 ## Alternatives
 
-Let individual components in the shoot control-plane (machine-controller-manager, etcd statefulset, VPN etc.) manager lease and co-ordination themselves.
+Let individual components in the shoot control-plane (machine-controller-manager, etcd statefulset, VPN etc.) manage lease and co-ordination themselves.
 
 This approach was discarded because of unnecessary duplication of responsibility.
