@@ -31,7 +31,12 @@ Given such challenges and requirements, we need some mechanism to migrate/move a
 ## Reuse
 * [Etcd Backup Restore](https://github.com/gardener/etcd-backup-restore) already backs up the . We can re-use this completely while restoring the shoot etcd on the destination seed cluster.
 
-But this leaves open the backup and restoration of resources that are currently not stored in the shoot apiserver/etcd. For example,
+## Proposed Solution
+
+### Backup and Restoration
+
+### Resources not covered by reuse
+The backup and restoration of the following resources that are currently not stored in the shoot apiserver/etcd is not covered by the reuse mentioned above. Resource such as below.
 
 * Resources from the shoot namespace in the seed.
     * Terraform resources such as configmaps and secrets.
@@ -39,10 +44,7 @@ But this leaves open the backup and restoration of resources that are currently 
 * Resources from the shoot backup infrastructure namespace in the seed.
     * Terraform resources such as configmaps and secrets.
 
-## Proposed Solution
-
-### Backup and Restoration
-* All the additional resources listed [above](#reuse) will be backed up in the same object store as the what is used for backing up the shoot etcd.
+All the additional resources listed will be backed up in the same object store as the what is used for backing up the shoot etcd.
 * The backup will be watch-based and not schedule based.
 * The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
     * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
