@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation"
@@ -90,20 +91,28 @@ func (b *HybridBotanist) DeployMachines() error {
 // DestroyMachines deletes all existing MachineDeployments. As it won't trigger the drain of nodes it needs to label
 // the existing machines. In case an errors occurs, it will return it.
 func (b *HybridBotanist) DestroyMachines() error {
-	var machineList unstructured.Unstructured
+	var (
+		machineList unstructured.Unstructured
+		errorList   []error
+		wg          sync.WaitGroup
+	)
+
 	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machines", b.Shoot.SeedNamespace).Do().Into(&machineList); err != nil {
 		return err
 	}
 
-	var errorList []error
 	machineList.EachListItem(func(o runtime.Object) error {
+		wg.Add(1)
 		go func(obj *unstructured.Unstructured) {
+			defer wg.Done()
 			if err := b.labelMachine(obj); err != nil {
 				errorList = append(errorList, err)
 			}
 		}(o.(*unstructured.Unstructured))
 		return nil
 	})
+	wg.Wait()
+
 	if len(errorList) > 0 {
 		return fmt.Errorf("Labelling machines failed: %v", errorList)
 	}
