@@ -83,9 +83,15 @@ Some of the components deployed as part of the shoot control-plane such as those
 
 #### Components of the solution
 
-##### Advertising current seed cluster lease for a shoot cluster
+##### Lease Service
 
-Such an advertising mechanism needs to be accessible from all the seed clusters among which the shoot control-plane can be moved. This can be solved in many ways. In all the cases, the lease can be auto-renewed or changed based on the shoot YAML.
+The Lease Service will act as the central point of truth for all the seed clusters about which seed owns a particular shoot.
+
+* It needs to be accessible from all the seed clusters among which the shoot control-plane can be moved.
+* It needs to be highly available to reduce chances of false positives/negatives.
+* Given the particular scenario of garden/seed/shoot architecture, shoot YAML in the garden cluster is already the true single point of truth. The Lease Service would be just a secondary source of the truth. Hence, there is no need for any explicit mechanism for lease renewal or leader promotion. That can be done automatically based on the shoot YAML.
+
+The actual implementation of such a lease service can be achieved in many ways.
 
 1. Shoot YAML in the Garden cluster.
 
