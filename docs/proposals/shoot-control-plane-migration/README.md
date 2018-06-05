@@ -135,6 +135,8 @@ In the passive state, the co-ordinator is either not able reach the lease servic
 
 In such a scenario, the co-ordinator passivates the shoot control-plane components such as machine-controller-manager, etcd statefulset, VPN etc. by scaling them down to zero.
 
+It should not scale itself down, of course.
+
 ##### State Diagram
 
 ![State Diagram](state-diagram.png)
