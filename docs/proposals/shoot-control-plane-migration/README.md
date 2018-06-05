@@ -117,7 +117,7 @@ It has the responsibility to monitor whether the current seed cluster where it i
 
 ##### State Diagram
 
-![Shoot Control-plane Co-ordinator State Diagram](co-ordinator-state-diagram.png)
+![State Diagram](state-diagram.png)
 
 This component should also expose a healthz endpoint which returns healthy only if it can get the current lease status and if the current seed cluster is the owner of the lease for the given shoot. This healthz endpoint can be used for livenessProbe in the shoot machine-controller-manager, shoot etcd and also perhaps in the VPN components to avoid co-ordination problems in case the shoot control-plane co-ordinator itself crashes.
 
