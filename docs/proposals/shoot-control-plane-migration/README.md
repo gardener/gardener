@@ -121,6 +121,20 @@ The Shoot Control-plane Co-ordinator is a pod (actually, a deployment) deployed 
 
 It has the responsibility to monitor whether the current seed cluster where it is deployed has the lease for the given shoot using any of the mechanisms chosen [above](#advertising-current-seed-cluster-lease-for-a-shoot-cluster) and take appropriate action to activate/passivate the relevant shoot control-plane components such as machine-controller-manager, etcd statefulset, VPN etc.
 
+It has two states.
+
+1. Active
+
+In the active state, the co-ordinator is able to reach the lease service and knows that the current seed is the owner for the given shoot according to the lease service.
+
+In such a scenario, the co-ordinator makes sure the shoot control-plane components such as machine-controller-manager, etcd statefulset, VPN etc. are scaled up and active.
+
+2. Passive
+
+In the passive state, the co-ordinator is either not able reach the lease service or knows that the current seed is not the owner of the given shoot according to the lease service.
+
+In such a scenario, the co-ordinator passivates the shoot control-plane components such as machine-controller-manager, etcd statefulset, VPN etc. by scaling them down to zero.
+
 ##### State Diagram
 
 ![State Diagram](state-diagram.png)
