@@ -77,6 +77,10 @@ Some of the components deployed as part of the shoot control-plane such as those
 
 * VPN?
 
+#### Landscape Diagram
+
+![Landscape diagram](landscape-diagram.png)
+
 #### Components of the solution
 
 ##### Advertising current seed cluster lease for a shoot cluster
@@ -85,15 +89,18 @@ Such an advertising mechanism needs to be accessible from all the seed clusters 
 
 1. Shoot YAML in the Garden cluster.
 
-   This mechanism is already available. But is not suitable because, among other issues, this would require garden cluster to be highly available to the seed clusters and also put the garden cluster's apiserver under unnecessary load.
+   This mechanism is already available. But is not suitable because, among other issues, this would require garden cluster to be accessible from the seed clusters and also put the garden cluster's apiserver under unnecessary load.
    
-2. In-memory cache service on the Garden cluster.
+2. In-memory cache service on some cluster accessible from seed clusters.
+
    This is possible because the data required to be served from this service can be computed readily from the shoot YAML. This would reduce the load on the garden cluster's apiserver but would still need this service to be highly available to the seed clusters.
    
 3. IaaS-based cache service.
+
    This is similar to option 2 except the management of high-availability of the service is delegated to the IaaS layer. Such a service can be calculated based on garden cluster shoot YAML or might also be persistent and kept actively up-to-date by gardener.
    
 4. A ring of highly available distributed cache among the seed clusters.
+
    This approach has the potential benefit of avoiding the access to garden cluster if the distributed cache can be actively kept up-to-date by gardener.
 
 ###### Lease data structure for a shoot
@@ -106,21 +113,22 @@ Such an advertising mechanism needs to be accessible from all the seed clusters 
 
 The Shoot Control-plane Co-ordinator is a pod (actually, a deployment) deployed as a part of each of the shoot control-plane in the seed clusters.
 
-It has the responsibility to monitor whether the current seed cluster where it is deployed has the lease for the given shoot using any of the mechanisms chosen [above](#advertising-current-seed-cluster-lease-for-a-shoot-cluster). The different scenarios and the actions to be taken by this co-ordinator would be as below.
+It has the responsibility to monitor whether the current seed cluster where it is deployed has the lease for the given shoot using any of the mechanisms chosen [above](#advertising-current-seed-cluster-lease-for-a-shoot-cluster) and take appropriate action to activate/passivate the relevant shoot control-plane components such as machine-controller-manager, etcd statefulset, VPN etc.
 
-| Scenario | Last Seen Lease Status | Latest Lease Status | Action |
-| ---:| --- | --- | --- |
-| 1 | Owner | Owner | Do nothing |
-| 2 | Owner | Not owner or cannot get lease status | Scale down the relevant deployments/statefulsets to 0 |
-| 3 | Not owner or cannot get lease status | Owner | Scale up the relevant deployments/statefulsets back to original values |
-| 4 | Not owner or cannot get lease status | Not owner or cannot get lease status | Do nothing |
+##### State Diagram
+
+![Shoot Control-plane Co-ordinator State Diagram](co-ordinator-state-diagram.png)
 
 This component should also expose a healthz endpoint which returns healthy only if it can get the current lease status and if the current seed cluster is the owner of the lease for the given shoot. This healthz endpoint can be used for livenessProbe in the shoot machine-controller-manager, shoot etcd and also perhaps in the VPN components to avoid co-ordination problems in case the shoot control-plane co-ordinator itself crashes.
 
 ###### Melt-down scenario
-In the [above](#shoot-control-plane-co-ordinator) approach, there is a possibility of a melt-down-like scenario where the co-ordinator is not able to access the lease status for some long period even though it actually owns the lease during that period, but the gardener is able to access the seed cluster. In such a scenario, co-ordinator will scale down the relevant component to 0 while a gardener reconciliation will scale them back up to the original values. This cycle can potentially keep happening while the scenario persists.
+In the [above](#shoot-control-plane-co-ordinator) approach, there is a possibility of a melt-down-like scenario where the co-ordinator is not able to access the lease status for some long period even though it actually owns the lease during that period, but the gardener is able to access the seed cluster. In such a scenario, co-ordinator will scale down the relevant component to zero while a gardener reconciliation will scale them back up to the original values. This cycle can potentially keep happening while the scenario persists.
 
-To address this issue, the co-ordinator can be supplied an additional source for the current lease status via some resource within the same namespace as the co-ordinator. The co-ordinator can choose to use the lease status from such a local resource or the remote/global/distributed resource depending on the actual lease period in both locations. The gardener reconciliation can update the lease status on the local resource in the namespace of the co-ordinator. The remote/global/distributed source is still required to handle the scenario where the gardener is not able to access the shoot control-plane on the seed cluster.
+To address this issue, the co-ordinator can be supplied an additional source for the current lease status via some resource within the same namespace as the co-ordinator. The co-ordinator can choose to use the lease status from such a local resource or the remote/global/distributed resource depending on the validity of the lease periods in both locations. The gardener reconciliation can update the lease status on the local resource in the namespace of the co-ordinator.
+
+The remote/global/distributed source for lease status is still required to handle the scenario where the gardener is not able to access the shoot control-plane on the seed cluster.
+
+The assumption is that the opposite melt-down scenario of co-ordinator scaling up the control-plane components while gardener reconciliation scales it down will not happen because in such a scenario the gardener reconciliation would actually delete the shoot control-plane rather than just scale down.
 
 ### Pros
 * No changes to existing shoot control-plane components except for additional livenessProbes.
