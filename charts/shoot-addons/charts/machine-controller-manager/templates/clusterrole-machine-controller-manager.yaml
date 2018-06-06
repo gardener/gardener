@@ -3,6 +3,8 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: system:machine-controller-manager-shoot
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
 rules:
 - apiGroups:
   - ""

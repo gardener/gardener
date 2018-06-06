@@ -118,6 +118,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources, deploySecrets, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshKubeAPIServer, refreshKubeControllerManager, waitUntilKubeAPIServerIsReady)
 		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, initializeShootClients)
 		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, initializeShootClients)
+		deleteClusterAutoscaler          = f.AddTask(botanist.DeleteClusterAutoscaler, defaultRetry, initializeShootClients)
 		waitUntilKubeAddonManagerDeleted = f.AddTask(botanist.WaitUntilKubeAddonManagerDeleted, 0, deleteKubeAddonManager)
 
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as
@@ -125,7 +126,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		// namespaces which cannot be deleted (kube-system, default, kube-public). In those three namespaces
 		// we delete all CRDs, workload, services and PVCs. Only if none of those resources remain, we go
 		// ahead and trigger the infrastructure deletion.
-		cleanCustomResourceDefinitions = f.AddTaskConditional(botanist.CleanCustomResourceDefinitions, 5*time.Minute, cleanupShootResources, waitUntilKubeAddonManagerDeleted)
+		cleanCustomResourceDefinitions = f.AddTaskConditional(botanist.CleanCustomResourceDefinitions, 5*time.Minute, cleanupShootResources, waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler)
 		cleanKubernetesResources       = f.AddTaskConditional(botanist.CleanKubernetesResources, 5*time.Minute, cleanupShootResources, cleanCustomResourceDefinitions)
 		destroyMachines                = f.AddTaskConditional(hybridBotanist.DestroyMachines, defaultRetry, isCloud, cleanKubernetesResources)
 		destroyNginxIngressResources   = f.AddTask(botanist.DestroyIngressDNSRecord, 0, cleanKubernetesResources)

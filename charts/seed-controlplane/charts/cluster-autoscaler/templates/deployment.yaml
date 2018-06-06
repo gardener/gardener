@@ -1,0 +1,65 @@
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: cluster-autoscaler
+spec:
+  revisionHistoryLimit: 0
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: cluster-autoscaler
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: kubernetes
+        role: cluster-autoscaler
+    spec:
+      serviceAccountName: cluster-autoscaler
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: cluster-autoscaler
+        image: {{ index .Values.images "cluster-autoscaler" }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - ./cluster-autoscaler
+        - --kubeconfig=/var/lib/cluster-autoscaler/kubeconfig
+        - --cloud-provider=mcm
+        {{- range $key, $pool := .Values.workerPools }}
+        - --nodes={{ $pool.min }}:{{ $pool.max }}:{{ $.Release.Namespace }}.{{ $pool.name }}
+        {{- end }}
+        - --stderrthreshold=info
+        - --skip-nodes-with-system-pods=false
+        - --skip-nodes-with-local-storage=false
+        - --expander=least-waste
+        - --v=2
+        env:
+        - name: CONTROL_NAMESPACE
+          value: {{ .Release.Namespace }}
+        - name: TARGET_KUBECONFIG
+          value: "/var/lib/cluster-autoscaler/kubeconfig"
+        resources:
+          limits:
+            cpu: 100m
+            memory: 300Mi
+          requests:
+            cpu: 100m
+            memory: 300Mi
+        volumeMounts:
+        - mountPath: /var/lib/cluster-autoscaler
+          name: cluster-autoscaler
+          readOnly: true
+      volumes:
+      - name: cluster-autoscaler
+        secret:
+          secretName: cluster-autoscaler

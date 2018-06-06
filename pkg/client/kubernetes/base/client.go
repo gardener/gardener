@@ -16,6 +16,7 @@ package kubernetesbase
 
 import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -54,6 +55,11 @@ func (c *Client) GardenClientset() *gardenclientset.Clientset {
 	return c.gardenClientset
 }
 
+// MachineClientset will return the machineClientset attribute of the Client object.
+func (c *Client) MachineClientset() *machineclientset.Clientset {
+	return c.machineClientset
+}
+
 // RESTClient will return the restClient attribute of the Client object.
 func (c *Client) RESTClient() rest.Interface {
 	return c.restClient
@@ -72,6 +78,11 @@ func (c *Client) SetClientset(clientset *kubernetes.Clientset) {
 // SetGardenClientset will set the gardenClientset attribute of the Client object.
 func (c *Client) SetGardenClientset(client *gardenclientset.Clientset) {
 	c.gardenClientset = client
+}
+
+// SetMachineClientset will set the machineClientset attribute of the Client object.
+func (c *Client) SetMachineClientset(client *machineclientset.Clientset) {
+	c.machineClientset = client
 }
 
 // SetRESTClient will set the restClient attribute of the Client object.

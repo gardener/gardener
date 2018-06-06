@@ -8,11 +8,17 @@ images:
 - name: etcd
   repository: quay.io/coreos/etcd
   tag: v3.3.5
+- name: etcd-backup-restore
+  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
+  tag: "0.2.3"
 - name: hyperkube
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
   repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
   tag: "0.4.0"
+- name: cluster-autoscaler
+  repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
+  tag: "0.1.0"
 - name: kube-addon-manager
   repository: k8s.gcr.io/kube-addon-manager
   tag: v8.6
@@ -22,11 +28,6 @@ images:
 - name: aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.2.0"
-
-# Shoot backup
-- name: etcd-backup-restore
-  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.2.3"
 
 # Monitoring
 - name: alertmanager

@@ -2,11 +2,13 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: system:machine-controller-manager-shoot
+  name: system:cluster-autoscaler-shoot
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:machine-controller-manager-shoot
+  name: system:cluster-autoscaler-shoot
 subjects:
 - kind: User
-  name: system:machine-controller-manager
+  name: system:cluster-autoscaler

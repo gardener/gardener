@@ -21,6 +21,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 // GetMachineClassInfo returns the name of the class kind, the plural of it and the name of the Helm chart which
@@ -44,7 +46,7 @@ func (b *AWSBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // GenerateMachineConfig generates the configuration values for the cloud-specific machine class Helm chart. It
 // also generates a list of corresponding MachineDeployments. The provided worker groups will be distributed over
 // the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
-func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []operation.MachineDeployment, error) {
+func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
 		iamInstanceProfile = "iamInstanceProfileNodes"
 		keyName            = "keyName"
@@ -54,7 +56,7 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 		zones              = b.Shoot.Info.Spec.Cloud.AWS.Zones
 		zoneLen            = len(zones)
 
-		machineDeployments = []operation.MachineDeployment{}
+		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
 
 		tfOutputNameSubnet = func(zoneIndex int) string {
@@ -117,7 +119,8 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
 				Name:      deploymentName,
 				ClassName: className,
-				Replicas:  common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
+				Minimum:   common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
+				Maximum:   common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
 			})
 
 			machineClassSpec["name"] = className
@@ -129,4 +132,47 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, []opera
 	}
 
 	return machineClasses, machineDeployments, nil
+}
+
+// ListMachineClasses returns two sets of strings whereas the first contains the names of all machine
+// classes, and the second the names of all referenced secrets.
+func (b *AWSBotanist) ListMachineClasses() (sets.String, sets.String, error) {
+	var (
+		classNames  = sets.NewString()
+		secretNames = sets.NewString()
+	)
+
+	existingMachineClasses, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, existingMachineClass := range existingMachineClasses.Items {
+		if existingMachineClass.Spec.SecretRef == nil {
+			return nil, nil, fmt.Errorf("could not find secret reference in class %s", existingMachineClass.Name)
+		}
+
+		secretNames.Insert(existingMachineClass.Spec.SecretRef.Name)
+		classNames.Insert(existingMachineClass.Name)
+	}
+
+	return classNames, secretNames, nil
+}
+
+// CleanupMachineClasses deletes all machine classes which are not part of the provided list <existingMachineDeployments>.
+func (b *AWSBotanist) CleanupMachineClasses(existingMachineDeployments operation.MachineDeployments) error {
+	existingMachineClasses, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	for _, existingMachineClass := range existingMachineClasses.Items {
+		if !existingMachineDeployments.ContainsClass(existingMachineClass.Name) {
+			if err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).Delete(existingMachineClass.Name, &metav1.DeleteOptions{}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

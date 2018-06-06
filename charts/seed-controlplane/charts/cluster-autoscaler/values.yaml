@@ -1,0 +1,13 @@
+podAnnotations: {}
+replicas: 1
+
+images:
+  cluster-autoscaler: image-repository:image-tag
+
+namespace:
+  uid: uuid-of-namespace
+
+workerPools:
+- name: foo
+  min: 1
+  max: 3

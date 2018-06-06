@@ -81,13 +81,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		waitUntilKubeAPIServerIsReady           = f.AddTask(botanist.WaitUntilKubeAPIServerReady, 0, deployKubeAPIServer)
 		initializeShootClients                  = f.AddTask(botanist.InitializeShootClients, 2*time.Minute, waitUntilKubeAPIServerIsReady)
 		deployMachineControllerManager          = f.AddTaskConditional(botanist.DeployMachineControllerManager, defaultRetry, isCloud, initializeShootClients)
-		deployMachines                          = f.AddTaskConditional(hybridBotanist.DeployMachines, defaultRetry, isCloud, deployMachineControllerManager, deployInfrastructure, initializeShootClients)
+		reconcileMachines                       = f.AddTaskConditional(hybridBotanist.ReconcileMachines, defaultRetry, isCloud, deployMachineControllerManager, deployInfrastructure, initializeShootClients)
 		deployKubeAddonManager                  = f.AddTask(hybridBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients, deployInfrastructure)
 		_                                       = f.AddTask(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, deployInfrastructure)
 		_                                       = f.AddTaskConditional(botanist.EnsureIngressDNSRecord, 10*time.Minute, managedDNS, deployKubeAddonManager)
-		waitUntilVPNConnectionExists            = f.AddTaskConditional(botanist.WaitUntilVPNConnectionExists, 0, !o.Shoot.Hibernated, deployKubeAddonManager, deployMachines)
+		waitUntilVPNConnectionExists            = f.AddTaskConditional(botanist.WaitUntilVPNConnectionExists, 0, !o.Shoot.Hibernated, deployKubeAddonManager, reconcileMachines)
 		applyCreateHook                         = f.AddTask(seedCloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
-		_                                       = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, deployMachines, applyCreateHook)
+		deploySeedMonitoring                    = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines, applyCreateHook)
+		_                                       = f.AddTask(botanist.DeployClusterAutoscaler, defaultRetry, reconcileMachines, deployKubeAddonManager, deploySeedMonitoring)
 	)
 
 	if e := f.Execute(); e != nil {

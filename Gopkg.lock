@@ -105,8 +105,8 @@
     "pkg/types",
     "version"
   ]
-  revision = "70c8726202dd91e482fb4029fd14af1d4ed1d5af"
-  version = "v3.3.5"
+  revision = "932c3c01f9d67471d67ff82c38acca196847f039"
+  version = "v3.3.6"
 
 [[projects]]
   name = "github.com/coreos/go-semver"
@@ -147,8 +147,8 @@
     ".",
     "log"
   ]
-  revision = "2810ccc68e0ca445fa81ebfa03fbf70aca5c41ae"
-  version = "v2.7.0"
+  revision = "3658237ded108b4134956c1b3050349d93e7b895"
+  version = "v2.7.1"
 
 [[projects]]
   name = "github.com/emicklei/go-restful-swagger12"
@@ -330,7 +330,7 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
+  revision = "9825584555aa620c53c265d4a09ace0df1346fd9"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -436,7 +436,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "8b1c2da0d56deffdbb9e48d4414b4e674bd8083e"
+  revision = "61aaa706c6d4fda9365b6273c96839eb7e27f6e4"
 
 [[projects]]
   name = "github.com/robfig/cron"
@@ -481,7 +481,7 @@
     "ssh",
     "ssh/terminal"
   ]
-  revision = "ab813273cd59e1333f7ae7bff5d027d4aadf528c"
+  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
 
 [[projects]]
   branch = "master"
@@ -499,7 +499,7 @@
     "trace",
     "websocket"
   ]
-  revision = "dfa909b99c79129e1100513e5cd36307665e5723"
+  revision = "1e491301e022f8f977054da4c2d852decd59571f"
 
 [[projects]]
   branch = "master"
@@ -564,7 +564,7 @@
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
+  revision = "4065a77fc542a455295382a23a996a08ed18813a"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -987,7 +987,7 @@
     "parser",
     "types"
   ]
-  revision = "01a732e01d00cb9a81bb0ca050d3e6d2b947927b"
+  revision = "2e1a79edcaecf0bfbde129a1fd55624b66adb699"
 
 [[projects]]
   name = "k8s.io/helm"
@@ -1015,7 +1015,7 @@
     "pkg/util",
     "pkg/util/proto"
   ]
-  revision = "41e43949ca69d04b66104069ed3ffd619b289b3d"
+  revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
 
 [solve-meta]
   analyzer-name = "dep"

@@ -745,6 +745,22 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			RunsInSeed:         true,
 		},
 
+		// Secret definition for cluster-autoscaler
+		ControlPlaneSecret{
+			TLSSecret: TLSSecret{
+				Secret: Secret{
+					Name: "cluster-autoscaler",
+				},
+				CommonName:   "system:cluster-autoscaler",
+				Organization: nil,
+				DNSNames:     nil,
+				IPAddresses:  nil,
+				CertType:     ClientCert,
+			},
+			KubeconfigRequired: true,
+			RunsInSeed:         true,
+		},
+
 		// Secret definition for kube-addon-manager
 		ControlPlaneSecret{
 			TLSSecret: TLSSecret{
