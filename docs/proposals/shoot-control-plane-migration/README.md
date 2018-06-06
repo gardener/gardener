@@ -20,10 +20,11 @@ There is also a future possibility of having a set of seed clusters serving a pa
 Given such challenges and requirements, we need some mechanism to migrate/move a shoot cluster's control plane between seed clusters.
 
 ## Goal
+
 * Provide a mechanism to migrate/move a shoot cluster's control-plane between seed clusters.
-* The mechanism should make it possible to reuse the shoot cluster nodes that are already available and healthy. Such existing available and healthy nodes should be reused after the contro-plane is moved to the destination seed cluster.
+* The mechanism should make it possible to reuse the shoot cluster nodes that are already available and healthy. Such existing available and healthy nodes should be reused after the control-plane is moved to the destination seed cluster.
 * The mechanism should be extensible in the future to support migration across regions/availability zones.
-* The mechanism should be automatable.
+* The mechanism should be automated.
 * The mechanism should work regardless whether the source seed cluster and the shoot control-plane running there is available and healthy or not. I.e., the mechanism should work for the disaster recovery scenario as well as a scenarios such as seed load-balancing.
 
 To be more explicit, the following scenarios should be supported.
@@ -36,9 +37,11 @@ To be more explicit, the following scenarios should be supported.
 | 4 | No | Yes | No |
 
 ## Non-goal
+
 * The proposed mechanism need not right away implement a solution for migration across regions/availability zones.
 
 ## Reuse
+
 * [Machine Controller Manager](https://github.com/gardener/machine-controller-manager) already has the capability to adopt existing machines in the IaaS layer based on proper machine definitions.
 * [Etcd Backup Restore](https://github.com/gardener/etcd-backup-restore) already backs up the shoot etcd which is running in the shoot namespace of the source seed cluster. We can re-use this completely while restoring the shoot etcd on the destination seed cluster.
 
@@ -51,17 +54,68 @@ The backup and restoration of the following resources that are currently not sto
 * Resources from the shoot namespace in the seed.
   * Terraform resources such as configmaps and secrets.
   * Machine Controller Manager resources such as machinedeployments, machinesets, machines, machineclasses, secrets etc.
-* Resources from the shoot backup infrastructure namespace in the seed.
+* Resources from the shoot backup namespace in the seed.
   * Terraform resources such as configmaps and secrets.
 
 All the additional resources listed above will be backed up in the same object store as the what is used for backing up the shoot etcd.
+
 * The backup will be watch-based and not schedule based.
 * The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
+* While taking backup it will take care of dependencies. This is needed since while restoring from it, validation checks needs to be passed.
+    
     * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
+
+#### Components of the solution
+
+Taking the idea from the framework setup for etcd-backup-restore, we will introduce new component named 
+**shoot-backup-restore** per shoot in seed namespace. This will backup the control plane component of shoot only from seed namespace.
+
+##### shoot-backup-restore implementation
+
+* It will get list of objects to be backed up via configmap shoot-resources.
+
+  * TODO: Come up json format for dependencies configmap
+  * Initial thought (not full proof) is To have nested dependency fields list  
+  * Example configmap content:
+  ```yaml
+  awsmachineclass: spec.sercretRef
+  machines: spec.class
+  machineset: ...
+  machinedeployment: ...
+  configmap: ...
+  secret: ...
+  roles: ...       # May not be required?
+  rolebinding: ... # May not be Required?
+  service: ...     # May not be Required?
+
+  ```
+
+  * TODO: Give thought about OwnerReferences
+  * TODO: Think on dependency hooks
+
+* It will apply watch on seed's apiserver for those objects and takes backup of full object including its dependency.
+
+* It will have an `/initialize` endpoint to initialize cluster.
+  * This endpoint will be called by gardener in each reconcile.
+  * As a part of endpoint, it should try to restore the objects from backups stored in bucket only if resource revision is older than last backup.
+  * While restoring it should take care of dependencies.
+  * Till the time of restoration, we will freeze backup to ignore updates.
+
+* On container restart, it will take backup of all objects.
+
+##### Gardener modification
+
+* Gardener controller manager component config will have configuration of unique gardener-backup-bucket {can be bucket or private git repo} accessible. This will have backup of backup infrastructure related resources.
+* Gardener will create seed namespace for shoot.
+* It will create backup namespace and restore backup infrastructure related configmaps and secrets. Again restoration will be ignored in case of existing resources with higher revision.
+* Wait until Backup-infrastructure controller create/reconcile backup resources successfully.
+* Gardener will deploy shoot-backup-restore deployment.
+* Gardener call `/initialize` endpoint and will wait until it succeeds.(Logic similar to etcd bootstrap script can be used for optimization.)
+* Gardener will proceed with rest of shoot reconciliation.
 
 #### Extensibility of backup/restore mechanism for the across-region scenario
 
-This approach can be extended to support migration across regions by replicating the object store across regions. Such replication across regions might be required to be setup as a part of the regular backup mechanism to avoid risking the unavailibity of the backups in the case of a downtime for the object store in the source seed's region.
+This approach can be extended to support migration across regions by replicating the object store across regions. Such replication across regions might be required to be setup as a part of the regular backup mechanism to avoid risking the unavailability of the backups in the case of a downtime for the object store in the source seed's region. AWS, Azure and GCP support multi-region object store.
 
 ### Migration Co-ordination
 
@@ -110,6 +164,7 @@ The actual implementation of such a lease service can be achieved in many ways.
    This approach has the potential benefit of avoiding the access to garden cluster if the distributed cache can be actively kept up-to-date by gardener.
 
 ###### Lease data structure for a shoot
+
 * Owning seed cluster
 * Lease Period
   * Lease start timestamp
@@ -141,9 +196,10 @@ It should not scale itself down, of course.
 
 ![State Diagram](state-diagram.png)
 
-This component should also expose a healthz endpoint which returns healthy only if it can get the current lease status and if the current seed cluster is the owner of the lease for the given shoot. This healthz endpoint can be used for livenessProbe in the shoot machine-controller-manager, shoot etcd and also perhaps in the VPN components to avoid co-ordination problems in case the shoot control-plane co-ordinator itself crashes.
+This component should also expose a `/healthz` endpoint which returns healthy only if it can get the current lease status and if the current seed cluster is the owner of the lease for the given shoot. This `/healthz` endoint can be used for livenessProbe in the shoot machine-controller-manager, shoot etcd and also perhaps in the VPN components to avoid co-ordination problems in case the shoot control-plane co-ordinator itself crashes.
 
 ###### Melt-down scenario
+
 In the [above](#shoot-control-plane-co-ordinator) approach, there is a possibility of a melt-down-like scenario where the co-ordinator is not able to access the lease status for some long period even though it actually owns the lease during that period, but the gardener is able to access the seed cluster. In such a scenario, co-ordinator will scale down the relevant component to zero while a gardener reconciliation will scale them back up to the original values. This cycle can potentially keep happening while the scenario persists.
 
 To address this issue, the co-ordinator can be supplied an additional source for the current lease status via some resource within the same namespace as the co-ordinator. The co-ordinator can choose to use the lease status from such a local resource or the remote/global/distributed resource depending on the validity of the lease periods in both locations. The gardener reconciliation can update the lease status on the local resource in the namespace of the co-ordinator.
@@ -153,6 +209,7 @@ The remote/global/distributed source for lease status is still required to handl
 The assumption is that the opposite melt-down scenario of co-ordinator scaling up the control-plane components while gardener reconciliation scales it down will not happen because in such a scenario the gardener reconciliation would actually delete the shoot control-plane rather than just scale down.
 
 ### Pros
+
 * No changes to existing shoot control-plane components except for additional livenessProbes.
 * Works for different mechanisms for advertising the current seed cluster lease for a shoot cluster.
 
