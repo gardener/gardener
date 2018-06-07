@@ -76,12 +76,6 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 		return nil
 	}
 
-	// Either ignore Shoots which are marked as to-be-ignored or execute care operations.
-	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
-		logger.Logger.Infof("[SHOOT CARE] %s - skipping because Shoot is marked as 'to-be-ignored'.", key)
-		return nil
-	}
-
 	return c.careControl.Care(shoot, key)
 }
 
