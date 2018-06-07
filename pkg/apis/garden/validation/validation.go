@@ -1263,6 +1263,9 @@ func validateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *fiel
 	if !autoScalingEnabled && worker.AutoScalerMin != worker.AutoScalerMax {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin/autoScalerMax"), "maximum value must be equal to minimum value if cluster autoscaler addon is disabled"))
 	}
+	if autoScalingEnabled && worker.AutoScalerMax != 0 && worker.AutoScalerMin == 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin"), "minimum value must be larger than 0 if autoscaling is enabled and maximum is not equals zero"))
+	}
 
 	return allErrs
 }
