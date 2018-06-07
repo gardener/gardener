@@ -20,6 +20,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	corev1 "k8s.io/api/core/v1"
@@ -67,6 +68,12 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 			return err
 		}
 		chartName = "gcp-clouddns"
+	case gardenv1beta1.DNSOpenstackDesignate:
+		tfvarsEnvironment, err = b.GenerateTerraformDesignateDNSVariablesEnvironment(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
+		chartName = "openstack-designate"
 	default:
 		return nil
 	}
@@ -98,6 +105,11 @@ func (b *Botanist) DestroyDNSRecord(terraformerPurpose string, purposeInternalDo
 		}
 	case gardenv1beta1.DNSGoogleCloudDNS:
 		tfvarsEnvironment, err = b.GenerateTerraformCloudDNSVariablesEnvironment(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
+	case gardenv1beta1.DNSOpenstackDesignate:
+		tfvarsEnvironment, err = b.GenerateTerraformDesignateDNSVariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
@@ -152,6 +164,25 @@ func (b *Botanist) GenerateTerraformCloudDNSVariablesEnvironment(purposeInternal
 			"value": project,
 		},
 	}, nil
+}
+
+// GenerateTerraformDesignateDNSVariablesEnvironment generates the environment containing the credentials which
+// are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *Botanist) GenerateTerraformDesignateDNSVariablesEnvironment(purposeInternalDomain bool) ([]map[string]interface{}, error) {
+	secret, err := b.getDomainCredentials(purposeInternalDomain, openstackbotanist.AuthURL, openstackbotanist.DomainName, openstackbotanist.TenantName, openstackbotanist.UserName, openstackbotanist.Password)
+	if err != nil {
+		return nil, err
+	}
+	keyValueMap := map[string]string{
+		"OS_AUTH_URL":    openstackbotanist.AuthURL,
+		"OS_DOMAIN_NAME": openstackbotanist.DomainName,
+		"OS_TENANT_NAME": openstackbotanist.TenantName,
+		"OS_USERNAME":    openstackbotanist.UserName,
+		"OS_PASSWORD":    openstackbotanist.Password,
+	}
+
+	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
 }
 
 // GenerateTerraformDNSConfig creates the Terraform variables and the Terraform config (for the DNS record)

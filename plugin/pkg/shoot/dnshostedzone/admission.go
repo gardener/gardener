@@ -26,6 +26,7 @@ import (
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -174,6 +175,16 @@ func verifyHostedZoneID(shoot *garden.Shoot, secretBindingLister gardenlisters.S
 		if !serviceAccountJSONFound {
 			return fmt.Errorf("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains credentials for Google CloudDNS (%s)", gcpbotanist.ServiceAccountJSON)
 		}
+	case garden.DNSOpenstackDesignate:
+		_, authURLFound := credentials.Data[openstackbotanist.AuthURL]
+		_, domainNameFound := credentials.Data[openstackbotanist.DomainName]
+		_, tenantNameFound := credentials.Data[openstackbotanist.TenantName]
+		_, usernameFound := credentials.Data[openstackbotanist.UserName]
+		_, passwordFound := credentials.Data[openstackbotanist.Password]
+		if !authURLFound || !domainNameFound || !tenantNameFound || !usernameFound || !passwordFound {
+			return fmt.Errorf("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains credentials for Designate (%s, %s, %s, %s and %s)", openstackbotanist.AuthURL, openstackbotanist.DomainName, openstackbotanist.TenantName, openstackbotanist.UserName, openstackbotanist.Password)
+		}
+
 	}
 
 	return nil

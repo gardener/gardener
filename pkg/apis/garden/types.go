@@ -958,6 +958,8 @@ const (
 	DNSAWSRoute53 DNSProvider = "aws-route53"
 	// DNSGoogleCloudDNS is a constant for the 'google-clouddns' DNS provider.
 	DNSGoogleCloudDNS DNSProvider = "google-clouddns"
+	//DNSOpenstackDesignate is a constance for the designate DNS provider
+	DNSOpenstackDesignate DNSProvider = "openstack-designate"
 )
 
 // CloudProvider is a string alias.
