@@ -45,16 +45,23 @@ func (b *HybridBotanist) ReconcileMachines() error {
 	}
 	b.MachineDeployments = wantedMachineDeployments
 
-	// Check whether new machine classes have been computed (resulting in a rolling update of the nodes).
+	// Get list of existing machine class names and list of used machine class secrets.
 	existingMachineClassNames, usedSecrets, err := b.ShootCloudBotanist.ListMachineClasses()
 	if err != nil {
 		return err
 	}
 
+	// Merge the list of used secrets with the list of those which are wanted. The machine class secret names
+	// always match the machine class name itself, hence, we check against the class name.
+	for _, wantedMachineDeployment := range wantedMachineDeployments {
+		usedSecrets.Insert(wantedMachineDeployment.ClassName)
+	}
+
+	// During the time a rolling update happens we do not want the cluster autoscaler to interfer, hence it
+	// is removed (and later, at the end of the flow, deployed again).
 	if b.Shoot.ClusterAutoscalerEnabled() {
-		// During the time a rolling update happens we do not want the cluster autoscaler to interfer, hence it
-		// is removed (and later, at the end of the flow, deployed again).
 		rollingUpdate := false
+		// Check whether new machine classes have been computed (resulting in a rolling update of the nodes).
 		for _, machineDeployment := range wantedMachineDeployments {
 			if !existingMachineClassNames.Has(machineDeployment.ClassName) {
 				rollingUpdate = true
