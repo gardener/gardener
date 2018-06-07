@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -96,7 +97,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			It("should reject for false annotation value", func() {
 				shoot.Annotations = map[string]string{
-					"confirmation.garden.sapcloud.io/deletion": "false",
+					common.ConfirmationDeletion: "false",
 				}
 				shootStore.Add(&shoot)
 
@@ -108,7 +109,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			It("should succeed for true annotation value", func() {
 				shoot.Annotations = map[string]string{
-					"confirmation.garden.sapcloud.io/deletion": "true",
+					common.ConfirmationDeletion: "true",
 				}
 				shootStore.Add(&shoot)
 

@@ -42,7 +42,6 @@ spec:
         - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
-        - --enable-admission-plugins=ResourceReferenceManager,ShootSeedManager,ShootDNSHostedZone,ShootValidator,ShootQuotaValidator
         {{- if .Values.apiserver.etcd.useSidecar }}
         - --etcd-servers=http://localhost:2379
         {{- else }}
