@@ -30,6 +30,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	deletionconfirmation "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
@@ -116,9 +117,11 @@ func (o *Options) complete() error {
 	shootseedmanager.Register(o.Recommended.Admission.Plugins)
 	shootdnshostedzone.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
+	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
+		deletionconfirmation.PluginName,
 		shootdnshostedzone.PluginName,
 		shootquotavalidator.PluginName,
 		shootseedmanager.PluginName,
@@ -129,20 +132,13 @@ func (o *Options) complete() error {
 	recommendedPluginOrder.Insert(allOrderedPlugins...)
 	o.Recommended.Admission.RecommendedPluginOrder = recommendedPluginOrder.List()
 
+	// TODO: Temporary deletionconfirmation it as disabled by default.
+	// Enable it once the old shoot deletion mechanics is removed.
+	o.Recommended.Admission.DefaultOffPlugins.Insert(deletionconfirmation.PluginName)
 	return nil
 }
 
 func (o *Options) config() (*apiserver.Config, error) {
-	// Enable some admission plugins by default
-	enabledPlugins := sets.NewString(o.Recommended.Admission.EnablePlugins...)
-	if !enabledPlugins.Has(resourcereferencemanager.PluginName) {
-		enabledPlugins.Insert(resourcereferencemanager.PluginName)
-	}
-	if !enabledPlugins.Has(shootvalidator.PluginName) {
-		enabledPlugins.Insert(shootvalidator.PluginName)
-	}
-	o.Recommended.Admission.EnablePlugins = enabledPlugins.List()
-
 	// Create clientset for the garden.sapcloud.io API group
 	// Use loopback config to create a new Kubernetes client for the garden.sapcloud.io API group
 	gardenerAPIServerConfig := genericapiserver.NewRecommendedConfig(api.Codecs)
