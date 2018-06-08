@@ -189,11 +189,21 @@ resource "aws_security_group_rule" "nodes_udp_public_z{{ $index }}" {
 
 resource "aws_eip" "eip_natgw_z{{ $index }}" {
   vpc = true
+
+  tags {
+    Name = "{{ required "clusterName is required" $.Values.clusterName }}-eip-natgw-z{{ $index }}"
+    "kubernetes.io/cluster/{{ required "clusterName is required" $.Values.clusterName }}"  = "1"
+  }
 }
 
 resource "aws_nat_gateway" "natgw_z{{ $index }}" {
   allocation_id = "${aws_eip.eip_natgw_z{{ $index }}.id}"
   subnet_id     = "${aws_subnet.public_utility_z{{ $index }}.id}"
+
+  tags {
+    Name = "{{ required "clusterName is required" $.Values.clusterName }}-natgw-z{{ $index }}"
+    "kubernetes.io/cluster/{{ required "clusterName is required" $.Values.clusterName }}"  = "1"
+  }
 }
 
 resource "aws_route_table" "routetable_private_utility_z{{ $index }}" {
