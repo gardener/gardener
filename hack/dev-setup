@@ -28,12 +28,12 @@ minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -
 
 mkdir -p ${DEV_DIR}
 
-cp ${EXAMPLE_DIR}/componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
+cp ${EXAMPLE_DIR}/20-componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
 
 kubectl config use-context minikube
-kubectl apply -f ${EXAMPLE_DIR}/namespace-garden.yaml
-kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
-kubectl apply -f ${EXAMPLE_DIR}/secret-internal-domain-unmanaged.yaml
+kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
+kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
+kubectl apply -f ${EXAMPLE_DIR}/10-secret-internal-domain-unmanaged.yaml
 
 cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1
