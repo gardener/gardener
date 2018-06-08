@@ -19,10 +19,9 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // CheckConditionControlPlaneHealthy checks whether the control plane of the Shoot cluster is healthy,
@@ -42,9 +41,6 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Co
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchPodListFailed", err.Error())
 	}
-	if len(podList.Items) < 6 {
-		return helper.ModifyCondition(condition, corev1.ConditionFalse, "ControlPlaneIncomplete", "The control plane in the Shoot namespace is incomplete (Pod's are missing).")
-	}
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			if containerStatus.State.Running == nil && containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason != "Completed" {
@@ -59,9 +55,10 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Co
 	return helper.ModifyCondition(condition, corev1.ConditionTrue, "AllContainersInRunningState", "All pods running the Shoot namespace in the Seed cluster are healthy.")
 }
 
-// CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state and
-// that no node known to the IaaS is not registered to the Shoot's kube-apiserver.
+// CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state, that
+// as many nodes are registered as desired, and that every machine is running.
 func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	// Check whether every Node registered to the API server is ready.
 	nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchNodeListFailed", err.Error())
@@ -76,27 +73,42 @@ func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Conditi
 		}
 	}
 
-	var machineList unstructured.Unstructured
-	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machines", b.Shoot.SeedNamespace).Do().Into(&machineList); err != nil {
+	// Check whether at least as many machines as desired are registered to the cluster.
+	var (
+		registeredMachine = len(nodeList.Items)
+		desiredMachines   int32
+	)
+
+	machineDeploymentList, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	if err != nil {
+		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchMachineDeploymentListFailed", err.Error())
+	}
+	for _, machineDeployment := range machineDeploymentList.Items {
+		if machineDeployment.DeletionTimestamp == nil {
+			desiredMachines += machineDeployment.Spec.Replicas
+		}
+	}
+
+	if int32(registeredMachine) < desiredMachines {
+		return helper.ModifyCondition(condition, corev1.ConditionFalse, "MissingNodes", fmt.Sprintf("Too less worker nodes registered to the cluster (%d/%d).", registeredMachine, desiredMachines))
+	}
+
+	// Check whether every machine object reports that the machine is in Running state.
+	machineList, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchMachineListFailed", err.Error())
 	}
-	if err := machineList.EachListItem(func(o runtime.Object) error {
+	for _, machine := range machineList.Items {
 		var (
-			obj                                = o.(*unstructured.Unstructured)
-			machineName                        = obj.GetName()
-			machinePhase, machinePhaseFound, _ = unstructured.NestedString(obj.UnstructuredContent(), "status", "currentStatus", "phase")
-			lastOpDescription, _, _            = unstructured.NestedString(obj.UnstructuredContent(), "status", "lastOperation", "description")
+			phase         = machine.Status.CurrentStatus.Phase
+			lastOperation = machine.Status.LastOperation
 		)
-
-		if !machinePhaseFound || machinePhase != "Running" {
-			return fmt.Errorf("Machine %s is not running (phase: %s, description: %s)", machineName, machinePhase, lastOpDescription)
+		if phase != machinev1alpha1.MachineRunning {
+			return helper.ModifyCondition(condition, corev1.ConditionFalse, "MachineNotRunning", fmt.Sprintf("Machine %s is in phase %s (description: %s)", machine.Name, phase, lastOperation.Description))
 		}
-		return nil
-	}); err != nil {
-		return helper.ModifyCondition(condition, corev1.ConditionFalse, "MachineUnhealthy", err.Error())
 	}
 
-	return helper.ModifyCondition(condition, corev1.ConditionTrue, "EveryNodeReady", "Every node registered to the cluster is ready.")
+	return helper.ModifyCondition(condition, corev1.ConditionTrue, "EveryNodeReady", fmt.Sprintf("Every node registered to the cluster is ready (%d/%d).", registeredMachine, desiredMachines))
 }
 
 // CheckConditionSystemComponentsHealthy checks whether every container in the kube-system namespace of the Shoot cluster is in "Running"
