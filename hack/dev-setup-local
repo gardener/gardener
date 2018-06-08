@@ -21,10 +21,10 @@ IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
 
-kubectl apply -f ${EXAMPLE_DIR}/namespace-garden-dev.yaml
-kubectl apply -f ${EXAMPLE_DIR}/cloudprofile-local.yaml
-kubectl apply -f ${EXAMPLE_DIR}/secret-cloudprovider-local.yaml
-kubectl apply -f ${EXAMPLE_DIR}/secretbinding-cloudprovider-local.yaml
+kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
+kubectl apply -f ${EXAMPLE_DIR}/30-cloudprofile-local.yaml
+kubectl apply -f ${EXAMPLE_DIR}/70-secret-cloudprovider-local.yaml
+kubectl apply -f ${EXAMPLE_DIR}/80-secretbinding-cloudprovider-local.yaml
 
 kubectl config set-cluster gardener-dev \
   --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
@@ -49,12 +49,12 @@ kubectl config use-context gardener-dev \
 # Different base64 implementations have different flags
 MINIKUBE_SEED_KUBECONFIG_B64=$(base64 ${MINIKUBE_SEED_KUBECONFIG} | tr -d '\r\n')
 
-sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}/g" example/secret-seed-local.yaml | \
+sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}/g" example/40-secret-seed-local.yaml | \
   kubectl apply -f -
 
-sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP}.nip.io/g" example/seed-local.yaml | \
+sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP}.nip.io/g" example/40-seed-local.yaml | \
   kubectl apply -f -
 
-sed -e "s/domain: <minikube-ip>.nip.io/domain: ${MINIKUBE_IP}.nip.io/g" example/shoot-local.yaml | \
+sed -e "s/domain: <minikube-ip>.nip.io/domain: ${MINIKUBE_IP}.nip.io/g" example/90-shoot-local.yaml | \
   sed -e "s/endpoint: localhost:3777/endpoint: ${IP_ADDRESS}:3777/g" | \
-  sed -e "s/name: johndoe-local/name: local/g" >${DEV_DIR}/shoot-local.yaml
+  sed -e "s/name: johndoe-local/name: local/g" >${DEV_DIR}/90-shoot-local.yaml

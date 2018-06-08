@@ -13,7 +13,7 @@ mkdir -p "$PATH_EXAMPLES"
 # render cloud-specific templates
 for cloud in aws azure gcp openstack local; do
   echo "* Rendering manifests for cloud '$cloud':"
-  for resource in cloudprofile seed secret-seed secret-cloudprovider secretbinding-cloudprovider shoot; do
+  for resource in 30-cloudprofile 40-secret-seed 50-seed 70-secret-cloudprovider 80-secretbinding-cloudprovider 90-shoot; do
     echo "  * Template '$resource' rendered."
     mako-render --var cloud="$cloud" "$PATH_TEMPLATES/$resource.yaml.tpl" > "$PATH_EXAMPLES/$resource-$cloud.yaml"
   done
@@ -21,7 +21,7 @@ for cloud in aws azure gcp openstack local; do
 done
 
 # render cloud-independent templates
-for template in quota; do
+for template in 60-quota; do
   echo "* Template '$template' rendered."
   mako-render "$PATH_TEMPLATES/$template.yaml.tpl" > "$PATH_EXAMPLES/$template.yaml"
 done

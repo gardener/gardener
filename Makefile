@@ -47,7 +47,7 @@ start:
 	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run \
 			-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=$(shell ./hack/get-next-version)" \
 			cmd/gardener-controller-manager/main.go \
-			--config=dev/componentconfig-gardener-controller-manager.yaml
+			--config=dev/20-componentconfig-gardener-controller-manager.yaml
 
 .PHONY: start-local
 start-local:
