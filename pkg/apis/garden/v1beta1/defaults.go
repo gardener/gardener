@@ -54,8 +54,8 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.AWS.Networks.Nodes == nil {
 			if cloud.AWS.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.AWS.Networks.Nodes = cloud.AWS.Networks.VPC.CIDR
-			} else {
-				obj.Spec.Cloud.AWS.Networks.Nodes = &obj.Spec.Cloud.AWS.Networks.Workers[0]
+			} else if len(cloud.AWS.Networks.Workers) > 0 {
+				obj.Spec.Cloud.AWS.Networks.Nodes = &cloud.AWS.Networks.Workers[0]
 			}
 		}
 	}
@@ -79,7 +79,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.GCP.Networks.Services == nil {
 			obj.Spec.Cloud.GCP.Networks.Services = &defaultServiceCIDR
 		}
-		if cloud.GCP.Networks.Nodes == nil {
+		if cloud.GCP.Networks.Nodes == nil && len(cloud.GCP.Networks.Workers) > 0 {
 			obj.Spec.Cloud.GCP.Networks.Nodes = &cloud.GCP.Networks.Workers[0]
 		}
 	}
@@ -91,7 +91,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.OpenStack.Networks.Services == nil {
 			obj.Spec.Cloud.OpenStack.Networks.Services = &defaultServiceCIDR
 		}
-		if cloud.OpenStack.Networks.Nodes == nil {
+		if cloud.OpenStack.Networks.Nodes == nil && len(cloud.OpenStack.Networks.Workers) > 0 {
 			obj.Spec.Cloud.OpenStack.Networks.Nodes = &cloud.OpenStack.Networks.Workers[0]
 		}
 	}
@@ -103,7 +103,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.Local.Networks.Services == nil {
 			obj.Spec.Cloud.Local.Networks.Services = &defaultServiceCIDR
 		}
-		if cloud.Local.Networks.Nodes == nil {
+		if cloud.Local.Networks.Nodes == nil && len(cloud.Local.Networks.Workers) > 0 {
 			obj.Spec.Cloud.Local.Networks.Nodes = &cloud.Local.Networks.Workers[0]
 		}
 	}

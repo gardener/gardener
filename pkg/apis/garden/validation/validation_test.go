@@ -1966,6 +1966,26 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid non-specified k8s networks", func() {
+				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(3))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+			})
+
 			It("should forbid invalid VPC CIDRs", func() {
 				shoot.Spec.Cloud.AWS.Networks.VPC.CIDR = &invalidCIDR
 
@@ -2278,6 +2298,26 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid non-specified k8s networks", func() {
+				shoot.Spec.Cloud.Azure.Networks.K8SNetworks = garden.K8SNetworks{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(3))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+			})
+
 			It("should forbid invalid VNet CIDRs", func() {
 				shoot.Spec.Cloud.Azure.Networks.VNet.CIDR = &invalidCIDR
 
@@ -2570,6 +2610,26 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should forbid non-specified k8s networks", func() {
+				shoot.Spec.Cloud.GCP.Networks.K8SNetworks = garden.K8SNetworks{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(3))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+			})
+
 			It("should forbid an empty worker list", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{}
 
@@ -2859,6 +2919,26 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.router.id", fldPath)),
+				}))
+			})
+
+			It("should forbid non-specified k8s networks", func() {
+				shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = garden.K8SNetworks{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(3))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
 				}))
 			})
 
