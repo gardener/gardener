@@ -160,6 +160,7 @@ func autoConvert_v1alpha1_ControllerManagerConfiguration_To_componentconfig_Cont
 	if err := Convert_v1alpha1_ServerConfiguration_To_componentconfig_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 
@@ -186,6 +187,7 @@ func autoConvert_componentconfig_ControllerManagerConfiguration_To_v1alpha1_Cont
 	if err := Convert_componentconfig_ServerConfiguration_To_v1alpha1_ServerConfiguration(&in.Server, &out.Server, s); err != nil {
 		return err
 	}
+	out.FeatureGates = *(*map[string]bool)(unsafe.Pointer(&in.FeatureGates))
 	return nil
 }
 

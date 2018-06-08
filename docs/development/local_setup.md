@@ -218,6 +218,7 @@ In another terminal, launch the Gardener Controller Manager
 ```bash
 $ make start
 time="2018-02-20T13:24:39+02:00" level=info msg="Starting Gardener controller manager..."
+time="2018-02-20T13:24:39+02:00" level=info msg="Feature Gates: DeletionConfirmation=true
 time="2018-02-20T13:24:39+02:00" level=info msg="Gardener controller manager HTTP server started (serving on 0.0.0.0:2718)"
 time="2018-02-20T13:24:39+02:00" level=info msg="Found internal domain secret internal-domain-unmanaged for domain nip.io."
 time="2018-02-20T13:24:39+02:00" level=info msg="Successfully bootstrapped the Garden cluster."

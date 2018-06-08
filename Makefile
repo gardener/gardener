@@ -34,8 +34,8 @@ start-api:
 	@go run cmd/gardener-apiserver/main.go \
 			--authentication-kubeconfig ~/.kube/config \
 			--authorization-kubeconfig ~/.kube/config \
-			--enable-admission-plugins=DeletionConfirmation \
 			--etcd-servers=http://$(shell minikube ip):32379 \
+			--feature-gates=DeletionConfirmation=true \
 			--kubeconfig ~/.kube/config \
 			--tls-cert-file ~/.minikube/apiserver.crt \
 			--tls-private-key-file ~/.minikube/apiserver.key \

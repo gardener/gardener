@@ -20,9 +20,14 @@ import (
 	"runtime"
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
+	"github.com/gardener/gardener/pkg/features"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/util/logs"
 )
+
+func init() {
+	features.RegisterAPIServerFeatureGate()
+}
 
 func main() {
 	logs.InitLogs()
