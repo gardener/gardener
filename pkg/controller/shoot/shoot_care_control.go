@@ -71,8 +71,8 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 
 	defer c.shootCareAdd(shoot)
 
-	if operationOngoing(shoot) {
-		logger.Logger.Debugf("[SHOOT CARE] %s - skipping because an operation in ongoing", key)
+	if shoot.Status.LastOperation == nil || operationOngoing(shoot) {
+		logger.Logger.Debugf("[SHOOT CARE] %s - skipping because Shoot is new or an operation in ongoing", key)
 		return nil
 	}
 
