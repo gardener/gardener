@@ -1631,6 +1631,18 @@ var _ = Describe("validation", func() {
 				AutoScalerMin: 1,
 				AutoScalerMax: 2,
 			}
+			workerAutoScalingInvalid = garden.Worker{
+				Name:          "cpu-worker",
+				MachineType:   "large",
+				AutoScalerMin: 0,
+				AutoScalerMax: 2,
+			}
+			workerAutoScalingHibernated = garden.Worker{
+				Name:          "cpu-worker",
+				MachineType:   "large",
+				AutoScalerMin: 0,
+				AutoScalerMax: 0,
+			}
 		)
 
 		BeforeEach(func() {
@@ -2075,6 +2087,38 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker:     workerAutoScalingInvalid,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+			})
+
+			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker:     workerAutoScalingHibernated,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
 			It("should enforce workers min=max if autoscaler is disabled", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
@@ -2407,6 +2451,38 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     workerAutoScalingInvalid,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+			})
+
+			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
+					{
+						Worker:     workerAutoScalingHibernated,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
 			It("should enforce workers min=max if autoscaler is disabled", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
@@ -2707,6 +2783,38 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
+			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+					{
+						Worker:     workerAutoScalingInvalid,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+			})
+
+			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
+					{
+						Worker:     workerAutoScalingHibernated,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
 			It("should enforce workers min=max if autoscaler is disabled", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
 					{
@@ -3003,6 +3111,34 @@ var _ = Describe("validation", func() {
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
 				}))
+			})
+
+			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+					{
+						Worker: workerAutoScalingInvalid,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+			})
+
+			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
+					{
+						Worker: workerAutoScalingHibernated,
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
 			})
 
 			It("should enforce workers min=max if autoscaler is disabled", func() {
