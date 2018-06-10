@@ -21,3 +21,4 @@ resource "openstack_dns_recordset_v2" "www" {
 {{- include "openstack-designate.records" $.Values | trimSuffix "," | indent 4 }}
   ]
 }
+{{- end -}}
