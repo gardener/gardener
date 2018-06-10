@@ -14,7 +14,7 @@ provider "openstack" {
 
 resource "openstack_dns_recordset_v2" "www" {
   zone_id = "{{ required "record.hostedZoneID is required" .Values.record.hostedZoneID }}"
-  name = "{{ required "record.name is required" .Values.record.name }}"
+  name = "{{ required "record.name is required" .Values.record.name | trimSuffix "."}}."
   type =  "{{ if eq (required "record.type is required" .Values.record.type) "ip" }}A{{ else }}CNAME{{ end }}"
   ttl = 120
   records = [
