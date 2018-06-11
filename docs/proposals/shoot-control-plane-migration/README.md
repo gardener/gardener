@@ -59,12 +59,15 @@ The backup and restoration of the following resources that are currently not sto
 
 All the additional resources listed above will be backed up in the same object store as what is used for backing up the shoot etcd.
 
-* The backup will be watch-based and not schedule based.
-   1 The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
-* While taking backup it will take care of dependencies. This is needed since while restoring from it, validation checks needs to be passed.
-    
-       * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
-   2 Alternatively, the backups might be file-for-file with only the current/latest version being maintained.
+1. The backup will be watch-based and not schedule based.
+
+   But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
+
+   Options for storage format might be as follows.
+   1. The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
+      1. While taking backup it will take care of dependencies. This is needed since while restoring from it, validation checks needs to be passed.
+
+   2. Alternatively, the backups might be file-for-file with only the current/latest version being maintained.
 
 #### Components of the solution
 
