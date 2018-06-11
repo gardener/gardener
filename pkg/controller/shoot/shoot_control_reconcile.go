@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
@@ -97,7 +98,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	}
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
-	if shootIsUsedAsSeed(o.Shoot.Info) {
+	if helper.IsUsedAsSeed(o.Shoot.Info) {
 		if err := botanist.RegisterAsSeed(); err != nil {
 			o.Logger.Errorf("Could not register '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
 		}
