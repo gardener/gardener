@@ -1,6 +1,7 @@
 cloudProvider: aws
 
 prometheus:
+  terraformerPodSuffix: ".tf-pod"
   port: 9090
   resources:
     requests:

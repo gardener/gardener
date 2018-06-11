@@ -140,9 +140,10 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 				},
 				"limits": map[string]interface{}{
 					"cpu":    common.ResourceQuantity(150.0, nodeCount, 25.0, 3.0, "m"),
-					"memory": common.ResourceQuantity(150.0, nodeCount, 140.0, 3.0, "Mi"),
+					"memory": common.ResourceQuantity(150.0, nodeCount, 170.0, 3.0, "Mi"),
 				},
 			},
+			"terraformerPodSuffix": common.TerraformerPodSuffix,
 		},
 	})
 }
