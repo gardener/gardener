@@ -52,7 +52,7 @@ MINIKUBE_SEED_KUBECONFIG_B64=$(base64 ${MINIKUBE_SEED_KUBECONFIG} | tr -d '\r\n'
 sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}/g" example/40-secret-seed-local.yaml | \
   kubectl apply -f -
 
-sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP}.nip.io/g" example/40-seed-local.yaml | \
+sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP}.nip.io/g" example/50-seed-local.yaml | \
   kubectl apply -f -
 
 sed -e "s/domain: <minikube-ip>.nip.io/domain: ${MINIKUBE_IP}.nip.io/g" example/90-shoot-local.yaml | \
