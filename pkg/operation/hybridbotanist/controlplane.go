@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -111,14 +112,22 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
-	var basicAuthData = b.Secrets["kubecfg"].Data
+	var (
+		basicAuthData = b.Secrets["kubecfg"].Data
+		replicas      = 1
+	)
 
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.Botanist.APIServerAddress)
 	if err != nil {
 		return err
 	}
 
+	if helper.IsUsedAsSeed(b.Shoot.Info) {
+		replicas = 3
+	}
+
 	defaultValues := map[string]interface{}{
+		"replicas":                 replicas,
 		"etcdServicePort":          2379,
 		"etcdMainServiceFqdn":      fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
 		"etcdEventsServiceFqdn":    fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),

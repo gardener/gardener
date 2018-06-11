@@ -18,8 +18,10 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strconv"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -270,4 +272,18 @@ func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, c
 	}
 
 	return false, "", nil
+}
+
+// IsUsedAsSeed returns true if the Shoot has been marked to be registered automatically as a Seed cluster.
+func IsUsedAsSeed(shoot *gardenv1beta1.Shoot) bool {
+	if shoot.Namespace != common.GardenNamespace {
+		return false
+	}
+
+	if val, ok := shoot.Annotations[common.ShootUseAsSeed]; ok {
+		useAsSeed, err := strconv.ParseBool(val)
+		return err == nil && useAsSeed
+	}
+
+	return false
 }
