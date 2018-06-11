@@ -57,25 +57,26 @@ The backup and restoration of the following resources that are currently not sto
 * Resources from the shoot backup namespace in the seed.
   * Terraform resources such as configmaps and secrets.
 
-All the additional resources listed above will be backed up in the same object store as the what is used for backing up the shoot etcd.
+All the additional resources listed above will be backed up in the same object store as what is used for backing up the shoot etcd.
 
 * The backup will be watch-based and not schedule based.
-* The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
+   1 The backup will be full backups at longer intervals followed by incremental backups at smaller intervals similar to the etcd continuous/incremental backup.
 * While taking backup it will take care of dependencies. This is needed since while restoring from it, validation checks needs to be passed.
     
-    * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
+       * But the granularity of the changes stored at the incremental backups would be at the object level and not the actual field-level changes. This is different from the etcd continuous/incremental backups where the incremental changes are recorded at the field level.
+   2 Alternatively, the backups might be file-for-file with only the current/latest version being maintained.
 
 #### Components of the solution
 
 Taking the idea from the framework setup for etcd-backup-restore, we will introduce new component named 
-**shoot-backup-restore** per shoot in seed namespace. This will backup the control plane component of shoot only from seed namespace.
+**shoot-backup-restore** per shoot in shoot namespace in the seed cluster. This will backup the control plane component of shoot only from shoot namespace in the seed cluster.
 
 ##### shoot-backup-restore implementation
 
 * It will get list of objects to be backed up via configmap shoot-resources.
 
   * TODO: Come up json format for dependencies configmap
-  * Initial thought (not full proof) is To have nested dependency fields list  
+  * Initial thought (not fool-proof) is to have nested dependency fields list  
   * Example configmap content:
   ```yaml
   awsmachineclass: spec.sercretRef
@@ -90,8 +91,8 @@ Taking the idea from the framework setup for etcd-backup-restore, we will introd
 
   ```
 
-  * TODO: Give thought about OwnerReferences
-  * TODO: Think on dependency hooks
+  * TODO: Consider OwnerReferences
+  * TODO: Consider dependency hooks
 
 * It will apply watch on seed's apiserver for those objects and takes backup of full object including its dependency.
 
@@ -143,25 +144,29 @@ The Lease Service will act as the central point of truth for all the seed cluste
 
 * It needs to be accessible from all the seed clusters among which the shoot control-plane can be moved.
 * It needs to be highly available to reduce chances of false positives/negatives.
-* Given the particular scenario of garden/seed/shoot architecture, shoot YAML in the garden cluster is already the true single point of truth. The Lease Service would be just a secondary source of the truth. Hence, there is no need for any explicit mechanism for lease renewal or leader promotion. That can be done automatically based on the shoot YAML.
+* Given the particular scenario of garden/seed/shoot architecture, shoot resource in the garden cluster is already the true single point of truth. The Lease Service would be just a secondary source of the truth. Hence, there is no need for any explicit mechanism for lease renewal or leader promotion. That can be done automatically based on the shoot resource.
 
 The actual implementation of such a lease service can be achieved in many ways.
 
-1. Shoot YAML in the Garden cluster.
+1. Shoot resource in the Garden cluster.
 
    This mechanism is already available. But is not suitable because, among other issues, this would require garden cluster to be accessible from the seed clusters and also put the garden cluster's apiserver under unnecessary load.
    
 2. In-memory cache service on some cluster accessible from seed clusters.
 
-   This is possible because the data required to be served from this service can be computed readily from the shoot YAML. This would reduce the load on the garden cluster's apiserver but would still need this service to be highly available to the seed clusters.
+   This is possible because the data required to be served from this service can be computed readily from the shoot resource. This would reduce the load on the garden cluster's apiserver but would still need this service to be highly available to the seed clusters.
    
 3. IaaS-based cache service.
 
-   This is similar to option 2 except the management of high-availability of the service is delegated to the IaaS layer. Such a service can be calculated based on garden cluster shoot YAML or might also be persistent and kept actively up-to-date by gardener.
+   This is similar to option 2 except the management of high-availability of the service is delegated to the IaaS layer. Such a service can be calculated based on garden cluster shoot resource or might also be persistent and kept actively up-to-date by gardener.
    
 4. A ring of highly available distributed cache among the seed clusters.
 
    This approach has the potential benefit of avoiding the access to garden cluster if the distributed cache can be actively kept up-to-date by gardener.
+
+5. Use DNS records with short TTL to publish/broadcast the owner seed cluster for any give shoot cluster.
+
+This approach looks promising because of the reuse of time-tested components like DNS but needs some evaluation via PoC.
 
 ###### Lease data structure for a shoot
 
@@ -216,13 +221,13 @@ The assumption is that the opposite melt-down scenario of co-ordinator scaling u
 ### Cons
 
 * One more additional component (shoot control-plane co-ordinator) in the shoot control-plane. Gardener reconciliation should be enhanced to handle the shoot control-plane co-ordinator.
-* Needs some sort of mechanism to advertise current seed cluster lease for a shoot cluster which need to be actively or passively kept up-to-date with changes to the shoot YAML in the garden cluster.
+* Needs some sort of mechanism to advertise current seed cluster lease for a shoot cluster which need to be actively or passively kept up-to-date with changes to the shoot resource in the garden cluster.
 
 ### Changes Required in Gardener Reconciliation
 
 On movement of seed for a shoot control-plane,
 
-1. Update the lease status (this is optional if the lease status is calculated based on shoot YAML).
+1. Update the lease status (this is optional if the lease status is calculated based on shoot resource).
 2. Deploy the new control-plane on the destination seed cluster. This can done even before the current lease expires.
 3. Garbage-collect the old shoot control-plane on the source seed cluster. This should be done after the new shoot control-plane is available and ready on the destination seed cluster.
    * Some care would be required while deleting the old shoot control-plane on the source seed cluster to avoid deleting the actual backup object store or even trigger the deletion grace period for it. Only the backup resources should be deleted without actually deleting the object store.
