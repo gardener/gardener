@@ -13,7 +13,7 @@ route:
   # This way ensures that you get multiple alerts for the same group that start
   # firing shortly after another are batched together on the first
   # notification.
-  group_wait: 1m
+  group_wait: 5m
 
   # When the first notification was sent, wait 'group_interval' to send a batch
   # of new alerts that started firing for that group.

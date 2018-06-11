@@ -355,6 +355,11 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			},
 			"replicas":           replicas,
 			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),
+			"seed": map[string]interface{}{
+				"apiserver": b.K8sSeedClient.GetConfig().Host,
+				"region":    b.Seed.Info.Spec.Cloud.Region,
+				"profile":   b.Seed.Info.Spec.Cloud.Profile,
+			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": replicas,

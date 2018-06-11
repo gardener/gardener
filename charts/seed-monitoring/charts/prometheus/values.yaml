@@ -23,3 +23,8 @@ podAnnotations: {}
 replicas: 1
 apiserverServiceIP: 100.10.10.10
 prometheusPort: 9090
+
+seed:
+  apiserver: https://api.foo.bar
+  region: antarctica-1
+  profile: penguin
