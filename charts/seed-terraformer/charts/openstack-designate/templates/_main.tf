@@ -1,11 +1,12 @@
 {{- define "openstack-designate.main" -}}
 provider "openstack" {
-  auth_url    = "${var.OS_AUTH_URL}"
-  domain_name = "${var.OS_DOMAIN_NAME}"
-  tenant_name = "${var.OS_TENANT_NAME}"
-  user_name   = "${var.OS_USERNAME}"
-  password    = "${var.OS_PASSWORD}"
-  insecure    = true
+  auth_url           = "${var.OS_AUTH_URL}"
+  domain_name        = "${var.OS_DOMAIN_NAME}"
+  tenant_name        = "${var.OS_TENANT_NAME}"
+  user_name          = "${var.OS_USERNAME}"
+  user_domain_name   = "${var.OS_USER_DOMAIN_NAME}"
+  password           = "${var.OS_PASSWORD}"
+  insecure           = true
 }
 
 //=====================================================================

@@ -170,16 +170,17 @@ func (b *Botanist) GenerateTerraformCloudDNSVariablesEnvironment(purposeInternal
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *Botanist) GenerateTerraformDesignateDNSVariablesEnvironment(purposeInternalDomain bool) ([]map[string]interface{}, error) {
-	secret, err := b.getDomainCredentials(purposeInternalDomain, openstackbotanist.AuthURL, openstackbotanist.DomainName, openstackbotanist.TenantName, openstackbotanist.UserName, openstackbotanist.Password)
+	secret, err := b.getDomainCredentials(purposeInternalDomain, openstackbotanist.AuthURL, openstackbotanist.DomainName, openstackbotanist.TenantName, openstackbotanist.UserName, openstackbotanist.UserDomainName, openstackbotanist.Password)
 	if err != nil {
 		return nil, err
 	}
 	keyValueMap := map[string]string{
-		"OS_AUTH_URL":    openstackbotanist.AuthURL,
-		"OS_DOMAIN_NAME": openstackbotanist.DomainName,
-		"OS_TENANT_NAME": openstackbotanist.TenantName,
-		"OS_USERNAME":    openstackbotanist.UserName,
-		"OS_PASSWORD":    openstackbotanist.Password,
+		"OS_AUTH_URL":         openstackbotanist.AuthURL,
+		"OS_DOMAIN_NAME":      openstackbotanist.DomainName,
+		"OS_TENANT_NAME":      openstackbotanist.TenantName,
+		"OS_USERNAME":         openstackbotanist.UserName,
+		"OS_USER_DOMAIN_NAME": openstackbotanist.UserDomainName,
+		"OS_PASSWORD":         openstackbotanist.Password,
 	}
 
 	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil

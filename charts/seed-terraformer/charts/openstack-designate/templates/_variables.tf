@@ -9,6 +9,11 @@ variable "OS_USERNAME" {
   type        = "string"
 }
 
+variable "OS_USER_DOMAIN_NAME" {
+  description = "OpenStack user domain name"
+  type        = "string"
+}
+
 variable "OS_PASSWORD" {
   description = "OpenStack password"
   type        = "string"

@@ -180,9 +180,10 @@ func verifyHostedZoneID(shoot *garden.Shoot, secretBindingLister gardenlisters.S
 		_, domainNameFound := credentials.Data[openstackbotanist.DomainName]
 		_, tenantNameFound := credentials.Data[openstackbotanist.TenantName]
 		_, usernameFound := credentials.Data[openstackbotanist.UserName]
+		_, userDomainNameFound := credentials.Data[openstackbotanist.UserDomainName]
 		_, passwordFound := credentials.Data[openstackbotanist.Password]
-		if !authURLFound || !domainNameFound || !tenantNameFound || !usernameFound || !passwordFound {
-			return fmt.Errorf("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains credentials for Designate (%s, %s, %s, %s and %s)", openstackbotanist.AuthURL, openstackbotanist.DomainName, openstackbotanist.TenantName, openstackbotanist.UserName, openstackbotanist.Password)
+		if !authURLFound || !domainNameFound || !tenantNameFound || !usernameFound || !userDomainNameFound || !passwordFound {
+			return fmt.Errorf("specifying the `.spec.dns.hostedZoneID` field is only possible if the cloud provider secret or the secret referenced in .spec.dns.secretName contains credentials for Designate (%s, %s, %s, %s, %s and %s)", openstackbotanist.AuthURL, openstackbotanist.DomainName, openstackbotanist.TenantName, openstackbotanist.UserName, openstackbotanist.UserDomainName, openstackbotanist.Password)
 		}
 
 	}
