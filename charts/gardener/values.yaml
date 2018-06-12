@@ -6,6 +6,13 @@ apiserver:
   image:
     repository: eu.gcr.io/gardener-project/gardener/apiserver
     tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
   etcd:
     useSidecar: false # only meant for development purposes. if this is set to true, other etcd config values are ignored
     servers: https://etcd:2379
@@ -47,6 +54,13 @@ controller:
   image:
     repository: eu.gcr.io/gardener-project/gardener/controller-manager
     tag: latest
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 750m
+      memory: 512Mi
   internalDomain:
     provider: aws-route53 # aws-route53 or google-clouddns
     hostedZoneID: Z3ABCDE1FGHIJK

@@ -39,6 +39,10 @@ spec:
         command:
         - /gardener-controller-manager
         - --config=/etc/gardener-controller-manager/config.yaml
+        {{- if .Values.controller.resources }}
+        resources:
+{{ toYaml .Values.controller.resources | indent 10 }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -46,13 +50,6 @@ spec:
             scheme: HTTP
           initialDelaySeconds: 30
           timeoutSeconds: 5
-        resources:
-          requests:
-            cpu: 100m
-            memory: 100Mi
-          limits:
-            cpu: 750m
-            memory: 512Mi
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
