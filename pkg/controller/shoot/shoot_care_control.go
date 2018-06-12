@@ -198,8 +198,8 @@ func (c *defaultCareControl) labelShoot(shoot *gardenv1beta1.Shoot, healthy bool
 	return err
 }
 
-// garbageCollection cleans the Seed and the Shoot cluster from unrequired objects.
-// It receives a Garden object <garden> which stores the Shoot object.
+// garbageCollection cleans the Seed and the Shoot cluster from no longer required
+// objects. It receives a Garden object <garden> which stores the Shoot object.
 func garbageCollection(botanist *botanistpkg.Botanist) {
 	var wg sync.WaitGroup
 

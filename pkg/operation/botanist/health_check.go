@@ -19,6 +19,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,28 +38,23 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Co
 		return helper.ModifyCondition(condition, corev1.ConditionFalse, "KubeAPIServerNotHealthy", "Shoot cluster kube-apiserver's /healthz endpoint indicates unhealthiness.")
 	}
 
-	podList, err := b.K8sSeedClient.ListPods(b.Shoot.SeedNamespace, metav1.ListOptions{})
-	if err != nil {
-		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchPodListFailed", err.Error())
-	}
-	for _, pod := range podList.Items {
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.State.Running == nil && containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason != "Completed" {
-				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotRunning", fmt.Sprintf("Container %s of pod %s is not in running state", containerStatus.Name, pod.Name))
-			}
-		}
-		if pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodSucceeded {
-			return helper.ModifyCondition(condition, corev1.ConditionFalse, "PodNotRunning", fmt.Sprintf("Pod %s is in phase %s", pod.Name, pod.Status.Phase))
-		}
+	// Check whether the number of availableReplicas matches the number of desired replicas for all deployments.
+	if updatedCondition, modified := verifyDeploymentHealthiness(condition, b.K8sSeedClient, b.Shoot.SeedNamespace, metav1.ListOptions{}); modified {
+		return updatedCondition
 	}
 
-	return helper.ModifyCondition(condition, corev1.ConditionTrue, "AllContainersInRunningState", "All pods running the Shoot namespace in the Seed cluster are healthy.")
+	// Check whether the number of running containers matches the number of actual containers within the pods (i.e., everything is running).
+	if updatedCondition, modified := verifyPodHealthiness(condition, b.K8sSeedClient, b.Shoot.SeedNamespace, metav1.ListOptions{}); modified {
+		return updatedCondition
+	}
+
+	return helper.ModifyCondition(condition, corev1.ConditionTrue, "AllPodsInRunningState", "All pods running the Shoot namespace in the Seed cluster are healthy.")
 }
 
 // CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
 func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
-	// Check whether every Node registered to the API server is ready.
+	// Check whether every Node registered to the kAPI server is ready.
 	nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchNodeListFailed", err.Error())
@@ -121,34 +117,57 @@ func (b *Botanist) CheckConditionSystemComponentsHealthy(condition *gardenv1beta
 		return helper.ModifyCondition(condition, corev1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
 	}
 
-	// Check whether the number of availableReplicas matches the number of desired replicas.
-	deploymentList, err := b.K8sShootClient.ListDeployments(metav1.NamespaceSystem, metav1.ListOptions{})
-	if err != nil {
-		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchPodListFailed", err.Error())
+	listOptions := metav1.ListOptions{
+		LabelSelector: "origin=gardener",
 	}
+
+	// Check whether the number of availableReplicas matches the number of desired replicas for all our deployments.
+	if updatedCondition, modified := verifyDeploymentHealthiness(condition, b.K8sShootClient, metav1.NamespaceSystem, listOptions); modified {
+		return updatedCondition
+	}
+
+	// Check whether the number of running containers matching the number of actual containers within all our pods (i.e., everything we deploy
+	// is running).
+	if updatedCondition, modified := verifyPodHealthiness(condition, b.K8sShootClient, metav1.NamespaceSystem, listOptions); modified {
+		return updatedCondition
+	}
+
+	return helper.ModifyCondition(condition, corev1.ConditionTrue, "AllPodsRunning", "All pods in the kube-system namespace of the Shoot cluster are running.")
+}
+
+// Helper functions
+
+func verifyDeploymentHealthiness(condition *gardenv1beta1.Condition, k8sClient kubernetes.Client, namespace string, listOptions metav1.ListOptions) (*gardenv1beta1.Condition, bool) {
+	deploymentList, err := k8sClient.ListDeployments(namespace, listOptions)
+	if err != nil {
+		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchDeploymentListFailed", err.Error()), true
+	}
+
 	for _, deployment := range deploymentList {
 		if *deployment.Spec.Replicas != deployment.Status.AvailableReplicas {
-			return helper.ModifyCondition(condition, corev1.ConditionFalse, "NotAllPodsAvailable", fmt.Sprintf("Deployment %s has not yet the desired number of available pods.", deployment.Name))
+			return helper.ModifyCondition(condition, corev1.ConditionFalse, "DeploymentUnavailable", fmt.Sprintf("Deployment %s has not yet the desired number of available pods.", deployment.Name)), true
 		}
 	}
 
-	// Check whether the number of running containers matching the number of actual containers within the pods (i.e., everything is running).
-	podList, err := b.K8sShootClient.ListPods(metav1.NamespaceSystem, metav1.ListOptions{
-		LabelSelector: "origin=gardener",
-	})
+	return condition, false
+}
+
+func verifyPodHealthiness(condition *gardenv1beta1.Condition, k8sClient kubernetes.Client, namespace string, listOptions metav1.ListOptions) (*gardenv1beta1.Condition, bool) {
+	podList, err := k8sClient.ListPods(namespace, listOptions)
 	if err != nil {
-		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchPodListFailed", err.Error())
+		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchPodListFailed", err.Error()), true
 	}
+
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			if containerStatus.State.Running == nil && containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason != "Completed" {
-				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotRunning", fmt.Sprintf("Container %s of pod %s is not in running state.", containerStatus.Name, pod.Name))
+				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotRunning", fmt.Sprintf("Container %s of pod %s is not in running state.", containerStatus.Name, pod.Name)), true
 			}
 		}
 		if pod.Status.Phase != corev1.PodRunning && pod.Status.Phase != corev1.PodSucceeded {
-			return helper.ModifyCondition(condition, corev1.ConditionFalse, "PodNotRunning", fmt.Sprintf("Pod %s is in phase %s", pod.Name, pod.Status.Phase))
+			return helper.ModifyCondition(condition, corev1.ConditionFalse, "PodNotRunning", fmt.Sprintf("Pod %s is in phase %s", pod.Name, pod.Status.Phase)), true
 		}
 	}
 
-	return helper.ModifyCondition(condition, corev1.ConditionTrue, "AllContainersInKubeSystemInRunningState", "Every container in the kube-system namespace of the Shoot cluster is running.")
+	return condition, false
 }
