@@ -56,7 +56,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
 		isCloud      = o.Shoot.Info.Spec.Cloud.Local == nil
 
-		f                                    = flow.New("Shoot cluster creation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
+		f                                    = flow.New("Shoot cluster reconciliation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
 		deployNamespace                      = f.AddTask(botanist.DeployNamespace, defaultRetry)
 		deployKubeAPIServerService           = f.AddTask(botanist.DeployKubeAPIServerService, defaultRetry, deployNamespace)
 		waitUntilKubeAPIServerServiceIsReady = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, isCloud, deployKubeAPIServerService)

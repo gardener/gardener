@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -52,7 +53,26 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 		chartName         string
 		tfvarsEnvironment []map[string]interface{}
 		err               error
+		targetType, _     = common.IdentifyAddressType(target)
 	)
+
+	// If the DNS record is already registered properly then we skip the reconciliation to avoid running into
+	// cloud provider rate limits.
+	switch targetType {
+	case "hostname":
+		if utils.LookupDNSHostCNAME(name) == fmt.Sprintf("%s.", target) {
+			b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
+			return nil
+		}
+	case "ip":
+		values := utils.LookupDNSHost(name)
+		for _, v := range values {
+			if v == target {
+				b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
+				return nil
+			}
+		}
+	}
 
 	switch b.determineDNSProvider(purposeInternalDomain) {
 	case gardenv1beta1.DNSAWSRoute53:
@@ -79,7 +99,7 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 	return terraformer.
 		NewFromOperation(b.Operation, terraformerPurpose).
 		SetVariablesEnvironment(tfvarsEnvironment).
-		DefineConfig(chartName, b.GenerateTerraformDNSConfig(name, hostedZoneID, []string{target})).
+		DefineConfig(chartName, b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})).
 		Apply()
 }
 
@@ -156,9 +176,7 @@ func (b *Botanist) GenerateTerraformCloudDNSVariablesEnvironment(purposeInternal
 
 // GenerateTerraformDNSConfig creates the Terraform variables and the Terraform config (for the DNS record)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID string, values []string) map[string]interface{} {
-	targetType, _ := common.IdentifyAddressType(values[0])
-
+func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID, targetType string, values []string) map[string]interface{} {
 	return map[string]interface{}{
 		"record": map[string]interface{}{
 			"hostedZoneID": hostedZoneID,

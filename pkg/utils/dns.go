@@ -23,30 +23,39 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// LookupDNS performs a DNS lookup for the given <domain>. In case of success, it will return the list
+// LookupDNSHost performs a DNS lookup for the given <domain>. In case of success, it will return the list
 // of records. If the domain is not resolvable, it will return nil.
-func LookupDNS(domain string) []string {
-	nsRecords, err := net.LookupHost(domain)
-	if err == nil {
+func LookupDNSHost(domain string) []string {
+	if nsRecords, err := net.LookupHost(domain); err == nil {
 		sort.Strings(nsRecords)
 		return nsRecords
 	}
-	return nil
+	return []string{}
+}
+
+// LookupDNSHostCNAME performs a CNAME DNS lookup for the given <domain>. In case of success, it will return
+// the record. If the domain is not resolvable (or is not of type CNAME), it will return an empty string.
+func LookupDNSHostCNAME(domain string) string {
+	if nsRecord, err := net.LookupCNAME(domain); err == nil {
+		return nsRecord
+	}
+	return ""
 }
 
 // WaitUntilDNSNameResolvable is a helper function which takes a <domain> and waits for a maximum of five
 // minutes that the domain name is resolvable by a DNS. It returns the first record of the resolution, or
 // an error if it was not successful.
 func WaitUntilDNSNameResolvable(domain string) (string, error) {
-	var nsRecord string
-	err := wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
-		nsRecords := LookupDNS(domain)
-		if nsRecords != nil {
-			nsRecord = nsRecords[0]
-			return true, nil
-		}
-		logger.Logger.Info("Waiting for DNS name " + domain + " to be resolvable...")
-		return false, nil
-	})
+	var (
+		nsRecord string
+		err      = wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
+			if nsRecords := LookupDNSHost(domain); len(nsRecords) > 0 {
+				nsRecord = nsRecords[0]
+				return true, nil
+			}
+			logger.Logger.Infof("Waiting for DNS name %s to be resolvable...", domain)
+			return false, nil
+		})
+	)
 	return nsRecord, err
 }
