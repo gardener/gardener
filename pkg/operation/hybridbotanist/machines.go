@@ -175,6 +175,11 @@ func (b *HybridBotanist) DestroyMachines() error {
 		return fmt.Errorf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error())
 	}
 
+	// Wait until all finalizers for secrets referred by machineClasses are removed
+	if err := b.waitUntilFinalizersRemovedForMachineClassSecrets(); err != nil {
+		return fmt.Errorf("Failed while waiting for the finalizers for machineClass secrets to be removed: '%s'", err.Error())
+	}
+
 	return nil
 }
 
@@ -280,7 +285,7 @@ func (b *HybridBotanist) markMachineForcefulDeletion(machine machinev1alpha1.Mac
 }
 
 // waitUntilMachineDeploymentsAvailable waits for a maximum of 30 minutes until all the desired <machineDeployments>
-// were marked as healthy/available by the machine-controller-manager. It polls the status every 10 seconds.
+// were marked as healthy/available by the machine-controller-manager. It polls the status every 5 seconds.
 func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeployments operation.MachineDeployments) error {
 	var (
 		numReady              int32
@@ -332,7 +337,7 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 }
 
 // waitUntilMachineResourcesDeleted waits for a maximum of 30 minutes until all machine resources have been properly
-// deleted by the machine-controller-manager. It polls the status every 10 seconds.
+// deleted by the machine-controller-manager. It polls the status every 5 seconds.
 func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) error {
 	var (
 		resources         = []string{classKind, "machinedeployments", "machinesets", "machines"}
@@ -370,6 +375,36 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 
 		if msg != "" {
 			b.Logger.Infof("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
+			return false, nil
+		}
+		return true, nil
+	})
+}
+
+// waitUntilFinalizersRemovedForMachineClassSecrets waits for a maximum of 30 minutes until finalizers are removed for
+// all secret referred by one/more machineClasses. It polls the status every 5 seconds.
+func (b *HybridBotanist) waitUntilFinalizersRemovedForMachineClassSecrets() error {
+
+	var (
+		machineClassSecrets *corev1.SecretList
+		err                 error
+	)
+
+	return wait.Poll(5*time.Second, 30*time.Minute, func() (bool, error) {
+
+		if machineClassSecrets, err = b.listMachineClassSecrets(); err != nil {
+			return false, err
+		}
+
+		msg := ""
+		for _, machineClassSecret := range machineClassSecrets.Items {
+			if len(machineClassSecret.Finalizers) != 0 {
+				msg += fmt.Sprintf("%s, ", machineClassSecret.Name)
+			}
+		}
+
+		if msg != "" {
+			b.Logger.Infof("Waiting until the finalizers for the following (machineClass) secrets are removed: %s", strings.TrimSuffix(msg, ", "))
 			return false, nil
 		}
 		return true, nil
