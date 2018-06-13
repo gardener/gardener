@@ -19,6 +19,7 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	corev1 "k8s.io/api/core/v1"
@@ -188,6 +189,22 @@ var _ = Describe("quotavalidator", func() {
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
 				})
 
+				It("should reject because the cloud provider secret does not contain valid dns provider credentials (Designate)", func() {
+					shoot.Spec.DNS.HostedZoneID = makeStringPointer("abcd")
+					shoot.Spec.DNS.Provider = garden.DNSOpenstackDesignate
+					shoot.Spec.DNS.Domain = makeStringPointer("my-shoot.my-domain.com")
+
+					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
+					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+					err := admissionHandler.Admit(attrs)
+
+					Expect(err).To(HaveOccurred())
+					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+				})
+
 				It("should pass because the cloud provider secret does contain valid dns provider credentials (AWS)", func() {
 					shoot.Spec.DNS.HostedZoneID = makeStringPointer("abcd")
 					shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
@@ -225,6 +242,29 @@ var _ = Describe("quotavalidator", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
+				It("should pass because the cloud provider secret does contain valid dns provider credentials (Designate)", func() {
+					shoot.Spec.DNS.HostedZoneID = makeStringPointer("abcd")
+					shoot.Spec.DNS.Provider = garden.DNSOpenstackDesignate
+					shoot.Spec.DNS.Domain = makeStringPointer("my-shoot.my-domain.com")
+					cloudProviderSecret.Data = map[string][]byte{
+						openstackbotanist.AuthURL:        nil,
+						openstackbotanist.DomainName:     nil,
+						openstackbotanist.TenantName:     nil,
+						openstackbotanist.UserName:       nil,
+						openstackbotanist.UserDomainName: nil,
+						openstackbotanist.Password:       nil,
+					}
+
+					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
+					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+					err := admissionHandler.Admit(attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
 				It("should reject because the referenced secret does not contain valid dns provider credentials", func() {
 					shoot.Spec.DNS.HostedZoneID = makeStringPointer("abcd")
 					shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
@@ -240,7 +280,7 @@ var _ = Describe("quotavalidator", func() {
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
 				})
 
-				It("should pass because the referenced secret does contain valid dns provider credentials", func() {
+				It("should pass because the referenced secret does contain valid dns provider credentials (AWS)", func() {
 					shoot.Spec.DNS.HostedZoneID = makeStringPointer("abcd")
 					shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 					shoot.Spec.DNS.Domain = makeStringPointer("my-shoot.my-domain.com")

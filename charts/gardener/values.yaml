@@ -62,7 +62,7 @@ controller:
       cpu: 750m
       memory: 512Mi
   internalDomain:
-    provider: aws-route53 # aws-route53 or google-clouddns
+    provider: aws-route53 # aws-route53, google-clouddns or openstack-designate
     hostedZoneID: Z3ABCDE1FGHIJK
     domain: example.com
     credentials:
@@ -71,6 +71,14 @@ controller:
       secretAccessKey: secret-access-key-with-route53-privileges
       # for google-clouddns we need 'serviceaccount.json' field' (service account needs 'DNS administrator' role)
       # serviceaccount.json: '{"type": "service_account", "project_id": "...", ...}'
+      #
+      # for openstack-designate we need to provide the following keys:
+      # authURL:
+      # domainName:
+      # tenantName:
+      # userDomainName:
+      # username:
+      # password:
   defaultDomains: []
   # - domain: example.com
   #   provider: aws-route53 # aws-route53 or google-clouddns
