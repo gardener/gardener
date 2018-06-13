@@ -1412,7 +1412,7 @@ var _ = Describe("validation", func() {
 
 		It("should forbid Seed specification with empty or invalid keys", func() {
 			seed.Spec.Cloud = garden.SeedCloud{}
-			seed.Spec.IngressDomain = "invalid-domain-name"
+			seed.Spec.IngressDomain = "invalid_dns1123-subdomain"
 			seed.Spec.SecretRef = corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
 				Nodes:    garden.CIDR("invalid-cidr"),

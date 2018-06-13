@@ -466,11 +466,7 @@ func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.Erro
 		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a region"))
 	}
 
-	r, _ := regexp.Compile(`^(?:[a-zA-Z0-9\-]+\.)*[a-zA-Z0-9]+\.[a-zA-Z0-9]{2,6}$`)
-	if !r.MatchString(seedSpec.IngressDomain) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingressDomain"), seedSpec.IngressDomain, fmt.Sprintf("domain must match the regex %s", r)))
-	}
-
+	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.IngressDomain, fldPath.Child("ingressDomain"))...)
 	allErrs = append(allErrs, validateSecretReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
 
 	networksPath := fldPath.Child("networks")
