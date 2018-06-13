@@ -29,6 +29,8 @@ const (
 	TenantName = "tenantName"
 	// UserName is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack username.
 	UserName = "username"
+	// UserDomainName is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack user domain name.
+	UserDomainName = "userDomainName"
 	// Password is a constant for the key in a cloud provider secret and backup secret that holds the OpenStack password.
 	Password = "password"
 	// AuthURL is a constant for the key in a backup secret that holds the OpenStack authentication URL.

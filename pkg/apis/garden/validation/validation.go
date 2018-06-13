@@ -161,8 +161,8 @@ func validateDNSProviders(providers []garden.DNSProviderConstraint, fldPath *fie
 
 	for i, provider := range providers {
 		idxPath := fldPath.Index(i)
-		if provider.Name != garden.DNSUnmanaged && provider.Name != garden.DNSAWSRoute53 && provider.Name != garden.DNSGoogleCloudDNS {
-			allErrs = append(allErrs, field.NotSupported(idxPath, provider.Name, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53), string(garden.DNSGoogleCloudDNS)}))
+		if provider.Name != garden.DNSUnmanaged && provider.Name != garden.DNSAWSRoute53 && provider.Name != garden.DNSGoogleCloudDNS && provider.Name != garden.DNSOpenstackDesignate {
+			allErrs = append(allErrs, field.NotSupported(idxPath, provider.Name, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53), string(garden.DNSGoogleCloudDNS), string(garden.DNSOpenstackDesignate)}))
 		}
 	}
 
@@ -1108,8 +1108,8 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if dns.Provider != garden.DNSUnmanaged && dns.Provider != garden.DNSAWSRoute53 && dns.Provider != garden.DNSGoogleCloudDNS {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("provider"), dns.Provider, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53), string(garden.DNSGoogleCloudDNS)}))
+	if dns.Provider != garden.DNSUnmanaged && dns.Provider != garden.DNSAWSRoute53 && dns.Provider != garden.DNSGoogleCloudDNS && dns.Provider != garden.DNSOpenstackDesignate {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("provider"), dns.Provider, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53), string(garden.DNSGoogleCloudDNS), string(garden.DNSOpenstackDesignate)}))
 	}
 
 	if dns.HostedZoneID != nil {
