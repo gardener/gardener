@@ -225,6 +225,7 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployme
 				"name": deployment.ClassName,
 			},
 		}
+		existingMachineDeployment := getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
 
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
@@ -234,17 +235,25 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployme
 		// we can use either min or max.
 		case !b.Shoot.ClusterAutoscalerEnabled():
 			replicas = deployment.Minimum
-			// If the machine deployment does not yet exist we set replicas to min so that the cluster
-			// autoscaler can scale them as required.
-		case !machineDeploymentExists(existingMachineDeployments, deployment.Name):
+		// If the machine deployment does not yet exist we set replicas to min so that the cluster
+		// autoscaler can scale them as required.
+		case existingMachineDeployment == nil:
 			replicas = deployment.Minimum
-			// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
-			// autoscaler can scale them as required.
+		// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
+		// autoscaler can scale them as required.
 		case shootIsWokenUp(b.Shoot.Hibernated, existingMachineDeployments):
 			replicas = deployment.Minimum
-			// In this case the machine deployment must exist (otherwise the above case was already true),
-			// and the cluster autoscaler must be enabled. We do not want to override the machine deployment's
-			// replicas as the cluster autoscaler is responsible for setting appropriate values.
+		// If the shoot worker pool minimum was updated and if the current machine deployment replica
+		// count is less than minimum, we update the machine deployment replica count to updated minimum.
+		case int(existingMachineDeployment.Spec.Replicas) < deployment.Minimum:
+			replicas = deployment.Minimum
+		// If the shoot worker pool maximum was updated and if the current machine deployment replica
+		// count is greater than maximum, we update the machine deployment replica count to updated maximum.
+		case int(existingMachineDeployment.Spec.Replicas) > deployment.Maximum:
+			replicas = deployment.Maximum
+		// In this case the machine deployment must exist (otherwise the above case was already true),
+		// and the cluster autoscaler must be enabled. We do not want to override the machine deployment's
+		// replicas as the cluster autoscaler is responsible for setting appropriate values.
 		default:
 			replicas = getDeploymentSpecReplicas(existingMachineDeployments, deployment.Name)
 			if replicas == -1 {
@@ -439,11 +448,11 @@ func getDeploymentSpecReplicas(existingMachineDeployments *machinev1alpha1.Machi
 	return -1
 }
 
-func machineDeploymentExists(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) bool {
+func getExistingMachineDeployment(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, name string) *machinev1alpha1.MachineDeployment {
 	for _, machineDeployment := range existingMachineDeployments.Items {
 		if machineDeployment.Name == name {
-			return true
+			return &machineDeployment
 		}
 	}
-	return false
+	return nil
 }
