@@ -6,6 +6,7 @@ apiserver:
   image:
     repository: eu.gcr.io/gardener-project/gardener/apiserver
     tag: latest
+    pullPolicy: IfNotPresent
   resources:
     requests:
       cpu: 100m
@@ -54,6 +55,7 @@ controller:
   image:
     repository: eu.gcr.io/gardener-project/gardener/controller-manager
     tag: latest
+    pullPolicy: IfNotPresent
   resources:
     requests:
       cpu: 100m
