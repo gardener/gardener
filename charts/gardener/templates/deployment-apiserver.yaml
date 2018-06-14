@@ -35,7 +35,7 @@ spec:
       containers:
       - name: gardener-apiserver
         image: {{ required ".Values.apiserver.image.repository is required" .Values.apiserver.image.repository }}:{{ required ".Values.apiserver.image.tag is required" .Values.apiserver.image.tag }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.apiserver.image.pullPolicy }}
         command:
         - /gardener-apiserver
         - --audit-log-path=/var/lib/audit.log

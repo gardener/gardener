@@ -35,7 +35,7 @@ spec:
       containers:
       - name: gardener-controller-manager
         image: {{ required ".Values.controller.image.repository is required" .Values.controller.image.repository }}:{{ required ".Values.controller.image.tag is required" .Values.controller.image.tag }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
         command:
         - /gardener-controller-manager
         - --config=/etc/gardener-controller-manager/config.yaml
