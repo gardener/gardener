@@ -1154,33 +1154,32 @@ func validateK8SNetworks(networks garden.K8SNetworks, fldPath *field.Path) field
 func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	kubeAPIServer := kubernetes.KubeAPIServer
-	if kubeAPIServer != nil {
-		oidc := kubeAPIServer.OIDCConfig
-		if oidc != nil {
+	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
+		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 
-			_, err := utils.DecodeCertificate([]byte(*oidc.CABundle))
-			if err != nil {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
+			if oidc.CABundle != nil {
+				if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
+					allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
+				}
 			}
-			if len(*oidc.ClientID) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), oidc.ClientID, "client id cannot be empty when key is provided"))
+			if oidc.ClientID != nil && len(*oidc.ClientID) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("clientID"), *oidc.ClientID, "client id cannot be empty when key is provided"))
 			}
-			if len(*oidc.GroupsClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), oidc.GroupsClaim, "groups claim cannot be empty when key is provided"))
+			if oidc.GroupsClaim != nil && len(*oidc.GroupsClaim) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsClaim"), *oidc.GroupsClaim, "groups claim cannot be empty when key is provided"))
 			}
-			if len(*oidc.GroupsPrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), oidc.GroupsPrefix, "groups prefix cannot be empty when key is provided"))
+			if oidc.GroupsPrefix != nil && len(*oidc.GroupsPrefix) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("groupsPrefix"), *oidc.GroupsPrefix, "groups prefix cannot be empty when key is provided"))
 			}
-			if len(*oidc.IssuerURL) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
+			if oidc.IssuerURL != nil && len(*oidc.IssuerURL) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), *oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
 			}
-			if len(*oidc.UsernameClaim) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), oidc.UsernameClaim, "username claim cannot be empty when key is provided"))
+			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "username claim cannot be empty when key is provided"))
 			}
-			if len(*oidc.UsernamePrefix) == 0 {
-				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
+			if oidc.UsernamePrefix != nil && len(*oidc.UsernamePrefix) == 0 {
+				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
 			}
 		}
 	}
