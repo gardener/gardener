@@ -17,6 +17,8 @@ package helper_test
 import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/operation/common"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -48,6 +50,89 @@ var _ = Describe("helper", func() {
 			cond := GetCondition(conditions, conditionType)
 
 			Expect(cond).To(BeNil())
+		})
+	})
+
+	Describe("#IsUsedAsSeed", func() {
+		var shoot *gardenv1beta1.Shoot
+
+		BeforeEach(func() {
+			shoot = &gardenv1beta1.Shoot{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:   common.GardenNamespace,
+					Annotations: nil,
+				},
+			}
+		})
+
+		It("should return false,nil,nil because shoot is not in the garden namespace", func() {
+			shoot.Namespace = "default"
+
+			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+
+			Expect(useAsSeed).To(BeFalse())
+			Expect(protected).To(BeNil())
+			Expect(visible).To(BeNil())
+		})
+
+		It("should return false,nil,nil because annotation is not set", func() {
+			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+
+			Expect(useAsSeed).To(BeFalse())
+			Expect(protected).To(BeNil())
+			Expect(visible).To(BeNil())
+		})
+
+		It("should return false,nil,nil because annotation is set with no usages", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "",
+			}
+
+			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+
+			Expect(useAsSeed).To(BeFalse())
+			Expect(protected).To(BeNil())
+			Expect(visible).To(BeNil())
+		})
+
+		It("should return true,nil,nil because annotation is set with normal usage", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true",
+			}
+
+			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+
+			Expect(useAsSeed).To(BeTrue())
+			Expect(protected).To(BeNil())
+			Expect(visible).To(BeNil())
+		})
+
+		It("should return true,true,true because annotation is set with protected and visible usage", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,protected,visible",
+			}
+
+			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+
+			Expect(useAsSeed).To(BeTrue())
+			Expect(protected).NotTo(BeNil())
+			Expect(visible).NotTo(BeNil())
+			Expect(*protected).To(BeTrue())
+			Expect(*visible).To(BeTrue())
+		})
+
+		It("should return true,true,true because annotation is set with unprotected and invisible usage", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,unprotected,invisible",
+			}
+
+			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+
+			Expect(useAsSeed).To(BeTrue())
+			Expect(protected).NotTo(BeNil())
+			Expect(visible).NotTo(BeNil())
+			Expect(*protected).To(BeFalse())
+			Expect(*visible).To(BeFalse())
 		})
 	})
 })

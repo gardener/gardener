@@ -60,7 +60,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 }
 
 // RegisterAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func (b *Botanist) RegisterAsSeed() error {
+func (b *Botanist) RegisterAsSeed(protected, visible *bool) error {
 	if b.Shoot.Info.Spec.DNS.Domain == nil {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
@@ -75,12 +75,12 @@ func (b *Botanist) RegisterAsSeed() error {
 		secretName      = fmt.Sprintf("seed-%s", b.Shoot.Info.Name)
 		secretNamespace = common.GardenNamespace
 		controllerKind  = gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")
+		ownerReferences = []metav1.OwnerReference{
+			*metav1.NewControllerRef(b.Shoot.Info, controllerKind),
+		}
 	)
-	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
 
-	ownerReferences := []metav1.OwnerReference{
-		*metav1.NewControllerRef(b.Shoot.Info, controllerKind),
-	}
+	secretData["kubeconfig"] = b.Secrets["kubecfg"].Data["kubeconfig"]
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -116,6 +116,8 @@ func (b *Botanist) RegisterAsSeed() error {
 				Services: *k8sNetworks.Services,
 				Nodes:    *k8sNetworks.Nodes,
 			},
+			Protected: protected,
+			Visible:   visible,
 		},
 	}
 	_, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Create(seed)

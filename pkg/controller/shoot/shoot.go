@@ -226,8 +226,10 @@ func (c *Controller) shootNamespaceFilter(obj interface{}) bool {
 }
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
-	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok && helper.IsUsedAsSeed(shoot) {
-		return c.shootSeedQueue
+	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok {
+		if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(shoot); shootUsedAsSeed {
+			return c.shootSeedQueue
+		}
 	}
 	return c.shootQueue
 }

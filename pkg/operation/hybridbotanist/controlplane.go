@@ -113,8 +113,9 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
 	var (
-		basicAuthData = b.Secrets["kubecfg"].Data
-		replicas      = 1
+		basicAuthData         = b.Secrets["kubecfg"].Data
+		replicas              = 1
+		shootUsedAsSeed, _, _ = helper.IsUsedAsSeed(b.Shoot.Info)
 	)
 
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.Botanist.APIServerAddress)
@@ -122,7 +123,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	if helper.IsUsedAsSeed(b.Shoot.Info) {
+	if shootUsedAsSeed {
 		replicas = 3
 	}
 

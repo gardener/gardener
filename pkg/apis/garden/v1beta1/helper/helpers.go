@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
+	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -274,16 +274,50 @@ func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, c
 	return false, "", nil
 }
 
-// IsUsedAsSeed returns true if the Shoot has been marked to be registered automatically as a Seed cluster.
-func IsUsedAsSeed(shoot *gardenv1beta1.Shoot) bool {
+// IsUsedAsSeed determines whether the Shoot has been marked to be registered automatically as a Seed cluster.
+// The first return value indicates whether it has been marked at all.
+// The second return value indicates whether the Shoot should be registered as "protected" Seed.
+// The third return value indicates whether the Shoot should be registered as "visible" Seed.
+func IsUsedAsSeed(shoot *gardenv1beta1.Shoot) (bool, *bool, *bool) {
 	if shoot.Namespace != common.GardenNamespace {
-		return false
+		return false, nil, nil
 	}
 
-	if val, ok := shoot.Annotations[common.ShootUseAsSeed]; ok {
-		useAsSeed, err := strconv.ParseBool(val)
-		return err == nil && useAsSeed
+	val, ok := shoot.Annotations[common.ShootUseAsSeed]
+	if !ok {
+		return false, nil, nil
 	}
 
-	return false
+	var (
+		trueVar  = true
+		falseVar = false
+
+		usages = map[string]bool{}
+
+		useAsSeed bool
+		protected *bool
+		visible   *bool
+	)
+
+	for _, u := range strings.Split(val, ",") {
+		usages[u] = true
+	}
+
+	if _, ok := usages["true"]; ok {
+		useAsSeed = true
+	}
+	if _, ok := usages["protected"]; ok {
+		protected = &trueVar
+	}
+	if _, ok := usages["unprotected"]; ok {
+		protected = &falseVar
+	}
+	if _, ok := usages["visible"]; ok {
+		visible = &trueVar
+	}
+	if _, ok := usages["invisible"]; ok {
+		visible = &falseVar
+	}
+
+	return useAsSeed, protected, visible
 }
