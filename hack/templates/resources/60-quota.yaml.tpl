@@ -23,7 +23,13 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: Quota
 metadata:
   name: ${value("metadata.name", "trial-quota")}
-  namespace: ${value("metadata.namespace", "garden-trial")}
+  namespace: ${value("metadata.namespace", "garden-trial")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
+  % if annotations != {}:
+  annotations: ${yaml.dump(annotations, width=10000)}
+  % endif
+  % if labels != {}:
+  labels: ${yaml.dump(labels, width=10000)}
+  % endif
 spec:
   scope: ${value("spec.scope", "secret")}<% clusterLifetimeDays = value("spec.clusterLifetimeDays", "") %>
   % if clusterLifetimeDays != "":

@@ -37,7 +37,13 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Seed
 metadata:
-  name: ${value("metadata.name", cloud)}
+  name: ${value("metadata.name", cloud)}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
+  % if annotations != {}:
+  annotations: ${yaml.dump(annotations, width=10000)}
+  % endif
+  % if labels != {}:
+  labels: ${yaml.dump(labels, width=10000)}
+  % endif
 spec:
   cloud:
     profile: ${value("spec.cloud.profile", cloud)}

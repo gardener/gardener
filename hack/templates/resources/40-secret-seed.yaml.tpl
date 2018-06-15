@@ -35,7 +35,13 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: ${value("metadata.name", "seed-" + cloud)}
-  namespace: ${value("metadata.namespace", "garden")}
+  namespace: ${value("metadata.namespace", "garden")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
+  % if annotations != {}:
+  annotations: ${yaml.dump(annotations, width=10000)}
+  % endif
+  % if labels != {}:
+  labels: ${yaml.dump(labels, width=10000)}
+  % endif
 type: Opaque
 data:
   % if cloud == "aws":

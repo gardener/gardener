@@ -36,7 +36,13 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: CloudProfile
 metadata:
-  name: ${value("spec.profile", cloud)}
+  name: ${value("spec.profile", cloud)}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
+  % if annotations != {}:
+  annotations: ${yaml.dump(annotations, width=10000)}
+  % endif
+  % if labels != {}:
+  labels: ${yaml.dump(labels, width=10000)}
+  % endif
 spec:<% caBundle=value("spec.caBundle", "") %>
   % if caBundle != "":
   caBundle: ${caBundle}

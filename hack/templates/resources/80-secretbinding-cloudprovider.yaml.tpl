@@ -36,7 +36,13 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: SecretBinding
 metadata:
   name: ${value("metadata.name", "core-" + cloud)}
-  namespace: ${value("metadata.namespace", "garden-dev")}
+  namespace: ${value("metadata.namespace", "garden-dev")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
+  % if annotations != {}:
+  annotations: ${yaml.dump(annotations, width=10000)}
+  % endif
+  % if labels != {}:
+  labels: ${yaml.dump(labels, width=10000)}
+  % endif
   labels:
     cloudprofile.garden.sapcloud.io/name: ${cloud} # label is only meaningful for Gardener dashboard
 secretRef:
