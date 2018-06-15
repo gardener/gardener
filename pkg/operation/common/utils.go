@@ -215,3 +215,31 @@ func IsFollowingNewNamingConvention(seedNamespace string) bool {
 func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
 	return regexp.MustCompile(fmt.Sprintf("%s%s(.*)\n", key, separator)).ReplaceAllString(cloudProviderConfig, fmt.Sprintf("%s%s%s\n", key, separator, value))
 }
+
+// DetermineErrorCode determines the Garden error code for the given error message.
+func DetermineErrorCode(message string) error {
+	var (
+		code                         gardenv1beta1.ErrorCode
+		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|invalid character|invalid_grant|invalid_client)`)
+		quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
+		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|Access Not Configured)`)
+		dependenciesRegexp           = regexp.MustCompile(`(?i)(DependencyViolation)`)
+	)
+
+	switch {
+	case unauthorizedRegexp.MatchString(message):
+		code = gardenv1beta1.ErrorInfraUnauthorized
+	case quotaExceededRegexp.MatchString(message):
+		code = gardenv1beta1.ErrorInfraQuotaExceeded
+	case insufficientPrivilegesRegexp.MatchString(message):
+		code = gardenv1beta1.ErrorInfraInsufficientPrivileges
+	case dependenciesRegexp.MatchString(message):
+		code = gardenv1beta1.ErrorInfraDependencies
+	}
+
+	if len(code) != 0 {
+		message = fmt.Sprintf("CODE:%s %s", code, message)
+	}
+
+	return errors.New(message)
+}

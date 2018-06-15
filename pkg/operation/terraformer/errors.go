@@ -15,13 +15,10 @@
 package terraformer
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 )
 
 // retrieveTerraformErrors gets a map <logList> whose keys are pod names and whose values are the corresponding logs,
@@ -50,34 +47,6 @@ func retrieveTerraformErrors(logList map[string]string) []string {
 		return nil
 	}
 	return errorList
-}
-
-// determineErrorCode determines the Garden error code for the given error message.
-func determineErrorCode(message string) error {
-	var (
-		code                         gardenv1beta1.ErrorCode
-		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed)`)
-		quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
-		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|Access Not Configured)`)
-		dependenciesRegexp           = regexp.MustCompile(`(?i)(DependencyViolation)`)
-	)
-
-	switch {
-	case unauthorizedRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraUnauthorized
-	case quotaExceededRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraQuotaExceeded
-	case insufficientPrivilegesRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraInsufficientPrivileges
-	case dependenciesRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraDependencies
-	}
-
-	if len(code) != 0 {
-		message = fmt.Sprintf("CODE:%s %s", code, message)
-	}
-
-	return errors.New(message)
 }
 
 // findTerraformErrors gets the <output> of a Terraform run and parses it to find the occurred

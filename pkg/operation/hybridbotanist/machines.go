@@ -26,7 +26,6 @@ import (
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -105,7 +104,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 
 	// Wait until all generated machine deployments are healthy/available.
 	if err := b.waitUntilMachineDeploymentsAvailable(wantedMachineDeployments); err != nil {
-		return fmt.Errorf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error())
+		return common.DetermineErrorCode(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -172,12 +171,7 @@ func (b *HybridBotanist) DestroyMachines() error {
 
 	// Wait until all machine resources have been properly deleted.
 	if err := b.waitUntilMachineResourcesDeleted(machineClassPlural); err != nil {
-		return fmt.Errorf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error())
-	}
-
-	// Wait until all finalizers for secrets referred by machineClasses are removed
-	if err := b.waitUntilFinalizersRemovedForMachineClassSecrets(); err != nil {
-		return fmt.Errorf("Failed while waiting for the finalizers for machineClass secrets to be removed: '%s'", err.Error())
+		return common.DetermineErrorCode(fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 
 	return nil
@@ -316,14 +310,22 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 			// If the Shoots get hibernated we want to wait until all machine deployments have been deleted entirely.
 			if b.Shoot.Hibernated {
 				numberOfAwakeMachines += existingMachineDeployment.Status.Replicas
-				// If the Shoot is not hibernated we want to wait until all machine deployments have been as many ready
-				// replicas as desired (specified in the .spec.replicas).
-			} else {
-				for _, machineDeployment := range wantedMachineDeployments {
-					if machineDeployment.Name == existingMachineDeployment.Name {
-						numDesired += existingMachineDeployment.Spec.Replicas
-						numReady += existingMachineDeployment.Status.ReadyReplicas
-					}
+				continue
+			}
+
+			// If the Shoot is not hibernated we want to wait until all machine deployments have been as many ready
+			// replicas as desired (specified in the .spec.replicas). However, if we see any error in the status of
+			// the deployment then we return it.
+			for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
+				return false, fmt.Errorf("Machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
+			}
+
+			// If the Shoot is not hibernated we want to wait until all machine deployments have been as many ready
+			// replicas as desired (specified in the .spec.replicas).
+			for _, machineDeployment := range wantedMachineDeployments {
+				if machineDeployment.Name == existingMachineDeployment.Name {
+					numDesired += existingMachineDeployment.Spec.Replicas
+					numReady += existingMachineDeployment.Status.ReadyReplicas
 				}
 			}
 		}
@@ -349,71 +351,83 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 // deleted by the machine-controller-manager. It polls the status every 5 seconds.
 func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) error {
 	var (
-		resources         = []string{classKind, "machinedeployments", "machinesets", "machines"}
-		numberOfResources = map[string]int{}
+		countMachines            = -1
+		countMachineSets         = -1
+		countMachineDeployments  = -1
+		countMachineClasses      = -1
+		countMachineClassSecrets = -1
+
+		listOptions = metav1.ListOptions{}
 	)
 
-	for _, resource := range resources {
-		numberOfResources[resource] = -1
-	}
-
 	return wait.Poll(5*time.Second, 30*time.Minute, func() (bool, error) {
-		for _, resource := range resources {
-			if numberOfResources[resource] == 0 {
-				continue
-			}
+		msg := ""
 
-			var list unstructured.Unstructured
-			if err := b.K8sSeedClient.MachineV1alpha1("GET", resource, b.Shoot.SeedNamespace).Do().Into(&list); err != nil {
+		// Check whether all machines have been deleted.
+		if countMachines != 0 {
+			existingMachines, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).List(listOptions)
+			if err != nil {
 				return false, err
 			}
+			countMachines = len(existingMachines.Items)
+			msg += fmt.Sprintf("%d machines, ", countMachines)
+		}
 
-			if field, ok := list.Object["items"]; ok {
-				if items, ok := field.([]interface{}); ok {
-					numberOfResources[resource] = len(items)
+		// Check whether all machine sets have been deleted.
+		if countMachineSets != 0 {
+			existingMachineSets, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineSets(b.Shoot.SeedNamespace).List(listOptions)
+			if err != nil {
+				return false, err
+			}
+			countMachineSets = len(existingMachineSets.Items)
+			msg += fmt.Sprintf("%d machine sets, ", countMachineSets)
+		}
+
+		// Check whether all machine deployments have been deleted.
+		if countMachineDeployments != 0 {
+			existingMachineDeployments, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(listOptions)
+			if err != nil {
+				return false, err
+			}
+			countMachineDeployments = len(existingMachineDeployments.Items)
+			msg += fmt.Sprintf("%d machine deployments, ", countMachineDeployments)
+
+			// Check whether an operation failed during the deletion process.
+			for _, existingMachineDeployment := range existingMachineDeployments.Items {
+				for _, failedMachine := range existingMachineDeployment.Status.FailedMachines {
+					return false, fmt.Errorf("Machine %s failed: %s", failedMachine.Name, failedMachine.LastOperation.Description)
 				}
 			}
 		}
 
-		msg := ""
-		for resource, count := range numberOfResources {
-			if numberOfResources[resource] != 0 {
-				msg += fmt.Sprintf("%d %s, ", count, resource)
+		// Check whether all machine classes have been deleted.
+		if countMachineClasses != 0 {
+			existingMachineClasses, _, err := b.ShootCloudBotanist.ListMachineClasses()
+			if err != nil {
+				return false, err
 			}
+			countMachineClasses = existingMachineClasses.Len()
+			msg += fmt.Sprintf("%d machine classes, ", countMachineClasses)
 		}
 
-		if msg != "" {
-			b.Logger.Infof("Waiting until the following machine resources have been deleted: %s", strings.TrimSuffix(msg, ", "))
-			return false, nil
-		}
-		return true, nil
-	})
-}
-
-// waitUntilFinalizersRemovedForMachineClassSecrets waits for a maximum of 30 minutes until finalizers are removed for
-// all secret referred by one/more machineClasses. It polls the status every 5 seconds.
-func (b *HybridBotanist) waitUntilFinalizersRemovedForMachineClassSecrets() error {
-
-	var (
-		machineClassSecrets *corev1.SecretList
-		err                 error
-	)
-
-	return wait.Poll(5*time.Second, 30*time.Minute, func() (bool, error) {
-
-		if machineClassSecrets, err = b.listMachineClassSecrets(); err != nil {
-			return false, err
-		}
-
-		msg := ""
-		for _, machineClassSecret := range machineClassSecrets.Items {
-			if len(machineClassSecret.Finalizers) != 0 {
-				msg += fmt.Sprintf("%s, ", machineClassSecret.Name)
+		// Check whether all machine class secrets have been deleted.
+		if countMachineClassSecrets != 0 {
+			count := 0
+			existingMachineClassSecrets, err := b.listMachineClassSecrets()
+			if err != nil {
+				return false, err
 			}
+			for _, machineClassSecret := range existingMachineClassSecrets.Items {
+				if len(machineClassSecret.Finalizers) != 0 {
+					count++
+				}
+			}
+			countMachineClassSecrets = count
+			msg += fmt.Sprintf("%d machine class secrets, ", countMachineClassSecrets)
 		}
 
-		if msg != "" {
-			b.Logger.Infof("Waiting until the finalizers for the following (machineClass) secrets are removed: %s", strings.TrimSuffix(msg, ", "))
+		if countMachines != 0 || countMachineSets != 0 || countMachineDeployments != 0 || countMachineClasses != 0 || countMachineClassSecrets != 0 {
+			b.Logger.Infof("Waiting until the following machine resources have been processed: %s", strings.TrimSuffix(msg, ", "))
 			return false, nil
 		}
 		return true, nil

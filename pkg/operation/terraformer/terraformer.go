@@ -217,7 +217,7 @@ func (t *Terraformer) execute(scriptName string) error {
 		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
 		}
-		return determineErrorCode(errorMessage)
+		return common.DetermineErrorCode(errorMessage)
 	}
 	return nil
 }
