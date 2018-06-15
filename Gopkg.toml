@@ -34,7 +34,7 @@ ignored = [
 
 [[constraint]]
   name = "github.com/gardener/machine-controller-manager"
-  revision = "0be5317161d27ef7b95fa7b53844ae3b78f24c7a"
+  version = "0.5.0"
 
 [[constraint]]
   name = "k8s.io/helm"

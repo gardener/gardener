@@ -277,6 +277,24 @@ https://github.com/gophercloud/gophercloud.
 Copyright 2012-2013 Rackspace, Inc.  
 Apache 2 license (https://github.com/gophercloud/gophercloud/blob/master/LICENSE)  
 
+Concurrent.
+https://github.com/modern-go/concurrent.  
+Apache 2 license (https://github.com/modern-go/concurrent/blob/master/LICENSE)  
+
+Reflect2.
+https://github.com/modern-go/reflect2.  
+Apache 2 license (https://github.com/modern-go/reflect2/blob/master/LICENSE)  
+
+Ginkgo.
+https://github.com/onsi/ginkgo.  
+Copyright (c) 2013-2014 Onsi Fakhouri
+MIT license (https://github.com/onsi/ginkgo/blob/master/LICENSE)  
+
+Gomega.
+https://github.com/onsi/ginkgo.  
+Copyright (c) 2013-2014 Onsi Fakhouri
+MIT license (https://github.com/onsi/gomega/blob/master/LICENSE)  
+
 ------
 ## BSD 3-clause "New" or "Revised" License
 ```

@@ -105,8 +105,8 @@
     "pkg/types",
     "version"
   ]
-  revision = "932c3c01f9d67471d67ff82c38acca196847f039"
-  version = "v3.3.6"
+  revision = "56536de5511128d0c7997aa2b792a4de575da536"
+  version = "v3.3.7"
 
 [[projects]]
   name = "github.com/coreos/go-semver"
@@ -168,7 +168,8 @@
     "pkg/apis/machine",
     "pkg/apis/machine/v1alpha1"
   ]
-  revision = "0be5317161d27ef7b95fa7b53844ae3b78f24c7a"
+  revision = "e477463675e081d052ff77ce39c20a96b591272d"
+  version = "0.5.0"
 
 [[projects]]
   name = "github.com/ghodss/yaml"
@@ -302,8 +303,8 @@
 [[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
-  revision = "9d5f1277e9a8ed20c3684bda8fde67c05628518c"
-  version = "v0.3.4"
+  revision = "9316a62528ac99aaecb4e47eadd6dc8aa6533d58"
+  version = "v0.3.5"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -330,7 +331,7 @@
     "jlexer",
     "jwriter"
   ]
-  revision = "9825584555aa620c53c265d4a09ace0df1346fd9"
+  revision = "3fdea8d05856a0c8df22ed4bc71b3219245e4485"
 
 [[projects]]
   name = "github.com/matttproud/golang_protobuf_extensions"
@@ -436,7 +437,7 @@
     "nfs",
     "xfs"
   ]
-  revision = "61aaa706c6d4fda9365b6273c96839eb7e27f6e4"
+  revision = "7d6f385de8bea29190f15ba9931442a0eaef9af7"
 
 [[projects]]
   name = "github.com/robfig/cron"
@@ -475,13 +476,14 @@
     "ed25519",
     "ed25519/internal/edwards25519",
     "internal/chacha20",
+    "internal/subtle",
     "pbkdf2",
     "poly1305",
     "scrypt",
     "ssh",
     "ssh/terminal"
   ]
-  revision = "5ba7f63082460102a45837dbd1827e10f9479ac0"
+  revision = "a8fb68e7206f8c78be19b432c58eb52a6aa34462"
 
 [[projects]]
   branch = "master"
@@ -499,7 +501,7 @@
     "trace",
     "websocket"
   ]
-  revision = "1e491301e022f8f977054da4c2d852decd59571f"
+  revision = "db08ff08e8622530d9ed3a0e8ac279f6d4c02196"
 
 [[projects]]
   branch = "master"
@@ -508,7 +510,7 @@
     "unix",
     "windows"
   ]
-  revision = "c11f84a56e43e20a78cee75a7c034031ecf57d1f"
+  revision = "8883426083c04a2627e6e59d84d5f6fb63d16c91"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -558,13 +560,13 @@
     "imports",
     "internal/fastwalk"
   ]
-  revision = "a5b4c53f6e8bdcafa95a94671bf2d1203365858b"
+  revision = "c6269430a55499efa2e293ae66926175dc3af30e"
 
 [[projects]]
   branch = "master"
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
-  revision = "4065a77fc542a455295382a23a996a08ed18813a"
+  revision = "32ee49c4dd805befd833990acba36cb75042378c"
 
 [[projects]]
   name = "google.golang.org/grpc"
@@ -597,8 +599,8 @@
     "tap",
     "transport"
   ]
-  revision = "41344da2231b913fa3d983840a57a6b1b7b631a1"
-  version = "v1.12.0"
+  revision = "7a6a684ca69eb4cae85ad0a484f2e531598c047b"
+  version = "v1.12.2"
 
 [[projects]]
   name = "gopkg.in/inf.v0"
@@ -655,7 +657,6 @@
   version = "kubernetes-1.10.3"
 
 [[projects]]
-  branch = "release-1.10"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
@@ -714,6 +715,7 @@
     "third_party/forked/golang/reflect"
   ]
   revision = "31dade610c053669d8054bfd847da657251e8c1a"
+  version = "kubernetes-1.10.3"
 
 [[projects]]
   name = "k8s.io/apiserver"
@@ -944,7 +946,6 @@
   version = "kubernetes-1.10.3"
 
 [[projects]]
-  branch = "release-1.10"
   name = "k8s.io/code-generator"
   packages = [
     "cmd/client-gen",
@@ -973,6 +974,7 @@
     "pkg/util"
   ]
   revision = "69d88fb997c52c32288a40f5efb62add0a7c8e04"
+  version = "kubernetes-1.10.3"
 
 [[projects]]
   branch = "master"
@@ -987,7 +989,7 @@
     "parser",
     "types"
   ]
-  revision = "2e1a79edcaecf0bfbde129a1fd55624b66adb699"
+  revision = "dcbe4570f0cf6efbc583a5321c8f9390f71a544d"
 
 [[projects]]
   name = "k8s.io/helm"
@@ -1015,11 +1017,11 @@
     "pkg/util",
     "pkg/util/proto"
   ]
-  revision = "8a9b82f00b3a86eac24681da3f9fe6c34c01cea2"
+  revision = "bf40560368791a7dddfeea9b3cfcf89b34139f44"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "29b7ed1ece63542edf89d11e9408d010bc6f45267de67940ea176994790f4aa0"
+  inputs-digest = "f6fa469a01d2caf8881fd89720af67818e25267a0444e7bf14222f18e517837e"
   solver-name = "gps-cdcl"
   solver-version = 1

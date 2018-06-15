@@ -31,12 +31,8 @@ func (in *BackupInfrastructureControllerConfiguration) DeepCopyInto(out *BackupI
 	out.SyncPeriod = in.SyncPeriod
 	if in.DeletionGracePeriodDays != nil {
 		in, out := &in.DeletionGracePeriodDays, &out.DeletionGracePeriodDays
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(int)
-			**out = **in
-		}
+		*out = new(int)
+		**out = **in
 	}
 	return
 }
@@ -90,12 +86,8 @@ func (in *ControllerManagerConfiguration) DeepCopyInto(out *ControllerManagerCon
 	out.ClientConnection = in.ClientConnection
 	if in.GardenerClientConnection != nil {
 		in, out := &in.GardenerClientConnection, &out.GardenerClientConnection
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(ClientConnectionConfiguration)
-			**out = **in
-		}
+		*out = new(ClientConnectionConfiguration)
+		**out = **in
 	}
 	in.Controllers.DeepCopyInto(&out.Controllers)
 	out.LeaderElection = in.LeaderElection
@@ -134,39 +126,23 @@ func (in *ControllerManagerControllerConfiguration) DeepCopyInto(out *Controller
 	*out = *in
 	if in.CloudProfile != nil {
 		in, out := &in.CloudProfile, &out.CloudProfile
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(CloudProfileControllerConfiguration)
-			**out = **in
-		}
+		*out = new(CloudProfileControllerConfiguration)
+		**out = **in
 	}
 	if in.SecretBinding != nil {
 		in, out := &in.SecretBinding, &out.SecretBinding
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(SecretBindingControllerConfiguration)
-			**out = **in
-		}
+		*out = new(SecretBindingControllerConfiguration)
+		**out = **in
 	}
 	if in.Quota != nil {
 		in, out := &in.Quota, &out.Quota
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(QuotaControllerConfiguration)
-			**out = **in
-		}
+		*out = new(QuotaControllerConfiguration)
+		**out = **in
 	}
 	if in.Seed != nil {
 		in, out := &in.Seed, &out.Seed
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(SeedControllerConfiguration)
-			**out = **in
-		}
+		*out = new(SeedControllerConfiguration)
+		**out = **in
 	}
 	in.Shoot.DeepCopyInto(&out.Shoot)
 	out.ShootCare = in.ShootCare
@@ -308,32 +284,20 @@ func (in *ShootControllerConfiguration) DeepCopyInto(out *ShootControllerConfigu
 	*out = *in
 	if in.RespectSyncPeriodOverwrite != nil {
 		in, out := &in.RespectSyncPeriodOverwrite, &out.RespectSyncPeriodOverwrite
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(bool)
-			**out = **in
-		}
+		*out = new(bool)
+		**out = **in
 	}
 	out.RetryDuration = in.RetryDuration
 	if in.RetrySyncPeriod != nil {
 		in, out := &in.RetrySyncPeriod, &out.RetrySyncPeriod
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(v1.Duration)
-			**out = **in
-		}
+		*out = new(v1.Duration)
+		**out = **in
 	}
 	out.SyncPeriod = in.SyncPeriod
 	if in.WatchNamespace != nil {
 		in, out := &in.WatchNamespace, &out.WatchNamespace
-		if *in == nil {
-			*out = nil
-		} else {
-			*out = new(string)
-			**out = **in
-		}
+		*out = new(string)
+		**out = **in
 	}
 	return
 }
