@@ -25,7 +25,7 @@ import (
 )
 
 // retrieveTerraformErrors gets a map <logList> whose keys are pod names and whose values are the corresponding logs,
-// and it parses the logs for Terraform errors. If none are found, it will return nil, and otherwhise the list of
+// and it parses the logs for Terraform errors. If none are found, it will return nil, and otherwise the list of
 // found errors as string slice.
 func retrieveTerraformErrors(logList map[string]string) []string {
 	var (
@@ -58,7 +58,7 @@ func determineErrorCode(message string) error {
 		code                         gardenv1beta1.ErrorCode
 		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed)`)
 		quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
-		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden)`)
+		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|Access Not Configured)`)
 		dependenciesRegexp           = regexp.MustCompile(`(?i)(DependencyViolation)`)
 	)
 
