@@ -48,12 +48,12 @@ var (
 	ControllerFeatureGate = utilfeature.NewFeatureGate()
 
 	apiserverFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
-		DeletionConfirmation: {Default: false, PreRelease: utilfeature.Beta},
+		DeletionConfirmation: {Default: true, PreRelease: utilfeature.Beta},
 	}
 
 	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
 		CoreDNS:              {Default: false, PreRelease: utilfeature.Alpha},
-		DeletionConfirmation: {Default: false, PreRelease: utilfeature.Beta},
+		DeletionConfirmation: {Default: true, PreRelease: utilfeature.Beta},
 	}
 )
 

@@ -35,7 +35,6 @@ start-api:
 			--authentication-kubeconfig ~/.kube/config \
 			--authorization-kubeconfig ~/.kube/config \
 			--etcd-servers=http://$(shell minikube ip):32379 \
-			--feature-gates=DeletionConfirmation=true \
 			--kubeconfig ~/.kube/config \
 			--tls-cert-file ~/.minikube/apiserver.crt \
 			--tls-private-key-file ~/.minikube/apiserver.key \
