@@ -42,11 +42,11 @@ spec:
         - --v=2
         resources:
           requests:
-            cpu: 5m
+            cpu: 50m
             memory: 64Mi
           limits:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 350m
+            memory: 256Mi
         volumeMounts:
         - mountPath: /var/lib/machine-controller-manager
           name: machine-controller-manager
