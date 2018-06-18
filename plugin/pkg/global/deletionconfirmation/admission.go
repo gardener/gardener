@@ -43,35 +43,38 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 	return New()
 }
 
-// WaitFunc is a function that waits for true.
-type WaitFunc func() bool
-
 // DeletionConfirmation contains an admission handler and listers.
 type DeletionConfirmation struct {
 	*admission.Handler
 	shootLister gardenlisters.ShootLister
-	waitFunc    WaitFunc
+	readyFunc   admission.ReadyFunc
 }
 
-var _ = admissioninitializer.WantsInternalGardenInformerFactory(&DeletionConfirmation{})
+var (
+	_ = admissioninitializer.WantsInternalGardenInformerFactory(&DeletionConfirmation{})
+
+	readyFuncs = []admission.ReadyFunc{}
+)
 
 // New creates a new DeletionConfirmation admission plugin.
 func New() (*DeletionConfirmation, error) {
-	h := admission.NewHandler(admission.Delete)
 	return &DeletionConfirmation{
-		Handler:  h,
-		waitFunc: h.WaitForReady,
+		Handler: admission.NewHandler(admission.Delete),
 	}, nil
+}
+
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (d *DeletionConfirmation) AssignReadyFunc(f admission.ReadyFunc) {
+	d.readyFunc = f
+	d.SetReadyFunc(f)
 }
 
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
 func (d *DeletionConfirmation) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	d.shootLister = f.Garden().InternalVersion().Shoots().Lister()
-}
+	shootInformer := f.Garden().InternalVersion().Shoots()
+	d.shootLister = shootInformer.Lister()
 
-// SetWaitFunc sets the wait function
-func (d *DeletionConfirmation) SetWaitFunc(w WaitFunc) {
-	d.waitFunc = w
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -92,7 +95,17 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 	}
 
 	// Wait until the caches have been synced
-	if !d.waitFunc() {
+	if d.readyFunc == nil {
+		d.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !d.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
@@ -102,7 +115,6 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 	}
 
 	annotations := shoot.GetAnnotations()
-
 	if annotations == nil {
 		return admission.NewForbidden(a, annotationRequiredError())
 	}

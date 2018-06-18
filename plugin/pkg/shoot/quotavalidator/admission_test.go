@@ -33,7 +33,7 @@ import (
 var _ = Describe("quotavalidator", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler      *RejectShootIfQuotaExceeded
+			admissionHandler      *QuotaValidator
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			shoot                 garden.Shoot
 			oldShoot              garden.Shoot
@@ -191,6 +191,7 @@ var _ = Describe("quotavalidator", func() {
 			quotaSecret = *quotaSecretBase.DeepCopy()
 
 			admissionHandler, _ = New()
+			admissionHandler.AssignReadyFunc(func() bool { return true })
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 			gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

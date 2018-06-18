@@ -53,17 +53,28 @@ type ReferenceManager struct {
 	seedLister          gardenlisters.SeedLister
 	secretBindingLister gardenlisters.SecretBindingLister
 	quotaLister         gardenlisters.QuotaLister
+	readyFunc           admission.ReadyFunc
 }
 
-var _ = admissioninitializer.WantsInternalGardenInformerFactory(&ReferenceManager{})
-var _ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
-var _ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
+var (
+	_ = admissioninitializer.WantsInternalGardenInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsKubeInformerFactory(&ReferenceManager{})
+	_ = admissioninitializer.WantsAuthorizer(&ReferenceManager{})
+
+	readyFuncs = []admission.ReadyFunc{}
+)
 
 // New creates a new ReferenceManager admission plugin.
 func New() (*ReferenceManager, error) {
 	return &ReferenceManager{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
+}
+
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (r *ReferenceManager) AssignReadyFunc(f admission.ReadyFunc) {
+	r.readyFunc = f
+	r.SetReadyFunc(f)
 }
 
 // SetAuthorizer gets the authorizer.
@@ -73,15 +84,27 @@ func (r *ReferenceManager) SetAuthorizer(authorizer authorizer.Authorizer) {
 
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
 func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	r.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
-	r.seedLister = f.Garden().InternalVersion().Seeds().Lister()
-	r.secretBindingLister = f.Garden().InternalVersion().SecretBindings().Lister()
-	r.quotaLister = f.Garden().InternalVersion().Quotas().Lister()
+	seedInformer := f.Garden().InternalVersion().Seeds()
+	r.seedLister = seedInformer.Lister()
+
+	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
+	r.cloudProfileLister = cloudProfileInformer.Lister()
+
+	secretBindingInformer := f.Garden().InternalVersion().SecretBindings()
+	r.secretBindingLister = secretBindingInformer.Lister()
+
+	quotaInformer := f.Garden().InternalVersion().Quotas()
+	r.quotaLister = quotaInformer.Lister()
+
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
 func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
-	r.secretLister = f.Core().V1().Secrets().Lister()
+	secretInformer := f.Core().V1().Secrets()
+	r.secretLister = secretInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -114,6 +137,16 @@ func skipVerification(operation admission.Operation, metadata metav1.ObjectMeta)
 // Admit ensures that referenced resources do actually exist.
 func (r *ReferenceManager) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
+	if r.readyFunc == nil {
+		r.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
 	if !r.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}

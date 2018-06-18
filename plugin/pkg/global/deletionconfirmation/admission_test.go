@@ -28,16 +28,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func ready() bool {
-	return true
-}
-
-func notReady() bool {
-	return false
-}
-
 var _ = Describe("deleteconfirmation", func() {
-
 	Describe("#Admit", func() {
 		var (
 			shoot                 garden.Shoot
@@ -49,10 +40,10 @@ var _ = Describe("deleteconfirmation", func() {
 
 		BeforeEach(func() {
 			admissionHandler, _ = New()
+			admissionHandler.AssignReadyFunc(func() bool { return true })
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 			shootStore = gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore()
-			admissionHandler.SetReadyFunc(ready)
 			shoot = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "dummy",
@@ -68,14 +59,6 @@ var _ = Describe("deleteconfirmation", func() {
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should do nothing because cache is not ready", func() {
-			admissionHandler.SetWaitFunc(notReady)
-			err := admissionHandler.Admit(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("not yet ready to handle request"))
 		})
 
 		It("should do nothing because the resource is already removed", func() {
@@ -125,9 +108,9 @@ var _ = Describe("deleteconfirmation", func() {
 			plugins := admission.NewPlugins()
 			Register(plugins)
 
-			registred := plugins.Registered()
-			Expect(registred).To(HaveLen(1))
-			Expect(registred).To(ContainElement("DeletionConfirmation"))
+			registered := plugins.Registered()
+			Expect(registered).To(HaveLen(1))
+			Expect(registered).To(ContainElement("DeletionConfirmation"))
 		})
 	})
 

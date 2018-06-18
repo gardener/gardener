@@ -135,6 +135,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 		BeforeEach(func() {
 			admissionHandler, _ = New()
+			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)

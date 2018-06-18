@@ -79,6 +79,7 @@ var _ = Describe("seedmanager", func() {
 
 		BeforeEach(func() {
 			admissionHandler, _ = New()
+			admissionHandler.AssignReadyFunc(func() bool { return true })
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 

@@ -49,48 +49,75 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// Finder contains listers and and admission handler.
-type Finder struct {
+// DNSHostedZone contains listers and and admission handler.
+type DNSHostedZone struct {
 	*admission.Handler
 	secretLister        kubecorev1listers.SecretLister
 	secretBindingLister gardenlisters.SecretBindingLister
+	readyFunc           admission.ReadyFunc
 }
 
-var _ = admissioninitializer.WantsInternalGardenInformerFactory(&Finder{})
-var _ = admissioninitializer.WantsKubeInformerFactory(&Finder{})
+var (
+	_ = admissioninitializer.WantsInternalGardenInformerFactory(&DNSHostedZone{})
+	_ = admissioninitializer.WantsKubeInformerFactory(&DNSHostedZone{})
 
-// New creates a new Finder admission plugin.
-func New() (*Finder, error) {
-	return &Finder{
+	readyFuncs = []admission.ReadyFunc{}
+)
+
+// New creates a new DNSHostedZone admission plugin.
+func New() (*DNSHostedZone, error) {
+	return &DNSHostedZone{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (d *DNSHostedZone) AssignReadyFunc(f admission.ReadyFunc) {
+	d.readyFunc = f
+	d.SetReadyFunc(f)
+}
+
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (h *Finder) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
-	h.secretBindingLister = f.Garden().InternalVersion().SecretBindings().Lister()
+func (d *DNSHostedZone) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
+	secretBindingInformer := f.Garden().InternalVersion().SecretBindings()
+	d.secretBindingLister = secretBindingInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretBindingInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
-func (h *Finder) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
-	h.secretLister = f.Core().V1().Secrets().Lister()
+func (d *DNSHostedZone) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
+	secretInformer := f.Core().V1().Secrets()
+	d.secretLister = secretInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
-func (h *Finder) ValidateInitialization() error {
-	if h.secretLister == nil {
+func (d *DNSHostedZone) ValidateInitialization() error {
+	if d.secretLister == nil {
 		return errors.New("missing secret lister")
 	}
-	if h.secretBindingLister == nil {
+	if d.secretBindingLister == nil {
 		return errors.New("missing secret binding lister")
 	}
 	return nil
 }
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
-func (h *Finder) Admit(a admission.Attributes) error {
+func (d *DNSHostedZone) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
-	if !h.WaitForReady() {
+	if d.readyFunc == nil {
+		d.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !d.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
@@ -112,13 +139,13 @@ func (h *Finder) Admit(a admission.Attributes) error {
 	// If not, we must ensure that the cloud provider secret provided by the user contain credentials for the
 	// respective DNS provider.
 	if shoot.Spec.DNS.HostedZoneID != nil {
-		if err := verifyHostedZoneID(shoot, h.secretBindingLister, h.secretLister); err != nil {
+		if err := verifyHostedZoneID(shoot, d.secretBindingLister, d.secretLister); err != nil {
 			return admission.NewForbidden(a, err)
 		}
 		return nil
 	}
 
-	hostedZoneID, err := determineHostedZoneID(shoot, h.secretLister)
+	hostedZoneID, err := determineHostedZoneID(shoot, d.secretLister)
 	if err != nil {
 		return admission.NewForbidden(a, err)
 	}

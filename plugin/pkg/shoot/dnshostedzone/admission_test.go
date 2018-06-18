@@ -35,7 +35,7 @@ import (
 var _ = Describe("quotavalidator", func() {
 	Describe("#Admit", func() {
 		var (
-			admissionHandler      *Finder
+			admissionHandler      *DNSHostedZone
 			kubeInformerFactory   kubeinformers.SharedInformerFactory
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			shoot                 garden.Shoot
@@ -106,6 +106,7 @@ var _ = Describe("quotavalidator", func() {
 
 		BeforeEach(func() {
 			admissionHandler, _ = New()
+			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)

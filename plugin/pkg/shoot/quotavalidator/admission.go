@@ -63,53 +63,83 @@ func Register(plugins *admission.Plugins) {
 	})
 }
 
-// RejectShootIfQuotaExceeded contains listers and and admission handler.
-type RejectShootIfQuotaExceeded struct {
+// QuotaValidator contains listers and and admission handler.
+type QuotaValidator struct {
 	*admission.Handler
 	shootLister         listers.ShootLister
 	cloudProfileLister  listers.CloudProfileLister
 	secretBindingLister listers.SecretBindingLister
 	quotaLister         listers.QuotaLister
+	readyFunc           admission.ReadyFunc
 }
 
-var _ = admissioninitializer.WantsInternalGardenInformerFactory(&RejectShootIfQuotaExceeded{})
+var (
+	_ = admissioninitializer.WantsInternalGardenInformerFactory(&QuotaValidator{})
 
-// New creates a new RejectShootIfQuotaExceeded admission plugin.
-func New() (*RejectShootIfQuotaExceeded, error) {
-	return &RejectShootIfQuotaExceeded{
+	readyFuncs = []admission.ReadyFunc{}
+)
+
+// New creates a new QuotaValidator admission plugin.
+func New() (*QuotaValidator, error) {
+	return &QuotaValidator{
 		Handler: admission.NewHandler(admission.Create, admission.Update),
 	}, nil
 }
 
+// AssignReadyFunc assigns the ready function to the admission handler.
+func (q *QuotaValidator) AssignReadyFunc(f admission.ReadyFunc) {
+	q.readyFunc = f
+	q.SetReadyFunc(f)
+}
+
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (h *RejectShootIfQuotaExceeded) SetInternalGardenInformerFactory(f informers.SharedInformerFactory) {
-	h.shootLister = f.Garden().InternalVersion().Shoots().Lister()
-	h.cloudProfileLister = f.Garden().InternalVersion().CloudProfiles().Lister()
-	h.secretBindingLister = f.Garden().InternalVersion().SecretBindings().Lister()
-	h.quotaLister = f.Garden().InternalVersion().Quotas().Lister()
+func (q *QuotaValidator) SetInternalGardenInformerFactory(f informers.SharedInformerFactory) {
+	shootInformer := f.Garden().InternalVersion().Shoots()
+	q.shootLister = shootInformer.Lister()
+
+	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
+	q.cloudProfileLister = cloudProfileInformer.Lister()
+
+	secretBindingInformer := f.Garden().InternalVersion().SecretBindings()
+	q.secretBindingLister = secretBindingInformer.Lister()
+
+	quotaInformer := f.Garden().InternalVersion().Quotas()
+	q.quotaLister = quotaInformer.Lister()
+
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
-func (h *RejectShootIfQuotaExceeded) ValidateInitialization() error {
-	if h.shootLister == nil {
+func (q *QuotaValidator) ValidateInitialization() error {
+	if q.shootLister == nil {
 		return errors.New("missing shoot lister")
 	}
-	if h.cloudProfileLister == nil {
+	if q.cloudProfileLister == nil {
 		return errors.New("missing cloudProfile lister")
 	}
-	if h.secretBindingLister == nil {
+	if q.secretBindingLister == nil {
 		return errors.New("missing secretBinding lister")
 	}
-	if h.quotaLister == nil {
+	if q.quotaLister == nil {
 		return errors.New("missing quota lister")
 	}
 	return nil
 }
 
 // Admit checks that the requested Shoot resources are within the quota limits.
-func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
+func (q *QuotaValidator) Admit(a admission.Attributes) error {
 	// Wait until the caches have been synced
-	if !h.WaitForReady() {
+	if q.readyFunc == nil {
+		q.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !q.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
@@ -156,14 +186,14 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		checkLifetime = lifetimeVerificationNeeded(*shoot, *oldShoot)
 	}
 
-	secretBinding, err := h.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
+	secretBinding, err := q.secretBindingLister.SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
 
 	// Quotas are cumulative, means each quota must be not exceeded that the admission pass.
 	for _, quotaRef := range secretBinding.Quotas {
-		quota, err := h.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
+		quota, err := q.quotaLister.Quotas(quotaRef.Namespace).Get(quotaRef.Name)
 		if err != nil {
 			return apierrors.NewInternalError(err)
 		}
@@ -179,7 +209,7 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 		}
 
 		if checkQuota {
-			exceededMetrics, err := h.isQuotaExceeded(*shoot, *quota)
+			exceededMetrics, err := q.isQuotaExceeded(*shoot, *quota)
 			if err != nil {
 				return apierrors.NewInternalError(err)
 			}
@@ -226,12 +256,12 @@ func (h *RejectShootIfQuotaExceeded) Admit(a admission.Attributes) error {
 	return nil
 }
 
-func (h *RejectShootIfQuotaExceeded) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]v1.ResourceName, error) {
-	allocatedResources, err := h.determineAllocatedResources(quota, shoot)
+func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]v1.ResourceName, error) {
+	allocatedResources, err := q.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
 	}
-	requiredResources, err := h.determineRequiredResources(allocatedResources, shoot)
+	requiredResources, err := q.determineRequiredResources(allocatedResources, shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -251,8 +281,8 @@ func (h *RejectShootIfQuotaExceeded) isQuotaExceeded(shoot garden.Shoot, quota g
 	return nil, nil
 }
 
-func (h *RejectShootIfQuotaExceeded) determineAllocatedResources(quota garden.Quota, shoot garden.Shoot) (v1.ResourceList, error) {
-	shoots, err := h.findShootsReferQuota(quota, shoot)
+func (q *QuotaValidator) determineAllocatedResources(quota garden.Quota, shoot garden.Shoot) (v1.ResourceList, error) {
+	shoots, err := q.findShootsReferQuota(quota, shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +290,7 @@ func (h *RejectShootIfQuotaExceeded) determineAllocatedResources(quota garden.Qu
 	// Collect the resources which are allocated according to the shoot specs
 	allocatedResources := make(v1.ResourceList)
 	for _, s := range shoots {
-		shootResources, err := h.getShootResources(s)
+		shootResources, err := q.getShootResources(s)
 		if err != nil {
 			return nil, err
 		}
@@ -275,13 +305,13 @@ func (h *RejectShootIfQuotaExceeded) determineAllocatedResources(quota garden.Qu
 	return allocatedResources, nil
 }
 
-func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, shoot garden.Shoot) ([]garden.Shoot, error) {
+func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.Shoot) ([]garden.Shoot, error) {
 	var (
 		shootsReferQuota []garden.Shoot
 		secretBindings   []garden.SecretBinding
 	)
 
-	allSecretBindings, err := h.secretBindingLister.SecretBindings(v1.NamespaceAll).List(labels.Everything())
+	allSecretBindings, err := q.secretBindingLister.SecretBindings(v1.NamespaceAll).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
@@ -294,7 +324,7 @@ func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, sh
 	}
 
 	for _, binding := range secretBindings {
-		shoots, err := h.shootLister.Shoots(binding.Namespace).List(labels.Everything())
+		shoots, err := q.shootLister.Shoots(binding.Namespace).List(labels.Everything())
 		if err != nil {
 			return nil, err
 		}
@@ -310,21 +340,21 @@ func (h *RejectShootIfQuotaExceeded) findShootsReferQuota(quota garden.Quota, sh
 	return shootsReferQuota, nil
 }
 
-func (h *RejectShootIfQuotaExceeded) determineRequiredResources(allocatedResources v1.ResourceList, shoot garden.Shoot) (v1.ResourceList, error) {
-	shootResources, err := h.getShootResources(shoot)
+func (q *QuotaValidator) determineRequiredResources(allocatedResources v1.ResourceList, shoot garden.Shoot) (v1.ResourceList, error) {
+	shootResources, err := q.getShootResources(shoot)
 	if err != nil {
 		return nil, err
 	}
 
-	requiredResourches := make(v1.ResourceList)
+	requiredResources := make(v1.ResourceList)
 	for _, metric := range quotaMetricNames {
-		requiredResourches[metric] = sumQuantity(allocatedResources[metric], shootResources[metric])
+		requiredResources[metric] = sumQuantity(allocatedResources[metric], shootResources[metric])
 	}
-	return requiredResourches, nil
+	return requiredResources, nil
 }
 
-func (h *RejectShootIfQuotaExceeded) getShootResources(shoot garden.Shoot) (v1.ResourceList, error) {
-	cloudProfile, err := h.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
+func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (v1.ResourceList, error) {
+	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
 	if err != nil {
 		return nil, apierrors.NewBadRequest("could not find referenced cloud profile")
 	}
