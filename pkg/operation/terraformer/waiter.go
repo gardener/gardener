@@ -68,15 +68,20 @@ func (t *Terraformer) waitForPod() int32 {
 			exitCode = 1 // 'terraform plan' exit code for "errors"
 			return false, err
 		}
+
 		// Check whether the Job has been successful (at least one succeeded Pod)
-		phase := pod.Status.Phase
-		if phase == corev1.PodSucceeded || phase == corev1.PodFailed {
-			containerStateTerminated := pod.Status.ContainerStatuses[0].State.Terminated
-			if containerStateTerminated != nil {
+		var (
+			phase             = pod.Status.Phase
+			containerStatuses = pod.Status.ContainerStatuses
+		)
+
+		if (phase == corev1.PodSucceeded || phase == corev1.PodFailed) && len(containerStatuses) > 0 {
+			if containerStateTerminated := containerStatuses[0].State.Terminated; containerStateTerminated != nil {
 				exitCode = containerStateTerminated.ExitCode
 			}
 			return true, nil
 		}
+
 		return false, nil
 	})
 	return exitCode
