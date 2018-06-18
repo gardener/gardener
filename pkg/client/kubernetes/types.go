@@ -20,6 +20,7 @@ import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
+	"github.com/sirupsen/logrus"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -54,7 +55,7 @@ type Client interface {
 	ListResources(...string) (unstructured.Unstructured, error)
 	CleanupResources(map[string]map[string]bool) error
 	CleanupAPIGroupResources(map[string]map[string]bool, string, []string) error
-	CheckResourceCleanup(map[string]map[string]bool, string, []string) (bool, error)
+	CheckResourceCleanup(*logrus.Entry, map[string]map[string]bool, string, []string) (bool, error)
 
 	// Machines
 	MachineV1alpha1(string, string, string) *rest.Request

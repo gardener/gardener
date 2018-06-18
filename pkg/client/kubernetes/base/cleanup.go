@@ -15,8 +15,10 @@
 package kubernetesbase
 
 import (
+	"errors"
 	"fmt"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -67,7 +69,7 @@ func (c *Client) CleanupAPIGroupResources(exceptions map[string]map[string]bool,
 }
 
 // CheckResourceCleanup will check whether all resources except for those in the <exceptions> map have been deleted.
-func (c *Client) CheckResourceCleanup(exceptions map[string]map[string]bool, resource string, apiGroupPath []string) (bool, error) {
+func (c *Client) CheckResourceCleanup(logger *logrus.Entry, exceptions map[string]map[string]bool, resource string, apiGroupPath []string) (bool, error) {
 	resourceList, err := c.ListResources(append(apiGroupPath, resource)...)
 	if err != nil {
 		return false, err
@@ -84,7 +86,10 @@ func (c *Client) CheckResourceCleanup(exceptions map[string]map[string]bool, res
 			return nil
 		}
 
-		return fmt.Errorf("waiting for '%s' (resource '%s') to be deleted", name, resource)
+		message := fmt.Sprintf("waiting for '%s' (resource '%s') to be deleted", name, resource)
+		logger.Info(message)
+
+		return errors.New(message)
 	}); err != nil {
 		return false, nil
 	}
