@@ -32,6 +32,7 @@ var exceptions = map[string]map[string]bool{
 		"ippools.crd.projectcalico.org":               true,
 		"clusterinformations.crd.projectcalico.org":   true,
 		"globalnetworkpolicies.crd.projectcalico.org": true,
+		"globalnetworksets.crd.projectcalico.org":     true,
 		"networkpolicies.crd.projectcalico.org":       true,
 		"hostendpoints.crd.projectcalico.org":         true,
 	},
