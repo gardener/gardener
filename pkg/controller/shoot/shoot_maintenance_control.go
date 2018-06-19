@@ -201,12 +201,12 @@ func NowWithinTimeWindow(begin, end string, nowTime time.Time) (bool, error) {
 
 	// Handle time windows whose end is on a different day than the beginning.
 	if maintenanceWindowEnd.Sub(maintenanceWindowBegin) < 0 {
-		maintenanceWindowEnd = maintenanceWindowEnd.Add(24 * time.Hour)
-
-		if now.Sub(maintenanceWindowEnd) < 0 {
+		if now.Sub(maintenanceWindowEnd) <= 0 {
 			now = now.Add(24 * time.Hour)
 		}
+		maintenanceWindowEnd = maintenanceWindowEnd.Add(24 * time.Hour)
 	}
 
-	return now.After(maintenanceWindowBegin) && now.Before(maintenanceWindowEnd), nil
+	return (now.Equal(maintenanceWindowBegin) || now.After(maintenanceWindowBegin)) &&
+		(now.Equal(maintenanceWindowEnd) || now.Before(maintenanceWindowEnd)), nil
 }

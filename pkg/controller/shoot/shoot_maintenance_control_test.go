@@ -36,52 +36,214 @@ var _ = Describe("ShootMaintenanceControl", func() {
 		})
 
 		Context("begin and end on the same day", func() {
-			const (
-				begin = "160000+0000"
-				end   = "190000+0000"
-			)
+			Context("normal case", func() {
+				const (
+					begin = "160000+0000"
+					end   = "190000+0000"
+				)
 
-			It("should return false", func() {
-				now := time.Date(0, time.January, 1, 15, 0, 0, 0, time.UTC)
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 15, 59, 59, 9999, time.UTC)
 
-				res, err := NowWithinTimeWindow(begin, end, now)
+					res, err := NowWithinTimeWindow(begin, end, now)
 
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(BeFalse())
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 19, 1, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 16, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 19, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 17, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
 			})
 
-			It("should return true", func() {
-				now := time.Date(0, time.January, 1, 17, 0, 0, 0, time.UTC)
+			Context("corner case", func() {
+				const (
+					begin = "000000+0000"
+					end   = "010000+0000"
+				)
 
-				res, err := NowWithinTimeWindow(begin, end, now)
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 23, 59, 59, 9999, time.UTC)
 
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(BeTrue())
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 2, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 1, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 0, 30, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
 			})
 		})
 
 		Context("begin and end on different days", func() {
-			const (
-				begin = "230000+0000"
-				end   = "010000+0000"
-			)
+			Context("normal case", func() {
+				const (
+					begin = "230000+0000"
+					end   = "010000+0000"
+				)
 
-			It("should return false", func() {
-				now := time.Date(0, time.January, 1, 22, 0, 0, 0, time.UTC)
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 22, 59, 59, 9999, time.UTC)
 
-				res, err := NowWithinTimeWindow(begin, end, now)
+					res, err := NowWithinTimeWindow(begin, end, now)
 
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(BeFalse())
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 2, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 23, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 1, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 0, 59, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
 			})
 
-			It("should return true", func() {
-				now := time.Date(0, time.January, 1, 0, 59, 0, 0, time.UTC)
+			Context("corner case", func() {
+				const (
+					begin = "230000+0000"
+					end   = "000000+0000"
+				)
 
-				res, err := NowWithinTimeWindow(begin, end, now)
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 22, 59, 59, 9999, time.UTC)
 
-				Expect(err).ToNot(HaveOccurred())
-				Expect(res).To(BeTrue())
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return false", func() {
+					now := time.Date(0, time.January, 1, 1, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeFalse())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 23, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
+
+				It("should return true", func() {
+					now := time.Date(0, time.January, 1, 23, 45, 0, 0, time.UTC)
+
+					res, err := NowWithinTimeWindow(begin, end, now)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res).To(BeTrue())
+				})
 			})
 		})
 	})
