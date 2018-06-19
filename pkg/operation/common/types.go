@@ -47,13 +47,8 @@ const (
 	// ClusterAutoscalerDeploymentName is the name of the cluster-autoscaler deployment.
 	ClusterAutoscalerDeploymentName = "cluster-autoscaler"
 
-	// ConfirmationDeletionTimestamp is an annotation on a Shoot resource whose value must be set equal to the Shoot's
-	// '.metadata.deletionTimestamp' value to trigger the deletion process of the Shoot cluster.
-	// DEPRECATED: Use ConfirmationDeletion instead.
-	ConfirmationDeletionTimestamp = "confirmation.garden.sapcloud.io/deletionTimestamp"
-
-	// ConfirmationDeletion is an annotation on a Shoot resource whose value must be set to true
-	// to trigger the deletion process of the Shoot cluster.
+	// ConfirmationDeletion is an annotation on a Shoot resource whose value must be set to "true" in order to
+	// allow deleting the Shoot (if the annotation is not set any DELETE request will be denied).
 	ConfirmationDeletion = "confirmation.garden.sapcloud.io/deletion"
 
 	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller

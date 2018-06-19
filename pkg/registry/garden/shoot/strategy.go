@@ -74,8 +74,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 		return true
 	}
 
-	// The deletion timestamp and the special confirmation annotation was set.
-	if !common.CheckConfirmationDeletionTimestampValid(oldShoot.ObjectMeta) && common.CheckConfirmationDeletionTimestampValid(newShoot.ObjectMeta) {
+	// The deletion timestamp was set.
+	if oldShoot.DeletionTimestamp == nil && newShoot.DeletionTimestamp != nil {
 		return true
 	}
 

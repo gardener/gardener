@@ -70,12 +70,10 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 	}
 
 	// The deletion timestamp was set.
-	if oldBackupInfrastructure.ObjectMeta.DeletionTimestamp == nil && newBackupInfrastructure.ObjectMeta.DeletionTimestamp != nil {
+	if oldBackupInfrastructure.DeletionTimestamp == nil && newBackupInfrastructure.DeletionTimestamp != nil {
 		return true
 	}
 
-	// Unlike shoot, in favour of keeping backupInfrastructure controller very lightweight, we agreed to not have failed state for backupInfrastructure and hence no need
-	// of handling it here. Hence it won't have any annotation like "operation=retry"
 	return false
 }
 

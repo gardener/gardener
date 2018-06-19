@@ -26,7 +26,6 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	gardenfeatures "github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	deletionconfirmation "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
@@ -133,9 +132,6 @@ func (o *Options) complete() error {
 	recommendedPluginOrder.Insert(allOrderedPlugins...)
 	o.Recommended.Admission.RecommendedPluginOrder = recommendedPluginOrder.List()
 
-	if !gardenfeatures.APIServerFeatureGate.Enabled(gardenfeatures.DeletionConfirmation) {
-		o.Recommended.Admission.DefaultOffPlugins.Insert(deletionconfirmation.PluginName)
-	}
 	return nil
 }
 

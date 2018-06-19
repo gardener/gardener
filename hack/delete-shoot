@@ -19,8 +19,3 @@ NAMESPACE="${2:-$(id -u -n)}"
 
 kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" confirmation.garden.sapcloud.io/deletion=true
 kubectl --namespace "$NAMESPACE" delete   shoot "$NAME"
-
-# TODO: kept the two following lines for backwards compatibility (delete them once the DeletionConfirmation admission controller becomes enabled by default and
-#       the gardener logic has been adapted properly)
-deletionTimestamp="$(kubectl --namespace "$NAMESPACE" get shoot "$NAME" -o jsonpath --template={.metadata.deletionTimestamp})"
-kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" confirmation.garden.sapcloud.io/deletionTimestamp="$deletionTimestamp"

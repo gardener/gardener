@@ -17,4 +17,4 @@
 NAME="$1"
 NAMESPACE="${2:-$(id -u -n)}"
 
-kubectl --namespace "$NAMESPACE" patch shoot "$NAME" --type=merge -p "{\"metadata\": {\"annotations\": {\"shoot.garden.sapcloud.io/operation\": \"retry\"}}}"
+kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" shoot.garden.sapcloud.io/operation=retry

@@ -111,10 +111,11 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		shoot.Annotations = annotations
 
-		_, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
+		shootUpdated, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err
 		}
+		shoot = shootUpdated
 
 		expirationTime = annotations[common.ShootExpirationTimestamp]
 	}
@@ -126,24 +127,17 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 	if time.Now().After(expirationTimeParsed) {
 		shootLogger.Info("[SHOOT QUOTA] Shoot cluster lifetime expired. Shoot will be deleted.")
 
-		// We have to delete the shoot, because only apiserver can set a deletionTimestamp
-		err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{})
-		if err != nil {
-			return err
-		}
-		shootUpdated, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Get(shoot.Name, metav1.GetOptions{})
-		if err != nil {
+		// We have to annotate the Shoot to confirm the deletion.
+		annotations := shoot.Annotations
+		annotations[common.ConfirmationDeletion] = "true"
+		shoot.ObjectMeta.Annotations = annotations
+
+		if _, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot); err != nil {
 			return err
 		}
 
-		// After the shoot has got a deletionTimestamp, we use this timestamp to set the
-		// deletionTimestampConfirmation annotation, which initiate the shoot deletion process.
-		annotations := shootUpdated.ObjectMeta.Annotations
-		annotations[common.ConfirmationDeletionTimestamp] = shootUpdated.DeletionTimestamp.Format(time.RFC3339)
-		shootUpdated.ObjectMeta.Annotations = annotations
-
-		_, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shootUpdated.Namespace).Update(shootUpdated)
-		if err != nil {
+		// Now we are allowed to delete the Shoot (to set the deletionTimestamp).
+		if err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}

@@ -30,12 +30,6 @@ const (
 	// owner: @mvladev
 	// alpha: v5.0
 	CoreDNS utilfeature.Feature = "CoreDNS"
-
-	// DeletionConfirmation enables DeletionConfirmation admission controller
-	// and uses standard deletion operations for Garden resources.
-	// owner: @mvladev
-	// alpha: v5.0
-	DeletionConfirmation utilfeature.Feature = "DeletionConfirmation"
 )
 
 var (
@@ -47,13 +41,10 @@ var (
 	// ControllerFeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
 	ControllerFeatureGate = utilfeature.NewFeatureGate()
 
-	apiserverFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
-		DeletionConfirmation: {Default: true, PreRelease: utilfeature.Beta},
-	}
+	apiserverFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
 
 	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
-		CoreDNS:              {Default: false, PreRelease: utilfeature.Alpha},
-		DeletionConfirmation: {Default: true, PreRelease: utilfeature.Beta},
+		CoreDNS: {Default: false, PreRelease: utilfeature.Alpha},
 	}
 )
 
