@@ -230,7 +230,7 @@ func (c *defaultControl) reconcileBackupInfrastructure(o *operation.Operation) *
 		defaultRetry = 30 * time.Second
 
 		f                     = flow.New("Backup Infrastructure creation").SetProgressReporter(o.ReportBackupInfrastructureProgress).SetLogger(o.Logger)
-		deployBackupNamespace = f.AddTask(botanist.DeployBackupNamespaceFromBackupInfrastructure, defaultRetry)
+		deployBackupNamespace = f.AddTask(botanist.DeployBackupNamespace, defaultRetry)
 		_                     = f.AddTask(seedCloudBotanist.DeployBackupInfrastructure, 0, deployBackupNamespace)
 	)
 	if e := f.Execute(); e != nil {

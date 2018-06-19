@@ -56,23 +56,15 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
 		isCloud      = o.Shoot.Info.Spec.Cloud.Local == nil
 
-		f                                    = flow.New("Shoot cluster reconciliation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
-		deployNamespace                      = f.AddTask(botanist.DeployNamespace, defaultRetry)
-		deployKubeAPIServerService           = f.AddTask(botanist.DeployKubeAPIServerService, defaultRetry, deployNamespace)
-		waitUntilKubeAPIServerServiceIsReady = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, isCloud, deployKubeAPIServerService)
-		deploySecrets                        = f.AddTask(botanist.DeploySecrets, 0, waitUntilKubeAPIServerServiceIsReady)
-		_                                    = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady)
-		_                                    = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
-		deployInfrastructure                 = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
-		// Although BackupInfrastructure controller has responsibility of deploying backup namespace, for backward
-		// compatibility Shoot controller will have to deploy backup namespace and move terraform resources from
-		// shoot's main seed namespace to backup namespace.
-		// TODO: These tasks (deployBackupNamespace and moveBackupTerraformResources) should be removed from flow, once
-		// we have all shoots reconciled with new gardener having this change i.e. for all existing shoots, all backup
-		// infrastructure related terraform resources are present only in backup namespace.
-		deployBackupNamespace                   = f.AddTaskConditional(botanist.DeployBackupNamespaceFromShoot, defaultRetry, isCloud, deployNamespace)
-		moveBackupTerraformResources            = f.AddTaskConditional(botanist.MoveBackupTerraformResources, 0, isCloud, deployBackupNamespace)
-		deployBackupInfrastructure              = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud, moveBackupTerraformResources)
+		f                                       = flow.New("Shoot cluster reconciliation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
+		deployNamespace                         = f.AddTask(botanist.DeployNamespace, defaultRetry)
+		deployKubeAPIServerService              = f.AddTask(botanist.DeployKubeAPIServerService, defaultRetry, deployNamespace)
+		waitUntilKubeAPIServerServiceIsReady    = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, isCloud, deployKubeAPIServerService)
+		deploySecrets                           = f.AddTask(botanist.DeploySecrets, 0, waitUntilKubeAPIServerServiceIsReady)
+		_                                       = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady)
+		_                                       = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
+		deployInfrastructure                    = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
+		deployBackupInfrastructure              = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud)
 		waitUntilBackupInfrastructureReconciled = f.AddTaskConditional(botanist.WaitUntilBackupInfrastructureReconciled, 0, isCloud, deployBackupInfrastructure)
 		deployETCD                              = f.AddTask(hybridBotanist.DeployETCD, defaultRetry, deploySecrets, waitUntilBackupInfrastructureReconciled)
 		deployCloudProviderConfig               = f.AddTask(hybridBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)

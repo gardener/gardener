@@ -135,18 +135,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		destroyExternalDomainDNSRecord = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, cleanKubernetesResources)
 		syncPointTerraformers          = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord)
 		deleteKubeAPIServer            = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
-
-		// Although BackupInfrastructure controller has responsibility of deploying backup namespace, for backward
-		// compatibility Shoot controller will have to deploy backup namespace and move terraform resources from
-		// Shoot's main seed namespace to backup namespace.
-		// TODO: These tasks (deployBackupNamespace, moveBackupTerraformResources & deployBackupInfrastructure) should be
-		// removed from flow, once we have all shoots reconciled with new gardener having this change i.e. for all
-		// existing shoots, all backup infrastructure related terraform resources are present only in backup namespace.
-		deployBackupNamespace        = f.AddTaskConditional(botanist.DeployBackupNamespaceFromShoot, defaultRetry, isCloud && nonTerminatingNamespace)
-		moveBackupTerraformResources = f.AddTaskConditional(botanist.MoveBackupTerraformResources, 0, isCloud, deployBackupNamespace)
-		deployBackupInfrastructure   = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud, moveBackupTerraformResources)
-
-		deleteBackupInfrastructure     = f.AddTask(botanist.DeleteBackupInfrastructure, 0, deleteKubeAPIServer, deployBackupInfrastructure)
+		deleteBackupInfrastructure     = f.AddTask(botanist.DeleteBackupInfrastructure, 0, deleteKubeAPIServer)
 		destroyInternalDomainDNSRecord = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointTerraformers)
 		deleteNamespace                = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer)
 		_                              = f.AddTask(botanist.WaitUntilSeedNamespaceDeleted, 0, deleteNamespace)
