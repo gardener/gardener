@@ -7,7 +7,7 @@ images:
 # Seed controlplane
 - name: etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.7
+  tag: v3.3.8
 - name: etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
   tag: "0.2.3"
@@ -24,7 +24,7 @@ images:
   tag: v8.6
 - name: vpn-seed
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
-  tag: "0.10.0"
+  tag: "0.11.0"
 - name: aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.2.0"
@@ -66,7 +66,7 @@ images:
   tag: v0.7.4
 - name: vpn-shoot
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
-  tag: "0.10.0"
+  tag: "0.11.0"
 - name: kube-dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
   tag: "1.14.10"
@@ -101,7 +101,7 @@ images:
   tag: "0.15.0"
 - name: ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.4.0"
+  tag: "0.5.0"
 - name: helm-tiller
   repository: gcr.io/kubernetes-helm/tiller
   tag: v2.9.1
