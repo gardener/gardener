@@ -64,6 +64,10 @@ spec:
         resources:
 {{ toYaml .Values.apiserver.resources | indent 10 }}
         {{- end }}
+        {{- if .Values.apiserver.dnsConfig }}
+        dnsConfig:
+{{ toYaml .Values.apiserver.dnsConfig | indent 10 }}
+        {{- end }}
         volumeMounts:
         - name: gardener-apiserver-cert
           mountPath: /var/run/kubernetes

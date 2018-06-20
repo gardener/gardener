@@ -43,6 +43,10 @@ spec:
         resources:
 {{ toYaml .Values.controller.resources | indent 10 }}
         {{- end }}
+        {{- if .Values.controller.dnsConfig }}
+        dnsConfig:
+{{ toYaml .Values.controller.dnsConfig | indent 10 }}
+        {{- end }}
         livenessProbe:
           httpGet:
             path: /healthz
