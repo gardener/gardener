@@ -40,7 +40,7 @@ controller:
   ## Allows customization of the external service
   ## the ingress will be bound to via DNS
   publishService:
-    enabled: false
+    enabled: true
     ## Allows overriding of the publish service to bind to
     ## Must be <namespace>/<service_name>
     ##
