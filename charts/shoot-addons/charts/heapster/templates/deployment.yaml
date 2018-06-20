@@ -6,4 +6,5 @@ metadata:
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     addonmanager.kubernetes.io/mode: EnsureExists
+    origin: gardener
 {{ template "deploymentspec" . }}

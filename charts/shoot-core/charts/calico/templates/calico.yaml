@@ -19,6 +19,7 @@ metadata:
   labels:
     k8s-app: calico-node
     addonmanager.kubernetes.io/mode: Reconcile
+    origin: gardener
 spec:
   selector:
     matchLabels:

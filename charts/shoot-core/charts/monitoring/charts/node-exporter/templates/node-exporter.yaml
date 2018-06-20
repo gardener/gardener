@@ -29,6 +29,7 @@ metadata:
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
+    origin: gardener
 spec:
   selector:
     matchLabels:

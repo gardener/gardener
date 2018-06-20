@@ -54,7 +54,7 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Co
 // CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
 func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
-	// Check whether every Node registered to the kAPI server is ready.
+	// Check whether every Node registered to the API server is ready.
 	nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchNodeListFailed", err.Error())
@@ -144,7 +144,7 @@ func verifyDeploymentHealthiness(condition *gardenv1beta1.Condition, k8sClient k
 	}
 
 	for _, deployment := range deploymentList {
-		if *deployment.Spec.Replicas != deployment.Status.AvailableReplicas {
+		if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas != deployment.Status.AvailableReplicas {
 			return helper.ModifyCondition(condition, corev1.ConditionFalse, "DeploymentUnavailable", fmt.Sprintf("Deployment %s has not yet the desired number of available pods.", deployment.Name)), true
 		}
 	}
@@ -160,6 +160,9 @@ func verifyPodHealthiness(condition *gardenv1beta1.Condition, k8sClient kubernet
 
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if !containerStatus.Ready {
+				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotReady", fmt.Sprintf("Container %s of pod %s is not ready yet.", containerStatus.Name, pod.Name)), true
+			}
 			if containerStatus.State.Running == nil && containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason != "Completed" {
 				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotRunning", fmt.Sprintf("Container %s of pod %s is not in running state.", containerStatus.Name, pod.Name)), true
 			}

@@ -20,8 +20,8 @@ api:
       cpu: 100m
       memory: 128Mi
     limits:
-      cpu: 100m
-      memory: 512Mi
+      cpu: 150m
+      memory: 700Mi
   livenessProbe:
     initialDelaySeconds: 180
   config:

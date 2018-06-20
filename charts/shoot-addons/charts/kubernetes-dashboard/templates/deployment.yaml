@@ -10,6 +10,7 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     kubernetes.io/cluster-service: "true"
     addonmanager.kubernetes.io/mode: Reconcile
+    origin: gardener
 spec:
   revisionHistoryLimit: 0
   replicas: 1

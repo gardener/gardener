@@ -9,6 +9,7 @@ metadata:
     k8s-addon: kube-dns.addons.k8s.io
     k8s-app: kube-dns
     kubernetes.io/cluster-service: "true"
+    origin: gardener
 spec:
   revisionHistoryLimit: 0
   # replicas: not specified here:

@@ -6,6 +6,7 @@ metadata:
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     addonmanager.kubernetes.io/mode: Reconcile
+    origin: gardener
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.api.replicaCount }}

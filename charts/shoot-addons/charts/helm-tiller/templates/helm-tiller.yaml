@@ -36,6 +36,7 @@ metadata:
     addonmanager.kubernetes.io/mode: Reconcile
     app: helm
     name: tiller
+    origin: gardener
   name: tiller-deploy
   namespace: kube-system
 spec:
