@@ -132,7 +132,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		destroyNginxIngressResources   = f.AddTask(botanist.DestroyIngressDNSRecord, 0, cleanKubernetesResources)
 		destroyKube2IAMResources       = f.AddTask(shootCloudBotanist.DestroyKube2IAMResources, 0, cleanKubernetesResources)
 		destroyInfrastructure          = f.AddTask(shootCloudBotanist.DestroyInfrastructure, 0, cleanKubernetesResources, destroyMachines)
-		syncPointTerraformers          = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure)
+		destroyExternalDomainDNSRecord = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, cleanKubernetesResources)
+		syncPointTerraformers          = f.AddSyncPoint(deleteSeedMonitoring, destroyNginxIngressResources, destroyKube2IAMResources, destroyInfrastructure, destroyExternalDomainDNSRecord)
 		deleteKubeAPIServer            = f.AddTask(botanist.DeleteKubeAPIServer, defaultRetry, syncPointTerraformers)
 
 		// Although BackupInfrastructure controller has responsibility of deploying backup namespace, for backward
@@ -146,9 +147,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		deployBackupInfrastructure   = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud, moveBackupTerraformResources)
 
 		deleteBackupInfrastructure     = f.AddTask(botanist.DeleteBackupInfrastructure, 0, deleteKubeAPIServer, deployBackupInfrastructure)
-		destroyExternalDomainDNSRecord = f.AddTask(botanist.DestroyExternalDomainDNSRecord, 0, syncPointTerraformers)
 		destroyInternalDomainDNSRecord = f.AddTask(botanist.DestroyInternalDomainDNSRecord, 0, syncPointTerraformers)
-		deleteNamespace                = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, destroyExternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer)
+		deleteNamespace                = f.AddTask(botanist.DeleteNamespace, defaultRetry, syncPointTerraformers, destroyInternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer)
 		_                              = f.AddTask(botanist.WaitUntilSeedNamespaceDeleted, 0, deleteNamespace)
 		_                              = f.AddTask(botanist.DeleteGardenSecrets, defaultRetry, deleteNamespace)
 	)
