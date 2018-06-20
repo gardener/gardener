@@ -19,6 +19,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -54,13 +55,14 @@ func (c *Client) CleanupAPIGroupResources(exceptions map[string]map[string]bool,
 
 	return resourceList.EachListItem(func(o runtime.Object) error {
 		var (
-			item          = o.(*unstructured.Unstructured)
-			namespace     = item.GetNamespace()
-			name          = item.GetName()
-			absPathDelete = buildResourcePath(apiGroupPath, resource, namespace, name)
+			item            = o.(*unstructured.Unstructured)
+			namespace       = item.GetNamespace()
+			name            = item.GetName()
+			ownerReferences = item.GetOwnerReferences()
+			absPathDelete   = buildResourcePath(apiGroupPath, resource, namespace, name)
 		)
 
-		if mustOmitResource(exceptions, resource, namespace, name) {
+		if mustOmitResource(exceptions, resource, namespace, name, ownerReferences) {
 			return nil
 		}
 
@@ -77,16 +79,17 @@ func (c *Client) CheckResourceCleanup(logger *logrus.Entry, exceptions map[strin
 
 	if err := resourceList.EachListItem(func(o runtime.Object) error {
 		var (
-			item      = o.(*unstructured.Unstructured)
-			name      = item.GetName()
-			namespace = item.GetNamespace()
+			item            = o.(*unstructured.Unstructured)
+			name            = item.GetName()
+			namespace       = item.GetNamespace()
+			ownerReferences = item.GetOwnerReferences()
 		)
 
-		if mustOmitResource(exceptions, resource, namespace, name) {
+		if mustOmitResource(exceptions, resource, namespace, name, ownerReferences) {
 			return nil
 		}
 
-		message := fmt.Sprintf("waiting for '%s' (resource '%s') to be deleted", name, resource)
+		message := fmt.Sprintf("Waiting for '%s' (resource '%s') to be deleted", name, resource)
 		logger.Info(message)
 
 		return errors.New(message)
@@ -103,7 +106,12 @@ func buildResourcePath(apiGroupPath []string, resource, namespace, name string) 
 	return append(apiGroupPath, resource, name)
 }
 
-func mustOmitResource(exceptionMap map[string]map[string]bool, resource, namespace, name string) bool {
+func mustOmitResource(exceptionMap map[string]map[string]bool, resource, namespace, name string, ownerReferences []metav1.OwnerReference) bool {
+	// Skip resources with owner references and rely on Kubernetes garbage collection to clean them up.
+	if len(ownerReferences) > 0 {
+		return true
+	}
+
 	if exceptions, ok := exceptionMap[resource]; ok {
 		id := name
 		if len(namespace) > 0 {

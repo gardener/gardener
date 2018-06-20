@@ -76,6 +76,7 @@ func (b *Botanist) CleanKubernetesResources() error {
 			}
 		}(apiGroupPath, resource)
 	}
+	wg.Wait()
 
 	if len(errors) == 0 {
 		return nil
