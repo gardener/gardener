@@ -15,15 +15,20 @@
 package resourcereferencemanager_test
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -46,6 +51,7 @@ var _ = Describe("resourcereferencemanager", func() {
 		var (
 			admissionHandler      *ReferenceManager
 			kubeInformerFactory   kubeinformers.SharedInformerFactory
+			kubeClient            *fake.Clientset
 			gardenInformerFactory gardeninformers.SharedInformerFactory
 			fakeAuthorizer        fakeAuthorizerType
 
@@ -138,16 +144,19 @@ var _ = Describe("resourcereferencemanager", func() {
 			admissionHandler.AssignReadyFunc(func() bool { return true })
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+			kubeClient = &fake.Clientset{}
+			admissionHandler.SetKubeClientset(kubeClient)
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
+			MissingSecretWait = 0
 
 			shoot = shootBase
 		})
 
 		Context("tests for SecretBinding objects", func() {
-			It("should accept because all referenced objects have been found", func() {
+			It("should accept because all referenced objects have been found (secret found in cache)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 
@@ -159,8 +168,30 @@ var _ = Describe("resourcereferencemanager", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
+			It("should accept because all referenced objects have been found (secret looked up live)", func() {
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: secret.Namespace,
+							Name:      secret.Name,
+						},
+					}, nil
+				})
+
+				user := &user.DefaultInfo{Name: allowedUser}
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should reject because the referenced secret does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("nope, out of luck")
+				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
@@ -271,9 +302,27 @@ var _ = Describe("resourcereferencemanager", func() {
 		})
 
 		Context("tests for Seed objects", func() {
-			It("should accept because all referenced objects have been found", func() {
+			It("should accept because all referenced objects have been found (secret found in cache)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+
+				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should accept because all referenced objects have been found (secret looked up live)", func() {
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: secret.Namespace,
+							Name:      secret.Name,
+						},
+					}, nil
+				})
 
 				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
 
@@ -294,6 +343,9 @@ var _ = Describe("resourcereferencemanager", func() {
 
 			It("should reject because the referenced secret does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				kubeClient.AddReactor("get", "secrets", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf("nope, out of luck")
+				})
 
 				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
 

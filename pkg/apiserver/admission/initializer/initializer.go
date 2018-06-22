@@ -19,13 +19,15 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 )
 
 // New constructs new instance of PluginInitializer
-func New(gardenInformers gardeninformers.SharedInformerFactory, kubeInformers kubeinformers.SharedInformerFactory, authz authorizer.Authorizer) admission.PluginInitializer {
+func New(gardenInformers gardeninformers.SharedInformerFactory, kubeInformers kubeinformers.SharedInformerFactory, kubeClient kubernetes.Interface, authz authorizer.Authorizer) admission.PluginInitializer {
 	return pluginInitializer{
 		gardenInformers: gardenInformers,
 		kubeInformers:   kubeInformers,
+		kubeClient:      kubeClient,
 		authorizer:      authz,
 	}
 }
@@ -38,6 +40,9 @@ func (i pluginInitializer) Initialize(plugin admission.Interface) {
 	}
 	if wants, ok := plugin.(WantsKubeInformerFactory); ok {
 		wants.SetKubeInformerFactory(i.kubeInformers)
+	}
+	if wants, ok := plugin.(WantsKubeClientset); ok {
+		wants.SetKubeClientset(i.kubeClient)
 	}
 	if wants, ok := plugin.(WantsAuthorizer); ok {
 		wants.SetAuthorizer(i.authorizer)
