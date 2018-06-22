@@ -96,11 +96,24 @@ spec:
             port: {{ required ".securePort is required" .Values.securePort }}
             httpHeaders:
             - name: Authorization
-              value: Basic {{ .Values.livenessProbeCredentials }}
+              value: Basic {{ .Values.probeCredentials }}
           successThreshold: 1
           failureThreshold: 2
           initialDelaySeconds: 30
-          periodSeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 15
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: {{ required ".securePort is required" .Values.securePort }}
+            httpHeaders:
+            - name: Authorization
+              value: Basic {{ .Values.probeCredentials }}
+          successThreshold: 1
+          failureThreshold: 2
+          initialDelaySeconds: 10
+          periodSeconds: 30
           timeoutSeconds: 15
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
