@@ -17,6 +17,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -242,4 +243,10 @@ func DetermineErrorCode(message string) error {
 	}
 
 	return errors.New(message)
+}
+
+// ResourceQuantity returns a resource quantity based on number of nodes, resource per node,
+// node weight and base resource quantity.
+func ResourceQuantity(baseResource, nodeCount, resourcePerNode, weight float64, SIUnit string) string {
+	return fmt.Sprintf("%.f%s", baseResource+math.Ceil(nodeCount/weight)*resourcePerNode*weight, SIUnit)
 }

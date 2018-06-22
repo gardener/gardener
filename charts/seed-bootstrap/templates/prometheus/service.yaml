@@ -11,7 +11,7 @@ spec:
   - name: web
     port: 80
     protocol: TCP
-    targetPort: {{ .Values.prometheusPort }}
+    targetPort: {{ .Values.prometheus.port }}
   selector:
     app: prometheus
     role: monitoring

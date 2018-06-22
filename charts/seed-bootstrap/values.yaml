@@ -1,2 +1,11 @@
 cloudProvider: aws
-prometheusPort: 9090
+
+prometheus:
+  port: 9090
+  resources:
+    requests:
+      cpu: 50m
+      memory: 120Mi
+    limits:
+      cpu: 100m
+      memory: 240Mi
