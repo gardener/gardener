@@ -117,7 +117,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		}
 	)
 
-	currentTimeWithinTimeWindow, err := NowWithinTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End, time.Now())
+	currentTimeWithinTimeWindow, err := NowWithinTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End, time.Now().UTC())
 	if err != nil {
 		handleError(err.Error())
 		return nil
@@ -194,7 +194,7 @@ func NowWithinTimeWindow(begin, end string, nowTime time.Time) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("Could not parse the maintenance time window end value: %s", err.Error())
 	}
-	now, err := utils.ParseMaintenanceTime(utils.FormatMaintenanceTime(nowTime))
+	now, err := utils.ParseMaintenanceTime(utils.FormatMaintenanceTime(nowTime.UTC()))
 	if err != nil {
 		return false, fmt.Errorf("Could not parse the current time into the maintenance format: %s", err.Error())
 	}

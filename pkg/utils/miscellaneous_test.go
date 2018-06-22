@@ -24,11 +24,11 @@ import (
 
 var _ = Describe("utils", func() {
 	Describe("#ParseMaintenanceTime", func() {
-		It("should return the time object", func() {
+		It("should return the time object in UTC", func() {
 			time, err := ParseMaintenanceTime("222200+0100")
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(time.String()).To(ContainSubstring("22:22:00 +0100"))
+			Expect(time.String()).To(ContainSubstring("21:22:00 +0000"))
 		})
 
 		It("should return an error", func() {
