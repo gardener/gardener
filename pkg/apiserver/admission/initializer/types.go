@@ -19,6 +19,7 @@ import (
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 )
 
 // WantsInternalGardenInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
@@ -33,6 +34,12 @@ type WantsKubeInformerFactory interface {
 	admission.InitializationValidator
 }
 
+// WantsKubeClientset defines a function which sets Clientset for admission plugins that need it.
+type WantsKubeClientset interface {
+	SetKubeClientset(kubernetes.Interface)
+	admission.InitializationValidator
+}
+
 // WantsAuthorizer defines a function which sets an authorizer for admission plugins that need it.
 type WantsAuthorizer interface {
 	SetAuthorizer(authorizer.Authorizer)
@@ -42,6 +49,7 @@ type WantsAuthorizer interface {
 type pluginInitializer struct {
 	gardenInformers gardeninformers.SharedInformerFactory
 	kubeInformers   kubeinformers.SharedInformerFactory
+	kubeClient      kubernetes.Interface
 	authorizer      authorizer.Authorizer
 }
 
