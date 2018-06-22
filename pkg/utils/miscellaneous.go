@@ -105,7 +105,13 @@ func FormatMaintenanceTime(t time.Time) string {
 }
 
 // ParseMaintenanceTime parses the maintenance time and returns it as Time object. In case the parse fails, an
-// error is returned.
+// error is returned. The time object is converted to UTC zone.
 func ParseMaintenanceTime(value string) (time.Time, error) {
-	return time.Parse(maintenanceTimeLayout, value)
+	timeInZone, err := time.Parse(maintenanceTimeLayout, value)
+	if err != nil {
+		return timeInZone, err
+	}
+
+	timeInUTC := timeInZone.UTC()
+	return time.Date(0, time.January, 1, timeInUTC.Hour(), timeInUTC.Minute(), timeInUTC.Second(), timeInUTC.Nanosecond(), timeInUTC.Location()), nil
 }
