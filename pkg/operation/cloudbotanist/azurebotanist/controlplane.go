@@ -34,12 +34,13 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 		routeTableName      = "routeTableName"
 		securityGroupName   = "securityGroupName"
 	)
+
 	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(resourceGroupName, vnetName, subnetName, routeTableName, availabilitySetName, securityGroupName)
 	if err != nil {
 		return "", err
 	}
 
-	return `cloud: AZUREPUBLICCLOUD
+	cloudProviderConfig := `cloud: AZUREPUBLICCLOUD
 tenantId: ` + string(b.Shoot.Secret.Data[TenantID]) + `
 subscriptionId: ` + string(b.Shoot.Secret.Data[SubscriptionID]) + `
 resourceGroup: ` + stateVariables[resourceGroupName] + `
@@ -57,8 +58,21 @@ cloudProviderBackoffExponent: 1.5
 cloudProviderBackoffDuration: 5
 cloudProviderBackoffJitter: 1.0
 cloudProviderRateLimit: true
-cloudProviderRateLimitQPS: 1.0
-cloudProviderRateLimitBucket: 5`, nil
+cloudProviderRateLimitQPS: 10.0
+cloudProviderRateLimitBucket: 100`
+
+	configHasWriteRateLimits, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.10")
+	if err != nil {
+		return "", err
+	}
+
+	if configHasWriteRateLimits {
+		cloudProviderConfig += `
+cloudProviderRateLimitQPSWrite: 10.0
+cloudProviderRateLimitBucketWrite: 100`
+	}
+
+	return cloudProviderConfig, nil
 }
 
 // RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
