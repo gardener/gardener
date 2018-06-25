@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetesv110
+package kubernetesv111
 
 import (
-	kubernetesv19 "github.com/gardener/gardener/pkg/client/kubernetes/v19"
+	kubernetesv110 "github.com/gardener/gardener/pkg/client/kubernetes/v110"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,5 +31,5 @@ var (
 // Client inherits all the attributes and methods of the v1.9 client.
 // Please see the documentation of the base client for further details.
 type Client struct {
-	*kubernetesv19.Client
+	*kubernetesv110.Client
 }

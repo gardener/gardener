@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/base"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v110"
+	"github.com/gardener/gardener/pkg/client/kubernetes/v111"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v18"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v19"
 	"github.com/gardener/gardener/pkg/logger"
@@ -111,6 +112,10 @@ func newKubernetesClient(config *rest.Config, clientset *kubernetes.Clientset, c
 	if err != nil {
 		return nil, err
 	}
+	k8s111, err := utils.CompareVersions(gitVersion, "~", "1.11")
+	if err != nil {
+		return nil, err
+	}
 
 	switch {
 	case k8s18:
@@ -125,6 +130,11 @@ func newKubernetesClient(config *rest.Config, clientset *kubernetes.Clientset, c
 		}
 	case k8s110:
 		k8sClient, err = kubernetesv110.New(config, clientset, clientConfig)
+		if err != nil {
+			return nil, err
+		}
+	case k8s111:
+		k8sClient, err = kubernetesv111.New(config, clientset, clientConfig)
 		if err != nil {
 			return nil, err
 		}

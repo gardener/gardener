@@ -12,24 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package kubernetesv110
+package kubernetesv111
 
 import (
-	kubernetesv19 "github.com/gardener/gardener/pkg/client/kubernetes/v19"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubernetesv110 "github.com/gardener/gardener/pkg/client/kubernetes/v110"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
-var (
-	propagationPolicy    = metav1.DeletePropagationForeground
-	gracePeriodSeconds   = int64(300)
-	defaultDeleteOptions = metav1.DeleteOptions{
-		PropagationPolicy:  &propagationPolicy,
-		GracePeriodSeconds: &gracePeriodSeconds,
+// New returns a new Kubernetes v1.11 client.
+func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clientcmd.ClientConfig) (*Client, error) {
+	v111Client, err := kubernetesv110.New(config, clientset, clientConfig)
+	if err != nil {
+		return nil, err
 	}
-)
 
-// Client inherits all the attributes and methods of the v1.9 client.
-// Please see the documentation of the base client for further details.
-type Client struct {
-	*kubernetesv19.Client
+	return &Client{
+		Client: v111Client,
+	}, nil
 }
