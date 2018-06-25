@@ -82,7 +82,7 @@ spec:
             cpu: 100m
             memory: 32Mi
           limits:
-            cpu: 300m
+            cpu: 200m
             memory: 256Mi
         volumeMounts:
         - name: kube-scheduler
