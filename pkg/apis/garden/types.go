@@ -1144,8 +1144,6 @@ const (
 	ShootLastOperationTypeCreate ShootLastOperationType = "Create"
 	// ShootLastOperationTypeReconcile indicates a 'reconcile' operation.
 	ShootLastOperationTypeReconcile ShootLastOperationType = "Reconcile"
-	// ShootLastOperationTypeUpdate indicates an 'update' operation.
-	ShootLastOperationTypeUpdate ShootLastOperationType = "Update"
 	// ShootLastOperationTypeDelete indicates a 'delete' operation.
 	ShootLastOperationTypeDelete ShootLastOperationType = "Delete"
 )
