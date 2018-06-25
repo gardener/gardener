@@ -53,7 +53,9 @@
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --network-plugin=cni \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
+{{- if semverCompare "< 1.11" .kubernetes.version }}
 --rotate-certificates=true \
+{{- end }}
 {{- range $index, $param := .kubernetes.kubelet.parameters }}
 {{ $param }} \
 {{- end }}
