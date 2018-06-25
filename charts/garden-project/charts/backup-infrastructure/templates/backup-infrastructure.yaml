@@ -1,8 +1,15 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: BackupInfrastructure
 metadata:
-  name: {{ .Values.name }}
+  name: {{ .Values.backupInfrastructure.name }}
   namespace: {{ .Release.Namespace }}
+  ownerReferences:
+  - apiVersion: garden.sapcloud.io/v1beta1
+    blockOwnerDeletion: false
+    controller: true
+    kind: Shoot
+    name: {{ .Values.shoot.name }}
+    uid: {{ .Values.shoot.uid }}
 spec:
-  seed: {{ .Values.seed }}
-  shootUID: {{ .Values.shootUID }}
+  seed: {{ .Values.seed.name }}
+  shootUID: {{ .Values.shoot.uid }}

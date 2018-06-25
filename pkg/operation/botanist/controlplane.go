@@ -112,9 +112,16 @@ func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure() error {
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), "backup-infrastructure", b.Operation.Shoot.Info.Namespace, nil, map[string]interface{}{
-		"name":     common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
-		"seed":     b.Seed.Info.Name,
-		"shootUID": b.Shoot.Info.Status.UID,
+		"backupInfrastructure": map[string]interface{}{
+			"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
+		},
+		"seed": map[string]interface{}{
+			"name": b.Seed.Info.Name,
+		},
+		"shoot": map[string]interface{}{
+			"name": b.Shoot.Info.Name,
+			"uid":  b.Shoot.Info.Status.UID,
+		},
 	})
 }
 
