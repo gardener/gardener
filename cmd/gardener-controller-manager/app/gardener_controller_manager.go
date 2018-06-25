@@ -296,10 +296,12 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 	run := func(stop <-chan struct{}) {
 		go startControllers(g, stopCh)
 		<-stop
-		if _, stopChIsNotClosed := (<-stopCh); stopChIsNotClosed {
+		select {
+		case <-stopCh:
+			// can only happen if stopCh is already closed because it's never written to it
+		default:
 			close(stopCh)
 		}
-		select {}
 	}
 
 	// Start HTTP server
