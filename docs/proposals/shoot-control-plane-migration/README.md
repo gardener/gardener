@@ -149,34 +149,17 @@ The Lease Service will act as the central point of truth for all the seed cluste
 * It needs to be highly available to reduce chances of false positives/negatives.
 * Given the particular scenario of garden/seed/shoot architecture, shoot resource in the garden cluster is already the true single point of truth. The Lease Service would be just a secondary source of the truth. Hence, there is no need for any explicit mechanism for lease renewal or leader promotion. That can be done automatically based on the shoot resource.
 
-The actual implementation of such a lease service can be achieved in many ways.
-
-1. Shoot resource in the Garden cluster.
-
-   This mechanism is already available. But is not suitable because, among other issues, this would require garden cluster to be accessible from the seed clusters and also put the garden cluster's apiserver under unnecessary load.
-   
-2. In-memory cache service on some cluster accessible from seed clusters.
-
-   This is possible because the data required to be served from this service can be computed readily from the shoot resource. This would reduce the load on the garden cluster's apiserver but would still need this service to be highly available to the seed clusters.
-   
-3. IaaS-based cache service.
-
-   This is similar to option 2 except the management of high-availability of the service is delegated to the IaaS layer. Such a service can be calculated based on garden cluster shoot resource or might also be persistent and kept actively up-to-date by gardener.
-   
-4. A ring of highly available distributed cache among the seed clusters.
-
-   This approach has the potential benefit of avoiding the access to garden cluster if the distributed cache can be actively kept up-to-date by gardener.
-
-5. Use DNS records with short TTL to publish/broadcast the owner seed cluster for any give shoot cluster.
-
-This approach looks promising because of the reuse of time-tested components like DNS but needs some evaluation via PoC.
-
 ###### Lease data structure for a shoot
 
 * Owning seed cluster
 * Lease Period
   * Lease start timestamp
-  * Lease end timestamp or interval
+  * Lease end timestamp or TTL
+
+DNS seems well suited to address this problem of lease service. We can use DNS records with short TTL to
+publish/broadcast the owning seed for any particular shoot. DNS is highly available and the short TTL can act like
+the lease. Garden shoot-controller or some additional controller can populate or renew the DNS records based on the 
+shoot resource records in the garden cluster.
 
 ##### Shoot Control-plane Co-ordinator
 
