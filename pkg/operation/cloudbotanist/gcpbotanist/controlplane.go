@@ -32,11 +32,11 @@ func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 	}
 
 	return `[Global]
-project-id = ` + b.Project + `
-network-name = ` + networkName + `
-multizone = true
-token-url = nil
-node-tags = ` + b.Shoot.SeedNamespace, nil
+project-id="` + b.Project + `"
+network-name="` + networkName + `"
+multizone=true
+token-url=nil
+node-tags="` + b.Shoot.SeedNamespace + `"`, nil
 }
 
 // RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud

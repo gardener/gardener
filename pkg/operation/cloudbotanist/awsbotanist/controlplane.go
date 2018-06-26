@@ -34,12 +34,12 @@ func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
 	}
 
 	return `[Global]
-VPC = ` + stateVariables[vpcID] + `
-SubnetID = ` + stateVariables[subnetID] + `
-DisableSecurityGroupIngress = true
-KubernetesClusterTag = ` + b.Shoot.SeedNamespace + `
-KubernetesClusterID = ` + b.Shoot.SeedNamespace + `
-Zone = ` + b.Shoot.Info.Spec.Cloud.AWS.Zones[0], nil
+VPC="` + stateVariables[vpcID] + `"
+SubnetID="` + stateVariables[subnetID] + `"
+DisableSecurityGroupIngress=true
+KubernetesClusterTag="` + b.Shoot.SeedNamespace + `"
+KubernetesClusterID="` + b.Shoot.SeedNamespace + `"
+Zone="` + b.Shoot.Info.Spec.Cloud.AWS.Zones[0] + `"`, nil
 }
 
 // RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud

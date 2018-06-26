@@ -41,17 +41,17 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 	}
 
 	cloudProviderConfig := `cloud: AZUREPUBLICCLOUD
-tenantId: ` + string(b.Shoot.Secret.Data[TenantID]) + `
-subscriptionId: ` + string(b.Shoot.Secret.Data[SubscriptionID]) + `
-resourceGroup: ` + stateVariables[resourceGroupName] + `
-location: ` + b.Shoot.Info.Spec.Cloud.Region + `
-vnetName: ` + stateVariables[vnetName] + `
-subnetName: ` + stateVariables[subnetName] + `
-securityGroupName: ` + stateVariables[securityGroupName] + `
-routeTableName: ` + stateVariables[routeTableName] + `
-primaryAvailabilitySetName: ` + stateVariables[availabilitySetName] + `
-aadClientId: ` + string(b.Shoot.Secret.Data[ClientID]) + `
-aadClientSecret: ` + string(b.Shoot.Secret.Data[ClientSecret]) + `
+tenantId: "` + string(b.Shoot.Secret.Data[TenantID]) + `"
+subscriptionId: "` + string(b.Shoot.Secret.Data[SubscriptionID]) + `"
+resourceGroup: "` + stateVariables[resourceGroupName] + `"
+location: "` + b.Shoot.Info.Spec.Cloud.Region + `"
+vnetName: "` + stateVariables[vnetName] + `"
+subnetName: "` + stateVariables[subnetName] + `"
+securityGroupName: "` + stateVariables[securityGroupName] + `"
+routeTableName: "` + stateVariables[routeTableName] + `"
+primaryAvailabilitySetName: "` + stateVariables[availabilitySetName] + `"
+aadClientId: "` + string(b.Shoot.Secret.Data[ClientID]) + `"
+aadClientSecret: "` + string(b.Shoot.Secret.Data[ClientSecret]) + `"
 cloudProviderBackoff: true
 cloudProviderBackoffRetries: 6
 cloudProviderBackoffExponent: 1.5

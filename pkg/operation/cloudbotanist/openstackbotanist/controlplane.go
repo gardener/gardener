@@ -38,16 +38,16 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 
 	cloudProviderConfig := `
 [Global]
-auth-url=` + b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL + `
-domain-name=` + string(b.Shoot.Secret.Data[DomainName]) + `
-tenant-name=` + string(b.Shoot.Secret.Data[TenantName]) + `
-username=` + string(b.Shoot.Secret.Data[UserName]) + `
-password=` + string(b.Shoot.Secret.Data[Password]) + `
+auth-url="` + b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL + `"
+domain-name="` + string(b.Shoot.Secret.Data[DomainName]) + `"
+tenant-name="` + string(b.Shoot.Secret.Data[TenantName]) + `"
+username="` + string(b.Shoot.Secret.Data[UserName]) + `"
+password="` + string(b.Shoot.Secret.Data[Password]) + `"
 [LoadBalancer]
 lb-version=v2
-lb-provider=` + b.Shoot.Info.Spec.Cloud.OpenStack.LoadBalancerProvider + `
-floating-network-id=` + stateVariables[floatingNetworkID] + `
-subnet-id=` + stateVariables[subnetID] + `
+lb-provider="` + b.Shoot.Info.Spec.Cloud.OpenStack.LoadBalancerProvider + `"
+floating-network-id="` + stateVariables[floatingNetworkID] + `"
+subnet-id="` + stateVariables[subnetID] + `"
 create-monitor=true
 monitor-delay=60s
 monitor-timeout=30s
