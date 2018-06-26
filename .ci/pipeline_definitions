@@ -46,3 +46,10 @@ gardener:
           preprocess: 'finalise'
         release:
           nextversion: 'bump_minor'
+    descriptor_test:
+      repo:
+        trigger: false
+      traits:
+        version:
+          preprocess: 'finalise'
+        component_descriptor: ~
