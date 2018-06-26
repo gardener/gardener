@@ -6,116 +6,151 @@
 images:
 # Seed controlplane
 - name: etcd
+  sourceRepository: github.com/coreos/etcd
   repository: quay.io/coreos/etcd
   tag: v3.3.8
 - name: etcd-backup-restore
+  sourceRepository: github.com/gardener/etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
   tag: "0.3.0"
 - name: hyperkube
+  sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
 - name: machine-controller-manager
+  sourceRepository: github.com/gardener/machine-controller-manager
   repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
   tag: "0.7.0"
 - name: cluster-autoscaler
+  sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "0.1.0"
 - name: kube-addon-manager
+  sourceRepository: github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager
   repository: k8s.gcr.io/kube-addon-manager
   tag: v8.6
 - name: vpn-seed
+  sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
   tag: "0.12.0"
 - name: aws-lb-readvertiser
+  sourceRepository: github.com/gardener/aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.3.0"
 
 # Monitoring
 - name: alertmanager
+  sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
   tag: v0.14.0
 - name: prometheus
+  sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
   # There is a Memory leak for k8s service discovery in v2.2.1 https://github.com/prometheus/prometheus/issues/4095
   # Upgrade when https://github.com/prometheus/prometheus/pull/4013 is merged and fixed
   tag: v2.2.0
 - name: configmap-reloader
+  sourceRepository: github.com/jimmidyson/configmap-reload
   repository: quay.io/coreos/configmap-reload
   tag: v0.0.1
 - name: kube-state-metrics
+  sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: quay.io/coreos/kube-state-metrics
   tag: v1.3.1
 - name: node-exporter
+  sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
   tag: v0.16.0
 - name: grafana
+  sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
   tag: "5.1.3"
 - name: blackbox-exporter
+  sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
   tag: v0.12.0
 
 # Shoot core addons
 - name: calico-node
+  sourceRepository: github.com/projectcalico/calico
   repository: quay.io/calico/node
   tag: v3.1.3
 - name: calico-cni
+  sourceRepository: github.com/projectcalico/cni-plugin
   repository: quay.io/calico/cni
   tag: v3.1.3
 - name: calico-typha
+  sourceRepository: github.com/projectcalico/typha
   repository: quay.io/calico/typha
   tag: v0.7.4
 - name: vpn-shoot
+  sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.12.0"
 - name: kube-dns
+  sourceRepository: github.com/kubernetes/dns
   repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
   tag: "1.14.10"
 - name: kube-dns-dnsmasq
+  sourceRepository: github.com/kubernetes/dns
   repository: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
   tag: "1.14.10"
 - name: kube-dns-sidecar
+  sourceRepository: github.com/kubernetes/dns
   repository: k8s.gcr.io/k8s-dns-sidecar-amd64
   tag: "1.14.10"
 - name: cluster-proportional-autoscaler
+  sourceRepository: github.com/kubernetes-incubator/cluster-proportional-autoscaler
   repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
   tag: "1.1.2"
 
 # Shoot optional addons
 - name: heapster
+  sourceRepository: github.com/kubernetes/heapster
   repository: k8s.gcr.io/heapster
   tag: v1.5.2
 - name: addon-resizer
+  sourceRepository: github.com/kubernetes/autoscaler/tree/master/addon-resizer
   repository: k8s.gcr.io/addon-resizer
   tag: "2.1"
 - name: kubernetes-dashboard
+  sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
   tag: v1.8.3
 - name: kube-lego
+  sourceRepository: github.com/jetstack/kube-lego
   repository: jetstack/kube-lego
   tag: "0.1.5"
 - name: kube2iam
+  sourceRepository: github.com/jtblin/kube2iam
   repository: jtblin/kube2iam
   tag: "0.9.0"
 - name: nginx-ingress-controller
+  sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
   tag: "0.15.0"
 - name: ingress-default-backend
+  sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
   tag: "0.6.0"
 - name: helm-tiller
+  sourceRepository: github.com/kubernetes/helm
   repository: gcr.io/kubernetes-helm/tiller
   tag: v2.9.1
 - name: monocular-api
+  sourceRepository: github.com/kubernetes-helm/monocular
   repository: bitnami/monocular-api
   tag: v0.3.1
 - name: monocular-ui
+  sourceRepository: github.com/kubernetes-helm/monocular
   repository: bitnami/monocular-ui
   tag: v0.3.1
 
 # Miscellaenous
 - name: terraformer
+  sourceRepository: github.com/gardener/terraformer
   repository: eu.gcr.io/gardener-project/gardener/terraformer
   tag: "0.7.0"
 - name: busybox
+  sourceRepository: github.com/mirror/busybox
   repository: busybox
   tag: "1.28.4"
