@@ -1158,6 +1158,15 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 
+			geqKubernetes110, err := utils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.10")
+			if err != nil {
+				geqKubernetes110 = false
+			}
+			geqKubernetes111, err := utils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
+			if err != nil {
+				geqKubernetes111 = false
+			}
+
 			if oidc.CABundle != nil {
 				if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
 					allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
@@ -1174,6 +1183,12 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 			}
 			if oidc.IssuerURL != nil && len(*oidc.IssuerURL) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("issuerURL"), *oidc.IssuerURL, "issuer url cannot be empty when key is provided"))
+			}
+			if !geqKubernetes110 && oidc.SigningAlgs != nil {
+				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("signingAlgs"), "signings algs cannot be provided when version is not greater or equal 1.10"))
+			}
+			if !geqKubernetes111 && oidc.RequiredClaims != nil {
+				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "required claims cannot be provided when version is not greater or equal 1.11"))
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "username claim cannot be empty when key is provided"))

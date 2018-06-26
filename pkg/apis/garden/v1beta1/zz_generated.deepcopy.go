@@ -1643,6 +1643,18 @@ func (in *OIDCConfig) DeepCopyInto(out *OIDCConfig) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.RequiredClaims != nil {
+		in, out := &in.RequiredClaims, &out.RequiredClaims
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.SigningAlgs != nil {
+		in, out := &in.SigningAlgs, &out.SigningAlgs
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	if in.UsernameClaim != nil {
 		in, out := &in.UsernameClaim, &out.UsernameClaim
 		*out = new(string)

@@ -1980,6 +1980,8 @@ func autoConvert_v1beta1_OIDCConfig_To_garden_OIDCConfig(in *OIDCConfig, out *ga
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))
 	out.IssuerURL = (*string)(unsafe.Pointer(in.IssuerURL))
+	out.RequiredClaims = *(*map[string]string)(unsafe.Pointer(&in.RequiredClaims))
+	out.SigningAlgs = *(*[]string)(unsafe.Pointer(&in.SigningAlgs))
 	out.UsernameClaim = (*string)(unsafe.Pointer(in.UsernameClaim))
 	out.UsernamePrefix = (*string)(unsafe.Pointer(in.UsernamePrefix))
 	return nil
@@ -1996,6 +1998,8 @@ func autoConvert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in *garden.OIDCConfig, 
 	out.GroupsClaim = (*string)(unsafe.Pointer(in.GroupsClaim))
 	out.GroupsPrefix = (*string)(unsafe.Pointer(in.GroupsPrefix))
 	out.IssuerURL = (*string)(unsafe.Pointer(in.IssuerURL))
+	out.RequiredClaims = *(*map[string]string)(unsafe.Pointer(&in.RequiredClaims))
+	out.SigningAlgs = *(*[]string)(unsafe.Pointer(&in.SigningAlgs))
 	out.UsernameClaim = (*string)(unsafe.Pointer(in.UsernameClaim))
 	out.UsernamePrefix = (*string)(unsafe.Pointer(in.UsernamePrefix))
 	return nil

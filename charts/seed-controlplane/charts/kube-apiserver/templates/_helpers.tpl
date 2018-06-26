@@ -34,6 +34,14 @@
 {{- if .Values.oidcConfig.groupsPrefix }}
 - --oidc-groups-prefix={{ .Values.oidcConfig.groupsPrefix }}
 {{- end }}
+{{- if .Values.oidcConfig.signingAlgs }}
+- --oidc-signing-algs={{ range $i, $alg := .Values.oidcConfig.signingAlgs }}{{ $alg }}{{ if ne $i (sub (len $.Values.oidcConfig.signingAlgs) 1) }},{{ end }}{{ end }}
+{{- end }}
+{{- if .Values.oidcConfig.requiredClaims }}
+{{- range $key, $val := .Values.oidcConfig.requiredClaims }}
+- --oidc-required-claim={{ $key }}={{ $val }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}

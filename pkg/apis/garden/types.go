@@ -1041,6 +1041,14 @@ type OIDCConfig struct {
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
 	// +optional
 	IssuerURL *string
+	// ATTENTION: Only meaningful for Kubernetes >= 1.11
+	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
+	// +optional
+	RequiredClaims map[string]string
+	// ATTENTION: Only meaningful for Kubernetes >= 1.10
+	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
+	// +optional
+	SigningAlgs []string
 	// The OpenID claim to use as the user name. Note that claims other than the default ('sub') is not guaranteed to be unique and immutable. This flag is experimental, please see the authentication documentation for further details. (default "sub")
 	// +optional
 	UsernameClaim *string
