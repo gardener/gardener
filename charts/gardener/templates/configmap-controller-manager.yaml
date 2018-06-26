@@ -74,4 +74,8 @@ data:
     server:
       bindAddress: {{ required ".Values.controller.config.server.bindAddress is required" .Values.controller.config.server.bindAddress }}
       port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+    {{- if .Values.controller.config.featureGates }}
+    featureGates:
+{{ toYaml .Values.controller.config.featureGates | indent 6 }}
+    {{- end }}
 {{- end }}

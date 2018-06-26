@@ -56,6 +56,7 @@ spec:
         - --etcd-keyfile=/var/run/kubernetes/etcd-client.key
         {{- end }}
         {{- end }}
+        {{- include "gardener-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --secure-port=443
         - --tls-cert-file=/var/run/kubernetes/gardener-apiserver.crt
         - --tls-private-key-file=/var/run/kubernetes/gardener-apiserver.key
