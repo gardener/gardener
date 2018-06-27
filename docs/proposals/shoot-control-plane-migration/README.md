@@ -53,9 +53,10 @@ The backup and restoration of the following resources that are currently not sto
 
 * Resources from the shoot namespace in the seed.
   * Terraform resources such as configmaps and secrets.
-  * Machine Controller Manager resources such as machinedeployments, machinesets, machines, machineclasses, secrets etc.
+  * API resource objects specific to different control-plane components, For example,
+    * Machine Controller Manager resources such as machinedeployments, machinesets, machines, machineclasses, secrets etc.
+    * API resource objects of any control-components that might be introduced in the future such as logging and tracing etc.
 * Resources from the shoot backup namespace in the seed.
-  * Terraform resources such as configmaps and secrets.
 
 All the additional resources listed above will be backed up in the same object store as what is used for backing up the shoot etcd.
 
@@ -133,7 +134,9 @@ Some of the components deployed as part of the shoot control-plane such as those
 
   The possibility of two etcd statefulsets (in source and destination seed clusters) backing up data to the same object store should be avoided.
 
-* VPN?
+* Other control-plane components
+
+Such as logging and tracing or even components that might be introduced in the future.
 
 #### Landscape Diagram
 
