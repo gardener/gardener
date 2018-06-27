@@ -57,16 +57,11 @@ spec:
         command:
         - /hyperkube
         - scheduler
-        {{- if semverCompare "< 1.9" .Values.kubernetesVersion }}
+        {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
+        - --config=/var/lib/kube-scheduler-config/config.yaml
+        {{- else }}
         - --kubeconfig=/var/lib/kube-scheduler/kubeconfig
         - --leader-elect=true
-        {{- else }}
-        - --config=/var/lib/kube-scheduler-config/config.yaml
-        {{/* Temporary workaround for https://github.com/kubernetes/kubernetes/issues/65483 */}}
-        {{- if semverCompare "= 1.11" .Values.kubernetesVersion }}
-        - --kubeconfig=/var/lib/kube-scheduler/kubeconfig
-        {{- end }}
-        {{/* Temporary workaround for https://github.com/kubernetes/kubernetes/issues/65483 */}}
         {{- end }}
         {{- include "kube-scheduler.featureGates" . | trimSuffix "," | indent 8 }}
         - --v=2
