@@ -77,13 +77,10 @@ spec:
           timeoutSeconds: 15
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        {{- if .Values.resources }}
         resources:
-          requests:
-            cpu: 100m
-            memory: 32Mi
-          limits:
-            cpu: 200m
-            memory: 256Mi
+{{ toYaml .Values.resources | indent 10 }}
+        {{- end }}
         volumeMounts:
         - name: kube-scheduler
           mountPath: /var/lib/kube-scheduler

@@ -126,13 +126,10 @@ spec:
         - name: local
           containerPort: 8080
           protocol: TCP
+        {{- if .Values.apiServerResources }}
         resources:
-          requests:
-            cpu: 200m
-            memory: 512Mi
-          limits:
-            cpu: 1500m
-            memory: 2500Mi
+{{ toYaml .Values.apiServerResources | indent 10 }}
+        {{- end }}
         volumeMounts:
         {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - name: audit-policy-config

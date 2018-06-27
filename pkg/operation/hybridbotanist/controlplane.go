@@ -112,23 +112,12 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
-	var (
-		basicAuthData         = b.Secrets["kubecfg"].Data
-		replicas              = 1
-		shootUsedAsSeed, _, _ = helper.IsUsedAsSeed(b.Shoot.Info)
-	)
-
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.Botanist.APIServerAddress)
 	if err != nil {
 		return err
 	}
 
-	if shootUsedAsSeed {
-		replicas = 3
-	}
-
 	defaultValues := map[string]interface{}{
-		"replicas":              replicas,
 		"etcdServicePort":       2379,
 		"etcdMainServiceFqdn":   fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
 		"etcdEventsServiceFqdn": fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
@@ -139,7 +128,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"serviceNetwork":        b.Shoot.GetServiceNetwork(),
 		"nodeNetwork":           b.Shoot.GetNodeNetwork(),
 		"securePort":            443,
-		"probeCredentials":      utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", basicAuthData["username"], basicAuthData["password"]))),
+		"probeCredentials":      utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[common.KubeAPIServerDeploymentName],
@@ -157,6 +146,16 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerConfig()
 	if err != nil {
 		return err
+	}
+
+	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+		defaultValues["replicas"] = 3
+		defaultValues["apiServerResources"] = map[string]interface{}{
+			"limits": map[string]interface{}{
+				"cpu":    "1500m",
+				"memory": "4000Mi",
+			},
+		}
 	}
 
 	apiServerConfig := b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
@@ -209,6 +208,15 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
+	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+		defaultValues["resources"] = map[string]interface{}{
+			"limits": map[string]interface{}{
+				"cpu":    "750m",
+				"memory": "1Gi",
+			},
+		}
+	}
+
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
 	if controllerManagerConfig != nil {
 		defaultValues["featureGates"] = controllerManagerConfig.FeatureGates
@@ -225,18 +233,24 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-scheduler deployment.
 func (b *HybridBotanist) DeployKubeScheduler() error {
-	var (
-		name          = "kube-scheduler"
-		defaultValues = map[string]interface{}{
-			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-kube-scheduler": b.CheckSums[name],
-			},
-		}
-	)
+	defaultValues := map[string]interface{}{
+		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-kube-scheduler": b.CheckSums[common.KubeSchedulerDeploymentName],
+		},
+	}
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeSchedulerConfig()
 	if err != nil {
 		return err
+	}
+
+	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+		defaultValues["resources"] = map[string]interface{}{
+			"limits": map[string]interface{}{
+				"cpu":    "300m",
+				"memory": "350Mi",
+			},
+		}
 	}
 
 	schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler
@@ -249,5 +263,5 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, values, cloudValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), common.KubeSchedulerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
 }

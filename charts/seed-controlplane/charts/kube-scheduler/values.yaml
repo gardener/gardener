@@ -6,3 +6,10 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository
+resources:
+  requests:
+    cpu: 100m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi

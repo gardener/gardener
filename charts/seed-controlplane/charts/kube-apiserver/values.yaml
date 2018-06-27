@@ -39,3 +39,11 @@ images:
 etcdMainServiceFqdn: etcd-main.svc
 etcdEventsServiceFqdn: etcd-events.svc
 etcdServicePort: 2379
+
+apiServerResources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: 1500m
+    memory: 2500Mi

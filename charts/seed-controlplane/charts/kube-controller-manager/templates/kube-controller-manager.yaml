@@ -92,13 +92,10 @@ spec:
           timeoutSeconds: 15
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        {{- if .Values.resources }}
         resources:
-          requests:
-            cpu: 200m
-            memory: 128Mi
-          limits:
-            cpu: 750m
-            memory: 1Gi
+{{ toYaml .Values.resources | indent 10 }}
+        {{- end }}
         volumeMounts:
         - name: ca
           mountPath: /srv/kubernetes/ca
