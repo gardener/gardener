@@ -22,6 +22,10 @@ containers:
       cpu: 200m
       memory: 512Mi
   env:
+  - name: MAX_BACKOFF_SEC
+    value: "60"
+  - name: MAX_TIME_SEC
+    value: "1800"
   - name: TF_STATE_CONFIG_MAP_NAME
     value: {{ .Values.names.state }}
 {{- if .Values.terraformVariablesEnvironment }}
