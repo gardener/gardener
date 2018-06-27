@@ -94,14 +94,7 @@ func (t *Terraformer) prepare() (int, error) {
 	}
 
 	// Clean up possible existing job/pod artifacts from previous runs
-	jobPodList, err := t.ListJobPods()
-	if err != nil {
-		return -1, err
-	}
-	if err := t.CleanupJob(jobPodList); err != nil {
-		return -1, err
-	}
-	if err := t.WaitForCleanEnvironment(); err != nil {
+	if err := t.EnsureCleanedUp(); err != nil {
 		return -1, err
 	}
 	return numberOfExistingResources, nil
@@ -126,4 +119,16 @@ func (t *Terraformer) cleanupConfiguration() error {
 	}
 
 	return nil
+}
+
+// EnsureCleanedUp deletes the job, pods, and waits until everything has been cleaned up.
+func (t *Terraformer) EnsureCleanedUp() error {
+	jobPodList, err := t.ListJobPods()
+	if err != nil {
+		return err
+	}
+	if err := t.CleanupJob(jobPodList); err != nil {
+		return err
+	}
+	return t.WaitForCleanEnvironment()
 }

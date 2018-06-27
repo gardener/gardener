@@ -55,6 +55,7 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 		tfvarsEnvironment []map[string]interface{}
 		err               error
 		targetType, _     = common.IdentifyAddressType(target)
+		tf                = terraformer.NewFromOperation(b.Operation, terraformerPurpose)
 	)
 
 	// If the DNS record is already registered properly then we skip the reconciliation to avoid running into
@@ -63,14 +64,16 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 	case "hostname":
 		if utils.LookupDNSHostCNAME(name) == fmt.Sprintf("%s.", target) {
 			b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
-			return nil
+			// Clean up possible existing Terraform job/pod artifacts from previous runs
+			return tf.EnsureCleanedUp()
 		}
 	case "ip":
 		values := utils.LookupDNSHost(name)
 		for _, v := range values {
 			if v == target {
 				b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
-				return nil
+				// Clean up possible existing Terraform job/pod artifacts from previous runs
+				return tf.EnsureCleanedUp()
 			}
 		}
 	}
@@ -103,8 +106,7 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 		return err
 	}
 
-	return terraformer.
-		NewFromOperation(b.Operation, terraformerPurpose).
+	return tf.
 		SetVariablesEnvironment(tfvarsEnvironment).
 		DefineConfig(chartName, b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})).
 		Apply()
