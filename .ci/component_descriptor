@@ -17,5 +17,4 @@ eval "$(jq -r ".images |
   \"${ADD_DEPENDENCIES_CMD} \\\\\n\" +
   join(\" \\\\\n\")" <<< "$images")"
 
-# cp after we are done patching
 cp "${BASE_DEFINITION_PATH}" "${COMPONENT_DESCRIPTOR_PATH}"

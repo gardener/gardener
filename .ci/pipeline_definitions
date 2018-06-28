@@ -29,20 +29,24 @@ gardener:
             dockerfile: 'build/gardener-controller-manager/Dockerfile'
     steps:
       check:
-        image: 'golang:1.9.4'
+        image: 'golang:1.10.2'
       test:
-        image: 'golang:1.9.4'
+        image: 'golang:1.10.2'
       build:
-        image: 'golang:1.9.4'
+        image: 'golang:1.10.2'
         output_dir: 'binary'
   variants:
-    head-update: ~
+    head-update:
+      traits:
+        component_descriptor: ~
     pull-request:
       traits:
         pull-request: ~
+        component_descriptor: ~
     release:
       traits:
         version:
           preprocess: 'finalise'
         release:
           nextversion: 'bump_minor'
+        component_descriptor: ~
