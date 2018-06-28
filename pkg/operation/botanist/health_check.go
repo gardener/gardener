@@ -160,10 +160,13 @@ func verifyPodHealthiness(condition *gardenv1beta1.Condition, k8sClient kubernet
 
 	for _, pod := range podList.Items {
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if !containerStatus.Ready {
+			if containerStatus.State.Waiting != nil {
+				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerWaiting", fmt.Sprintf("Container %s of pod %s is waiting to start.", containerStatus.Name, pod.Name)), true
+			}
+			if containerStatus.State.Running != nil && !containerStatus.Ready {
 				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotReady", fmt.Sprintf("Container %s of pod %s is not ready yet.", containerStatus.Name, pod.Name)), true
 			}
-			if containerStatus.State.Running == nil && containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason != "Completed" {
+			if containerStatus.State.Terminated != nil && containerStatus.State.Terminated.Reason != "Completed" {
 				return helper.ModifyCondition(condition, corev1.ConditionFalse, "ContainerNotRunning", fmt.Sprintf("Container %s of pod %s is not in running state.", containerStatus.Name, pod.Name)), true
 			}
 		}
