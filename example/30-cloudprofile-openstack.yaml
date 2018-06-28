@@ -17,9 +17,10 @@ spec:
       - name: MY-FLOATING-POOL
       kubernetes:
         versions:
-        - 1.10.1
-        - 1.9.7
-        - 1.8.11
+        - 1.11.0
+        - 1.10.5
+        - 1.9.8
+        - 1.8.14
       loadBalancerProviders:
       - name: haproxy
       machineImages:

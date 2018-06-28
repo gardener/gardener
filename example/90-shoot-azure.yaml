@@ -26,7 +26,7 @@ spec:
         autoScalerMin: 2
         autoScalerMax: 2
   kubernetes:
-    version: 1.10.1
+    version: 1.11.0
   dns:
     provider: aws-route53
     domain: johndoe-azure.garden-dev.example.com
