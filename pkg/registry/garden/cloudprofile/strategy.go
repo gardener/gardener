@@ -15,6 +15,8 @@
 package cloudprofile
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -22,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -38,7 +39,7 @@ func (cloudProfileStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (cloudProfileStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (cloudProfileStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	cloudprofile := obj.(*garden.CloudProfile)
 
 	finalizers := sets.NewString(cloudprofile.Finalizers...)
@@ -48,7 +49,7 @@ func (cloudProfileStrategy) PrepareForCreate(ctx genericapirequest.Context, obj 
 	cloudprofile.Finalizers = finalizers.UnsortedList()
 }
 
-func (cloudProfileStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (cloudProfileStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	cloudprofile := obj.(*garden.CloudProfile)
 	return validation.ValidateCloudProfile(cloudprofile)
 }
@@ -60,7 +61,7 @@ func (cloudProfileStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (cloudProfileStrategy) PrepareForUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) {
+func (cloudProfileStrategy) PrepareForUpdate(ctx context.Context, newObj, oldObj runtime.Object) {
 	_ = oldObj.(*garden.CloudProfile)
 	_ = newObj.(*garden.CloudProfile)
 }
@@ -69,7 +70,7 @@ func (cloudProfileStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
 
-func (cloudProfileStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (cloudProfileStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldProfile, newProfile := oldObj.(*garden.CloudProfile), newObj.(*garden.CloudProfile)
 	return validation.ValidateCloudProfileUpdate(newProfile, oldProfile)
 }

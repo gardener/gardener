@@ -15,6 +15,8 @@
 package shoot
 
 import (
+	"context"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -26,7 +28,6 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
 type shootStrategy struct {
@@ -41,7 +42,7 @@ func (shootStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (shootStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (shootStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	shoot := obj.(*garden.Shoot)
 
 	shoot.Generation = 1
@@ -54,7 +55,7 @@ func (shootStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime
 	shoot.Finalizers = finalizers.UnsortedList()
 }
 
-func (shootStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*garden.Shoot)
 	oldShoot := old.(*garden.Shoot)
 	newShoot.Status = oldShoot.Status
@@ -90,7 +91,7 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 	return false
 }
 
-func (shootStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (shootStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	shoot := obj.(*garden.Shoot)
 	return validation.ValidateShoot(shoot)
 }
@@ -102,7 +103,7 @@ func (shootStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (shootStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (shootStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	newShoot := newObj.(*garden.Shoot)
 	oldShoot := oldObj.(*garden.Shoot)
 	return validation.ValidateShootUpdate(newShoot, oldShoot)
@@ -119,12 +120,12 @@ type shootStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of Shoots.
 var StatusStrategy = shootStatusStrategy{Strategy}
 
-func (shootStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newShoot := obj.(*garden.Shoot)
 	oldShoot := old.(*garden.Shoot)
 	newShoot.Spec = oldShoot.Spec
 }
 
-func (shootStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (shootStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateShootStatusUpdate(obj.(*garden.Shoot).Status, old.(*garden.Shoot).Status)
 }

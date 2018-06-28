@@ -46,7 +46,7 @@ func (c *FakeShoots) List(opts v1.ListOptions) (result *garden.ShootList, err er
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &garden.ShootList{}
+	list := &garden.ShootList{ListMeta: obj.(*garden.ShootList).ListMeta}
 	for _, item := range obj.(*garden.ShootList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

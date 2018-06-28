@@ -15,6 +15,7 @@
 package backupinfrastructure
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -22,18 +23,17 @@ import (
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 // Registry is an interface for things that know how to store BackupInfrastructures.
 type Registry interface {
-	ListBackupInfrastructures(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.BackupInfrastructureList, error)
-	WatchBackupInfrastructures(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
-	GetBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructureID string, options *metav1.GetOptions) (*garden.BackupInfrastructure, error)
-	CreateBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc) (*garden.BackupInfrastructure, error)
-	UpdateBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.BackupInfrastructure, error)
-	DeleteBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructureID string) error
+	ListBackupInfrastructures(ctx context.Context, options *metainternalversion.ListOptions) (*garden.BackupInfrastructureList, error)
+	WatchBackupInfrastructures(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
+	GetBackupInfrastructure(ctx context.Context, backupInfrastructureID string, options *metav1.GetOptions) (*garden.BackupInfrastructure, error)
+	CreateBackupInfrastructure(ctx context.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc) (*garden.BackupInfrastructure, error)
+	UpdateBackupInfrastructure(ctx context.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.BackupInfrastructure, error)
+	DeleteBackupInfrastructure(ctx context.Context, backupInfrastructureID string) error
 }
 
 // storage puts strong typing around storage calls
@@ -47,7 +47,7 @@ func NewRegistry(s rest.StandardStorage) Registry {
 	return &storage{s}
 }
 
-func (s *storage) ListBackupInfrastructures(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.BackupInfrastructureList, error) {
+func (s *storage) ListBackupInfrastructures(ctx context.Context, options *metainternalversion.ListOptions) (*garden.BackupInfrastructureList, error) {
 	if options != nil && options.FieldSelector != nil && !options.FieldSelector.Empty() {
 		return nil, fmt.Errorf("field selector not supported yet")
 	}
@@ -58,11 +58,11 @@ func (s *storage) ListBackupInfrastructures(ctx genericapirequest.Context, optio
 	return obj.(*garden.BackupInfrastructureList), err
 }
 
-func (s *storage) WatchBackupInfrastructures(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+func (s *storage) WatchBackupInfrastructures(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	return s.Watch(ctx, options)
 }
 
-func (s *storage) GetBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructureID string, options *metav1.GetOptions) (*garden.BackupInfrastructure, error) {
+func (s *storage) GetBackupInfrastructure(ctx context.Context, backupInfrastructureID string, options *metav1.GetOptions) (*garden.BackupInfrastructure, error) {
 	obj, err := s.Get(ctx, backupInfrastructureID, options)
 	if err != nil {
 		return nil, errors.NewNotFound(garden.Resource("backupinfrastructures"), backupInfrastructureID)
@@ -70,7 +70,7 @@ func (s *storage) GetBackupInfrastructure(ctx genericapirequest.Context, backupI
 	return obj.(*garden.BackupInfrastructure), nil
 }
 
-func (s *storage) CreateBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc) (*garden.BackupInfrastructure, error) {
+func (s *storage) CreateBackupInfrastructure(ctx context.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc) (*garden.BackupInfrastructure, error) {
 	obj, err := s.Create(ctx, backupInfrastructure, rest.ValidateAllObjectFunc, false)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *storage) CreateBackupInfrastructure(ctx genericapirequest.Context, back
 	return obj.(*garden.BackupInfrastructure), nil
 }
 
-func (s *storage) UpdateBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.BackupInfrastructure, error) {
+func (s *storage) UpdateBackupInfrastructure(ctx context.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.BackupInfrastructure, error) {
 	obj, _, err := s.Update(ctx, backupInfrastructure.Name, rest.DefaultUpdatedObjectInfo(backupInfrastructure), createValidation, updateValidation)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (s *storage) UpdateBackupInfrastructure(ctx genericapirequest.Context, back
 	return obj.(*garden.BackupInfrastructure), nil
 }
 
-func (s *storage) DeleteBackupInfrastructure(ctx genericapirequest.Context, backupInfrastructureID string) error {
+func (s *storage) DeleteBackupInfrastructure(ctx context.Context, backupInfrastructureID string) error {
 	_, _, err := s.Delete(ctx, backupInfrastructureID, nil)
 	return err
 }

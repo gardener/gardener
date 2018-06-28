@@ -14,23 +14,23 @@ ignored = [
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.10.3"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.10.3"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.10.3"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.10.3"
+  version = "kubernetes-1.11.0"
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.10.3"
+  version = "kubernetes-1.11.0"
 
 [[constraint]]
   name = "github.com/gardener/machine-controller-manager"
@@ -68,6 +68,21 @@ ignored = [
   name = "github.com/robfig/cron"
   revision = "2315d5715e36303a941d907f038da7f7c44c773b"
 
+[[override]]
+  name = "github.com/coreos/etcd"
+  version = "3.2.13"
+
+# https://github.com/kubernetes/kubernetes/issues/17162
+# https://github.com/kubernetes-incubator/service-catalog/pull/1204
+[[override]]
+  name = "github.com/golang/glog"
+  revision = "44145f04b68cf362d9c4df2182967c2275eaefed"
+
+# https://github.com/kubernetes/apimachinery/issues/46
+[[override]]
+  name = "github.com/json-iterator/go"
+  revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
+
 # Dependencies for testing purposes only
 [[constraint]]
   name = "github.com/onsi/gomega"
@@ -76,16 +91,6 @@ ignored = [
 [[constraint]]
   name = "github.com/onsi/ginkgo"
   version = "~1.4.0"
-
-# https://github.com/kubernetes/kubernetes/issues/17162
-# https://github.com/kubernetes-incubator/service-catalog/pull/1204
-[[override]]
-  name = "github.com/golang/glog"
-  revision = "44145f04b68cf362d9c4df2182967c2275eaefed"
-
-[[override]]
-  name = "github.com/coreos/etcd"
-  version = "3.2.13"
 
 [prune]
   unused-packages = true

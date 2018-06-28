@@ -15,6 +15,8 @@
 package seed
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -23,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -39,7 +40,7 @@ func (seedStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (seedStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (seedStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	seed := obj.(*garden.Seed)
 
 	seed.Generation = 1
@@ -52,7 +53,7 @@ func (seedStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.
 	seed.Finalizers = finalizers.UnsortedList()
 }
 
-func (seedStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (seedStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*garden.Seed)
 	oldSeed := old.(*garden.Seed)
 	newSeed.Status = oldSeed.Status
@@ -62,7 +63,7 @@ func (seedStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old run
 	}
 }
 
-func (seedStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (seedStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	seed := obj.(*garden.Seed)
 	return validation.ValidateSeed(seed)
 }
@@ -78,7 +79,7 @@ func (seedStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
 
-func (seedStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (seedStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldSeed, newSeed := oldObj.(*garden.Seed), newObj.(*garden.Seed)
 	return validation.ValidateSeedUpdate(newSeed, oldSeed)
 }
@@ -90,12 +91,12 @@ type seedStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of Seeds.
 var StatusStrategy = seedStatusStrategy{Strategy}
 
-func (seedStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (seedStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newSeed := obj.(*garden.Seed)
 	oldSeed := old.(*garden.Seed)
 	newSeed.Spec = oldSeed.Spec
 }
 
-func (seedStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (seedStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateSeedStatusUpdate(obj.(*garden.Seed), old.(*garden.Seed))
 }

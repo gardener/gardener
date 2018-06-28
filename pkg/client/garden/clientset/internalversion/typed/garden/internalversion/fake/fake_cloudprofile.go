@@ -43,7 +43,7 @@ func (c *FakeCloudProfiles) List(opts v1.ListOptions) (result *garden.CloudProfi
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &garden.CloudProfileList{}
+	list := &garden.CloudProfileList{ListMeta: obj.(*garden.CloudProfileList).ListMeta}
 	for _, item := range obj.(*garden.CloudProfileList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

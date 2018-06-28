@@ -62,7 +62,7 @@ func (c *FakeGCPMachineClasses) List(opts v1.ListOptions) (result *v1alpha1.GCPM
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.GCPMachineClassList{}
+	list := &v1alpha1.GCPMachineClassList{ListMeta: obj.(*v1alpha1.GCPMachineClassList).ListMeta}
 	for _, item := range obj.(*v1alpha1.GCPMachineClassList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

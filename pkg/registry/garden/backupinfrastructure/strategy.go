@@ -15,6 +15,8 @@
 package backupinfrastructure
 
 import (
+	"context"
+
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -25,7 +27,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 )
 
 type backupInfrastructureStrategy struct {
@@ -40,7 +41,7 @@ func (backupInfrastructureStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (backupInfrastructureStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (backupInfrastructureStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	backupInfrastructure := obj.(*garden.BackupInfrastructure)
 
 	backupInfrastructure.Generation = 1
@@ -53,7 +54,7 @@ func (backupInfrastructureStrategy) PrepareForCreate(ctx genericapirequest.Conte
 	backupInfrastructure.Finalizers = finalizers.UnsortedList()
 }
 
-func (backupInfrastructureStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (backupInfrastructureStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newBackupInfrastructure := obj.(*garden.BackupInfrastructure)
 	oldBackupInfrastructure := old.(*garden.BackupInfrastructure)
 	newBackupInfrastructure.Status = oldBackupInfrastructure.Status
@@ -77,7 +78,7 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 	return false
 }
 
-func (backupInfrastructureStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (backupInfrastructureStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	backupInfrastructure := obj.(*garden.BackupInfrastructure)
 	return validation.ValidateBackupInfrastructure(backupInfrastructure)
 }
@@ -89,7 +90,7 @@ func (backupInfrastructureStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (backupInfrastructureStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (backupInfrastructureStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBackupInfrastructure, newBackupInfrastructure := oldObj.(*garden.BackupInfrastructure), newObj.(*garden.BackupInfrastructure)
 	return validation.ValidateBackupInfrastructureUpdate(newBackupInfrastructure, oldBackupInfrastructure)
 }
@@ -105,12 +106,12 @@ type backupInfrastructureStatusStrategy struct {
 // StatusStrategy defines the storage strategy for the status subresource of BackupInfrastructures.
 var StatusStrategy = backupInfrastructureStatusStrategy{Strategy}
 
-func (backupInfrastructureStatusStrategy) PrepareForUpdate(ctx genericapirequest.Context, obj, old runtime.Object) {
+func (backupInfrastructureStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
 	newBackupInfrastructure := obj.(*garden.BackupInfrastructure)
 	oldBackupInfrastructure := old.(*garden.BackupInfrastructure)
 	newBackupInfrastructure.Spec = oldBackupInfrastructure.Spec
 }
 
-func (backupInfrastructureStatusStrategy) ValidateUpdate(ctx genericapirequest.Context, obj, old runtime.Object) field.ErrorList {
+func (backupInfrastructureStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateBackupInfrastructureStatusUpdate(obj.(*garden.BackupInfrastructure), old.(*garden.BackupInfrastructure))
 }

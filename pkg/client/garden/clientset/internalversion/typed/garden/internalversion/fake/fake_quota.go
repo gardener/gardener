@@ -46,7 +46,7 @@ func (c *FakeQuotas) List(opts v1.ListOptions) (result *garden.QuotaList, err er
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &garden.QuotaList{}
+	list := &garden.QuotaList{ListMeta: obj.(*garden.QuotaList).ListMeta}
 	for _, item := range obj.(*garden.QuotaList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

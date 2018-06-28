@@ -15,6 +15,8 @@
 package secretbinding
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -22,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -38,7 +39,7 @@ func (secretBindingStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (secretBindingStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (secretBindingStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	binding := obj.(*garden.SecretBinding)
 
 	finalizers := sets.NewString(binding.Finalizers...)
@@ -48,7 +49,7 @@ func (secretBindingStrategy) PrepareForCreate(ctx genericapirequest.Context, obj
 	binding.Finalizers = finalizers.UnsortedList()
 }
 
-func (secretBindingStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (secretBindingStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	binding := obj.(*garden.SecretBinding)
 	return validation.ValidateSecretBinding(binding)
 }
@@ -60,7 +61,7 @@ func (secretBindingStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (secretBindingStrategy) PrepareForUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) {
+func (secretBindingStrategy) PrepareForUpdate(ctx context.Context, newObj, oldObj runtime.Object) {
 	_ = oldObj.(*garden.SecretBinding)
 	_ = newObj.(*garden.SecretBinding)
 }
@@ -69,7 +70,7 @@ func (secretBindingStrategy) AllowUnconditionalUpdate() bool {
 	return true
 }
 
-func (secretBindingStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (secretBindingStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldBinding, newBinding := oldObj.(*garden.SecretBinding), newObj.(*garden.SecretBinding)
 	return validation.ValidateSecretBindingUpdate(newBinding, oldBinding)
 }

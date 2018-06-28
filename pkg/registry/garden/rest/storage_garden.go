@@ -24,6 +24,7 @@ import (
 	secretbinding "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
 	shootstore "github.com/gardener/gardener/pkg/registry/garden/shoot/storage"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/registry/generic"
 	"k8s.io/apiserver/pkg/registry/rest"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -34,11 +35,8 @@ type StorageProvider struct{}
 
 // NewRESTStorage creates a new API group info object and registers the v1beta1 Garden storage.
 func (p StorageProvider) NewRESTStorage(restOptionsGetter generic.RESTOptionsGetter) genericapiserver.APIGroupInfo {
-	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(garden.GroupName, api.Registry, api.Scheme, api.ParameterCodec, api.Codecs)
-
+	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(garden.GroupName, api.Scheme, metav1.ParameterCodec, api.Codecs)
 	apiGroupInfo.VersionedResourcesStorageMap[gardenv1beta1.SchemeGroupVersion.Version] = p.v1beta1Storage(restOptionsGetter)
-	apiGroupInfo.GroupMeta.GroupVersion = gardenv1beta1.SchemeGroupVersion
-
 	return apiGroupInfo
 }
 

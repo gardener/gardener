@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -22,18 +23,17 @@ import (
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 // Registry is an interface for things that know how to store Shoots.
 type Registry interface {
-	ListShoots(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.ShootList, error)
-	WatchShoots(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
-	GetShoot(ctx genericapirequest.Context, shootID string, options *metav1.GetOptions) (*garden.Shoot, error)
-	CreateShoot(ctx genericapirequest.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc) (*garden.Shoot, error)
-	UpdateShoot(ctx genericapirequest.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Shoot, error)
-	DeleteShoot(ctx genericapirequest.Context, shootID string) error
+	ListShoots(ctx context.Context, options *metainternalversion.ListOptions) (*garden.ShootList, error)
+	WatchShoots(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
+	GetShoot(ctx context.Context, shootID string, options *metav1.GetOptions) (*garden.Shoot, error)
+	CreateShoot(ctx context.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc) (*garden.Shoot, error)
+	UpdateShoot(ctx context.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Shoot, error)
+	DeleteShoot(ctx context.Context, shootID string) error
 }
 
 // storage puts strong typing around storage calls
@@ -47,7 +47,7 @@ func NewRegistry(s rest.StandardStorage) Registry {
 	return &storage{s}
 }
 
-func (s *storage) ListShoots(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.ShootList, error) {
+func (s *storage) ListShoots(ctx context.Context, options *metainternalversion.ListOptions) (*garden.ShootList, error) {
 	if options != nil && options.FieldSelector != nil && !options.FieldSelector.Empty() {
 		return nil, fmt.Errorf("field selector not supported yet")
 	}
@@ -58,11 +58,11 @@ func (s *storage) ListShoots(ctx genericapirequest.Context, options *metainterna
 	return obj.(*garden.ShootList), err
 }
 
-func (s *storage) WatchShoots(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+func (s *storage) WatchShoots(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	return s.Watch(ctx, options)
 }
 
-func (s *storage) GetShoot(ctx genericapirequest.Context, shootID string, options *metav1.GetOptions) (*garden.Shoot, error) {
+func (s *storage) GetShoot(ctx context.Context, shootID string, options *metav1.GetOptions) (*garden.Shoot, error) {
 	obj, err := s.Get(ctx, shootID, options)
 	if err != nil {
 		return nil, errors.NewNotFound(garden.Resource("shoots"), shootID)
@@ -70,7 +70,7 @@ func (s *storage) GetShoot(ctx genericapirequest.Context, shootID string, option
 	return obj.(*garden.Shoot), nil
 }
 
-func (s *storage) CreateShoot(ctx genericapirequest.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc) (*garden.Shoot, error) {
+func (s *storage) CreateShoot(ctx context.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc) (*garden.Shoot, error) {
 	obj, err := s.Create(ctx, shoot, rest.ValidateAllObjectFunc, false)
 	if err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (s *storage) CreateShoot(ctx genericapirequest.Context, shoot *garden.Shoot
 	return obj.(*garden.Shoot), nil
 }
 
-func (s *storage) UpdateShoot(ctx genericapirequest.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Shoot, error) {
+func (s *storage) UpdateShoot(ctx context.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Shoot, error) {
 	obj, _, err := s.Update(ctx, shoot.Name, rest.DefaultUpdatedObjectInfo(shoot), createValidation, updateValidation)
 	if err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (s *storage) UpdateShoot(ctx genericapirequest.Context, shoot *garden.Shoot
 	return obj.(*garden.Shoot), nil
 }
 
-func (s *storage) DeleteShoot(ctx genericapirequest.Context, shootID string) error {
+func (s *storage) DeleteShoot(ctx context.Context, shootID string) error {
 	_, _, err := s.Delete(ctx, shootID, nil)
 	return err
 }

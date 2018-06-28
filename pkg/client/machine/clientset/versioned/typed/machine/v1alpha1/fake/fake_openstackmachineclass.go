@@ -62,7 +62,7 @@ func (c *FakeOpenStackMachineClasses) List(opts v1.ListOptions) (result *v1alpha
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.OpenStackMachineClassList{}
+	list := &v1alpha1.OpenStackMachineClassList{ListMeta: obj.(*v1alpha1.OpenStackMachineClassList).ListMeta}
 	for _, item := range obj.(*v1alpha1.OpenStackMachineClassList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

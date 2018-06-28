@@ -62,7 +62,7 @@ func (c *FakeAWSMachineClasses) List(opts v1.ListOptions) (result *v1alpha1.AWSM
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1alpha1.AWSMachineClassList{}
+	list := &v1alpha1.AWSMachineClassList{ListMeta: obj.(*v1alpha1.AWSMachineClassList).ListMeta}
 	for _, item := range obj.(*v1alpha1.AWSMachineClassList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

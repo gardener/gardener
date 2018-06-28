@@ -46,7 +46,7 @@ func (c *FakeSecretBindings) List(opts v1.ListOptions) (result *v1beta1.SecretBi
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &v1beta1.SecretBindingList{}
+	list := &v1beta1.SecretBindingList{ListMeta: obj.(*v1beta1.SecretBindingList).ListMeta}
 	for _, item := range obj.(*v1beta1.SecretBindingList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

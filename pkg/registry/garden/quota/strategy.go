@@ -15,6 +15,8 @@
 package quota
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -22,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/storage/names"
 )
 
@@ -38,7 +39,7 @@ func (quotaStrategy) NamespaceScoped() bool {
 	return true
 }
 
-func (quotaStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime.Object) {
+func (quotaStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	quota := obj.(*garden.Quota)
 
 	finalizers := sets.NewString(quota.Finalizers...)
@@ -48,7 +49,7 @@ func (quotaStrategy) PrepareForCreate(ctx genericapirequest.Context, obj runtime
 	quota.Finalizers = finalizers.UnsortedList()
 }
 
-func (quotaStrategy) Validate(ctx genericapirequest.Context, obj runtime.Object) field.ErrorList {
+func (quotaStrategy) Validate(ctx context.Context, obj runtime.Object) field.ErrorList {
 	quota := obj.(*garden.Quota)
 	return validation.ValidateQuota(quota)
 }
@@ -60,12 +61,12 @@ func (quotaStrategy) AllowCreateOnUpdate() bool {
 	return false
 }
 
-func (quotaStrategy) PrepareForUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) {
+func (quotaStrategy) PrepareForUpdate(ctx context.Context, newObj, oldObj runtime.Object) {
 	_ = oldObj.(*garden.Quota)
 	_ = newObj.(*garden.Quota)
 }
 
-func (quotaStrategy) ValidateUpdate(ctx genericapirequest.Context, newObj, oldObj runtime.Object) field.ErrorList {
+func (quotaStrategy) ValidateUpdate(ctx context.Context, newObj, oldObj runtime.Object) field.ErrorList {
 	oldQuota, newQuota := oldObj.(*garden.Quota), newObj.(*garden.Quota)
 	return validation.ValidateQuotaUpdate(newQuota, oldQuota)
 }

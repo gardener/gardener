@@ -15,22 +15,23 @@
 package secretbinding
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 // Registry is an interface for things that know how to store SecretBindings.
 type Registry interface {
-	ListSecretBindings(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.SecretBindingList, error)
-	WatchSecretBindings(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
-	GetSecretBinding(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (*garden.SecretBinding, error)
-	CreateSecretBinding(ctx genericapirequest.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc) (*garden.SecretBinding, error)
-	UpdateSecretBinding(ctx genericapirequest.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.SecretBinding, error)
-	DeleteSecretBinding(ctx genericapirequest.Context, name string) error
+	ListSecretBindings(ctx context.Context, options *metainternalversion.ListOptions) (*garden.SecretBindingList, error)
+	WatchSecretBindings(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
+	GetSecretBinding(ctx context.Context, name string, options *metav1.GetOptions) (*garden.SecretBinding, error)
+	CreateSecretBinding(ctx context.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc) (*garden.SecretBinding, error)
+	UpdateSecretBinding(ctx context.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.SecretBinding, error)
+	DeleteSecretBinding(ctx context.Context, name string) error
 }
 
 // storage puts strong typing around storage calls
@@ -44,7 +45,7 @@ func NewRegistry(s rest.StandardStorage) Registry {
 	return &storage{s}
 }
 
-func (s *storage) ListSecretBindings(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.SecretBindingList, error) {
+func (s *storage) ListSecretBindings(ctx context.Context, options *metainternalversion.ListOptions) (*garden.SecretBindingList, error) {
 	obj, err := s.List(ctx, options)
 	if err != nil {
 		return nil, err
@@ -53,11 +54,11 @@ func (s *storage) ListSecretBindings(ctx genericapirequest.Context, options *met
 	return obj.(*garden.SecretBindingList), err
 }
 
-func (s *storage) WatchSecretBindings(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+func (s *storage) WatchSecretBindings(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	return s.Watch(ctx, options)
 }
 
-func (s *storage) GetSecretBinding(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (*garden.SecretBinding, error) {
+func (s *storage) GetSecretBinding(ctx context.Context, name string, options *metav1.GetOptions) (*garden.SecretBinding, error) {
 	obj, err := s.Get(ctx, name, options)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (s *storage) GetSecretBinding(ctx genericapirequest.Context, name string, o
 	return obj.(*garden.SecretBinding), nil
 }
 
-func (s *storage) CreateSecretBinding(ctx genericapirequest.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc) (*garden.SecretBinding, error) {
+func (s *storage) CreateSecretBinding(ctx context.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc) (*garden.SecretBinding, error) {
 	obj, err := s.Create(ctx, binding, createValidation, false)
 	if err != nil {
 		return nil, err
@@ -75,7 +76,7 @@ func (s *storage) CreateSecretBinding(ctx genericapirequest.Context, binding *ga
 	return obj.(*garden.SecretBinding), nil
 }
 
-func (s *storage) UpdateSecretBinding(ctx genericapirequest.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.SecretBinding, error) {
+func (s *storage) UpdateSecretBinding(ctx context.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.SecretBinding, error) {
 	obj, _, err := s.Update(ctx, binding.Name, rest.DefaultUpdatedObjectInfo(binding), createValidation, updateValidation)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (s *storage) UpdateSecretBinding(ctx genericapirequest.Context, binding *ga
 	return obj.(*garden.SecretBinding), nil
 }
 
-func (s *storage) DeleteSecretBinding(ctx genericapirequest.Context, name string) error {
+func (s *storage) DeleteSecretBinding(ctx context.Context, name string) error {
 	_, _, err := s.Delete(ctx, name, nil)
 	return err
 }

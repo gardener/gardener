@@ -46,7 +46,7 @@ func (c *FakeSecretBindings) List(opts v1.ListOptions) (result *garden.SecretBin
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &garden.SecretBindingList{}
+	list := &garden.SecretBindingList{ListMeta: obj.(*garden.SecretBindingList).ListMeta}
 	for _, item := range obj.(*garden.SecretBindingList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

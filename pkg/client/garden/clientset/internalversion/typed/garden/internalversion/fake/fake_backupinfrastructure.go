@@ -46,7 +46,7 @@ func (c *FakeBackupInfrastructures) List(opts v1.ListOptions) (result *garden.Ba
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &garden.BackupInfrastructureList{}
+	list := &garden.BackupInfrastructureList{ListMeta: obj.(*garden.BackupInfrastructureList).ListMeta}
 	for _, item := range obj.(*garden.BackupInfrastructureList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

@@ -15,22 +15,23 @@
 package quota
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 // Registry is an interface for things that know how to store Quotas.
 type Registry interface {
-	ListQuotas(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.QuotaList, error)
-	WatchQuotas(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
-	GetQuota(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (*garden.Quota, error)
-	CreateQuota(ctx genericapirequest.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc) (*garden.Quota, error)
-	UpdateQuota(ctx genericapirequest.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Quota, error)
-	DeleteQuota(ctx genericapirequest.Context, name string) error
+	ListQuotas(ctx context.Context, options *metainternalversion.ListOptions) (*garden.QuotaList, error)
+	WatchQuotas(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
+	GetQuota(ctx context.Context, name string, options *metav1.GetOptions) (*garden.Quota, error)
+	CreateQuota(ctx context.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc) (*garden.Quota, error)
+	UpdateQuota(ctx context.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Quota, error)
+	DeleteQuota(ctx context.Context, name string) error
 }
 
 // storage puts strong typing around storage calls
@@ -44,7 +45,7 @@ func NewRegistry(s rest.StandardStorage) Registry {
 	return &storage{s}
 }
 
-func (s *storage) ListQuotas(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.QuotaList, error) {
+func (s *storage) ListQuotas(ctx context.Context, options *metainternalversion.ListOptions) (*garden.QuotaList, error) {
 	obj, err := s.List(ctx, options)
 	if err != nil {
 		return nil, err
@@ -53,11 +54,11 @@ func (s *storage) ListQuotas(ctx genericapirequest.Context, options *metainterna
 	return obj.(*garden.QuotaList), err
 }
 
-func (s *storage) WatchQuotas(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+func (s *storage) WatchQuotas(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	return s.Watch(ctx, options)
 }
 
-func (s *storage) GetQuota(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (*garden.Quota, error) {
+func (s *storage) GetQuota(ctx context.Context, name string, options *metav1.GetOptions) (*garden.Quota, error) {
 	obj, err := s.Get(ctx, name, options)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (s *storage) GetQuota(ctx genericapirequest.Context, name string, options *
 	return obj.(*garden.Quota), nil
 }
 
-func (s *storage) CreateQuota(ctx genericapirequest.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc) (*garden.Quota, error) {
+func (s *storage) CreateQuota(ctx context.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc) (*garden.Quota, error) {
 	obj, err := s.Create(ctx, quota, createValidation, false)
 	if err != nil {
 		return nil, err
@@ -75,7 +76,7 @@ func (s *storage) CreateQuota(ctx genericapirequest.Context, quota *garden.Quota
 	return obj.(*garden.Quota), nil
 }
 
-func (s *storage) UpdateQuota(ctx genericapirequest.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Quota, error) {
+func (s *storage) UpdateQuota(ctx context.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Quota, error) {
 	obj, _, err := s.Update(ctx, quota.Name, rest.DefaultUpdatedObjectInfo(quota), createValidation, updateValidation)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (s *storage) UpdateQuota(ctx genericapirequest.Context, quota *garden.Quota
 	return obj.(*garden.Quota), nil
 }
 
-func (s *storage) DeleteQuota(ctx genericapirequest.Context, name string) error {
+func (s *storage) DeleteQuota(ctx context.Context, name string) error {
 	_, _, err := s.Delete(ctx, name, nil)
 	return err
 }

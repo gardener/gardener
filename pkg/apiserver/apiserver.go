@@ -61,7 +61,7 @@ func (cfg *Config) Complete() CompletedConfig {
 
 // New returns a new instance of GardenerServer from the given config.
 func (c completedConfig) New() (*GardenerServer, error) {
-	genericServer, err := c.GenericConfig.New("gardener-apiserver", genericapiserver.EmptyDelegate)
+	genericServer, err := c.GenericConfig.New("gardener-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}

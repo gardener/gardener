@@ -43,7 +43,7 @@ func (c *FakeSeeds) List(opts v1.ListOptions) (result *garden.SeedList, err erro
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &garden.SeedList{}
+	list := &garden.SeedList{ListMeta: obj.(*garden.SeedList).ListMeta}
 	for _, item := range obj.(*garden.SeedList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)

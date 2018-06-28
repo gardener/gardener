@@ -15,22 +15,23 @@
 package seed
 
 import (
+	"context"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	metainternalversion "k8s.io/apimachinery/pkg/apis/meta/internalversion"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	genericapirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/apiserver/pkg/registry/rest"
 )
 
 // Registry is an interface for things that know how to store Seeds.
 type Registry interface {
-	ListSeeds(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.SeedList, error)
-	WatchSeeds(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
-	GetSeed(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (*garden.Seed, error)
-	CreateSeed(ctx genericapirequest.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc) (*garden.Seed, error)
-	UpdateSeed(ctx genericapirequest.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Seed, error)
-	DeleteSeed(ctx genericapirequest.Context, name string) error
+	ListSeeds(ctx context.Context, options *metainternalversion.ListOptions) (*garden.SeedList, error)
+	WatchSeeds(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error)
+	GetSeed(ctx context.Context, name string, options *metav1.GetOptions) (*garden.Seed, error)
+	CreateSeed(ctx context.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc) (*garden.Seed, error)
+	UpdateSeed(ctx context.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Seed, error)
+	DeleteSeed(ctx context.Context, name string) error
 }
 
 // storage puts strong typing around storage calls
@@ -44,7 +45,7 @@ func NewRegistry(s rest.StandardStorage) Registry {
 	return &storage{s}
 }
 
-func (s *storage) ListSeeds(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (*garden.SeedList, error) {
+func (s *storage) ListSeeds(ctx context.Context, options *metainternalversion.ListOptions) (*garden.SeedList, error) {
 	obj, err := s.List(ctx, options)
 	if err != nil {
 		return nil, err
@@ -53,11 +54,11 @@ func (s *storage) ListSeeds(ctx genericapirequest.Context, options *metainternal
 	return obj.(*garden.SeedList), err
 }
 
-func (s *storage) WatchSeeds(ctx genericapirequest.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
+func (s *storage) WatchSeeds(ctx context.Context, options *metainternalversion.ListOptions) (watch.Interface, error) {
 	return s.Watch(ctx, options)
 }
 
-func (s *storage) GetSeed(ctx genericapirequest.Context, name string, options *metav1.GetOptions) (*garden.Seed, error) {
+func (s *storage) GetSeed(ctx context.Context, name string, options *metav1.GetOptions) (*garden.Seed, error) {
 	obj, err := s.Get(ctx, name, options)
 	if err != nil {
 		return nil, err
@@ -66,7 +67,7 @@ func (s *storage) GetSeed(ctx genericapirequest.Context, name string, options *m
 	return obj.(*garden.Seed), nil
 }
 
-func (s *storage) CreateSeed(ctx genericapirequest.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc) (*garden.Seed, error) {
+func (s *storage) CreateSeed(ctx context.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc) (*garden.Seed, error) {
 	obj, err := s.Create(ctx, seed, createValidation, false)
 	if err != nil {
 		return nil, err
@@ -75,7 +76,7 @@ func (s *storage) CreateSeed(ctx genericapirequest.Context, seed *garden.Seed, c
 	return obj.(*garden.Seed), nil
 }
 
-func (s *storage) UpdateSeed(ctx genericapirequest.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Seed, error) {
+func (s *storage) UpdateSeed(ctx context.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Seed, error) {
 	obj, _, err := s.Update(ctx, seed.Name, rest.DefaultUpdatedObjectInfo(seed), createValidation, updateValidation)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (s *storage) UpdateSeed(ctx genericapirequest.Context, seed *garden.Seed, c
 	return obj.(*garden.Seed), nil
 }
 
-func (s *storage) DeleteSeed(ctx genericapirequest.Context, name string) error {
+func (s *storage) DeleteSeed(ctx context.Context, name string) error {
 	_, _, err := s.Delete(ctx, name, nil)
 	return err
 }

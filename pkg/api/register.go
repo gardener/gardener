@@ -16,8 +16,6 @@ package api
 
 import (
 	"github.com/gardener/gardener/pkg/apis/garden/install"
-	"k8s.io/apimachinery/pkg/apimachinery/announced"
-	"k8s.io/apimachinery/pkg/apimachinery/registered"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -25,23 +23,14 @@ import (
 )
 
 var (
-	groupFactoryRegistry = make(announced.APIGroupFactoryRegistry)
-
-	// Registry is an API registration manager.
-	Registry = registered.NewOrDie("")
-
 	// Scheme is a new API scheme.
 	Scheme = runtime.NewScheme()
-
-	// ParameterCodec is capable of transforming url values into versioned objects.
-	ParameterCodec = runtime.NewParameterCodec(Scheme)
-
 	// Codecs are used for serialization.
 	Codecs = serializer.NewCodecFactory(Scheme)
 )
 
 func init() {
-	install.Install(groupFactoryRegistry, Registry, Scheme)
+	install.Install(Scheme)
 
 	metav1.AddToGroupVersion(Scheme, schema.GroupVersion{Version: "v1"})
 
