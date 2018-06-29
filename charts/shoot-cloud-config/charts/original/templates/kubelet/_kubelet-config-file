@@ -25,6 +25,7 @@ cpuCFSQuota: true
 cpuManagerPolicy: none
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true
+enableDebuggingHandlers: true
 enableServer: true
 enforceNodeAllocatable:
 - pods
