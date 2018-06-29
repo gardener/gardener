@@ -168,15 +168,10 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
+  resourceNames:
+  - garden-project-members
   verbs:
-  - create
-  - delete
-  - deletecollection
   - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - garden.sapcloud.io
   resources:
