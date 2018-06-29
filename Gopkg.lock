@@ -521,7 +521,7 @@
     "trace",
     "websocket"
   ]
-  revision = "e514e69ffb8bc3c76a71ae40de0118d794855992"
+  revision = "4cb1c02c05b0e749b0365f61ae859a8e0cfceed9"
 
 [[projects]]
   branch = "master"
@@ -580,7 +580,7 @@
     "imports",
     "internal/fastwalk"
   ]
-  revision = "16699b2d33e2654d743c50b4525ab7e73e346238"
+  revision = "1c99e1239a0c8b0e59c34000995c4e319b7702ca"
 
 [[projects]]
   branch = "master"
@@ -685,6 +685,7 @@
     "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
+    "pkg/api/meta/table",
     "pkg/api/resource",
     "pkg/api/validation",
     "pkg/api/validation/path",
@@ -710,6 +711,7 @@
     "pkg/util/cache",
     "pkg/util/clock",
     "pkg/util/diff",
+    "pkg/util/duration",
     "pkg/util/errors",
     "pkg/util/framer",
     "pkg/util/httpstream",
@@ -998,7 +1000,7 @@
     "util/workqueue"
   ]
   revision = "7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65"
-  version = "kubernetes-1.11.0"
+  version = "v8.0.0"
 
 [[projects]]
   branch = "release-1.11"
@@ -1065,18 +1067,20 @@
   branch = "master"
   name = "k8s.io/kube-openapi"
   packages = [
+    "cmd/openapi-gen/args",
     "pkg/builder",
     "pkg/common",
     "pkg/generators",
+    "pkg/generators/rules",
     "pkg/handler",
     "pkg/util",
     "pkg/util/proto"
   ]
-  revision = "4cac20de16b951c103aa40c4bafbc8cefdd18a12"
+  revision = "d83b052f768a50a309c692a9c271da3f3276ff88"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "44fda5ac0d45aa79eb9940827aa2971129f0872bd203f117afe4b09993d62645"
+  inputs-digest = "3121c3aed1203fc89899021b5cd3099263234337e124dd82c5d3a2e6ff843103"
   solver-name = "gps-cdcl"
   solver-version = 1

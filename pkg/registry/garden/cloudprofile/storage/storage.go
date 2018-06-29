@@ -53,6 +53,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		CreateStrategy: cloudprofile.Strategy,
 		UpdateStrategy: cloudprofile.Strategy,
 		DeleteStrategy: cloudprofile.Strategy,
+
+		TableConvertor: newTableConvertor(),
 	}
 	options := &generic.StoreOptions{RESTOptions: optsGetter}
 	if err := store.CompleteWithOptions(options); err != nil {

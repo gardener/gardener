@@ -58,6 +58,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 		CreateStrategy: backupinfrastructure.Strategy,
 		UpdateStrategy: backupinfrastructure.Strategy,
 		DeleteStrategy: backupinfrastructure.Strategy,
+
+		TableConvertor: newTableConvertor(),
 	}
 	options := &generic.StoreOptions{RESTOptions: optsGetter}
 	if err := store.CompleteWithOptions(options); err != nil {
