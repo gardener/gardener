@@ -1514,7 +1514,7 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidateSecretBinding", func() {
+	Describe("#ValidateSecretBinding, #ValidateSecretBindingUpdate", func() {
 		var secretBinding *garden.SecretBinding
 
 		BeforeEach(func() {
@@ -1568,6 +1568,27 @@ var _ = Describe("validation", func() {
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("quotas[0].name"),
+			}))
+		})
+
+		It("should forbid updating the secret binding spec", func() {
+			newSecretBinding := prepareSecretBindingForUpdate(secretBinding)
+			newSecretBinding.SecretRef.Name = "another-name"
+			newSecretBinding.Quotas = append(newSecretBinding.Quotas, corev1.ObjectReference{
+				Name:      "new-quota",
+				Namespace: "new-quota-ns",
+			})
+
+			errorList := ValidateSecretBindingUpdate(newSecretBinding, secretBinding)
+
+			Expect(len(errorList)).To(Equal(2))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("secretRef"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("quotas"),
 			}))
 		})
 	})
@@ -3792,4 +3813,10 @@ func prepareBackupInfrastructureForUpdate(backupInfrastructure *garden.BackupInf
 	b := backupInfrastructure.DeepCopy()
 	b.ResourceVersion = "1"
 	return b
+}
+
+func prepareSecretBindingForUpdate(secretBinding *garden.SecretBinding) *garden.SecretBinding {
+	s := secretBinding.DeepCopy()
+	s.ResourceVersion = "1"
+	return s
 }
