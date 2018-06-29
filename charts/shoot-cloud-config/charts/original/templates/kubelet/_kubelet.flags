@@ -49,7 +49,6 @@
 {{- if semverCompare "< 1.12" .kubernetes.version }}
 --cadvisor-port=0 \
 {{- end }}
---enable-debugging-handlers=true \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --network-plugin=cni \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
