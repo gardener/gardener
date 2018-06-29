@@ -15,7 +15,7 @@
 package deletionconfirmation_test
 
 import (
-	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
+	. "github.com/gardener/gardener/plugin/pkg/shoot/deletionconfirmation"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -110,7 +110,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			registered := plugins.Registered()
 			Expect(registered).To(HaveLen(1))
-			Expect(registered).To(ContainElement("DeletionConfirmation"))
+			Expect(registered).To(ContainElement("ShootDeletionConfirmation"))
 		})
 	})
 

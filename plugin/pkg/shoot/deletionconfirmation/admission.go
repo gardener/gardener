@@ -30,7 +30,7 @@ import (
 
 const (
 	// PluginName is the name of this admission plugin.
-	PluginName = "DeletionConfirmation"
+	PluginName = "ShootDeletionConfirmation"
 )
 
 // Register registers a plugin.
