@@ -16,4 +16,4 @@
 
 ## Usage
 
-* [Creating and deleting Shoot clusters](usage/shoots.md)
+* [Creating, deleting and updating Shoot clusters](usage/shoots.md)
