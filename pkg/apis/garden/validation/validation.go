@@ -662,7 +662,7 @@ func validateSecretReferenceOptionalNamespace(ref corev1.SecretReference, fldPat
 func ValidateShoot(shoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, ValidateName, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, validateShootName(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, ValidateShootSpec(&shoot.Spec, field.NewPath("spec"))...)
 
@@ -1255,7 +1255,7 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 func validateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, validateDNS1123Subdomain(worker.Name, fldPath.Child("name"))...)
+	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
 	maxWorkerNameLength := 15
 	if len(worker.Name) > maxWorkerNameLength {
 		allErrs = append(allErrs, field.TooLong(fldPath.Child("name"), worker.Name, maxWorkerNameLength))
@@ -1323,6 +1323,17 @@ func validateDNS1123Subdomain(value string, fldPath *field.Path) field.ErrorList
 	allErrs := field.ErrorList{}
 
 	for _, msg := range validation.IsDNS1123Subdomain(value) {
+		allErrs = append(allErrs, field.Invalid(fldPath, value, msg))
+	}
+
+	return allErrs
+}
+
+// validateDNS1123Label valides a name is a proper RFC1123 DNS label.
+func validateDNS1123Label(value string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	for _, msg := range validation.IsDNS1123Label(value) {
 		allErrs = append(allErrs, field.Invalid(fldPath, value, msg))
 	}
 

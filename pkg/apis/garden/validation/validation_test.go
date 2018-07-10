@@ -1775,6 +1775,18 @@ var _ = Describe("validation", func() {
 			}))
 		})
 
+		It("should forbid shoots with a not DNS-1123 label compliant name", func() {
+			shoot.ObjectMeta.Name = "shoot.test"
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("metadata.name"),
+			}))
+		})
+
 		It("should forbid empty Shoot resources", func() {
 			shoot := &garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{},
@@ -2191,7 +2203,7 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
 						Worker:     invalidWorkerName,
@@ -2573,7 +2585,7 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
 						Worker:     invalidWorkerName,
@@ -2887,7 +2899,7 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
 					{
 						Worker:     invalidWorkerName,
@@ -3197,7 +3209,7 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid worker pools with names that are not DNS-1123 subdomain compliant", func() {
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
 				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
 					{
 						Worker: invalidWorkerName,
