@@ -5,11 +5,11 @@ advertiseAddress: 127.0.0.1
 securePort: 443
 probeCredentials: base64(user:pass)
 shootNetworks:
-  service: 10.0.0.0/24
+  service: 10.0.1.0/24
 seedNetworks:
-  service: 172.16.0.0/20
-  pod: 10.0.0.0/24 
-  node: 192.168.0.0/16
+  service: 10.0.0.0/24
+  pod: 192.168.0.0/1
+  node: 172.16.0.0/20
 environment: []
 additionalParameters: []
 podAnnotations: {}

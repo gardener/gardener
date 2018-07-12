@@ -2,7 +2,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: kube-apiserver-deny-seed
+  name: kube-apiserver-deny-blacklist
   namespace:  {{ .Release.Namespace }}
 spec:
   podSelector:
@@ -17,9 +17,11 @@ spec:
         # Allow all except seed networks
         cidr: 0.0.0.0/0
         except:
-        - {{ .Values.seedNetworks.pod}}
-        - {{ .Values.seedNetworks.node}}
-        - {{ .Values.seedNetworks.service}}
+        - {{ .Values.seedNetworks.pod }}
+        - {{ .Values.seedNetworks.node }}
+        - {{ .Values.seedNetworks.service }}
+        # Cloud provider metadata service ip
+        - 169.254.169.254/32
 ---
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
