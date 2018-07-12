@@ -124,11 +124,16 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"advertiseAddress":      loadBalancerIP,
 		"cloudProvider":         b.ShootCloudBotanist.GetCloudProviderName(),
 		"kubernetesVersion":     b.Shoot.Info.Spec.Kubernetes.Version,
-		"podNetwork":            b.Shoot.GetPodNetwork(),
-		"serviceNetwork":        b.Shoot.GetServiceNetwork(),
-		"nodeNetwork":           b.Shoot.GetNodeNetwork(),
-		"securePort":            443,
-		"probeCredentials":      utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
+		"shootNetworks": map[string]interface{}{
+			"service": b.Shoot.GetServiceNetwork(),
+		},
+		"seedNetworks": map[string]interface{}{
+			"service": b.Seed.Info.Spec.Networks.Services,
+			"pod":     b.Seed.Info.Spec.Networks.Pods,
+			"node":    b.Seed.Info.Spec.Networks.Nodes,
+		},
+		"securePort":       443,
+		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[common.KubeAPIServerDeploymentName],

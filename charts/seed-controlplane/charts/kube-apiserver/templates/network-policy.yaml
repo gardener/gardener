@@ -1,0 +1,66 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kube-apiserver-deny-seed
+  namespace:  {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes
+      role: apiserver
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        # Allow all except seed networks
+        cidr: 0.0.0.0/0
+        except:
+        - {{ .Values.seedNetworks.pod}}
+        - {{ .Values.seedNetworks.node}}
+        - {{ .Values.seedNetworks.service}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kube-apiserver-allow-etcd
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes
+      role: apiserver
+  policyTypes:
+  - Egress
+  egress:
+  - ports:
+    - port: {{ required ".etcdServicePort is required" .Values.etcdServicePort }}
+      protocol: TCP
+  - to:
+    - podSelector:
+        matchLabels:
+          app: etcd-statefulset
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kube-apiserver-allow-dns
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes
+      role: apiserver
+  policyTypes:
+  - Egress
+  egress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP  
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system

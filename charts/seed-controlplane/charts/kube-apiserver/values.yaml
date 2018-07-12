@@ -4,9 +4,12 @@ kubernetesVersion: 1.8.5
 advertiseAddress: 127.0.0.1
 securePort: 443
 probeCredentials: base64(user:pass)
-serviceNetwork: 10.0.0.0/24
-podNetwork: 192.168.0.0/16
-nodeNetwork: 172.16.0.0/20
+shootNetworks:
+  service: 10.0.0.0/24
+seedNetworks:
+  service: 172.16.0.0/20
+  pod: 10.0.0.0/24 
+  node: 192.168.0.0/16
 environment: []
 additionalParameters: []
 podAnnotations: {}
