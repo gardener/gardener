@@ -112,6 +112,11 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
+	var (
+		featureGates  map[string]bool
+		runtimeConfig map[string]bool
+	)
+
 	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.Botanist.APIServerAddress)
 	if err != nil {
 		return err
@@ -165,13 +170,32 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 
 	apiServerConfig := b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
 	if apiServerConfig != nil {
-		defaultValues["featureGates"] = apiServerConfig.FeatureGates
-		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
+		featureGates = apiServerConfig.FeatureGates
+		runtimeConfig = apiServerConfig.RuntimeConfig
 
 		if apiServerConfig.OIDCConfig != nil {
 			defaultValues["oidcConfig"] = apiServerConfig.OIDCConfig
 		}
 	}
+
+	geqKubernetes111, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.11")
+	if err != nil {
+		geqKubernetes111 = false
+	}
+
+	// Enable support for pod priority if kubernetes version is less than 1.11
+	if !geqKubernetes111 {
+		if featureGates == nil {
+			featureGates = make(map[string]bool)
+		}
+		if runtimeConfig == nil {
+			runtimeConfig = make(map[string]bool)
+		}
+		featureGates["PodPriority"] = true
+		runtimeConfig["scheduling.k8s.io/v1alpha1"] = true
+	}
+	defaultValues["featureGates"] = featureGates
+	defaultValues["runtimeConfig"] = runtimeConfig
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{
 		"hyperkube":         "hyperkube",
@@ -238,6 +262,10 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-scheduler deployment.
 func (b *HybridBotanist) DeployKubeScheduler() error {
+	var (
+		featureGates map[string]bool
+	)
+
 	defaultValues := map[string]interface{}{
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podAnnotations": map[string]interface{}{
@@ -260,8 +288,22 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 
 	schedulerConfig := b.Shoot.Info.Spec.Kubernetes.KubeScheduler
 	if schedulerConfig != nil {
-		defaultValues["featureGates"] = schedulerConfig.FeatureGates
+		featureGates = schedulerConfig.FeatureGates
 	}
+
+	geqKubernetes111, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.11")
+	if err != nil {
+		geqKubernetes111 = false
+	}
+
+	// Enable support for pod priority if kubernetes version is less than 1.11
+	if !geqKubernetes111 {
+		if featureGates == nil {
+			featureGates = make(map[string]bool)
+		}
+		featureGates["PodPriority"] = true
+	}
+	defaultValues["featureGates"] = featureGates
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})
 	if err != nil {

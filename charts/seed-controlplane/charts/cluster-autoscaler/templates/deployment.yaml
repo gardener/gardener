@@ -42,6 +42,7 @@ spec:
         - --skip-nodes-with-system-pods=false
         - --skip-nodes-with-local-storage=false
         - --expander=least-waste
+        - --expendable-pods-priority-cutoff=-10
         - --v=2
         env:
         - name: CONTROL_NAMESPACE

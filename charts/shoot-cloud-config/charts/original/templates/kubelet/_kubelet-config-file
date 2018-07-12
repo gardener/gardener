@@ -53,8 +53,11 @@ evictionPressureTransitionPeriod: 4m0s
 evictionMaxPodGracePeriod: 90
 evictionMinimumReclaim: null
 failSwapOn: true
-{{- if .kubernetes.kubelet.featureGates }}
 featureGates:
+{{- if semverCompare "< 1.11" .kubernetes.version }}
+  PodPriority: true
+{{- end }}
+{{- if .kubernetes.kubelet.featureGates }}
 {{ toYaml .kubernetes.kubelet.featureGates | indent 6 }}
 {{- end }}
 fileCheckFrequency: 20s

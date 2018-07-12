@@ -37,9 +37,9 @@ spec:
         - /hyperkube
         - apiserver
         {{- if semverCompare "< 1.10" .Values.kubernetesVersion }}
-        - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,ResourceQuota
+        - --admission-control=Priority,NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,ResourceQuota
         {{- else }}
-        - --enable-admission-plugins=NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,StorageObjectInUseProtection,{{ if semverCompare ">= 1.9" .Values.kubernetesVersion }}MutatingAdmissionWebhook,{{ end }}ValidatingAdmissionWebhook,ResourceQuota
+        - --enable-admission-plugins=Priority,NamespaceLifecycle,LimitRanger,ServiceAccount,NodeRestriction,DefaultStorageClass,PersistentVolumeLabel,DefaultTolerationSeconds,StorageObjectInUseProtection,{{ if semverCompare ">= 1.9" .Values.kubernetesVersion }}MutatingAdmissionWebhook,{{ end }}ValidatingAdmissionWebhook,ResourceQuota
         {{- end }}
         - --advertise-address={{ .Values.advertiseAddress }}
         - --allow-privileged=true
