@@ -18,7 +18,6 @@ spec:
         checksum/configmap-dashboards: {{ include (print $.Template.BasePath "/grafana-dashboards-configmap.yaml") . | sha256sum }}
         checksum/configmap-datasources: {{ include (print $.Template.BasePath "/grafana-datasources-configmap.yaml") . | sha256sum }}
         checksum/configmap-dashboard-providers: {{ include (print $.Template.BasePath "/grafana-dashboard-providers-configmap.yaml") . | sha256sum }}
-        checksum/secret-auth: {{ include (print $.Template.BasePath "/grafana-secret.yaml") . | sha256sum }}
       labels:
         component: grafana
     spec:
@@ -32,19 +31,11 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: GF_AUTH_BASIC_ENABLED
+          value: "false"
+        - name: GF_AUTH_DISABLE_LOGIN_FORM
           value: "true"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
-        - name: GF_SECURITY_ADMIN_USER
-          valueFrom:
-            secretKeyRef:
-              name: grafana-credentials
-              key: user
-        - name: GF_SECURITY_ADMIN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: grafana-credentials
-              key: password
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/grafana-storage

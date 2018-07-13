@@ -238,8 +238,8 @@ func (b *Botanist) DeleteClusterAutoscaler() error {
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring() error {
 	var (
-		kubecfgSecret    = b.Secrets["kubecfg"]
-		basicAuth        = utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
+		credentials      = b.Secrets["monitoring-ingress-credentials"]
+		basicAuth        = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.ProjectName)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.ProjectName)
 		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.ProjectName)
