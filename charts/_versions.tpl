@@ -54,3 +54,7 @@ apiregistration.k8s.io/v1
 apiregistration.k8s.io/v1beta1
 {{- end -}}
 {{- end -}}
+
+{{- define "networkpolicyversion" -}}
+networking.k8s.io/v1
+{{- end -}}

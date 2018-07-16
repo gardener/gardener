@@ -1,5 +1,5 @@
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
   name: kube-apiserver-deny-blacklist
@@ -23,7 +23,7 @@ spec:
         # Cloud provider metadata service ip
         - 169.254.169.254/32
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
   name: kube-apiserver-allow-etcd
@@ -44,7 +44,7 @@ spec:
         matchLabels:
           app: etcd-statefulset
 ---
-apiVersion: networking.k8s.io/v1
+apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
   name: kube-apiserver-allow-dns
