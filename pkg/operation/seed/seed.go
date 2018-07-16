@@ -139,13 +139,14 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
-// (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment currently corresponds to
-// 1 core of CPU and 2Gis of Memory.
+// (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
+// corresponds to resources of (request/limits) 500m of CPU and 1200Mi of Memory.
+// ReplicasRequiredToSupportSingleShoot is 4 which is 2000m of CPU and 4800Mi of RAM.
 // The logic for computation of desired excess capacity corresponds to either deploying 3 new shoot control planes
 // or 5% of existing shoot control planes of current number of shoots deployed in seed (5 if current shoots are 100),
 // whichever of the two is larger
 func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
-	replicasToSupportSingleShoot := 7
+	replicasToSupportSingleShoot := 4
 	effectiveExcessCapacity := 3
 	excessCapacityBasedOnAssociatedShoots := int(float64(numberOfAssociatedShoots) * 0.05)
 
