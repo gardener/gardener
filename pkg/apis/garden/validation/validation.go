@@ -1384,7 +1384,7 @@ func ValidateBackupInfrastructureSpecUpdate(newSpec, oldSpec *garden.BackupInfra
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("seed"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Seed, oldSpec.Seed, fldPath.Child("shootUID"))...)
+	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.ShootUID, oldSpec.ShootUID, fldPath.Child("shootUID"))...)
 	return allErrs
 }
 
