@@ -388,16 +388,28 @@ func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration
 // there is no container id.
 func determineGardenerIdentity(watchNamespace *string) (*gardenv1beta1.Gardener, string, error) {
 	var (
-		gardenerID        = utils.GenerateRandomString(64)
-		gardenerName, _   = os.Hostname()
+		gardenerID        string
+		gardenerName      string
 		gardenerNamespace = common.GardenNamespace
+		err               error
 	)
 
+	gardenerName, err = os.Hostname()
+	if err != nil {
+		return nil, "", fmt.Errorf("unable to get hostname: %v", err)
+	}
+
 	// If running inside a Kubernetes cluster (as container) we can read the container id from the proc file system.
+	// Otherwise generate a random string for the gardenerID
 	if cgroup, err := ioutil.ReadFile("/proc/self/cgroup"); err == nil {
 		splitByNewline := strings.Split(string(cgroup), "\n")
 		splitBySlash := strings.Split(splitByNewline[0], "/")
 		gardenerID = splitBySlash[len(splitBySlash)-1]
+	} else {
+		gardenerID, err = utils.GenerateRandomString(64)
+		if err != nil {
+			return nil, "", fmt.Errorf("unable to generate gardenerID: %v", err)
+		}
 	}
 
 	// If running inside a Kubernetes cluster we will have a service account mount.

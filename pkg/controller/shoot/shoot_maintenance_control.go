@@ -107,8 +107,12 @@ type defaultMaintenanceControl struct {
 }
 
 func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key string) error {
+	operationID, err := utils.GenerateRandomString(8)
+	if err != nil {
+		return err
+	}
+
 	var (
-		operationID = utils.GenerateRandomString(8)
 		shoot       = shootObj.DeepCopy()
 		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
 		handleError = func(msg string) {

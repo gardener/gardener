@@ -180,7 +180,11 @@ func (b *Botanist) DeploySecrets() error {
 			"password": csv[0],
 		}
 	} else {
-		basicAuthUsername, basicAuthPassword := generateBasicAuthData()
+		basicAuthUsername, basicAuthPassword, err := generateBasicAuthData()
+		if err != nil {
+			return err
+		}
+
 		basicAuthData = map[string]string{
 			"username": basicAuthUsername,
 			"password": basicAuthPassword,
@@ -222,7 +226,10 @@ func (b *Botanist) DeploySecrets() error {
 	if val, ok := secretsMap[name]; ok {
 		b.Secrets[name] = val
 	} else {
-		monitoringUser, monitoringPassword := generateBasicAuthData()
+		monitoringUser, monitoringPassword, err := generateBasicAuthData()
+		if err != nil {
+			return err
+		}
 		data = map[string][]byte{
 			"username": []byte(monitoringUser),
 			"password": []byte(monitoringPassword),
@@ -545,8 +552,9 @@ func signCertificate(certificateTemplate, certificateTemplateSigner *x509.Certif
 
 // generateBasicAuthData computes a username/password keypair. It uses "admin" as username and generates a
 // random password of length 32.
-func generateBasicAuthData() (string, string) {
-	return "admin", utils.GenerateRandomString(32)
+func generateBasicAuthData() (string, string, error) {
+	password, err := utils.GenerateRandomString(32)
+	return "admin", password, err
 }
 
 // generateKubeconfig generates a Kubernetes Kubeconfig for communicating with the kube-apiserver by using
