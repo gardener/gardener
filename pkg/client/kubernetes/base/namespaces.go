@@ -18,6 +18,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // CreateNamespace creates a new Namespace object.
@@ -42,6 +43,11 @@ func (c *Client) GetNamespace(name string) (*corev1.Namespace, error) {
 // ListNamespaces returns a list of namespaces. The selection can be restricted by passing a <selector>.
 func (c *Client) ListNamespaces(selector metav1.ListOptions) (*corev1.NamespaceList, error) {
 	return c.clientset.CoreV1().Namespaces().List(selector)
+}
+
+// PatchNamespace patches a Namespace object.
+func (c *Client) PatchNamespace(name string, body []byte) (*corev1.Namespace, error) {
+	return c.Clientset().CoreV1().Namespaces().Patch(name, types.JSONPatchType, body)
 }
 
 // DeleteNamespace deletes a namespace.
