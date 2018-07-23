@@ -46,7 +46,7 @@ gardener:
     release:
       traits:
         version:
-          preprocess: 'finalise'
+          preprocess: 'finalize'
         release:
           nextversion: 'bump_minor'
         component_descriptor: ~
