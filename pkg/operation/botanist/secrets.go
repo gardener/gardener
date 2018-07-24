@@ -217,6 +217,22 @@ func (b *Botanist) DeploySecrets() error {
 		b.Secrets[name] = tlsAuthSecret
 	}
 
+	// We create the basic auth credentials for ingress resources used by the monitoring stack
+	name = "monitoring-ingress-credentials"
+	if val, ok := secretsMap[name]; ok {
+		b.Secrets[name] = val
+	} else {
+		monitoringUser, monitoringPassword := generateBasicAuthData()
+		data = map[string][]byte{
+			"username": []byte(monitoringUser),
+			"password": []byte(monitoringPassword),
+		}
+		b.Secrets[name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, name, corev1.SecretTypeOpaque, data, false)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Now we are prepared enough to generate the remaining secrets, i.e. server certificates, client certificates,
 	// and SSH key pairs.
 	secretList, err := b.generateSecrets()
