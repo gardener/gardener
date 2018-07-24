@@ -1,2 +1,15 @@
 cloudProvider: aws
-prometheusPort: 9090
+prometheus:
+  port: 9090
+  cadvisorAllowedMetrics:
+  # container metrics without the container_
+  - last_seen
+  - fs_usage_bytes
+  - fs_inodes_total
+  - fs_limit_bytes
+  - network_receive_bytes_total
+  - network_transmit_bytes_total
+  - cpu_cfs_periods_total
+  - cpu_usage_seconds_total
+  - memory_usage_bytes
+  - memory_working_set_bytes
