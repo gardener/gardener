@@ -312,14 +312,14 @@ At this point three processes should run in an individual terminal, the Gardener
 Now, you can create a Shoot cluster by running
 
 ```bash
-$ kubectl apply -f dev/shoot-local.yaml
+$ kubectl apply -f dev/90-shoot-local.yaml
 shoot "local" created
 ```
 
 When the Shoot API server is created you can download the `kubeconfig` for it and access it:
 
 ```bash
-$ kubectl --namespace shoot-dev-local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
+$ kubectl --namespace shoot--dev--local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
 
 # Depending on your Internet speed, it can take some time, before your node reports a READY status.
 $ kubectl --kubeconfig dev/shoot-kubeconfig get nodes
