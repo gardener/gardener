@@ -454,3 +454,20 @@ spec:
     kind: NetworkPolicy
     plural: networkpolicies
     singular: networkpolicy
+
+---
+
+apiVersion: crd.projectcalico.org/v1
+kind: GlobalNetworkPolicy
+metadata:
+  name: block-metadata-service
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  egress:
+  - action: Allow
+    destination:
+      notNets:
+      - 169.254.169.254/32
+  types:
+  - Egress
