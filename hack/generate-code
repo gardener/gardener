@@ -68,7 +68,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-groups.sh \
   -h <(headers)
 
 rm -Rf ./$(dirname "${0}")/../openapi/openapi_generated.go
-go install ./$(dirname "${0}")/../vendor/k8s.io/code-generator/cmd/openapi-gen
+go install ./$(dirname "${0}")/../vendor/k8s.io/kube-openapi/cmd/openapi-gen
 
 echo "Generating openapi definitions"
 ${GOPATH}/bin/openapi-gen "$@" \
@@ -81,6 +81,7 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=k8s.io/apimachinery/pkg/types \
   --input-dirs=k8s.io/apimachinery/pkg/version \
   --input-dirs=k8s.io/apimachinery/pkg/runtime \
+  --report-filename=./$(dirname "${0}")/../pkg/openapi/api_violations.report \
   --output-package=github.com/gardener/gardener/pkg/openapi \
   -h <(headers)
 
