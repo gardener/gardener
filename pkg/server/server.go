@@ -15,6 +15,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -25,11 +26,22 @@ import (
 )
 
 // Serve starts a HTTP server.
-func Serve(k8sGardenClient kubernetes.Client, bindAddress string, port int, metricsInterval time.Duration) {
-	http.HandleFunc("/healthz", handlers.Healthz)
+func Serve(k8sGardenClient kubernetes.Client, bindAddress string, port int, metricsInterval time.Duration, stopCh chan struct{}) {
 	http.Handle("/metrics", handlers.InitMetrics(k8sGardenClient, metricsInterval))
+	http.HandleFunc("/healthz", handlers.Healthz)
 
 	listenAddress := fmt.Sprintf("%s:%d", bindAddress, port)
-	go http.ListenAndServe(listenAddress, nil)
+	server := http.Server{
+		Addr: listenAddress,
+	}
+
+	go func() {
+		<-stopCh
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		server.Shutdown(ctx)
+	}()
+
+	go server.ListenAndServe()
 	logger.Logger.Infof("Gardener controller manager HTTP server started (serving on %s)", listenAddress)
 }

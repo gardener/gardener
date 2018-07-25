@@ -322,7 +322,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 	}
 
 	// Start HTTP server
-	go server.Serve(g.K8sGardenClient, g.Config.Server.BindAddress, g.Config.Server.Port, g.Config.Metrics.Interval.Duration)
+	go server.Serve(g.K8sGardenClient, g.Config.Server.BindAddress, g.Config.Server.Port, g.Config.Metrics.Interval.Duration, stopCh)
 	handlers.UpdateHealth(true)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
