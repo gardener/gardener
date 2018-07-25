@@ -17,6 +17,7 @@ package botanist
 import (
 	"strings"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,6 +27,10 @@ import (
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
 // i.e., it deletes old machine sets which have a desired=actual=0 replica count.
 func (b *Botanist) PerformGarbageCollectionSeed() error {
+	if err := b.deleteEvictedPods(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
+		return err
+	}
+
 	var machineSetList unstructured.Unstructured
 	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machinesets", b.Shoot.SeedNamespace).Do().Into(&machineSetList); err != nil {
 		return err
@@ -62,7 +67,12 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
 func (b *Botanist) PerformGarbageCollectionShoot() error {
-	podList, err := b.K8sShootClient.ListPods(metav1.NamespaceSystem, metav1.ListOptions{})
+	return b.deleteEvictedPods(b.K8sShootClient, metav1.NamespaceSystem)
+}
+
+// deleteEvictedPods determine pods in state 'Evicted' in a given namespace and delete them.
+func (b *Botanist) deleteEvictedPods(client kubernetes.Client, namespace string) error {
+	podList, err := client.ListPods(namespace, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -73,9 +83,9 @@ func (b *Botanist) PerformGarbageCollectionShoot() error {
 		)
 		if reason != "" && strings.Contains(reason, "Evicted") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", name, reason)
-			err := b.K8sShootClient.DeletePod(metav1.NamespaceSystem, name)
+			err := client.DeletePod(namespace, name)
 			if apierrors.IsNotFound(err) {
-				return nil
+				continue
 			}
 			if err != nil {
 				return err
