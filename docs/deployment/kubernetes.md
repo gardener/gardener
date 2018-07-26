@@ -8,4 +8,4 @@ $ helm install charts/gardener --name gardener --wait
 
 You can configure the Helm chart by modifying the [allowed configuration values](../../charts/gardener/values.yaml). Please note that all resources and deployments need to be created in the `garden` namespace (not overrideable).
 
-:warning: The Seed Kubernetes clusters need to have a `nginx-ingress-conroller` deployed to make the Gardener work properly. Moreover, there should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `domain` field of [a Seed cluster resource](../../example/seed-aws-dev.yaml).
+:warning: The Seed Kubernetes clusters need to have a `nginx-ingress-conroller` deployed to make the Gardener work properly. Moreover, there should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `domain` field of [a Seed cluster resource](../../example/50-seed-aws.yaml).
