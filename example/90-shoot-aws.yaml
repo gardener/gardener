@@ -73,6 +73,7 @@ spec:
       enabled: true
     nginx-ingress:
       enabled: true
+      loadBalancerSourceRanges: []
     kube-lego:
       enabled: true
       email: john.doe@example.com

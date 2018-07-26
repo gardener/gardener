@@ -1954,6 +1954,7 @@ func autoConvert_v1beta1_NginxIngress_To_garden_NginxIngress(in *NginxIngress, o
 	if err := Convert_v1beta1_Addon_To_garden_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
+	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
 	return nil
 }
 
@@ -1966,6 +1967,7 @@ func autoConvert_garden_NginxIngress_To_v1beta1_NginxIngress(in *garden.NginxIng
 	if err := Convert_garden_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
+	out.LoadBalancerSourceRanges = *(*[]string)(unsafe.Pointer(&in.LoadBalancerSourceRanges))
 	return nil
 }
 

@@ -298,7 +298,7 @@ func (in *Addons) DeepCopyInto(out *Addons) {
 	if in.NginxIngress != nil {
 		in, out := &in.NginxIngress, &out.NginxIngress
 		*out = new(NginxIngress)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Monocular != nil {
 		in, out := &in.Monocular, &out.Monocular
@@ -1607,6 +1607,11 @@ func (in *Monocular) DeepCopy() *Monocular {
 func (in *NginxIngress) DeepCopyInto(out *NginxIngress) {
 	*out = *in
 	out.Addon = in.Addon
+	if in.LoadBalancerSourceRanges != nil {
+		in, out := &in.LoadBalancerSourceRanges, &out.LoadBalancerSourceRanges
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

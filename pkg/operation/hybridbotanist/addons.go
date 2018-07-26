@@ -145,6 +145,13 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
+	if b.Shoot.NginxIngressEnabled() {
+		nginxIngressConfig["controller"] =  map[string]interface{}{
+			"service": map[string]interface{}{
+				"loadBalancerSourceRanges": b.Shoot.Info.Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
+			},
+		}
+	}
 
 	heapster, err := b.Botanist.InjectImages(heapsterConfig, b.K8sShootClient.Version(), map[string]string{"heapster": "heapster", "heapster-nanny": "addon-resizer"})
 	if err != nil {

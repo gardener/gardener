@@ -2970,6 +2970,20 @@ func schema_pkg_apis_garden_v1beta1_NginxIngress(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"loadBalancerSourceRanges": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

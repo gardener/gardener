@@ -870,6 +870,9 @@ type ClusterAutoscaler struct {
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon `json:",inline"`
+	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
+	// +optional
+	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
 }
 
 // Monocular describes configuration values for the monocular addon.

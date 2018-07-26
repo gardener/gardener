@@ -223,6 +223,7 @@ spec:
       enabled: ${value("spec.addons.cluster-autoscaler.enabled", "true")}
     nginx-ingress:
       enabled: ${value("spec.addons.nginx-ingress.enabled", "true")}
+      loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
     kube-lego:
       enabled: ${value("spec.addons.kube-lego.enabled", "true")}
       email: ${value("spec.addons.kube-lego.email", "john.doe@example.com")}

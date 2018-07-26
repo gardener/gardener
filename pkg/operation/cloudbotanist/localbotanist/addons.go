@@ -52,5 +52,5 @@ func (b *LocalBotanist) GenerateAdmissionControlConfig() (map[string]interface{}
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *LocalBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.Info.Spec.Addons.NginxIngress.Enabled), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
