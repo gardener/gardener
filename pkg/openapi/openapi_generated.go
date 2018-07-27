@@ -3796,6 +3796,11 @@ func schema_pkg_apis_garden_v1beta1_Seed(ref common.ReferenceCallback) common.Op
 					},
 				},
 			},
+			VendorExtensible: spec.VendorExtensible{
+				Extensions: spec.Extensions{
+					"x-kubernetes-print-columns": "custom-columns=NAME:.metadata.name,DOMAIN:.spec.ingressDomain,CLOUDPROFILE:.spec.cloud.profile,REGION:.spec.cloud.profile,READY:.status.conditions[?(@.type == 'Available')].status",
+				},
+			},
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedSpec", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
