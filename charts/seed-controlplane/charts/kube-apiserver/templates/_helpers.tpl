@@ -2,11 +2,17 @@
 {{- if .Values.featureGates }}
 - --feature-gates={{ range $feature, $enabled := .Values.featureGates }}{{ $feature }}={{ $enabled }},{{ end }}
 {{- end }}
+{{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
+- --feature-gates=PodPriority=true
+{{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.runtimeConfig" }}
 {{- if .Values.runtimeConfig }}
 - --runtime-config={{ range $config, $enabled := .Values.runtimeConfig }}{{ $config }}={{ $enabled }},{{ end }}
+{{- end }}
+{{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
+- --runtime-config=scheduling.k8s.io/v1alpha1=true
 {{- end }}
 {{- end -}}
 
