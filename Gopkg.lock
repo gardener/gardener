@@ -1027,8 +1027,6 @@
     "cmd/lister-gen",
     "cmd/lister-gen/args",
     "cmd/lister-gen/generators",
-    "cmd/openapi-gen",
-    "cmd/openapi-gen/args",
     "pkg/util"
   ]
   revision = "6702109cc68eb6fe6350b83e14407c8d7309fd1a"
@@ -1064,9 +1062,9 @@
   version = "v2.9.1"
 
 [[projects]]
-  branch = "master"
   name = "k8s.io/kube-openapi"
   packages = [
+    "cmd/openapi-gen",
     "cmd/openapi-gen/args",
     "pkg/builder",
     "pkg/common",
@@ -1074,13 +1072,14 @@
     "pkg/generators/rules",
     "pkg/handler",
     "pkg/util",
-    "pkg/util/proto"
+    "pkg/util/proto",
+    "pkg/util/sets"
   ]
-  revision = "d83b052f768a50a309c692a9c271da3f3276ff88"
+  revision = "d8ea2fe547a448256204cfc68dfee7b26c720acb"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3121c3aed1203fc89899021b5cd3099263234337e124dd82c5d3a2e6ff843103"
+  inputs-digest = "d559b579cb15d876807656c901acc9d9f50cfa19407d9ec1e763190730471042"
   solver-name = "gps-cdcl"
   solver-version = 1

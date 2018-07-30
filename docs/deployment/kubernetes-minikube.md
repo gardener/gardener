@@ -19,7 +19,7 @@ Then in a terminal execute:
 
 ```bash
 # Minikube requires extra memory for this setup
-$ minikube start --cpus=3 --memory=4096 --extra-config=apiserver.Authorization.Mode=RBAC
+$ minikube start --cpus=3 --memory=4096 --extra-config=apiserver.authorization-mode=RBAC
 
 # Allow Tiller and Dashboard to run in RBAC mode
 $ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:default
