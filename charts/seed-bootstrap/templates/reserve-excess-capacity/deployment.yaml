@@ -1,0 +1,34 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: reserve-excess-capacity
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: reserve-excess-capacity
+spec:
+  revisionHistoryLimit: 0
+  replicas: {{ index .Values.replicas "reserve-excess-capacity" }}
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: reserve-excess-capacity
+  template:
+    metadata:
+      labels:
+        app: kubernetes
+        role: reserve-excess-capacity
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: pause-container
+        image: {{ index .Values.images "pause-container" }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1200Mi
+          limits:
+            cpu: 500m
+            memory: 1200Mi
+      priorityClassName: reserve-excess-capacity

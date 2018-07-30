@@ -1,0 +1,8 @@
+apiVersion: {{ include "priorityclassversion" . }}
+kind: PriorityClass
+metadata:
+  name: reserve-excess-capacity
+  namespace: {{ .Release.Namespace }}
+value: -5
+globalDefault: false
+description: "This class is used to reserve excess resource capacity on a cluster"
