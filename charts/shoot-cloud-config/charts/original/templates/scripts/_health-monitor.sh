@@ -28,6 +28,9 @@
       function kubectl {
         /opt/bin/hyperkube kubectl --kubeconfig /var/lib/kubelet/kubeconfig-real "$@"
       }
+      function restart_kubelet {
+        pkill -f "hyperkube kubelet"
+      }
 
       timeframe=600
       toggle_threshold=5
@@ -36,10 +39,11 @@
       last_kubelet_ready_state="True"
 
       while [ 1 ]; do
+        # Check whether the kubelet's /healthz endpoint reports unhealthiness
         if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10255/healthz 2>&1); then
           echo $output
           echo "Kubelet is unhealthy!"
-          pkill kubelet
+          restart_kubelet
           sleep 60
           continue
         fi
