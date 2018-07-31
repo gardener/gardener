@@ -10,31 +10,20 @@ gardener:
       publish:
         dockerimages:
           apiserver:
-            inputs:
-              repos:
-                source: ~ # default
-              steps:
-                build: ~
             registry: 'gcr-readwrite'
             image: 'eu.gcr.io/gardener-project/gardener/apiserver'
-            dockerfile: 'build/gardener-apiserver/Dockerfile'
+            dockerfile: 'Dockerfile'
+            target_name: apiserver
           controller-manager:
-            inputs:
-              repos:
-                source: ~ # default
-              steps:
-                build: ~
             registry: 'gcr-readwrite'
             image: 'eu.gcr.io/gardener-project/gardener/controller-manager'
-            dockerfile: 'build/gardener-controller-manager/Dockerfile'
+            dockerfile: 'Dockerfile'
+            target_name: controller-manager
     steps:
       check:
         image: 'golang:1.10.2'
       test:
         image: 'golang:1.10.2'
-      build:
-        image: 'golang:1.10.2'
-        output_dir: 'binary'
   variants:
     head-update:
       traits:
