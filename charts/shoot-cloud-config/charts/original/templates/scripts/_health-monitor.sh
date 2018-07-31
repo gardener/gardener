@@ -28,6 +28,9 @@
       function kubectl {
         /opt/bin/hyperkube kubectl --kubeconfig /var/lib/kubelet/kubeconfig-real "$@"
       }
+      function restart_kubelet {
+        pkill -f "hyperkube kubelet"
+      }
 
       timeframe=600
       toggle_threshold=5
@@ -36,16 +39,29 @@
       last_kubelet_ready_state="True"
 
       while [ 1 ]; do
+        # Check whether the kubelet's /healthz endpoint reports unhealthiness
         if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10255/healthz 2>&1); then
           echo $output
           echo "Kubelet is unhealthy!"
-          pkill kubelet
+          restart_kubelet
           sleep 60
           continue
         fi
 
+        node_status="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json | jq -r '.items[0].status')"
+
+        # Check whether the kubelet does report an InternalIP node address
+        if node_ip_addresses="$(echo $node_status | jq -r '.addresses[] | select(.type=="InternalIP" or .type=="ExternalIP") | .address')"; then
+          if [[ -z "$node_ip_addresses" ]]; then
+            echo "Kubelet has not reported an InternalIP nor an ExternalIP node address yet. Restarting kubelet!";
+            restart_kubelet
+            sleep 20
+            continue
+          fi
+        fi
+
         # Check whether kubelet ready status toggles between true and false and reboot VM if happened too often.
-        if status="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json | jq -r '.items[0].status.conditions[] | select(.type=="Ready") | .status')"; then
+        if status="$(echo $node_status | jq -r '.conditions[] | select(.type=="Ready") | .status')"; then
           if [[ "$status" != "True" ]]; then
             if [[ $time_kubelet_not_ready_first_occurrence == 0 ]]; then
               time_kubelet_not_ready_first_occurrence=$(date +%s)

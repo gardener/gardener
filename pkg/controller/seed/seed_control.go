@@ -225,8 +225,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		return err
 	}
 
+	// Fetching associated shoots for the current seed
+	associatedShoots, err := controllerutils.DetermineShootAssociations(seed, c.shootLister)
+	if err != nil {
+		seedLogger.Error(err.Error())
+		return err
+	}
+
 	// Bootstrap the Seed cluster.
-	if err := seedpkg.BootstrapCluster(seedObj, c.k8sGardenClient, c.secrets, c.imageVector); err != nil {
+	if err := seedpkg.BootstrapCluster(seedObj, c.k8sGardenClient, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
 		conditionSeedAvailable = helper.ModifyCondition(conditionSeedAvailable, corev1.ConditionFalse, "BootstrappingFailed", err.Error())
 		c.updateSeedStatus(seed, *conditionSeedAvailable)
 		seedLogger.Error(err.Error())

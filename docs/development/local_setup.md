@@ -187,7 +187,7 @@ kubectl is now configured to use the cluster.
 
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
 You need to have control over a domain (or subdomain) for which these records will be created.
-Please provide an *internal domain secret* (see [this](../../example/secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../deployment/configuration.md).
+Please provide an *internal domain secret* (see [this](../../example/10-secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../deployment/configuration.md).
 
 ```bash
 $ make dev-setup
@@ -312,14 +312,14 @@ At this point three processes should run in an individual terminal, the Gardener
 Now, you can create a Shoot cluster by running
 
 ```bash
-$ kubectl apply -f dev/shoot-local.yaml
+$ kubectl apply -f dev/90-shoot-local.yaml
 shoot "local" created
 ```
 
 When the Shoot API server is created you can download the `kubeconfig` for it and access it:
 
 ```bash
-$ kubectl --namespace shoot-dev-local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
+$ kubectl --namespace shoot--dev--local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
 
 # Depending on your Internet speed, it can take some time, before your node reports a READY status.
 $ kubectl --kubeconfig dev/shoot-kubeconfig get nodes
@@ -356,6 +356,6 @@ Currently, there are some limitations in the local Shoot setup which need to be 
 
 ## Additional information
 
-In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](../../example/shoot-azure.yaml#L10) for an example Shoot manifest).
+In order to ensure that a specific Seed cluster will be chosen, add the `.spec.cloud.seed` field (see [here](../../example/90-shoot-azure.yaml#L10) for an example Shoot manifest).
 
 Please take a look at the [example manifests folder](../../example) to see which resource objects you need to install into your Garden cluster.

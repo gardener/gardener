@@ -152,3 +152,9 @@ images:
   sourceRepository: github.com/mirror/busybox
   repository: busybox
   tag: "1.28.4"
+
+# Seed bootstrap
+- name: pause-container
+  sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
+  repository: gcr.io/google_containers/pause-amd64
+  tag: "3.1"

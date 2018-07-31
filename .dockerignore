@@ -1,0 +1,11 @@
+# Ignore everything
+**
+
+# Exclude folders relevant for build
+!pkg/
+!cmd/
+!vendor/
+!plugin/
+!charts/
+!VERSION
+

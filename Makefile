@@ -15,7 +15,9 @@
 REGISTRY                           := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
 CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
-IMAGE_TAG                          := $(shell cat VERSION)
+VERSION														 := $(shell cat VERSION)
+IMAGE_TAG                          := ${VERSION}
+WORKDIR														 := $(shell pwd)
 
 #########################################
 # Rules for local development scenarios #
@@ -62,20 +64,28 @@ revendor:
 
 .PHONY: build
 build:
-	@.ci/build
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+		-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${VERSION}" \
+		-o bin/gardener-apiserver \
+		cmd/gardener-apiserver/*.go
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+		-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${VERSION}" \
+		-o bin/gardener-controller-manager \
+		cmd/gardener-controller-manager/*.go
 
 .PHONY: build-local
 build-local:
-	@env LOCAL_BUILD=1 .ci/build
+	@GOBIN=${WORKDIR}/bin go install \
+		-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${VERSION}" \
+		./cmd/...
 
 .PHONY: release
 release: build build-local docker-images docker-login docker-push rename-binaries
 
 .PHONY: docker-images
 docker-images:
-	@if [[ ! -f bin/rel/gardener-apiserver || ! -f bin/rel/gardener-controller-manager ]]; then echo "No binary found. Please run 'make build'"; false; fi
-	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(APISERVER_IMAGE_REPOSITORY):latest         -f build/gardener-apiserver/Dockerfile          --rm .
-	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG) -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest -f build/gardener-controller-manager/Dockerfile --rm .
+	@docker build -t $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)         -t $(APISERVER_IMAGE_REPOSITORY):latest         -f Dockerfile --target apiserver .
+	@docker build -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG) -t $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest -f Dockerfile --target controller-manager .
 
 .PHONY: docker-login
 docker-login:
