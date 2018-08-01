@@ -8,7 +8,7 @@ images:
 - name: etcd
   sourceRepository: github.com/coreos/etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.8
+  tag: v3.3.9
 - name: etcd-backup-restore
   sourceRepository: github.com/gardener/etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
@@ -41,7 +41,7 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.14.0
+  tag: v0.15.1
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
@@ -61,7 +61,7 @@ images:
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
-  tag: "5.1.3"
+  tag: "5.2.2"
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
@@ -99,7 +99,7 @@ images:
 - name: cluster-proportional-autoscaler
   sourceRepository: github.com/kubernetes-incubator/cluster-proportional-autoscaler
   repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
-  tag: "1.1.2"
+  tag: "1.2.0"
 
 # Shoot optional addons
 - name: heapster
@@ -117,15 +117,15 @@ images:
 - name: kube-lego
   sourceRepository: github.com/jetstack/kube-lego
   repository: jetstack/kube-lego
-  tag: "0.1.5"
+  tag: "0.1.7"
 - name: kube2iam
   sourceRepository: github.com/jtblin/kube2iam
   repository: jtblin/kube2iam
-  tag: "0.9.0"
+  tag: "0.10.1"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.16.2"
+  tag: "0.17.1"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
@@ -151,7 +151,7 @@ images:
 - name: busybox
   sourceRepository: github.com/mirror/busybox
   repository: busybox
-  tag: "1.28.4"
+  tag: "1.29.2"
 
 # Seed bootstrap
 - name: pause-container

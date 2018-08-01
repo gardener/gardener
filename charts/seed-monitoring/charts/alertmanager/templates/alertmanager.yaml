@@ -30,7 +30,7 @@ metadata:
 spec:
   ports:
   - port: 9093
-    name: mesh
+    name: cluster
   type: ClusterIP
   # This is important! Without it the mech won't work.
   clusterIP: None
@@ -69,11 +69,8 @@ spec:
         - --config.file=/etc/alertmanager/config/alertmanager.yaml
         - --web.listen-address=:9093
         - --web.external-url=https://{{ .Values.ingress.host }}
-        - --mesh.listen-address=:6783
         - --storage.path=/etc/alertmanager/data
-        - --mesh.peer="alertmanager-0.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
-        - --mesh.peer="alertmanager-1.alertmanager.${ALERTMANAGER_NAMESPACE}.svc"
-        - --log.level=debug
+        - --log.level=info
         env:
         - name: ALERTMANAGER_NAMESPACE
           valueFrom:
@@ -84,7 +81,7 @@ spec:
           name: web
           protocol: TCP
         - containerPort: 6783
-          name: mesh
+          name: cluster
           protocol: TCP
         livenessProbe:
           httpGet:
