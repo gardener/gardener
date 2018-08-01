@@ -76,6 +76,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
+	// Project defines the configuration of the Project controller.
+	// +optional
+	Project *ProjectControllerConfiguration `json:"project,omitempty"`
 	// Quota defines the configuration of the Quota controller.
 	// +optional
 	Quota *QuotaControllerConfiguration `json:"quota,omitempty"`
@@ -105,6 +108,14 @@ type CloudProfileControllerConfiguration struct {
 // SecretBindingControllerConfiguration defines the configuration of the
 // SecretBinding controller.
 type SecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ProjectControllerConfiguration defines the configuration of the
+// Project controller.
+type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

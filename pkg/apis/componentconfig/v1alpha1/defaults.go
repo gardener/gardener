@@ -84,6 +84,11 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
+	if obj.Controllers.Project == nil {
+		obj.Controllers.Project = &ProjectControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
 	if obj.Controllers.Quota == nil {
 		obj.Controllers.Quota = &QuotaControllerConfiguration{
 			ConcurrentSyncs: 5,

@@ -26,7 +26,6 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
-	"github.com/gardener/gardener/pkg/operation/common"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -269,16 +268,6 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
-	}
-
-	// Add createdBy annotation to Shoot
-	if a.GetOperation() == admission.Create {
-		annotations := shoot.Annotations
-		if annotations == nil {
-			annotations = map[string]string{}
-		}
-		annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
-		shoot.Annotations = annotations
 	}
 
 	return nil

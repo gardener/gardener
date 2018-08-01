@@ -1333,14 +1333,39 @@ type Condition struct {
 type ConditionType string
 
 const (
+	// ProjectNamespaceEmpty is a constant for a condition type indicating the Project namespace has no Shoots or
+	// BackupInfrastructures.
+	ProjectNamespaceEmpty ConditionType = "NamespaceEmpty"
+	// ProjectShootsWithErrors is a constant for a condition type indicating that Shoots within the project have
+	// errors.
+	ProjectShootsWithErrors ConditionType = "ShootsWithErrors"
+	// ProjectNamespaceReady is a constant for a condition type indicating the Project namespace has been created.
+	ProjectNamespaceReady ConditionType = "NamespaceReady"
+	// ProjectNamespaceCreationFailed is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceCreationFailed string = "NamespaceCreationFailed"
+	// ProjectNamespaceReconciled is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceReconciled string = "NamespaceReconciled"
+	// ProjectNamespaceReconcileFailed is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceReconcileFailed string = "NamespaceReconcileFailed"
+	// ProjectNamespaceDeletionAllowed is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceDeletionAllowed string = "NamespaceDeletionAllowed"
+	// ProjectNamespaceDeletionProcessing is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceDeletionProcessing string = "NamespaceDeletionProcessing"
+	// ProjectNamespaceDeletionImpossible is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceDeletionImpossible string = "NamespaceDeletionImpossible"
+	// ProjectNamespaceDeletionFailed is a constant for a reason for the status of condition type ProjectNamespaceReady.
+	ProjectNamespaceDeletionFailed string = "NamespaceDeletionFailed"
+
 	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
 	SeedAvailable ConditionType = "Available"
+
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
 	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
 	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+
 	// ConditionCheckError is a constant for indicating that a condition could not be checked.
 	ConditionCheckError = "ConditionCheckError"
 )

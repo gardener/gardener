@@ -29,6 +29,10 @@ data:
       secretBinding:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.secretBinding.concurrentSyncs is required" .Values.controller.config.controllers.secretBinding.concurrentSyncs }}
       {{- end }}
+      {{- if .Values.controller.config.controllers.project }}
+      project:
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.project.concurrentSyncs is required" .Values.controller.config.controllers.project.concurrentSyncs }}
+      {{- end }}
       {{- if .Values.controller.config.controllers.quota }}
       quota:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.quota.concurrentSyncs is required" .Values.controller.config.controllers.quota.concurrentSyncs }}

@@ -1,0 +1,14 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: garden-project-members
+  namespace: {{ .Release.Namespace }}
+  labels:
+    garden.sapcloud.io/role: members
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:system:project-member
+subjects:
+{{ toYaml .Values.project.owners }}

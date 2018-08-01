@@ -24,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-	"k8s.io/apiserver/pkg/authentication/user"
 	kubeinformers "k8s.io/client-go/informers"
 
 	. "github.com/onsi/ginkgo"
@@ -368,23 +367,6 @@ var _ = Describe("validator", func() {
 				awsCloud.Zones = zones
 				cloudProfile.Spec.AWS = awsProfile
 				shoot.Spec.Cloud.AWS = awsCloud
-			})
-
-			It("should add the created-by annotation", func() {
-				userName := "test-user"
-				user := &user.DefaultInfo{Name: userName}
-
-				kubeInformerFactory.Core().V1().Namespaces().Informer().GetStore().Add(&namespace)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, user)
-
-				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, userName))
-
-				err := admissionHandler.Admit(attrs)
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, userName))
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {

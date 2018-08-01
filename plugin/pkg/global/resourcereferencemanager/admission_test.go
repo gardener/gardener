@@ -19,6 +19,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,8 +65,12 @@ var _ = Describe("resourcereferencemanager", func() {
 			quotaName        = "quota-1"
 			secretName       = "secret-1"
 			shootName        = "shoot-1"
+			projectName      = "project-1"
 			allowedUser      = "allowed-user"
 			finalizers       = []string{garden.GardenerName}
+
+			defaultUserName = "test-user"
+			defaultUserInfo = &user.DefaultInfo{Name: defaultUserName}
 
 			secret = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -121,6 +126,11 @@ var _ = Describe("resourcereferencemanager", func() {
 					},
 				},
 			}
+			project = garden.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: projectName,
+				},
+			}
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       shootName,
@@ -142,14 +152,19 @@ var _ = Describe("resourcereferencemanager", func() {
 		BeforeEach(func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
+
 			kubeInformerFactory = kubeinformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetKubeInformerFactory(kubeInformerFactory)
+
 			kubeClient = &fake.Clientset{}
 			admissionHandler.SetKubeClientset(kubeClient)
+
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+
 			fakeAuthorizer = fakeAuthorizerType{}
 			admissionHandler.SetAuthorizer(fakeAuthorizer)
+
 			MissingSecretWait = 0
 
 			shoot = shootBase
@@ -356,12 +371,27 @@ var _ = Describe("resourcereferencemanager", func() {
 		})
 
 		Context("tests for Shoot objects", func() {
+			It("should add the created-by annotation", func() {
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
+
+				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+			})
+
 			It("should accept because all referenced objects have been found", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -372,7 +402,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -383,7 +413,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -394,11 +424,26 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
 				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("tests for Project objects", func() {
+			It("should add the created-by annotation", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+
+				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, defaultUserInfo)
+
+				Expect(project.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(project.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
 			})
 		})
 	})

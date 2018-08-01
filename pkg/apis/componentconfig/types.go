@@ -75,6 +75,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration
+	// Project defines the configuration of the Project controller.
+	// +optional
+	Project *ProjectControllerConfiguration
 	// Quota defines the configuration of the Quota controller.
 	// +optional
 	Quota *QuotaControllerConfiguration
@@ -104,6 +107,14 @@ type CloudProfileControllerConfiguration struct {
 // SecretBindingControllerConfiguration defines the configuration of the
 // SecretBinding controller.
 type SecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+}
+
+// ProjectControllerConfiguration defines the configuration of the
+// Project controller.
+type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
