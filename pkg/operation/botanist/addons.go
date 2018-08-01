@@ -40,12 +40,6 @@ func (b *Botanist) DestroyIngressDNSRecord() error {
 	return b.DestroyDNSRecord("ingress", false)
 }
 
-// GenerateNginxIngressConfig generates the values which are required to render the chart of
-// the nginx-ingress-controller properly.
-func (b *Botanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
-}
-
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
 // the kubernetes-dashboard properly.
 func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
