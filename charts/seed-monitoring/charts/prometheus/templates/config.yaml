@@ -136,10 +136,7 @@ data:
         regex: rest_client_request_latency_seconds_bucket
         action: drop
       - source_labels: [ __name__ ]
-        regex: '^etcd_.+'
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: '^reflector_.+'
+        regex: ^(etcd|reflector)_.+
         action: drop
 
     # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
@@ -179,17 +176,19 @@ data:
       # Drop metrics that are useless and high-volume
       # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
       - source_labels: [ __name__ ]
-        regex: container_network_tcp_usage_total
+        regex: ^container_({{ .Values.cadvisorAllowedMetrics | join "|" }})$
+        action: keep
+      - source_labels: [ container_name ]
+        regex: ^POD$
         action: drop
-      - source_labels: [ __name__ ]
-        regex: container_tasks_state
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: container_network_udp_usage_total
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: container_cpu_load_average_10s
-        action: drop
+      # get system services
+      - source_labels: [ id ]
+        action: replace
+        regex: ^/system\.slice/(.+)\.service$
+        target_label: systemd_service_name
+        replacement: '${1}'
+      - regex: ^id$
+        action: labeldrop
 
     # We fetch kubelet metrics from seed's kube-system Prometheus and filter
     # the metrics in shoot's namespace

@@ -24,7 +24,7 @@ spec:
   - name: web
     port: 80
     protocol: TCP
-    targetPort: {{ .Values.prometheusPort }}
+    targetPort: {{ .Values.port }}
   selector:
     app: prometheus
     role: monitoring
@@ -74,33 +74,32 @@ spec:
         - --storage.tsdb.retention=180h
         - --web.route-prefix=/
         - --web.enable-lifecycle
-        - --web.listen-address=0.0.0.0:{{ .Values.prometheusPort }}
+        - --web.listen-address=0.0.0.0:{{ .Values.port }}
         - --web.external-url=https://{{ .Values.ingress.host }}
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
         # data volume needs to be mounted with the same permissions,
         # otherwise we will have Permission denied problems
         securityContext:
           runAsUser: 0
-        # TODO: enable those checks when v2.2.2 is released
-        # livenessProbe:
-        #   failureThreshold: 10
-        #   httpGet:
-        #     path: /-/healthy
-        #     port: {{ .Values.prometheusPort }}
-        #     scheme: HTTP
-        #   initialDelaySeconds: 300
-        #   periodSeconds: 5
-        #   successThreshold: 1
-        #   timeoutSeconds: 3
-        # readinessProbe:
-        #   failureThreshold: 6
-        #   httpGet:
-        #     path: /-/ready
-        #     port: {{ .Values.prometheusPort }}
-        #     scheme: HTTP
-        #   periodSeconds: 5
-        #   successThreshold: 1
-        #   timeoutSeconds: 3
+        livenessProbe:
+          failureThreshold: 10
+          httpGet:
+            path: /-/healthy
+            port: {{ .Values.port }}
+            scheme: HTTP
+          initialDelaySeconds: 300
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
+        readinessProbe:
+          failureThreshold: 6
+          httpGet:
+            path: /-/ready
+            port: {{ .Values.port }}
+            scheme: HTTP
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 3
         resources:
           requests:
             cpu: 50m

@@ -13,49 +13,6 @@ data:
     - /etc/prometheus/rules/*.yml
 
     scrape_configs:
-    - job_name: kube-kubelet
-      honor_labels: false
-      scheme: https
-
-      tls_config:
-        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
-      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
-
-      kubernetes_sd_configs:
-      - role: node
-      relabel_configs:
-      - source_labels: [__meta_kubernetes_node_address_InternalIP]
-        target_label: instance
-      - action: labelmap
-        regex: __meta_kubernetes_node_label_(.+)
-      - target_label: __address__
-        replacement: kubernetes.default.svc
-      - source_labels: [__meta_kubernetes_node_name]
-        regex: (.+)
-        target_label: __metrics_path__
-        replacement: /api/v1/nodes/${1}/proxy/metrics
-      - target_label: type
-        replacement: seed
-
-      metric_relabel_configs:
-      # get system services
-      - source_labels: [id]
-        action: replace
-        regex: '^/system\.slice/(.+)\.service$'
-        target_label: systemd_service_name
-        replacement: '${1}'
-      # Drop metrics that are useless and high-volume
-      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
-      - source_labels: [ __name__ ]
-        regex: rest_client_request_latency_seconds_bucket
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: '^etcd_.+'
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: '^reflector_.+'
-        action: drop
-
     - job_name: cadvisor
       honor_labels: false
       scheme: https
@@ -84,14 +41,14 @@ data:
       # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
       metric_relabel_configs:
       - source_labels: [ __name__ ]
-        regex: container_network_tcp_usage_total
+        regex: ^container_({{ .Values.prometheus.cadvisorAllowedMetrics | join "|" }})$
+        action: keep
+      - source_labels: [ container_name ]
+        regex: ^POD$
         action: drop
-      - source_labels: [ __name__ ]
-        regex: container_tasks_state
+        # drop terraform pods
+      - source_labels: [ pod_name ]
+        regex: ^.+\.tf-pod.+$
         action: drop
-      - source_labels: [ __name__ ]
-        regex: container_network_udp_usage_total
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: container_cpu_load_average_10s
-        action: drop
+      - regex: ^id$
+        action: labeldrop
