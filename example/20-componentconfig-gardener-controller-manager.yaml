@@ -2,6 +2,7 @@
 apiVersion: componentconfig.sapcloud.io/v1alpha1
 kind: ControllerManagerConfiguration
 clientConnection:
+  disableTCPKeepAlive: false
   acceptContentTypes: application/json
   contentType: application/json
   qps: 100
