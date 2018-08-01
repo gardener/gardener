@@ -1,0 +1,14 @@
+# Project objects logically group team members, secrets, and Shoot clusters. They result in Kubernetes namespaces
+# prefixed with "garden-".
+---
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Project
+metadata:
+  name: dev
+spec:
+  owner:
+    apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: john.doe@example.com
+# description: "This is my first project"
+# purpose: "Experimenting with Gardener"

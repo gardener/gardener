@@ -22,6 +22,7 @@ import (
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -1362,6 +1363,198 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
+		})
+	})
+
+	Describe("#ValidateProject", func() {
+		var project *garden.Project
+
+		BeforeEach(func() {
+			project = &garden.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "project-1",
+				},
+				Spec: garden.ProjectSpec{
+					Owner: rbacv1.Subject{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     rbacv1.UserKind,
+						Name:     "john.doe@example.com",
+					},
+				},
+			}
+		})
+
+		It("should not return any errors", func() {
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(0))
+		})
+
+		It("should forbid Project resources with empty metadata", func() {
+			project.ObjectMeta = metav1.ObjectMeta{}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("metadata.name"),
+			}))
+		})
+
+		It("should forbid Projects having too long names", func() {
+			project.ObjectMeta.Name = "project-name-too-long"
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeTooLong),
+				"Field": Equal("metadata.name"),
+			}))
+		})
+
+		It("should forbid Projects having two consecutive hyphens", func() {
+			project.ObjectMeta.Name = "in--valid"
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("metadata.name"),
+			}))
+		})
+
+		It("should forbid Project specification with empty or invalid keys for description/purpose", func() {
+			project.Spec.Description = makeStringPointer("")
+			project.Spec.Purpose = makeStringPointer("")
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(2))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.description"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.purpose"),
+			}))
+		})
+
+		It("should forbid Project specification with owners having an empty name", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     rbacv1.UserKind,
+				Name:     "",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.owner.name"),
+			}))
+		})
+
+		It("should forbid Project specification with serviceaccount owners having an invalid api group name", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup:  "apps/v1beta1",
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      "foo",
+				Namespace: "default",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.owner.apiGroup"),
+			}))
+		})
+
+		It("should forbid Project specification with serviceaccount owners having an invalid name", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup:  "",
+				Kind:      rbacv1.ServiceAccountKind,
+				Name:      "foo-",
+				Namespace: "default",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.owner.name"),
+			}))
+		})
+
+		It("should forbid Project specification with serviceaccount owners having no namespace", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup: "",
+				Kind:     rbacv1.ServiceAccountKind,
+				Name:     "foo",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.owner.namespace"),
+			}))
+		})
+
+		It("should forbid Project specification with user owners having an invalid api group name", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup: "rbac.authorization.invalid",
+				Kind:     rbacv1.UserKind,
+				Name:     "john.doe@example.com",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.owner.apiGroup"),
+			}))
+		})
+
+		It("should forbid Project specification with group owners having an invalid api group name", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup: "rbac.authorization.invalid",
+				Kind:     rbacv1.GroupKind,
+				Name:     "groupname",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.owner.apiGroup"),
+			}))
+		})
+
+		It("should forbid Project specification with an unknown kind", func() {
+			project.Spec.Owner = rbacv1.Subject{
+				APIGroup: "rbac.authorization.invalid",
+				Kind:     "unknown",
+				Name:     "foo",
+			}
+
+			errorList := ValidateProject(project)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeNotSupported),
+				"Field": Equal("spec.owner.kind"),
+			}))
 		})
 	})
 

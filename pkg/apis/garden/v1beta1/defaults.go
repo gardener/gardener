@@ -16,6 +16,7 @@ package v1beta1
 
 import (
 	"github.com/gardener/gardener/pkg/utils"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -155,6 +156,20 @@ func SetDefaults_Seed(obj *Seed) {
 	falseVar := false
 	if obj.Spec.Protected == nil {
 		obj.Spec.Protected = &falseVar
+	}
+}
+
+// SetDefaults_Project sets default values for Project objects.
+func SetDefaults_Project(obj *Project) {
+	if len(obj.Spec.Owner.APIGroup) == 0 {
+		switch obj.Spec.Owner.Kind {
+		case rbacv1.ServiceAccountKind:
+			obj.Spec.Owner.APIGroup = ""
+		case rbacv1.UserKind:
+			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+		case rbacv1.GroupKind:
+			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+		}
 	}
 }
 

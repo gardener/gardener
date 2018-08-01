@@ -20,6 +20,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	backupinfrastructurestore "github.com/gardener/gardener/pkg/registry/garden/backupinfrastructure/storage"
 	cloudprofilestore "github.com/gardener/gardener/pkg/registry/garden/cloudprofile/storage"
+	projectstore "github.com/gardener/gardener/pkg/registry/garden/project/storage"
 	quotastore "github.com/gardener/gardener/pkg/registry/garden/quota/storage"
 	secretbinding "github.com/gardener/gardener/pkg/registry/garden/secretbinding/storage"
 	seedstore "github.com/gardener/gardener/pkg/registry/garden/seed/storage"
@@ -48,26 +49,30 @@ func (p StorageProvider) GroupName() string {
 func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGetter) map[string]rest.Storage {
 	storage := map[string]rest.Storage{}
 
+	backupInfrastructureStorage := backupinfrastructurestore.NewStorage(restOptionsGetter)
+	storage["backupinfrastructures"] = backupInfrastructureStorage.BackupInfrastructure
+	storage["backupinfrastructures/status"] = backupInfrastructureStorage.Status
+
 	cloudprofileStorage := cloudprofilestore.NewStorage(restOptionsGetter)
 	storage["cloudprofiles"] = cloudprofileStorage.CloudProfile
+
+	projectStorage := projectstore.NewStorage(restOptionsGetter)
+	storage["projects"] = projectStorage.Project
+	storage["projects/status"] = projectStorage.Status
+
+	quotaStorage := quotastore.NewStorage(restOptionsGetter)
+	storage["quotas"] = quotaStorage.Quota
+
+	secretBindingStorage := secretbinding.NewStorage(restOptionsGetter)
+	storage["secretbindings"] = secretBindingStorage.SecretBinding
 
 	seedStorage := seedstore.NewStorage(restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 
-	secretBindingStorage := secretbinding.NewStorage(restOptionsGetter)
-	storage["secretbindings"] = secretBindingStorage.SecretBinding
-
-	quotaStorage := quotastore.NewStorage(restOptionsGetter)
-	storage["quotas"] = quotaStorage.Quota
-
 	shootStorage := shootstore.NewStorage(restOptionsGetter)
 	storage["shoots"] = shootStorage.Shoot
 	storage["shoots/status"] = shootStorage.Status
-
-	backupInfrastructureStorage := backupinfrastructurestore.NewStorage(restOptionsGetter)
-	storage["backupinfrastructures"] = backupInfrastructureStorage.BackupInfrastructure
-	storage["backupinfrastructures/status"] = backupInfrastructureStorage.Status
 
 	return storage
 }

@@ -12,6 +12,8 @@ type Interface interface {
 	BackupInfrastructures() BackupInfrastructureInformer
 	// CloudProfiles returns a CloudProfileInformer.
 	CloudProfiles() CloudProfileInformer
+	// Projects returns a ProjectInformer.
+	Projects() ProjectInformer
 	// Quotas returns a QuotaInformer.
 	Quotas() QuotaInformer
 	// SecretBindings returns a SecretBindingInformer.
@@ -41,6 +43,11 @@ func (v *version) BackupInfrastructures() BackupInfrastructureInformer {
 // CloudProfiles returns a CloudProfileInformer.
 func (v *version) CloudProfiles() CloudProfileInformer {
 	return &cloudProfileInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// Projects returns a ProjectInformer.
+func (v *version) Projects() ProjectInformer {
+	return &projectInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Quotas returns a QuotaInformer.

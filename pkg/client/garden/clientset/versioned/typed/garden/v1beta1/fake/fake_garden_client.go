@@ -20,6 +20,10 @@ func (c *FakeGardenV1beta1) CloudProfiles() v1beta1.CloudProfileInterface {
 	return &FakeCloudProfiles{c}
 }
 
+func (c *FakeGardenV1beta1) Projects() v1beta1.ProjectInterface {
+	return &FakeProjects{c}
+}
+
 func (c *FakeGardenV1beta1) Quotas(namespace string) v1beta1.QuotaInterface {
 	return &FakeQuotas{c, namespace}
 }

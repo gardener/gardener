@@ -18,6 +18,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -329,6 +330,64 @@ const (
 )
 
 ////////////////////////////////////////////////////
+//                    PROJECTS                    //
+////////////////////////////////////////////////////
+
+// +genclient
+// +genclient:nonNamespaced
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// Project holds certain properties about a Gardener project.
+type Project struct {
+	metav1.TypeMeta
+	// Standard object metadata.
+	// +optional
+	metav1.ObjectMeta
+	// Spec defines the project properties.
+	// +optional
+	Spec ProjectSpec
+	// Most recently observed status of the Project.
+	// +optional
+	Status ProjectStatus
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// ProjectList is a collection of Projects.
+type ProjectList struct {
+	metav1.TypeMeta
+	// Standard list object metadata.
+	// +optional
+	metav1.ListMeta
+	// Items is the list of Projects.
+	Items []Project
+}
+
+// ProjectSpec is the specification of a Project.
+type ProjectSpec struct {
+	// Description is a human-readable description of what the project is used for.
+	// +optional
+	Description *string
+	// Owner is a subject representing a user name, an email address, or any other identifier of a user owning
+	// the project.
+	Owner rbacv1.Subject
+	// Purpose is a human-readable explanation of the project's purpose.
+	// +optional
+	Purpose *string
+}
+
+// ProjectStatus holds the most recently observed status of the project.
+type ProjectStatus struct {
+	// Conditions represents the latest available observations of a Projects's current state.
+	// +optional
+	Conditions []Condition
+	// Namespace is the name of the namespace that has been created for the Project object.
+	// A nil value means that no namespace has been created yet.
+	// +optional
+	Namespace *string
+}
+
+////////////////////////////////////////////////////
 //                      SEEDS                     //
 ////////////////////////////////////////////////////
 
@@ -374,7 +433,7 @@ type SeedSpec struct {
 	SecretRef corev1.SecretReference
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks
-	// Visible labels the Seed cluster as selectable for the seedfinder admisson controller.
+	// Visible labels the Seed cluster as selectable for the seedfinder admission controller.
 	// +optional
 	Visible *bool
 	// Protected prevent that the Seed Cluster can be used for regular Shoot cluster control planes.
