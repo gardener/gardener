@@ -30,11 +30,6 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-var (
-	// Debug enables logging when SWAGGER_DEBUG env var is not empty
-	Debug = os.Getenv("SWAGGER_DEBUG") != ""
-)
-
 // ExpandOptions provides options for expand.
 type ExpandOptions struct {
 	RelativeBase    string
@@ -49,7 +44,7 @@ type ResolutionCache interface {
 }
 
 type simpleCache struct {
-	lock  sync.Mutex
+	lock  sync.RWMutex
 	store map[string]interface{}
 }
 
@@ -59,6 +54,7 @@ func init() {
 	resCache = initResolutionCache()
 }
 
+// initResolutionCache initializes the URI resolution cache
 func initResolutionCache() ResolutionCache {
 	return &simpleCache{store: map[string]interface{}{
 		"http://swagger.io/v2/schema.json":       MustLoadSwagger20Schema(),
@@ -66,16 +62,37 @@ func initResolutionCache() ResolutionCache {
 	}}
 }
 
+// resolverContext allows to share a context during spec processing.
+// At the moment, it just holds the index of circular references found.
+type resolverContext struct {
+	// circulars holds all visited circular references, which allows shortcuts.
+	// NOTE: this is not just a performance improvement: it is required to figure out
+	// circular references which participate several cycles.
+	// This structure is privately instantiated and needs not be locked against
+	// concurrent access, unless we chose to implement a parallel spec walking.
+	circulars map[string]bool
+	basePath  string
+}
+
+func newResolverContext(originalBasePath string) *resolverContext {
+	return &resolverContext{
+		circulars: make(map[string]bool),
+		basePath:  originalBasePath, // keep the root base path in context
+	}
+}
+
+// Get retrieves a cached URI
 func (s *simpleCache) Get(uri string) (interface{}, bool) {
 	debugLog("getting %q from resolution cache", uri)
-	s.lock.Lock()
+	s.lock.RLock()
 	v, ok := s.store[uri]
 	debugLog("got %q from resolution cache: %t", uri, ok)
 
-	s.lock.Unlock()
+	s.lock.RUnlock()
 	return v, ok
 }
 
+// Set caches a URI
 func (s *simpleCache) Set(uri string, data interface{}) {
 	s.lock.Lock()
 	s.store[uri] = data
@@ -84,7 +101,7 @@ func (s *simpleCache) Set(uri string, data interface{}) {
 
 // ResolveRefWithBase resolves a reference against a context root with preservation of base path
 func ResolveRefWithBase(root interface{}, ref *Ref, opts *ExpandOptions) (*Schema, error) {
-	resolver, err := defaultSchemaLoader(root, opts, nil)
+	resolver, err := defaultSchemaLoader(root, opts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,21 +133,21 @@ func ResolveRef(root interface{}, ref *Ref) (*Schema, error) {
 	case map[string]interface{}:
 		b, _ := json.Marshal(sch)
 		newSch := new(Schema)
-		json.Unmarshal(b, newSch)
+		_ = json.Unmarshal(b, newSch)
 		return newSch, nil
 	default:
 		return nil, fmt.Errorf("unknown type for the resolved reference")
 	}
 }
 
-// ResolveParameter resolves a paramter reference against a context root
+// ResolveParameter resolves a parameter reference against a context root
 func ResolveParameter(root interface{}, ref Ref) (*Parameter, error) {
 	return ResolveParameterWithBase(root, ref, nil)
 }
 
-// ResolveParameterWithBase resolves a paramter reference against a context root and base path
+// ResolveParameterWithBase resolves a parameter reference against a context root and base path
 func ResolveParameterWithBase(root interface{}, ref Ref, opts *ExpandOptions) (*Parameter, error) {
-	resolver, err := defaultSchemaLoader(root, opts, nil)
+	resolver, err := defaultSchemaLoader(root, opts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +166,7 @@ func ResolveResponse(root interface{}, ref Ref) (*Response, error) {
 
 // ResolveResponseWithBase resolves response a reference against a context root and base path
 func ResolveResponseWithBase(root interface{}, ref Ref, opts *ExpandOptions) (*Response, error) {
-	resolver, err := defaultSchemaLoader(root, opts, nil)
+	resolver, err := defaultSchemaLoader(root, opts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +180,7 @@ func ResolveResponseWithBase(root interface{}, ref Ref, opts *ExpandOptions) (*R
 
 // ResolveItems resolves header and parameter items reference against a context root and base path
 func ResolveItems(root interface{}, ref Ref, opts *ExpandOptions) (*Items, error) {
-	resolver, err := defaultSchemaLoader(root, opts, nil)
+	resolver, err := defaultSchemaLoader(root, opts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +197,7 @@ func ResolveItems(root interface{}, ref Ref, opts *ExpandOptions) (*Items, error
 
 // ResolvePathItem resolves response a path item against a context root and base path
 func ResolvePathItem(root interface{}, ref Ref, opts *ExpandOptions) (*PathItem, error) {
-	resolver, err := defaultSchemaLoader(root, opts, nil)
+	resolver, err := defaultSchemaLoader(root, opts, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -199,6 +216,7 @@ type schemaLoader struct {
 	root    interface{}
 	options *ExpandOptions
 	cache   ResolutionCache
+	context *resolverContext
 	loadDoc func(string) (json.RawMessage, error)
 }
 
@@ -221,7 +239,8 @@ func init() {
 func defaultSchemaLoader(
 	root interface{},
 	expandOptions *ExpandOptions,
-	cache ResolutionCache) (*schemaLoader, error) {
+	cache ResolutionCache,
+	context *resolverContext) (*schemaLoader, error) {
 
 	if cache == nil {
 		cache = resCache
@@ -229,11 +248,15 @@ func defaultSchemaLoader(
 	if expandOptions == nil {
 		expandOptions = &ExpandOptions{}
 	}
-
+	absBase, _ := absPath(expandOptions.RelativeBase)
+	if context == nil {
+		context = newResolverContext(absBase)
+	}
 	return &schemaLoader{
 		root:    root,
 		options: expandOptions,
 		cache:   cache,
+		context: context,
 		loadDoc: func(path string) (json.RawMessage, error) {
 			debugLog("fetching document at %q", path)
 			return PathLoader(path)
@@ -312,12 +335,6 @@ func nextRef(startingNode interface{}, startingRef *Ref, ptr *jsonpointer.Pointe
 	return ret
 }
 
-func debugLog(msg string, args ...interface{}) {
-	if Debug {
-		log.Printf(msg, args...)
-	}
-}
-
 // normalize absolute path for cache.
 // on Windows, drive letters should be converted to lower as scheme in net/url.URL
 func normalizeAbsPath(path string) string {
@@ -366,6 +383,59 @@ func normalizePaths(refPath, base string) string {
 	return baseURL.String()
 }
 
+// denormalizePaths returns to simplest notation on file $ref,
+// i.e. strips the absolute path and sets a path relative to the base path.
+//
+// This is currently used when we rewrite ref after a circular ref has been detected
+func denormalizeFileRef(ref *Ref, relativeBase, originalRelativeBase string) *Ref {
+	debugLog("denormalizeFileRef for: %s", ref.String())
+
+	if ref.String() == "" || ref.IsRoot() || ref.HasFragmentOnly {
+		return ref
+	}
+	// strip relativeBase from URI
+	relativeBaseURL, _ := url.Parse(relativeBase)
+	relativeBaseURL.Fragment = ""
+
+	if relativeBaseURL.IsAbs() && strings.HasPrefix(ref.String(), relativeBase) {
+		// this should work for absolute URI (e.g. http://...): we have an exact match, just trim prefix
+		r, _ := NewRef(strings.TrimPrefix(ref.String(), relativeBase))
+		return &r
+	}
+
+	if relativeBaseURL.IsAbs() {
+		// other absolute URL get unchanged (i.e. with a non-empty scheme)
+		return ref
+	}
+
+	// for relative file URIs:
+	originalRelativeBaseURL, _ := url.Parse(originalRelativeBase)
+	originalRelativeBaseURL.Fragment = ""
+	if strings.HasPrefix(ref.String(), originalRelativeBaseURL.String()) {
+		// the resulting ref is in the expanded spec: return a local ref
+		r, _ := NewRef(strings.TrimPrefix(ref.String(), originalRelativeBaseURL.String()))
+		return &r
+	}
+
+	// check if we may set a relative path, considering the original base path for this spec.
+	// Example:
+	//   spec is located at /mypath/spec.json
+	//   my normalized ref points to: /mypath/item.json#/target
+	//   expected result: item.json#/target
+	parts := strings.Split(ref.String(), "#")
+	relativePath, err := filepath.Rel(path.Dir(originalRelativeBaseURL.String()), parts[0])
+	if err != nil {
+		// there is no common ancestor (e.g. different drives on windows)
+		// leaves the ref unchanged
+		return ref
+	}
+	if len(parts) == 2 {
+		relativePath += "#" + parts[1]
+	}
+	r, _ := NewRef(relativePath)
+	return &r
+}
+
 // relativeBase could be an ABSOLUTE file path or an ABSOLUTE URL
 func normalizeFileRef(ref *Ref, relativeBase string) *Ref {
 	// This is important for when the reference is pointing to the root schema
@@ -374,8 +444,7 @@ func normalizeFileRef(ref *Ref, relativeBase string) *Ref {
 		return &r
 	}
 
-	refURL := ref.GetURL()
-	debugLog("normalizing %s against %s (%s)", ref.String(), relativeBase, refURL.String())
+	debugLog("normalizing %s against %s (%s)", ref.String(), relativeBase, ref.GetURL().String())
 
 	s := normalizePaths(ref.String(), relativeBase)
 	r, _ := NewRef(s)
@@ -400,7 +469,7 @@ func (r *schemaLoader) resolveRef(ref *Ref, target interface{}, basePath string)
 	// it is pointing somewhere in the root.
 	root := r.root
 	if (ref.IsRoot() || ref.HasFragmentOnly) && root == nil && basePath != "" {
-		if baseRef, err := NewRef(basePath); err == nil {
+		if baseRef, erb := NewRef(basePath); erb == nil {
 			root, _, _, _ = r.load(baseRef.GetURL())
 		}
 	}
@@ -475,7 +544,7 @@ func absPath(fname string) (string, error) {
 
 // ExpandSpec expands the references in a swagger spec
 func ExpandSpec(spec *Swagger, options *ExpandOptions) error {
-	resolver, err := defaultSchemaLoader(spec, options, nil)
+	resolver, err := defaultSchemaLoader(spec, options, nil, nil)
 	// Just in case this ever returns an error.
 	if shouldStopOnError(err, resolver.options) {
 		return err
@@ -572,7 +641,7 @@ func ExpandSchemaWithBasePath(schema *Schema, cache ResolutionCache, opts *Expan
 		basePath, _ = absPath(opts.RelativeBase)
 	}
 
-	resolver, err := defaultSchemaLoader(nil, opts, cache)
+	resolver, err := defaultSchemaLoader(nil, opts, cache, nil)
 	if err != nil {
 		return err
 	}
@@ -624,8 +693,32 @@ func basePathFromSchemaID(oldBasePath, id string) string {
 	return u.String()
 }
 
-func isCircular(ref *Ref, basePath string, parentRefs ...string) bool {
-	return basePath != "" && swag.ContainsStringsCI(parentRefs, ref.String())
+// isCircular detects cycles in sequences of $ref.
+// It relies on a private context (which needs not be locked).
+func (r *schemaLoader) isCircular(ref *Ref, basePath string, parentRefs ...string) (foundCycle bool) {
+	normalizedRef := normalizePaths(ref.String(), basePath)
+	if _, ok := r.context.circulars[normalizedRef]; ok {
+		// circular $ref has been already detected in another explored cycle
+		foundCycle = true
+		return
+	}
+	foundCycle = swag.ContainsStringsCI(parentRefs, normalizedRef)
+	if foundCycle {
+		r.context.circulars[normalizedRef] = true
+	}
+	return
+}
+
+func updateBasePath(transitive *schemaLoader, resolver *schemaLoader, basePath string) string {
+	if transitive != resolver {
+		debugLog("got a new resolver")
+		if transitive.options != nil && transitive.options.RelativeBase != "" {
+			basePath, _ = absPath(transitive.options.RelativeBase)
+			debugLog("new basePath = %s", basePath)
+		}
+	}
+
+	return basePath
 }
 
 func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader, basePath string) (*Schema, error) {
@@ -652,7 +745,6 @@ func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader, ba
 	}
 
 	/* Explain here what this function does */
-
 	var t *Schema
 	/* if Ref is found, everything else doesn't matter */
 	/* Ref also changes the resolution scope of children expandSchema */
@@ -661,14 +753,19 @@ func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader, ba
 		normalizedRef := normalizeFileRef(&target.Ref, basePath)
 		normalizedBasePath := normalizedRef.RemoteURI()
 
-		/* this means there is a circle in the recursion tree */
-		/* return the Ref */
-		if isCircular(normalizedRef, basePath, parentRefs...) {
-			target.Ref = *normalizedRef
+		if resolver.isCircular(normalizedRef, basePath, parentRefs...) {
+			// this means there is a cycle in the recursion tree: return the Ref
+			// - circular refs cannot be expanded. We leave them as ref.
+			// - denormalization means that a new local file ref is set relative to the original basePath
+			debugLog("shortcut circular ref")
+			debugLog("basePath: %s", basePath)
+			debugLog("normalized basePath: %s", normalizedBasePath)
+			debugLog("normalized ref: %s", normalizedRef.String())
+			target.Ref = *denormalizeFileRef(normalizedRef, normalizedBasePath, resolver.context.basePath)
 			return &target, nil
 		}
 
-		debugLog("\nbasePath: %s", basePath)
+		debugLog("basePath: %s", basePath)
 		if Debug {
 			b, _ := json.Marshal(target)
 			debugLog("calling Resolve with target: %s", string(b))
@@ -680,12 +777,14 @@ func expandSchema(target Schema, parentRefs []string, resolver *schemaLoader, ba
 		if t != nil {
 			parentRefs = append(parentRefs, normalizedRef.String())
 			var err error
-			resolver, err = transitiveResolver(basePath, target.Ref, resolver)
+			transitiveResolver, err := transitiveResolver(basePath, target.Ref, resolver)
 			if shouldStopOnError(err, resolver.options) {
 				return nil, err
 			}
 
-			return expandSchema(*t, parentRefs, resolver, normalizedBasePath)
+			basePath = updateBasePath(transitiveResolver, resolver, normalizedBasePath)
+
+			return expandSchema(*t, parentRefs, transitiveResolver, basePath)
 		}
 	}
 
@@ -794,7 +893,7 @@ func derefPathItem(pathItem *PathItem, parentRefs []string, resolver *schemaLoad
 		normalizedRef := normalizeFileRef(&pathItem.Ref, basePath)
 		normalizedBasePath := normalizedRef.RemoteURI()
 
-		if isCircular(normalizedRef, basePath, parentRefs...) {
+		if resolver.isCircular(normalizedRef, basePath, parentRefs...) {
 			return nil
 		}
 
@@ -829,7 +928,8 @@ func expandPathItem(pathItem *PathItem, resolver *schemaLoader, basePath string)
 	}
 	pathItem.Ref = Ref{}
 
-	parentRefs = parentRefs[0:]
+	// Currently unused:
+	//parentRefs = parentRefs[0:]
 
 	for idx := range pathItem.Parameters {
 		if err := expandParameter(&(pathItem.Parameters[idx]), resolver, basePath); shouldStopOnError(err, resolver.options) {
@@ -900,7 +1000,13 @@ func transitiveResolver(basePath string, ref Ref, resolver *schemaLoader) (*sche
 		rootURL.Fragment = ""
 		root, _ := resolver.cache.Get(rootURL.String())
 		var err error
-		resolver, err = defaultSchemaLoader(root, resolver.options, resolver.cache)
+
+		// shallow copy of resolver options to set a new RelativeBase when
+		// traversing multiple documents
+		newOptions := resolver.options
+		newOptions.RelativeBase = rootURL.String()
+		debugLog("setting new root: %s", newOptions.RelativeBase)
+		resolver, err = defaultSchemaLoader(root, newOptions, resolver.cache, resolver.context)
 		if err != nil {
 			return nil, err
 		}
@@ -916,7 +1022,7 @@ func ExpandResponse(response *Response, basePath string) error {
 	opts := &ExpandOptions{
 		RelativeBase: basePath,
 	}
-	resolver, err := defaultSchemaLoader(nil, opts, nil)
+	resolver, err := defaultSchemaLoader(nil, opts, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -931,7 +1037,7 @@ func derefResponse(response *Response, parentRefs []string, resolver *schemaLoad
 		normalizedRef := normalizeFileRef(&response.Ref, basePath)
 		normalizedBasePath := normalizedRef.RemoteURI()
 
-		if isCircular(normalizedRef, basePath, parentRefs...) {
+		if resolver.isCircular(normalizedRef, basePath, parentRefs...) {
 			return nil
 		}
 
@@ -958,17 +1064,26 @@ func expandResponse(response *Response, resolver *schemaLoader, basePath string)
 		return err
 	}
 	if response.Ref.String() != "" {
-		var err error
-		resolver, err = transitiveResolver(basePath, response.Ref, resolver)
-		if shouldStopOnError(err, resolver.options) {
+		transitiveResolver, err := transitiveResolver(basePath, response.Ref, resolver)
+		if shouldStopOnError(err, transitiveResolver.options) {
 			return err
+		}
+		basePath = updateBasePath(transitiveResolver, resolver, basePath)
+		resolver = transitiveResolver
+	}
+	if response.Schema != nil && response.Schema.Ref.String() != "" {
+		// schema expanded to a $ref in another root
+		var ern error
+		response.Schema.Ref, ern = NewRef(normalizePaths(response.Schema.Ref.String(), response.Ref.RemoteURI()))
+		if ern != nil {
+			return ern
 		}
 	}
 	response.Ref = Ref{}
 
 	parentRefs = parentRefs[0:]
 	if !resolver.options.SkipSchemas && response.Schema != nil {
-		parentRefs = append(parentRefs, response.Schema.Ref.String())
+		// parentRefs = append(parentRefs, response.Schema.Ref.String())
 		s, err := expandSchema(*response.Schema, parentRefs, resolver, basePath)
 		if shouldStopOnError(err, resolver.options) {
 			return err
@@ -986,7 +1101,7 @@ func ExpandParameter(parameter *Parameter, basePath string) error {
 	opts := &ExpandOptions{
 		RelativeBase: basePath,
 	}
-	resolver, err := defaultSchemaLoader(nil, opts, nil)
+	resolver, err := defaultSchemaLoader(nil, opts, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -1000,7 +1115,7 @@ func derefParameter(parameter *Parameter, parentRefs []string, resolver *schemaL
 		normalizedRef := normalizeFileRef(&parameter.Ref, basePath)
 		normalizedBasePath := normalizedRef.RemoteURI()
 
-		if isCircular(normalizedRef, basePath, parentRefs...) {
+		if resolver.isCircular(normalizedRef, basePath, parentRefs...) {
 			return nil
 		}
 
@@ -1027,17 +1142,26 @@ func expandParameter(parameter *Parameter, resolver *schemaLoader, basePath stri
 		return err
 	}
 	if parameter.Ref.String() != "" {
-		var err error
-		resolver, err = transitiveResolver(basePath, parameter.Ref, resolver)
-		if shouldStopOnError(err, resolver.options) {
+		transitiveResolver, err := transitiveResolver(basePath, parameter.Ref, resolver)
+		if shouldStopOnError(err, transitiveResolver.options) {
 			return err
+		}
+		basePath = updateBasePath(transitiveResolver, resolver, basePath)
+		resolver = transitiveResolver
+	}
+
+	if parameter.Schema != nil && parameter.Schema.Ref.String() != "" {
+		// schema expanded to a $ref in another root
+		var ern error
+		parameter.Schema.Ref, ern = NewRef(normalizePaths(parameter.Schema.Ref.String(), parameter.Ref.RemoteURI()))
+		if ern != nil {
+			return ern
 		}
 	}
 	parameter.Ref = Ref{}
 
 	parentRefs = parentRefs[0:]
 	if !resolver.options.SkipSchemas && parameter.Schema != nil {
-		parentRefs = append(parentRefs, parameter.Schema.Ref.String())
 		s, err := expandSchema(*parameter.Schema, parentRefs, resolver, basePath)
 		if shouldStopOnError(err, resolver.options) {
 			return err

@@ -146,9 +146,11 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 // or 5% of existing shoot control planes of current number of shoots deployed in seed (5 if current shoots are 100),
 // whichever of the two is larger
 func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
-	replicasToSupportSingleShoot := 4
-	effectiveExcessCapacity := 3
-	excessCapacityBasedOnAssociatedShoots := int(float64(numberOfAssociatedShoots) * 0.05)
+	var (
+		replicasToSupportSingleShoot          = 4
+		effectiveExcessCapacity               = 3
+		excessCapacityBasedOnAssociatedShoots = int(float64(numberOfAssociatedShoots) * 0.05)
+	)
 
 	if excessCapacityBasedOnAssociatedShoots > effectiveExcessCapacity {
 		effectiveExcessCapacity = excessCapacityBasedOnAssociatedShoots
