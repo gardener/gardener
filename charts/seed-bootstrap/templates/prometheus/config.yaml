@@ -95,3 +95,10 @@ data:
       - source_labels: [ __name__ ]
         regex: container_cpu_load_average_10s
         action: drop
+      # drop infra pod in k8s
+      - source_labels: [ container_name ]
+        regex: '^POD$'
+        action: drop
+      - source_labels: [ pod_name ]
+        regex: '^.+{{ .Values.prometheus.terraformerPodSuffix }}.+$'
+        action: drop

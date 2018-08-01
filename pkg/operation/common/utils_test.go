@@ -160,5 +160,31 @@ var _ = Describe("common", func() {
 				})
 			})
 		})
+		Describe("#ResourceQuantity", func() {
+			It("should return the correct resource", func() {
+				var (
+					baseResource    = 100.0
+					nodeCount       = 1.0
+					weight          = 1.0
+					resourcePerNode = 50.0
+					SIUnit          = "Mi"
+				)
+				result := ResourceQuantity(baseResource, nodeCount, resourcePerNode, weight, SIUnit)
+
+				Expect(result).To(Equal("150Mi"))
+			})
+			It("should ceil resource", func() {
+				var (
+					baseResource    = 100.0
+					nodeCount       = 1.0
+					weight          = 3.0
+					resourcePerNode = 50.0
+					SIUnit          = "Mi"
+				)
+				result := ResourceQuantity(baseResource, nodeCount, resourcePerNode, weight, SIUnit)
+
+				Expect(result).To(Equal("250Mi"))
+			})
+		})
 	})
 })

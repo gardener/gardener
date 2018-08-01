@@ -125,6 +125,13 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
+	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	nodeCount := float64(len(nodes.Items))
+
 	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"images": map[string]interface{}{
@@ -134,6 +141,22 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		},
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),
+		},
+
+		"prometheus": map[string]interface{}{
+			// TODO: use https://github.com/kubernetes/autoscaler/tree/master/vertical-pod-autoscaler
+			// once it moves to beta version.
+			"resources": map[string]interface{}{
+				"requests": map[string]interface{}{
+					"cpu":    common.ResourceQuantity(70.0, nodeCount, 13.0, 3.0, "m"),
+					"memory": common.ResourceQuantity(100.0, nodeCount, 90.0, 3.0, "Mi"),
+				},
+				"limits": map[string]interface{}{
+					"cpu":    common.ResourceQuantity(150.0, nodeCount, 25.0, 3.0, "m"),
+					"memory": common.ResourceQuantity(150.0, nodeCount, 170.0, 3.0, "Mi"),
+				},
+			},
+			"terraformerPodSuffix": common.TerraformerPodSuffix,
 		},
 	})
 }
