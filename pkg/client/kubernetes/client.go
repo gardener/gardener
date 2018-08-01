@@ -17,6 +17,9 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes/base"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v110"
@@ -44,6 +47,22 @@ func NewClientFromFile(kubeconfigPath string) (Client, error) {
 		return nil, err
 	}
 	return newClientSet(config, clientConfig)
+}
+
+// Create new Transport to forcefully recreate new kubernetes HTTP client
+func newTransport() http.RoundTripper {
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+	}
 }
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
@@ -82,6 +101,7 @@ func NewClientFromSecretObject(secret *corev1.Secret) (Client, error) {
 }
 
 func newClientSet(config *rest.Config, clientConfig clientcmd.ClientConfig) (Client, error) {
+	config.Transport = newTransport()
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
