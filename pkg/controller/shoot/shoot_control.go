@@ -190,10 +190,12 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	if err != nil {
 		return true, err
 	}
-
+	operationID, err := utils.GenerateRandomString(8)
+	if err != nil {
+		return true, err
+	}
 	var (
 		shoot         = shootObj.DeepCopy()
-		operationID   = utils.GenerateRandomString(8)
 		shootLogger   = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
 		lastOperation = shoot.Status.LastOperation
 		operationType = controllerutils.ComputeOperationType(lastOperation)

@@ -15,27 +15,29 @@
 package utils
 
 import (
-	"math/rand"
-	"time"
+	"crypto/rand"
+	"math/big"
 )
 
-// GenerateRandomString generates a random string of the specified length <n>. The set of allowed characters
-// is [0-9a-zA-Z], thus no special characters are included in the output.
-func GenerateRandomString(n int) string {
+// GenerateRandomString uses crypto/rand to generate a random string of the specified length <n>.
+// The set of allowed characters is [0-9a-zA-Z], thus no special characters are included in the output.
+// Returns error if there was a problem during the random generation.
+func GenerateRandomString(n int) (string, error) {
 	allowedCharacters := "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 	return GenerateRandomStringFromCharset(n, allowedCharacters)
 }
 
-// GenerateRandomStringFromCharset generates a random string of the specified length <n>. The set of allowed characters
-// can be specified.
-func GenerateRandomStringFromCharset(n int, allowedCharacters string) string {
-	seed := time.Now().UnixNano()
-	randomSource := rand.NewSource(seed)
-	randomGenerator := rand.New(randomSource)
+// GenerateRandomStringFromCharset generates a cryptographically secure random string of the specified length <n>.
+// The set of allowed characters can be specified. Returns error if there was a problem during the random generation.
+func GenerateRandomStringFromCharset(n int, allowedCharacters string) (string, error) {
 	output := make([]byte, n)
+	max := new(big.Int).SetInt64(int64(len(allowedCharacters)))
 	for i := range output {
-		randomCharacter := randomGenerator.Intn(len(allowedCharacters))
-		output[i] = allowedCharacters[randomCharacter]
+		randomCharacter, err := rand.Int(rand.Reader, max)
+		if err != nil {
+			return "", err
+		}
+		output[i] = allowedCharacters[randomCharacter.Int64()]
 	}
-	return string(output)
+	return string(output), nil
 }
