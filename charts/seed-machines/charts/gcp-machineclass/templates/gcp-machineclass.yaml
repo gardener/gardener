@@ -27,7 +27,7 @@ spec:
   labels:
 {{ toYaml $machineClass.labels | indent 4 }}
 {{- end }}
-  machineType: n1-standard-4
+  machineType: {{ $machineClass.machineType }}
 {{- if $machineClass.metadata }}
   metadata:
 {{ toYaml $machineClass.metadata | indent 2 }}
