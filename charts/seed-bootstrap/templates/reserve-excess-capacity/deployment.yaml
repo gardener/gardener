@@ -1,3 +1,4 @@
+{{- if .Values.reserveExcessCapacity }}
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
@@ -32,3 +33,4 @@ spec:
             cpu: 500m
             memory: 1200Mi
       priorityClassName: reserve-excess-capacity
+{{- end }}

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
@@ -107,8 +108,8 @@ type ControlInterface interface {
 // implements the documented semantics for Seeds. updater is the UpdaterInterface used
 // to update the status of Seeds. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, secretLister, shootLister, backupInfrastructureLister}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, config *componentconfig.ControllerManagerConfiguration, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, config, secretLister, shootLister, backupInfrastructureLister}
 }
 
 type defaultControl struct {
@@ -118,6 +119,7 @@ type defaultControl struct {
 	imageVector                imagevector.ImageVector
 	recorder                   record.EventRecorder
 	updater                    UpdaterInterface
+	config                     *componentconfig.ControllerManagerConfiguration
 	secretLister               kubecorev1listers.SecretLister
 	shootLister                gardenlisters.ShootLister
 	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
@@ -233,6 +235,9 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	}
 
 	// Bootstrap the Seed cluster.
+	if c.config.Controllers.Seed.ReserveExcessCapacity != nil {
+		seedObj.MustReserveExcessCapacity(*c.config.Controllers.Seed.ReserveExcessCapacity)
+	}
 	if err := seedpkg.BootstrapCluster(seedObj, c.k8sGardenClient, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
 		conditionSeedAvailable = helper.ModifyCondition(conditionSeedAvailable, corev1.ConditionFalse, "BootstrappingFailed", err.Error())
 		c.updateSeedStatus(seed, *conditionSeedAvailable)

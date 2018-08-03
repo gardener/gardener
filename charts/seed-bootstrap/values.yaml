@@ -1,4 +1,5 @@
 cloudProvider: aws
+
 prometheus:
   port: 9090
   cadvisorAllowedMetrics:
@@ -13,3 +14,12 @@ prometheus:
   - cpu_usage_seconds_total
   - memory_usage_bytes
   - memory_working_set_bytes
+
+reserveExcessCapacity: true
+
+replicas:
+  reserve-excess-capacity: 0
+
+images:
+  pause-container: image-repository:image-tag
+  prometheus: image-repository:image-tag

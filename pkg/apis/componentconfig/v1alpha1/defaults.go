@@ -28,6 +28,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_ControllerManagerConfiguration sets defaults for the configuration of the Gardener controller manager.
 func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfiguration) {
+	trueVar := true
+
 	if len(obj.Server.BindAddress) == 0 {
 		obj.Server.BindAddress = "0.0.0.0"
 	}
@@ -89,7 +91,12 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 	if obj.Controllers.Seed == nil {
 		obj.Controllers.Seed = &SeedControllerConfiguration{
-			ConcurrentSyncs: 5,
+			ConcurrentSyncs:       5,
+			ReserveExcessCapacity: &trueVar,
+		}
+	} else {
+		if obj.Controllers.Seed.ReserveExcessCapacity == nil {
+			obj.Controllers.Seed.ReserveExcessCapacity = &trueVar
 		}
 	}
 

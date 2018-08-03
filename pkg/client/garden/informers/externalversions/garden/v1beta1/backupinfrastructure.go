@@ -5,7 +5,7 @@ package v1beta1
 import (
 	time "time"
 
-	garden_v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
@@ -54,7 +54,7 @@ func NewFilteredBackupInfrastructureInformer(client versioned.Interface, namespa
 				return client.GardenV1beta1().BackupInfrastructures(namespace).Watch(options)
 			},
 		},
-		&garden_v1beta1.BackupInfrastructure{},
+		&gardenv1beta1.BackupInfrastructure{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,7 +65,7 @@ func (f *backupInfrastructureInformer) defaultInformer(client versioned.Interfac
 }
 
 func (f *backupInfrastructureInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&garden_v1beta1.BackupInfrastructure{}, f.defaultInformer)
+	return f.factory.InformerFor(&gardenv1beta1.BackupInfrastructure{}, f.defaultInformer)
 }
 
 func (f *backupInfrastructureInformer) Lister() v1beta1.BackupInfrastructureLister {

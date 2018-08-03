@@ -21,8 +21,9 @@ import (
 
 // Seed is an object containing information about a Seed cluster.
 type Seed struct {
-	Info          *gardenv1beta1.Seed
-	Secret        *corev1.Secret
-	CloudProvider gardenv1beta1.CloudProvider
-	CloudProfile  *gardenv1beta1.CloudProfile
+	Info                  *gardenv1beta1.Seed
+	Secret                *corev1.Secret
+	CloudProvider         gardenv1beta1.CloudProvider
+	CloudProfile          *gardenv1beta1.CloudProfile
+	reserveExcessCapacity bool
 }

@@ -5,7 +5,7 @@ package v1beta1
 import (
 	time "time"
 
-	garden_v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
@@ -53,7 +53,7 @@ func NewFilteredCloudProfileInformer(client versioned.Interface, resyncPeriod ti
 				return client.GardenV1beta1().CloudProfiles().Watch(options)
 			},
 		},
-		&garden_v1beta1.CloudProfile{},
+		&gardenv1beta1.CloudProfile{},
 		resyncPeriod,
 		indexers,
 	)
@@ -64,7 +64,7 @@ func (f *cloudProfileInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *cloudProfileInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&garden_v1beta1.CloudProfile{}, f.defaultInformer)
+	return f.factory.InformerFor(&gardenv1beta1.CloudProfile{}, f.defaultInformer)
 }
 
 func (f *cloudProfileInformer) Lister() v1beta1.CloudProfileLister {

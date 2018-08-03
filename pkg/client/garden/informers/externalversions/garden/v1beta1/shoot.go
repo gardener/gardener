@@ -5,7 +5,7 @@ package v1beta1
 import (
 	time "time"
 
-	garden_v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
@@ -54,7 +54,7 @@ func NewFilteredShootInformer(client versioned.Interface, namespace string, resy
 				return client.GardenV1beta1().Shoots(namespace).Watch(options)
 			},
 		},
-		&garden_v1beta1.Shoot{},
+		&gardenv1beta1.Shoot{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,7 +65,7 @@ func (f *shootInformer) defaultInformer(client versioned.Interface, resyncPeriod
 }
 
 func (f *shootInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&garden_v1beta1.Shoot{}, f.defaultInformer)
+	return f.factory.InformerFor(&gardenv1beta1.Shoot{}, f.defaultInformer)
 }
 
 func (f *shootInformer) Lister() v1beta1.ShootLister {

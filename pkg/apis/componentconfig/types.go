@@ -118,6 +118,13 @@ type SeedControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
+	// ReserveExcessCapacity indicates whether the Seed controller should reserve
+	// excess capacity for Shoot control planes in the Seeds. This is done via
+	// PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or
+	// the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API
+	// group enabled. It defaults to true.
+	// +optional
+	ReserveExcessCapacity *bool
 }
 
 // ShootControllerConfiguration defines the configuration of the CloudProfile

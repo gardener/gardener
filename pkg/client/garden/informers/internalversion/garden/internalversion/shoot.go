@@ -6,7 +6,7 @@ import (
 	time "time"
 
 	garden "github.com/gardener/gardener/pkg/apis/garden"
-	clientset_internalversion "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
+	clientsetinternalversion "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/internalversion/internalinterfaces"
 	internalversion "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,14 +31,14 @@ type shootInformer struct {
 // NewShootInformer constructs a new informer for Shoot type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewShootInformer(client clientset_internalversion.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+func NewShootInformer(client clientsetinternalversion.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewFilteredShootInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredShootInformer constructs a new informer for Shoot type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredShootInformer(client clientset_internalversion.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredShootInformer(client clientsetinternalversion.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
@@ -60,7 +60,7 @@ func NewFilteredShootInformer(client clientset_internalversion.Interface, namesp
 	)
 }
 
-func (f *shootInformer) defaultInformer(client clientset_internalversion.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *shootInformer) defaultInformer(client clientsetinternalversion.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFilteredShootInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 

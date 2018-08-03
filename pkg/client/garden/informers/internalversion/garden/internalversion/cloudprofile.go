@@ -6,7 +6,7 @@ import (
 	time "time"
 
 	garden "github.com/gardener/gardener/pkg/apis/garden"
-	clientset_internalversion "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
+	clientsetinternalversion "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/internalversion/internalinterfaces"
 	internalversion "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,14 +30,14 @@ type cloudProfileInformer struct {
 // NewCloudProfileInformer constructs a new informer for CloudProfile type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewCloudProfileInformer(client clientset_internalversion.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+func NewCloudProfileInformer(client clientsetinternalversion.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewFilteredCloudProfileInformer(client, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredCloudProfileInformer constructs a new informer for CloudProfile type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredCloudProfileInformer(client clientset_internalversion.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredCloudProfileInformer(client clientsetinternalversion.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
@@ -59,7 +59,7 @@ func NewFilteredCloudProfileInformer(client clientset_internalversion.Interface,
 	)
 }
 
-func (f *cloudProfileInformer) defaultInformer(client clientset_internalversion.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
+func (f *cloudProfileInformer) defaultInformer(client clientsetinternalversion.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
 	return NewFilteredCloudProfileInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 

@@ -5,7 +5,7 @@ package v1beta1
 import (
 	time "time"
 
-	garden_v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
@@ -53,7 +53,7 @@ func NewFilteredSeedInformer(client versioned.Interface, resyncPeriod time.Durat
 				return client.GardenV1beta1().Seeds().Watch(options)
 			},
 		},
-		&garden_v1beta1.Seed{},
+		&gardenv1beta1.Seed{},
 		resyncPeriod,
 		indexers,
 	)
@@ -64,7 +64,7 @@ func (f *seedInformer) defaultInformer(client versioned.Interface, resyncPeriod 
 }
 
 func (f *seedInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&garden_v1beta1.Seed{}, f.defaultInformer)
+	return f.factory.InformerFor(&gardenv1beta1.Seed{}, f.defaultInformer)
 }
 
 func (f *seedInformer) Lister() v1beta1.SeedLister {

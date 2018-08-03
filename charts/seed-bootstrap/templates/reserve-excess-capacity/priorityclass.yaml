@@ -1,3 +1,4 @@
+{{- if .Values.reserveExcessCapacity }}
 apiVersion: {{ include "priorityclassversion" . }}
 kind: PriorityClass
 metadata:
@@ -6,3 +7,4 @@ metadata:
 value: -5
 globalDefault: false
 description: "This class is used to reserve excess resource capacity on a cluster"
+{{- end }}

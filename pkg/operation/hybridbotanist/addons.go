@@ -146,7 +146,7 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 	if b.Shoot.NginxIngressEnabled() {
-		nginxIngressConfig["controller"] =  map[string]interface{}{
+		nginxIngressConfig["controller"] = map[string]interface{}{
 			"service": map[string]interface{}{
 				"loadBalancerSourceRanges": b.Shoot.Info.Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
 			},

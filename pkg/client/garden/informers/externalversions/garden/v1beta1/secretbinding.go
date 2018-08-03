@@ -5,7 +5,7 @@ package v1beta1
 import (
 	time "time"
 
-	garden_v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	versioned "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	internalinterfaces "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/internalinterfaces"
 	v1beta1 "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
@@ -54,7 +54,7 @@ func NewFilteredSecretBindingInformer(client versioned.Interface, namespace stri
 				return client.GardenV1beta1().SecretBindings(namespace).Watch(options)
 			},
 		},
-		&garden_v1beta1.SecretBinding{},
+		&gardenv1beta1.SecretBinding{},
 		resyncPeriod,
 		indexers,
 	)
@@ -65,7 +65,7 @@ func (f *secretBindingInformer) defaultInformer(client versioned.Interface, resy
 }
 
 func (f *secretBindingInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&garden_v1beta1.SecretBinding{}, f.defaultInformer)
+	return f.factory.InformerFor(&gardenv1beta1.SecretBinding{}, f.defaultInformer)
 }
 
 func (f *secretBindingInformer) Lister() v1beta1.SecretBindingLister {
