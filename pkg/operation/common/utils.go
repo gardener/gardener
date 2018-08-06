@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -224,4 +225,43 @@ func DetermineErrorCode(message string) error {
 	}
 
 	return errors.New(message)
+}
+
+// ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace
+// name in the project statuses.
+func ProjectForNamespace(k8sGardenClient kubernetes.Client, namespace *corev1.Namespace) (*gardenv1beta1.Project, error) {
+	projectList, err := k8sGardenClient.GardenClientset().GardenV1beta1().Projects().List(metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, project := range projectList.Items {
+		if project.Status.Namespace != nil && *project.Status.Namespace == namespace.Name {
+			return &project, nil
+		}
+	}
+
+	return nil, nil
+}
+
+// ProjectNameForNamespace determines the project name for a given <namespace>. It tries to identify it first per the namespace's ownerReferences.
+// If it doesn't help then it will check whether the project name is a label on the namespace object. If it doesn't help then the name can be inferred
+// from the namespace name in case it is prefixed with the project prefix. If none of those approaches the namespace name itself is returned as project
+// name.
+func ProjectNameForNamespace(namespace *corev1.Namespace) string {
+	for _, ownerReference := range namespace.OwnerReferences {
+		if ownerReference.Kind == "Project" {
+			return ownerReference.Name
+		}
+	}
+
+	if name, ok := namespace.Labels[ProjectName]; ok {
+		return name
+	}
+
+	if nameSplit := strings.Split(namespace.Name, ProjectPrefix); len(nameSplit) > 1 {
+		return nameSplit[1]
+	}
+
+	return namespace.Name
 }

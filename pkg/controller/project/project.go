@@ -24,6 +24,7 @@ import (
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -36,12 +37,18 @@ type Controller struct {
 
 	k8sInformers kubeinformers.SharedInformerFactory
 
-	control  ControlInterface
+	control                 ControlInterface
+	projectNamespaceControl ControlInterfaceProjectNamespace
+
 	recorder record.EventRecorder
 
 	projectLister gardenlisters.ProjectLister
 	projectQueue  workqueue.RateLimitingInterface
 	projectSynced cache.InformerSynced
+
+	namespaceLister kubecorev1listers.NamespaceLister
+	namespaceQueue  workqueue.RateLimitingInterface
+	namespaceSynced cache.InformerSynced
 
 	shootLister gardenlisters.ShootLister
 
@@ -60,26 +67,29 @@ func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFacto
 		projectInformer = gardenv1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
+		namespaceInformer = corev1Informer.Namespaces()
+		namespaceLister   = namespaceInformer.Lister()
+
 		backupInfrastructureInformer = gardenv1beta1Informer.BackupInfrastructures()
 		backupInfrastructureLister   = backupInfrastructureInformer.Lister()
 
 		shootInformer = gardenv1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 
-		namespaceInformer = corev1Informer.Namespaces()
-		namespaceLister   = namespaceInformer.Lister()
-
 		projectUpdater = NewRealUpdater(k8sGardenClient, projectLister)
 	)
 
 	projectController := &Controller{
-		k8sGardenClient:    k8sGardenClient,
-		k8sGardenInformers: gardenInformerFactory,
-		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, projectUpdater, backupInfrastructureLister, shootLister, namespaceLister),
-		recorder:           recorder,
-		projectLister:      projectLister,
-		projectQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
-		workerCh:           make(chan int),
+		k8sGardenClient:         k8sGardenClient,
+		k8sGardenInformers:      gardenInformerFactory,
+		control:                 NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, projectUpdater, backupInfrastructureLister, shootLister, namespaceLister),
+		projectNamespaceControl: NewDefaultProjectNamespaceControl(k8sGardenClient, kubeInformerFactory, namespaceLister, projectLister),
+		recorder:                recorder,
+		projectLister:           projectLister,
+		projectQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		namespaceLister:         namespaceLister,
+		namespaceQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Namespace"),
+		workerCh:                make(chan int),
 	}
 
 	projectInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -89,6 +99,13 @@ func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFacto
 	})
 	projectController.projectSynced = projectInformer.Informer().HasSynced
 
+	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    projectController.namespaceAdd,
+		UpdateFunc: projectController.namespaceUpdate,
+		DeleteFunc: projectController.namespaceDelete,
+	})
+	projectController.namespaceSynced = namespaceInformer.Informer().HasSynced
+
 	return projectController
 }
 
@@ -96,7 +113,7 @@ func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFacto
 func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.projectSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.projectSynced, c.namespaceSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -116,6 +133,9 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(c.projectQueue, "Project", c.reconcileProjectKey, stopCh, &waitGroup, c.workerCh)
+	}
+	for i := 0; i < workers; i++ {
+		controllerutils.CreateWorker(c.namespaceQueue, "Project Namespaces", c.reconcileProjectNamespaceKey, stopCh, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

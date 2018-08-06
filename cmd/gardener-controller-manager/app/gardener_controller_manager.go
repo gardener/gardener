@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	componentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1"
@@ -341,7 +340,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 
 func startControllers(g *Gardener, stopCh <-chan struct{}) {
 	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), 0)
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 30*time.Second)
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 0)
 
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
