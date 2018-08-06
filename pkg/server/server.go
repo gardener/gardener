@@ -21,10 +21,10 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/handlers"
+	"github.com/gardener/gardener/pkg/server/handlers/webhooks"
 )
 
 // Serve starts a HTTP and a HTTPS server.
@@ -40,6 +40,7 @@ func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.Serve
 		serverHTTPS = &http.Server{Addr: listenAddressHTTPS, Handler: serverMuxHTTPS}
 	)
 
+	// Add handlers to HTTP server and start it.
 	serverMuxHTTP.Handle("/metrics", handlers.InitMetrics(k8sGardenClient, metricsInterval))
 	serverMuxHTTP.HandleFunc("/healthz", handlers.Healthz)
 
@@ -50,6 +51,9 @@ func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.Serve
 		}
 	}()
 
+	// Add handlers to HTTPS server and start it.
+	serverMuxHTTPS.HandleFunc("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient))
+
 	go func() {
 		logger.Logger.Infof("Starting HTTPS server on %s", listenAddressHTTPS)
 		if err := serverHTTPS.ListenAndServeTLS(serverConfig.HTTPS.TLS.ServerCertPath, serverConfig.HTTPS.TLS.ServerKeyPath); err != http.ErrServerClosed {
@@ -57,6 +61,7 @@ func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.Serve
 		}
 	}()
 
+	// Server shutdown logic.
 	<-stopCh
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

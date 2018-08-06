@@ -58,3 +58,7 @@ scheduling.k8s.io/v1alpha1
 {{- define "hpaversion" -}}
 autoscaling/v2beta1
 {{- end -}}
+
+{{- define "webhookadmissionregistration" -}}
+admissionregistration.k8s.io/v1beta1
+{{- end -}}

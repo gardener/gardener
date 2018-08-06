@@ -189,7 +189,7 @@ First, start `minikube` with at least Kubernetes v1.9.x, e.g. via `minikube --ku
 Default cpu and memory settings of minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 4 CPUs and 8192MB memory.
 
 ```bash
-$ minikube start --cpus=4 --memory=8192 --kubernetes-version=v1.9.0
+$ minikube start --cpus=4 --memory=8192 --kubernetes-version=v1.9.0 --extra-config=apiserver.Admission.PluginNames=MutatingAdmissionWebhook,ValidatingAdmissionWebhook
 Starting local Kubernetes v1.9.0 cluster...
 [...]
 kubectl is now configured to use the cluster.

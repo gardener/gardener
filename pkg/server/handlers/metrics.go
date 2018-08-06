@@ -132,9 +132,9 @@ func (m metrics) initShootMetrics() {
 			}).Set(operationState)
 
 			for _, condition := range shoot.Status.Conditions {
-				var condidtionStatus float64
+				var conditionStatus float64
 				if condition.Status == corev1.ConditionTrue {
-					condidtionStatus = 1
+					conditionStatus = 1
 				}
 				metricShootStateConditions.With(prometheus.Labels{
 					"name":      shoot.Name,
@@ -143,7 +143,7 @@ func (m metrics) initShootMetrics() {
 					"status":    string(condition.Status),
 					"operation": operationType,
 					"mail_to":   mailTo,
-				}).Set(condidtionStatus)
+				}).Set(conditionStatus)
 			}
 
 			// Collect the count of nodes
