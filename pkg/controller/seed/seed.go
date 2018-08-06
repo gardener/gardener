@@ -39,6 +39,8 @@ type Controller struct {
 
 	k8sInformers kubeinformers.SharedInformerFactory
 
+	config *componentconfig.ControllerManagerConfiguration
+
 	control  ControlInterface
 	recorder record.EventRecorder
 
@@ -72,6 +74,7 @@ func NewSeedController(k8sGardenClient kubernetes.Client, gardenInformerFactory 
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: gardenInformerFactory,
 		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, secrets, imageVector, recorder, seedUpdater, config, secretLister, shootLister, backupInfrastructureLister),
+		config:             config,
 		recorder:           recorder,
 		seedLister:         seedLister,
 		seedQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),

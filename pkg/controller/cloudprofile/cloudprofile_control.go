@@ -68,8 +68,7 @@ func (c *Controller) reconcileCloudProfileKey(key string) error {
 		return err
 	}
 
-	err = c.control.ReconcileCloudProfile(cloudProfile, key)
-	if err != nil {
+	if err := c.control.ReconcileCloudProfile(cloudProfile, key); err != nil {
 		c.cloudProfileQueue.AddAfter(key, 15*time.Second)
 	}
 	return nil

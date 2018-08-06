@@ -238,6 +238,7 @@ func (in *SeedControllerConfiguration) DeepCopyInto(out *SeedControllerConfigura
 		*out = new(bool)
 		**out = **in
 	}
+	out.SyncPeriod = in.SyncPeriod
 	return
 }
 

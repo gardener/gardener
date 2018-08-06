@@ -126,6 +126,8 @@ type SeedControllerConfiguration struct {
 	// group enabled. It defaults to true.
 	// +optional
 	ReserveExcessCapacity *bool `json:"reserveExcessCapacity,omitempty"`
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
 // ShootControllerConfiguration defines the configuration of the CloudProfile

@@ -87,9 +87,10 @@ func (c *Controller) reconcileSeedKey(key string) error {
 		return err
 	}
 
-	err = c.control.ReconcileSeed(seed, key)
-	if err != nil {
+	if err := c.control.ReconcileSeed(seed, key); err != nil {
 		c.seedQueue.AddAfter(key, 15*time.Second)
+	} else {
+		c.seedQueue.AddAfter(key, c.config.Controllers.Seed.SyncPeriod.Duration)
 	}
 	return err
 }

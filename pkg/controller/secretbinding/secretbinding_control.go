@@ -70,8 +70,7 @@ func (c *Controller) reconcileSecretBindingKey(key string) error {
 		return err
 	}
 
-	err = c.control.ReconcileSecretBinding(secretBinding, key)
-	if err != nil {
+	if err := c.control.ReconcileSecretBinding(secretBinding, key); err != nil {
 		c.secretBindingQueue.AddAfter(key, time.Minute)
 	}
 	return nil

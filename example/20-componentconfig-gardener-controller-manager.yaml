@@ -20,6 +20,9 @@ controllers:
   shootQuota:
     concurrentSyncs: 5
     syncPeriod: 60m
+  seed:
+    concurrentSyncs: 5
+    syncPeriod: 1m
   backupInfrastructure:
     concurrentSyncs: 20
     syncPeriod: 10m

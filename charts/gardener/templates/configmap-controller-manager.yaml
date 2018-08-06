@@ -27,15 +27,16 @@ data:
       {{- end }}
       {{- if .Values.controller.config.controllers.secretBinding }}
       secretBinding:
-       concurrentSyncs: {{ required ".Values.controller.config.controllers.secretBinding.concurrentSyncs is required" .Values.controller.config.controllers.cloudProfile.concurrentSyncs }}
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.secretBinding.concurrentSyncs is required" .Values.controller.config.controllers.secretBinding.concurrentSyncs }}
       {{- end }}
       {{- if .Values.controller.config.controllers.quota }}
       quota:
-       concurrentSyncs: {{ required ".Values.controller.config.controllers.quota.concurrentSyncs is required" .Values.controller.config.controllers.cloudProfile.concurrentSyncs }}
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.quota.concurrentSyncs is required" .Values.controller.config.controllers.quota.concurrentSyncs }}
       {{- end }}
       {{- if .Values.controller.config.controllers.seed }}
       seed:
-        concurrentSyncs: {{ required ".Values.controller.config.controllers.seed.concurrentSyncs is required" .Values.controller.config.controllers.cloudProfile.concurrentSyncs }}
+        concurrentSyncs: {{ required ".Values.controller.config.controllers.seed.concurrentSyncs is required" .Values.controller.config.controllers.seed.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.controller.config.controllers.seed.syncPeriod is required" .Values.controller.config.controllers.seed.syncPeriod }}
       {{- end }}
       shoot:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shoot.concurrentSyncs is required" .Values.controller.config.controllers.shoot.concurrentSyncs }}

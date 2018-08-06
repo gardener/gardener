@@ -69,8 +69,7 @@ func (c *Controller) reconcileQuotaKey(key string) error {
 		return err
 	}
 
-	err = c.control.ReconcileQuota(quota, key)
-	if err != nil {
+	if err := c.control.ReconcileQuota(quota, key); err != nil {
 		c.quotaQueue.AddAfter(key, time.Minute)
 	}
 	return nil
