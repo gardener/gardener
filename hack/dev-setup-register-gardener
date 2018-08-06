@@ -18,25 +18,33 @@ IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
 APISERVICE_NAME="v1beta1.garden.sapcloud.io"
-SERVICE_NAME="gardener-apiserver"
-ENDPOINT_NAME="gardener-apiserver"
+APISERVER_SERVICE_NAME="gardener-apiserver"
+APISERVER_ENDPOINT_NAME="gardener-apiserver"
+CONTROLLER_MANAGER_SERVICE_NAME="gardener-controller-manager"
+CONTROLLER_MANAGER_ENDPOINT_NAME="gardener-controller-manager"
 
 if kubectl get apiservice "$APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $APISERVICE_NAME --wait=false
   kubectl patch apiservices $APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
-if kubectl get service "$SERVICE_NAME" &> /dev/null; then
-  kubectl delete service $SERVICE_NAME
+if kubectl get service "$APISERVER_SERVICE_NAME" &> /dev/null; then
+  kubectl delete service $APISERVER_SERVICE_NAME
 fi
-if kubectl get endpoints "$ENDPOINT_NAME" &> /dev/null; then
-  kubectl delete endpoints $ENDPOINT_NAME
+if kubectl get service "$CONTROLLER_MANAGER_SERVICE_NAME" &> /dev/null; then
+  kubectl delete service $CONTROLLER_MANAGER_SERVICE_NAME
+fi
+if kubectl get endpoints "$APISERVER_ENDPOINT_NAME" &> /dev/null; then
+  kubectl delete endpoints $APISERVER_ENDPOINT_NAME
+fi
+if kubectl get endpoints "$CONTROLLER_MANAGER_ENDPOINT_NAME" &> /dev/null; then
+  kubectl delete endpoints $CONTROLLER_MANAGER_ENDPOINT_NAME
 fi
 
 cat <<EOF | kubectl apply -f -
 kind: Service
 apiVersion: v1
 metadata:
-  name: $SERVICE_NAME
+  name: $APISERVER_SERVICE_NAME
   namespace: garden
 spec:
   ports:
@@ -44,16 +52,46 @@ spec:
     port: 443
     targetPort: 8443
 ---
+kind: Service
+apiVersion: v1
+metadata:
+  name: $CONTROLLER_MANAGER_SERVICE_NAME
+  namespace: garden
+spec:
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 2718
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 2719
+---
 kind: Endpoints
 apiVersion: v1
 metadata:
-  name: $ENDPOINT_NAME
+  name: $APISERVER_ENDPOINT_NAME
   namespace: garden
 subsets:
 - addresses:
   - ip: ${IP_ADDRESS}
   ports:
   - port: 8443
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: $CONTROLLER_MANAGER_ENDPOINT_NAME
+  namespace: garden
+subsets:
+- addresses:
+  - ip: ${IP_ADDRESS}
+  ports:
+  - name: http
+    port: 2718
+  - name: https
+    port: 2719
 EOF
 
 cat <<EOF | kubectl apply -f -

@@ -249,12 +249,36 @@ type MetricsConfiguration struct {
 	Interval metav1.Duration
 }
 
-// ServerConfiguration contains details for the HTTP server.
+// ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
+	// HTTP is the configuration for the HTTP server.
+	HTTP Server
+	// HTTPS is the configuration for the HTTPS server.
+	HTTPS HTTPSServer
+}
+
+// Server contains information for HTTP(S) server configuration.
+type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string
 	// Port is the port on which to serve unsecured, unauthenticated access.
 	Port int
+}
+
+// HTTPSServer is the configuration for the HTTPSServer server.
+type HTTPSServer struct {
+	// Server is the configuration for the bind address and the port.
+	Server
+	// TLSServer contains information about the TLS configuration for a HTTPS server.
+	TLS TLSServer
+}
+
+// TLSServer contains information about the TLS configuration for a HTTPS server.
+type TLSServer struct {
+	// ServerCertPath is the path to the server certificate file.
+	ServerCertPath string
+	// ServerKeyPath is the path to the private key file.
+	ServerKeyPath string
 }
 
 const (

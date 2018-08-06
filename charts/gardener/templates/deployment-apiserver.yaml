@@ -39,7 +39,7 @@ spec:
         command:
         - /gardener-apiserver
         - --audit-log-path=/var/lib/audit.log
-        - --audit-policy-file=/etc/garden/audit/audit-policy.yaml
+        - --audit-policy-file=/etc/gardener-apiserver/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
         {{- if .Values.apiserver.etcd.useSidecar }}
@@ -47,19 +47,19 @@ spec:
         {{- else }}
         - --etcd-servers={{ required ".Values.apiserver.etcd.servers is required" .Values.apiserver.etcd.servers }}
         {{- if .Values.apiserver.etcd.caBundle }}
-        - --etcd-cafile=/var/run/kubernetes/etcd-client-ca.crt
+        - --etcd-cafile=/etc/gardener-apiserver/srv/etcd-client-ca.crt
         {{- end }}
         {{- if .Values.apiserver.etcd.tls }}
-        - --etcd-certfile=/var/run/kubernetes/etcd-client.crt
+        - --etcd-certfile=/etc/gardener-apiserver/srv/etcd-client.crt
         {{- end }}
         {{- if .Values.apiserver.etcd.tls }}
-        - --etcd-keyfile=/var/run/kubernetes/etcd-client.key
+        - --etcd-keyfile=/etc/gardener-apiserver/srv/etcd-client.key
         {{- end }}
         {{- end }}
         {{- include "gardener-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --secure-port=443
-        - --tls-cert-file=/var/run/kubernetes/gardener-apiserver.crt
-        - --tls-private-key-file=/var/run/kubernetes/gardener-apiserver.key
+        - --tls-cert-file=/etc/gardener-apiserver/srv/gardener-apiserver.crt
+        - --tls-private-key-file=/etc/gardener-apiserver/srv/gardener-apiserver.key
         - --v=2
         {{- if .Values.apiserver.resources }}
         resources:
@@ -71,10 +71,10 @@ spec:
         {{- end }}
         volumeMounts:
         - name: gardener-apiserver-cert
-          mountPath: /var/run/kubernetes
+          mountPath: /etc/gardener-apiserver/srv
           readOnly: true
         - name: gardener-audit-policy-config
-          mountPath: /etc/garden/audit
+          mountPath: /etc/gardener-apiserver/audit
       {{- if .Values.apiserver.etcd.useSidecar }}
       - name: etcd
         image: quay.io/coreos/etcd:v3.1.12

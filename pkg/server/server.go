@@ -20,28 +20,51 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/gardener/gardener/pkg/apis/componentconfig"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/handlers"
 )
 
-// Serve starts a HTTP server.
-func Serve(k8sGardenClient kubernetes.Client, bindAddress string, port int, metricsInterval time.Duration, stopCh chan struct{}) {
-	http.Handle("/metrics", handlers.InitMetrics(k8sGardenClient, metricsInterval))
-	http.HandleFunc("/healthz", handlers.Healthz)
+// Serve starts a HTTP and a HTTPS server.
+func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.ServerConfiguration, metricsInterval time.Duration, stopCh chan struct{}) {
+	var (
+		listenAddressHTTP  = fmt.Sprintf("%s:%d", serverConfig.HTTP.BindAddress, serverConfig.HTTP.Port)
+		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverConfig.HTTPS.BindAddress, serverConfig.HTTPS.Port)
 
-	listenAddress := fmt.Sprintf("%s:%d", bindAddress, port)
-	server := http.Server{
-		Addr: listenAddress,
-	}
+		serverMuxHTTP  = http.NewServeMux()
+		serverMuxHTTPS = http.NewServeMux()
+
+		serverHTTP  = &http.Server{Addr: listenAddressHTTP, Handler: serverMuxHTTP}
+		serverHTTPS = &http.Server{Addr: listenAddressHTTPS, Handler: serverMuxHTTPS}
+	)
+
+	serverMuxHTTP.Handle("/metrics", handlers.InitMetrics(k8sGardenClient, metricsInterval))
+	serverMuxHTTP.HandleFunc("/healthz", handlers.Healthz)
 
 	go func() {
-		<-stopCh
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.Shutdown(ctx)
+		logger.Logger.Infof("Starting HTTP server on %s", listenAddressHTTP)
+		if err := serverHTTP.ListenAndServe(); err != http.ErrServerClosed {
+			logger.Logger.Errorf("Could not start HTTP server: %v", err)
+		}
 	}()
 
-	go server.ListenAndServe()
-	logger.Logger.Infof("Gardener controller manager HTTP server started (serving on %s)", listenAddress)
+	go func() {
+		logger.Logger.Infof("Starting HTTPS server on %s", listenAddressHTTPS)
+		if err := serverHTTPS.ListenAndServeTLS(serverConfig.HTTPS.TLS.ServerCertPath, serverConfig.HTTPS.TLS.ServerKeyPath); err != http.ErrServerClosed {
+			logger.Logger.Errorf("Could not start HTTPS server: %v", err)
+		}
+	}()
+
+	<-stopCh
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := serverHTTP.Shutdown(ctx); err != nil {
+		logger.Logger.Errorf("Error when shutting down HTTP server: %v", err)
+	}
+	if err := serverHTTPS.Shutdown(ctx); err != nil {
+		logger.Logger.Errorf("Error when shutting down HTTPS server: %v", err)
+	}
+	logger.Logger.Info("HTTP(S) servers stopped.")
 }

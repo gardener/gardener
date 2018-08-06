@@ -78,8 +78,15 @@ data:
     metrics:
       interval: {{ required ".Values.controller.config.metrics.interval is required" .Values.controller.config.metrics.interval }}
     server:
-      bindAddress: {{ required ".Values.controller.config.server.bindAddress is required" .Values.controller.config.server.bindAddress }}
-      port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+      http:
+        bindAddress: {{ required ".Values.controller.config.server.http.bindAddress is required" .Values.controller.config.server.http.bindAddress }}
+        port: {{ required ".Values.controller.config.server.http.port is required" .Values.controller.config.server.http.port }}
+      https:
+        bindAddress: {{ required ".Values.controller.config.server.https.bindAddress is required" .Values.controller.config.server.https.bindAddress }}
+        port: {{ required ".Values.controller.config.server.https.port is required" .Values.controller.config.server.https.port }}
+        tls:
+          serverCertPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.crt
+          serverKeyPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.key
     {{- if .Values.controller.config.featureGates }}
     featureGates:
 {{ toYaml .Values.controller.config.featureGates | indent 6 }}
