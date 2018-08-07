@@ -26,7 +26,7 @@
 {{- include "kubelet.featureGates" . | trimSuffix "," }} \
 {{- end }}
 {{- if semverCompare "< 1.11" .kubernetes.version }}
---feature-gates=PodPriority=true
+--feature-gates=PodPriority=true \
 {{- end }}
 --image-gc-high-threshold=50 \
 --image-gc-low-threshold=40 \
