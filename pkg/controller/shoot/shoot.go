@@ -178,19 +178,26 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		return
 	}
 	for _, shoot := range shoots {
+		if shoot.DeletionTimestamp != nil {
+			continue
+		}
+
 		schedule, err := cron.ParseStandard(shoot.Spec.Backup.Schedule)
 		if err != nil {
 			logger.Logger.Errorf("Failed to parse the schedule for shoot [%v]: %v ", shoot.ObjectMeta.Name, err.Error())
 			return
 		}
-		nextScheduleTime := schedule.Next(time.Now())
-		scheculeTimeAfterNextSchedule := schedule.Next(nextScheduleTime)
-		granularity := scheculeTimeAfterNextSchedule.Sub(nextScheduleTime)
+
+		var (
+			newShoot                      = shoot.DeepCopy()
+			nextScheduleTime              = schedule.Next(time.Now())
+			scheduleTimeAfterNextSchedule = schedule.Next(nextScheduleTime)
+			granularity                   = scheduleTimeAfterNextSchedule.Sub(nextScheduleTime)
+		)
+
 		if granularity < garden.MinimumETCDFullBackupTimeInterval {
-			newShoot := shoot.DeepCopy()
 			newShoot.Spec.Backup.Schedule = garden.DefaultETCDBackupSchedule
-			_, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.ObjectMeta.Namespace).Update(newShoot)
-			if err != nil {
+			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.ObjectMeta.Namespace).Update(newShoot); err != nil {
 				logger.Logger.Errorf("Failed to update shoot [%v]: %v ", newShoot.ObjectMeta.Name, err.Error())
 				return
 			}
