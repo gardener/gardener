@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
+	garden "github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
@@ -27,7 +28,9 @@ import (
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -166,6 +169,33 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		logger.Logger.Infof("Watching only namespace '%s' for Shoot resources...", *watchNamespace)
 	}
 	logger.Logger.Info("Shoot controller initialized.")
+
+	// Get all shoots managed by Gardener and check if the backup defaults are valid. If not, update the shoots
+	// with the default backup schedule.
+	shoots, err := c.shootLister.List(labels.Everything())
+	if err != nil {
+		logger.Logger.Errorf("Failed to fetch shoots resources: %v", err.Error())
+		return
+	}
+	for _, shoot := range shoots {
+		schedule, err := cron.ParseStandard(shoot.Spec.Backup.Schedule)
+		if err != nil {
+			logger.Logger.Errorf("Failed to parse the schedule for shoot [%v]: %v ", shoot.ObjectMeta.Name, err.Error())
+			return
+		}
+		nextScheduleTime := schedule.Next(time.Now())
+		scheculeTimeAfterNextSchedule := schedule.Next(nextScheduleTime)
+		granularity := scheculeTimeAfterNextSchedule.Sub(nextScheduleTime)
+		if granularity < garden.MinimumETCDFullBackupTimeInterval {
+			newShoot := shoot.DeepCopy()
+			newShoot.Spec.Backup.Schedule = garden.DefaultETCDBackupSchedule
+			_, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.ObjectMeta.Namespace).Update(newShoot)
+			if err != nil {
+				logger.Logger.Errorf("Failed to update shoot [%v]: %v ", newShoot.ObjectMeta.Name, err.Error())
+				return
+			}
+		}
+	}
 
 	for i := 0; i < shootWorkers; i++ {
 		controllerutils.CreateWorker(c.shootQueue, "Shoot", c.reconcileShootKey, stopCh, &waitGroup, c.workerCh)
