@@ -63,6 +63,8 @@ type ClientConnectionConfiguration struct {
 	QPS float32 `json:"qps"`
 	// Burst allows extra queries to accumulate when a client is exceeding its rate.
 	Burst int32 `json:"burst"`
+	// Disable TCP connection reuse for Kubernetes clients (client-go)
+	DisableTCPKeepAlive bool `json:"disableTCPKeepAlive"`
 }
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
