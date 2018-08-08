@@ -30,6 +30,7 @@ gardener:
     head-update:
       traits:
         component_descriptor: ~
+        draft_release: ~
     pull-request:
       traits:
         pull-request: ~
