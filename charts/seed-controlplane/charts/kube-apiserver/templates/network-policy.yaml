@@ -20,8 +20,11 @@ spec:
         - {{ .Values.seedNetworks.pod }}
         - {{ .Values.seedNetworks.node }}
         - {{ .Values.seedNetworks.service }}
-        # Cloud provider metadata service ip
-        - 169.254.169.254/32
+        # Currently disabled as the API server incorporates the PersistentVolumeLabel admission controller
+        # which needs to talk to the cloud provider when provisioning volumes.
+        # We should enable it again once we have incorporated the Kubernetes Cloud Controller Manager.
+        # # Cloud provider metadata service ip
+        # - 169.254.169.254/32
 ---
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
