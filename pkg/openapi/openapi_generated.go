@@ -2249,7 +2249,7 @@ func schema_pkg_apis_garden_v1beta1_Kube2IAM(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"enabled", "roles"},
+				Required: []string{"enabled"},
 			},
 		},
 		Dependencies: []string{
@@ -2388,7 +2388,7 @@ func schema_pkg_apis_garden_v1beta1_KubeLego(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"enabled", "email"},
+				Required: []string{"enabled"},
 			},
 		},
 		Dependencies: []string{},

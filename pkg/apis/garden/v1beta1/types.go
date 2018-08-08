@@ -886,14 +886,16 @@ type Monocular struct {
 type KubeLego struct {
 	Addon `json:",inline"`
 	// Mail is the email address to register at Let's Encrypt.
-	Mail string `json:"email"`
+	// +optional
+	Mail string `json:"email,omitempty"`
 }
 
 // Kube2IAM describes configuration values for the kube2iam addon.
 type Kube2IAM struct {
 	Addon `json:",inline"`
 	// Roles is list of AWS IAM roles which should be created by the Gardener.
-	Roles []Kube2IAMRole `json:"roles"`
+	// +optional
+	Roles []Kube2IAMRole `json:"roles,omitempty"`
 }
 
 // Kube2IAMRole allows passing AWS IAM policies which will result in IAM roles.

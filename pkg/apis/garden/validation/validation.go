@@ -1080,6 +1080,11 @@ func validateDNSUpdate(new, old garden.DNS, fldPath *field.Path) field.ErrorList
 func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	if len(new) == 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath, new, "cannot validate kubernetes version upgrade because it is unset"))
+		return allErrs
+	}
+
 	// Forbid Kubernetes version downgrade
 	downgrade, err := utils.CompareVersions(new, "<", old)
 	if err != nil {
@@ -1155,6 +1160,11 @@ func validateK8SNetworks(networks garden.K8SNetworks, fldPath *field.Path) field
 
 func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if len(kubernetes.Version) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("version"), "kubernetes version must not be empty"))
+		return allErrs
+	}
 
 	if kubeAPIServer := kubernetes.KubeAPIServer; kubeAPIServer != nil {
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {

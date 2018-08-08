@@ -3508,6 +3508,35 @@ var _ = Describe("validation", func() {
 			})
 		})
 
+		It("should require a kubernetes version", func() {
+			shoot.Spec.Kubernetes.Version = ""
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(len(errorList)).To(Equal(1))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.kubernetes.version"),
+			}))
+		})
+
+		It("should forbid removing the kubernetes version", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.Kubernetes.Version = ""
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(2))
+			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.kubernetes.version"),
+			}))
+			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeRequired),
+				"Field": Equal("spec.kubernetes.version"),
+			}))
+		})
+
 		It("should forbid kubernetes version downgrades", func() {
 			newShoot := prepareShootForUpdate(shoot)
 			newShoot.Spec.Kubernetes.Version = "1.7.2"

@@ -907,6 +907,7 @@ type Monocular struct {
 type KubeLego struct {
 	Addon
 	// Mail is the email address to register at Let's Encrypt.
+	// +optional
 	Mail string
 }
 
@@ -914,6 +915,7 @@ type KubeLego struct {
 type Kube2IAM struct {
 	Addon
 	// Roles is list of AWS IAM roles which should be created by the Gardener.
+	// +optional
 	Roles []Kube2IAMRole
 }
 
