@@ -20,6 +20,7 @@ data:
       contentType: {{ required ".Values.controller.config.clientConnection.contentType is required" .Values.controller.config.clientConnection.contentType }}
       qps: {{ required ".Values.controller.config.clientConnection.qps is required" .Values.controller.config.clientConnection.qps }}
       burst: {{ required ".Values.controller.config.clientConnection.burst is required" .Values.controller.config.clientConnection.burst }}
+      disableTCPKeepAlive: {{ required ".Values.controller.config.clientConnection.disableTCPKeepAlive is required" .Values.controller.config.clientConnection.disableTCPKeepAlive }}
     controllers:
       {{- if .Values.controller.config.controllers.cloudProfile }}
       cloudProfile:

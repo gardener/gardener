@@ -119,6 +119,7 @@ controller:
       contentType: application/json
       qps: 100
       burst: 130
+      disableTCPKeepAlive: false
     controllers:
       shoot:
         concurrentSyncs: 20
