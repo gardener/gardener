@@ -34,15 +34,7 @@ dev-setup-local:
 
 .PHONY: start-api
 start-api:
-	@go run cmd/gardener-apiserver/main.go \
-			--authentication-kubeconfig ~/.kube/config \
-			--authorization-kubeconfig ~/.kube/config \
-			--etcd-servers=http://$(shell minikube ip):32379 \
-			--kubeconfig ~/.kube/config \
-			--tls-cert-file ~/.minikube/apiserver.crt \
-			--tls-private-key-file ~/.minikube/apiserver.key \
-			--secure-port=8443 \
-			--v=2
+	@./hack/start-api
 
 .PHONY: start
 start:

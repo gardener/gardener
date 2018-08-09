@@ -20,17 +20,29 @@ set -e
 
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
-MINIKUBE_IP=$(minikube ip)
 
-echo "After OSX sleep, minikube's time is off."
-echo "This results in x509 certificate auth to not work for shoot certificates"
-minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)
+source $(dirname "${0}")/common
+
+# test if we are running against a Minikube or Docker Kubernetes local setup
+case $(k8s_env) in
+    $DOCKER_FOR_DESKTOP)
+        echo "Found Docker Kubernetes ..."
+        LOCAL_K8S_HOST_IP=localhost
+        ;;
+    $MINIKUBE)
+        echo "Found Minikube ..."
+        LOCAL_K8S_HOST_IP=$(minikube ip)
+        echo "After OSX sleep, minikube's time is off."
+        echo "This results in x509 certificate auth to not work for shoot certificates"
+        minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)
+        kubectl config use-context minikube
+        ;;
+ esac
 
 mkdir -p ${DEV_DIR}
 
 cp ${EXAMPLE_DIR}/20-componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
 
-kubectl config use-context minikube
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/10-secret-internal-domain-unmanaged.yaml
@@ -56,7 +68,7 @@ spec:
         name: etcd
         command:
         - etcd
-        - -advertise-client-urls=http://${MINIKUBE_IP}:2379
+        - -advertise-client-urls=http://${LOCAL_K8S_HOST_IP}:2379
         - -listen-client-urls=http://0.0.0.0:2379
         - -data-dir=/etcd-data
         volumeMounts:
