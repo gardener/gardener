@@ -15,9 +15,10 @@
 REGISTRY                           := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
 CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
-VERSION														 := $(shell cat VERSION)
+VERSION                            := $(shell cat VERSION)
 IMAGE_TAG                          := ${VERSION}
-WORKDIR														 := $(shell pwd)
+WORKDIR                            := $(shell pwd)
+PUSH_LATEST                        := true
 
 #########################################
 # Rules for local development scenarios #
@@ -96,9 +97,9 @@ docker-push:
 	@if ! docker images $(APISERVER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(APISERVER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@if ! docker images $(CONROLLER_MANAGER_IMAGE_REPOSITORY) | awk '{ print $$2 }' | grep -q -F $(IMAGE_TAG); then echo "$(CONROLLER_MANAGER_IMAGE_REPOSITORY) version $(IMAGE_TAG) is not yet built. Please run 'make docker-images'"; false; fi
 	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):latest
+	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(APISERVER_IMAGE_REPOSITORY):latest; fi
 	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):$(IMAGE_TAG)
-	@gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest
+	@if [[ "$(PUSH_LATEST)" == "true" ]]; then gcloud docker -- push $(CONROLLER_MANAGER_IMAGE_REPOSITORY):latest; fi
 
 .PHONY: rename-binaries
 rename-binaries:
