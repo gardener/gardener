@@ -24,4 +24,4 @@ Take a look at our [landscape setup template](https://github.com/gardener/landsc
 
 ## Feedback and Support
 
-Feedback and contributions are always welcome. Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues) or join our [Slack workspace](https://gardener-cloud.slack.com) (find the self-service invitation link [here](https://publicslack.com/slacks/gardener-cloud/invites/new)).
+Feedback and contributions are always welcome. Please report bugs or suggestions about our Kubernetes clusters as such or the Gardener itself as [GitHub issues](https://github.com/gardener/gardener/issues) or join our [Slack channel #gardener](https://kubernetes.slack.com/messages/gardener) (Invite yourself to the Kubernetes Slack workspace [here](http://slack.k8s.io)).
