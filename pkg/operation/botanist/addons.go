@@ -24,7 +24,7 @@ import (
 
 // EnsureIngressDNSRecord creates the respective wildcard DNS record for the nginx-ingress-controller.
 func (b *Botanist) EnsureIngressDNSRecord() error {
-	if !b.Shoot.NginxIngressEnabled() {
+	if !b.Shoot.NginxIngressEnabled() || b.Shoot.Hibernated {
 		return b.DestroyIngressDNSRecord()
 	}
 
