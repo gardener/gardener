@@ -66,3 +66,7 @@ scheduling.k8s.io/v1beta1
 scheduling.k8s.io/v1alpha1
 {{- end -}}
 {{- end -}}
+
+{{- define "hpaversion" -}}
+autoscaling/v2beta1
+{{- end -}}

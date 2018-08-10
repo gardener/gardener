@@ -27,6 +27,49 @@ import (
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
 
+// getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
+func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
+	cpuRequest := "0m"
+	memoryRequest := "0Mi"
+	cpuLimit := "0m"
+	memoryLimit := "0Mi"
+
+	switch {
+	case nodeCount <= 2:
+		cpuRequest = "100m"
+		memoryRequest = "512Mi"
+
+		cpuLimit = "400m"
+		memoryLimit = "700Mi"
+	case nodeCount <= 10:
+		cpuRequest = "400m"
+		memoryRequest = "700Mi"
+
+		cpuLimit = "800m"
+		memoryLimit = "1000Mi"
+	case nodeCount <= 50:
+		cpuRequest = "700m"
+		memoryRequest = "1000Mi"
+
+		cpuLimit = "1300m"
+		memoryLimit = "2000Mi"
+	case nodeCount <= 100:
+		cpuRequest = "1500m"
+		memoryRequest = "3000Mi"
+
+		cpuLimit = "3000m"
+		memoryLimit = "4000Mi"
+	default:
+		cpuRequest = "2500m"
+		memoryRequest = "4000Mi"
+
+		cpuLimit = "4000m"
+		memoryLimit = "6000Mi"
+	}
+
+	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
+}
+
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
 /// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
@@ -159,6 +202,34 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"limits": map[string]interface{}{
 				"cpu":    "1500m",
 				"memory": "4000Mi",
+			},
+		}
+	} else {
+		maxNodes := b.Shoot.GetNodeCount()
+		// Get current kube-apiserver deployment
+		existingAPIServerDeployment, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+		if err == nil {
+			// As kube-apiserver HPA manages the number of replicas in big clusters
+			// maintain current number of replicas
+			// otherwise keep the value to default
+			if maxNodes >= common.EnableHPANodeCount &&
+				existingAPIServerDeployment.Spec.Replicas != nil &&
+				*existingAPIServerDeployment.Spec.Replicas > 0 {
+				defaultValues["replicas"] = *existingAPIServerDeployment.Spec.Replicas
+				defaultValues["maxReplicas"] = 4
+			}
+		}
+
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(maxNodes)
+		defaultValues["apiServerResources"] = map[string]interface{}{
+			"limits": map[string]interface{}{
+				"cpu":    cpuLimit,
+				"memory": memoryLimit,
+			},
+
+			"requests": map[string]interface{}{
+				"cpu":    cpuRequest,
+				"memory": memoryRequest,
 			},
 		}
 	}

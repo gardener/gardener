@@ -1,0 +1,17 @@
+apiVersion: {{ include "hpaversion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: kube-apiserver
+  namespace: {{.Release.Namespace}}
+spec:
+  maxReplicas: {{.Values.maxReplicas}}
+  minReplicas: {{.Values.minReplicas}}
+  scaleTargetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: kube-apiserver
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: {{.Values.targetAverageUtilization}}
