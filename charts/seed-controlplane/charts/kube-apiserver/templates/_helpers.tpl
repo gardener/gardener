@@ -69,3 +69,49 @@
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{- define "kube-apiserver.auditversion" -}}
+{{- if semverCompare ">= 1.12" .Values.kubernetesVersion -}}
+audit.k8s.io/v1
+{{- else -}}
+audit.k8s.io/v1beta1
+{{- end -}}
+{{- end -}}
+
+{{- define "kube-apiserver.auditConfigAuditPolicy" -}}
+{{- if .Values.auditConfig.auditPolicy }}
+{{- .Values.auditConfig.auditPolicy -}}
+{{- else -}}
+apiVersion: {{ include "kube-apiserver.auditversion" . }}
+kind: Policy
+rules:
+- level: None
+  userGroups:
+  - system:nodes
+- level: None
+  users:
+  - gardener
+  - kubelet
+  - system:kube-controller-manager
+  - system:kube-scheduler
+  - system:kube-addon-manager
+  - system:kube-aggregator
+  - system:kube-proxy
+  - system:apiserver
+  - garden.sapcloud.io:monitoring
+  - garden.sapcloud.io:monitoring:prometheus
+  - garden.sapcloud.io:monitoring:kube-state-metrics
+- level: None
+  nonResourceURLs:
+  - /healthz*
+  - /version
+  - /swagger*
+- level: None
+  resources:
+  - group: ""
+    resources: ["events"]
+- level: None
+  verbs: ["get"]
+- level: Metadata
+{{- end -}}
+{{- end -}}

@@ -76,3 +76,6 @@ apiServerResources:
 maxReplicas: 1
 minReplicas: 1
 targetAverageUtilization: 80
+
+auditConfig:
+  auditPolicy: ""

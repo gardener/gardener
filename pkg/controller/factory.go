@@ -79,6 +79,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 
 		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
+		configMapInformer = f.k8sInformers.Core().V1().ConfigMaps().Informer()
 	)
 
 	f.k8sGardenInformers.Start(ctx.Done())
@@ -87,7 +88,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	}
 
 	f.k8sInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), namespaceInformer.HasSynced, secretInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), namespaceInformer.HasSynced, secretInformer.HasSynced, configMapInformer.HasSynced) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 

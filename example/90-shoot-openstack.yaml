@@ -56,6 +56,10 @@ spec:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
   #         namespace1: <node-selectors-labels>
   #         namespace2: <node-selectors-labels>
+  #   auditConfig:
+  #     auditPolicy:
+  #       configMapRef:
+  #         name: auditpolicy
   # cloudControllerManager:
   #   featureGates:
   #     SomeKubernetesFeature: true

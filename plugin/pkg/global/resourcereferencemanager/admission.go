@@ -55,6 +55,7 @@ type ReferenceManager struct {
 	kubeClient          kubernetes.Interface
 	authorizer          authorizer.Authorizer
 	secretLister        kubecorev1listers.SecretLister
+	configMapLister     kubecorev1listers.ConfigMapLister
 	cloudProfileLister  gardenlisters.CloudProfileLister
 	seedLister          gardenlisters.SeedLister
 	secretBindingLister gardenlisters.SecretBindingLister
@@ -119,7 +120,10 @@ func (r *ReferenceManager) SetKubeInformerFactory(f kubeinformers.SharedInformer
 	secretInformer := f.Core().V1().Secrets()
 	r.secretLister = secretInformer.Lister()
 
-	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced)
+	configMapInformer := f.Core().V1().ConfigMaps()
+	r.configMapLister = configMapInformer.Lister()
+
+	readyFuncs = append(readyFuncs, secretInformer.Informer().HasSynced, configMapInformer.Informer().HasSynced)
 }
 
 // SetKubeClientset gets the clientset from the Kubernetes client.
@@ -134,6 +138,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.secretLister == nil {
 		return errors.New("missing secret lister")
+	}
+	if r.configMapLister == nil {
+		return errors.New("missing configMap lister")
 	}
 	if r.cloudProfileLister == nil {
 		return errors.New("missing cloud profile lister")
@@ -355,7 +362,21 @@ func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {
 		return err
 	}
 
+	if hasAuditPolicy(shoot.Spec.Kubernetes.KubeAPIServer) {
+		if _, err := r.configMapLister.ConfigMaps(shoot.Namespace).Get(shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name); err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+func hasAuditPolicy(apiServerConfig *garden.KubeAPIServerConfig) bool {
+	return apiServerConfig != nil &&
+		apiServerConfig.AuditConfig != nil &&
+		apiServerConfig.AuditConfig.AuditPolicy != nil &&
+		apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil &&
+		len(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name) != 0
 }
 
 func (r *ReferenceManager) lookupSecret(namespace, name string) error {
