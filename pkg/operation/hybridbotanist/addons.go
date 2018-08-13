@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	corev1 "k8s.io/api/core/v1"
@@ -150,6 +151,15 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 			"service": map[string]interface{}{
 				"loadBalancerSourceRanges": b.Shoot.Info.Spec.Addons.NginxIngress.LoadBalancerSourceRanges,
 			},
+		}
+
+		if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+			nginxIngressConfig["controller"].(map[string]interface{})["resources"] = map[string]interface{}{
+				"limits": map[string]interface{}{
+					"cpu":    "500m",
+					"memory": "1024Mi",
+				},
+			}
 		}
 	}
 
