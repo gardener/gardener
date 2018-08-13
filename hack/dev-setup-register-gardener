@@ -22,7 +22,8 @@ SERVICE_NAME="gardener-apiserver"
 ENDPOINT_NAME="gardener-apiserver"
 
 if kubectl get apiservice "$APISERVICE_NAME" &> /dev/null; then
-  kubectl delete apiservice $APISERVICE_NAME
+  kubectl delete apiservice $APISERVICE_NAME --wait=false
+  kubectl patch apiservices $APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
 if kubectl get service "$SERVICE_NAME" &> /dev/null; then
   kubectl delete service $SERVICE_NAME
