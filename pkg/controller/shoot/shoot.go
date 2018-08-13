@@ -179,8 +179,9 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 	}
 	for _, shoot := range shoots {
 		var (
-			newShoot    = shoot.DeepCopy()
-			needsUpdate = false
+			newShoot          = shoot.DeepCopy()
+			needsSpecUpdate   = false
+			needsStatusUpdate = false
 		)
 
 		// Check if the backup defaults are valid. If not, update the shoots with the default backup schedule.
@@ -198,18 +199,23 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 
 		if shoot.DeletionTimestamp == nil && granularity < garden.MinimumETCDFullBackupTimeInterval {
 			newShoot.Spec.Backup.Schedule = garden.DefaultETCDBackupSchedule
-			needsUpdate = true
+			needsSpecUpdate = true
 		}
 
 		// Check if the status indicates that an operation is processing and mark it as "aborted".
 		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateProcessing {
 			newShoot.Status.LastOperation.State = gardenv1beta1.ShootLastOperationStateAborted
-			needsUpdate = true
+			needsStatusUpdate = true
 		}
 
-		if needsUpdate {
+		if needsSpecUpdate {
 			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).Update(newShoot); err != nil {
-				panic(fmt.Sprintf("Failed to update shoot [%v]: %v ", newShoot.ObjectMeta.Name, err.Error()))
+				panic(fmt.Sprintf("Failed to update shoot [%v]: %v ", newShoot.Name, err.Error()))
+			}
+		}
+		if needsStatusUpdate {
+			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
+				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
 	}
