@@ -23,7 +23,7 @@ SUPPORTED_K8S_ENVS=($DOCKER_FOR_DESKTOP $MINIKUBE)
 __k8s_env=""
 k8s_env() {
     if [[ "$__k8s_env" == "" ]]; then
-        __k8s_env=$(kubectl get node -o yaml | yaml2json | jq -r .items[].metadata.name)
+        __k8s_env=$(kubectl get node -o jsonpath="{.items[*].metadata.name}")
     fi
     for supported_k8s_env in ${SUPPORTED_K8S_ENVS[@]}; do
         if [[ "$supported_k8s_env" == "$__k8s_env" ]]; then
