@@ -28,14 +28,15 @@ case $(k8s_env) in
     $DOCKER_FOR_DESKTOP)
         echo "Found Docker Kubernetes ..."
         LOCAL_K8S_HOST_IP=localhost
+        ETCD_DATA_DIR="/Users/$(whoami)/.docker/gardener-etcd"
         ;;
     $MINIKUBE)
         echo "Found Minikube ..."
-        LOCAL_K8S_HOST_IP=$(minikube ip)
+        LOCAL_K8S_HOST_IP="$(minikube ip)"
+        ETCD_DATA_DIR="/data/gardener-etcd"
         echo "After OSX sleep, minikube's time is off."
         echo "This results in x509 certificate auth to not work for shoot certificates"
         minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)
-        kubectl config use-context minikube
         ;;
  esac
 
@@ -77,7 +78,7 @@ spec:
       volumes:
       - name: data
         hostPath:
-          path: /data/gardener-etcd
+          path: ${ETCD_DATA_DIR}
 ---
 apiVersion: v1
 kind: Service

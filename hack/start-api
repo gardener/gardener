@@ -21,29 +21,26 @@ source $(dirname "${0}")/common
 case $(k8s_env) in
     $DOCKER_FOR_DESKTOP)
         echo "Found Docker Kubernetes ..."
-        LOCAL_K8S_HOST_IP=localhost
-        LOCAL_K8S_PORT=6443
         go run cmd/gardener-apiserver/main.go \
-			--authentication-kubeconfig ~/.kube/config \
-			--authorization-kubeconfig ~/.kube/config \
-			--etcd-servers=http://$LOCAL_K8S_HOST_IP:32379 \
-			--kubeconfig ~/.kube/config \
-			--tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \
-			--tls-private-key-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-key-data"}}{{end}}{{end}}' --raw | base64 -d) \
-			--secure-port=8443 \
-			--v=2
+          --authentication-kubeconfig ~/.kube/config \
+          --authorization-kubeconfig ~/.kube/config \
+          --etcd-servers http://localhost:32379 \
+          --kubeconfig ~/.kube/config \
+          --tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \
+          --tls-private-key-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-key-data"}}{{end}}{{end}}' --raw | base64 -d) \
+          --secure-port=8443 \
+          --v 2
         ;;
     $MINIKUBE)
         echo "Found Minikube ..."
-        LOCAL_K8S_HOST_IP=$(minikube ip)
         go run cmd/gardener-apiserver/main.go \
-			--authentication-kubeconfig ~/.kube/config \
-			--authorization-kubeconfig ~/.kube/config \
-			--etcd-servers=http://$LOCAL_K8S_HOST_IP:32379 \
-			--kubeconfig ~/.kube/config \
-			--tls-cert-file ~/.minikube/apiserver.crt \
-			--tls-private-key-file ~/.minikube/apiserver.key \
-			--secure-port=8443 \
-			--v=2
+          --authentication-kubeconfig ~/.kube/config \
+          --authorization-kubeconfig ~/.kube/config \
+          --etcd-servers http://$(minikube ip):32379 \
+          --kubeconfig ~/.kube/config \
+          --tls-cert-file ~/.minikube/apiserver.crt \
+          --tls-private-key-file ~/.minikube/apiserver.key \
+          --secure-port=8443 \
+          --v 2
         ;;
 esac
