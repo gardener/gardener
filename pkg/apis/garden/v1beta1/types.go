@@ -1126,9 +1126,9 @@ type LastOperation struct {
 	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 	// The progress in percentage (0-100) of the last operation.
 	Progress int `json:"progress"`
-	// Status of the last operation, one of Processing, Succeeded, Error, Failed.
+	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
 	State ShootLastOperationState `json:"state"`
-	// Type of the last operation, one of Create, Reconcile, Update, Delete.
+	// Type of the last operation, one of Create, Reconcile, Delete.
 	Type ShootLastOperationType `json:"type"`
 }
 
@@ -1158,6 +1158,8 @@ const (
 	ShootLastOperationStateFailed ShootLastOperationState = "Failed"
 	// ShootLastOperationStatePending indicates that an operation cannot be done now, but will be tried in future.
 	ShootLastOperationStatePending ShootLastOperationState = "Pending"
+	// ShootLastOperationStateAborted indicates that an operation has been aborted.
+	ShootLastOperationStateAborted ShootLastOperationState = "Aborted"
 )
 
 // LastError indicates the last occurred error for an operation on a Shoot cluster.

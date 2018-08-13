@@ -2674,14 +2674,14 @@ func schema_pkg_apis_garden_v1beta1_LastOperation(ref common.ReferenceCallback) 
 					},
 					"state": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Status of the last operation, one of Processing, Succeeded, Error, Failed.",
+							Description: "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"type": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Type of the last operation, one of Create, Reconcile, Update, Delete.",
+							Description: "Type of the last operation, one of Create, Reconcile, Delete.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

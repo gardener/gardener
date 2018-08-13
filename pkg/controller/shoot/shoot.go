@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -170,18 +171,19 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 	}
 	logger.Logger.Info("Shoot controller initialized.")
 
-	// Get all shoots managed by Gardener and check if the backup defaults are valid. If not, update the shoots
-	// with the default backup schedule.
+	// Update Shoots before starting the workers.
 	shoots, err := c.shootLister.List(labels.Everything())
 	if err != nil {
 		logger.Logger.Errorf("Failed to fetch shoots resources: %v", err.Error())
 		return
 	}
 	for _, shoot := range shoots {
-		if shoot.DeletionTimestamp != nil {
-			continue
-		}
+		var (
+			newShoot    = shoot.DeepCopy()
+			needsUpdate = false
+		)
 
+		// Check if the backup defaults are valid. If not, update the shoots with the default backup schedule.
 		schedule, err := cron.ParseStandard(shoot.Spec.Backup.Schedule)
 		if err != nil {
 			logger.Logger.Errorf("Failed to parse the schedule for shoot [%v]: %v ", shoot.ObjectMeta.Name, err.Error())
@@ -189,17 +191,25 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		}
 
 		var (
-			newShoot                      = shoot.DeepCopy()
 			nextScheduleTime              = schedule.Next(time.Now())
 			scheduleTimeAfterNextSchedule = schedule.Next(nextScheduleTime)
 			granularity                   = scheduleTimeAfterNextSchedule.Sub(nextScheduleTime)
 		)
 
-		if granularity < garden.MinimumETCDFullBackupTimeInterval {
+		if shoot.DeletionTimestamp == nil && granularity < garden.MinimumETCDFullBackupTimeInterval {
 			newShoot.Spec.Backup.Schedule = garden.DefaultETCDBackupSchedule
-			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.ObjectMeta.Namespace).Update(newShoot); err != nil {
-				logger.Logger.Errorf("Failed to update shoot [%v]: %v ", newShoot.ObjectMeta.Name, err.Error())
-				return
+			needsUpdate = true
+		}
+
+		// Check if the status indicates that an operation is processing and mark it as "aborted".
+		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateProcessing {
+			newShoot.Status.LastOperation.State = gardenv1beta1.ShootLastOperationStateAborted
+			needsUpdate = true
+		}
+
+		if needsUpdate {
+			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).Update(newShoot); err != nil {
+				panic(fmt.Sprintf("Failed to update shoot [%v]: %v ", newShoot.ObjectMeta.Name, err.Error()))
 			}
 		}
 	}
