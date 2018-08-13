@@ -16,5 +16,6 @@
     [Service]
     Type=oneshot
     ExecStart=/usr/sbin/update-ca-certificates
+    ExecStartPost=/usr/bin/systemctl restart docker
 {{- end -}}
 {{- end -}}
