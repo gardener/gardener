@@ -50,16 +50,33 @@ func ValueExists(value string, list []string) bool {
 	return false
 }
 
-// MergeMaps takes two maps <defaults>, <custom> and merges them. If <custom> defines a value with a key
-// already existing in the <defaults> map, the <default> value for that key will be overwritten.
-func MergeMaps(defaults, custom map[string]interface{}) map[string]interface{} {
+// MergeMaps takes two maps <a>, <b> and merges them. If <b> defines a value with a key
+// already existing in the <a> map, the <a> value for that key will be overwritten.
+func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
 	var values = map[string]interface{}{}
-	for i, v := range defaults {
+
+	for i, v := range b {
+		existing, ok := a[i]
 		values[i] = v
+
+		switch elem := v.(type) {
+		case map[string]interface{}:
+			if ok {
+				if extMap, ok := existing.(map[string]interface{}); ok {
+					values[i] = MergeMaps(extMap, elem)
+				}
+			}
+		default:
+			values[i] = v
+		}
 	}
-	for i, v := range custom {
-		values[i] = v
+
+	for i, v := range a {
+		if _, ok := values[i]; !ok {
+			values[i] = v
+		}
 	}
+
 	return values
 }
 
