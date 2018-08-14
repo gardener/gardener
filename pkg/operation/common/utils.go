@@ -202,10 +202,10 @@ func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value st
 func DetermineErrorCode(message string) error {
 	var (
 		code                         gardenv1beta1.ErrorCode
-		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|invalid character|invalid_grant|invalid_client)`)
+		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|invalid character|invalid_grant|invalid_client|Authorization Profile was not found)`)
 		quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
 		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden)`)
-		dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|DependencyViolation|OptInRequired)`)
+		dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired)`)
 	)
 
 	switch {
