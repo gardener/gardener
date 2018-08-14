@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-apiserver-admission-config
+  namespace: {{ .Release.Namespace }}
+data:
+  admission-configuration.yaml: |
+    apiVersion: {{ include "apiserverversion" . }}
+    kind: AdmissionConfiguration
+    {{- if (include "kube-apiserver.admissionConfig" .) }}
+    plugins:
+    {{- include "kube-apiserver.admissionConfig" . | indent 4 }}
+    {{- else }}
+    plugins: []
+    {{- end }}
+
+{{- range $i, $plugin := .Values.admissionPlugins }}
+{{- if $plugin.config }}
+  {{ lower $plugin.name }}.yaml: |
+{{ $plugin.config | indent 4 }}
+{{- end }}
+{{- end }}

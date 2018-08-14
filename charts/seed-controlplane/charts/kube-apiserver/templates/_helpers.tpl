@@ -51,3 +51,22 @@
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{- define "kube-apiserver.admissionPluginConfigFileDir" -}}
+/etc/kubernetes/admission
+{{- end -}}
+
+{{- define "kube-apiserver.admissionPlugins" }}
+{{- range $i, $plugin := .Values.admissionPlugins -}}
+{{ $plugin.name }},
+{{- end -}}
+{{- end -}}
+
+{{- define "kube-apiserver.admissionConfig" }}
+{{- range $i, $plugin := .Values.admissionPlugins }}
+{{- if $plugin.config }}
+- name: {{ $plugin.name }}
+  path: {{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/{{ lower $plugin.name }}.yaml
+{{- end }}
+{{- end }}
+{{- end -}}
