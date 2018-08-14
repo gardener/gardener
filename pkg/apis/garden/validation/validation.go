@@ -1209,6 +1209,15 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernamePrefix"), *oidc.UsernamePrefix, "username prefix cannot be empty when key is provided"))
 			}
 		}
+
+		admissionPluginsPath := fldPath.Child("kubeAPIServer", "admissionPlugins")
+		for i, plugin := range kubeAPIServer.AdmissionPlugins {
+			idxPath := admissionPluginsPath.Index(i)
+
+			if len(plugin.Name) == 0 {
+				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
+			}
+		}
 	}
 
 	return allErrs

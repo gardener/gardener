@@ -169,7 +169,65 @@ spec:
         workers: ${value("spec.cloud.local.networks.workers", ["192.168.99.100/24"])}
     % endif
   kubernetes:
-    version: ${value("spec.kubernetes.version", kubernetesVersion)}
+    version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
+    % if kubeAPIServer != {}:
+    kubeAPIServer: ${yaml.dump(kubeAPIServer, width=10000)}
+    % else:
+  # kubeAPIServer:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #   oidcConfig:
+  #     caBundle: |
+  #       -----BEGIN CERTIFICATE-----
+  #       Li4u
+  #       -----END CERTIFICATE-----
+  #     clientID: client-id
+  #     groupsClaim: groups-claim
+  #     groupsPrefix: groups-prefix
+  #     issuerURL: https://identity.example.com
+  #     requiredClaims:
+  #       key: value
+  #     signingAlgs: RS256,some-other-algorithm
+  #     usernameClaim: username-claim
+  #     usernamePrefix: username-prefix
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config: |
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  % endif
+    % if kubeControllerManager != {}:
+    kubeControllerManager: ${yaml.dump(kubeControllerManager, width=10000)}
+    % else:
+  # kubeControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  % endif
+    % if kubeScheduler != {}:
+    kubeScheduler: ${yaml.dump(kubeScheduler, width=10000)}
+    % else:
+  # kubeScheduler:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  % endif
+    % if kubeProxy != {}:
+    kubeProxy: ${yaml.dump(kubeProxy, width=10000)}
+    % else:
+  # kubeProxy:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  % endif
+    % if kubelet != {}:
+    kubelet: ${yaml.dump(kubelet, width=10000)}
+    % else:
+  # kubelet:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  % endif
   dns:
     provider: ${value("spec.dns.provider", "aws-route53") if cloud != "local" else "unmanaged"}
     domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<minikube-ip>.nip.io"}

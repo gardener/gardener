@@ -1748,6 +1748,15 @@ var _ = Describe("validation", func() {
 								UsernameClaim:  makeStringPointer("user-claim"),
 								UsernamePrefix: makeStringPointer("user-prefix"),
 							},
+							AdmissionPlugins: []garden.AdmissionPlugin{
+								{
+									Name: "PodNodeSelector",
+									Config: makeStringPointer(`podNodeSelectorPluginConfig:
+  clusterDefaultNodeSelector: <node-selectors-labels>
+  namespace1: <node-selectors-labels>
+  namespace2: <node-selectors-labels>`),
+								},
+							},
 						},
 					},
 					Maintenance: &garden.Maintenance{
@@ -3497,14 +3506,41 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid unsupported OIDC configuration (for K8S >= v1.11)", func() {
+			It("should allow supported OIDC configuration (for K8S >= v1.11)", func() {
 				shoot.Spec.Kubernetes.Version = "1.11.1"
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{}
+				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{
+					"some": "claim",
+				}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
+			})
+		})
+
+		Context("admission plugin validation", func() {
+			It("should allow not specifying admission plugins", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid specifying admission plugins without a name", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AdmissionPlugins = []garden.AdmissionPlugin{
+					{
+						Name: "",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.admissionPlugins[0].name"),
+				}))
 			})
 		})
 

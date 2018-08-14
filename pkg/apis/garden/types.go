@@ -1028,6 +1028,10 @@ type KubeAPIServerConfig struct {
 	// OIDCConfig contains configuration settings for the OIDC provider.
 	// +optional
 	OIDCConfig *OIDCConfig
+	// AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding
+	// configuration.
+	// +optional
+	AdmissionPlugins []AdmissionPlugin
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.
@@ -1062,6 +1066,20 @@ type OIDCConfig struct {
 	// If provided, all usernames will be prefixed with this value. If not provided, username claims other than 'email' are prefixed by the issuer URL to avoid clashes. To skip any prefixing, provide the value '-'.
 	// +optional
 	UsernamePrefix *string
+}
+
+// AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.
+type AdmissionPlugin struct {
+	// Name is the name of the plugin.
+	Name string
+	// Config is the configuration of the plugin.
+	// NOTE: After a discussion with @mvladev we decided to not use the runtime.RawExtension type for the configuration
+	// for now as there seems to be a bug with the OpenAPI generation which would make kubectl not correctly validate
+	// the objects (see also https://github.com/kubernetes-sigs/cluster-api/issues/137). We keep it as string for now
+	// and will later migrate the Go type to runtime.RawExtension once the issues have been resolved.
+	// SEE ALSO: https://github.com/gardener/gardener/pull/322
+	// +optional
+	Config *string
 }
 
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
