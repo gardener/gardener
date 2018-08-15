@@ -125,6 +125,13 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
+	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	nodeCount := len(nodes.Items)
+
 	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"images": map[string]interface{}{
@@ -135,6 +142,9 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),
+		},
+		"prometheus": map[string]interface{}{
+			"objectCount": nodeCount,
 		},
 	})
 }
