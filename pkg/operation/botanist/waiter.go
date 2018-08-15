@@ -46,8 +46,42 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady() error {
 	return nil
 }
 
-// WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) have a condition in its/their status
-// which indicates readiness.
+// WaitUntilEtcdReady waits until the etcd statefulsets indicate readiness in their statuses.
+func (b *Botanist) WaitUntilEtcdReady() error {
+	return wait.PollImmediate(5*time.Second, 300*time.Second, func() (bool, error) {
+		statefulSetList, err := b.K8sSeedClient.ListStatefulSets(b.Shoot.SeedNamespace, metav1.ListOptions{
+			LabelSelector: "app=etcd-statefulset",
+		})
+		if err != nil {
+			return false, err
+		}
+		if len(statefulSetList) < 2 {
+			b.Logger.Info("Waiting until the etcd statefulsets gets created...")
+			return false, nil
+		}
+
+		bothEtcdStatefulSetsReady := true
+		for _, statefulSet := range statefulSetList {
+			if statefulSet.DeletionTimestamp != nil {
+				continue
+			}
+
+			if statefulSet.Status.ReadyReplicas < 1 {
+				bothEtcdStatefulSetsReady = false
+				break
+			}
+		}
+
+		if bothEtcdStatefulSetsReady {
+			return true, nil
+		}
+
+		b.Logger.Info("Waiting until the both etcd statefulsets are ready...")
+		return false, nil
+	})
+}
+
+// WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
 func (b *Botanist) WaitUntilKubeAPIServerReady() error {
 	return wait.PollImmediate(5*time.Second, 300*time.Second, func() (bool, error) {
 		podList, err := b.K8sSeedClient.ListPods(b.Shoot.SeedNamespace, metav1.ListOptions{

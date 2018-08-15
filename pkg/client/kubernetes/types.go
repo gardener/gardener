@@ -94,6 +94,7 @@ type Client interface {
 	DeleteDeployment(string, string) error
 
 	// StatefulSets
+	ListStatefulSets(string, metav1.ListOptions) ([]*mapping.StatefulSet, error)
 	DeleteStatefulSet(string, string) error
 
 	// Jobs

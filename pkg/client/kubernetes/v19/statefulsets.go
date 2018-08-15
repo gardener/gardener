@@ -14,6 +14,29 @@
 
 package kubernetesv19
 
+import (
+	"sort"
+
+	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// ListStatefulSets returns the list of StatefulSets in the given <namespace>.
+func (c *Client) ListStatefulSets(namespace string, listOptions metav1.ListOptions) ([]*mapping.StatefulSet, error) {
+	var statefulsetList []*mapping.StatefulSet
+	statefulsets, err := c.Clientset().AppsV1().StatefulSets(namespace).List(listOptions)
+	if err != nil {
+		return nil, err
+	}
+	sort.Slice(statefulsets.Items, func(i, j int) bool {
+		return statefulsets.Items[i].ObjectMeta.CreationTimestamp.Before(&statefulsets.Items[j].ObjectMeta.CreationTimestamp)
+	})
+	for _, statefulset := range statefulsets.Items {
+		statefulsetList = append(statefulsetList, mapping.AppsV1StatefulSet(statefulset))
+	}
+	return statefulsetList, nil
+}
+
 // DeleteStatefulSet deletes a StatefulSet object.
 func (c *Client) DeleteStatefulSet(namespace, name string) error {
 	return c.Clientset().AppsV1().StatefulSets(namespace).Delete(name, &defaultDeleteOptions)
