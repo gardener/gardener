@@ -50,3 +50,7 @@ apiServerResources:
   limits:
     cpu: 1500m
     memory: 2500Mi
+
+maxReplicas: 1
+minReplicas: 1
+targetAverageUtilization: 60
