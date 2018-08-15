@@ -38,7 +38,7 @@ data:
       seed:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.seed.concurrentSyncs is required" .Values.controller.config.controllers.seed.concurrentSyncs }}
         syncPeriod: {{ required ".Values.controller.config.controllers.seed.syncPeriod is required" .Values.controller.config.controllers.seed.syncPeriod }}
-        reserveExcessCapacity: {{ or .Values.controller.config.controllers.seed.reserveExcessCapacity false }}
+        reserveExcessCapacity: {{ required ".Values.controller.config.controllers.seed.reserveExcessCapacity is required" .Values.controller.config.controllers.seed.reserveExcessCapacity }}
       {{- end }}
       shoot:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shoot.concurrentSyncs is required" .Values.controller.config.controllers.shoot.concurrentSyncs }}
