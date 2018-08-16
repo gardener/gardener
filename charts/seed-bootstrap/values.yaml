@@ -15,6 +15,35 @@ prometheus:
   - memory_usage_bytes
   - memory_working_set_bytes
 
+  # object can be any object you want to scale Prometheus on:
+  # - number of Pods
+  # - number of Nodes
+  # - total Foos
+  objectCount: 4
+  resources:
+    requests:
+    - name: cpu
+      base: 100
+      perObject: 4
+      weight: 5
+      unit: m
+    - name: memory
+      base: 100
+      perObject: 18
+      weight: 5
+      unit: Mi
+    limits:
+    - name: cpu
+      base: 150
+      perObject: 8
+      weight: 5
+      unit: m
+    - name: memory
+      base: 150
+      perObject: 36
+      weight: 5
+      unit: Mi
+
 reserveExcessCapacity: true
 
 replicas:

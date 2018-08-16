@@ -40,31 +40,25 @@ spec:
         securityContext:
           runAsUser: 0
         livenessProbe:
-          failureThreshold: 10
           httpGet:
             path: /-/healthy
             port: {{ .Values.prometheus.port }}
             scheme: HTTP
-          initialDelaySeconds: 300
+          failureThreshold: 60
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
         readinessProbe:
-          failureThreshold: 6
           httpGet:
             path: /-/ready
             port: {{ .Values.prometheus.port }}
             scheme: HTTP
-          periodSeconds: 60
+          failureThreshold: 120
+          periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-          requests:
-            cpu: 50m
-            memory: 1200Mi
-          limits:
-            cpu: 200m
-            memory: 2400Mi
+{{- include "resource.quantity" .Values.prometheus | indent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
