@@ -52,6 +52,7 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
+	"flag"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.
@@ -245,6 +246,9 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	logger := logger.NewLogger(config.LogLevel)
 	logger.Info("Starting Gardener controller manager...")
 	logger.Infof("Feature Gates: %s", gardenerfeatures.ControllerFeatureGate.String())
+	if err := flag.Lookup("v").Value.Set(fmt.Sprintf("%d", config.KubernetesLogLevel)); err != nil {
+		return nil, err
+	}
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
 	var (
