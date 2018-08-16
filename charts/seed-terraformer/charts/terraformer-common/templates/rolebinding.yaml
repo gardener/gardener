@@ -10,5 +10,5 @@ roleRef:
   name: garden.sapcloud.io:system:terraformers
 subjects:
 - kind: ServiceAccount
-  name: default
+  name: terraformer
   namespace: {{ .Release.Namespace }}

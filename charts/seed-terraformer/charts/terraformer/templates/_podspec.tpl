@@ -38,6 +38,8 @@ containers:
     name: tfvars
   - mountPath: /tf-state-in
     name: tfstate
+serviceAccount: terraformer
+serviceAccountName: terraformer
 volumes:
 - name: tf
   configMap:
