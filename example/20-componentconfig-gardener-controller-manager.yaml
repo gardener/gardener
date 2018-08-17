@@ -36,6 +36,7 @@ leaderElection:
   retryPeriod: 2s
   resourceLock: configmaps
 logLevel: info
+kubernetesLogLevel: 0
 metrics:
   interval: 30s
 server:
