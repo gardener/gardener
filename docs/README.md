@@ -6,6 +6,7 @@
 * [Testing and Dependency Management](development/testing_and_dependencies.md)
 * [Features, Releases and Hotfixes](development/process.md)
 * [Repositories of required components](development/repositories.md)
+* [Machine-Controller-Manager integration and Machine bootstrap flow](development/machine-bootstrap.md)
 
 ## Deployment
 
