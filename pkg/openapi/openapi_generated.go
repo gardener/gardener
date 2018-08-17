@@ -42,6 +42,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSWorker":                     schema_pkg_apis_garden_v1beta1_AWSWorker(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon":                         schema_pkg_apis_garden_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons":                        schema_pkg_apis_garden_v1beta1_Addons(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin":               schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud":                    schema_pkg_apis_garden_v1beta1_AzureCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints":              schema_pkg_apis_garden_v1beta1_AzureConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount":              schema_pkg_apis_garden_v1beta1_AzureDomainCount(ref),
@@ -858,6 +859,34 @@ func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AdmissionPlugin contains information about a specific admission plugin and its corresponding configuration.",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the plugin.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"config": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Config is the configuration of the plugin. NOTE: After a discussion with @mvladev we decided to not use the runtime.RawExtension type for the configuration for now as there seems to be a bug with the OpenAPI generation which would make kubectl not correctly validate the objects (see also https://github.com/kubernetes-sigs/cluster-api/issues/137). We keep it as string for now and will later migrate the Go type to runtime.RawExtension once the issues have been resolved. SEE ALSO: https://github.com/gardener/gardener/pull/322",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 
@@ -2332,11 +2361,24 @@ func schema_pkg_apis_garden_v1beta1_KubeAPIServerConfig(ref common.ReferenceCall
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"),
 						},
 					},
+					"admissionPlugins": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdmissionPlugins contains the list of user-defined admission plugins (additional to those managed by Gardener), and, if desired, the corresponding configuration.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
 	}
 }
 

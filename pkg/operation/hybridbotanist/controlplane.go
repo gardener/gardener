@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
@@ -234,7 +235,11 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	apiServerConfig := b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
+	var (
+		apiServerConfig  = b.Shoot.Info.Spec.Kubernetes.KubeAPIServer
+		admissionPlugins = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
+	)
+
 	if apiServerConfig != nil {
 		defaultValues["featureGates"] = apiServerConfig.FeatureGates
 		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
@@ -242,7 +247,24 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		if apiServerConfig.OIDCConfig != nil {
 			defaultValues["oidcConfig"] = apiServerConfig.OIDCConfig
 		}
+
+		for _, plugin := range apiServerConfig.AdmissionPlugins {
+			pluginOverwritesDefault := false
+
+			for i, defaultPlugin := range admissionPlugins {
+				if defaultPlugin.Name == plugin.Name {
+					pluginOverwritesDefault = true
+					admissionPlugins[i] = plugin
+					break
+				}
+			}
+
+			if !pluginOverwritesDefault {
+				admissionPlugins = append(admissionPlugins, plugin)
+			}
+		}
 	}
+	defaultValues["admissionPlugins"] = admissionPlugins
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{
 		"hyperkube":         "hyperkube",

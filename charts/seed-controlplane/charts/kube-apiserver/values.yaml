@@ -18,6 +18,7 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 runtimeConfig: {}
   # autoscaling/v2alpha1: true
+
 oidcConfig: {}
   # caBundle: |
   #   -----BEGIN CERTIFICATE-----
@@ -34,6 +35,27 @@ oidcConfig: {}
   #   bar: foo
   # usernameClaim: user
   # usernamePrefix: prefix
+
+admissionPlugins:
+- name: Priority
+- name: NamespaceLifecycle
+- name: LimitRanger
+- name: ServiceAccount
+- name: NodeRestriction
+- name: DefaultStorageClass
+- name: PersistentVolumeLabel
+- name: DefaultTolerationSeconds
+- name: StorageObjectInUseProtection
+- name: MutatingAdmissionWebhook
+- name: ValidatingAdmissionWebhook
+- name: ResourceQuota
+# - name: PodNodeSelector
+#   config: |
+#     podNodeSelectorPluginConfig:
+#       clusterDefaultNodeSelector: <node-selectors-labels>
+#       namespace1: <node-selectors-labels>
+#       namespace2: <node-selectors-labels>
+
 images:
   hyperkube: image-repository
   vpn-seed: image-repository:image-tag

@@ -19,6 +19,10 @@ componentconfig/v1alpha1
 {{- end -}}
 {{- end -}}
 
+{{- define "apiserverversion" -}}
+apiserver.k8s.io/v1alpha1
+{{- end -}}
+
 {{- define "rbacversion" -}}
 rbac.authorization.k8s.io/v1
 {{- end -}}

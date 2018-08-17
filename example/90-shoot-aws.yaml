@@ -28,6 +28,44 @@ spec:
       zones: ['eu-west-1a']
   kubernetes:
     version: 1.11.0
+  # kubeAPIServer:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #   oidcConfig:
+  #     caBundle: |
+  #       -----BEGIN CERTIFICATE-----
+  #       Li4u
+  #       -----END CERTIFICATE-----
+  #     clientID: client-id
+  #     groupsClaim: groups-claim
+  #     groupsPrefix: groups-prefix
+  #     issuerURL: https://identity.example.com
+  #     requiredClaims:
+  #       key: value
+  #     signingAlgs: RS256,some-other-algorithm
+  #     usernameClaim: username-claim
+  #     usernamePrefix: username-prefix
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config: |
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  # kubeControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubeScheduler:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubeProxy:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubelet:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
   dns:
     provider: aws-route53
     domain: johndoe-aws.garden-dev.example.com
