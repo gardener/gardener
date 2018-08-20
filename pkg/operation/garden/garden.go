@@ -35,13 +35,13 @@ func New(k8sGardenClient kubernetes.Client, namespace string) (*Garden, error) {
 		return nil, err
 	}
 
-	projectName := namespace
-	if name, ok := ns.Labels[common.ProjectName]; ok && len(name) > 0 {
-		projectName = name
+	project, err := common.ProjectForNamespace(k8sGardenClient, ns)
+	if err != nil {
+		return nil, err
 	}
 
 	return &Garden{
-		ProjectName: projectName,
+		Project: project,
 	}, nil
 }
 

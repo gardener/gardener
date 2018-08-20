@@ -28,10 +28,9 @@ import (
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
-	kubeinformers "k8s.io/client-go/informers"
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 )
 
 const (
@@ -51,13 +50,12 @@ type ValidateShoot struct {
 	*admission.Handler
 	cloudProfileLister listers.CloudProfileLister
 	seedLister         listers.SeedLister
-	namespaceLister    kubecorev1listers.NamespaceLister
+	projectLister      listers.ProjectLister
 	readyFunc          admission.ReadyFunc
 }
 
 var (
 	_ = admissioninitializer.WantsInternalGardenInformerFactory(&ValidateShoot{})
-	_ = admissioninitializer.WantsKubeInformerFactory(&ValidateShoot{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -83,15 +81,10 @@ func (v *ValidateShoot) SetInternalGardenInformerFactory(f informers.SharedInfor
 	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
 	v.cloudProfileLister = cloudProfileInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced)
-}
+	projectInformer := f.Garden().InternalVersion().Projects()
+	v.projectLister = projectInformer.Lister()
 
-// SetKubeInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateShoot) SetKubeInformerFactory(f kubeinformers.SharedInformerFactory) {
-	namespaceInformer := f.Core().V1().Namespaces()
-	v.namespaceLister = namespaceInformer.Lister()
-
-	readyFuncs = append(readyFuncs, namespaceInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -102,8 +95,8 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	if v.seedLister == nil {
 		return errors.New("missing seed lister")
 	}
-	if v.namespaceLister == nil {
-		return errors.New("missing namespace lister")
+	if v.projectLister == nil {
+		return errors.New("missing project lister")
 	}
 	return nil
 }
@@ -136,37 +129,49 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 
 	cloudProfile, err := v.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
 	if err != nil {
-		return apierrors.NewBadRequest("could not find referenced cloud profile")
-	}
-	seed, err := v.seedLister.Get(*shoot.Spec.Cloud.Seed)
-	if err != nil {
-		return apierrors.NewBadRequest("could not find referenced seed")
-	}
-	namespace, err := v.namespaceLister.Get(shoot.Namespace)
-	if err != nil {
-		return apierrors.NewBadRequest("could not find referenced namespace")
+		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced cloud profile: %+v", err.Error()))
 	}
 
-	// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
-	// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
-	// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
-	// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
-	// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
-	// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
-	// Shoots in case the limits are changed in the future).
-	if a.GetOperation() == admission.Create {
-		var (
-			projectName = shoot.Namespace
-			lengthLimit = 21
-		)
-		if projectNameLabel, ok := namespace.Labels[common.ProjectName]; ok {
-			projectName = projectNameLabel
+	seed, err := v.seedLister.Get(*shoot.Spec.Cloud.Seed)
+	if err != nil {
+		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
+	}
+
+	var project *garden.Project
+	projectList, err := v.projectLister.List(labels.Everything())
+	if err != nil {
+		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
+	}
+	for _, p := range projectList {
+		if p.Status.Namespace != nil && *p.Status.Namespace == shoot.Namespace {
+			project = p
+			break
 		}
-		if len(projectName+shoot.Name) > lengthLimit {
-			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, projectName, shoot.Name))
+	}
+	if project == nil {
+		return apierrors.NewBadRequest("could not find referenced project")
+	}
+
+	switch a.GetOperation() {
+	case admission.Create:
+		// We currently use the identifier "shoot-<project-name>-<shoot-name> in nearly all places for old Shoots, but have
+		// changed that to "shoot--<project-name>-<shoot-name>": when creating infrastructure resources, Kubernetes resources,
+		// DNS names, etc., then this identifier is used to tag/name the resources. Some of those resources have length
+		// constraints that this identifier must not exceed 30 characters, thus we need to check whether Shoots do not exceed
+		// this limit. The project name is a label on the namespace. If it is not found, the namespace name itself is used as
+		// project name. These checks should only be performed for CREATE operations (we do not want to reject changes to existing
+		// Shoots in case the limits are changed in the future).
+		var lengthLimit = 21
+		if len(project.Name+shoot.Name) > lengthLimit {
+			return apierrors.NewBadRequest(fmt.Sprintf("the length of the shoot name and the project name must not exceed %d characters (project: %s; shoot: %s)", lengthLimit, project.Name, shoot.Name))
 		}
-		if strings.Contains(projectName, "--") {
-			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", projectName))
+		if strings.Contains(project.Name, "--") {
+			return apierrors.NewBadRequest(fmt.Sprintf("the project name must not contain two consecutive hyphens (project: %s)", project.Name))
+		}
+
+		// We don't want new Shoots to be created in Projects which were already marked for deletion.
+		if project.DeletionTimestamp != nil {
+			return admission.NewForbidden(a, fmt.Errorf("cannot create shoot '%s' in project '%s' already marked for deletion", shoot.Name, project.Name))
 		}
 	}
 
