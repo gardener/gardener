@@ -82,21 +82,20 @@ spec:
         securityContext:
           runAsUser: 0
         livenessProbe:
-          failureThreshold: 10
           httpGet:
             path: /-/healthy
             port: {{ .Values.port }}
             scheme: HTTP
-          initialDelaySeconds: 300
+          failureThreshold: 60
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
         readinessProbe:
-          failureThreshold: 6
           httpGet:
             path: /-/ready
             port: {{ .Values.port }}
             scheme: HTTP
+          failureThreshold: 120
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
