@@ -87,10 +87,10 @@ func newClientSet(config *rest.Config, clientConfig clientcmd.ClientConfig) (Cli
 	// Fix zombie tcp connections on un-ACK-nowledged data
 	config.Dial = newFailFastDial(
 		(&net.Dialer{
-			Timeout:   10 * time.Second,
-			KeepAlive: 10 * time.Second,
+			Timeout:   20 * time.Second,
+			KeepAlive: 20 * time.Second,
 		}).DialContext,
-		7*time.Second,
+		20*time.Second,
 	).DialContext
 
 	clientset, err := kubernetes.NewForConfig(config)
