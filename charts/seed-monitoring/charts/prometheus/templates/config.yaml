@@ -26,14 +26,12 @@ data:
         seed_profile: {{ .Values.seed.profile }}
     rule_files:
     - /etc/prometheus/rules/*.yml
-
     alerting:
       alertmanagers:
       - kubernetes_sd_configs:
         - role: endpoints
           namespaces:
             names: [{{.Release.Namespace}}]
-
         scheme: http
         relabel_configs:
         - source_labels: [__meta_kubernetes_service_label_component]
@@ -45,7 +43,6 @@ data:
         - source_labels: [__meta_kubernetes_endpoint_port_name]
           action: keep
           regex: metrics
-
     scrape_configs:
     - job_name: 'kube-etcd3'
       scheme: https
@@ -69,19 +66,16 @@ data:
 
     - job_name: 'kube-apiserver'
       scheme: https
-
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
           names: [{{.Release.Namespace}}]
-
       tls_config:
         # This is needed because the api server's certificates are not are generated
         # for a specific pod IP
         insecure_skip_verify: true
         cert_file: /etc/prometheus/seed/prometheus.crt
         key_file: /etc/prometheus/seed/prometheus.key
-
       relabel_configs:
       - source_labels: [__meta_kubernetes_service_name]
         action: keep
@@ -91,26 +85,26 @@ data:
         regex: kube-apiserver
       - source_labels: [__meta_kubernetes_pod_name]
         target_label: pod
+      metric_relabel_configs:
+      - source_labels: [ __name__ ]
+        regex: ^apiserver_admission_.+$
+        action: drop
+{{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
 
     - job_name: 'kube-kubelet'
       honor_labels: false
       scheme: https
-
       tls_config:
         # This is needed because the kubelets' certificates are not are generated
         # for a specific pod IP
         insecure_skip_verify: true
         cert_file: /etc/prometheus/seed/prometheus.crt
         key_file: /etc/prometheus/seed/prometheus.key
-
       kubernetes_sd_configs:
       - role: node
         api_server: kube-apiserver
         tls_config:
-          ca_file: /etc/prometheus/seed/ca.crt
-          cert_file: /etc/prometheus/seed/prometheus.crt
-          key_file: /etc/prometheus/seed/prometheus.key
-
+{{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
       - source_labels: [__meta_kubernetes_node_address_InternalIP]
         target_label: instance
@@ -118,7 +112,6 @@ data:
         regex: __meta_kubernetes_node_label_(.+)
       - target_label: type
         replacement: shoot
-
       # get system services
       metric_relabel_configs:
       - source_labels: [id]
@@ -133,7 +126,7 @@ data:
       # Drop metrics that are useless and high-volume
       # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
       - source_labels: [ __name__ ]
-        regex: rest_client_request_latency_seconds_bucket
+        regex: ^rest_client_request_latency_seconds.+$
         action: drop
       - source_labels: [ __name__ ]
         regex: ^(etcd|reflector)_.+
@@ -144,22 +137,17 @@ data:
       honor_labels: false
       scheme: https
       metrics_path: /metrics/cadvisor
-
       tls_config:
         # This is needed because the kubelets' certificates are not are generated
         # for a specific pod IP
         insecure_skip_verify: true
         cert_file: /etc/prometheus/seed/prometheus.crt
         key_file: /etc/prometheus/seed/prometheus.key
-
       kubernetes_sd_configs:
       - role: node
         api_server: kube-apiserver
         tls_config:
-          ca_file: /etc/prometheus/seed/ca.crt
-          cert_file: /etc/prometheus/seed/prometheus.crt
-          key_file: /etc/prometheus/seed/prometheus.key
-
+{{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
       - source_labels: [__meta_kubernetes_node_address_InternalIP]
         target_label: instance
@@ -167,7 +155,6 @@ data:
         regex: __meta_kubernetes_node_label_(.+)
       - target_label: type
         replacement: shoot
-
       metric_relabel_configs:
       # We want to keep only metrics in kube-system namespace
       - source_labels: [namespace]
@@ -208,14 +195,12 @@ data:
     - job_name: 'kube-state-metrics'
       scheme: http
       honor_labels: false
-
       # Service is used, because we only care about metric from one kube-state-metrics instance
       # and not multiple in HA setup
       kubernetes_sd_configs:
       - role: service
         namespaces:
           names: [{{.Release.Namespace}}]
-
       relabel_configs:
       - source_labels: [__meta_kubernetes_service_label_component]
         action: keep
@@ -235,36 +220,36 @@ data:
 
     - job_name: 'annotated-seed-service-endpoints'
       honor_labels: false
-
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
           names: [{{.Release.Namespace}}]
-
       relabel_configs:
-{{- include "prometheus.service-endpoints.relabel-config" . }}
+{{ include "prometheus.service-endpoints.relabel-config" . | indent 6 }}
+      metric_relabel_configs:
+{{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
 
     - job_name: 'annotated-shoot-service-endpoints'
       honor_labels: false
-
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
           names: [kube-system]
         api_server: kube-apiserver
         tls_config:
-          ca_file: /etc/prometheus/seed/ca.crt
-          cert_file: /etc/prometheus/seed/prometheus.crt
-          key_file: /etc/prometheus/seed/prometheus.key
-
+{{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
-{{- include "prometheus.service-endpoints.relabel-config" . }}
+      - source_labels: [__meta_kubernetes_service_label_addonmanager_kubernetes_io_mode]
+        regex: (.+)
+        action: keep
+{{ include "prometheus.service-endpoints.relabel-config" . | indent 6 }}
+      metric_relabel_configs:
+{{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
 
     - job_name: 'vpn-connection'
       honor_labels: false
       scrape_interval: 15s
       scrape_timeout: 5s
-
       metrics_path: /probe
       params:
         module:
