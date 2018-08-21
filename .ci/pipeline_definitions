@@ -42,3 +42,15 @@ gardener:
         release:
           nextversion: 'bump_minor'
         component_descriptor: ~
+
+gardener-updates:
+  template: 'default'
+  variants:
+    create_upgrade_prs:
+      steps: ~
+      traits:
+        component_descriptor: ~
+        update_component_deps: ~
+        cronjob:
+          interval: '15m'
+        version: ~
