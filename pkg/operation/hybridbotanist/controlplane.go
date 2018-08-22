@@ -199,6 +199,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 
 	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
 		defaultValues["replicas"] = 3
+		defaultValues["minReplicas"] = 3
+		defaultValues["maxReplicas"] = 3
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "1500m",
@@ -213,9 +215,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			// As kube-apiserver HPA manages the number of replicas in big clusters
 			// maintain current number of replicas
 			// otherwise keep the value to default
-			if maxNodes >= common.EnableHPANodeCount &&
-				existingAPIServerDeployment.Spec.Replicas != nil &&
-				*existingAPIServerDeployment.Spec.Replicas > 0 {
+			if maxNodes >= common.EnableHPANodeCount && existingAPIServerDeployment.Spec.Replicas != nil && *existingAPIServerDeployment.Spec.Replicas > 0 {
 				defaultValues["replicas"] = *existingAPIServerDeployment.Spec.Replicas
 				defaultValues["maxReplicas"] = 4
 			}
@@ -227,7 +227,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 				"cpu":    cpuLimit,
 				"memory": memoryLimit,
 			},
-
 			"requests": map[string]interface{}{
 				"cpu":    cpuRequest,
 				"memory": memoryRequest,
