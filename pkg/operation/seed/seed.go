@@ -132,7 +132,12 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 
 	nodeCount := len(nodes.Items)
 
-	return common.ApplyChart(k8sSeedClient, chartrenderer.New(k8sSeedClient), filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
+	chartRenderer, err := chartrenderer.New(k8sSeedClient)
+	if err != nil {
+		return err
+	}
+
+	return common.ApplyChart(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"images": map[string]interface{}{
 			"prometheus":         prometheusVersion.String(),

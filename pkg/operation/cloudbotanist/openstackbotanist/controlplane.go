@@ -30,8 +30,11 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 		floatingNetworkID = "floating_network_id"
 		subnetID          = "subnet_id"
 	)
-
-	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(floatingNetworkID, subnetID)
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return "", err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(floatingNetworkID, subnetID)
 	if err != nil {
 		return "", err
 	}
@@ -121,8 +124,11 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
 		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
 	)
-
-	stateVariables, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector).GetStateOutputVariables(containerName)
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector)
+	if err != nil {
+		return nil, nil, err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(containerName)
 	if err != nil {
 		return nil, nil, err
 	}

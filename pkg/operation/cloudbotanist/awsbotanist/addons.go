@@ -35,8 +35,12 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 		return err
 	}
 
-	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM).
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM)
+	if err != nil {
+		return err
+	}
+
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("aws-kube2iam", values).
 		Apply()
@@ -45,8 +49,11 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 // DestroyKube2IAMResources destroy the kube2iam resources created by Terraform. This comprises IAM roles and
 // policies.
 func (b *AWSBotanist) DestroyKube2IAMResources() error {
-	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM).
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -55,7 +62,11 @@ func (b *AWSBotanist) DestroyKube2IAMResources() error {
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1beta1.Kube2IAMRole) (map[string]interface{}, error) {
 	nodesRoleARN := "nodes_role_arn"
-	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(nodesRoleARN)
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return nil, err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(nodesRoleARN)
 	if err != nil {
 		return nil, err
 	}

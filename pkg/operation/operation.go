@@ -60,6 +60,11 @@ func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGa
 		return nil, err
 	}
 
+	chartRenderer, err := chartrenderer.New(k8sGardenClient)
+	if err != nil {
+		return nil, err
+	}
+
 	operation := &Operation{
 		Logger:               logger,
 		GardenerInfo:         gardenerInfo,
@@ -70,7 +75,7 @@ func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGa
 		Seed:                 seedObj,
 		K8sGardenClient:      k8sGardenClient,
 		K8sGardenInformers:   k8sGardenInformers,
-		ChartGardenRenderer:  chartrenderer.New(k8sGardenClient),
+		ChartGardenRenderer:  chartRenderer,
 		BackupInfrastructure: backupInfrastructure,
 		MachineDeployments:   MachineDeployments{},
 	}
@@ -108,7 +113,10 @@ func (o *Operation) InitializeSeedClients() error {
 	k8sSeedClient.SetMachineClientset(machineClientset)
 
 	o.K8sSeedClient = k8sSeedClient
-	o.ChartSeedRenderer = chartrenderer.New(k8sSeedClient)
+	o.ChartSeedRenderer, err = chartrenderer.New(k8sSeedClient)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -127,7 +135,10 @@ func (o *Operation) InitializeShootClients() error {
 	}
 
 	o.K8sShootClient = k8sShootClient
-	o.ChartShootRenderer = chartrenderer.New(k8sShootClient)
+	o.ChartShootRenderer, err = chartrenderer.New(k8sShootClient)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

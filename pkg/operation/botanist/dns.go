@@ -50,12 +50,14 @@ func (b *Botanist) DestroyExternalDomainDNSRecord() error {
 // DeployDNSRecord kicks off a Terraform job of name <alias> which deploys the DNS record for <name> which
 // will point to <target>.
 func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purposeInternalDomain bool) error {
+	tf, err := terraformer.NewFromOperation(b.Operation, terraformerPurpose)
+	if err != nil {
+		return err
+	}
 	var (
 		chartName         string
 		tfvarsEnvironment []map[string]interface{}
-		err               error
 		targetType, _     = common.IdentifyAddressType(target)
-		tf                = terraformer.NewFromOperation(b.Operation, terraformerPurpose)
 	)
 
 	// If the DNS record is already registered properly then we skip the reconciliation to avoid running into
@@ -138,9 +140,11 @@ func (b *Botanist) DestroyDNSRecord(terraformerPurpose string, purposeInternalDo
 	default:
 		return nil
 	}
-
-	return terraformer.
-		NewFromOperation(b.Operation, terraformerPurpose).
+	tf, err := terraformer.NewFromOperation(b.Operation, terraformerPurpose)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(tfvarsEnvironment).
 		Destroy()
 }
