@@ -58,14 +58,21 @@ spec:
         - controller-manager
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
-        - --cloud-provider={{ .Values.cloudProvider }}
+        {{- include "kube-controller-manager.controllers" . | indent 8 }}
+        # We already have the cloud-controller-manager in place and deploy it next to every Shoot control plane.
+        # Though the kube-controller-manager should no longer require the cloud provider credentials or the cloud
+        # config after this change, the fact that we do not have a CSI plugin for the volumes in place yet, we still
+        # need to provide it with this information (config, credentials). The only thing the KCM still does with the
+        # cloud is to (de-)provisioning and de-/attaching volumes to nodes. The CSI plugins will take over this functionality,
+        # hence, once we have it we can also isolate KCM from interaction with the cloud.
+        # For the same reasons, the kubelet still needs the information and can be excluded from interacting with the cloud
+        # API once we have CSI.
+        {{- include "kube-controller-manager.cloudProviderFlags" . | indent 8 }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster-cidr={{ .Values.podNetwork }}
         - --cluster-name={{ .Values.clusterName }}
         - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt
         - --cluster-signing-key-file=/srv/kubernetes/ca/ca.key
-        - --configure-cloud-routes={{ .Values.configureRoutes }}
-        - --controllers=*,bootstrapsigner,tokencleaner
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true

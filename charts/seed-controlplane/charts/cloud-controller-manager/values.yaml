@@ -1,9 +1,9 @@
 cloudProvider: aws
 replicas: 1
 kubernetesVersion: 1.7.5
-serviceNetwork: 10.0.0.0/24
-podNetwork: 192.168.0.0/16
+configureRoutes: true
 clusterName: shoot-foo-bar
+podNetwork: 192.168.0.0/16
 environment: []
 additionalParameters: []
 podAnnotations: {}
@@ -14,8 +14,8 @@ images:
   hyperkube: image-repository
 resources:
   requests:
-    cpu: 200m
-    memory: 128Mi
+    cpu: 100m
+    memory: 64Mi
   limits:
-    cpu: 500m
-    memory: 512Mi
+    cpu: 250m
+    memory: 300Mi

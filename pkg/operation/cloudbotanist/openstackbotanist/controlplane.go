@@ -105,6 +105,12 @@ func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{
 	}, nil
 }
 
+// GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
+// render the Deployment manifest of the cloud-controller-manager properly.
+func (b *OpenStackBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
+
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *OpenStackBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {

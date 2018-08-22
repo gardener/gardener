@@ -29,7 +29,7 @@ var (
 		{Name: "ServiceAccount"},
 		{Name: "NodeRestriction"},
 		{Name: "DefaultStorageClass"},
-		{Name: "PersistentVolumeLabel"},
+		{Name: "Initializers"},
 		{Name: "DefaultTolerationSeconds"},
 	}
 

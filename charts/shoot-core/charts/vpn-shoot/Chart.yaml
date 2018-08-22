@@ -1,4 +1,4 @@
 apiVersion: v1
-description: A Helm chart for kube-proxy
+description: A Helm chart for vpn-shoot
 name: vpn-shoot
 version: 0.1.0

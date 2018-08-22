@@ -135,6 +135,9 @@ const (
 	// EnableHPANodeCount is the number of nodes in shoot cluster after which HPA is deployed to autoscale kube-apiserver.
 	EnableHPANodeCount = 5
 
+	// CloudControllerManagerDeploymentName is the name of the cloud-controller-manager deployment.
+	CloudControllerManagerDeploymentName = "cloud-controller-manager"
+
 	// KubeControllerManagerDeploymentName is the name of the kube-controller-manager deployment.
 	KubeControllerManagerDeploymentName = "kube-controller-manager"
 

@@ -109,13 +109,12 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		deploySecrets                 = f.AddTaskConditional(botanist.DeploySecrets, 0, cleanupShootResources)
 		refreshMachineClassSecrets    = f.AddTaskConditional(hybridBotanist.RefreshMachineClassSecrets, defaultRetry, cleanupShootResources, deploySecrets)
 		refreshCloudProviderConfig    = f.AddTaskConditional(hybridBotanist.RefreshCloudProviderConfig, defaultRetry, cleanupShootResources, deploySecrets)
-		refreshKubeAPIServer          = f.AddTaskConditional(botanist.RefreshKubeAPIServerChecksums, defaultRetry, cleanupShootResources, deploySecrets, refreshCloudProviderConfig)
-		refreshKubeControllerManager  = f.AddTaskConditional(botanist.RefreshKubeControllerManagerChecksums, defaultRetry, cleanupShootResources, deploySecrets, refreshCloudProviderConfig, refreshKubeAPIServer)
-		waitUntilKubeAPIServerIsReady = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerReady, 0, cleanupShootResources, refreshKubeAPIServer)
+		refreshCloudControllerManager = f.AddTaskConditional(botanist.RefreshCloudControllerManagerChecksums, defaultRetry, cleanupShootResources, deploySecrets, refreshCloudProviderConfig)
+		refreshKubeControllerManager  = f.AddTaskConditional(botanist.RefreshKubeControllerManagerChecksums, defaultRetry, cleanupShootResources, deploySecrets, refreshCloudProviderConfig)
 
 		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
 		// resources).
-		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources, deploySecrets, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshKubeAPIServer, refreshKubeControllerManager, waitUntilKubeAPIServerIsReady)
+		initializeShootClients           = f.AddTaskConditional(botanist.InitializeShootClients, 2*time.Minute, cleanupShootResources, deploySecrets, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager)
 		deleteSeedMonitoring             = f.AddTask(botanist.DeleteSeedMonitoring, defaultRetry, initializeShootClients)
 		deleteKubeAddonManager           = f.AddTask(botanist.DeleteKubeAddonManager, defaultRetry, initializeShootClients)
 		deleteClusterAutoscaler          = f.AddTask(botanist.DeleteClusterAutoscaler, defaultRetry, initializeShootClients)
