@@ -209,7 +209,8 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		}
 
 		if needsSpecUpdate {
-			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).Update(newShoot); err != nil {
+			newShoot, err = c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).Update(newShoot)
+			if err != nil {
 				panic(fmt.Sprintf("Failed to update shoot [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
