@@ -20,7 +20,7 @@ See our documentation in the `/docs` repository, please [find the index here](do
 
 ## Setting up your own Gardener landscape in the cloud
 
-Take a look at our [landscape setup template](https://github.com/gardener/landscape-setup-template) to bootstrap your own Gardener system.
+Take a look at our [Gardener Helm Chart](https://github.com/gardener/gardener/tree/master/charts/gardener) for deploying Gardener to an existing Kubernetes cluster, or at our [landscape setup template](https://github.com/gardener/landscape-setup-template) to bootstrap your own Gardener system (including pre-installed configuration and [Gardener Dashboard](https://github.com/gardener/dashboard)).
 
 ## Feedback and Support
 
