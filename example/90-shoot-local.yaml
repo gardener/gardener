@@ -42,6 +42,9 @@ spec:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
   #         namespace1: <node-selectors-labels>
   #         namespace2: <node-selectors-labels>
+  # cloudControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
   # kubeControllerManager:
   #   featureGates:
   #     SomeKubernetesFeature: true

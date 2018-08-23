@@ -177,7 +177,7 @@ spec:
         workers: ${value("spec.cloud.local.networks.workers", ["192.168.99.100/24"])}
     % endif
   kubernetes:
-    version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
+    version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% cloudControllerManager=value("spec.kubernetes.cloudControllerManager", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
     % if kubeAPIServer != {}:
     kubeAPIServer: ${yaml.dump(kubeAPIServer, width=10000)}
     % else:
@@ -207,6 +207,13 @@ spec:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
   #         namespace1: <node-selectors-labels>
   #         namespace2: <node-selectors-labels>
+  % endif
+    % if cloudControllerManager != {}:
+    cloudControllerManager: ${yaml.dump(cloudControllerManager, width=10000)}
+    % else:
+  # cloudControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
   % endif
     % if kubeControllerManager != {}:
     kubeControllerManager: ${yaml.dump(kubeControllerManager, width=10000)}
