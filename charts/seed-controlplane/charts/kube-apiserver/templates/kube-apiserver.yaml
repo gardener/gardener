@@ -46,9 +46,6 @@ spec:
         - --advertise-address={{ .Values.advertiseAddress }}
         - --allow-privileged=true
         - --anonymous-auth=false
-        {{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
-        - --apiserver-count={{ .Values.replicas }}
-        {{- end }}
         {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
