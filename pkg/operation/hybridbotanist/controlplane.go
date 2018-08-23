@@ -274,11 +274,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	// Delete keypair for VPN implementation based on SSH (only meaningful for old clusters).
-	if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, "vpn-ssh-keypair"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
 }
 
