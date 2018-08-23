@@ -17,27 +17,23 @@ package kubernetesbase
 import (
 	"sort"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ListReplicaSets returns the list of ReplicaSets in the given <namespace>.
-func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOptions) ([]*mapping.ReplicaSet, error) {
-	var replicasetList []*mapping.ReplicaSet
-	replicasets, err := c.Clientset().AppsV1beta2().ReplicaSets(namespace).List(listOptions)
+func (c *Client) ListReplicaSets(namespace string, listOptions metav1.ListOptions) (*appsv1.ReplicaSetList, error) {
+	replicasets, err := c.Clientset().AppsV1().ReplicaSets(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
 	sort.Slice(replicasets.Items, func(i, j int) bool {
 		return replicasets.Items[i].ObjectMeta.CreationTimestamp.Before(&replicasets.Items[j].ObjectMeta.CreationTimestamp)
 	})
-	for _, replicaset := range replicasets.Items {
-		replicasetList = append(replicasetList, mapping.AppsV1beta2ReplicaSet(replicaset))
-	}
-	return replicasetList, nil
+	return replicasets, nil
 }
 
 // DeleteReplicaSet deletes a ReplicaSet object.
 func (c *Client) DeleteReplicaSet(namespace, name string) error {
-	return c.Clientset().AppsV1beta2().ReplicaSets(namespace).Delete(name, &defaultDeleteOptions)
+	return c.Clientset().AppsV1().ReplicaSets(namespace).Delete(name, &defaultDeleteOptions)
 }

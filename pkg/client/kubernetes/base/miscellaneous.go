@@ -27,7 +27,7 @@ func (c *Client) Curl(path string) (*rest.Result, error) {
 	return &res, nil
 }
 
-// QueryVersion queries the version of the API server and returns the GitVersion (e.g., v1.8.0).
+// QueryVersion queries the version of the API server and returns the GitVersion (e.g., v1.11.2).
 func (c *Client) QueryVersion() (string, error) {
 	version, err := c.clientset.Discovery().ServerVersion()
 	if err != nil {

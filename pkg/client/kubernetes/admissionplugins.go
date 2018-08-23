@@ -33,11 +33,10 @@ var (
 		{Name: "DefaultTolerationSeconds"},
 	}
 
-	lowestSupportedKubernetesVersionMajorMinor = "1.8"
+	lowestSupportedKubernetesVersionMajorMinor = "1.9"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardenv1beta1.AdmissionPlugin{
-		"1.8":  append(defaultPlugins, gardenv1beta1.AdmissionPlugin{Name: "ResourceQuota"}),
 		"1.9":  append(defaultPlugins, gardenv1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}, gardenv1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}, gardenv1beta1.AdmissionPlugin{Name: "ResourceQuota"}),
 		"1.10": append(defaultPlugins, gardenv1beta1.AdmissionPlugin{Name: "ResourceQuota"}, gardenv1beta1.AdmissionPlugin{Name: "StorageObjectInUseProtection"}, gardenv1beta1.AdmissionPlugin{Name: "MutatingAdmissionWebhook"}, gardenv1beta1.AdmissionPlugin{Name: "ValidatingAdmissionWebhook"}),
 	}

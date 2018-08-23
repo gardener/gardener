@@ -24,8 +24,8 @@ import (
 
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
-		It("should return the list for 1.8 (non-parseable version)", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota"}
+		It("should return the list for 1.9 (non-parseable version)", func() {
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("not-1-a-semver-version")
 
@@ -34,20 +34,10 @@ var _ = Describe("kubernetes", func() {
 			}
 		})
 
-		It("should return the list for 1.8 (lowest supported version)", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota"}
+		It("should return the list for 1.9 (lowest supported version)", func() {
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("1.7.4")
-
-			for _, plugin := range expected {
-				Expect(plugins).To(ContainElement(gardenv1beta1.AdmissionPlugin{Name: plugin}))
-			}
-		})
-
-		It("should return the list for 1.8", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota"}
-
-			plugins := GetAdmissionPluginsForVersion("1.8.4")
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardenv1beta1.AdmissionPlugin{Name: plugin}))

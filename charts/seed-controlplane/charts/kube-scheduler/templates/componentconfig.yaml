@@ -1,4 +1,4 @@
-{{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,4 +13,3 @@ data:
       kubeconfig: /var/lib/kube-scheduler/kubeconfig
     leaderElection:
       leaderElect: true
-{{- end }}

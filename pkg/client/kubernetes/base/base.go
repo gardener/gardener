@@ -31,17 +31,17 @@ func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clie
 		resourceAPIGroups: map[string][]string{
 			CronJobs:                  {"apis", "batch", "v1beta1"},
 			CustomResourceDefinitions: {"apis", "apiextensions.k8s.io", "v1beta1"},
-			DaemonSets:                {"apis", "apps", "v1beta2"},
-			Deployments:               {"apis", "apps", "v1beta2"},
+			DaemonSets:                {"apis", "apps", "v1"},
+			Deployments:               {"apis", "apps", "v1"},
 			Ingresses:                 {"apis", "extensions", "v1beta1"},
 			Jobs:                      {"apis", "batch", "v1"},
 			Namespaces:                {"api", "v1"},
 			PersistentVolumeClaims:    {"api", "v1"},
 			Pods:                   {"api", "v1"},
-			ReplicaSets:            {"apis", "apps", "v1beta2"},
+			ReplicaSets:            {"apis", "apps", "v1"},
 			ReplicationControllers: {"api", "v1"},
 			Services:               {"api", "v1"},
-			StatefulSets:           {"apis", "apps", "v1beta2"},
+			StatefulSets:           {"apis", "apps", "v1"},
 		},
 	}
 

@@ -143,7 +143,7 @@ func verifyDeploymentHealthiness(condition *gardenv1beta1.Condition, k8sClient k
 		return helper.ModifyCondition(condition, corev1.ConditionUnknown, "FetchDeploymentListFailed", err.Error()), true
 	}
 
-	for _, deployment := range deploymentList {
+	for _, deployment := range deploymentList.Items {
 		if deployment.Spec.Replicas != nil && *deployment.Spec.Replicas != deployment.Status.AvailableReplicas {
 			return helper.ModifyCondition(condition, corev1.ConditionFalse, "DeploymentUnavailable", fmt.Sprintf("Deployment %s has not yet the desired number of available pods.", deployment.Name)), true
 		}

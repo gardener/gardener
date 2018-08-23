@@ -44,7 +44,7 @@ var _ = Describe("validation", func() {
 				},
 			}
 			kubernetesVersionConstraint = garden.KubernetesConstraints{
-				Versions: []string{"1.8.4"},
+				Versions: []string{"1.11.4"},
 			}
 			machineType = garden.MachineType{
 				Name:   "machine-type-1",
@@ -80,7 +80,7 @@ var _ = Describe("validation", func() {
 					Name: garden.DNSProvider("some-unsupported-provider"),
 				},
 			}
-			invalidKubernetes  = []string{"1.8"}
+			invalidKubernetes  = []string{"1.11"}
 			invalidMachineType = garden.MachineType{
 
 				Name:   "",
@@ -1737,7 +1737,7 @@ var _ = Describe("validation", func() {
 						Domain:       &domain,
 					},
 					Kubernetes: garden.Kubernetes{
-						Version: "1.8.2",
+						Version: "1.11.2",
 						KubeAPIServer: &garden.KubeAPIServerConfig{
 							OIDCConfig: &garden.OIDCConfig{
 								CABundle:       makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
@@ -3453,7 +3453,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(9))
+				Expect(len(errorList)).To(Equal(7))
 				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
@@ -3475,18 +3475,10 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
 				}))
 				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.signingAlgs"),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.requiredClaims"),
-				}))
-				Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernameClaim"),
 				}))
-				Expect(*errorList[8]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
 				}))

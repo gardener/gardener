@@ -1,6 +1,6 @@
 cloudProvider: aws
 replicas: 1
-kubernetesVersion: 1.8.5
+kubernetesVersion: 1.11.2
 advertiseAddress: 127.0.0.1
 securePort: 443
 probeCredentials: base64(user:pass)

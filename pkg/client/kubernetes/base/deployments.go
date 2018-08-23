@@ -17,46 +17,34 @@ package kubernetesbase
 import (
 	"sort"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 // GetDeployment returns a Deployment object.
-func (c *Client) GetDeployment(namespace, name string) (*mapping.Deployment, error) {
-	deployment, err := c.Clientset().AppsV1beta2().Deployments(namespace).Get(name, metav1.GetOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return mapping.AppsV1beta2Deployment(*deployment), nil
+func (c *Client) GetDeployment(namespace, name string) (*appsv1.Deployment, error) {
+	return c.Clientset().AppsV1().Deployments(namespace).Get(name, metav1.GetOptions{})
 }
 
 // ListDeployments returns the list of Deployments in the given <namespace>.
-func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOptions) ([]*mapping.Deployment, error) {
-	var deploymentList []*mapping.Deployment
-	deployments, err := c.Clientset().AppsV1beta2().Deployments(namespace).List(listOptions)
+func (c *Client) ListDeployments(namespace string, listOptions metav1.ListOptions) (*appsv1.DeploymentList, error) {
+	deployments, err := c.Clientset().AppsV1().Deployments(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
 	sort.Slice(deployments.Items, func(i, j int) bool {
 		return deployments.Items[i].ObjectMeta.CreationTimestamp.Before(&deployments.Items[j].ObjectMeta.CreationTimestamp)
 	})
-	for _, deployment := range deployments.Items {
-		deploymentList = append(deploymentList, mapping.AppsV1beta2Deployment(deployment))
-	}
-	return deploymentList, nil
+	return deployments, nil
 }
 
 // PatchDeployment patches a Deployment object.
-func (c *Client) PatchDeployment(namespace, name string, body []byte) (*mapping.Deployment, error) {
-	deployment, err := c.Clientset().AppsV1beta2().Deployments(namespace).Patch(name, types.JSONPatchType, body)
-	if err != nil {
-		return nil, err
-	}
-	return mapping.AppsV1beta2Deployment(*deployment), nil
+func (c *Client) PatchDeployment(namespace, name string, body []byte) (*appsv1.Deployment, error) {
+	return c.Clientset().AppsV1().Deployments(namespace).Patch(name, types.JSONPatchType, body)
 }
 
 // DeleteDeployment deletes a Deployment object.
 func (c *Client) DeleteDeployment(namespace, name string) error {
-	return c.Clientset().AppsV1beta2().Deployments(namespace).Delete(name, &defaultDeleteOptions)
+	return c.Clientset().AppsV1().Deployments(namespace).Delete(name, &defaultDeleteOptions)
 }

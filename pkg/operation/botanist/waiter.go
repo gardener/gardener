@@ -55,13 +55,13 @@ func (b *Botanist) WaitUntilEtcdReady() error {
 		if err != nil {
 			return false, err
 		}
-		if len(statefulSetList) < 2 {
+		if len(statefulSetList.Items) < 2 {
 			b.Logger.Info("Waiting until the etcd statefulsets gets created...")
 			return false, nil
 		}
 
 		bothEtcdStatefulSetsReady := true
-		for _, statefulSet := range statefulSetList {
+		for _, statefulSet := range statefulSetList.Items {
 			if statefulSet.DeletionTimestamp != nil {
 				continue
 			}

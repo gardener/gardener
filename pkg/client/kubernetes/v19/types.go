@@ -15,7 +15,7 @@
 package kubernetesv19
 
 import (
-	kubernetesv18 "github.com/gardener/gardener/pkg/client/kubernetes/v18"
+	kubernetesbase "github.com/gardener/gardener/pkg/client/kubernetes/base"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,8 +28,8 @@ var (
 	}
 )
 
-// Client inherits all the attributes and methods of the v1.8 client.
+// Client inherits all the attributes and methods of the base client.
 // Please see the documentation of the base client for further details.
 type Client struct {
-	*kubernetesv18.Client
+	*kubernetesbase.Client
 }

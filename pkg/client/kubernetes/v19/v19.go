@@ -16,7 +16,6 @@ package kubernetesv19
 
 import (
 	kubernetesbase "github.com/gardener/gardener/pkg/client/kubernetes/base"
-	kubernetesv18 "github.com/gardener/gardener/pkg/client/kubernetes/v18"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -24,28 +23,11 @@ import (
 
 // New returns a new Kubernetes v1.9 client.
 func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clientcmd.ClientConfig) (*Client, error) {
-	v18Client, err := kubernetesv18.New(config, clientset, clientConfig)
+	baseClient, err := kubernetesbase.New(config, clientset, clientConfig)
 	if err != nil {
 		return nil, err
 	}
-
-	v18Client.SetResourceAPIGroups(map[string][]string{
-		kubernetesbase.CronJobs:                  {"apis", "batch", "v1beta1"},
-		kubernetesbase.CustomResourceDefinitions: {"apis", "apiextensions.k8s.io", "v1beta1"},
-		kubernetesbase.DaemonSets:                {"apis", "apps", "v1"},
-		kubernetesbase.Deployments:               {"apis", "apps", "v1"},
-		kubernetesbase.Ingresses:                 {"apis", "extensions", "v1beta1"},
-		kubernetesbase.Jobs:                      {"apis", "batch", "v1"},
-		kubernetesbase.Namespaces:                {"api", "v1"},
-		kubernetesbase.PersistentVolumeClaims:    {"api", "v1"},
-		kubernetesbase.Pods:                      {"api", "v1"},
-		kubernetesbase.ReplicaSets:               {"apis", "apps", "v1"},
-		kubernetesbase.ReplicationControllers:    {"api", "v1"},
-		kubernetesbase.Services:                  {"api", "v1"},
-		kubernetesbase.StatefulSets:              {"apis", "apps", "v1"},
-	})
-
 	return &Client{
-		Client: v18Client,
+		Client: baseClient,
 	}, nil
 }

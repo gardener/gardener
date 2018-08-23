@@ -17,27 +17,23 @@ package kubernetesbase
 import (
 	"sort"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ListStatefulSets returns the list of StatefulSets in the given <namespace>.
-func (c *Client) ListStatefulSets(namespace string, listOptions metav1.ListOptions) ([]*mapping.StatefulSet, error) {
-	var statefulsetList []*mapping.StatefulSet
-	statefulsets, err := c.Clientset().AppsV1beta2().StatefulSets(namespace).List(listOptions)
+func (c *Client) ListStatefulSets(namespace string, listOptions metav1.ListOptions) (*appsv1.StatefulSetList, error) {
+	statefulsets, err := c.Clientset().AppsV1().StatefulSets(namespace).List(listOptions)
 	if err != nil {
 		return nil, err
 	}
 	sort.Slice(statefulsets.Items, func(i, j int) bool {
 		return statefulsets.Items[i].ObjectMeta.CreationTimestamp.Before(&statefulsets.Items[j].ObjectMeta.CreationTimestamp)
 	})
-	for _, statefulset := range statefulsets.Items {
-		statefulsetList = append(statefulsetList, mapping.AppsV1beta2StatefulSet(statefulset))
-	}
-	return statefulsetList, nil
+	return statefulsets, nil
 }
 
 // DeleteStatefulSet deletes a StatefulSet object.
 func (c *Client) DeleteStatefulSet(namespace, name string) error {
-	return c.Clientset().AppsV1beta2().StatefulSets(namespace).Delete(name, &defaultDeleteOptions)
+	return c.Clientset().AppsV1().StatefulSets(namespace).Delete(name, &defaultDeleteOptions)
 }

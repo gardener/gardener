@@ -34,9 +34,7 @@ subjects:
 - kind: User
   name: system:kube-apiserver:kubelet
 
-{{- if semverCompare ">= 1.8" .Capabilities.KubeVersion.GitVersion }}
 ---
-# This cluster role is gone in 1.8
 apiVersion: {{include "rbacversion" .}}
 kind: ClusterRoleBinding
 metadata:
@@ -51,5 +49,3 @@ subjects:
 - apiGroup: rbac.authorization.k8s.io
   kind: Group
   name: system:nodes
-
-{{- end }}

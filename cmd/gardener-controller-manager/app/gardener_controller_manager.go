@@ -16,6 +16,7 @@ package app
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -52,7 +53,6 @@ import (
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	"flag"
 )
 
 // Options has all the context and parameters needed to run a Gardener controller manager.

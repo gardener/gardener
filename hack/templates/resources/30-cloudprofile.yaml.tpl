@@ -67,10 +67,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.1
-        - 1.10.5
-        - 1.9.8
-        - 1.8.14
+        - 1.11.2
+        - 1.10.7
+        - 1.9.10
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -164,10 +163,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.1
-        - 1.10.5
-        - 1.9.8
-        - 1.8.14
+        - 1.11.2
+        - 1.10.7
+        - 1.9.10
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
@@ -259,10 +257,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.1
-        - 1.10.5
-        - 1.9.8
-        - 1.8.14
+        - 1.11.2
+        - 1.10.7
+        - 1.9.10
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -346,10 +343,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.1
-        - 1.10.5
-        - 1.9.8
-        - 1.8.14
+        - 1.11.2
+        - 1.10.7
+        - 1.9.10
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:

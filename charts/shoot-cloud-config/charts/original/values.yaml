@@ -17,7 +17,7 @@
 #     featureGates: {}
 #       #  CustomResourceValidation: true
 #       #  RotateKubeletServerCertificate: false
-#   version: 1.8.4
+#   version: 1.11.2
 # workers:
 # - name: cpu-worker
 #   secretName: cloud-config-cpu-worker-ab234

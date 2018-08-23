@@ -1,4 +1,3 @@
-{{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -38,4 +37,3 @@ data:
     - level: None
       verbs: ["get"]
     - level: Metadata
-{{- end }}

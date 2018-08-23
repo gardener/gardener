@@ -33,7 +33,6 @@
 {{- if .Values.oidcConfig.groupsClaim }}
 - --oidc-groups-claim={{ .Values.oidcConfig.groupsClaim }}
 {{- end }}
-{{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
 {{- if .Values.oidcConfig.usernamePrefix }}
 - --oidc-username-prefix={{ .Values.oidcConfig.usernamePrefix }}
 {{- end }}
@@ -46,7 +45,6 @@
 {{- if .Values.oidcConfig.requiredClaims }}
 {{- range $key, $val := .Values.oidcConfig.requiredClaims }}
 - --oidc-required-claim={{ $key }}={{ $val }}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

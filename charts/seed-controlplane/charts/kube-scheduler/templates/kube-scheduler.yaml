@@ -57,12 +57,7 @@ spec:
         command:
         - /hyperkube
         - scheduler
-        {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
         - --config=/var/lib/kube-scheduler-config/config.yaml
-        {{- else }}
-        - --kubeconfig=/var/lib/kube-scheduler/kubeconfig
-        - --leader-elect=true
-        {{- end }}
         {{- include "kube-scheduler.featureGates" . | trimSuffix "," | indent 8 }}
         - --v=2
         livenessProbe:
@@ -84,10 +79,8 @@ spec:
         volumeMounts:
         - name: kube-scheduler
           mountPath: /var/lib/kube-scheduler
-        {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
         - name: kube-scheduler-config
           mountPath: /var/lib/kube-scheduler-config
-        {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -96,8 +89,6 @@ spec:
       - name: kube-scheduler
         secret:
           secretName: kube-scheduler
-      {{- if semverCompare ">= 1.9" .Values.kubernetesVersion }}
       - name: kube-scheduler-config
         configMap:
           name: kube-scheduler-config
-      {{- end }}

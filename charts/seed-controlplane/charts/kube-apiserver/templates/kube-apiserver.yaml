@@ -46,18 +46,13 @@ spec:
         - --advertise-address={{ .Values.advertiseAddress }}
         - --allow-privileged=true
         - --anonymous-auth=false
-        {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - --audit-log-path=/var/lib/audit.log
         - --audit-policy-file=/etc/kubernetes/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
-        {{- end }}
         - --authorization-mode=Node,RBAC
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
-        {{- if semverCompare "< 1.9" .Values.kubernetesVersion }}
-        - --cloud-provider={{ .Values.cloudProvider }}
-        {{- end }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
@@ -130,10 +125,8 @@ spec:
 {{ toYaml .Values.apiServerResources | indent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
         - name: audit-policy-config
           mountPath: /etc/kubernetes/audit
-        {{- end }}
         - name: ca
           mountPath: /srv/kubernetes/ca
         - name: etcd-client-tls
@@ -221,11 +214,9 @@ spec:
       schedulerName: default-scheduler
       terminationGracePeriodSeconds: 30
       volumes:
-      {{- if semverCompare ">= 1.8" .Values.kubernetesVersion }}
       - name: audit-policy-config
         configMap:
           name: audit-policy-config
-      {{- end }}
       - name: ca
         secret:
           secretName: ca

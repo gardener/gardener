@@ -18,9 +18,9 @@ import (
 	"bytes"
 
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-	"github.com/gardener/gardener/pkg/client/kubernetes/mapping"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -88,13 +88,13 @@ type Client interface {
 	DeleteService(string, string) error
 
 	// Deployments
-	GetDeployment(string, string) (*mapping.Deployment, error)
-	ListDeployments(string, metav1.ListOptions) ([]*mapping.Deployment, error)
-	PatchDeployment(string, string, []byte) (*mapping.Deployment, error)
+	GetDeployment(string, string) (*appsv1.Deployment, error)
+	ListDeployments(string, metav1.ListOptions) (*appsv1.DeploymentList, error)
+	PatchDeployment(string, string, []byte) (*appsv1.Deployment, error)
 	DeleteDeployment(string, string) error
 
 	// StatefulSets
-	ListStatefulSets(string, metav1.ListOptions) ([]*mapping.StatefulSet, error)
+	ListStatefulSets(string, metav1.ListOptions) (*appsv1.StatefulSetList, error)
 	DeleteStatefulSet(string, string) error
 
 	// Jobs
@@ -102,7 +102,7 @@ type Client interface {
 	DeleteJob(string, string) error
 
 	// ReplicaSets
-	ListReplicaSets(string, metav1.ListOptions) ([]*mapping.ReplicaSet, error)
+	ListReplicaSets(string, metav1.ListOptions) (*appsv1.ReplicaSetList, error)
 	DeleteReplicaSet(string, string) error
 
 	// Pods
