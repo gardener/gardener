@@ -63,8 +63,11 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, o
 		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
 	)
-
-	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(outputVariables...)
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return nil, nil, err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
 	if err != nil {
 		return nil, nil, err
 	}

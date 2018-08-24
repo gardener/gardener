@@ -35,7 +35,7 @@ import (
 
 // NewFromOperation takes an <o> operation object and initializes the Terraformer, and a
 // string <purpose> and returns an initialized Terraformer.
-func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
+func NewFromOperation(o *operation.Operation, purpose string) (*Terraformer, error) {
 	return New(o.Logger, o.K8sSeedClient, purpose, o.Shoot.Info.Name, o.Shoot.SeedNamespace, o.ImageVector)
 }
 
@@ -44,7 +44,7 @@ func NewFromOperation(o *operation.Operation, purpose string) *Terraformer {
 // <image> name for the to-be-used Docker image. It returns a Terraformer struct with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
-func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace string, imageVector imagevector.ImageVector) *Terraformer {
+func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace string, imageVector imagevector.ImageVector) (*Terraformer, error) {
 	var (
 		prefix    = fmt.Sprintf("%s.%s", name, purpose)
 		podSuffix = utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5]
@@ -54,10 +54,15 @@ func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, names
 		image = img.String()
 	}
 
+	chartRenderer, err := chartrenderer.New(k8sClient)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Terraformer{
 		logger:        logger,
 		k8sClient:     k8sClient,
-		chartRenderer: chartrenderer.New(k8sClient),
+		chartRenderer: chartRenderer,
 
 		namespace: namespace,
 		purpose:   purpose,
@@ -68,7 +73,7 @@ func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, names
 		stateName:     prefix + common.TerraformerStateSuffix,
 		podName:       fmt.Sprintf("%s-%s", prefix+common.TerraformerPodSuffix, podSuffix),
 		jobName:       prefix + common.TerraformerJobSuffix,
-	}
+	}, nil
 }
 
 // Apply executes the Terraform Job by running the 'terraform apply' command.

@@ -68,7 +68,11 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, operati
 		outputVariables = append(outputVariables, tfOutputNameSubnet(zoneIndex))
 	}
 
-	stateVariables, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra).GetStateOutputVariables(outputVariables...)
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return nil, nil, err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
 	if err != nil {
 		return nil, nil, err
 	}

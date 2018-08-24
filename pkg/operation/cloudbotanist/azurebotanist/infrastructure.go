@@ -56,9 +56,11 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 	if err != nil {
 		return err
 	}
-
-	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("azure-infra", b.generateTerraformInfraConfig(createResourceGroup, createVNet, resourceGroupName, vnetName, vnetCIDR, countUpdateDomains, countFaultDomains)).
 		Apply()
@@ -66,8 +68,11 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AzureBotanist) DestroyInfrastructure() error {
-	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -113,8 +118,11 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *AzureBotanist) DeployBackupInfrastructure() error {
-	return terraformer.
-		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("azure-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -122,8 +130,11 @@ func (b *AzureBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *AzureBotanist) DestroyBackupInfrastructure() error {
-	return terraformer.
-		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }

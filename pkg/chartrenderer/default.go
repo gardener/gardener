@@ -24,12 +24,9 @@ import (
 	"k8s.io/helm/pkg/engine"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"k8s.io/client-go/discovery"
 	"k8s.io/helm/pkg/chartutil"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
 	"k8s.io/helm/pkg/timeconv"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const notesFileSuffix = "NOTES.txt"
@@ -38,17 +35,23 @@ const notesFileSuffix = "NOTES.txt"
 // The chart render is used to render the Helm charts into a RenderedChart struct from which the
 // resulting manifest can be generated.
 type DefaultChartRenderer struct {
-	client   kubernetes.Client
-	renderer *engine.Engine
+	client       kubernetes.Client
+	renderer     *engine.Engine
+	capabilities *chartutil.Capabilities
 }
 
 // New creates a new DefaultChartRenderer object. It requires a Kubernetes client as input which will be
 // injected in the Tiller environment.
-func New(client kubernetes.Client) ChartRenderer {
-	return &DefaultChartRenderer{
-		client:   client,
-		renderer: engine.New(),
+func New(client kubernetes.Client) (ChartRenderer, error) {
+	sv, err := client.Clientset().Discovery().ServerVersion()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get kubernetes server version %v", err)
 	}
+	return &DefaultChartRenderer{
+		client:       client,
+		renderer:     engine.New(),
+		capabilities: &chartutil.Capabilities{KubeVersion: sv},
+	}, nil
 }
 
 // Render loads the chart from the given location <chartPath> and calls the Render() function
@@ -86,25 +89,6 @@ func (c *RenderedChart) FileContent(filename string) string {
 	return ""
 }
 
-// GetVersionSet retrieves a set of available k8s API versions.
-func GetVersionSet(client discovery.ServerGroupsInterface) (chartutil.VersionSet, error) {
-	groups, err := client.ServerGroups()
-	if err != nil {
-		return chartutil.DefaultVersionSet, err
-	}
-
-	// FIXME: The Kubernetes test fixture for cli appears to always return nil
-	// for calls to Discovery().ServerGroups(). So in this case, we return
-	// the default API list. This is also a safe value to return in any other
-	// odd-ball case.
-	if groups == nil {
-		return chartutil.DefaultVersionSet, nil
-	}
-
-	versions := metav1.ExtractGroupVersions(groups)
-	return chartutil.NewVersionSet(versions...), nil
-}
-
 func (r *DefaultChartRenderer) renderRelease(chart *chartapi.Chart, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
 	chartName := chart.GetMetadata().GetName()
 
@@ -123,11 +107,7 @@ func (r *DefaultChartRenderer) renderRelease(chart *chartapi.Chart, releaseName,
 		return nil, fmt.Errorf("can't process requirements for import values for chart %s: ,%s", chartName, err)
 	}
 
-	caps, err := capabilities(r.client.Clientset().Discovery())
-	if err != nil {
-		return nil, err
-	}
-
+	caps := r.capabilities
 	revision := 1
 	ts := timeconv.Now()
 	options := chartutil.ReleaseOptions{
@@ -161,21 +141,5 @@ func (r *DefaultChartRenderer) renderResources(ch *chartapi.Chart, values chartu
 	return &RenderedChart{
 		ChartName: ch.Metadata.Name,
 		Files:     files,
-	}, nil
-}
-
-// capabilities builds a Capabilities from discovery information.
-func capabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabilities, error) {
-	sv, err := disc.ServerVersion()
-	if err != nil {
-		return nil, err
-	}
-	vs, err := GetVersionSet(disc)
-	if err != nil {
-		return nil, fmt.Errorf("Could not get apiVersions from Kubernetes: %s", err)
-	}
-	return &chartutil.Capabilities{
-		APIVersions: vs,
-		KubeVersion: sv,
 	}, nil
 }

@@ -31,9 +31,11 @@ func (b *GCPBotanist) DeployInfrastructure() error {
 		vpcName = b.VPCName
 		createVPC = false
 	}
-
-	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		DefineConfig("gcp-infra", b.generateTerraformInfraConfig(createVPC, vpcName)).
 		Apply()
@@ -41,8 +43,11 @@ func (b *GCPBotanist) DeployInfrastructure() error {
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *GCPBotanist) DestroyInfrastructure() error {
-	return terraformer.
-		NewFromOperation(b.Operation, common.TerraformerPurposeInfra).
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
 		Destroy()
 }
@@ -84,8 +89,11 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
-	return terraformer.
-		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		DefineConfig("gcp-backup", b.generateTerraformBackupConfig()).
 		Apply()
@@ -93,8 +101,11 @@ func (b *GCPBotanist) DeployBackupInfrastructure() error {
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
-	return terraformer.
-		New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector).
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	if err != nil {
+		return err
+	}
+	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
 		Destroy()
 }
