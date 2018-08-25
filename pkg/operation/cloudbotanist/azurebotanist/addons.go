@@ -62,6 +62,14 @@ func (b *AzureBotanist) GenerateAdmissionControlConfig() (map[string]interface{}
 					"kind":               "managed",
 				},
 			},
+			{
+				"Name":           "files",
+				"IsDefaultClass": false,
+				"Provisioner":    "kubernetes.io/azure-file",
+				"Parameters": map[string]interface{}{
+					"skuName": "Standard_LRS",
+				},
+			},
 		},
 	}, nil
 }
