@@ -28,6 +28,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"net"
+	"time"
 )
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
@@ -81,6 +83,15 @@ func NewClientFromSecretObject(secret *corev1.Secret) (Client, error) {
 }
 
 func newClientSet(config *rest.Config, clientConfig clientcmd.ClientConfig) (Client, error) {
+	// Fix zombie tcp connections on un-ACK-nowledged data
+	config.Dial = newFailFastDial(
+		(&net.Dialer{
+			Timeout:   20 * time.Second,
+			KeepAlive: 20 * time.Second,
+		}).DialContext,
+		20*time.Second,
+	).DialContext
+
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return nil, err
