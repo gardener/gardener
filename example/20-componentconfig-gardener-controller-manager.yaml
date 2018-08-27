@@ -10,8 +10,8 @@ clientConnection:
 controllers:
   shoot:
     concurrentSyncs: 20
-    syncPeriod: 10m
-    retryDuration: 1440m
+    syncPeriod: 1h
+    retryDuration: 24h
   shootCare:
     concurrentSyncs: 5
     syncPeriod: 30s
@@ -27,7 +27,7 @@ controllers:
     reserveExcessCapacity: false
   backupInfrastructure:
     concurrentSyncs: 20
-    syncPeriod: 10m
+    syncPeriod: 24h
     deletionGracePeriodDays: 0
 leaderElection:
   leaderElect: true

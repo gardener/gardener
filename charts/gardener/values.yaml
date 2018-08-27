@@ -123,8 +123,8 @@ controller:
     controllers:
       shoot:
         concurrentSyncs: 20
-        syncPeriod: 10m
-        retryDuration: 1440m
+        syncPeriod: 1h
+        retryDuration: 24h
       shootCare:
         concurrentSyncs: 5
         syncPeriod: 30s
@@ -136,7 +136,7 @@ controller:
         syncPeriod: 60m
       backupInfrastructure:
         concurrentSyncs: 20
-        syncPeriod: 10m
+        syncPeriod: 24h
       seed:
         concurrentSyncs: 5
         syncPeriod: 1m
