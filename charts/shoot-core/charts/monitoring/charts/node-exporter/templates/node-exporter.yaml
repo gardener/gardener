@@ -7,7 +7,6 @@ metadata:
     addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
   annotations:
-    addonmanager.kubernetes.io/mode: Reconcile
     prometheus.io/scrape: "true"
     prometheus.io/port: "9100"
     prometheus.io/name: node-exporter
@@ -82,8 +81,8 @@ spec:
             cpu: 10m
             memory: 10Mi
           limits:
-            cpu: 100m
-            memory: 30Mi
+            cpu: 20m
+            memory: 50Mi
         volumeMounts:
         - name: proc
           readOnly:  true
