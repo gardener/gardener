@@ -52,5 +52,5 @@ gardener-updates:
         component_descriptor: ~
         update_component_deps: ~
         cronjob:
-          interval: '1m'
+          interval: '2.5m'
         version: ~
