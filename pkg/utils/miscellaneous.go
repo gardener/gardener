@@ -16,9 +16,7 @@ package utils
 
 import (
 	"net"
-	"reflect"
 	"regexp"
-	"runtime"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,18 +24,6 @@ import (
 )
 
 const maintenanceTimeLayout = "150405-0700"
-
-// FuncName takes a function <f> as input and returns its name as a string. If the function is a method
-// of a struct, the struct will be also prefixed, e.g. 'Botanist.CreateNamespace'.
-func FuncName(f interface{}) string {
-	funcName := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
-	re := regexp.MustCompile(`^.*\.(\(.*)\-.*$`)
-	match := re.FindStringSubmatch(funcName)
-	if len(match) > 1 {
-		return match[1]
-	}
-	return funcName
-}
 
 // ValueExists returns true or false, depending on whether the given string <value>
 // is part of the given []string list <list>.

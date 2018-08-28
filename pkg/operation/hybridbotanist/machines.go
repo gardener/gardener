@@ -104,7 +104,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 
 	// Wait until all generated machine deployments are healthy/available.
 	if err := b.waitUntilMachineDeploymentsAvailable(wantedMachineDeployments); err != nil {
-		return common.DetermineErrorCode(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
+		return common.DetermineError(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -171,7 +171,7 @@ func (b *HybridBotanist) DestroyMachines() error {
 
 	// Wait until all machine resources have been properly deleted.
 	if err := b.waitUntilMachineResourcesDeleted(machineClassPlural); err != nil {
-		return common.DetermineErrorCode(fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
+		return common.DetermineError(fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 
 	return nil

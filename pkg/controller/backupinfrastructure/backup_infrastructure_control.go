@@ -22,6 +22,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
@@ -227,18 +228,38 @@ func (c *defaultControl) reconcileBackupInfrastructure(o *operation.Operation) *
 	}
 
 	var (
-		defaultRetry = 30 * time.Second
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
 
-		f                     = flow.New("Backup Infrastructure creation").SetProgressReporter(o.ReportBackupInfrastructureProgress).SetLogger(o.Logger)
-		deployBackupNamespace = f.AddTask(botanist.DeployBackupNamespace, defaultRetry)
-		_                     = f.AddTask(seedCloudBotanist.DeployBackupInfrastructure, 0, deployBackupNamespace)
+		g = flow.NewGraph("Backup Infrastructure Creation")
+
+		deployBackupNamespace = g.Add(flow.Task{
+			Name: "Deploying backup namespace",
+			Fn:   flow.TaskFn(botanist.DeployBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+
+		_ = g.Add(flow.Task{
+			Name:         "Deploying backup infrastructure",
+			Fn:           flow.TaskFn(seedCloudBotanist.DeployBackupInfrastructure),
+			Dependencies: flow.NewTaskIDs(deployBackupNamespace),
+		})
+
+		f = g.Compile()
 	)
-	if e := f.Execute(); e != nil {
-		e.Description = fmt.Sprintf("Failed to reconcile Backup Infrastructure state: %s", e.Description)
-		return e
+	err = f.Run(flow.Opts{
+		Logger:           o.Logger,
+		ProgressReporter: o.ReportBackupInfrastructureProgress,
+	})
+	if err != nil {
+		o.Logger.Errorf("Failed to reconcile backup infrastructure %q: %+v", o.BackupInfrastructure.Name, err)
+
+		return &gardenv1beta1.LastError{
+			Codes:       helper.ExtractErrorCodes(flow.Causes(err)),
+			Description: helper.FormatLastErrDescription(err),
+		}
 	}
 
-	o.Logger.Infof("Successfully reconciled Backup Infrastructure state '%s'", o.BackupInfrastructure.Name)
+	o.Logger.Infof("Successfully reconciled backup infrastructure %q", o.BackupInfrastructure.Name)
 	return nil
 }
 
@@ -271,19 +292,40 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 	// that would have already been done.
 	var (
 		cleanupBackupInfrastructureResources = namespace.Status.Phase != corev1.NamespaceTerminating
-		defaultRetry                         = 30 * time.Second
+		defaultInterval                      = 5 * time.Second
+		defaultTimeout                       = 30 * time.Second
 
-		f                           = flow.New("Backup infrastructure deletion").SetProgressReporter(o.ReportBackupInfrastructureProgress).SetLogger(o.Logger)
-		destroyBackupInfrastructure = f.AddTaskConditional(seedCloudBotanist.DestroyBackupInfrastructure, 0, cleanupBackupInfrastructureResources)
-		deleteBackupNamespace       = f.AddTask(botanist.DeleteBackupNamespace, defaultRetry, destroyBackupInfrastructure)
-		_                           = f.AddTask(botanist.WaitUntilBackupNamespaceDeleted, 0, deleteBackupNamespace)
+		g                           = flow.NewGraph("Backup infrastructure deletion")
+		destroyBackupInfrastructure = g.Add(flow.Task{
+			Name: "Destroying backup infrastructure",
+			Fn:   flow.TaskFn(seedCloudBotanist.DestroyBackupInfrastructure).DoIf(cleanupBackupInfrastructureResources),
+		})
+		deleteBackupNamespace = g.Add(flow.Task{
+			Name:         "Deleting backup namespace",
+			Fn:           flow.TaskFn(botanist.DeleteBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(destroyBackupInfrastructure),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until backup namespace is deleted",
+			Fn:           botanist.WaitUntilBackupNamespaceDeleted,
+			Dependencies: flow.NewTaskIDs(deleteBackupNamespace),
+		})
+		f = g.Compile()
 	)
-	if e := f.Execute(); e != nil {
-		e.Description = fmt.Sprintf("Failed to delete Backup Infrastructure: %s", e.Description)
-		return e
+	err = f.Run(flow.Opts{
+		Logger:           o.Logger,
+		ProgressReporter: o.ReportBackupInfrastructureProgress,
+	})
+	if err != nil {
+		o.Logger.Errorf("Failed to delete backup infrastructure %q: %+v", o.BackupInfrastructure.Name, err)
+
+		return &gardenv1beta1.LastError{
+			Codes:       helper.ExtractErrorCodes(err),
+			Description: err.Error(),
+		}
 	}
 
-	o.Logger.Infof("Successfully deleted Backup Infrastructure '%s'", o.BackupInfrastructure.Name)
+	o.Logger.Infof("Successfully deleted backup infrastructure %q", o.BackupInfrastructure.Name)
 	return nil
 }
 

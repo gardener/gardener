@@ -20,11 +20,31 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"errors"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	. "github.com/onsi/ginkgo/extensions/table"
 )
 
 var _ = Describe("common", func() {
 	Describe("utils", func() {
+		Describe("#DetermineError", func() {
+			DescribeTable("appropriate error should be determined",
+				func(msg string, expectedErr error) {
+					err := DetermineError(msg)
+					Expect(err).To(Equal(expectedErr))
+				},
+				Entry("no code to extract", "foo", errors.New("foo")),
+				Entry("unauthorized", "unauthorized",
+					NewErrorWithCode(gardenv1beta1.ErrorInfraUnauthorized, "unauthorized")),
+				Entry("quota exceeded", "limitexceeded",
+					NewErrorWithCode(gardenv1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
+				Entry("insufficient privileges", "accessdenied",
+					NewErrorWithCode(gardenv1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
+				Entry("infrastructure dependencies", "pendingverification",
+					NewErrorWithCode(gardenv1beta1.ErrorInfraDependencies, "pendingverification")),
+			)
+		})
+
 		Describe("#IdentifyAddressType", func() {
 			It("should return a tuple with first value equals hostname", func() {
 				address := "example.com"

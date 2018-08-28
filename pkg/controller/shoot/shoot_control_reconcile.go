@@ -15,7 +15,6 @@
 package shoot
 
 import (
-	"fmt"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -52,59 +51,172 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	}
 
 	var (
-		defaultRetry = 30 * time.Second
-		managedDNS   = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
-		isCloud      = o.Shoot.Info.Spec.Cloud.Local == nil
+		defaultTimeout  = 30 * time.Second
+		defaultInterval = 5 * time.Second
+		managedDNS      = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
+		isCloud         = o.Shoot.Info.Spec.Cloud.Local == nil
 
-		f                                       = flow.New("Shoot cluster reconciliation").SetProgressReporter(o.ReportShootProgress).SetLogger(o.Logger)
-		deployNamespace                         = f.AddTask(botanist.DeployNamespace, defaultRetry)
-		deployKubeAPIServerService              = f.AddTask(botanist.DeployKubeAPIServerService, defaultRetry, deployNamespace)
-		waitUntilKubeAPIServerServiceIsReady    = f.AddTaskConditional(botanist.WaitUntilKubeAPIServerServiceIsReady, 0, isCloud, deployKubeAPIServerService)
-		deploySecrets                           = f.AddTask(botanist.DeploySecrets, 0, waitUntilKubeAPIServerServiceIsReady)
-		_                                       = f.AddTask(botanist.DeployInternalDomainDNSRecord, 0, waitUntilKubeAPIServerServiceIsReady)
-		_                                       = f.AddTaskConditional(botanist.DeployExternalDomainDNSRecord, 0, managedDNS)
-		deployInfrastructure                    = f.AddTask(shootCloudBotanist.DeployInfrastructure, 0, deploySecrets)
-		deployBackupInfrastructure              = f.AddTaskConditional(botanist.DeployBackupInfrastructure, 0, isCloud)
-		waitUntilBackupInfrastructureReconciled = f.AddTaskConditional(botanist.WaitUntilBackupInfrastructureReconciled, 0, isCloud, deployBackupInfrastructure)
-		deployETCD                              = f.AddTask(hybridBotanist.DeployETCD, defaultRetry, deploySecrets, waitUntilBackupInfrastructureReconciled)
-		waitUntilEtcdReady                      = f.AddTask(botanist.WaitUntilEtcdReady, 0, deployETCD)
-		deployKubeAPIServer                     = f.AddTask(hybridBotanist.DeployKubeAPIServer, defaultRetry, deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady)
-		deployCloudProviderConfig               = f.AddTask(hybridBotanist.DeployCloudProviderConfig, defaultRetry, deployInfrastructure)
-		_                                       = f.AddTaskConditional(hybridBotanist.DeployCloudControllerManager, defaultRetry, isCloud, deploySecrets, deployKubeAPIServer, deployCloudProviderConfig)
-		_                                       = f.AddTask(hybridBotanist.DeployKubeControllerManager, defaultRetry, deploySecrets, deployKubeAPIServer, deployCloudProviderConfig)
-		_                                       = f.AddTask(hybridBotanist.DeployKubeScheduler, defaultRetry, deploySecrets, deployKubeAPIServer)
-		waitUntilKubeAPIServerIsReady           = f.AddTask(botanist.WaitUntilKubeAPIServerReady, 0, deployKubeAPIServer)
-		initializeShootClients                  = f.AddTask(botanist.InitializeShootClients, 2*time.Minute, waitUntilKubeAPIServerIsReady)
-		deployKubeAddonManager                  = f.AddTask(hybridBotanist.DeployKubeAddonManager, defaultRetry, initializeShootClients, deployInfrastructure)
-		deployMachineControllerManager          = f.AddTaskConditional(botanist.DeployMachineControllerManager, defaultRetry, isCloud, initializeShootClients, deployKubeAddonManager)
-		reconcileMachines                       = f.AddTaskConditional(hybridBotanist.ReconcileMachines, defaultRetry, isCloud, deployMachineControllerManager, deployInfrastructure, initializeShootClients)
-		_                                       = f.AddTask(shootCloudBotanist.DeployKube2IAMResources, defaultRetry, deployInfrastructure)
-		_                                       = f.AddTaskConditional(botanist.EnsureIngressDNSRecord, 10*time.Minute, managedDNS, deployKubeAddonManager)
-		waitUntilVPNConnectionExists            = f.AddTaskConditional(botanist.WaitUntilVPNConnectionExists, 0, !o.Shoot.Hibernated, deployKubeAddonManager, reconcileMachines)
-		applyCreateHook                         = f.AddTask(seedCloudBotanist.ApplyCreateHook, defaultRetry, waitUntilVPNConnectionExists)
-		deploySeedMonitoring                    = f.AddTask(botanist.DeploySeedMonitoring, defaultRetry, waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines, applyCreateHook)
-		_                                       = f.AddTask(botanist.DeployClusterAutoscaler, defaultRetry, reconcileMachines, deployKubeAddonManager, deploySeedMonitoring)
+		g               = flow.NewGraph("Shoot cluster reconciliation")
+		deployNamespace = g.Add(flow.Task{
+			Name: "Deploying Shoot namespace in Seed",
+			Fn:   flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+		deployKubeAPIServerService = g.Add(flow.Task{
+			Name:         "Deploying Kube API server service",
+			Fn:           flow.TaskFn(botanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kube API server service has reported readiness",
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).DoIf(isCloud),
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
+		})
+		deploySecrets = g.Add(flow.Task{
+			Name:         "Deploying Shoot certificates / keys",
+			Fn:           botanist.DeploySecrets,
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying external domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedDNS),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		deployInfrastructure = g.Add(flow.Task{
+			Name:         "Deploying Shoot infrastructure",
+			Fn:           shootCloudBotanist.DeployInfrastructure,
+			Dependencies: flow.NewTaskIDs(deploySecrets),
+		})
+		deployBackupInfrastructure = g.Add(flow.Task{
+			Name: "Deploying backup infrastructure",
+			Fn:   flow.TaskFn(botanist.DeployBackupInfrastructure).DoIf(isCloud),
+		})
+		waitUntilBackupInfrastructureReconciled = g.Add(flow.Task{
+			Name:         "Waiting until the backup infrastructure has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureReconciled).DoIf(isCloud),
+			Dependencies: flow.NewTaskIDs(deployBackupInfrastructure),
+		})
+		deployETCD = g.Add(flow.Task{
+			Name:         "Deploying main and event etcd",
+			Fn:           flow.TaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilBackupInfrastructureReconciled),
+		})
+		waitUntilEtcdReady = g.Add(flow.Task{
+			Name:         "Waiting until main and event etcd report readiness",
+			Fn:           botanist.WaitUntilEtcdReady,
+			Dependencies: flow.NewTaskIDs(deployETCD),
+		})
+		deployKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deploying Kube API server",
+			Fn:           flow.TaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady),
+		})
+		deployCloudProviderConfig = g.Add(flow.Task{
+			Name:         "Deploying cloud provider configuration",
+			Fn:           flow.TaskFn(hybridBotanist.DeployCloudProviderConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying cloud controller manager",
+			Fn:           flow.TaskFn(hybridBotanist.DeployCloudControllerManager).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployKubeAPIServer, deployCloudProviderConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kube controller manager",
+			Fn:           flow.TaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployKubeAPIServer, deployCloudProviderConfig),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kube scheduler",
+			Fn:           flow.TaskFn(hybridBotanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployKubeAPIServer),
+		})
+		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
+			Name:         "Waiting until Kube API server reports readiness",
+			Fn:           botanist.WaitUntilKubeAPIServerReady,
+			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		initializeShootClients = g.Add(flow.Task{
+			Name:         "Initializing connection to Shoot",
+			Fn:           flow.TaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
+		deployKubeAddonManager = g.Add(flow.Task{
+			Name:         "Deploying Kube addon manager",
+			Fn:           flow.TaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployInfrastructure),
+		})
+		deployMachineControllerManager = g.Add(flow.Task{
+			Name:         "Deploying machine controller manager",
+			Fn:           flow.TaskFn(botanist.DeployMachineControllerManager).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
+		})
+		reconcileMachines = g.Add(flow.Task{
+			Name:         "Reconciling Shoot workers",
+			Fn:           flow.TaskFn(hybridBotanist.ReconcileMachines).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployMachineControllerManager, deployInfrastructure, initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Kube2IAM resources",
+			Fn:           flow.TaskFn(shootCloudBotanist.DeployKube2IAMResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Ensuring ingress DNS record",
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Dependencies: flow.NewTaskIDs(deployKubeAddonManager),
+		})
+		waitUntilVPNConnectionExists = g.Add(flow.Task{
+			Name:         "Waiting until the Kube API server can connect to the Shoot workers",
+			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.Hibernated),
+			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, reconcileMachines),
+		})
+		applyCreateHook = g.Add(flow.Task{
+			Name:         "Applying create hooks",
+			Fn:           flow.TaskFn(seedCloudBotanist.ApplyCreateHook).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilVPNConnectionExists),
+		})
+		deploySeedMonitoring = g.Add(flow.Task{
+			Name:         "Deploying Shoot monitoring stack in Seed",
+			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines, applyCreateHook),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploy cluster autoscaler",
+			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(reconcileMachines, deployKubeAddonManager, deploySeedMonitoring),
+		})
+		f = g.Compile()
 	)
 
-	if e := f.Execute(); e != nil {
-		e.Description = fmt.Sprintf("Failed to reconcile Shoot cluster state: %s", e.Description)
-		return e
+	err = f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress})
+	if err != nil {
+		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
+
+		return &gardenv1beta1.LastError{
+			Codes:       helper.ExtractErrorCodes(flow.Causes(err)),
+			Description: helper.FormatLastErrDescription(err),
+		}
 	}
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
 	if o.Shoot.Info.Namespace == common.GardenNamespace {
 		if shootUsedAsSeed, protected, visible := helper.IsUsedAsSeed(o.Shoot.Info); shootUsedAsSeed {
 			if err := botanist.RegisterAsSeed(protected, visible); err != nil {
-				o.Logger.Errorf("Could not register '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
+				o.Logger.Errorf("Could not register Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
 			}
 		} else {
 			if err := botanist.UnregisterAsSeed(); err != nil {
-				o.Logger.Errorf("Could not unregister '%s' as Seed: '%s'", o.Shoot.Info.Name, err.Error())
+				o.Logger.Errorf("Could not unregister Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
 			}
 		}
 	}
 
-	o.Logger.Infof("Successfully reconciled Shoot cluster state '%s'", o.Shoot.Info.Name)
+	o.Logger.Infof("Successfully reconciled Shoot %q", o.Shoot.Info.Name)
 	return nil
 }
 
@@ -189,8 +301,6 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 		LastUpdateTime: metav1.Now(),
 	}
 	o.Shoot.Info.Status.Gardener = *(o.GardenerInfo)
-
-	o.Logger.Error(description)
 
 	if newShoot, err := c.updater.UpdateShootStatus(o.Shoot.Info); err == nil {
 		o.Shoot.Info = newShoot
