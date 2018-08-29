@@ -16,78 +16,33 @@ package botanist
 
 import (
 	"bytes"
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net"
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	"golang.org/x/crypto/ssh"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-// Secret is a struct which contains a name and is used to be inherited from for more advanced secrets.
-// * DoNotApply is a boolean value which can be used to prevent creating the Secret in the Seed cluster.
-//   This can be useful to generate secrets which will be used in the Shoot cluster (whose API server
-//   might not be available yet).
-type Secret struct {
-	Name       string
-	DoNotApply bool
-}
-
 // RSASecret is a struct which inherits from Secret (i.e., it gets a name) and which allows specifying the
 // number of bits which should be used for the to-be-created RSA private key. A RSASecret always contains
 // the corresponding public key as well.
 // * Bits is the number of bits for the RSA private key.
 type RSASecret struct {
-	Secret
+	utils.Secret
 	Bits int
 }
-
-// TLSSecret is a struct which inherits from Secret (i.e., it gets a name) and which allows specifying the
-// required properties for the to-be-created certificate. It always contains a 2048-bit RSA private key
-// and can be either a server of a client certificate.
-// * CommonName is the common name used in the certificate.
-// * Organization is a list of organizations used in the certificate.
-// * DNSNames is a list of DNS names for the Subject Alternate Names list.
-// * IPAddresses is a list of IP addresses for the Subject Alternate Names list.
-// * CertType specifies the usages of the certificate (server, client, both).
-type TLSSecret struct {
-	Secret
-	CommonName   string
-	Organization []string
-	DNSNames     []string
-	IPAddresses  []net.IP
-	CertType     certType
-	WantsCA      bool
-}
-
-type certType string
-
-const (
-	// ServerCert indicates that the certificate should have the ExtKeyUsageServerAuth usage.
-	ServerCert certType = "server"
-
-	// ClientCert indicates that the certificate should have the ExtKeyUsageClientAuth usage.
-	ClientCert certType = "client"
-
-	// ServerClientCert indicates that the certificate should have both the ExtKeyUsageServerAuth and ExtKeyUsageClientAuth usage.
-	ServerClientCert certType = "both"
-)
 
 // ControlPlaneSecret is a struct which inherits from TLSSecret and is extended with a couple of additional
 // properties. A control plane secret will always contain a client certificate and optionally a kubeconfig.
@@ -99,7 +54,7 @@ const (
 // * RunsInSeed specifies whether the component using the generated Kubeconfig runs in the Seed cluster (which
 //   means it can communicate with the kube-apiserver locally).
 type ControlPlaneSecret struct {
-	TLSSecret
+	utils.TLSSecret
 	KubeconfigRequired                 bool
 	KubeconfigWithBasicAuth            bool
 	KubeconfigUseInternalClusterDomain bool
@@ -136,25 +91,12 @@ func (b *Botanist) DeploySecrets() error {
 	name = "ca"
 	if val, ok := secretsMap[name]; ok {
 		b.Secrets[name] = val
-		CAPrivateKey, err = utils.DecodePrivateKey(val.Data["ca.key"])
-		if err != nil {
-			return err
-		}
-		CACertificateTemplate, err = utils.DecodeCertificate(val.Data["ca.crt"])
-		if err != nil {
-			return err
-		}
-		CACertificatePEM, err = signCertificate(CACertificateTemplate, CACertificateTemplate, CAPrivateKey, CAPrivateKey)
+		CAPrivateKey, CACertificateTemplate, CACertificatePEM, err = utils.LoadCA(val.Data["ca.key"], val.Data["ca.crt"])
 		if err != nil {
 			return err
 		}
 	} else {
-		CAPrivateKey, err = generateRSAPrivateKey(2048)
-		if err != nil {
-			return err
-		}
-		CACertificateTemplate = generateCertificateTemplate("kubernetes", nil, nil, nil, true, "")
-		CACertificatePEM, err = signCertificate(CACertificateTemplate, CACertificateTemplate, CAPrivateKey, CAPrivateKey)
+		CAPrivateKey, CACertificateTemplate, CACertificatePEM, err = utils.GenerateCA()
 		if err != nil {
 			return err
 		}
@@ -180,7 +122,7 @@ func (b *Botanist) DeploySecrets() error {
 			"password": csv[0],
 		}
 	} else {
-		basicAuthUsername, basicAuthPassword, err := generateBasicAuthData()
+		basicAuthUsername, basicAuthPassword, err := utils.GenerateBasicAuthData()
 		if err != nil {
 			return err
 		}
@@ -226,7 +168,7 @@ func (b *Botanist) DeploySecrets() error {
 	if val, ok := secretsMap[name]; ok {
 		b.Secrets[name] = val
 	} else {
-		monitoringUser, monitoringPassword, err := generateBasicAuthData()
+		monitoringUser, monitoringPassword, err := utils.GenerateBasicAuthData()
 		if err != nil {
 			return err
 		}
@@ -264,7 +206,7 @@ func (b *Botanist) DeploySecrets() error {
 				}
 				errorChan <- err
 			}()
-		case TLSSecret:
+		case utils.TLSSecret:
 			go func() {
 				secretMapLock.Lock()
 				defer secretMapLock.Unlock()
@@ -357,11 +299,11 @@ func (b *Botanist) DeleteGardenSecrets() error {
 // number of bits. It also computes the corresponding public key. The computed secrets will be created
 // as a Secret object in the Seed cluster and the created Secret object will be returned.
 func (b *Botanist) createRSASecret(secret RSASecret) (*corev1.Secret, error) {
-	privateKey, err := generateRSAPrivateKey(secret.Bits)
+	privateKey, err := utils.GenerateRSAPrivateKey(secret.Bits)
 	if err != nil {
 		return nil, err
 	}
-	sshAuthorizedKeys, err := generateRSAPublicKey(privateKey)
+	sshAuthorizedKeys, err := utils.GenerateRSAPublicKey(privateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -388,7 +330,7 @@ func (b *Botanist) createRSASecret(secret RSASecret) (*corev1.Secret, error) {
 // generates a new 2048-bit RSA private key along with a X509 certificate which will be signed by the given
 // CA. The computed secrets will be created as a Secret object in the Seed cluster and the created Secret
 // object will be returned.
-func (b *Botanist) createTLSSecret(secret TLSSecret, CACertificateTemplate *x509.Certificate, CAPrivateKey *rsa.PrivateKey, CACertificatePEM []byte) (*corev1.Secret, error) {
+func (b *Botanist) createTLSSecret(secret utils.TLSSecret, CACertificateTemplate *x509.Certificate, CAPrivateKey *rsa.PrivateKey, CACertificatePEM []byte) (*corev1.Secret, error) {
 	privateKeyPEM, certificatePEM, err := generateCertificate(secret, CACertificateTemplate, CAPrivateKey)
 	if err != nil {
 		return nil, err
@@ -473,88 +415,18 @@ func (b *Botanist) createControlPlaneSecret(secret ControlPlaneSecret, CACertifi
 // generateCertificate takes a TLSSecret object, the CA certificate template and the CA private key, and it
 // generates a new 2048-bit RSA private key along with a X509 certificate which will be signed by the given
 // CA. The private key as well as the certificate will be returned PEM-encoded.
-func generateCertificate(secret TLSSecret, CACertificateTemplate *x509.Certificate, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
-	privateKey, err := generateRSAPrivateKey(2048)
+func generateCertificate(secret utils.TLSSecret, CACertificateTemplate *x509.Certificate, CAPrivateKey *rsa.PrivateKey) ([]byte, []byte, error) {
+	privateKey, err := utils.GenerateRSAPrivateKey(2048)
 	if err != nil {
 		return nil, nil, err
 	}
 	privateKeyPEM := utils.EncodePrivateKey(privateKey)
-	certificateTemplate := generateCertificateTemplate(secret.CommonName, secret.Organization, secret.DNSNames, secret.IPAddresses, false, secret.CertType)
-	certificatePEM, err := signCertificate(certificateTemplate, CACertificateTemplate, privateKey, CAPrivateKey)
+	certificateTemplate := utils.GenerateCertificateTemplate(secret.CommonName, secret.Organization, secret.DNSNames, secret.IPAddresses, false, secret.CertType)
+	certificatePEM, err := utils.SignCertificate(certificateTemplate, CACertificateTemplate, privateKey, CAPrivateKey)
 	if err != nil {
 		return nil, nil, err
 	}
 	return privateKeyPEM, certificatePEM, nil
-}
-
-// generateRSAPrivateKey generates a RSA private for the given number of <bits>.
-func generateRSAPrivateKey(bits int) (*rsa.PrivateKey, error) {
-	return rsa.GenerateKey(rand.Reader, bits)
-}
-
-// generateRSAPublicKey takes a RSA private key <privateKey> and generates the corresponding public key.
-// It serializes the public key for inclusion in an OpenSSH `authorized_keys` file and it trims the new-
-// line at the end.
-func generateRSAPublicKey(privateKey *rsa.PrivateKey) ([]byte, error) {
-	pubKey, err := ssh.NewPublicKey(&privateKey.PublicKey)
-	if err != nil {
-		return nil, err
-	}
-	publicKey := ssh.MarshalAuthorizedKey(pubKey)
-	return bytes.Trim(publicKey, "\x0a"), nil
-}
-
-// generateCertificateTemplate creates a X509 Certificate object based on the provided information regarding
-// common name, organization, SANs (DNS names and IP addresses). It can create a server or a client certificate
-// or both, depending on the <certType> value. If <isCACert> is true, then a CA certificate is being created.
-// The certificates a valid for 10 years.
-func generateCertificateTemplate(commonName string, organization, dnsNames []string, ipAddresses []net.IP, isCA bool, certType certType) *x509.Certificate {
-	serialNumber, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	template := &x509.Certificate{
-		IsCA: isCA,
-		BasicConstraintsValid: true,
-		SerialNumber:          serialNumber,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().AddDate(10, 0, 0), // + 10 years
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		Subject: pkix.Name{
-			CommonName:   commonName,
-			Organization: organization,
-		},
-		DNSNames:    dnsNames,
-		IPAddresses: ipAddresses,
-	}
-	if isCA {
-		template.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
-	} else {
-		switch certType {
-		case ServerCert:
-			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
-		case ClientCert:
-			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
-		case ServerClientCert:
-			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth}
-		}
-	}
-	return template
-}
-
-// signCertificate takes a <certificateTemplate> and a <certificateTemplateSigner> which is used to sign
-// the first. It also requires the corresponding private keys of both certificates. The created certificate
-// is returned as byte slice.
-func signCertificate(certificateTemplate, certificateTemplateSigner *x509.Certificate, privateKey, privateKeySigner *rsa.PrivateKey) ([]byte, error) {
-	certificate, err := x509.CreateCertificate(rand.Reader, certificateTemplate, certificateTemplateSigner, &privateKey.PublicKey, privateKeySigner)
-	if err != nil {
-		return nil, err
-	}
-	return utils.EncodeCertificate(certificate), nil
-}
-
-// generateBasicAuthData computes a username/password keypair. It uses "admin" as username and generates a
-// random password of length 32.
-func generateBasicAuthData() (string, string, error) {
-	password, err := utils.GenerateRandomString(32)
-	return "admin", password, err
 }
 
 // generateKubeconfig generates a Kubernetes Kubeconfig for communicating with the kube-apiserver by using
@@ -672,8 +544,8 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 	secretList := []interface{}{
 		// Secret definition for kube-apiserver
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-apiserver",
 				},
 				CommonName:   user.APIServerUser,
@@ -683,7 +555,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 					net.ParseIP("127.0.0.1"),
 					net.ParseIP(common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1)),
 				},
-				CertType: ServerCert,
+				CertType: utils.ServerCert,
 			},
 			KubeconfigRequired: false,
 			RunsInSeed:         true,
@@ -691,15 +563,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-apiserver to kubelets communication
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-apiserver-kubelet",
 				},
 				CommonName:   "system:kube-apiserver:kubelet",
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: false,
 			RunsInSeed:         false,
@@ -707,15 +579,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-aggregator
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-aggregator",
 				},
 				CommonName:   "system:kube-aggregator",
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: false,
 			RunsInSeed:         false,
@@ -723,15 +595,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-controller-manager
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-controller-manager",
 				},
 				CommonName:   user.KubeControllerManager,
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -739,15 +611,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-scheduler
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-scheduler",
 				},
 				CommonName:   user.KubeScheduler,
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -755,15 +627,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for machine-controller-manager
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "machine-controller-manager",
 				},
 				CommonName:   "system:machine-controller-manager",
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -771,15 +643,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for cluster-autoscaler
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "cluster-autoscaler",
 				},
 				CommonName:   "system:cluster-autoscaler",
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -787,15 +659,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-addon-manager
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-addon-manager",
 				},
 				CommonName:   "system:kube-addon-manager",
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -803,15 +675,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-proxy
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-proxy",
 				},
 				CommonName:   user.KubeProxy,
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigUseInternalClusterDomain: true,
@@ -820,15 +692,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kube-state-metrics
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kube-state-metrics",
 				},
 				CommonName:   fmt.Sprintf("%s:monitoring:kube-state-metrics", garden.GroupName),
 				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -836,15 +708,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for prometheus
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "prometheus",
 				},
 				CommonName:   fmt.Sprintf("%s:monitoring:prometheus", garden.GroupName),
 				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired: true,
 			RunsInSeed:         true,
@@ -852,15 +724,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for kubecfg
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "kubecfg",
 				},
 				CommonName:   "system:cluster-admin",
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigWithBasicAuth:            true,
@@ -870,15 +742,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for gardener
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: gardenv1beta1.GardenerName,
 				},
 				CommonName:   gardenv1beta1.GardenerName,
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigWithBasicAuth:            true,
@@ -888,15 +760,15 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for cloud-config-downloader
 		ControlPlaneSecret{
-			TLSSecret: TLSSecret{
-				Secret: Secret{
+			TLSSecret: utils.TLSSecret{
+				Secret: utils.Secret{
 					Name: "cloud-config-downloader",
 				},
 				CommonName:   "cloud-config-downloader",
 				Organization: nil,
 				DNSNames:     nil,
 				IPAddresses:  nil,
-				CertType:     ClientCert,
+				CertType:     utils.ClientCert,
 			},
 			KubeconfigRequired:                 true,
 			KubeconfigWithBasicAuth:            false,
@@ -906,7 +778,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for ssh-keypair
 		RSASecret{
-			Secret: Secret{
+			Secret: utils.Secret{
 				Name: "ssh-keypair",
 			},
 			Bits: 4096,
@@ -914,103 +786,103 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 
 		// Secret definition for service-account-key
 		RSASecret{
-			Secret: Secret{
+			Secret: utils.Secret{
 				Name: "service-account-key",
 			},
 			Bits: 4096,
 		},
 
 		// Secret definition for vpn-shoot (OpenVPN server side)
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "vpn-shoot",
 			},
 			CommonName:   "vpn-shoot",
 			Organization: nil,
 			DNSNames:     []string{},
 			IPAddresses:  []net.IP{},
-			CertType:     ServerCert,
+			CertType:     utils.ServerCert,
 			WantsCA:      true,
 		},
 
 		// Secret definition for vpn-seed (OpenVPN client side)
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "vpn-seed",
 			},
 			CommonName:   "vpn-seed",
 			Organization: nil,
 			DNSNames:     []string{},
 			IPAddresses:  []net.IP{},
-			CertType:     ClientCert,
+			CertType:     utils.ClientCert,
 			WantsCA:      true,
 		},
 
 		// Secret definition for etcd server
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "etcd-server-tls",
 			},
 			CommonName:   "etcd-server",
 			Organization: nil,
 			DNSNames:     etcdCertDNSNames,
 			IPAddresses:  nil,
-			CertType:     ServerClientCert,
+			CertType:     utils.ServerClientCert,
 		},
 
 		// Secret definition for etcd server
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "etcd-client-tls",
 			},
 			CommonName:   "etcd-client",
 			Organization: nil,
 			DNSNames:     nil,
 			IPAddresses:  nil,
-			CertType:     ClientCert,
+			CertType:     utils.ClientCert,
 		},
 
 		// Secret definition for alertmanager (ingress)
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "alertmanager-tls",
 			},
 			CommonName:   "alertmanager",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{alertManagerHost},
 			IPAddresses:  nil,
-			CertType:     ServerCert,
+			CertType:     utils.ServerCert,
 		},
 
 		// Secret definition for grafana (ingress)
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "grafana-tls",
 			},
 			CommonName:   "grafana",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{grafanaHost},
 			IPAddresses:  nil,
-			CertType:     ServerCert,
+			CertType:     utils.ServerCert,
 		},
 
 		// Secret definition for prometheus (ingress)
-		TLSSecret{
-			Secret: Secret{
+		utils.TLSSecret{
+			Secret: utils.Secret{
 				Name: "prometheus-tls",
 			},
 			CommonName:   "prometheus",
 			Organization: []string{fmt.Sprintf("%s:monitoring:ingress", garden.GroupName)},
 			DNSNames:     []string{prometheusHost},
 			IPAddresses:  nil,
-			CertType:     ServerCert,
+			CertType:     utils.ServerCert,
 		},
 	}
 
 	if b.Shoot.MonocularEnabled() && b.Shoot.Info.Spec.DNS.Domain != nil {
 		monocularHost := b.Shoot.GetIngressFQDN("monocular")
-		secretList = append(secretList, TLSSecret{
-			Secret: Secret{
+		secretList = append(secretList, utils.TLSSecret{
+			Secret: utils.Secret{
 				Name:       "monocular-tls",
 				DoNotApply: true,
 			},
@@ -1018,7 +890,7 @@ func (b *Botanist) generateSecrets() ([]interface{}, error) {
 			Organization: nil,
 			DNSNames:     []string{monocularHost},
 			IPAddresses:  nil,
-			CertType:     ServerCert,
+			CertType:     utils.ServerCert,
 		})
 	}
 
