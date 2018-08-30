@@ -67,6 +67,7 @@ spec:
         - --kubelet-client-key=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.key
         - --insecure-port=0
         {{- include "kube-apiserver.oidcConfig" . | indent 8 }}
+        - --profiling=false
         - --proxy-client-cert-file=/srv/kubernetes/aggregator/kube-aggregator.crt
         - --proxy-client-key-file=/srv/kubernetes/aggregator/kube-aggregator.key
         - --requestheader-client-ca-file=/srv/kubernetes/ca/ca.crt
