@@ -69,6 +69,9 @@ type CloudProfileSpec struct {
 	// OpenStack is the profile specification for the OpenStack cloud.
 	// +optional
 	OpenStack *OpenStackProfile `json:"openstack,omitempty"`
+	// Alicloud is the profile specification for the Alibaba cloud.
+	// +optional
+	Alicloud *AlicloudProfile `json:"alicloud,omitempty"`
 	// Local is the profile specification for the Local provider.
 	// +optional
 	Local *LocalProfile `json:"local,omitempty"`
@@ -250,6 +253,56 @@ type OpenStackMachineImage struct {
 	Name MachineImageName `json:"name"`
 	// Image is the technical name of the image.
 	Image string `json:"image"`
+}
+
+// AlicloudProfile defines constraints and definitions in Alibaba Cloud environment.
+type AlicloudProfile struct {
+	// Constraints is an object containing constraints for certain values in the Shoot specification.
+	Constraints AlicloudConstraints `json:"constraints"`
+}
+
+// AlicloudConstraints is an object containing constraints for certain values in the Shoot specification
+type AlicloudConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
+	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+	Kubernetes KubernetesConstraints `json:"kubernetes"`
+	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+	MachineImages []AlicloudMachineImage `json:"machineImages"`
+	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
+	MachineTypes []MachineType `json:"machineTypes"`
+	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
+	VolumeTypes []VolumeType `json:"volumeTypes"`
+	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
+	Zones []AlicloudZone `json:"zones"`
+}
+
+// AlicloudMachineImage defines the region and the AMI for a machine image.
+type AlicloudMachineImage struct {
+	// Name is the name of the image.
+	Name MachineImageName `json:"name"`
+	// Verison is the version of image.
+	Version string `json:"version"`
+	// ID is the ID of the image.
+	ID string `json:"id"`
+}
+
+// AlicloudZone defines availablity zones together with resource contraints for a specific region
+type AlicloudZone struct {
+	// Region is a region name.
+	Region string `json:"region"`
+	// ZoneContraints is a list of resource contraints per availability zone in this region.
+	ZoneContraints []AlicloudZoneContstrants `json:"zoneContraints"`
+}
+
+// AlicloudZoneContstrants contains available volume types and machine types for a specific availability zone.
+type AlicloudZoneContstrants struct {
+	// Name is the name of a zone in alicloud.
+	Zone string `json:"zone"`
+	// VolumeTypes are available volume types in the current zone.
+	VolumeTypes []string `json:"volumeTypes"`
+	// MachineTypes are are avilable machine types in the current zone.
+	MachineTypes []string `json:"machineTypes"`
 }
 
 // LocalProfile defines constraints and definitions for the local development.
@@ -595,6 +648,9 @@ type Cloud struct {
 	// OpenStack contains the Shoot specification for the OpenStack cloud.
 	// +optional
 	OpenStack *OpenStackCloud `json:"openstack,omitempty"`
+	// Alicloud contains the Shoot specification for the Alibaba cloud.
+	// +optional
+	Alicloud *Alicloud `json:"alicloud,omitempty"`
 	// Local contains the Shoot specification for the Local local provider.
 	// +optional
 	Local *Local `json:"local,omitempty"`
@@ -654,6 +710,49 @@ type AWSVPC struct {
 
 // AWSWorker is the definition of a worker group.
 type AWSWorker struct {
+	Worker `json:",inline"`
+	// VolumeType is the type of the root volumes.
+	VolumeType string `json:"volumeType"`
+	// VolumeSize is the size of the root volume.
+	VolumeSize string `json:"volumeSize"`
+}
+
+// Alicloud contains the Shoot specification for Alibaba cloud
+type Alicloud struct {
+	// MachineImage holds information about the machine image to use for all workers.
+	// It will default to the first image stated in the referenced CloudProfile if no
+	// value has been provided.
+	// +optional
+	MachineImage AlicloudMachineImage `json:"machineImage,omitempty"`
+	// Networks holds information about the Kubernetes and infrastructure networks.
+	Networks AlicloudNetworks `json:"networks"`
+	// Workers is a list of worker groups.
+	Workers []AlicloudWorker `json:"workers"`
+	// Zones is a list of availability zones to deploy the Shoot cluster to, currently, only one is supported.
+	Zones []string `json:"zones"`
+}
+
+// AlicloudVPC contains either an id (of an existing VPC) or the CIDR (for a VPC to be created).
+type AlicloudVPC struct {
+	// ID is the Alicloud VPC id of an existing VPC.
+	// +optional
+	ID *string ` json:"id"`
+	// CIDR is a CIDR range for a new VPC.
+	// +optional
+	CIDR *CIDR `json:"cidr"`
+}
+
+// AlicloudNetworks holds information about the Kubernetes and infrastructure networks.
+type AlicloudNetworks struct {
+	K8SNetworks `json:",inline"`
+	// VPC indicates whether to use an existing VPC or create a new one.
+	VPC AlicloudVPC `json:"vpc"`
+	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
+	Workers []CIDR `json:"workers"`
+}
+
+// AlicloudWorker is the definition of a worker group.
+type AlicloudWorker struct {
 	Worker `json:",inline"`
 	// VolumeType is the type of the root volumes.
 	VolumeType string `json:"volumeType"`
@@ -960,6 +1059,8 @@ const (
 	CloudProviderGCP CloudProvider = "gcp"
 	// CloudProviderOpenStack is a constant for the OpenStack cloud provider.
 	CloudProviderOpenStack CloudProvider = "openstack"
+	// CloudProviderAlicloud is a constant for the Alibaba cloud provider.
+	CloudProviderAlicloud CloudProvider = "alicloud"
 	// CloudProviderLocal is a constant for the development provider.
 	CloudProviderLocal CloudProvider = "local"
 )

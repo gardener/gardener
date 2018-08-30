@@ -43,6 +43,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon":                         schema_pkg_apis_garden_v1beta1_Addon(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons":                        schema_pkg_apis_garden_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin":               schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud":                      schema_pkg_apis_garden_v1beta1_Alicloud(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudConstraints":           schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage":          schema_pkg_apis_garden_v1beta1_AlicloudMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudNetworks":              schema_pkg_apis_garden_v1beta1_AlicloudNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile":               schema_pkg_apis_garden_v1beta1_AlicloudProfile(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVPC":                   schema_pkg_apis_garden_v1beta1_AlicloudVPC(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker":                schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZone":                  schema_pkg_apis_garden_v1beta1_AlicloudZone(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZoneContstrants":       schema_pkg_apis_garden_v1beta1_AlicloudZoneContstrants(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud":                    schema_pkg_apis_garden_v1beta1_AzureCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints":              schema_pkg_apis_garden_v1beta1_AzureConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount":              schema_pkg_apis_garden_v1beta1_AzureDomainCount(ref),
@@ -890,6 +899,425 @@ func schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref common.ReferenceCallback
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_Alicloud(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Alicloud contains the Shoot specification for Alibaba cloud",
+				Properties: map[string]spec.Schema{
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage"),
+						},
+					},
+					"networks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Networks holds information about the Kubernetes and infrastructure networks.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudNetworks"),
+						},
+					},
+					"workers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Workers is a list of worker groups.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker"),
+									},
+								},
+							},
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is a list of availability zones to deploy the Shoot cluster to, currently, only one is supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"networks", "workers", "zones"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudConstraints is an object containing constraints for certain values in the Shoot specification",
+				Properties: map[string]spec.Schema{
+					"dnsProviders": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"),
+									},
+								},
+							},
+						},
+					},
+					"kubernetes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints"),
+						},
+					},
+					"machineImages": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage"),
+									},
+								},
+							},
+						},
+					},
+					"machineTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType"),
+									},
+								},
+							},
+						},
+					},
+					"volumeTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"),
+									},
+								},
+							},
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZone"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZone", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudMachineImage defines the region and the AMI for a machine image.",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Verison is the version of image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"id": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID is the ID of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "version", "id"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudNetworks holds information about the Kubernetes and infrastructure networks.",
+				Properties: map[string]spec.Schema{
+					"nodes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Nodes is the CIDR of the node network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"vpc": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VPC indicates whether to use an existing VPC or create a new one.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVPC"),
+						},
+					},
+					"workers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Workers is a CIDR of a worker subnet (private) to create (used for the VMs).",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"vpc", "workers"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVPC"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudProfile defines constraints and definitions in Alibaba Cloud environment.",
+				Properties: map[string]spec.Schema{
+					"constraints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Constraints is an object containing constraints for certain values in the Shoot specification.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudConstraints"),
+						},
+					},
+				},
+				Required: []string{"constraints"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudConstraints"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudVPC(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudVPC contains either an id (of an existing VPC) or the CIDR (for a VPC to be created).",
+				Properties: map[string]spec.Schema{
+					"id": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID is the Alicloud VPC id of an existing VPC.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cidr": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CIDR is a CIDR range for a new VPC.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudWorker is the definition of a worker group.",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the worker group.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"machineType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineType is the machine type of the worker group.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"autoScalerMin": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoScalerMin is the minimum number of VMs to create.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"autoScalerMax": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoScalerMin is the maximum number of VMs to create.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"volumeType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeType is the type of the root volumes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"volumeSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeSize is the size of the root volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudZone(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudZone defines availablity zones together with resource contraints for a specific region",
+				Properties: map[string]spec.Schema{
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is a region name.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"zoneContraints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ZoneContraints is a list of resource contraints per availability zone in this region.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZoneContstrants"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"region", "zoneContraints"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZoneContstrants"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudZoneContstrants(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudZoneContstrants contains available volume types and machine types for a specific availability zone.",
+				Properties: map[string]spec.Schema{
+					"zone": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of a zone in alicloud.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"volumeTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeTypes are available volume types in the current zone.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"machineTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineTypes are are avilable machine types in the current zone.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"zone", "volumeTypes", "machineTypes"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_AzureCloud(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1531,6 +1959,12 @@ func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud"),
 						},
 					},
+					"alicloud": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Alicloud contains the Shoot specification for the Alibaba cloud.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud"),
+						},
+					},
 					"local": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Local contains the Shoot specification for the Local local provider.",
@@ -1542,7 +1976,7 @@ func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "k8s.io/api/core/v1.LocalObjectReference"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -1664,6 +2098,12 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"),
 						},
 					},
+					"alicloud": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Alicloud is the profile specification for the Alibaba cloud.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile"),
+						},
+					},
 					"local": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Local is the profile specification for the Local provider.",
@@ -1681,7 +2121,7 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"},
 	}
 }
 
