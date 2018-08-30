@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -28,6 +28,8 @@
     region="westeurope"
   elif cloud == "gcp":
     region="europe-west1"
+  elif cloud == "alicloud":
+    region="cn-beijing"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "local":
@@ -321,6 +323,102 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - us-east1-c
         - us-east1-d
     % endif
+  % endif
+  % if cloud == "alicloud":
+  alicloud:
+    constraints:
+      dnsProviders:<% dnsProviders=value("spec.alicloud.constraints.dnsProviders", []) %>
+      % if dnsProviders != []:
+      ${yaml.dump(dnsProviders, width=10000)}
+      % else:
+      - name: aws-route53
+      - name: unmanaged
+      % endif
+      kubernetes:<% kubernetesVersions=value("spec.alicloud.constraints.kubernetes.versions", []) %>
+        % if kubernetesVersions != []:
+        ${yaml.dump(kubernetesVersions, width=10000)}
+        % else:
+        versions:
+        - 1.11.0
+        - 1.10.5
+        - 1.9.8
+        - 1.8.14
+        % endif
+      machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
+      % if machineImages != []:
+      ${yaml.dump(machineImages, width=10000)}
+      % else:
+      - name: CoreOS
+        version: "1745.7.0"
+        id: coreos_1745_7_0_64_30G_alibase_20180705.vhd
+      % endif
+      machineTypes:<% machineTypes=value("spec.alicloud.constraints.machineTypes", []) %>
+      % if machineTypes != []:
+      ${yaml.dump(machineTypes, width=10000)}
+      % else:
+      - name: ecs.t5-lc1m1.small
+        cpu: "1"
+        gpu: "0"
+        memory: 1Gi
+      - name: ecs.t5-lc1m2.small
+        cpu: "1"
+        gpu: "0"
+        memory: 2Gi
+      - name: ecs.t5-lc1m2.large
+        cpu: "2"
+        gpu: "0"
+        memory: 4Gi
+      - name: ecs.mn4.small
+        cpu: "1"
+        gpu: "0"
+        memory: 4Gi
+      - name: ecs.sn2ne.large
+        cpu: "2"
+        gpu: "0"
+        memory: 8Gi
+      - name: ecs.sn2ne.xlarge
+        cpu: "4"
+        gpu: "0"
+        memory: 16Gi
+      - name: ecs.sn2ne.2xlarge
+        cpu: "8"
+        gpu: "0"
+        memory: 32Gi
+      - name: ecs.sn2ne.3xlarge
+        cpu: "12"
+        gpu: "0"
+        memory: 48Gi
+      % endif
+      volumeTypes:<% volumeTypes=value("spec.alicloud.constraints.volumeTypes", []) %>
+      % if volumeTypes != []:
+      ${yaml.dump(volumeTypes, width=10000)}
+      % else:
+      - name: cloud_efficiency
+        class: cloud_efficiency
+      - name: cloud
+        class: cloud
+      - name: ssd
+        class: ssd
+      % endif
+      zones:<% zones=value("spec.alicloud.zones", []) %> # List of availablity zones together with resource contraints in a specific region
+      % if zones != []:
+      ${yaml.dump(zones, width=10000)}
+      % else:
+      - region: cn-beijing
+        zoneContraints: 
+        - zone: cn-beijing-f # Avalibility zone
+          volumeTypes: # Available volume types for this zone
+          - cloud_efficiency
+          - ssd
+          machineTypes: # Available machine types for this zone
+          - ecs.t5-lc1m1.small 
+          - ecs.t5-lc1m2.small
+          - ecs.t5-lc1m2.large
+          - ecs.sn2ne.large
+          - ecs.sn2ne.xlarge
+          - ecs.sn2ne.2xlarge
+          - ecs.sn2ne.3xlarge
+      % endif      
   % endif
   % if cloud == "openstack" or cloud == "os":
   openstack:
