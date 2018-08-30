@@ -101,7 +101,6 @@ func autoConvert_v1alpha1_ClientConnectionConfiguration_To_componentconfig_Clien
 	out.ContentType = in.ContentType
 	out.QPS = in.QPS
 	out.Burst = in.Burst
-	out.DisableTCPKeepAlive = in.DisableTCPKeepAlive
 	return nil
 }
 
@@ -116,7 +115,6 @@ func autoConvert_componentconfig_ClientConnectionConfiguration_To_v1alpha1_Clien
 	out.ContentType = in.ContentType
 	out.QPS = in.QPS
 	out.Burst = in.Burst
-	out.DisableTCPKeepAlive = in.DisableTCPKeepAlive
 	return nil
 }
 
