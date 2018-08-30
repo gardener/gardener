@@ -70,7 +70,7 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	allErrs := field.ErrorList{}
 
 	if _, err := helper.DetermineCloudProviderInProfile(*spec); err != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/openstack/local"), "cloud profile must only contain exactly one field of aws/azure/gcp/openstack"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/alicloud/openstack/local"), "cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack"))
 		return allErrs
 	}
 
@@ -100,6 +100,15 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.GCP.Constraints.MachineTypes, fldPath.Child("gcp", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.GCP.Constraints.VolumeTypes, fldPath.Child("gcp", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.GCP.Constraints.Zones, fldPath.Child("gcp", "constraints", "zones"))...)
+	}
+
+	if spec.Alicloud != nil {
+		allErrs = append(allErrs, validateDNSProviders(spec.Alicloud.Constraints.DNSProviders, fldPath.Child("alicloud", "constraints", "dnsProviders"))...)
+		allErrs = append(allErrs, validateKubernetesConstraints(spec.Alicloud.Constraints.Kubernetes, fldPath.Child("alicloud", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validateAlicloudMachineImages(spec.Alicloud.Constraints.MachineImages, fldPath.Child("alicloud", "constraints", "machineImages"))...)
+		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Alicloud.Constraints.MachineTypes, fldPath.Child("alicloud", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Alicloud.Constraints.VolumeTypes, fldPath.Child("alicloud", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateAlicloudZones(&spec.Alicloud.Constraints, fldPath.Child("alicloud", "constraints"))...)
 	}
 
 	if spec.OpenStack != nil {
@@ -313,6 +322,102 @@ func validateGCPMachineImages(machineImages []garden.GCPMachineImage, fldPath *f
 	return allErrs
 }
 
+func validateAlicloudMachineImages(machineImages []garden.AlicloudMachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(machineImages) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
+	}
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+
+		if image.Name != garden.MachineImageCoreOS {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), image.Name, []string{string(garden.MachineImageCoreOS)}))
+		}
+
+		if len(image.ID) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("id"), string(image.Name)))
+		}
+	}
+
+	return allErrs
+}
+
+func validateAlicloudZones(contraints *garden.AlicloudConstraints, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	zonesPath := fldPath.Child("zones")
+	if len(contraints.Zones) == 0 {
+		allErrs = append(allErrs, field.Required(zonesPath, "must provide at least one zone"))
+	}
+
+	for i, region := range contraints.Zones {
+		idxPath := zonesPath.Index(i)
+		regionPath := idxPath.Child("region")
+		zcPath := idxPath.Child("zoneContraints")
+
+		if len(region.Region) == 0 {
+			allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
+		}
+
+		allErrs = append(allErrs, validateAlicloudZoneConstrants(contraints, region.ZoneContraints, zcPath)...)
+	}
+
+	return allErrs
+}
+
+func validateAlicloudZoneConstrants(contraints *garden.AlicloudConstraints, zoneConstraints []garden.AlicloudZoneContstrants, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if len(zoneConstraints) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one zone constraints"))
+	}
+
+	for i, zc := range zoneConstraints {
+		idxPath := fldPath.Index(i)
+
+		//check zone
+		if len(zc.Zone) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("zone"), ""))
+		}
+
+		//check volume types
+		volumesPath := idxPath.Child("volumeTypes")
+		if len(zc.VolumeTypes) == 0 {
+			allErrs = append(allErrs, field.Required(volumesPath, "must provide at least one volume type"))
+		}
+		for j, v := range zc.VolumeTypes {
+			volumeExists := false
+			for _, av := range contraints.VolumeTypes {
+				if v == av.Class {
+					volumeExists = true
+					break
+				}
+			}
+			if !volumeExists {
+				allErrs = append(allErrs, field.Invalid(volumesPath.Index(j), v, fmt.Sprintf("Volume name [%s] is not in available volume list", v)))
+			}
+		}
+
+		//check machine types
+		machinesPath := idxPath.Child("machineTypes")
+		if len(zc.MachineTypes) == 0 {
+			allErrs = append(allErrs, field.Required(machinesPath, "must provide at least one machine type"))
+		}
+		for j, m := range zc.MachineTypes {
+			mtExists := false
+			for _, am := range contraints.MachineTypes {
+				if m == am.Name {
+					mtExists = true
+					break
+				}
+			}
+			if !mtExists {
+				allErrs = append(allErrs, field.Invalid(machinesPath.Index(j), m, fmt.Sprintf("Machine type [%s] is not in available machine type list", m)))
+			}
+		}
+	}
+
+	return allErrs
+}
+
 func validateOpenStackMachineImages(machineImages []garden.OpenStackMachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -327,6 +432,7 @@ func validateOpenStackMachineImages(machineImages []garden.OpenStackMachineImage
 	}
 
 	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
+
 	return allErrs
 }
 
@@ -1003,6 +1109,49 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 		}
 	}
 
+	alicloud := cloud.Alicloud
+	alicloudPath := fldPath.Child("alicloud")
+	if alicloud != nil {
+		zoneCount := len(alicloud.Zones)
+		if zoneCount == 0 {
+			allErrs = append(allErrs, field.Required(alicloudPath.Child("zones"), "must specify at least one zone"))
+			return allErrs
+		}
+
+		allErrs = append(allErrs, validateK8SNetworks(alicloud.Networks.K8SNetworks, alicloudPath.Child("networks"))...)
+
+		if len(alicloud.Networks.Workers) != zoneCount {
+			allErrs = append(allErrs, field.Invalid(alicloudPath.Child("networks", "workers"), alicloud.Networks.Workers, "must specify as many workers networks as zones"))
+		}
+
+		for i, cidr := range alicloud.Networks.Workers {
+			allErrs = append(allErrs, validateCIDR(cidr, alicloudPath.Child("networks", "workers").Index(i))...)
+		}
+
+		if (alicloud.Networks.VPC.ID == nil && alicloud.Networks.VPC.CIDR == nil) || (alicloud.Networks.VPC.ID != nil && alicloud.Networks.VPC.CIDR != nil) {
+			allErrs = append(allErrs, field.Invalid(alicloudPath.Child("networks", "vpc"), alicloud.Networks.VPC, "must specify either a vpc id or a cidr"))
+		} else if alicloud.Networks.VPC.CIDR != nil && alicloud.Networks.VPC.ID == nil {
+			allErrs = append(allErrs, validateCIDR(*(alicloud.Networks.VPC.CIDR), alicloudPath.Child("networks", "vpc", "cidr"))...)
+		}
+
+		if len(alicloud.Workers) == 0 {
+			allErrs = append(allErrs, field.Required(alicloudPath.Child("workers"), "must specify at least one worker"))
+			return allErrs
+		}
+		for i, worker := range alicloud.Workers {
+			idxPath := alicloudPath.Child("workers").Index(i)
+			allErrs = append(allErrs, validateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			if workerNames[worker.Name] {
+				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
+			}
+			workerNames[worker.Name] = true
+		}
+
+	}
+
 	return allErrs
 }
 
@@ -1053,6 +1202,15 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	} else if newSpec.Cloud.OpenStack != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Networks, oldSpec.Cloud.OpenStack.Networks, openStackPath.Child("networks"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.OpenStack.Zones, oldSpec.Cloud.OpenStack.Zones, openStackPath.Child("zones"))...)
+	}
+
+	alicloudPath := fldPath.Child("cloud", "alicloud")
+	if oldSpec.Cloud.Alicloud != nil && newSpec.Cloud.Alicloud == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud, oldSpec.Cloud.Alicloud, alicloudPath)...)
+		return allErrs
+	} else if newSpec.Cloud.Alicloud != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks, oldSpec.Cloud.Alicloud.Networks, alicloudPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Zones, oldSpec.Cloud.Alicloud.Zones, alicloudPath.Child("zones"))...)
 	}
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)

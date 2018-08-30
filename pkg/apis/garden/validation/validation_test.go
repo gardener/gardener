@@ -127,7 +127,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.aws/azure/gcp/openstack/local"),
+				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/local"),
 			}))
 		})
 
@@ -1359,6 +1359,329 @@ var _ = Describe("validation", func() {
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.dhcpDomain", fldPath)),
+					}))
+				})
+			})
+		})
+
+		Context("tests for Alicloud cloud profiles", func() {
+			var (
+				fldPath         = "alicloud"
+				alicloudProfile *garden.CloudProfile
+			)
+
+			BeforeEach(func() {
+				alicloudProfile = &garden.CloudProfile{
+					ObjectMeta: metadata,
+					Spec: garden.CloudProfileSpec{
+						Alicloud: &garden.AlicloudProfile{
+							Constraints: garden.AlicloudConstraints{
+								DNSProviders: dnsProviderConstraint,
+								Kubernetes:   kubernetesVersionConstraint,
+								MachineImages: []garden.AlicloudMachineImage{
+									{
+										Name:    "CoreOS",
+										Version: "1745.7.0",
+										ID:      "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
+									},
+								},
+								MachineTypes: machineTypesConstraint,
+								VolumeTypes:  volumeTypesConstraint,
+								Zones: []garden.AlicloudZone{
+									{
+										Region: "cn-beijing",
+										ZoneContraints: []garden.AlicloudZoneContstrants{
+											{
+												Zone: "cn-beijing-f",
+												VolumeTypes: []string{
+													"super-premium",
+												},
+												MachineTypes: []string{
+													"machine-type-1",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateCloudProfile(alicloudProfile)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid ca bundles with unsupported format", func() {
+				alicloudProfile.Spec.CABundle = makeStringPointer("unsupported")
+
+				errorList := ValidateCloudProfile(alicloudProfile)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.caBundle"),
+				}))
+			})
+
+			Context("dns provider constraints", func() {
+				It("should enforce that at least one provider has been defined", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
+					}))
+				})
+
+				It("should forbid unsupported providers", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.DNSProviders = invalidDNSProviders
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
+					}))
+				})
+			})
+
+			Context("kubernetes version constraints", func() {
+				It("should enforce that at least one version has been defined", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions = []string{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+					}))
+				})
+
+				It("should forbid versions of a not allowed pattern", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions = invalidKubernetes
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+					}))
+				})
+			})
+
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages = []garden.AlicloudMachineImage{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					}))
+				})
+
+				It("should be with CoreOS name", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].Name = garden.MachineImageName("None-CoreOS")
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].name", fldPath)),
+					}))
+				})
+
+				It("should forbid empty machine image id", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].ID = ""
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].id", fldPath)),
+					}))
+				})
+			})
+
+			Context("machine types validation", func() {
+				It("should enforce that at least one machine type has been defined", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.MachineType{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					//last error is populated by zone constrants
+					Expect(len(errorList)).To(Equal(2))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
+					}))
+				})
+
+				It("should forbid machine types with unsupported property values", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = invalidMachineTypes
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+					//last error is populated by zone constrants
+					Expect(len(errorList)).To(Equal(5))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
+					}))
+					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpu", fldPath)),
+					}))
+					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpu", fldPath)),
+					}))
+					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].memory", fldPath)),
+					}))
+				})
+			})
+
+			Context("volume types validation", func() {
+				It("should enforce that at least one volume type has been defined", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.VolumeType{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					//last error is populated by zone constrants
+					Expect(len(errorList)).To(Equal(2))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
+					}))
+				})
+
+				It("should forbid volume types with unsupported property values", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = invalidVolumeTypes
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					//last error is populated by zone constrants
+					Expect(len(errorList)).To(Equal(3))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
+					}))
+					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].class", fldPath)),
+					}))
+				})
+			})
+
+			Context("zone constraints validation", func() {
+				It("should forbid empty zones", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones = []garden.AlicloudZone{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
+					}))
+				})
+
+				It("should forbid empty region name", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].Region = ""
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
+					}))
+				})
+
+				It("should forbid empty zone constraints", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints = []garden.AlicloudZoneContstrants{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints", fldPath)),
+					}))
+				})
+
+				It("should forbid empty zone name", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].Zone = ""
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].zone", fldPath)),
+					}))
+				})
+
+				It("should forbid empty volume types", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].VolumeTypes = []string{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].volumeTypes", fldPath)),
+					}))
+				})
+
+				It("should enforce volume type in general volume type list", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].VolumeTypes[0] = "other volume type"
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].volumeTypes[0]", fldPath)),
+					}))
+				})
+
+				It("should forbid empty machine types", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].MachineTypes = []string{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].machineTypes", fldPath)),
+					}))
+				})
+
+				It("should enforce volume type in general volume type list", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].MachineTypes[0] = "other machine type"
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].machineTypes[0]", fldPath)),
 					}))
 				})
 			})
@@ -2960,6 +3283,338 @@ var _ = Describe("validation", func() {
 			It("should forbid removing the GCP section", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Cloud.GCP = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+				}))
+			})
+		})
+
+		Context("Alicloud specific validation", func() {
+			var (
+				fldPath  = "alicloud"
+				alicloud *garden.Alicloud
+			)
+
+			BeforeEach(func() {
+				alicloud = &garden.Alicloud{
+					Networks: garden.AlicloudNetworks{
+						K8SNetworks: k8sNetworks,
+						VPC: garden.AlicloudVPC{
+							CIDR: &nodeCIDR,
+						},
+						Workers: []garden.CIDR{"10.250.0.0/17"},
+					},
+					Workers: []garden.AlicloudWorker{
+						{
+							Worker:     worker,
+							VolumeSize: "20Gi",
+							VolumeType: "default",
+						},
+					},
+					Zones: []string{"cn-beijing-f"},
+				}
+
+				shoot.Spec.Cloud.AWS = nil
+				shoot.Spec.Cloud.Alicloud = alicloud
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should forbid invalid network configuration", func() {
+				shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
+				shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = invalidK8sNetworks
+				shoot.Spec.Cloud.Alicloud.Networks.VPC = garden.AlicloudVPC{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc", fldPath)),
+				}))
+			})
+
+			It("should forbid non-specified k8s networks", func() {
+				shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = garden.K8SNetworks{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(3))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid VPC CIDRs", func() {
+				shoot.Spec.Cloud.Alicloud.Networks.VPC.CIDR = &invalidCIDR
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.cidr", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))
+			})
+
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
+				}))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     invalidWorker,
+						VolumeSize: "hugo",
+						VolumeType: "",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMax", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     workerAutoScalingInvalid,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin", fldPath)),
+				}))
+			})
+
+			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     workerAutoScalingHibernated,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			It("should enforce workers min=max if autoscaler is disabled", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     workerAutoScaling,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+				}
+				shoot.Spec.Addons.ClusterAutoscaler.Addon = garden.Addon{
+					Enabled: false,
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin/autoScalerMax", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with too less volume size", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+			})
+
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Cloud.Alicloud.Workers[0].Worker = invalidWorkerTooLongName
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker:     invalidWorkerName,
+						VolumeSize: "20Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+			})
+
+			It("should forbid an empty zones list", func() {
+				shoot.Spec.Cloud.Alicloud.Zones = []string{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid updating networks and zones", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				cidr := garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.Alicloud.Networks.Pods = &cidr
+				newShoot.Spec.Cloud.Alicloud.Zones = []string{"another-zone"}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(len(errorList)).To(Equal(2))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))
+			})
+
+			It("should forbid removing the AWS section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.Alicloud = nil
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
