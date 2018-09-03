@@ -10,11 +10,6 @@
 
 cluster-autoscaler:
   enabled: false
-heapster:
-  enabled: false
-  images:
-    heapster: image-repository:image-tag
-    heapster-nanny: image-repository:image-tag
 helm-tiller:
   enabled: false
   images:

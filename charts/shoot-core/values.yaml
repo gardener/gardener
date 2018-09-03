@@ -31,3 +31,6 @@ monitoring:
   node-exporter:
     images:
       node-exporter: image-repository:image-tag
+metrics-server:
+  images:
+    metrics-server: image-repository:image-tag

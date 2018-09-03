@@ -1,0 +1,40 @@
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: metrics-server
+  namespace: kube-system
+  labels:
+    k8s-app: metrics-server
+    addonmanager.kubernetes.io/mode: Reconcile
+    origin: gardener
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metrics-server
+  template:
+    metadata:
+      name: metrics-server
+      labels:
+        k8s-app: metrics-server
+        origin: gardener
+    spec:
+      serviceAccountName: metrics-server
+      containers:
+      - name: metrics-server
+        image: {{ index .Values.images "metrics-server" }}
+        imagePullPolicy: Always
+        command:
+        - /metrics-server
+        - --profiling=false
+        # See https://github.com/kubernetes-incubator/metrics-server/issues/25 and https://github.com/kubernetes-incubator/metrics-server/issues/130
+        # The kube-apiserver and the kubelet use different CAs, however, the metrics-server assumes the CAs are the same.
+        # We should remove this flag once it is possible to specify the CA of the kubelet.
+        - --kubelet-insecure-tls
+        # We should generate a new CA used for the metrics-server and sign its certificates with it.
+        # For now, we will keep the TLS cert/key exposed by the metrics-server self-signed/self-generated and configure the kube-apiserver not to
+        # verify it. Once the secret-generation refactoring is done we can easily generate new CAs and new certificates. Let's wait for the refactorting
+        # to be merged.
+        #- --tls-cert-file=TODO
+        #- --tls-private-key-file=TODO
+        - --v=2
