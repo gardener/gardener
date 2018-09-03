@@ -12,7 +12,7 @@ This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kub
 
 ## Installing Golang environment
 
-Install the latest version of Golang (at least `v1.9.2` is required). For Mac OS you could use [Homebrew](https://brew.sh/):
+Install the latest version of Golang (at least `v1.10.x` is required). For Mac OS you could use [Homebrew](https://brew.sh/):
 
 ```bash
 $ brew install golang
@@ -52,7 +52,7 @@ $ go get -u github.com/onsi/gomega
 
 ## Installing `kubectl` and `helm`
 
-As already mentioned in the introduction, the communication with the Gardener happens via the Kubernetes (Garden) cluster it is targeting. To interact with that cluster, you need to install `kubectl`.
+As already mentioned in the introduction, the communication with the Gardener happens via the Kubernetes (Garden) cluster it is targeting. To interact with that cluster, you need to install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`.
 
 On Mac OS run
 
@@ -92,6 +92,7 @@ Please install the `openvpn` binary. On Mac OS run
 
 ```bash
 $ brew install openvpn
+$ export PATH=$(brew --prefix openvpn)/sbin:$PATH
 ```
 
 On other OS, please check the [OpenVPN downloads page](https://openvpn.net/index.php/open-source/downloads.html).
@@ -110,9 +111,19 @@ On Mac OS run
 $ brew install iproute2mac
 ```
 
+## [Mac OS X only] Install GNU core utilities
+
+When running on Mac OS X you have to install the GNU core utilities:
+```bash
+$ brew install coreutils gnu-sed
+```
+
+This will create symlinks for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH`.
+
+
 ## [Optional] Installing Docker
 
-In case you want to build Docker images for the Gardener you have to install Docker itself. We recommend using [Docker for Mac OS X](https://docs.docker.com/docker-for-mac/) which can be downloaded from [here](https://download.docker.com/mac/stable/Docker.dmg).
+In case you want to use the "Docker for Mac Kubernetes" or if you want to build Docker images for the Gardener you have to install Docker itself. On Mac OS X, please use [Docker for Mac OS X](https://docs.docker.com/docker-for-mac/) which can be downloaded [here](https://download.docker.com/mac/stable/Docker.dmg).
 
 On other OS, please check the [Docker installation documentation](https://docs.docker.com/install/).
 
@@ -345,12 +356,12 @@ shoot "local" deleted
 shoot "local" patched
 ```
 
-#### Limitations
+#### Limitations of local Shoot setup
 
 Currently, there are some limitations in the local Shoot setup which need to be considered. Please keep in mind that this setup is intended to be used by Gardener developers.
 
 - The cloud provider allows to choose from a various list of different machine types. This flexibility is not available in this setup on a single local machine. However, it is possible to specify the Shoot nodes resources (cpu and memory) used by Vagrant in this [configuration file](../../vagrant/Vagrantfile). In the Shoot creation process the Machine Controller Manager plays a central role. Due to the limitation in this setup this component is not used.
-- It is not yet possible to create Shoot clusters consisting of more than one worker node. Cluster Autoscaling therefore is not supported
+- It is not yet possible to create Shoot clusters consisting of more than one worker node. Cluster auto-scaling therefore is not supported
 - It is not yet possible to create two or more Shoot clusters in parallel
 - The Shoot API Server is exposed via a NodePort. In a cloud setup a LoadBalancer would be used
 - The communication between the Seed and the Shoot Clusters uses VPN tunnel. In this setup tunnels are not needed since all components run on localhost
