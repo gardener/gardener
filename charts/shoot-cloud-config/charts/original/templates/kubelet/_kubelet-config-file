@@ -75,7 +75,7 @@ maxOpenFiles: 1000000
 maxPods: 110
 nodeStatusUpdateFrequency: 10s
 podsPerCore: 0
-readOnlyPort: 10255
+readOnlyPort: 0
 registryPullQPS: 5
 registryBurst: 10
 resolvConf: /etc/resolv.conf
