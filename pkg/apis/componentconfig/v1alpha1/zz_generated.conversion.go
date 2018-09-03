@@ -421,7 +421,6 @@ func autoConvert_v1alpha1_ShootControllerConfiguration_To_componentconfig_ShootC
 	out.RetryDuration = in.RetryDuration
 	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
-	out.WatchNamespace = (*string)(unsafe.Pointer(in.WatchNamespace))
 	return nil
 }
 
@@ -436,7 +435,6 @@ func autoConvert_componentconfig_ShootControllerConfiguration_To_v1alpha1_ShootC
 	out.RetryDuration = in.RetryDuration
 	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
-	out.WatchNamespace = (*string)(unsafe.Pointer(in.WatchNamespace))
 	return nil
 }
 

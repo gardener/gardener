@@ -15,8 +15,8 @@
 package componentconfig
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/golang/glog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -146,14 +146,11 @@ type ShootControllerConfiguration struct {
 	// in case of errors.
 	RetryDuration metav1.Duration
 	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
-	// readded to the queue so that the operation can be retried. Defaults to 15s.
+	// re-added to the queue so that the operation can be retried. Defaults to 15s.
 	// +optional
 	RetrySyncPeriod *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
-	// WatchNamespace defines the namespace which should be watched by the controller.
-	// +optional
-	WatchNamespace *string
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare

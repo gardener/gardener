@@ -278,7 +278,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		}
 	}
 
-	identity, gardenerNamespace, err := determineGardenerIdentity(config.Controllers.Shoot.WatchNamespace)
+	identity, gardenerNamespace, err := determineGardenerIdentity()
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration
 // we need to identify for still ongoing operations whether another Gardener controller manager instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
-func determineGardenerIdentity(watchNamespace *string) (*gardenv1beta1.Gardener, string, error) {
+func determineGardenerIdentity() (*gardenv1beta1.Gardener, string, error) {
 	var (
 		gardenerID        string
 		gardenerName      string
@@ -419,8 +419,6 @@ func determineGardenerIdentity(watchNamespace *string) (*gardenv1beta1.Gardener,
 	// If running inside a Kubernetes cluster we will have a service account mount.
 	if ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
 		gardenerNamespace = string(ns)
-	} else if watchNamespace != nil {
-		gardenerNamespace = *watchNamespace
 	}
 
 	return &gardenv1beta1.Gardener{

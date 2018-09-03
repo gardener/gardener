@@ -22,16 +22,11 @@ import (
 // it sets the value of the respective keys of <config> to the values in the environment.
 // Currently implemented environment variables:
 // KUBECONFIG can override config.ClientConnection.KubeConfigFile
-// WATCH_NAMESPACE can override config.Controller.WatchNamespace and config.LeaderElection.LockObjectNamespace
 func ApplyEnvironmentToConfig(config *ControllerManagerConfiguration) {
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		config.ClientConnection.KubeConfigFile = kubeconfig
 	}
 	if kubeconfig := os.Getenv("GARDENER_KUBECONFIG"); kubeconfig != "" {
 		config.GardenerClientConnection.KubeConfigFile = kubeconfig
-	}
-	if watchNamespace := os.Getenv("WATCH_NAMESPACE"); watchNamespace != "" {
-		config.Controllers.Shoot.WatchNamespace = &watchNamespace
-		config.LeaderElection.LockObjectNamespace = watchNamespace
 	}
 }

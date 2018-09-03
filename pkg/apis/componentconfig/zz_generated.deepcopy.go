@@ -300,11 +300,6 @@ func (in *ShootControllerConfiguration) DeepCopyInto(out *ShootControllerConfigu
 		**out = **in
 	}
 	out.SyncPeriod = in.SyncPeriod
-	if in.WatchNamespace != nil {
-		in, out := &in.WatchNamespace, &out.WatchNamespace
-		*out = new(string)
-		**out = **in
-	}
 	return
 }
 

@@ -99,37 +99,25 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 		workerCh:              make(chan int),
 	}
 
-	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: shootController.shootNamespaceFilter,
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    shootController.shootAdd,
-			UpdateFunc: shootController.shootUpdate,
-			DeleteFunc: shootController.shootDelete,
-		},
+	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.shootAdd,
+		UpdateFunc: shootController.shootUpdate,
+		DeleteFunc: shootController.shootDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: shootController.shootNamespaceFilter,
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    shootController.shootCareAdd,
-			DeleteFunc: shootController.shootCareDelete,
-		},
+	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.shootCareAdd,
+		DeleteFunc: shootController.shootCareDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: shootController.shootNamespaceFilter,
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    shootController.shootMaintenanceAdd,
-			DeleteFunc: shootController.shootMaintenanceDelete,
-		},
+	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.shootMaintenanceAdd,
+		DeleteFunc: shootController.shootMaintenanceDelete,
 	})
 
-	shootInformer.Informer().AddEventHandler(cache.FilteringResourceEventHandler{
-		FilterFunc: shootController.shootNamespaceFilter,
-		Handler: cache.ResourceEventHandlerFuncs{
-			AddFunc:    shootController.shootQuotaAdd,
-			DeleteFunc: shootController.shootQuotaDelete,
-		},
+	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.shootQuotaAdd,
+		DeleteFunc: shootController.shootQuotaDelete,
 	})
 
 	shootController.shootSynced = shootInformer.Informer().HasSynced
@@ -143,10 +131,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 
 // Run runs the Controller until the given stop channel can be read from.
 func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers, shootQuotaWorkers int, stopCh <-chan struct{}) {
-	var (
-		watchNamespace = c.config.Controllers.Shoot.WatchNamespace
-		waitGroup      sync.WaitGroup
-	)
+	var waitGroup sync.WaitGroup
 
 	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.quotaSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
@@ -164,11 +149,6 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		}
 	}()
 
-	if watchNamespace == nil {
-		logger.Logger.Info("Watching all namespaces for Shoot resources...")
-	} else {
-		logger.Logger.Infof("Watching only namespace '%s' for Shoot resources...", *watchNamespace)
-	}
 	logger.Logger.Info("Shoot controller initialized.")
 
 	// Update Shoots before starting the workers.
@@ -268,15 +248,6 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 // RunningWorkers returns the number of running workers.
 func (c *Controller) RunningWorkers() int {
 	return c.numberOfRunningWorkers
-}
-
-// shootNamespaceFilter filters Shoots based on their namespace and the configuration value.
-func (c *Controller) shootNamespaceFilter(obj interface{}) bool {
-	var (
-		shoot          = obj.(*gardenv1beta1.Shoot)
-		watchNamespace = c.config.Controllers.Shoot.WatchNamespace
-	)
-	return watchNamespace == nil || shoot.Namespace == *watchNamespace
 }
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
