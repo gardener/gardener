@@ -213,8 +213,8 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployme
 			"name":            deployment.Name,
 			"minReadySeconds": 500,
 			"rollingUpdate": map[string]interface{}{
-				"maxSurge":       1,
-				"maxUnavailable": 0,
+				"maxSurge":       deployment.MaxSurge.String(),
+				"maxUnavailable": deployment.MaxUnavailable.String(),
 			},
 			"labels": map[string]interface{}{
 				"name": deployment.Name,

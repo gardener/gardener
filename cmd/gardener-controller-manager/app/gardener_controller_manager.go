@@ -64,8 +64,8 @@ type Options struct {
 }
 
 // AddFlags adds flags for a specific Gardener controller manager to the specified FlagSet.
-func AddFlags(options *Options, fs *pflag.FlagSet) {
-	fs.StringVar(&options.ConfigFile, "config", options.ConfigFile, "The path to the configuration file.")
+func (o *Options) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.ConfigFile, "config", o.ConfigFile, "The path to the configuration file.")
 }
 
 // NewOptions returns a new Options object.
@@ -203,7 +203,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 	if err != nil {
 		panic(err)
 	}
-	AddFlags(opts, cmd.Flags())
+	opts.AddFlags(cmd.Flags())
 	return cmd
 }
 

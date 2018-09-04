@@ -45,7 +45,15 @@ func NewWithBackupInfrastructure(backupInfrastructure *gardenv1beta1.BackupInfra
 	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, backupInfrastructure.Spec.Seed, nil, backupInfrastructure)
 }
 
-func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, namespace, seedName string, shoot *gardenv1beta1.Shoot, backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*Operation, error) {
+func newOperation(logger *logrus.Entry,
+	k8sGardenClient kubernetes.Client,
+	k8sGardenInformers gardeninformers.Interface,
+	gardenerInfo *gardenv1beta1.Gardener,
+	secretsMap map[string]*corev1.Secret,
+	imageVector imagevector.ImageVector, namespace,
+	seedName string,
+	shoot *gardenv1beta1.Shoot,
+	backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*Operation, error) {
 	secrets := make(map[string]*corev1.Secret)
 	for k, v := range secretsMap {
 		secrets[k] = v

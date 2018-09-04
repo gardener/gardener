@@ -235,7 +235,17 @@ func autoConvert_v1beta1_AWSCloud_To_garden_AWSCloud(in *AWSCloud, out *garden.A
 	if err := Convert_v1beta1_AWSNetworks_To_garden_AWSNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]garden.AWSWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]garden.AWSWorker, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_AWSWorker_To_garden_AWSWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -250,7 +260,17 @@ func autoConvert_garden_AWSCloud_To_v1beta1_AWSCloud(in *garden.AWSCloud, out *A
 	if err := Convert_garden_AWSNetworks_To_v1beta1_AWSNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]AWSWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]AWSWorker, len(*in))
+		for i := range *in {
+			if err := Convert_garden_AWSWorker_To_v1beta1_AWSWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -550,7 +570,17 @@ func autoConvert_v1beta1_AzureCloud_To_garden_AzureCloud(in *AzureCloud, out *ga
 		return err
 	}
 	out.ResourceGroup = (*garden.AzureResourceGroup)(unsafe.Pointer(in.ResourceGroup))
-	out.Workers = *(*[]garden.AzureWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]garden.AzureWorker, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_AzureWorker_To_garden_AzureWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	return nil
 }
 
@@ -565,7 +595,17 @@ func autoConvert_garden_AzureCloud_To_v1beta1_AzureCloud(in *garden.AzureCloud, 
 		return err
 	}
 	out.ResourceGroup = (*AzureResourceGroup)(unsafe.Pointer(in.ResourceGroup))
-	out.Workers = *(*[]AzureWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]AzureWorker, len(*in))
+		for i := range *in {
+			if err := Convert_garden_AzureWorker_To_v1beta1_AzureWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	return nil
 }
 
@@ -937,10 +977,42 @@ func autoConvert_v1beta1_Cloud_To_garden_Cloud(in *Cloud, out *garden.Cloud, s c
 	out.Region = in.Region
 	out.SecretBindingRef = in.SecretBindingRef
 	out.Seed = (*string)(unsafe.Pointer(in.Seed))
-	out.AWS = (*garden.AWSCloud)(unsafe.Pointer(in.AWS))
-	out.Azure = (*garden.AzureCloud)(unsafe.Pointer(in.Azure))
-	out.GCP = (*garden.GCPCloud)(unsafe.Pointer(in.GCP))
-	out.OpenStack = (*garden.OpenStackCloud)(unsafe.Pointer(in.OpenStack))
+	if in.AWS != nil {
+		in, out := &in.AWS, &out.AWS
+		*out = new(garden.AWSCloud)
+		if err := Convert_v1beta1_AWSCloud_To_garden_AWSCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.AWS = nil
+	}
+	if in.Azure != nil {
+		in, out := &in.Azure, &out.Azure
+		*out = new(garden.AzureCloud)
+		if err := Convert_v1beta1_AzureCloud_To_garden_AzureCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Azure = nil
+	}
+	if in.GCP != nil {
+		in, out := &in.GCP, &out.GCP
+		*out = new(garden.GCPCloud)
+		if err := Convert_v1beta1_GCPCloud_To_garden_GCPCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.GCP = nil
+	}
+	if in.OpenStack != nil {
+		in, out := &in.OpenStack, &out.OpenStack
+		*out = new(garden.OpenStackCloud)
+		if err := Convert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.OpenStack = nil
+	}
 	out.Local = (*garden.Local)(unsafe.Pointer(in.Local))
 	return nil
 }
@@ -955,10 +1027,42 @@ func autoConvert_garden_Cloud_To_v1beta1_Cloud(in *garden.Cloud, out *Cloud, s c
 	out.Region = in.Region
 	out.SecretBindingRef = in.SecretBindingRef
 	out.Seed = (*string)(unsafe.Pointer(in.Seed))
-	out.AWS = (*AWSCloud)(unsafe.Pointer(in.AWS))
-	out.Azure = (*AzureCloud)(unsafe.Pointer(in.Azure))
-	out.GCP = (*GCPCloud)(unsafe.Pointer(in.GCP))
-	out.OpenStack = (*OpenStackCloud)(unsafe.Pointer(in.OpenStack))
+	if in.AWS != nil {
+		in, out := &in.AWS, &out.AWS
+		*out = new(AWSCloud)
+		if err := Convert_garden_AWSCloud_To_v1beta1_AWSCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.AWS = nil
+	}
+	if in.Azure != nil {
+		in, out := &in.Azure, &out.Azure
+		*out = new(AzureCloud)
+		if err := Convert_garden_AzureCloud_To_v1beta1_AzureCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Azure = nil
+	}
+	if in.GCP != nil {
+		in, out := &in.GCP, &out.GCP
+		*out = new(GCPCloud)
+		if err := Convert_garden_GCPCloud_To_v1beta1_GCPCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.GCP = nil
+	}
+	if in.OpenStack != nil {
+		in, out := &in.OpenStack, &out.OpenStack
+		*out = new(OpenStackCloud)
+		if err := Convert_garden_OpenStackCloud_To_v1beta1_OpenStackCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.OpenStack = nil
+	}
 	out.Local = (*Local)(unsafe.Pointer(in.Local))
 	return nil
 }
@@ -1149,7 +1253,17 @@ func autoConvert_v1beta1_GCPCloud_To_garden_GCPCloud(in *GCPCloud, out *garden.G
 	if err := Convert_v1beta1_GCPNetworks_To_garden_GCPNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]garden.GCPWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]garden.GCPWorker, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_GCPWorker_To_garden_GCPWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -1164,7 +1278,17 @@ func autoConvert_garden_GCPCloud_To_v1beta1_GCPCloud(in *garden.GCPCloud, out *G
 	if err := Convert_garden_GCPNetworks_To_v1beta1_GCPNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]GCPWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]GCPWorker, len(*in))
+		for i := range *in {
+			if err := Convert_garden_GCPWorker_To_v1beta1_GCPWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -2053,7 +2177,17 @@ func autoConvert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(in *OpenStackCl
 	if err := Convert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]garden.OpenStackWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]garden.OpenStackWorker, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_OpenStackWorker_To_garden_OpenStackWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -2070,7 +2204,17 @@ func autoConvert_garden_OpenStackCloud_To_v1beta1_OpenStackCloud(in *garden.Open
 	if err := Convert_garden_OpenStackNetworks_To_v1beta1_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]OpenStackWorker)(unsafe.Pointer(&in.Workers))
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]OpenStackWorker, len(*in))
+		for i := range *in {
+			if err := Convert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
 	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
 	return nil
 }
@@ -2718,7 +2862,17 @@ func Convert_garden_Shoot_To_v1beta1_Shoot(in *garden.Shoot, out *Shoot, s conve
 
 func autoConvert_v1beta1_ShootList_To_garden_ShootList(in *ShootList, out *garden.ShootList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]garden.Shoot)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]garden.Shoot, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_Shoot_To_garden_Shoot(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2729,7 +2883,17 @@ func Convert_v1beta1_ShootList_To_garden_ShootList(in *ShootList, out *garden.Sh
 
 func autoConvert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *ShootList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]Shoot)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]Shoot, len(*in))
+		for i := range *in {
+			if err := Convert_garden_Shoot_To_v1beta1_Shoot(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2847,12 +3011,9 @@ func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker,
 	out.MachineType = in.MachineType
 	out.AutoScalerMin = in.AutoScalerMin
 	out.AutoScalerMax = in.AutoScalerMax
+	// WARNING: in.MaxSurge requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/util/intstr.IntOrString vs k8s.io/apimachinery/pkg/util/intstr.IntOrString)
+	// WARNING: in.MaxUnavailable requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/util/intstr.IntOrString vs k8s.io/apimachinery/pkg/util/intstr.IntOrString)
 	return nil
-}
-
-// Convert_v1beta1_Worker_To_garden_Worker is an autogenerated conversion function.
-func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
-	return autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s)
 }
 
 func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
@@ -2860,12 +3021,9 @@ func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker,
 	out.MachineType = in.MachineType
 	out.AutoScalerMin = in.AutoScalerMin
 	out.AutoScalerMax = in.AutoScalerMax
+	// WARNING: in.MaxSurge requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/util/intstr.IntOrString vs *k8s.io/apimachinery/pkg/util/intstr.IntOrString)
+	// WARNING: in.MaxUnavailable requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/util/intstr.IntOrString vs *k8s.io/apimachinery/pkg/util/intstr.IntOrString)
 	return nil
-}
-
-// Convert_garden_Worker_To_v1beta1_Worker is an autogenerated conversion function.
-func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s conversion.Scope) error {
-	return autoConvert_garden_Worker_To_v1beta1_Worker(in, out, s)
 }
 
 func autoConvert_v1beta1_Zone_To_garden_Zone(in *Zone, out *garden.Zone, s conversion.Scope) error {

@@ -16,6 +16,8 @@ package validation_test
 
 import (
 	"fmt"
+	. "github.com/onsi/ginkgo/extensions/table"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -1786,6 +1788,36 @@ var _ = Describe("validation", func() {
 		})
 	})
 
+	Describe("#ValidateWorkers", func() {
+		DescribeTable("reject when maxUnavailable and maxSurge are invalid",
+			func(maxUnavailable, maxSurge intstr.IntOrString, expectType field.ErrorType) {
+				worker := garden.Worker{
+					Name:           "worker-name",
+					MachineType:    "large",
+					MaxUnavailable: maxUnavailable,
+					MaxSurge:       maxSurge,
+				}
+				errList := ValidateWorker(worker, false, nil)
+
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(expectType),
+				}))))
+			},
+
+			// double zero values (percent or int)
+			Entry("two zero integers", intstr.FromInt(0), intstr.FromInt(0), field.ErrorTypeInvalid),
+			Entry("zero int and zero percent", intstr.FromInt(0), intstr.FromString("0%"), field.ErrorTypeInvalid),
+			Entry("zero percent and zero int", intstr.FromString("0%"), intstr.FromInt(0), field.ErrorTypeInvalid),
+			Entry("two zero percents", intstr.FromString("0%"), intstr.FromString("0%"), field.ErrorTypeInvalid),
+
+			// greater than 100
+			Entry("maxUnavailable greater than 100 percent", intstr.FromString("101%"), intstr.FromString("100%"), field.ErrorTypeInvalid),
+
+			// below zero tests
+			Entry("values are not below zero", intstr.FromInt(-1), intstr.FromInt(0), field.ErrorTypeInvalid),
+			Entry("percentage is not less than zero", intstr.FromString("-90%"), intstr.FromString("90%"), field.ErrorTypeInvalid),
+		)
+	})
 	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *garden.Shoot
@@ -1816,46 +1848,60 @@ var _ = Describe("validation", func() {
 				Services: &invalidCIDR,
 			}
 			worker = garden.Worker{
-				Name:          "worker-name",
-				MachineType:   "large",
-				AutoScalerMin: 1,
-				AutoScalerMax: 1,
+				Name:           "worker-name",
+				MachineType:    "large",
+				AutoScalerMin:  1,
+				AutoScalerMax:  1,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 			invalidWorker = garden.Worker{
-				Name:          "",
-				MachineType:   "",
-				AutoScalerMin: -1,
-				AutoScalerMax: -2,
+				Name:           "",
+				MachineType:    "",
+				AutoScalerMin:  -1,
+				AutoScalerMax:  -2,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 			invalidWorkerName = garden.Worker{
-				Name:          "not_compliant",
-				MachineType:   "large",
-				AutoScalerMin: 1,
-				AutoScalerMax: 1,
+				Name:           "not_compliant",
+				MachineType:    "large",
+				AutoScalerMin:  1,
+				AutoScalerMax:  1,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 			invalidWorkerTooLongName = garden.Worker{
-				Name:          "worker-name-is-too-long",
-				MachineType:   "large",
-				AutoScalerMin: 1,
-				AutoScalerMax: 1,
+				Name:           "worker-name-is-too-long",
+				MachineType:    "large",
+				AutoScalerMin:  1,
+				AutoScalerMax:  1,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 			workerAutoScaling = garden.Worker{
-				Name:          "cpu-worker",
-				MachineType:   "large",
-				AutoScalerMin: 1,
-				AutoScalerMax: 2,
+				Name:           "cpu-worker",
+				MachineType:    "large",
+				AutoScalerMin:  1,
+				AutoScalerMax:  2,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 			workerAutoScalingInvalid = garden.Worker{
-				Name:          "cpu-worker",
-				MachineType:   "large",
-				AutoScalerMin: 0,
-				AutoScalerMax: 2,
+				Name:           "cpu-worker",
+				MachineType:    "large",
+				AutoScalerMin:  0,
+				AutoScalerMax:  2,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 			workerAutoScalingHibernated = garden.Worker{
-				Name:          "cpu-worker",
-				MachineType:   "large",
-				AutoScalerMin: 0,
-				AutoScalerMax: 0,
+				Name:           "cpu-worker",
+				MachineType:    "large",
+				AutoScalerMin:  0,
+				AutoScalerMax:  0,
+				MaxSurge:       intstr.FromInt(1),
+				MaxUnavailable: intstr.FromInt(0),
 			}
 		)
 

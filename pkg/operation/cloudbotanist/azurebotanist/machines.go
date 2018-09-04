@@ -109,10 +109,12 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, opera
 		)
 
 		machineDeployments = append(machineDeployments, operation.MachineDeployment{
-			Name:      deploymentName,
-			ClassName: className,
-			Minimum:   worker.AutoScalerMin,
-			Maximum:   worker.AutoScalerMax,
+			Name:           deploymentName,
+			ClassName:      className,
+			Minimum:        worker.AutoScalerMin,
+			Maximum:        worker.AutoScalerMax,
+			MaxSurge:       *worker.MaxSurge,
+			MaxUnavailable: *worker.MaxUnavailable,
 		})
 
 		machineClassSpec["name"] = className

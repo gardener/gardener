@@ -173,6 +173,15 @@ func SetDefaults_Project(obj *Project) {
 	}
 }
 
+func SetDefaults_Worker(obj *Worker) {
+	if obj.MaxSurge == nil {
+		obj.MaxSurge = &DefaultWorkerMaxSurge
+	}
+	if obj.MaxUnavailable == nil {
+		obj.MaxUnavailable = &DefaultWorkerMaxUnavailable
+	}
+}
+
 // SetDefaults_SecretBinding sets default values for SecretBinding objects.
 func SetDefaults_SecretBinding(obj *SecretBinding) {
 	if len(obj.SecretRef.Namespace) == 0 {

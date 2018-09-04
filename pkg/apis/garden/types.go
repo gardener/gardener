@@ -15,6 +15,7 @@
 package garden
 
 import (
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -896,6 +897,10 @@ type Worker struct {
 	AutoScalerMin int
 	// AutoScalerMin is the maximum number of VMs to create.
 	AutoScalerMax int
+	// MaxSurge is maximum number of VMs that are created during an update.
+	MaxSurge intstr.IntOrString
+	//MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	MaxUnavailable intstr.IntOrString
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.

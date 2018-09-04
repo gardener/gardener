@@ -17,6 +17,7 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"net"
 	"regexp"
 	"strconv"
@@ -40,6 +41,47 @@ import (
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
 func ValidateName(name string, prefix bool) []string {
 	return apivalidation.NameIsDNSSubdomain(name, prefix)
+}
+
+func ValidatePositiveIntOrPercent(intOrPercent intstr.IntOrString, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if intOrPercent.Type == intstr.String {
+		if validation.IsValidPercent(intOrPercent.StrVal) != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath, intOrPercent, "must be an integer or percentage (e.g '5%')"))
+		}
+	} else if intOrPercent.Type == intstr.Int {
+		allErrs = append(allErrs, apivalidation.ValidateNonnegativeField(int64(intOrPercent.IntValue()), fldPath)...)
+	}
+	return allErrs
+}
+
+func IsNotMoreThan100Percent(intOrStringValue intstr.IntOrString, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	value, isPercent := getPercentValue(intOrStringValue)
+	if !isPercent || value <= 100 {
+		return nil
+	}
+	allErrs = append(allErrs, field.Invalid(fldPath, intOrStringValue, "must not be greater than 100%"))
+	return allErrs
+}
+
+func getIntOrPercentValue(intOrStringValue intstr.IntOrString) int {
+	value, isPercent := getPercentValue(intOrStringValue)
+	if isPercent {
+		return value
+	}
+	return intOrStringValue.IntValue()
+}
+
+func getPercentValue(intOrStringValue intstr.IntOrString) (int, bool) {
+	if intOrStringValue.Type != intstr.String {
+		return 0, false
+	}
+	if len(validation.IsValidPercent(intOrStringValue.StrVal)) != 0 {
+		return 0, false
+	}
+	value, _ := strconv.Atoi(intOrStringValue.StrVal[:len(intOrStringValue.StrVal)-1])
+	return value, true
 }
 
 ////////////////////////////////////////////////////
@@ -941,7 +983,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 		}
 		for i, worker := range aws.Workers {
 			idxPath := awsPath.Child("workers").Index(i)
-			allErrs = append(allErrs, validateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -995,7 +1037,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 		}
 		for i, worker := range azure.Workers {
 			idxPath := azurePath.Child("workers").Index(i)
-			allErrs = append(allErrs, validateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 35, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -1034,7 +1076,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 		}
 		for i, worker := range gcp.Workers {
 			idxPath := gcpPath.Child("workers").Index(i)
-			allErrs = append(allErrs, validateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -1081,7 +1123,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 		}
 		for i, worker := range openStack.Workers {
 			idxPath := openStackPath.Child("workers").Index(i)
-			allErrs = append(allErrs, validateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
@@ -1357,7 +1399,7 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 	return allErrs
 }
 
-func validateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *field.Path) field.ErrorList {
+func ValidateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
@@ -1382,6 +1424,15 @@ func validateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *fiel
 	}
 	if autoScalingEnabled && worker.AutoScalerMax != 0 && worker.AutoScalerMin == 0 {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin"), "minimum value must be larger than 0 if autoscaling is enabled and maximum is not equals zero"))
+	}
+
+	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxSurge, fldPath.Child("maxSurge"))...)
+	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
+	allErrs = append(allErrs, IsNotMoreThan100Percent(worker.MaxUnavailable, fldPath.Child("maxUnavailable"))...)
+
+	if getIntOrPercentValue(worker.MaxUnavailable) == 0 && getIntOrPercentValue(worker.MaxSurge) == 0 {
+		// Both MaxSurge and MaxUnavailable cannot be zero.
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "may not be 0 when `maxSurge` is 0"))
 	}
 
 	return allErrs

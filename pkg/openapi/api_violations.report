@@ -50,3 +50,6 @@ API rule violation: names_match,k8s.io/apimachinery/pkg/runtime,RawExtension,Raw
 API rule violation: names_match,k8s.io/apimachinery/pkg/runtime,Unknown,Raw
 API rule violation: names_match,k8s.io/apimachinery/pkg/runtime,Unknown,ContentEncoding
 API rule violation: names_match,k8s.io/apimachinery/pkg/runtime,Unknown,ContentType
+API rule violation: names_match,k8s.io/apimachinery/pkg/util/intstr,IntOrString,Type
+API rule violation: names_match,k8s.io/apimachinery/pkg/util/intstr,IntOrString,IntVal
+API rule violation: names_match,k8s.io/apimachinery/pkg/util/intstr,IntOrString,StrVal

@@ -80,6 +80,8 @@ spec:
         volumeSize: 20Gi
         autoScalerMin: 2
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
       % endif
       zones: ${value("spec.cloud.aws.zones", ["eu-west-1a"])}
     % endif
@@ -112,6 +114,8 @@ spec:
         volumeSize: 35Gi # must be at least 35Gi for Azure VMs
         autoScalerMin: 2
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
       % endif
     % endif
     % if cloud == "gcp":
@@ -135,6 +139,8 @@ spec:
         volumeSize: 20Gi
         autoScalerMin: 2
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
       % endif
       zones: ${value("spec.cloud.gcp.zones", ["europe-west1-b"])}
     % endif
@@ -159,6 +165,8 @@ spec:
         machineType: medium_2_4
         autoScalerMin: 2
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
       % endif
       zones: ${value("spec.cloud.openstack.zones", ["europe-1a"])}
     % endif

@@ -45,6 +45,36 @@ var _ = Describe("common", func() {
 			})
 		})
 
+		Describe("#DistributePercentOverZones", func() {
+			It("should return unmodified percentage if total is evenly divisble", func() {
+				var (
+					total      = 6
+					noOfZones  = 3
+					percentage = "40%"
+				)
+
+				percentages := make([]string, 0, noOfZones)
+				for i := 0; i < noOfZones; i++ {
+					percentages = append(percentages, DistributePercentOverZones(i, percentage, noOfZones, total))
+				}
+				Expect(percentages).To(Equal([]string{percentage, percentage, percentage}))
+			})
+
+			It("should return correct percentage if total is not evenly divisble", func() {
+				var (
+					total      = 7
+					noOfZones  = 3
+					percentage = "40%"
+				)
+
+				percentages := make([]string, 0, noOfZones)
+				for i := 0; i < noOfZones; i++ {
+					percentages = append(percentages, DistributePercentOverZones(i, percentage, noOfZones, total))
+				}
+				Expect(percentages).To(Equal([]string{"52%", "35%", "35%"}))
+			})
+		})
+
 		Describe("#ComputeClusterIP", func() {
 			It("should return a cluster IP as string", func() {
 				var (
