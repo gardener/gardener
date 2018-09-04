@@ -239,7 +239,7 @@ spec:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
   % if cloud != "local":
   backup:
-    schedule: ${value("backup.schedule", "\"*/5 * * * *\"")}
+    schedule: ${value("backup.schedule", "\"0 */24 * * *\"")}
     maximum: ${value("backup.maximum", "7")}
   % endif
   addons:
@@ -273,8 +273,12 @@ spec:
           }
       % endif
     % endif
+    # Heapster addon is deprecated and no longer supported. Gardener deploys the Kubernetes metrics-server
+    # into the kube-system namespace of shoots (cannot be turned off) for fetching metrics and enabling
+    # horizontal pod auto-scaling.
+    # This field will be removed in the future. Do not use it anymore.
     heapster:
-      enabled: ${value("spec.addons.heapster.enabled", "true")}
+      enabled: ${value("spec.addons.heapster.enabled", "false")}
     kubernetes-dashboard:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
     cluster-autoscaler:

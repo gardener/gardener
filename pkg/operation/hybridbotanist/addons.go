@@ -23,6 +23,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -53,7 +54,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
 			},
 		}
-		vpnShootConfig = map[string]interface{}{
+		metricsServerConfig = map[string]interface{}{}
+		vpnShootConfig      = map[string]interface{}{
 			"podNetwork":     b.Shoot.GetPodNetwork(),
 			"serviceNetwork": b.Shoot.GetServiceNetwork(),
 			"nodeNetwork":    b.Shoot.GetNodeNetwork(),
@@ -86,6 +88,10 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
+	metricsServer, err := b.Botanist.InjectImages(metricsServerConfig, b.K8sShootClient.Version(), map[string]string{"metrics-server": "metrics-server"})
+	if err != nil {
+		return nil, err
+	}
 	vpnShoot, err := b.Botanist.InjectImages(vpnShootConfig, b.K8sShootClient.Version(), map[string]string{"vpn-shoot": "vpn-shoot"})
 	if err != nil {
 		return nil, err
@@ -100,11 +106,12 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
-		"global":     global,
-		"kube-dns":   kubeDNS,
-		"kube-proxy": kubeProxy,
-		"vpn-shoot":  vpnShoot,
-		"calico":     calico,
+		"global":         global,
+		"kube-dns":       kubeDNS,
+		"kube-proxy":     kubeProxy,
+		"vpn-shoot":      vpnShoot,
+		"calico":         calico,
+		"metrics-server": metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter": nodeExporter,
 		},
@@ -116,10 +123,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
 	clusterAutoscalerConfig, err := b.Botanist.GenerateClusterAutoscalerConfig()
-	if err != nil {
-		return nil, err
-	}
-	heapsterConfig, err := b.Botanist.GenerateHeapsterConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -170,10 +173,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		}
 	}
 
-	heapster, err := b.Botanist.InjectImages(heapsterConfig, b.K8sShootClient.Version(), map[string]string{"heapster": "heapster", "heapster-nanny": "addon-resizer"})
-	if err != nil {
-		return nil, err
-	}
 	helmTiller, err := b.Botanist.InjectImages(helmTillerConfig, b.K8sShootClient.Version(), map[string]string{"helm-tiller": "helm-tiller"})
 	if err != nil {
 		return nil, err
@@ -199,9 +198,26 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 
+	// From https://github.com/kubernetes/kubernetes/blob/677f740adf61f9c56d0719eacabfeae3b0787256/cluster/addons/addon-manager/README.md:
+	// "Addons with label addonmanager.kubernetes.io/mode=EnsureExists will be checked for existence only. Users can edit these addons as they want. In particular:"
+	// "* Addon will only be created/re-created with the given template file when there is no instance of the resource with that name."
+	// "* Addon will not be deleted when the manifest file is deleted from the $ADDON_PATH."
+	// --> As we used the 'addonmanager.kubernetes.io/mode=EnsureExists' label for the Heapster deployment in previous versions we have to delete it ourselves now.
+	//     This behavior can be removed in a future release.
+	heapsterDeployments, err := b.K8sShootClient.ListDeployments(metav1.NamespaceSystem, metav1.ListOptions{
+		LabelSelector: "chart=heapster-0.1.1,origin=gardener",
+	})
+	if err != nil {
+		return nil, err
+	}
+	for _, deployment := range heapsterDeployments.Items {
+		if err := b.K8sShootClient.DeleteDeployment(metav1.NamespaceSystem, deployment.Name); err != nil && !apierrors.IsNotFound(err) {
+			return nil, err
+		}
+	}
+
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"cluster-autoscaler":   clusterAutoscalerConfig,
-		"heapster":             heapster,
 		"helm-tiller":          helmTiller,
 		"kube-lego":            kubeLego,
 		"kube2iam":             kube2IAM,

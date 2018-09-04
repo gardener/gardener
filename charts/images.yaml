@@ -66,6 +66,10 @@ images:
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
   tag: v0.12.0
+- name: metrics-server
+  sourceRepository: github.com/kubernetes-incubator/metrics-server
+  repository: k8s.gcr.io/metrics-server-amd64
+  tag: v0.3.0
 
 # Shoot core addons
 - name: calico-node
@@ -102,14 +106,6 @@ images:
   tag: "1.2.0"
 
 # Shoot optional addons
-- name: heapster
-  sourceRepository: github.com/kubernetes/heapster
-  repository: k8s.gcr.io/heapster
-  tag: v1.5.2
-- name: addon-resizer
-  sourceRepository: github.com/kubernetes/autoscaler/tree/master/addon-resizer
-  repository: k8s.gcr.io/addon-resizer
-  tag: "2.1"
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64

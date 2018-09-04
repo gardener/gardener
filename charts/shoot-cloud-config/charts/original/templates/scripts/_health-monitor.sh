@@ -40,7 +40,7 @@
 
       while [ 1 ]; do
         # Check whether the kubelet's /healthz endpoint reports unhealthiness
-        if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10255/healthz 2>&1); then
+        if ! output=$(curl -m $max_seconds -f -s -S http://127.0.0.1:10248/healthz 2>&1); then
           echo $output
           echo "Kubelet is unhealthy!"
           restart_kubelet

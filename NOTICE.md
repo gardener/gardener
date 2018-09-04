@@ -21,7 +21,6 @@ Apache 2 license (https://git.k8s.io/kubernetes/LICENSE).
 
 The following charts of the [`charts`](charts) directory were seeded based on a copy of the following origins:
 
-* [git.k8s.io/charts/stable/heapster](https://git.k8s.io/charts/stable/heapster)
 * [git.k8s.io/charts/stable/kube-lego](https://git.k8s.io/charts/stable/kube-lego)
 * [git.k8s.io/charts/stable/kube-state-metrics](https://git.k8s.io/charts/stable/kube-state-metrics)
 * [git.k8s.io/charts/stable/kube2iam](https://git.k8s.io/charts/stable/kube2iam)

@@ -102,29 +102,6 @@ func (b *Botanist) GenerateMonocularConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(values, enabled), nil
 }
 
-// GenerateHeapsterConfig generates the values which are required to render the chart of
-// heapster properly.
-func (b *Botanist) GenerateHeapsterConfig() (map[string]interface{}, error) {
-	var (
-		enabled = b.Shoot.HeapsterEnabled()
-		values  map[string]interface{}
-	)
-
-	if enabled {
-		addonManagerLabels := map[string]interface{}{
-			"addonmanager.kubernetes.io/mode": "Reconcile",
-		}
-		values = map[string]interface{}{
-			"labels": addonManagerLabels,
-			"service": map[string]interface{}{
-				"labels": addonManagerLabels,
-			},
-		}
-	}
-
-	return common.GenerateAddonConfig(values, enabled), nil
-}
-
 // GenerateHelmTillerConfig generates the values which are required to render the chart of
 // helm-tiller properly.
 func (b *Botanist) GenerateHelmTillerConfig() (map[string]interface{}, error) {

@@ -1,0 +1,20 @@
+---
+apiVersion: {{ include "apiserviceversion" . }}
+kind: APIService
+metadata:
+  name: v1beta1.metrics.k8s.io
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  service:
+    name: metrics-server
+    namespace: kube-system
+  group: metrics.k8s.io
+  version: v1beta1
+  groupPriorityMinimum: 100
+  versionPriority: 100
+  # We should generate a new CA used for the metrics-server and sign its certificates with it.
+  # For now, we will keep the TLS cert/key exposed by the metrics-server self-signed/self-generated and configure the kube-apiserver not to
+  # verify it. Once the secret-generation refactoring is done we can easily generate new CAs and new certificates. Let's wait for the refactorting
+  # to be merged.
+  insecureSkipTLSVerify: true

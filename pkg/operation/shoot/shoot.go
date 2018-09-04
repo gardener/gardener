@@ -232,11 +232,6 @@ func (s *Shoot) ClusterAutoscalerEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.ClusterAutoscaler != nil && s.Info.Spec.Addons.ClusterAutoscaler.Enabled
 }
 
-// HeapsterEnabled returns true if the heapster addon is enabled in the Shoot manifest.
-func (s *Shoot) HeapsterEnabled() bool {
-	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Heapster != nil && s.Info.Spec.Addons.Heapster.Enabled
-}
-
 // Kube2IAMEnabled returns true if the kube2iam addon is enabled in the Shoot manifest.
 func (s *Shoot) Kube2IAMEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Kube2IAM != nil && s.Info.Spec.Addons.Kube2IAM.Enabled
