@@ -768,7 +768,18 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 
 func (b *Botanist) syncShootCredentialsToGarden() error {
 	for key, value := range map[string]string{"kubeconfig": "kubecfg", "ssh-keypair": "ssh-keypair"} {
-		if _, err := b.K8sGardenClient.CreateSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, key), corev1.SecretTypeOpaque, b.Secrets[value].Data, true); err != nil {
+		secretObj := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      fmt.Sprintf("%s.%s", b.Shoot.Info.Name, key),
+				Namespace: b.Shoot.Info.Namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					*metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")),
+				},
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: b.Secrets[value].Data,
+		}
+		if _, err := b.K8sGardenClient.CreateSecretObject(secretObj, true); err != nil {
 			return err
 		}
 	}
