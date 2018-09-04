@@ -76,6 +76,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener":                      schema_pkg_apis_garden_v1beta1_Gardener(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster":                      schema_pkg_apis_garden_v1beta1_Heapster(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HelmTiller":                    schema_pkg_apis_garden_v1beta1_HelmTiller(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation":                   schema_pkg_apis_garden_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks":                   schema_pkg_apis_garden_v1beta1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM":                      schema_pkg_apis_garden_v1beta1_Kube2IAM(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole":                  schema_pkg_apis_garden_v1beta1_Kube2IAMRole(ref),
@@ -2274,6 +2275,27 @@ func schema_pkg_apis_garden_v1beta1_HelmTiller(ref common.ReferenceCallback) com
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Hibernation contains information whether the Shoot is suspended or not.",
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled is true if Shoot is hibernated, false otherwise.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_K8SNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4416,6 +4438,12 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS"),
 						},
 					},
+					"hibernation": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Hibernation contains information whether the Shoot is suspended or not.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation"),
+						},
+					},
 					"kubernetes": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Kubernetes contains the version and configuration settings of the control plane components.",
@@ -4432,7 +4460,7 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"},
 	}
 }
 

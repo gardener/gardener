@@ -238,7 +238,13 @@ spec:
   % endif
   dns:
     provider: ${value("spec.dns.provider", "aws-route53") if cloud != "local" else "unmanaged"}
-    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<minikube-ip>.nip.io"}
+    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<minikube-ip>.nip.io"}<% hibernation = value("spec.hibernation", {}) %>
+  % if hibernation != {}:
+  hibernation: ${yaml.dump(hibernation, width=10000)}
+  % else:
+# hibernation:
+#   enabled: false
+  % endif
   maintenance:
     timeWindow:
       begin: ${value("spec.maintenance.timeWindow.begin", "220000+0100")}

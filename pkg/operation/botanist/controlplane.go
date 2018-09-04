@@ -183,21 +183,14 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 	)
 
 	for _, worker := range b.MachineDeployments {
-		// Skip worker pools for which min=max=0.
-		if worker.Minimum == 0 && worker.Maximum == 0 {
-			continue
-		}
-
-		// Cluster Autoscaler requires min>=1. We ensure that in the API server validation part, however,
-		// for backwards compatibility, we treat existing worker pools whose minimum equals 0 as min=1.
-		min := worker.Minimum
+		// Skip worker pools for which min=0. Auto scaler cannot handle worker pools having a min count of 0.
 		if worker.Minimum == 0 {
-			min = 1
+			continue
 		}
 
 		workerPools = append(workerPools, map[string]interface{}{
 			"name": worker.Name,
-			"min":  min,
+			"min":  worker.Minimum,
 			"max":  worker.Maximum,
 		})
 	}

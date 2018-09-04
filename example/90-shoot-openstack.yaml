@@ -68,6 +68,8 @@ spec:
   dns:
     provider: aws-route53
     domain: johndoe-openstack.garden-dev.example.com
+# hibernation:
+#   enabled: false
   maintenance:
     timeWindow:
       begin: 220000+0100
