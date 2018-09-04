@@ -30,7 +30,7 @@ import (
 // been created (i.e., its ingress information has been updated in the service status).
 func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady() error {
 	var e error
-	if err := wait.PollImmediate(5*time.Second, 600*time.Second, func() (bool, error) {
+	if err := wait.Poll(5*time.Second, 600*time.Second, func() (bool, error) {
 		loadBalancerIngress, serviceStatusIngress, err := common.GetLoadBalancerIngress(b.K8sSeedClient, b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
 		if err != nil {
 			e = err
@@ -48,7 +48,7 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady() error {
 
 // WaitUntilEtcdReady waits until the etcd statefulsets indicate readiness in their statuses.
 func (b *Botanist) WaitUntilEtcdReady() error {
-	return wait.PollImmediate(5*time.Second, 300*time.Second, func() (bool, error) {
+	return wait.Poll(5*time.Second, 300*time.Second, func() (bool, error) {
 		statefulSetList, err := b.K8sSeedClient.ListStatefulSets(b.Shoot.SeedNamespace, metav1.ListOptions{
 			LabelSelector: "app=etcd-statefulset",
 		})

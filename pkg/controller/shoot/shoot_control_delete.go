@@ -105,31 +105,31 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 
 		// We need to ensure that the deployed cloud provider secret is up-to-date. In case it has changed then we
 		// need to redeploy the cloud provider config (containing the secrets for some cloud providers) as well as
-		// restart the components using the secrets (API server, controller manager). We also need to update all
+		// restart the components using the secrets (cloud controller, controller manager). We also need to update all
 		// existing machine class secrets.
-		deploySecrets = g.Add(flow.Task{
-			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.TaskFn(botanist.DeploySecrets).DoIf(cleanupShootResources),
+		deployCloudProviderSecret = g.Add(flow.Task{
+			Name: "Deploying cloud provider account secret",
+			Fn:   flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
 		})
 		refreshMachineClassSecrets = g.Add(flow.Task{
 			Name:         "Refreshing machine class secrets",
 			Fn:           flow.TaskFn(hybridBotanist.RefreshMachineClassSecrets).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret),
 		})
 		refreshCloudProviderConfig = g.Add(flow.Task{
 			Name:         "Refreshing cloud provider configuration",
 			Fn:           flow.TaskFn(hybridBotanist.RefreshCloudProviderConfig).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret),
 		})
 		refreshCloudControllerManager = g.Add(flow.Task{
 			Name:         "Refreshing cloud controller manager checksums",
 			Fn:           flow.TaskFn(botanist.RefreshCloudControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, refreshCloudProviderConfig),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
 		})
 		refreshKubeControllerManager = g.Add(flow.Task{
-			Name:         "Refreshing Kube controller manager checksums",
+			Name:         "Refreshing Kubernetes controller manager checksums",
 			Fn:           flow.TaskFn(botanist.RefreshKubeControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, refreshCloudProviderConfig),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
 		})
 
 		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
@@ -137,7 +137,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deploySecrets, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager),
 		})
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting Shoot monitoring stack in Seed",
@@ -145,7 +145,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deleteKubeAddonManager = g.Add(flow.Task{
-			Name:         "Deleting Kube addon manager",
+			Name:         "Deleting Kubernetes addon manager",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
@@ -155,7 +155,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		waitUntilKubeAddonManagerDeleted = g.Add(flow.Task{
-			Name:         "Waiting until Kube addon manager has been deleted",
+			Name:         "Waiting until Kubernetes addon manager has been deleted",
 			Fn:           botanist.WaitUntilKubeAddonManagerDeleted,
 			Dependencies: flow.NewTaskIDs(deleteKubeAddonManager),
 		})
@@ -210,7 +210,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		)
 
 		deleteKubeAPIServer = g.Add(flow.Task{
-			Name:         "Deleting Kube API server",
+			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointTerraformers),
 		})

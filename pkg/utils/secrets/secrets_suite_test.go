@@ -12,10 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Bridge package to expose internal functions to tests in the botanist_test package.
+package secrets_test
 
-package botanist
+import (
+	"testing"
 
-var (
-	ExportGenerateKubeconfig = generateKubeconfig
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
+
+func TestSecrets(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Utility Secrets Suite")
+}

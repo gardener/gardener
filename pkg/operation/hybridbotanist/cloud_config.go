@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -70,7 +71,7 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 	config := map[string]interface{}{
 		"cloudProvider": cloudProvider,
 		"kubernetes": map[string]interface{}{
-			"caCert":     string(b.Secrets["ca"].Data["ca.crt"]),
+			"caCert":     string(b.Secrets["ca"].Data[secrets.DataKeyCertificateCA]),
 			"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
 			// TODO: resolve conformance test issue before changing:
 			// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
