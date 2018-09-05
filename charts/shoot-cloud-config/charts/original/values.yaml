@@ -7,10 +7,10 @@
 # images:
 #   hyperkube: image-repository
 # kubernetes:
-#   caCert: abcd
 #   clusterDNS: 100.64.0.10
 #   domain: cluster.local
 #   kubelet:
+#     caCert: abcd
 #     bootstrapToken: hugo
 #     hostnameOverride: false
 #     parameters: []

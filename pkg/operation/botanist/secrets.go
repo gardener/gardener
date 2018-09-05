@@ -37,6 +37,7 @@ const (
 	caCluster    = "ca"
 	caETCD       = "ca-etcd"
 	caFrontProxy = "ca-front-proxy"
+	caKubelet    = "ca-kubelet"
 )
 
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
@@ -53,6 +54,11 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	caFrontProxy: &secrets.CertificateSecretConfig{
 		Name:       caFrontProxy,
 		CommonName: "front-proxy",
+		CertType:   secrets.CACert,
+	},
+	caKubelet: &secrets.CertificateSecretConfig{
+		Name:       caKubelet,
+		CommonName: "kubelet",
 		CertType:   secrets.CACert,
 	},
 }
@@ -128,7 +134,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[caKubelet],
 			},
 		},
 
@@ -621,6 +627,7 @@ func (b *Botanist) deleteOldCertificates(existingSecretsMap map[string]*corev1.S
 	var dedicatedCASecrets = map[string][]string{
 		caETCD:       []string{"etcd-server-tls", "etcd-client-tls"},
 		caFrontProxy: []string{"kube-aggregator"},
+		caKubelet:    []string{"kube-apiserver-kubelet"},
 	}
 	for caName, secrets := range dedicatedCASecrets {
 		for _, secretName := range secrets {

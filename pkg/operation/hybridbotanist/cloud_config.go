@@ -71,12 +71,12 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 	config := map[string]interface{}{
 		"cloudProvider": cloudProvider,
 		"kubernetes": map[string]interface{}{
-			"caCert":     string(b.Secrets["ca"].Data[secrets.DataKeyCertificateCA]),
 			"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
 			// TODO: resolve conformance test issue before changing:
 			// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
 			"domain": gardenv1beta1.DefaultDomain,
 			"kubelet": map[string]interface{}{
+				"caCert":           string(b.Secrets["ca-kubelet"].Data[secrets.DataKeyCertificateCA]),
 				"bootstrapToken":   bootstraptokenutil.TokenFromIDAndSecret(string(bootstrapTokenSecretData[bootstraptokenapi.BootstrapTokenIDKey]), string(bootstrapTokenSecretData[bootstraptokenapi.BootstrapTokenSecretKey])),
 				"parameters":       userDataConfig.KubeletParameters,
 				"hostnameOverride": userDataConfig.HostnameOverride,
