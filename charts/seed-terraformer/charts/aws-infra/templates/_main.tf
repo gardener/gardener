@@ -321,7 +321,7 @@ resource "aws_iam_role_policy" "nodes" {
     {
       "Effect": "Allow",
       "Action": [
-        "ec2:Describe*"
+        "ec2:DescribeInstances"
       ],
       "Resource": [
         "*"
