@@ -17,64 +17,45 @@ spec:
         versions:
         - 1.11.0
         - 1.10.5
-        - 1.9.8
-        - 1.8.14
       machineImages:
       - name: CoreOS
         version: "1745.7.0"
         id: coreos_1745_7_0_64_30G_alibase_20180705.vhd
       machineTypes:
-      - name: ecs.t5-lc1m1.small
-        cpu: "1"
-        gpu: "0"
-        memory: 1Gi
-      - name: ecs.t5-lc1m2.small
-        cpu: "1"
-        gpu: "0"
-        memory: 2Gi
-      - name: ecs.t5-lc1m2.large
-        cpu: "2"
-        gpu: "0"
-        memory: 4Gi
-      - name: ecs.mn4.small
-        cpu: "1"
-        gpu: "0"
-        memory: 4Gi
       - name: ecs.sn2ne.large
         cpu: "2"
         gpu: "0"
         memory: 8Gi
+        zones:
+        - cn-beijing-f
       - name: ecs.sn2ne.xlarge
         cpu: "4"
         gpu: "0"
         memory: 16Gi
+        zones:
+        - cn-beijing-f
       - name: ecs.sn2ne.2xlarge
         cpu: "8"
         gpu: "0"
         memory: 32Gi
+        zones:
+        - cn-beijing-f
       - name: ecs.sn2ne.3xlarge
         cpu: "12"
         gpu: "0"
         memory: 48Gi
+        zones:
+        - cn-beijing-f
       volumeTypes:
       - name: cloud_efficiency
-        class: cloud_efficiency
-      - name: cloud
-        class: cloud
+        class: standard
+        zones:
+        - cn-beijing-f
       - name: ssd
-        class: ssd
+        class: premium
+        zones:
+        - cn-beijing-f
       zones: # List of availablity zones together with resource contraints in a specific region
       - region: cn-beijing
-        zoneContraints: 
-        - zone: cn-beijing-f # Avalibility zone
-          volumeTypes: # Available volume types for this zone
-          - cloud_efficiency
-          - ssd
-          machineTypes: # Available machine types for this zone
-          - ecs.t5-lc1m1.small 
-          - ecs.t5-lc1m2.small
-          - ecs.t5-lc1m2.large
-          - ecs.sn2ne.large
-          - ecs.sn2ne.xlarge
-          - ecs.sn2ne.2xlarge
-          - ecs.sn2ne.3xlarge
+        names:
+        - cn-beijing-f  # Avalibility zone
