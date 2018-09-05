@@ -34,10 +34,11 @@ import (
 )
 
 const (
-	caCluster    = "ca"
-	caETCD       = "ca-etcd"
-	caFrontProxy = "ca-front-proxy"
-	caKubelet    = "ca-kubelet"
+	caCluster       = "ca"
+	caETCD          = "ca-etcd"
+	caFrontProxy    = "ca-front-proxy"
+	caKubelet       = "ca-kubelet"
+	caMetricsServer = "ca-metrics-server"
 )
 
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
@@ -59,6 +60,11 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	caKubelet: &secrets.CertificateSecretConfig{
 		Name:       caKubelet,
 		CommonName: "kubelet",
+		CertType:   secrets.CACert,
+	},
+	caMetricsServer: &secrets.CertificateSecretConfig{
+		Name:       caMetricsServer,
+		CommonName: "metrics-server",
 		CertType:   secrets.CACert,
 	},
 }
@@ -456,6 +462,23 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			CertType:  secrets.ClientCert,
 			SigningCA: certificateAuthorities[caETCD],
+		},
+
+		// Secret definition for metrics-server
+		&secrets.CertificateSecretConfig{
+			Name: "metrics-server",
+
+			CommonName:   "metrics-server",
+			Organization: nil,
+			DNSNames: []string{
+				"metrics-server",
+				fmt.Sprintf("metrics-server.%s", metav1.NamespaceSystem),
+				fmt.Sprintf("metrics-server.%s.svc", metav1.NamespaceSystem),
+			},
+			IPAddresses: nil,
+
+			CertType:  secrets.ServerClientCert,
+			SigningCA: certificateAuthorities[caMetricsServer],
 		},
 
 		// Secret definition for alertmanager (ingress)
