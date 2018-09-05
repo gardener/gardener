@@ -185,14 +185,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			}
 			return nil
 		}
-		seedLogger.Infof("Can't delete Seed, because the following objects are still referencing it:")
+
+		parentLogMessage := "Can't delete Seed, because the following objects are still referencing it: "
 		if len(associatedShoots) != 0 {
-			seedLogger.Infof("Shoots: %v", associatedShoots)
+			seedLogger.Infof("%s Shoots=%v", parentLogMessage, associatedShoots)
 		}
 		if len(associatedBackupInfrastructures) != 0 {
-			seedLogger.Infof("BackupInfrastructures: %v", associatedBackupInfrastructures)
+			seedLogger.Infof("%s BackupInfrastructures=%v", parentLogMessage, associatedBackupInfrastructures)
 		}
-		return errors.New("Seed still has references")
+		return errors.New("seed still has references")
 	}
 
 	seedLogger.Infof("[SEED RECONCILE] %s", key)
