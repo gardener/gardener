@@ -35,12 +35,18 @@ import (
 
 const (
 	caCluster = "ca"
+	caETCD    = "ca-etcd"
 )
 
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	caCluster: &secrets.CertificateSecretConfig{
 		Name:       caCluster,
 		CommonName: "kubernetes",
+		CertType:   secrets.CACert,
+	},
+	caETCD: &secrets.CertificateSecretConfig{
+		Name:       caETCD,
+		CommonName: "etcd",
 		CertType:   secrets.CACert,
 	},
 }
@@ -424,7 +430,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerClientCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[caETCD],
 		},
 
 		// Secret definition for etcd server
@@ -437,7 +443,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[caETCD],
 		},
 
 		// Secret definition for alertmanager (ingress)
@@ -508,6 +514,10 @@ func (b *Botanist) DeploySecrets() error {
 		return err
 	}
 
+	if err := b.deleteOldCertificates(existingSecretsMap); err != nil {
+		return err
+	}
+
 	certificateAuthorities, err := b.generateCertificateAuthorities(existingSecretsMap)
 	if err != nil {
 		return err
@@ -569,6 +579,19 @@ func (b *Botanist) DeployCloudProviderSecret() error {
 	return nil
 }
 
+// DeleteGardenSecrets deletes the Shoot-specific secrets from the project namespace in the Garden cluster.
+// TODO: https://github.com/gardener/gardener/pull/353: This can be removed in a future version as we are now using owner
+// references for the Garden secrets (also remove the actual invocation of the function in the deletion flow of a Shoot).
+func (b *Botanist) DeleteGardenSecrets() error {
+	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "kubeconfig")); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "ssh-keypair")); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
 func (b *Botanist) fetchExistingSecrets() (map[string]*corev1.Secret, error) {
 	secretList, err := b.K8sSeedClient.ListSecrets(b.Shoot.SeedNamespace, metav1.ListOptions{})
 	if err != nil {
@@ -584,16 +607,25 @@ func (b *Botanist) fetchExistingSecrets() (map[string]*corev1.Secret, error) {
 	return existingSecretsMap, nil
 }
 
-// DeleteGardenSecrets deletes the Shoot-specific secrets from the project namespace in the Garden cluster.
-// TODO: https://github.com/gardener/gardener/pull/353: This can be removed in a future version as we are now using owner
-// references for the Garden secrets (also remove the actual invocation of the function in the deletion flow of a Shoot).
-func (b *Botanist) DeleteGardenSecrets() error {
-	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "kubeconfig")); err != nil && !apierrors.IsNotFound(err) {
-		return err
+// Previously, we have used the same certificate authority in all places. Now, we are using dedicated CAs for the
+// different components. Gardener does not re-create/generate certificates/secrets if they already exist. Hence,
+// we have to delete the existing certificates to let them re-created and re-signed by a new CA.
+// This can be removed in a future version. See details: https://github.com/gardener/gardener/pull/353
+func (b *Botanist) deleteOldCertificates(existingSecretsMap map[string]*corev1.Secret) error {
+	var dedicatedCASecrets = map[string][]string{
+		caETCD: []string{"etcd-server-tls", "etcd-client-tls"},
 	}
-	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "ssh-keypair")); err != nil && !apierrors.IsNotFound(err) {
-		return err
+	for caName, secrets := range dedicatedCASecrets {
+		for _, secretName := range secrets {
+			if _, ok := existingSecretsMap[caName]; !ok {
+				if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, secretName); err != nil && !apierrors.IsNotFound(err) {
+					return err
+				}
+				delete(existingSecretsMap, secretName)
+			}
+		}
 	}
+
 	return nil
 }
 

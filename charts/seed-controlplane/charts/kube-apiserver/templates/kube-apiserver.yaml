@@ -56,9 +56,9 @@ spec:
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
-        - --etcd-cafile=/srv/kubernetes/ca/ca.crt
-        - --etcd-certfile=/srv/kubernetes/etcd/tls.crt
-        - --etcd-keyfile=/srv/kubernetes/etcd/tls.key
+        - --etcd-cafile=/srv/kubernetes/etcd/ca/ca.crt
+        - --etcd-certfile=/srv/kubernetes/etcd/client/tls.crt
+        - --etcd-keyfile=/srv/kubernetes/etcd/client/tls.key
         - --etcd-servers=https://{{ .Values.etcdMainServiceFqdn }}:{{ .Values.etcdServicePort }}
         - --etcd-servers-overrides=/events#https://{{ .Values.etcdEventsServiceFqdn }}:{{ .Values.etcdServicePort }}
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
@@ -128,8 +128,10 @@ spec:
           mountPath: /etc/kubernetes/audit
         - name: ca
           mountPath: /srv/kubernetes/ca
+        - name: ca-etcd
+          mountPath: /srv/kubernetes/etcd/ca
         - name: etcd-client-tls
-          mountPath: /srv/kubernetes/etcd
+          mountPath: /srv/kubernetes/etcd/client
         - name: kube-apiserver
           mountPath: /srv/kubernetes/apiserver
         - name: service-account-key
@@ -215,6 +217,9 @@ spec:
       - name: ca
         secret:
           secretName: ca
+      - name: ca-etcd
+        secret:
+          secretName: ca-etcd
       - name: kube-apiserver
         secret:
           secretName: kube-apiserver

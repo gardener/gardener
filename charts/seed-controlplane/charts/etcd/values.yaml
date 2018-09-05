@@ -8,12 +8,12 @@ images:
 backup:
   schedule: "*/5 * * * *" # cron standard schedule
   maxBackups: 7 # Maximum number of backups to keep (may change in future)
-  storageProvider: ""  # Abs,Gcs,S3,Swift empty means no backup, 
+  storageProvider: ""  # Abs,Gcs,S3,Swift empty means no backup,
   backupSecret: etcd-backup
-  storageContainer: ""  
+  storageContainer: ""
   env: []         # Follow comments below
-  volumeMounts: [] 
-  
+  volumeMounts: []
+
 tlsServerSecretName: etcd-server-tls
 tlsClientSecretName: etcd-client-tls
 podAnnotations: {}
@@ -23,32 +23,32 @@ podAnnotations: {}
 # storageProvider: "S3"
 # env:
 # - name: "AWS_REGION"
-#   valueFrom: 
-#     secretKeyRef: 
+#   valueFrom:
+#     secretKeyRef:
 #       name: etcd-backup
 #       key: "region"
 # - name: "AWS_SECRET_ACCESS_KEY"
-#   valueFrom: 
+#   valueFrom:
 #     secretKeyRef:
 #       name: etcd-backup
 #       key: "secretAccessKey"
 # - name: "AWS_ACCESS_KEY_ID
-#   valueFrom: 
+#   valueFrom:
 #     secretKeyRef:
 #       name: etcd-backup
 #       key: "accessKeyID"
- 
+
 # Azure ABS storage configuration
 # Note: No volumeMounts needed
 # storageProvider: "ABS"
 # env:
 # - name: "STORAGE_ACCOUNT"
-#   valueFrom: 
-#     secretKeyRef: 
+#   valueFrom:
+#     secretKeyRef:
 #       name: etcd-backup
 #       key: "storage-account"
 # - name: "STORAGE_KEY"
-#   valueFrom: 
+#   valueFrom:
 #     secretKeyRef:
 #       name: etcd-backup
 #       key: "storage-key"
@@ -67,27 +67,27 @@ podAnnotations: {}
 # storageProvider: "Swift"
 # env:
 # - name: "OS_AUTH_URL"
-#   valueFrom: 
-#     secretKeyRef: 
+#   valueFrom:
+#     secretKeyRef:
 #       name: etcd-backup
 #       key: "authURL"
 # - name: "OS_DOMAIN_NAME"
-#   valueFrom: 
+#   valueFrom:
 #     secretKeyRef:
 #       name: etcd-backup
 #       key: "domainName"
 # -	name: "OS_USERNAME"
-#   valueFrom: 
-#     secretKeyRef: 
+#   valueFrom:
+#     secretKeyRef:
 #       name: etcd-backup
 #       key: "username"
 # - name: "OS_PASSWORD"
-#   valueFrom: 
+#   valueFrom:
 #     secretKeyRef:
 #       name: etcd-backup
 #       key: "password"
 # - name: "OS_TENANT_NAME"
-#   valueFrom: 
+#   valueFrom:
 #     secretKeyRef:
 #       name: etcd-backup
-#       key: "tenantNam"
+#       key: "tenantName"
