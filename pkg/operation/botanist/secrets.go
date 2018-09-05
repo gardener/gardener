@@ -34,8 +34,9 @@ import (
 )
 
 const (
-	caCluster = "ca"
-	caETCD    = "ca-etcd"
+	caCluster    = "ca"
+	caETCD       = "ca-etcd"
+	caFrontProxy = "ca-front-proxy"
 )
 
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
@@ -47,6 +48,11 @@ var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
 	caETCD: &secrets.CertificateSecretConfig{
 		Name:       caETCD,
 		CommonName: "etcd",
+		CertType:   secrets.CACert,
+	},
+	caFrontProxy: &secrets.CertificateSecretConfig{
+		Name:       caFrontProxy,
+		CommonName: "front-proxy",
 		CertType:   secrets.CACert,
 	},
 }
@@ -137,7 +143,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[caFrontProxy],
 			},
 		},
 
@@ -613,7 +619,8 @@ func (b *Botanist) fetchExistingSecrets() (map[string]*corev1.Secret, error) {
 // This can be removed in a future version. See details: https://github.com/gardener/gardener/pull/353
 func (b *Botanist) deleteOldCertificates(existingSecretsMap map[string]*corev1.Secret) error {
 	var dedicatedCASecrets = map[string][]string{
-		caETCD: []string{"etcd-server-tls", "etcd-client-tls"},
+		caETCD:       []string{"etcd-server-tls", "etcd-client-tls"},
+		caFrontProxy: []string{"kube-aggregator"},
 	}
 	for caName, secrets := range dedicatedCASecrets {
 		for _, secretName := range secrets {

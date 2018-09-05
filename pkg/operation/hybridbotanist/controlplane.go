@@ -184,6 +184,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
+			"checksum/secret-ca-front-proxy":            b.CheckSums["ca-front-proxy"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[common.KubeAPIServerDeploymentName],
 			"checksum/secret-kube-aggregator":           b.CheckSums["kube-aggregator"],
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
