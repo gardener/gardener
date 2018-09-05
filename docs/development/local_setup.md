@@ -351,7 +351,7 @@ $ vagrant ssh
 To delete the Shoot cluster
 
 ```bash
-$ ./hack/delete-shoot local garden-dev
+$ ./hack/delete shoot local garden-dev
 shoot "local" deleted
 shoot "local" patched
 ```

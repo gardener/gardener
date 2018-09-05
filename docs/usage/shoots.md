@@ -12,10 +12,10 @@ In order to investigate what is happening in the Seed cluster, please download i
 
 To connect to the newly created Shoot cluster, you must download its Kubeconfig as well. Please connect to the proper Seed cluster, navigate to the Shoot namespace, and download the Kubeconfig from the `kubecfg` secret in that namespace.
 
-In order to delete your cluster, you have to set an annotation confirming the deletion first, and trigger the deletion after that. You can use the prepared `delete-shoot` script which takes the Shoot name as first parameter. The namespace can be specified by the second parameter, but it is optional. If you don't state it, it defaults to your namespace (the username you are logged in with to your machine).
+In order to delete your cluster, you have to set an annotation confirming the deletion first, and trigger the deletion after that. You can use the prepared `delete shoot` script which takes the Shoot name as first parameter. The namespace can be specified by the second parameter, but it is optional. If you don't state it, it defaults to your namespace (the username you are logged in with to your machine).
 
 ```bash
-$ ./hack/delete-shoot johndoe-1
+$ ./hack/delete shoot johndoe-1 johndoe
 ```
 
 # Updating Shoot Cluster version and How Auto Update Feature is Handled

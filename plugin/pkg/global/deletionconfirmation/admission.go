@@ -25,12 +25,13 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 )
 
 const (
 	// PluginName is the name of this admission plugin.
-	PluginName = "ShootDeletionConfirmation"
+	PluginName = "DeletionConfirmation"
 )
 
 // Register registers a plugin.
@@ -46,8 +47,9 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 // DeletionConfirmation contains an admission handler and listers.
 type DeletionConfirmation struct {
 	*admission.Handler
-	shootLister gardenlisters.ShootLister
-	readyFunc   admission.ReadyFunc
+	shootLister   gardenlisters.ShootLister
+	projectLister gardenlisters.ProjectLister
+	readyFunc     admission.ReadyFunc
 }
 
 var (
@@ -74,13 +76,19 @@ func (d *DeletionConfirmation) SetInternalGardenInformerFactory(f gardeninformer
 	shootInformer := f.Garden().InternalVersion().Shoots()
 	d.shootLister = shootInformer.Lister()
 
-	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced)
+	projectInformer := f.Garden().InternalVersion().Projects()
+	d.projectLister = projectInformer.Lister()
+
+	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (d *DeletionConfirmation) ValidateInitialization() error {
 	if d.shootLister == nil {
 		return errors.New("missing shoot lister")
+	}
+	if d.projectLister == nil {
+		return errors.New("missing project lister")
 	}
 	return nil
 }
@@ -90,7 +98,9 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 	// Ignore all kinds other than Shoot.
 	// TODO: in future the Kinds should be configurable
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
-	if a.GetKind().GroupKind() != garden.Kind("Shoot") {
+	switch a.GetKind().GroupKind() {
+	case garden.Kind("Shoot"), garden.Kind("Project"):
+	default:
 		return nil
 	}
 
@@ -109,12 +119,24 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
-	shoot, err := d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
-	if err != nil {
-		return err
+	var obj metav1.Object
+
+	switch a.GetKind().GroupKind() {
+	case garden.Kind("Shoot"):
+		shoot, err := d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
+		if err != nil {
+			return err
+		}
+		obj = shoot
+	case garden.Kind("Project"):
+		project, err := d.projectLister.Get(a.GetName())
+		if err != nil {
+			return err
+		}
+		obj = project
 	}
 
-	annotations := shoot.GetAnnotations()
+	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return admission.NewForbidden(a, annotationRequiredError())
 	}
