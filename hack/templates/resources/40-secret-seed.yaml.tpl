@@ -49,9 +49,9 @@ data:
   secretAccessKey: ${value("data.secretAccessKey", "base64(secret-access-key)")}
   % endif
   % if cloud == "azure" or cloud == "az":
-  tenantID: ${value("data.tenantID", "base64(tenant-id)")}
-  subscriptionID: ${value("data.subscriptionID", "base64(subscription-id)")}
-  clientID: ${value("data.clientID", "base64(client-id)")}
+  tenantID: ${value("data.tenantID", "base64(uuid-of-tenant)")}
+  subscriptionID: ${value("data.subscriptionID", "base64(uuid-of-subscription)")}
+  clientID: ${value("data.clientID", "base64(uuid-of-client)")}
   clientSecret: ${value("data.clientSecret", "base64(client-secret)")}
   % endif
   % if cloud == "gcp":
