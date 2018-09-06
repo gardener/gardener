@@ -16,7 +16,12 @@ spec:
     role: controller-manager
     release: {{ .Release.Name }}
   ports:
-  - port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+  - name: http
     protocol: TCP
-    targetPort: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+    port: 80
+    targetPort: {{ required ".Values.controller.config.server.http.port is required" .Values.controller.config.server.http.port }}
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: {{ required ".Values.controller.config.server.https.port is required" .Values.controller.config.server.https.port }}
 {{- end }}

@@ -29,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/robfig/cron"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -430,6 +431,91 @@ func validateAzureDomainCount(domainCount []garden.AzureDomainCount, fldPath *fi
 }
 
 ////////////////////////////////////////////////////
+//                    PROJECTS                    //
+////////////////////////////////////////////////////
+
+// ValidateProject validates a Project object.
+func ValidateProject(project *garden.Project) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&project.ObjectMeta, false, ValidateName, field.NewPath("metadata"))...)
+	maxProjectNameLength := 10
+	if len(project.Name) > maxProjectNameLength {
+		allErrs = append(allErrs, field.TooLong(field.NewPath("metadata", "name"), project.Name, maxProjectNameLength))
+	}
+	allErrs = append(allErrs, validateNameConsecutiveHyphens(project.Name, field.NewPath("metadata", "name"))...)
+	allErrs = append(allErrs, ValidateProjectSpec(&project.Spec, field.NewPath("spec"))...)
+
+	return allErrs
+}
+
+// ValidateProjectUpdate validates a Project object before an update.
+func ValidateProjectUpdate(newProject, oldProject *garden.Project) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProject.ObjectMeta, &oldProject.ObjectMeta, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidateProject(newProject)...)
+
+	return allErrs
+}
+
+// ValidateProjectSpec validates the specification of a Project object.
+func ValidateProjectSpec(projectSpec *garden.ProjectSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateSubject(projectSpec.Owner, fldPath.Child("owner"))...)
+	if description := projectSpec.Description; description != nil && len(*description) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("description"), "must provide a description when key is present"))
+	}
+	if purpose := projectSpec.Description; purpose != nil && len(*purpose) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("purpose"), "must provide a purpose when key is present"))
+	}
+
+	return allErrs
+}
+
+// ValidateSubject validates the subject representing the owner.
+func ValidateSubject(subject rbacv1.Subject, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(subject.Name) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), ""))
+	}
+
+	switch subject.Kind {
+	case rbacv1.ServiceAccountKind:
+		if len(subject.Name) > 0 {
+			for _, msg := range apivalidation.ValidateServiceAccountName(subject.Name, false) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("name"), subject.Name, msg))
+			}
+		}
+		if len(subject.APIGroup) > 0 {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiGroup"), subject.APIGroup, []string{""}))
+		}
+		if len(subject.Namespace) == 0 {
+			allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), ""))
+		}
+
+	case rbacv1.UserKind, rbacv1.GroupKind:
+		if subject.APIGroup != rbacv1.GroupName {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("apiGroup"), subject.APIGroup, []string{rbacv1.GroupName}))
+		}
+
+	default:
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("kind"), subject.Kind, []string{rbacv1.ServiceAccountKind, rbacv1.UserKind, rbacv1.GroupKind}))
+	}
+
+	return allErrs
+}
+
+// ValidateProjectStatusUpdate validates the status field of a Project object.
+func ValidateProjectStatusUpdate(newProject, oldProject *garden.Project) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	return allErrs
+}
+
+////////////////////////////////////////////////////
 //                      SEEDS                     //
 ////////////////////////////////////////////////////
 
@@ -663,7 +749,7 @@ func ValidateShoot(shoot *garden.Shoot) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&shoot.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, validateShootName(shoot.Name, field.NewPath("metadata", "name"))...)
+	allErrs = append(allErrs, validateNameConsecutiveHyphens(shoot.Name, field.NewPath("metadata", "name"))...)
 	allErrs = append(allErrs, ValidateShootSpec(&shoot.Spec, field.NewPath("spec"))...)
 
 	return allErrs
@@ -731,11 +817,11 @@ func ValidateShootStatusUpdate(newStatus, oldStatus garden.ShootStatus) field.Er
 	return allErrs
 }
 
-func validateShootName(name string, fldPath *field.Path) field.ErrorList {
+func validateNameConsecutiveHyphens(name string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if strings.Contains(name, "--") {
-		allErrs = append(allErrs, field.Invalid(fldPath, name, "shoot name may not contain two consecutive hyphens"))
+		allErrs = append(allErrs, field.Invalid(fldPath, name, "name may not contain two consecutive hyphens"))
 	}
 
 	return allErrs

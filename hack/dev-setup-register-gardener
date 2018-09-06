@@ -18,25 +18,33 @@ IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 
 APISERVICE_NAME="v1beta1.garden.sapcloud.io"
-SERVICE_NAME="gardener-apiserver"
-ENDPOINT_NAME="gardener-apiserver"
+APISERVER_SERVICE_NAME="gardener-apiserver"
+APISERVER_ENDPOINT_NAME="gardener-apiserver"
+CONTROLLER_MANAGER_SERVICE_NAME="gardener-controller-manager"
+CONTROLLER_MANAGER_ENDPOINT_NAME="gardener-controller-manager"
 
 if kubectl get apiservice "$APISERVICE_NAME" &> /dev/null; then
   kubectl delete apiservice $APISERVICE_NAME --wait=false
   kubectl patch apiservices $APISERVICE_NAME -p '{"metadata":{"finalizers":null}}' 2> /dev/null || true
 fi
-if kubectl get service "$SERVICE_NAME" &> /dev/null; then
-  kubectl delete service $SERVICE_NAME
+if kubectl get service "$APISERVER_SERVICE_NAME" &> /dev/null; then
+  kubectl delete service $APISERVER_SERVICE_NAME
 fi
-if kubectl get endpoints "$ENDPOINT_NAME" &> /dev/null; then
-  kubectl delete endpoints $ENDPOINT_NAME
+if kubectl get service "$CONTROLLER_MANAGER_SERVICE_NAME" &> /dev/null; then
+  kubectl delete service $CONTROLLER_MANAGER_SERVICE_NAME
+fi
+if kubectl get endpoints "$APISERVER_ENDPOINT_NAME" &> /dev/null; then
+  kubectl delete endpoints $APISERVER_ENDPOINT_NAME
+fi
+if kubectl get endpoints "$CONTROLLER_MANAGER_ENDPOINT_NAME" &> /dev/null; then
+  kubectl delete endpoints $CONTROLLER_MANAGER_ENDPOINT_NAME
 fi
 
 cat <<EOF | kubectl apply -f -
 kind: Service
 apiVersion: v1
 metadata:
-  name: $SERVICE_NAME
+  name: $APISERVER_SERVICE_NAME
   namespace: garden
 spec:
   ports:
@@ -44,16 +52,46 @@ spec:
     port: 443
     targetPort: 8443
 ---
+kind: Service
+apiVersion: v1
+metadata:
+  name: $CONTROLLER_MANAGER_SERVICE_NAME
+  namespace: garden
+spec:
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 2718
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 2719
+---
 kind: Endpoints
 apiVersion: v1
 metadata:
-  name: $ENDPOINT_NAME
+  name: $APISERVER_ENDPOINT_NAME
   namespace: garden
 subsets:
 - addresses:
   - ip: ${IP_ADDRESS}
   ports:
   - port: 8443
+---
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: $CONTROLLER_MANAGER_ENDPOINT_NAME
+  namespace: garden
+subsets:
+- addresses:
+  - ip: ${IP_ADDRESS}
+  ports:
+  - name: http
+    port: 2718
+  - name: https
+    port: 2719
 EOF
 
 cat <<EOF | kubectl apply -f -
@@ -70,4 +108,29 @@ spec:
   service:
     name: gardener-apiserver
     namespace: garden
+EOF
+
+cat <<EOF | kubectl apply -f -
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validate-namespace-deletion
+webhooks:
+- name: validate-namespace-deletion.gardener.cloud
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - DELETE
+    resources:
+    - namespaces
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      namespace: garden
+      name: gardener-controller-manager
+      path: /webhooks/validate-namespace-deletion
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVYWEyY0ZPL0NTVnJ2cThPLzBnZXVNdFhMT3NJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1NERUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdUQWtOQk1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaApibU5wYzJOdk1SUXdFZ1lEVlFRREV3dGxlR0Z0Y0d4bExtNWxkREFlRncweE9EQTRNVFl5TURNeU1EQmFGdzB5Ck16QTRNVFV5TURNeU1EQmFNRWd4Q3pBSkJnTlZCQVlUQWxWVE1Rc3dDUVlEVlFRSUV3SkRRVEVXTUJRR0ExVUUKQnhNTlUyRnVJRVp5WVc1amFYTmpiekVVTUJJR0ExVUVBeE1MWlhoaGJYQnNaUzV1WlhRd2dnRWlNQTBHQ1NxRwpTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDNUM4L3ZoWHVFeWQwZlQ2YmxIcGtrbERiY251ckQ0SzZTCmJGaGRMWmVHQ0krdktXMzRPdEFzOFNwQXZrSmsxL0FPZ0ZsZFBGaTdGYThZbWdKQ3piR255bEZxcXJhd2RCaEgKdFZZeENBZTE0dTJTZGlxMXNPZ3VyRHRRM0doK0V1NXUrUDBsMTZ5MGR5UXhsNGREdHdIZno0anJOVmFkbldEYwpULytQUHNkNDZpMCtjT1loa0RrN1I1NEV1Rysxa1hha0c0c1hWcEt5MVRNd295bnJCVmg0MkwzYnNrcXJWbnBUCitnY0F6Q3RvaWE4WFJKL2pob3NjWHRSMHIxdEtpM2cxSjRxQTd1WDRJOXJUc2dPQmNrMGV4SlBSZ0Vtd3VPNUYKc1o0NEU4TUlveCtGVkg5TkRUY0JkSVQ5NVhVbGNhbkhKK1Baa1JVWFp5c2lNOWxuSWpCakFnTUJBQUdqUWpCQQpNQTRHQTFVZER3RUIvd1FFQXdJQkJqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCUVVKVTJJCmlDcll0dEhoTmhqNWh3c1FJK01JbGpBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQVRlOTNldkVBSThtZGlwZG0KanBGQjkrMFczQzJrTzEvQ3RCdWpOM1B2ZWc5OGxVOXBrS2lVOVdRL3orYlpEV3pUeklTdlYzMk9WSkNtUVN6cgpWRFJUMDNjbGpQaUJYOW9GNTc3TTE2TzNacnZQV3QxUXo2WHptYk9hdjVidkJXaTlpVWRMSEptOHA2Q0RIS1lYCklEZXdsVUg4K0FGaU10d0xlcjRRZFdRUnkrMGlOZG5YQjhCYnZ3QmxhcU1oUlphancyaW83eUdaZ3FXVmI5cnkKNlRsNnF1ZVpaazJOeUszSURtbTdhMWV4TFhQUjh2U2QyUUI2YlNCTVI3NXAvRm1jVkN1VzY0MlRZTnEwUW9VcwpXOXlUM3YxcHhRZlhraTZWTGQ3L3Y4QnhwTlEzazFWM01LWGlLOEIwOEdzRDZJa2s5R2dNVmNkWDRaQmVtWmYzCjBjVUQyUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 EOF

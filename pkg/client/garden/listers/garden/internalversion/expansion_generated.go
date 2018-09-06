@@ -14,6 +14,10 @@ type BackupInfrastructureNamespaceListerExpansion interface{}
 // CloudProfileLister.
 type CloudProfileListerExpansion interface{}
 
+// ProjectListerExpansion allows custom methods to be added to
+// ProjectLister.
+type ProjectListerExpansion interface{}
+
 // QuotaListerExpansion allows custom methods to be added to
 // QuotaLister.
 type QuotaListerExpansion interface{}

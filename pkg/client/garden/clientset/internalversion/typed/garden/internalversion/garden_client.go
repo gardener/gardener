@@ -11,6 +11,7 @@ type GardenInterface interface {
 	RESTClient() rest.Interface
 	BackupInfrastructuresGetter
 	CloudProfilesGetter
+	ProjectsGetter
 	QuotasGetter
 	SecretBindingsGetter
 	SeedsGetter
@@ -28,6 +29,10 @@ func (c *GardenClient) BackupInfrastructures(namespace string) BackupInfrastruct
 
 func (c *GardenClient) CloudProfiles() CloudProfileInterface {
 	return newCloudProfiles(c)
+}
+
+func (c *GardenClient) Projects() ProjectInterface {
+	return newProjects(c)
 }
 
 func (c *GardenClient) Quotas(namespace string) QuotaInterface {

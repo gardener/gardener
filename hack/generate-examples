@@ -21,7 +21,7 @@ for cloud in aws azure gcp openstack local; do
 done
 
 # render cloud-independent templates
-for template in 60-quota; do
+for template in 05-project-dev 60-quota; do
   echo "* Template '$template' rendered."
   mako-render "$PATH_TEMPLATES/$template.yaml.tpl" > "$PATH_EXAMPLES/$template.yaml"
 done

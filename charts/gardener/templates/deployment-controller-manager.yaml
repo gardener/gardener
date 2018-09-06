@@ -20,6 +20,7 @@ spec:
     metadata:
       annotations:
         checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/configmap-controller-manager.yaml") . | sha256sum }}
+        checksum/secret-gardener-controller-manager-cert: {{ include (print $.Template.BasePath "/secret-controller-manager.yaml") . | sha256sum }}
         checksum/secret-default-domain: {{ include (print $.Template.BasePath "/secret-default-domain.yaml") . | sha256sum }}
         checksum/secret-internal-domain: {{ include (print $.Template.BasePath "/secret-internal-domain.yaml") . | sha256sum }}
         checksum/secret-alerting-smtp: {{ include (print $.Template.BasePath "/secret-alerting-smtp.yaml") . | sha256sum }}
@@ -38,7 +39,7 @@ spec:
         imagePullPolicy: {{ .Values.controller.image.pullPolicy }}
         command:
         - /gardener-controller-manager
-        - --config=/etc/gardener-controller-manager/config.yaml
+        - --config=/etc/gardener-controller-manager/config/config.yaml
         {{- if .Values.controller.resources }}
         resources:
 {{ toYaml .Values.controller.resources | indent 10 }}
@@ -50,20 +51,26 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ required ".Values.controller.config.server.port is required" .Values.controller.config.server.port }}
+            port: {{ required ".Values.controller.config.server.http.port is required" .Values.controller.config.server.http.port }}
             scheme: HTTP
           initialDelaySeconds: 30
           timeoutSeconds: 5
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
+        - name: gardener-controller-manager-cert
+          mountPath: /etc/gardener-controller-manager/srv
+          readOnly: true
         - name: gardener-controller-manager-config
-          mountPath: /etc/gardener-controller-manager
+          mountPath: /etc/gardener-controller-manager/config
 {{- if .Values.controller.additionalVolumeMounts }}
 {{ toYaml .Values.controller.additionalVolumeMounts | indent 8 }}
 {{- end }}
       terminationGracePeriodSeconds: 3600
       volumes:
+      - name: gardener-controller-manager-cert
+        secret:
+          secretName: gardener-controller-manager-cert
       - name: gardener-controller-manager-config
         configMap:
           name: gardener-controller-manager-configmap

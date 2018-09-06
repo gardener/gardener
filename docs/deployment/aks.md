@@ -753,11 +753,11 @@ export KUBECONFIG=/tmp/johndoe-azure-kubeconfig.yaml
 Deleting a Shoot cluster is not straight forward, and this is to
 protect users from undesired/accidental cluster deletion. One has to
 place some special annotations to get a Shoot cluster removed. We use
-the [hack/delete-shoot](../../hack/delete-shoot) for this purpose.
+the [hack/delete](../../hack/delete) script for this purpose.
 
 Please refer to [Creating / Deleting a Shoot
 cluster](../usage/shoots.md) document for more details.
 
 ```
-hack/delete-shoot johndoe-azure garden-dev
+hack/delete shoot johndoe-azure garden-dev
 ```

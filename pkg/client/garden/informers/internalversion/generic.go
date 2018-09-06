@@ -41,6 +41,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().InternalVersion().BackupInfrastructures().Informer()}, nil
 	case garden.SchemeGroupVersion.WithResource("cloudprofiles"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().InternalVersion().CloudProfiles().Informer()}, nil
+	case garden.SchemeGroupVersion.WithResource("projects"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().InternalVersion().Projects().Informer()}, nil
 	case garden.SchemeGroupVersion.WithResource("quotas"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Garden().InternalVersion().Quotas().Informer()}, nil
 	case garden.SchemeGroupVersion.WithResource("secretbindings"):

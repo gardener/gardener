@@ -81,8 +81,8 @@ func newOperation(logger *logrus.Entry, k8sGardenClient kubernetes.Client, k8sGa
 	}
 
 	if shoot != nil {
-		internalDomain := constructInternalDomain(shoot.Name, gardenObj.ProjectName, secretsMap[common.GardenRoleInternalDomain].Annotations[common.DNSDomain])
-		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.ProjectName, internalDomain)
+		internalDomain := constructInternalDomain(shoot.Name, gardenObj.Project.Name, secretsMap[common.GardenRoleInternalDomain].Annotations[common.DNSDomain])
+		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.Project.Name, internalDomain)
 		if err != nil {
 			return nil, err
 		}

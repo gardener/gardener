@@ -25,6 +25,7 @@ import (
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -55,6 +56,7 @@ type ReferenceManager struct {
 	cloudProfileLister  gardenlisters.CloudProfileLister
 	seedLister          gardenlisters.SeedLister
 	secretBindingLister gardenlisters.SecretBindingLister
+	projectLister       gardenlisters.ProjectLister
 	quotaLister         gardenlisters.QuotaLister
 	readyFunc           admission.ReadyFunc
 }
@@ -104,7 +106,10 @@ func (r *ReferenceManager) SetInternalGardenInformerFactory(f gardeninformers.Sh
 	quotaInformer := f.Garden().InternalVersion().Quotas()
 	r.quotaLister = quotaInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced)
+	projectInformer := f.Garden().InternalVersion().Projects()
+	r.projectLister = projectInformer.Lister()
+
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, secretBindingInformer.Informer().HasSynced, quotaInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
@@ -139,6 +144,9 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	}
 	if r.quotaLister == nil {
 		return errors.New("missing quota lister")
+	}
+	if r.projectLister == nil {
+		return errors.New("missing project lister")
 	}
 	return nil
 }
@@ -198,7 +206,34 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if skipVerification(operation, shoot.ObjectMeta) {
 			return nil
 		}
+		// Add createdBy annotation to Shoot
+		if a.GetOperation() == admission.Create {
+			annotations := shoot.Annotations
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
+			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
+			shoot.Annotations = annotations
+		}
 		err = r.ensureShootReferences(shoot)
+
+	case garden.Kind("Project"):
+		project, ok := a.GetObject().(*garden.Project)
+		if !ok {
+			return apierrors.NewBadRequest("could not convert resource into Project object")
+		}
+		if skipVerification(operation, project.ObjectMeta) {
+			return nil
+		}
+		// Add createdBy annotation to Project
+		if a.GetOperation() == admission.Create {
+			annotations := project.Annotations
+			if annotations == nil {
+				annotations = map[string]string{}
+			}
+			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
+			project.Annotations = annotations
+		}
 	}
 
 	if err != nil {

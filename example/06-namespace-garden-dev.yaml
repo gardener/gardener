@@ -3,6 +3,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: garden-dev
+  annotations:
+    project.garden.sapcloud.io/owner: john.doe@example.com
   labels:
     garden.sapcloud.io/role: project
     project.garden.sapcloud.io/name: dev

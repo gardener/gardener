@@ -15,8 +15,8 @@
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/golang/glog"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -76,6 +76,9 @@ type ControllerManagerControllerConfiguration struct {
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
+	// Project defines the configuration of the Project controller.
+	// +optional
+	Project *ProjectControllerConfiguration `json:"project,omitempty"`
 	// Quota defines the configuration of the Quota controller.
 	// +optional
 	Quota *QuotaControllerConfiguration `json:"quota,omitempty"`
@@ -105,6 +108,14 @@ type CloudProfileControllerConfiguration struct {
 // SecretBindingControllerConfiguration defines the configuration of the
 // SecretBinding controller.
 type SecretBindingControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ProjectControllerConfiguration defines the configuration of the
+// Project controller.
+type ProjectControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
@@ -147,14 +158,11 @@ type ShootControllerConfiguration struct {
 	// in case of errors.
 	RetryDuration metav1.Duration `json:"retryDuration"`
 	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
-	// readded to the queue so that the operation can be retried. Defaults to 15s.
+	// re-added to the queue so that the operation can be retried. Defaults to 15s.
 	// +optional
 	RetrySyncPeriod *metav1.Duration `json:"retrySyncPeriod,omitempty"`
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
-	// WatchNamespace defines the namespace which should be watched by the controller.
-	// +optional
-	WatchNamespace *string `json:"watchNamespace,omitempty"`
 }
 
 // ShootCareControllerConfiguration defines the configuration of the ShootCare
@@ -242,12 +250,36 @@ type MetricsConfiguration struct {
 	Interval metav1.Duration `json:"interval"`
 }
 
-// ServerConfiguration contains details for the HTTP server.
+// ServerConfiguration contains details for the HTTP(S) servers.
 type ServerConfiguration struct {
+	// HTTP is the configuration for the HTTP server.
+	HTTP Server `json:"http"`
+	// HTTPS is the configuration for the HTTPS server.
+	HTTPS HTTPSServer `json:"https"`
+}
+
+// Server contains information for HTTP(S) server configuration.
+type Server struct {
 	// BindAddress is the IP address on which to listen for the specified port.
 	BindAddress string `json:"bindAddress"`
 	// Port is the port on which to serve unsecured, unauthenticated access.
 	Port int `json:"port"`
+}
+
+// HTTPSServer is the configuration for the HTTPSServer server.
+type HTTPSServer struct {
+	// Server is the configuration for the bind address and the port.
+	Server `json:",inline"`
+	// TLSServer contains information about the TLS configuration for a HTTPS server.
+	TLS TLSServer `json:"tls"`
+}
+
+// TLSServer contains information about the TLS configuration for a HTTPS server.
+type TLSServer struct {
+	// ServerCertPath is the path to the server certificate file.
+	ServerCertPath string `json:"serverCertPath"`
+	// ServerKeyPath is the path to the private key file.
+	ServerKeyPath string `json:"serverKeyPath"`
 }
 
 const (

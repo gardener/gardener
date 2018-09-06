@@ -6,6 +6,8 @@ type BackupInfrastructureExpansion interface{}
 
 type CloudProfileExpansion interface{}
 
+type ProjectExpansion interface{}
+
 type QuotaExpansion interface{}
 
 type SecretBindingExpansion interface{}

@@ -14,8 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-NAME="$1"
-NAMESPACE="${2:-$(id -u -n)}"
+RESOURCE="$1"
+NAME="$2"
+NAMESPACE=""
 
-kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" confirmation.garden.sapcloud.io/deletion=true
-kubectl --namespace "$NAMESPACE" delete   shoot "$NAME"
+if [[ "$1" != "project" ]]; then
+  NAMESPACE="--namespace ${3:-$(id -u -n)}"
+fi
+
+kubectl $NAMESPACE annotate "$RESOURCE" "$NAME" confirmation.garden.sapcloud.io/deletion=true --overwrite
+kubectl $NAMESPACE delete   "$RESOURCE" "$NAME"

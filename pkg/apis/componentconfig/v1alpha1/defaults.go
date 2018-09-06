@@ -30,11 +30,17 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfiguration) {
 	trueVar := true
 
-	if len(obj.Server.BindAddress) == 0 {
-		obj.Server.BindAddress = "0.0.0.0"
+	if len(obj.Server.HTTP.BindAddress) == 0 {
+		obj.Server.HTTP.BindAddress = "0.0.0.0"
 	}
-	if obj.Server.Port == 0 {
-		obj.Server.Port = 2718
+	if obj.Server.HTTP.Port == 0 {
+		obj.Server.HTTP.Port = 2718
+	}
+	if len(obj.Server.HTTPS.BindAddress) == 0 {
+		obj.Server.HTTPS.BindAddress = "0.0.0.0"
+	}
+	if obj.Server.HTTPS.Port == 0 {
+		obj.Server.HTTPS.Port = 2719
 	}
 
 	if len(obj.ClientConnection.ContentType) == 0 {
@@ -81,6 +87,11 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 	if obj.Controllers.SecretBinding == nil {
 		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.Project == nil {
+		obj.Controllers.Project = &ProjectControllerConfiguration{
 			ConcurrentSyncs: 5,
 		}
 	}

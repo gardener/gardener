@@ -144,9 +144,28 @@ const (
 	// KubeAddonManagerDeploymentName is the name of the kube-addon-manager deployment.
 	KubeAddonManagerDeploymentName = "kube-addon-manager"
 
+	// ProjectPrefix is the prefix of namespaces representing projects.
+	ProjectPrefix = "garden-"
+
 	// ProjectName is they key of a label on namespaces whose value holds the project name. Usually, the label is set
 	// by the Gardener Dashboard.
 	ProjectName = "project.garden.sapcloud.io/name"
+
+	// ProjectNamespace is they key of a label on projects whose value holds the namespace name. Usually, the label is set
+	// by the Gardener Dashboard.
+	ProjectNamespace = "project.garden.sapcloud.io/namespace"
+
+	// ProjectOwner is they key of a label on namespaces whose value holds the project owner. Usually, the label is set
+	// by the Gardener Dashboard.
+	ProjectOwner = "project.garden.sapcloud.io/owner"
+
+	// ProjectDescription is they key of a label on namespaces whose value holds the project description. Usually, the label is set
+	// by the Gardener Dashboard.
+	ProjectDescription = "project.garden.sapcloud.io/description"
+
+	// ProjectPurpose is they key of a label on namespaces whose value holds the project purpose. Usually, the label is set
+	// by the Gardener Dashboard.
+	ProjectPurpose = "project.garden.sapcloud.io/purpose"
 
 	// PrometheusDeploymentName is the name of the Prometheus deployment.
 	PrometheusDeploymentName = "prometheus"

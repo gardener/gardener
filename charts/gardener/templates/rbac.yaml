@@ -137,6 +137,27 @@ subjects:
   kind: Group
   name: system:authenticated
 
+# Cluster role for allowing creation of projects
+# IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users/groups/serviceaccounts
+#            to this ClusterRole on your own.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:project-creation
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - projects
+  verbs:
+  - create
+
 # Cluster role setting the permissions for a project member (in the respective namespace/project)
 ---
 apiVersion: {{ include "rbacversion" . }}

@@ -21,7 +21,6 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	componentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1"
@@ -37,9 +36,11 @@ import (
 	"github.com/gardener/gardener/pkg/server/handlers"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/version"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -278,7 +279,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		}
 	}
 
-	identity, gardenerNamespace, err := determineGardenerIdentity(config.Controllers.Shoot.WatchNamespace)
+	identity, gardenerNamespace, err := determineGardenerIdentity()
 	if err != nil {
 		return nil, err
 	}
@@ -309,7 +310,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 	}
 
 	// Start HTTP server
-	go server.Serve(g.K8sGardenClient, g.Config.Server.BindAddress, g.Config.Server.Port, g.Config.Metrics.Interval.Duration, stopCh)
+	go server.Serve(g.K8sGardenClient, g.Config.Server, g.Config.Metrics.Interval.Duration, stopCh)
 	handlers.UpdateHealth(true)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
@@ -339,7 +340,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 
 func startControllers(g *Gardener, stopCh <-chan struct{}) {
 	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), 0)
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 30*time.Second)
+	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 0)
 
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
@@ -390,7 +391,7 @@ func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration
 // we need to identify for still ongoing operations whether another Gardener controller manager instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
 // there is no container id.
-func determineGardenerIdentity(watchNamespace *string) (*gardenv1beta1.Gardener, string, error) {
+func determineGardenerIdentity() (*gardenv1beta1.Gardener, string, error) {
 	var (
 		gardenerID        string
 		gardenerName      string
@@ -419,8 +420,6 @@ func determineGardenerIdentity(watchNamespace *string) (*gardenv1beta1.Gardener,
 	// If running inside a Kubernetes cluster we will have a service account mount.
 	if ns, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace"); err == nil {
 		gardenerNamespace = string(ns)
-	} else if watchNamespace != nil {
-		gardenerNamespace = *watchNamespace
 	}
 
 	return &gardenv1beta1.Gardener{

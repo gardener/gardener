@@ -39,5 +39,12 @@ kubernetesLogLevel: 0
 metrics:
   interval: 30s
 server:
-  bindAddress: 0.0.0.0
-  port: 2718
+  http:
+    bindAddress: 0.0.0.0
+    port: 2718
+  https:
+    bindAddress: 0.0.0.0
+    port: 2719
+    tls:
+      serverCertPath: dev/tls/gardener-controller-manager.crt
+      serverKeyPath: dev/tls/gardener-controller-manager.key

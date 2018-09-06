@@ -14,7 +14,9 @@
 
 package garden
 
+import gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+
 // Garden is an object containing Garden cluster specific data.
 type Garden struct {
-	ProjectName string
+	Project *gardenv1beta1.Project
 }
