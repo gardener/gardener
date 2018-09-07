@@ -72,6 +72,8 @@ type Controller struct {
 	cloudProfileSynced  cache.InformerSynced
 	secretBindingSynced cache.InformerSynced
 	quotaSynced         cache.InformerSynced
+	projectSynced       cache.InformerSynced
+	namespaceSynced     cache.InformerSynced
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -148,6 +150,8 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 	shootController.cloudProfileSynced = gardenv1beta1Informer.CloudProfiles().Informer().HasSynced
 	shootController.secretBindingSynced = gardenv1beta1Informer.SecretBindings().Informer().HasSynced
 	shootController.quotaSynced = gardenv1beta1Informer.Quotas().Informer().HasSynced
+	shootController.projectSynced = projectInformer.Informer().HasSynced
+	shootController.namespaceSynced = namespaceInformer.Informer().HasSynced
 
 	return shootController
 }
@@ -156,7 +160,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers, shootQuotaWorkers int, stopCh <-chan struct{}) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.quotaSynced) {
+	if !cache.WaitForCacheSync(stopCh, c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.quotaSynced, c.projectSynced, c.namespaceSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -171,6 +175,33 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 			}
 		}
 	}()
+
+	// Now that we have Project resources we should wait for the Project controller to create the Project resources
+	// for all namespaces before starting the Shoot controller. This is because the Shoot controller wants to read
+	// the Project object responsible for a respective Shoot object and, if it starts simultaneously to the Project
+	// controller, some of the needed objects are not yet created.
+	// This is only needed for backwards-compatibility and can be removed in a future version.
+	if err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
+		selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleProject))
+		if err != nil {
+			return false, err
+		}
+		namespaceList, err := c.namespaceLister.List(selector)
+		if err != nil {
+			return false, err
+		}
+		projectList, err := c.projectLister.List(labels.Everything())
+		if err != nil {
+			return false, err
+		}
+
+		if len(namespaceList) != len(projectList) {
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		panic(fmt.Sprintf("error occurred while waiting for the project controller to create all project resources: %+v", err))
+	}
 
 	// Update Shoots before starting the workers.
 	shoots, err := c.shootLister.List(labels.Everything())
@@ -220,33 +251,6 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
-	}
-
-	// Now that we have Project resources we should wait for the Project controller to create the Project resources
-	// for all namespaces before starting the Shoot controller. This is because the Shoot controller wants to read
-	// the Project object responsible for a respective Shoot object and, if it starts simultaneously to the Project
-	// controller, some of the needed objects are not yet created.
-	// This is only needed for backwards-compatibility and can be removed in a future version.
-	if err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
-		selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleProject))
-		if err != nil {
-			return false, err
-		}
-		namespaceList, err := c.namespaceLister.List(selector)
-		if err != nil {
-			return false, err
-		}
-		projectList, err := c.projectLister.List(labels.Everything())
-		if err != nil {
-			return false, err
-		}
-
-		if len(namespaceList) != len(projectList) {
-			return false, nil
-		}
-		return true, nil
-	}); err != nil {
-		panic(fmt.Sprintf("error occurred while waiting for the project controller to create all project resources: %+v", err))
 	}
 
 	logger.Logger.Info("Shoot controller initialized.")
