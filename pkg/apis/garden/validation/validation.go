@@ -106,9 +106,9 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		allErrs = append(allErrs, validateDNSProviders(spec.Alicloud.Constraints.DNSProviders, fldPath.Child("alicloud", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Alicloud.Constraints.Kubernetes, fldPath.Child("alicloud", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateAlicloudMachineImages(spec.Alicloud.Constraints.MachineImages, fldPath.Child("alicloud", "constraints", "machineImages"))...)
-		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Alicloud.Constraints.MachineTypes, fldPath.Child("alicloud", "constraints", "machineTypes"))...)
-		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Alicloud.Constraints.VolumeTypes, fldPath.Child("alicloud", "constraints", "volumeTypes"))...)
-		allErrs = append(allErrs, validateAlicloudZones(&spec.Alicloud.Constraints, fldPath.Child("alicloud", "constraints"))...)
+		allErrs = append(allErrs, validateAlicloudMachineTypeConstraints(spec.Alicloud.Constraints, fldPath.Child("alicloud", "constraints"))...)
+		allErrs = append(allErrs, validateAlicloudVolumeTypeConstraints(spec.Alicloud.Constraints, fldPath.Child("alicloud", "constraints"))...)
+		allErrs = append(allErrs, validateZones(spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "zones"))...)
 	}
 
 	if spec.OpenStack != nil {
@@ -216,6 +216,52 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+	}
+
+	return allErrs
+}
+
+func validateAlicloudMachineTypeConstraints(constraints garden.AlicloudConstraints, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	machineTypes := constraints.MachineTypes
+	mtPath := fldPath.Child("machineTypes")
+
+	if len(machineTypes) == 0 {
+		allErrs = append(allErrs, field.Required(mtPath, "must provide at least one machine type"))
+	}
+
+	for i, machineType := range machineTypes {
+		idxPath := mtPath.Index(i)
+		namePath := idxPath.Child("name")
+		cpuPath := idxPath.Child("cpu")
+		gpuPath := idxPath.Child("gpu")
+		memoryPath := idxPath.Child("memory")
+		zonesPath := idxPath.Child("zones")
+
+		if len(machineType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
+		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
+		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+
+		for idx, zoneName := range machineType.Zones {
+			existed := false
+			for _, zone := range constraints.Zones {
+				for _, zoneNameDefined := range zone.Names {
+					if zoneName == zoneNameDefined {
+						existed = true
+						break
+					}
+				}
+				if existed {
+					break
+				}
+			}
+			if !existed {
+				allErrs = append(allErrs, field.Invalid(zonesPath.Index(idx), zoneName, fmt.Sprintf("Zone name [%s] is not in defined zones list", zoneName)))
+			}
+		}
 	}
 
 	return allErrs
@@ -342,82 +388,6 @@ func validateAlicloudMachineImages(machineImages []garden.AlicloudMachineImage, 
 	return allErrs
 }
 
-func validateAlicloudZones(contraints *garden.AlicloudConstraints, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	zonesPath := fldPath.Child("zones")
-	if len(contraints.Zones) == 0 {
-		allErrs = append(allErrs, field.Required(zonesPath, "must provide at least one zone"))
-	}
-
-	for i, region := range contraints.Zones {
-		idxPath := zonesPath.Index(i)
-		regionPath := idxPath.Child("region")
-		zcPath := idxPath.Child("zoneContraints")
-
-		if len(region.Region) == 0 {
-			allErrs = append(allErrs, field.Required(regionPath, "must provide a region"))
-		}
-
-		allErrs = append(allErrs, validateAlicloudZoneConstrants(contraints, region.ZoneContraints, zcPath)...)
-	}
-
-	return allErrs
-}
-
-func validateAlicloudZoneConstrants(contraints *garden.AlicloudConstraints, zoneConstraints []garden.AlicloudZoneContstrants, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	if len(zoneConstraints) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one zone constraints"))
-	}
-
-	for i, zc := range zoneConstraints {
-		idxPath := fldPath.Index(i)
-
-		//check zone
-		if len(zc.Zone) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("zone"), ""))
-		}
-
-		//check volume types
-		volumesPath := idxPath.Child("volumeTypes")
-		if len(zc.VolumeTypes) == 0 {
-			allErrs = append(allErrs, field.Required(volumesPath, "must provide at least one volume type"))
-		}
-		for j, v := range zc.VolumeTypes {
-			volumeExists := false
-			for _, av := range contraints.VolumeTypes {
-				if v == av.Class {
-					volumeExists = true
-					break
-				}
-			}
-			if !volumeExists {
-				allErrs = append(allErrs, field.Invalid(volumesPath.Index(j), v, fmt.Sprintf("Volume name [%s] is not in available volume list", v)))
-			}
-		}
-
-		//check machine types
-		machinesPath := idxPath.Child("machineTypes")
-		if len(zc.MachineTypes) == 0 {
-			allErrs = append(allErrs, field.Required(machinesPath, "must provide at least one machine type"))
-		}
-		for j, m := range zc.MachineTypes {
-			mtExists := false
-			for _, am := range contraints.MachineTypes {
-				if m == am.Name {
-					mtExists = true
-					break
-				}
-			}
-			if !mtExists {
-				allErrs = append(allErrs, field.Invalid(machinesPath.Index(j), m, fmt.Sprintf("Machine type [%s] is not in available machine type list", m)))
-			}
-		}
-	}
-
-	return allErrs
-}
-
 func validateOpenStackMachineImages(machineImages []garden.OpenStackMachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -475,6 +445,50 @@ func validateVolumeTypeConstraints(volumeTypes []garden.VolumeType, fldPath *fie
 		}
 		if len(volumeType.Class) == 0 {
 			allErrs = append(allErrs, field.Required(classPath, "must provide a class"))
+		}
+	}
+
+	return allErrs
+}
+
+func validateAlicloudVolumeTypeConstraints(constraints garden.AlicloudConstraints, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	volumeTypes := constraints.VolumeTypes
+	vtPath := fldPath.Child("volumeTypes")
+
+	if len(volumeTypes) == 0 {
+		allErrs = append(allErrs, field.Required(vtPath, "must provide at least one volume type"))
+	}
+
+	for i, volumeType := range volumeTypes {
+		idxPath := vtPath.Index(i)
+		namePath := idxPath.Child("name")
+		classPath := idxPath.Child("class")
+		zonesPath := idxPath.Child("zones")
+
+		if len(volumeType.Name) == 0 {
+			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+		}
+		if len(volumeType.Class) == 0 {
+			allErrs = append(allErrs, field.Required(classPath, "must provide a class"))
+		}
+		for idx, zoneName := range volumeType.Zones {
+			existed := false
+			for _, zone := range constraints.Zones {
+				for _, zoneNameDefined := range zone.Names {
+					if zoneName == zoneNameDefined {
+						existed = true
+						break
+					}
+				}
+				if existed {
+					break
+				}
+			}
+			if !existed {
+				allErrs = append(allErrs, field.Invalid(zonesPath.Index(idx), zoneName, fmt.Sprintf("Zone name [%s] is not in defined zones list", zoneName)))
+			}
 		}
 	}
 

@@ -1385,24 +1385,31 @@ var _ = Describe("validation", func() {
 										ID:      "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
 									},
 								},
-								MachineTypes: machineTypesConstraint,
-								VolumeTypes:  volumeTypesConstraint,
-								Zones: []garden.AlicloudZone{
+								MachineTypes: []garden.AlicloudMachineType{
 									{
-										Region: "cn-beijing",
-										ZoneContraints: []garden.AlicloudZoneContstrants{
-											{
-												Zone: "cn-beijing-f",
-												VolumeTypes: []string{
-													"super-premium",
-												},
-												MachineTypes: []string{
-													"machine-type-1",
-												},
-											},
+										MachineType: garden.MachineType{
+											Name:   "ecs.sn2ne.large",
+											CPU:    resource.MustParse("2"),
+											GPU:    resource.MustParse("0"),
+											Memory: resource.MustParse("8Gi"),
+										},
+										Zones: []string{
+											"my-region-a",
 										},
 									},
 								},
+								VolumeTypes: []garden.AlicloudVolumeType{
+									{
+										VolumeType: garden.VolumeType{
+											Name:  "cloud_efficiency",
+											Class: "standard",
+										},
+										Zones: []string{
+											"my-region-a",
+										},
+									},
+								},
+								Zones: zonesConstraint,
 							},
 						},
 					},
@@ -1519,12 +1526,11 @@ var _ = Describe("validation", func() {
 
 			Context("machine types validation", func() {
 				It("should enforce that at least one machine type has been defined", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.MachineType{}
+					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.AlicloudMachineType{}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					//last error is populated by zone constrants
-					Expect(len(errorList)).To(Equal(2))
+					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
@@ -1532,11 +1538,20 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid machine types with unsupported property values", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = invalidMachineTypes
+					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.AlicloudMachineType{
+						{
+							MachineType: garden.MachineType{
+								Name:   "",
+								CPU:    resource.MustParse("-2"),
+								GPU:    resource.MustParse("-2"),
+								Memory: resource.MustParse("-8Gi"),
+							},
+						},
+					}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
-					//last error is populated by zone constrants
-					Expect(len(errorList)).To(Equal(5))
+
+					Expect(len(errorList)).To(Equal(4))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
@@ -1554,16 +1569,39 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].memory", fldPath)),
 					}))
 				})
+
+				It("should enforce zone name in general zones defined in constraints", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.AlicloudMachineType{
+						{
+							MachineType: garden.MachineType{
+								Name:   "ecs.sn2ne.large",
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("8Gi"),
+							},
+							Zones: []string{
+								"cn-beijing-",
+							},
+						},
+					}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(1))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].zones[0]", fldPath)),
+					}))
+				})
 			})
 
 			Context("volume types validation", func() {
 				It("should enforce that at least one volume type has been defined", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.VolumeType{}
+					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.AlicloudVolumeType{}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					//last error is populated by zone constrants
-					Expect(len(errorList)).To(Equal(2))
+					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
@@ -1571,12 +1609,18 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid volume types with unsupported property values", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = invalidVolumeTypes
+					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.AlicloudVolumeType{
+						{
+							VolumeType: garden.VolumeType{
+								Name:  "",
+								Class: "",
+							},
+						},
+					}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					//last error is populated by zone constrants
-					Expect(len(errorList)).To(Equal(3))
+					Expect(len(errorList)).To(Equal(2))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
@@ -1586,102 +1630,56 @@ var _ = Describe("validation", func() {
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].class", fldPath)),
 					}))
 				})
-			})
 
-			Context("zone constraints validation", func() {
-				It("should forbid empty zones", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones = []garden.AlicloudZone{}
+				It("should enforce zone name in general zones defined in constraints", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.AlicloudVolumeType{
+						{
+							VolumeType: garden.VolumeType{
+								Name:  "cloud_efficiency",
+								Class: "standard",
+							},
+							Zones: []string{
+								"cn-beijing-",
+							},
+						},
+					}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
 					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].zones[0]", fldPath)),
+					}))
+				})
+			})
+
+			Context("zone validation", func() {
+				It("should forbid empty zones", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones = []garden.Zone{}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(len(errorList)).To(Equal(3))
+					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
 					}))
 				})
 
-				It("should forbid empty region name", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].Region = ""
+				It("should forbid zones with unsupported name values", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.Zones = invalidZones
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					Expect(len(errorList)).To(Equal(4))
+					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
 					}))
-				})
-
-				It("should forbid empty zone constraints", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints = []garden.AlicloudZoneContstrants{}
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints", fldPath)),
-					}))
-				})
-
-				It("should forbid empty zone name", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].Zone = ""
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].zone", fldPath)),
-					}))
-				})
-
-				It("should forbid empty volume types", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].VolumeTypes = []string{}
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].volumeTypes", fldPath)),
-					}))
-				})
-
-				It("should enforce volume type in general volume type list", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].VolumeTypes[0] = "other volume type"
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].volumeTypes[0]", fldPath)),
-					}))
-				})
-
-				It("should forbid empty machine types", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].MachineTypes = []string{}
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].machineTypes", fldPath)),
-					}))
-				})
-
-				It("should enforce volume type in general volume type list", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.Zones[0].ZoneContraints[0].MachineTypes[0] = "other machine type"
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].zoneContraints[0].machineTypes[0]", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
 					}))
 				})
 			})
