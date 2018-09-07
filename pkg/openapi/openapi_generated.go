@@ -26,6 +26,7 @@ import (
 	spec "github.com/go-openapi/spec"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	common "k8s.io/kube-openapi/pkg/common"
 )
 
@@ -380,6 +381,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"k8s.io/apimachinery/pkg/runtime.RawExtension":                                       schema_k8sio_apimachinery_pkg_runtime_RawExtension(ref),
 		"k8s.io/apimachinery/pkg/runtime.TypeMeta":                                           schema_k8sio_apimachinery_pkg_runtime_TypeMeta(ref),
 		"k8s.io/apimachinery/pkg/runtime.Unknown":                                            schema_k8sio_apimachinery_pkg_runtime_Unknown(ref),
+		"k8s.io/apimachinery/pkg/util/intstr.IntOrString":                                    schema_apimachinery_pkg_util_intstr_IntOrString(ref),
 		"k8s.io/apimachinery/pkg/version.Info":                                               schema_k8sio_apimachinery_pkg_version_Info(ref),
 	}
 }
@@ -779,6 +781,18 @@ func schema_pkg_apis_garden_v1beta1_AWSWorker(ref common.ReferenceCallback) comm
 							Format:      "int32",
 						},
 					},
+					"maxSurge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"maxUnavailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
 					"volumeType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "VolumeType is the type of the root volumes.",
@@ -797,7 +811,8 @@ func schema_pkg_apis_garden_v1beta1_AWSWorker(ref common.ReferenceCallback) comm
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -1280,6 +1295,18 @@ func schema_pkg_apis_garden_v1beta1_AzureWorker(ref common.ReferenceCallback) co
 							Format:      "int32",
 						},
 					},
+					"maxSurge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"maxUnavailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
 					"volumeType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "VolumeType is the type of the root volumes.",
@@ -1298,7 +1325,8 @@ func schema_pkg_apis_garden_v1beta1_AzureWorker(ref common.ReferenceCallback) co
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -2134,6 +2162,18 @@ func schema_pkg_apis_garden_v1beta1_GCPWorker(ref common.ReferenceCallback) comm
 							Format:      "int32",
 						},
 					},
+					"maxSurge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"maxUnavailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
 					"volumeType": {
 						SchemaProps: spec.SchemaProps{
 							Description: "VolumeType is the type of the root volumes.",
@@ -2152,7 +2192,8 @@ func schema_pkg_apis_garden_v1beta1_GCPWorker(ref common.ReferenceCallback) comm
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -3590,11 +3631,24 @@ func schema_pkg_apis_garden_v1beta1_OpenStackWorker(ref common.ReferenceCallback
 							Format:      "int32",
 						},
 					},
+					"maxSurge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"maxUnavailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
 				},
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -4370,8 +4424,7 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 					},
 					"maintenance": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Maintenance contains information about the time window for maintenance operations and which operations should be performed.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"),
+							Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"),
 						},
 					},
 				},
@@ -4525,11 +4578,24 @@ func schema_pkg_apis_garden_v1beta1_Worker(ref common.ReferenceCallback) common.
 							Format:      "int32",
 						},
 					},
+					"maxSurge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"maxUnavailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
 				},
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
 	}
 }
 
@@ -16488,6 +16554,18 @@ func schema_k8sio_apimachinery_pkg_runtime_Unknown(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_apimachinery_pkg_util_intstr_IntOrString(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IntOrString is a type that can hold an int32 or a string.  When used in JSON or YAML marshalling and unmarshalling, it produces or consumes the inner type.  This allows you to have, for example, a JSON field that can accept a name or number.",
+				Type:        intstr.IntOrString{}.OpenAPISchemaType(),
+				Format:      intstr.IntOrString{}.OpenAPISchemaFormat(),
+			},
+		},
 	}
 }
 

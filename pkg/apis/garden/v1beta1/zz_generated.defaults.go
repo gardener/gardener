@@ -58,6 +58,30 @@ func SetObjectDefaults_SeedList(in *SeedList) {
 
 func SetObjectDefaults_Shoot(in *Shoot) {
 	SetDefaults_Shoot(in)
+	if in.Spec.Cloud.AWS != nil {
+		for i := range in.Spec.Cloud.AWS.Workers {
+			a := &in.Spec.Cloud.AWS.Workers[i]
+			SetDefaults_Worker(&a.Worker)
+		}
+	}
+	if in.Spec.Cloud.Azure != nil {
+		for i := range in.Spec.Cloud.Azure.Workers {
+			a := &in.Spec.Cloud.Azure.Workers[i]
+			SetDefaults_Worker(&a.Worker)
+		}
+	}
+	if in.Spec.Cloud.GCP != nil {
+		for i := range in.Spec.Cloud.GCP.Workers {
+			a := &in.Spec.Cloud.GCP.Workers[i]
+			SetDefaults_Worker(&a.Worker)
+		}
+	}
+	if in.Spec.Cloud.OpenStack != nil {
+		for i := range in.Spec.Cloud.OpenStack.Workers {
+			a := &in.Spec.Cloud.OpenStack.Workers[i]
+			SetDefaults_Worker(&a.Worker)
+		}
+	}
 }
 
 func SetObjectDefaults_ShootList(in *ShootList) {

@@ -16,7 +16,6 @@ package gcpbotanist
 
 import (
 	"fmt"
-
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
@@ -131,10 +130,12 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, operati
 			)
 
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
-				Name:      deploymentName,
-				ClassName: className,
-				Minimum:   common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
-				Maximum:   common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
+				Name:           deploymentName,
+				ClassName:      className,
+				Minimum:        common.DistributeOverZones(zoneIndex, worker.AutoScalerMin, zoneLen),
+				Maximum:        common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
+				MaxSurge:       common.DistributePositiveIntOrPercent(zoneIndex, *worker.MaxSurge, zoneLen, worker.AutoScalerMax),
+				MaxUnavailable: common.DistributePositiveIntOrPercent(zoneIndex, *worker.MaxUnavailable, zoneLen, worker.AutoScalerMin),
 			})
 
 			machineClassSpec["name"] = className

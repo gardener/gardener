@@ -82,6 +82,7 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=k8s.io/apimachinery/pkg/types \
   --input-dirs=k8s.io/apimachinery/pkg/version \
   --input-dirs=k8s.io/apimachinery/pkg/runtime \
+  --input-dirs=k8s.io/apimachinery/pkg/util/intstr \
   --report-filename=./$(dirname "${0}")/../pkg/openapi/api_violations.report \
   --output-package=github.com/gardener/gardener/pkg/openapi \
   -h <(headers)

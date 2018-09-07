@@ -25,6 +25,8 @@ spec:
         volumeSize: 20Gi
         autoScalerMin: 2
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
       zones: ['eu-west-1a']
   kubernetes:
     version: 1.11.0

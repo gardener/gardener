@@ -22,6 +22,8 @@ spec:
         machineType: medium_2_4
         autoScalerMin: 2
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
       zones: ['europe-1a']
   kubernetes:
     version: 1.11.0

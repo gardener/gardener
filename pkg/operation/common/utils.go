@@ -17,6 +17,8 @@ package common
 import (
 	"errors"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"math"
 	"net"
 	"regexp"
 	"strconv"
@@ -68,6 +70,46 @@ func DistributeOverZones(zoneIndex, size, zoneSize int) int {
 		second = 1
 	}
 	return first + second
+}
+
+// DistributePercentOverZones distributes a given percentage value over zones in relation to
+// the given total value. In case the total value is evenly divisible over the zones, this
+// always just returns the initial percentage. Otherwise, the total value is used to determine
+// the weight of a specific zone in relation to the other zones and adapt the given percentage
+// accordingly.
+func DistributePercentOverZones(zoneIndex int, percent string, zoneSize int, total int) string {
+	percents, err := strconv.Atoi(percent[:len(percent)-1])
+	if err != nil {
+		panic(fmt.Sprintf("given value %q is not a percent value", percent))
+	}
+
+	var weightedPercents int
+	if total%zoneSize == 0 {
+		// Zones are evenly sized, we don't need to adapt the percentage per zone
+		weightedPercents = percents
+	} else {
+		// Zones are not evenly sized, we need to calculate the ratio of each zone
+		// and modify the percentage depending on that ratio.
+		zoneTotal := DistributeOverZones(zoneIndex, total, zoneSize)
+		absoluteTotalRatio := float64(total) / float64(zoneSize)
+		ratio := 100.0 / absoluteTotalRatio * float64(zoneTotal)
+		// Optimistic rounding up, this will cause an actual max surge / max unavailable percentage to be a bit higher.
+		weightedPercents = int(math.Ceil(ratio * float64(percents) / 100.0))
+	}
+
+	return fmt.Sprintf("%d%%", weightedPercents)
+}
+
+// DistributePositiveIntOrPercent distributes a given int or percentage value over zones in relation to
+// the given total value. In case the total value is evenly divisible over the zones, this
+// always just returns the initial percentage. Otherwise, the total value is used to determine
+// the weight of a specific zone in relation to the other zones and adapt the given percentage
+// accordingly.
+func DistributePositiveIntOrPercent(zoneIndex int, intOrPercent intstr.IntOrString, zoneSize int, total int) intstr.IntOrString {
+	if intOrPercent.Type == intstr.String {
+		return intstr.FromString(DistributePercentOverZones(zoneIndex, intOrPercent.StrVal, zoneSize, total))
+	}
+	return intstr.FromInt(DistributeOverZones(zoneIndex, int(intOrPercent.IntVal), zoneSize))
 }
 
 // IdentifyAddressType takes a string containing an address (hostname or IP) and tries to parse it

@@ -122,6 +122,12 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 	if a.GetKind().GroupKind() != garden.Kind("Shoot") {
 		return nil
 	}
+
+	// Ignore updates to shoot status or other subresources
+	if a.GetSubresource() != "" {
+		return nil
+	}
+
 	shoot, ok := a.GetObject().(*garden.Shoot)
 	if !ok {
 		return apierrors.NewInternalError(errors.New("could not convert resource into Shoot object"))

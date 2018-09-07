@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -54,10 +55,12 @@ type Operation struct {
 // MachineDeployment holds insformation about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
 type MachineDeployment struct {
-	Name      string
-	ClassName string
-	Minimum   int
-	Maximum   int
+	Name           string
+	ClassName      string
+	Minimum        int
+	Maximum        int
+	MaxSurge       intstr.IntOrString
+	MaxUnavailable intstr.IntOrString
 }
 
 // MachineDeployments is a list of machine deployments.

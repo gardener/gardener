@@ -15,6 +15,7 @@
 package v1beta1
 
 import (
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -591,6 +592,7 @@ type ShootSpec struct {
 	// Maintenance contains information about the time window for maintenance operations and which
 	// operations should be performed.
 	// +optional
+
 	Maintenance *Maintenance `json:"maintenance,omitempty"`
 }
 
@@ -875,7 +877,21 @@ type Worker struct {
 	AutoScalerMin int `json:"autoScalerMin"`
 	// AutoScalerMin is the maximum number of VMs to create.
 	AutoScalerMax int `json:"autoScalerMax"`
+	// MaxSurge is maximum number of VMs that are created during an update.
+	// +optional
+	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
+	//MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
+
+var (
+	// DefaultWorkerMaxSurge is the default value for Worker MaxSurge.
+	DefaultWorkerMaxSurge = intstr.FromInt(1)
+
+	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
+	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
+)
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
