@@ -94,6 +94,10 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return err
 	}
 
+	if shoot.Name != "foo" {
+		return nil
+	}
+
 	var (
 		shootLogger  = logger.NewShootLogger(logger.Logger, shoot.ObjectMeta.Name, shoot.ObjectMeta.Namespace, "")
 		needsRequeue = true

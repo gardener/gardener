@@ -112,8 +112,9 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		return
 	}
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
+
 	var (
-		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.config, f.recorder)
 		quotaController                = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
 		projectController              = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)

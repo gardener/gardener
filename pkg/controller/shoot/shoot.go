@@ -28,13 +28,19 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	"github.com/robfig/cron"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	kubeinformers "k8s.io/client-go/informers"
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
+
+	"github.com/robfig/cron"
 )
 
 // Controller controls Shoots.
@@ -51,7 +57,10 @@ type Controller struct {
 	secrets            map[string]*corev1.Secret
 	imageVector        imagevector.ImageVector
 
-	shootLister           gardenlisters.ShootLister
+	shootLister     gardenlisters.ShootLister
+	projectLister   gardenlisters.ProjectLister
+	namespaceLister kubecorev1listers.NamespaceLister
+
 	shootQueue            workqueue.RateLimitingInterface
 	shootCareQueue        workqueue.RateLimitingInterface
 	shootMaintenanceQueue workqueue.RateLimitingInterface
@@ -71,32 +80,46 @@ type Controller struct {
 // NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = k8sGardenInformers.Garden().V1beta1()
-		shootInformer         = gardenv1beta1Informer.Shoots()
-		shootLister           = shootInformer.Lister()
-		shootUpdater          = NewRealUpdater(k8sGardenClient, shootLister)
+		corev1Informer        = kubeInformerFactory.Core().V1()
+
+		shootInformer = gardenv1beta1Informer.Shoots()
+		shootLister   = shootInformer.Lister()
+		shootUpdater  = NewRealUpdater(k8sGardenClient, shootLister)
+
+		projectInformer = gardenv1beta1Informer.Projects()
+		projectLister   = projectInformer.Lister()
+
+		namespaceInformer = corev1Informer.Namespaces()
+		namespaceLister   = namespaceInformer.Lister()
 	)
 
 	shootController := &Controller{
-		k8sGardenClient:       k8sGardenClient,
-		k8sGardenInformers:    k8sGardenInformers,
-		config:                config,
-		control:               NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder, shootUpdater),
-		careControl:           NewDefaultCareControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, shootUpdater),
-		maintenanceControl:    NewDefaultMaintenanceControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, recorder, shootUpdater),
-		quotaControl:          NewDefaultQuotaControl(k8sGardenClient, gardenv1beta1Informer),
-		recorder:              recorder,
-		secrets:               secrets,
-		imageVector:           imageVector,
-		shootLister:           shootLister,
+		k8sGardenClient:    k8sGardenClient,
+		k8sGardenInformers: k8sGardenInformers,
+
+		config:             config,
+		control:            NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder, shootUpdater),
+		careControl:        NewDefaultCareControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, shootUpdater),
+		maintenanceControl: NewDefaultMaintenanceControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, recorder, shootUpdater),
+		quotaControl:       NewDefaultQuotaControl(k8sGardenClient, gardenv1beta1Informer),
+		recorder:           recorder,
+		secrets:            secrets,
+		imageVector:        imageVector,
+
+		shootLister:     shootLister,
+		projectLister:   projectLister,
+		namespaceLister: namespaceLister,
+
 		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
 		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
 		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
 		shootSeedQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
-		workerCh:              make(chan int),
+
+		workerCh: make(chan int),
 	}
 
 	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -149,8 +172,6 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 		}
 	}()
 
-	logger.Logger.Info("Shoot controller initialized.")
-
 	// Update Shoots before starting the workers.
 	shoots, err := c.shootLister.List(labels.Everything())
 	if err != nil {
@@ -200,6 +221,35 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 			}
 		}
 	}
+
+	// Now that we have Project resources we should wait for the Project controller to create the Project resources
+	// for all namespaces before starting the Shoot controller. This is because the Shoot controller wants to read
+	// the Project object responsible for a respective Shoot object and, if it starts simultaneously to the Project
+	// controller, some of the needed objects are not yet created.
+	// This is only needed for backwards-compatibility and can be removed in a future version.
+	if err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
+		selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleProject))
+		if err != nil {
+			return false, err
+		}
+		namespaceList, err := c.namespaceLister.List(selector)
+		if err != nil {
+			return false, err
+		}
+		projectList, err := c.projectLister.List(labels.Everything())
+		if err != nil {
+			return false, err
+		}
+
+		if len(namespaceList) != len(projectList) {
+			return false, nil
+		}
+		return true, nil
+	}); err != nil {
+		panic(fmt.Sprintf("error occurred while waiting for the project controller to create all project resources: %+v", err))
+	}
+
+	logger.Logger.Info("Shoot controller initialized.")
 
 	for i := 0; i < shootWorkers; i++ {
 		controllerutils.CreateWorker(c.shootQueue, "Shoot", c.reconcileShootKey, stopCh, &waitGroup, c.workerCh)
