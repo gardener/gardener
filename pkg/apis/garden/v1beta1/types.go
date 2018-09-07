@@ -270,11 +270,11 @@ type AlicloudConstraints struct {
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
 	MachineImages []AlicloudMachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
-	MachineTypes []MachineType `json:"machineTypes"`
+	MachineTypes []AlicloudMachineType `json:"machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
-	VolumeTypes []VolumeType `json:"volumeTypes"`
+	VolumeTypes []AlicloudVolumeType `json:"volumeTypes"`
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
-	Zones []AlicloudZone `json:"zones"`
+	Zones []Zone `json:"zones"`
 }
 
 // AlicloudMachineImage defines the region and the AMI for a machine image.
@@ -287,22 +287,16 @@ type AlicloudMachineImage struct {
 	ID string `json:"id"`
 }
 
-// AlicloudZone defines availablity zones together with resource contraints for a specific region
-type AlicloudZone struct {
-	// Region is a region name.
-	Region string `json:"region"`
-	// ZoneContraints is a list of resource contraints per availability zone in this region.
-	ZoneContraints []AlicloudZoneContstrants `json:"zoneContraints"`
+//AlicloudMachineType defines certain machine type combining original defined MachineType and new defined Zones
+type AlicloudMachineType struct {
+	MachineType `json:",inline"`
+	Zones       []string `json:"zones"`
 }
 
-// AlicloudZoneContstrants contains available volume types and machine types for a specific availability zone.
-type AlicloudZoneContstrants struct {
-	// Name is the name of a zone in alicloud.
-	Zone string `json:"zone"`
-	// VolumeTypes are available volume types in the current zone.
-	VolumeTypes []string `json:"volumeTypes"`
-	// MachineTypes are are avilable machine types in the current zone.
-	MachineTypes []string `json:"machineTypes"`
+//AlicloudVolumeType defines
+type AlicloudVolumeType struct {
+	VolumeType `json:",inline"`
+	Zones      []string `json:"zones"`
 }
 
 // LocalProfile defines constraints and definitions for the local development.

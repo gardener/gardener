@@ -46,12 +46,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud":                      schema_pkg_apis_garden_v1beta1_Alicloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudConstraints":           schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage":          schema_pkg_apis_garden_v1beta1_AlicloudMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineType":           schema_pkg_apis_garden_v1beta1_AlicloudMachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudNetworks":              schema_pkg_apis_garden_v1beta1_AlicloudNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile":               schema_pkg_apis_garden_v1beta1_AlicloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVPC":                   schema_pkg_apis_garden_v1beta1_AlicloudVPC(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVolumeType":            schema_pkg_apis_garden_v1beta1_AlicloudVolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker":                schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZone":                  schema_pkg_apis_garden_v1beta1_AlicloudZone(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZoneContstrants":       schema_pkg_apis_garden_v1beta1_AlicloudZoneContstrants(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud":                    schema_pkg_apis_garden_v1beta1_AzureCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints":              schema_pkg_apis_garden_v1beta1_AzureConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount":              schema_pkg_apis_garden_v1beta1_AzureDomainCount(ref),
@@ -998,7 +998,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref common.ReferenceCall
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineType"),
 									},
 								},
 							},
@@ -1011,7 +1011,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref common.ReferenceCall
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVolumeType"),
 									},
 								},
 							},
@@ -1024,7 +1024,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref common.ReferenceCall
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZone"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"),
 									},
 								},
 							},
@@ -1035,7 +1035,7 @@ func schema_pkg_apis_garden_v1beta1_AlicloudConstraints(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZone", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 	}
 }
 
@@ -1071,6 +1071,59 @@ func schema_pkg_apis_garden_v1beta1_AlicloudMachineImage(ref common.ReferenceCal
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AlicloudMachineType(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudMachineType defines certain machine type combining original defined MachineType and new defined Zones",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the machine type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPU is the number of CPUs for this machine type.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"gpu": {
+						SchemaProps: spec.SchemaProps{
+							Description: "GPU is the number of GPUs for this machine type.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"memory": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Memory is the amount of memory for this machine type.",
+							Ref:         ref("k8s.io/apimachinery/pkg/api/resource.Quantity"),
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name", "cpu", "gpu", "memory", "zones"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/api/resource.Quantity"},
 	}
 }
 
@@ -1178,6 +1231,47 @@ func schema_pkg_apis_garden_v1beta1_AlicloudVPC(ref common.ReferenceCallback) co
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_AlicloudVolumeType(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AlicloudVolumeType defines",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the volume type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"class": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Class is the class of the volume type.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name", "class", "zones"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1228,90 +1322,6 @@ func schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref common.ReferenceCallback)
 					},
 				},
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
-			},
-		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_AlicloudZone(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "AlicloudZone defines availablity zones together with resource contraints for a specific region",
-				Properties: map[string]spec.Schema{
-					"region": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Region is a region name.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"zoneContraints": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ZoneContraints is a list of resource contraints per availability zone in this region.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZoneContstrants"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"region", "zoneContraints"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudZoneContstrants"},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_AlicloudZoneContstrants(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "AlicloudZoneContstrants contains available volume types and machine types for a specific availability zone.",
-				Properties: map[string]spec.Schema{
-					"zone": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Name is the name of a zone in alicloud.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"volumeTypes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "VolumeTypes are available volume types in the current zone.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-					"machineTypes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MachineTypes are are avilable machine types in the current zone.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"zone", "volumeTypes", "machineTypes"},
 			},
 		},
 		Dependencies: []string{},
