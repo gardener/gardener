@@ -152,6 +152,10 @@ images:
   sourceRepository: github.com/mirror/busybox
   repository: busybox
   tag: "1.29.2"
+- name: ruby
+  sourceRepository: github.com/docker-library/ruby
+  repository: ruby
+  tag: "2.5.1-alpine"
 
 # Seed bootstrap
 - name: pause-container

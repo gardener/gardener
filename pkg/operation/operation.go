@@ -224,10 +224,17 @@ func (o *Operation) InjectImages(values map[string]interface{}, version string, 
 // creating machines/VMs. It needs the name of the worker group it is used for (<workerName>) and returns
 // the rendered chart.
 func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrenderer.RenderedChart, error) {
-	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, map[string]interface{}{
+	config := map[string]interface{}{
 		"kubeconfig": string(o.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
 		"secretName": o.Shoot.ComputeCloudConfigSecretName(workerName),
-	})
+	}
+
+	values, err := o.InjectImages(config, o.K8sShootClient.Version(), map[string]string{"ruby": "ruby"})
+	if err != nil {
+		return nil, err
+	}
+
+	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, values)
 }
 
 // ComputeOriginalCloudConfig computes the original cloud config which is downloaded by the cloud config
