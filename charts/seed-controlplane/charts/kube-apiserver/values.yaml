@@ -1,4 +1,3 @@
-cloudProvider: aws
 replicas: 1
 kubernetesVersion: 1.11.2
 advertiseAddress: 127.0.0.1
@@ -10,7 +9,6 @@ seedNetworks:
   service: 10.0.0.0/24
   pod: 192.168.0.0/1
   node: 172.16.0.0/20
-environment: []
 additionalParameters: []
 podAnnotations: {}
 featureGates: {}

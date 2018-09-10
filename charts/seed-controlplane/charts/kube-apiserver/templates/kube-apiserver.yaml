@@ -41,6 +41,7 @@ spec:
         - --admission-control={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         {{- else }}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
+        - --disable-admission-plugins=PersistentVolumeLabel
         {{- end }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
         - --advertise-address={{ .Values.advertiseAddress }}
@@ -53,7 +54,6 @@ spec:
         - --authorization-mode=Node,RBAC
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
-        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
         - --etcd-cafile=/srv/kubernetes/ca/ca.crt
@@ -82,10 +82,8 @@ spec:
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
         - --v=2
 {{- range $index, $param := $.Values.additionalParameters }}
-        - {{$param}}
+        - {{ $param }}
 {{- end }}
-        env:
-{{ toYaml .Values.environment | indent 10 }}
         livenessProbe:
           httpGet:
             scheme: HTTPS
@@ -96,7 +94,7 @@ spec:
               value: Basic {{ .Values.probeCredentials }}
           successThreshold: 1
           failureThreshold: 2
-          initialDelaySeconds: 30
+          initialDelaySeconds: 15
           periodSeconds: 30
           timeoutSeconds: 15
         readinessProbe:
@@ -148,10 +146,6 @@ spec:
         {{- end }}
         - name: kube-apiserver-admission-config
           mountPath: {{ include "kube-apiserver.admissionPluginConfigFileDir" . }}
-        - name: cloud-provider-config
-          mountPath: /etc/kubernetes/cloudprovider
-        - name: cloudprovider
-          mountPath: /srv/cloudprovider
         - name: etcssl
           mountPath: /etc/ssl
           readOnly: true
@@ -253,12 +247,6 @@ spec:
       - name: vpn-seed-tlsauth
         secret:
           secretName: vpn-seed-tlsauth
-      - name: cloud-provider-config
-        configMap:
-          name: cloud-provider-config
-      - name: cloudprovider
-        secret:
-          secretName: cloudprovider
       - name: etcssl
         hostPath:
           path: /etc/ssl

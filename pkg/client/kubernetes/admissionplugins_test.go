@@ -25,7 +25,7 @@ import (
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
 		It("should return the list for 1.9 (non-parseable version)", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("not-1-a-semver-version")
 
@@ -35,7 +35,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return the list for 1.9 (lowest supported version)", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("1.7.4")
 
@@ -45,7 +45,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return the list for 1.9", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("1.9.0")
 
@@ -55,7 +55,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return the list for 1.10", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("1.10.99")
 
@@ -65,7 +65,7 @@ var _ = Describe("kubernetes", func() {
 		})
 
 		It("should return the list for 1.11", func() {
-			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "PersistentVolumeLabel", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
+			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("1.11.23")
 

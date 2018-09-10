@@ -59,6 +59,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupInfrastructureSpec":      schema_pkg_apis_garden_v1beta1_BackupInfrastructureSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.BackupInfrastructureStatus":    schema_pkg_apis_garden_v1beta1_BackupInfrastructureStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud":                         schema_pkg_apis_garden_v1beta1_Cloud(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudControllerManagerConfig":  schema_pkg_apis_garden_v1beta1_CloudControllerManagerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfile":                  schema_pkg_apis_garden_v1beta1_CloudProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfileList":              schema_pkg_apis_garden_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfileSpec":              schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref),
@@ -1591,6 +1592,33 @@ func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.O
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_CloudControllerManagerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.",
+				Properties: map[string]spec.Schema{
+					"featureGates": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FeatureGates contains information about enabled feature gates.",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"boolean"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_CloudProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2616,6 +2644,12 @@ func schema_pkg_apis_garden_v1beta1_Kubernetes(ref common.ReferenceCallback) com
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeAPIServerConfig"),
 						},
 					},
+					"cloudControllerManager": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CloudControllerManager contains configuration settings for the cloud-controller-manager.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudControllerManagerConfig"),
+						},
+					},
 					"kubeControllerManager": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubeControllerManager contains configuration settings for the kube-controller-manager.",
@@ -2652,7 +2686,7 @@ func schema_pkg_apis_garden_v1beta1_Kubernetes(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeletConfig"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeletConfig"},
 	}
 }
 

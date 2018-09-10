@@ -15,6 +15,7 @@
 package botanist
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -89,11 +90,6 @@ func (b *Botanist) DeployKubeAPIServerService() error {
 	})
 }
 
-// RefreshKubeAPIServerChecksums updates the cloud provider checksum in the kube-apiserver pod spec template.
-func (b *Botanist) RefreshKubeAPIServerChecksums() error {
-	return b.patchDeploymentCloudProviderChecksum(common.KubeAPIServerDeploymentName)
-}
-
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer() error {
 	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
@@ -103,8 +99,25 @@ func (b *Botanist) DeleteKubeAPIServer() error {
 	return err
 }
 
+// RefreshCloudControllerManagerChecksums updates the cloud provider checksum in the cloud-controller-manager pod spec template.
+func (b *Botanist) RefreshCloudControllerManagerChecksums() error {
+	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	return b.patchDeploymentCloudProviderChecksum(common.CloudControllerManagerDeploymentName)
+}
+
 // RefreshKubeControllerManagerChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
 func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
+	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
 	return b.patchDeploymentCloudProviderChecksum(common.KubeControllerManagerDeploymentName)
 }
 
@@ -378,8 +391,30 @@ func (b *Botanist) DeleteSeedMonitoring() error {
 
 // patchDeployment patches the given deployment with the provided patch.
 func (b *Botanist) patchDeploymentCloudProviderChecksum(deploymentName string) error {
-	body := fmt.Sprintf(`[{"op": "replace", "path": "/spec/template/metadata/annotations/checksum~1secret-cloudprovider", "value": "%s"}]`, b.CheckSums[common.CloudProviderSecretName])
+	type jsonPatch struct {
+		Op    string `json:"op"`
+		Path  string `json:"path"`
+		Value string `json:"value"`
+	}
 
-	_, err := b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, deploymentName, []byte(body))
+	patch := []jsonPatch{
+		{
+			Op:    "replace",
+			Path:  "/spec/template/metadata/annotations/checksum~1secret-cloudprovider",
+			Value: b.CheckSums[common.CloudProviderSecretName],
+		},
+		{
+			Op:    "replace",
+			Path:  "/spec/template/metadata/annotations/checksum~1configmap-cloud-provider-config",
+			Value: b.CheckSums[common.CloudProviderConfigName],
+		},
+	}
+
+	body, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, deploymentName, body)
 	return err
 }

@@ -56,8 +56,15 @@ func (b *AWSBotanist) RefreshCloudProviderConfig(currentConfig map[string]string
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
+
+// GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
+// render the Deployment manifest of the cloud-controller-manager properly.
+func (b *AWSBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"environment": getAWSCredentialsEnvironment(),
+		"configureRoutes": false,
+		"environment":     getAWSCredentialsEnvironment(),
 	}, nil
 }
 
@@ -65,8 +72,7 @@ func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *AWSBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"configureRoutes": false,
-		"environment":     getAWSCredentialsEnvironment(),
+		"environment": getAWSCredentialsEnvironment(),
 	}, nil
 }
 

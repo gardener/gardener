@@ -62,3 +62,7 @@ autoscaling/v2beta1
 {{- define "webhookadmissionregistration" -}}
 admissionregistration.k8s.io/v1beta1
 {{- end -}}
+
+{{- define "initializeradmissionregistrationversion" -}}
+admissionregistration.k8s.io/v1alpha1
+{{- end -}}

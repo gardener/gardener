@@ -50,6 +50,12 @@ func (b *GCPBotanist) RefreshCloudProviderConfig(currentConfig map[string]string
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
+
+// GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
+// render the Deployment manifest of the cloud-controller-manager properly.
+func (b *GCPBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"environment": getGCPCredentialsEnvironment(),
 	}, nil

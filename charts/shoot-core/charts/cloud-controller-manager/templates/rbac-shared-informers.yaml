@@ -1,0 +1,51 @@
+{{- if semverCompare "< 1.10" .Capabilities.KubeVersion.GitVersion -}}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:controller:cloud-controller-shared-informers
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  - services
+  verbs:
+  - delete
+  - get
+  - patch
+  - update
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - nodes/status
+  verbs:
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+  - update
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: system:controller:cloud-controller-shared-informers
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:controller:cloud-controller-shared-informers
+subjects:
+- kind: ServiceAccount
+  name: shared-informers
+  namespace: kube-system
+{{- end }}

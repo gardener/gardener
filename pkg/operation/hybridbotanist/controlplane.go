@@ -131,7 +131,7 @@ func (b *HybridBotanist) DeployCloudProviderConfig() error {
 	if err != nil {
 		return err
 	}
-	b.Botanist.CheckSums[common.CloudProviderConfigName] = utils.ComputeSHA256Hex([]byte(cloudProviderConfig))
+	b.CheckSums[common.CloudProviderConfigName] = utils.ComputeSHA256Hex([]byte(cloudProviderConfig))
 
 	defaultValues := map[string]interface{}{
 		"cloudProviderConfig": cloudProviderConfig,
@@ -145,10 +145,15 @@ func (b *HybridBotanist) DeployCloudProviderConfig() error {
 func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 	currentConfig, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
 	newConfig := b.ShootCloudBotanist.RefreshCloudProviderConfig(currentConfig.Data)
+	b.CheckSums[common.CloudProviderConfigName] = utils.ComputeSHA256Hex([]byte(newConfig[common.CloudProviderConfigMapKey]))
+
 	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfig)
 	return err
 }
@@ -166,7 +171,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"etcdMainServiceFqdn":   fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
 		"etcdEventsServiceFqdn": fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
 		"advertiseAddress":      loadBalancerIP,
-		"cloudProvider":         b.ShootCloudBotanist.GetCloudProviderName(),
 		"kubernetesVersion":     b.Shoot.Info.Spec.Kubernetes.Version,
 		"shootNetworks": map[string]interface{}{
 			"service": b.Shoot.GetServiceNetwork(),
@@ -187,12 +191,10 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
 			"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
-			"checksum/secret-cloudprovider":             b.CheckSums[common.CloudProviderSecretName],
-			"checksum/configmap-cloud-provider-config":  b.CheckSums["cloud-provider-config"],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
 		},
 	}
-	cloudValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerConfig()
+	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerConfig()
 	if err != nil {
 		return err
 	}
@@ -274,7 +276,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
 }
 
 // DeployKubeControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
@@ -286,16 +288,15 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
-		"configureRoutes":   true,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                       b.CheckSums["ca"],
 			"checksum/secret-kube-controller-manager":  b.CheckSums[common.KubeControllerManagerDeploymentName],
 			"checksum/secret-service-account-key":      b.CheckSums["service-account-key"],
 			"checksum/secret-cloudprovider":            b.CheckSums[common.CloudProviderSecretName],
-			"checksum/configmap-cloud-provider-config": b.CheckSums["cloud-provider-config"],
+			"checksum/configmap-cloud-provider-config": b.CheckSums[common.CloudProviderConfigName],
 		},
 	}
-	cloudValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
+	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
 	if err != nil {
 		return err
 	}
@@ -319,7 +320,48 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), common.KubeControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), common.KubeControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
+}
+
+// DeployCloudControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
+// cloud-controller-manager deployment.
+func (b *HybridBotanist) DeployCloudControllerManager() error {
+	defaultValues := map[string]interface{}{
+		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
+		"clusterName":       b.Shoot.SeedNamespace,
+		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+		"podNetwork":        b.Shoot.GetPodNetwork(),
+		"podAnnotations": map[string]interface{}{
+			"checksum/secret-cloud-controller-manager": b.CheckSums[common.CloudControllerManagerDeploymentName],
+			"checksum/secret-cloudprovider":            b.CheckSums[common.CloudProviderSecretName],
+			"checksum/configmap-cloud-provider-config": b.CheckSums[common.CloudProviderConfigName],
+		},
+	}
+	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()
+	if err != nil {
+		return err
+	}
+
+	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+		defaultValues["resources"] = map[string]interface{}{
+			"limits": map[string]interface{}{
+				"cpu":    "500m",
+				"memory": "512Mi",
+			},
+		}
+	}
+
+	cloudControllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.CloudControllerManager
+	if cloudControllerManagerConfig != nil {
+		defaultValues["featureGates"] = cloudControllerManagerConfig.FeatureGates
+	}
+
+	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CloudControllerManagerDeploymentName), common.CloudControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
 }
 
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the
