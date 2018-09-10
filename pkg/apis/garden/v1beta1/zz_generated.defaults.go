@@ -82,6 +82,12 @@ func SetObjectDefaults_Shoot(in *Shoot) {
 			SetDefaults_Worker(&a.Worker)
 		}
 	}
+	if in.Spec.Cloud.Alicloud != nil {
+		for i := range in.Spec.Cloud.Alicloud.Workers {
+			a := &in.Spec.Cloud.Alicloud.Workers[i]
+			SetDefaults_Worker(&a.Worker)
+		}
+	}
 }
 
 func SetObjectDefaults_ShootList(in *ShootList) {

@@ -44,13 +44,17 @@ func DetermineCloudProviderInProfile(spec garden.CloudProfileSpec) (garden.Cloud
 		numClouds++
 		cloud = garden.CloudProviderOpenStack
 	}
+	if spec.Alicloud != nil {
+		numClouds++
+		cloud = garden.CloudProviderAlicloud
+	}
 	if spec.Local != nil {
 		numClouds++
 		cloud = garden.CloudProviderLocal
 	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud profile must only contain exactly one field of aws/azure/gcp/openstack/local")
+		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/local")
 	}
 	return cloud, nil
 }
@@ -78,6 +82,10 @@ func DetermineCloudProviderInShoot(cloudObj garden.Cloud) (garden.CloudProvider,
 	if cloudObj.OpenStack != nil {
 		numClouds++
 		cloud = garden.CloudProviderOpenStack
+	}
+	if cloudObj.Alicloud != nil {
+		numClouds++
+		cloud = garden.CloudProviderAlicloud
 	}
 	if cloudObj.Local != nil {
 		numClouds++
