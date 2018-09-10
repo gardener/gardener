@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -31,6 +31,9 @@
     kubernetesVersion="1.11.0"
   elif cloud == "gcp":
     region="europe-west1"
+    kubernetesVersion="1.11.0"
+  elif cloud == "alicloud":
+    region="cn-beijing"
     kubernetesVersion="1.11.0"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
@@ -117,6 +120,31 @@ spec:
         maxSurge: 1
         maxUnavailable: 0
       % endif
+    % endif
+    % if cloud == "alicloud":
+    alicloud:
+      networks:
+        vpc:<% vpcID = value("spec.cloud.alicloud.networks.vpc.id", ""); vpcCIDR = value("spec.cloud.alicloud.networks.vpc.cidr", "10.250.0.0/16") %> # specify either 'id' or 'cidr'
+          % if vpcID != "":
+          id: ${vpcID}
+          # cidr: 10.250.0.0/16
+          % else:
+          # id: vpc-123456
+          cidr: ${vpcCIDR}
+          % endif
+        workers: ${value("spec.cloud.alicloud.networks.workers", ["10.250.0.0/19"])}
+      workers:<% workers=value("spec.cloud.alicloud.workers", []) %>
+      % if workers != []:
+      ${yaml.dump(workers, width=10000)}
+      % else:
+      - name: small
+        machineType: ecs.sn2ne.xlarge
+        volumeType: cloud_efficiency
+        volumeSize: 30Gi
+        autoScalerMin: 1
+        autoScalerMax: 2
+      % endif
+      zones: ${value("spec.cloud.alicloud.zones", ["cn-beijing-f"])} 
     % endif
     % if cloud == "gcp":
     gcp:

@@ -1,0 +1,60 @@
+---
+apiVersion: garden.sapcloud.io/v1beta1
+kind: CloudProfile
+metadata:
+  name: alicloud
+spec:
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
+  alicloud:
+    constraints:
+      dnsProviders:
+      - name: aws-route53
+      - name: unmanaged
+      kubernetes:
+        versions:
+        - 1.11.0
+        - 1.10.5
+      machineImages:
+      - name: CoreOS
+        id: coreos_1745_7_0_64_30G_alibase_20180705.vhd
+      machineTypes:
+      - name: ecs.sn2ne.large
+        cpu: "2"
+        gpu: "0"
+        memory: 8Gi
+        zones:
+        - cn-beijing-f
+      - name: ecs.sn2ne.xlarge
+        cpu: "4"
+        gpu: "0"
+        memory: 16Gi
+        zones:
+        - cn-beijing-f
+      - name: ecs.sn2ne.2xlarge
+        cpu: "8"
+        gpu: "0"
+        memory: 32Gi
+        zones:
+        - cn-beijing-f
+      - name: ecs.sn2ne.3xlarge
+        cpu: "12"
+        gpu: "0"
+        memory: 48Gi
+        zones:
+        - cn-beijing-f
+      volumeTypes:
+      - name: cloud_efficiency
+        class: standard
+        zones:
+        - cn-beijing-f
+      - name: ssd
+        class: premium
+        zones:
+        - cn-beijing-f
+      zones: # List of availablity zones together with resource contraints in a specific region
+      - region: cn-beijing
+        names:
+        - cn-beijing-f  # Avalibility zone

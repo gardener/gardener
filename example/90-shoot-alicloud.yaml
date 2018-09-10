@@ -1,0 +1,97 @@
+---
+apiVersion: garden.sapcloud.io/v1beta1
+kind: Shoot
+metadata:
+  name: johndoe-alicloud
+  namespace: garden-dev
+spec:
+  cloud:
+    profile: alicloud
+    region: cn-beijing
+    secretBindingRef:
+      name: core-alicloud
+    alicloud:
+      networks:
+        vpc: # specify either 'id' or 'cidr'
+          # id: vpc-123456
+          cidr: 10.250.0.0/16
+        workers: ['10.250.0.0/19']
+      workers:
+      - name: small
+        machineType: ecs.sn2ne.xlarge
+        volumeType: cloud_efficiency
+        volumeSize: 30Gi
+        autoScalerMin: 1
+        autoScalerMax: 2
+      zones: ['cn-beijing-f'] 
+  kubernetes:
+    version: 1.11.0
+  # kubeAPIServer:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  #   runtimeConfig:
+  #     scheduling.k8s.io/v1alpha1: true
+  #   oidcConfig:
+  #     caBundle: |
+  #       -----BEGIN CERTIFICATE-----
+  #       Li4u
+  #       -----END CERTIFICATE-----
+  #     clientID: client-id
+  #     groupsClaim: groups-claim
+  #     groupsPrefix: groups-prefix
+  #     issuerURL: https://identity.example.com
+  #     requiredClaims:
+  #       key: value
+  #     signingAlgs: RS256,some-other-algorithm
+  #     usernameClaim: username-claim
+  #     usernamePrefix: username-prefix
+  #   admissionPlugins:
+  #   - name: PodNodeSelector
+  #     config: |
+  #       podNodeSelectorPluginConfig:
+  #         clusterDefaultNodeSelector: <node-selectors-labels>
+  #         namespace1: <node-selectors-labels>
+  #         namespace2: <node-selectors-labels>
+  # kubeControllerManager:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubeScheduler:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubeProxy:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  # kubelet:
+  #   featureGates:
+  #     SomeKubernetesFeature: true
+  dns:
+    provider: aws-route53
+    domain: johndoe-alicloud.garden-dev.example.com
+  maintenance:
+    timeWindow:
+      begin: 220000+0100
+      end: 230000+0100
+    autoUpdate:
+      kubernetesVersion: true
+  backup:
+    schedule: "0 */24 * * *"
+    maximum: 7
+  addons:
+    # Heapster addon is deprecated and no longer supported. Gardener deploys the Kubernetes metrics-server
+    # into the kube-system namespace of shoots (cannot be turned off) for fetching metrics and enabling
+    # horizontal pod auto-scaling.
+    # This field will be removed in the future. Do not use it anymore.
+    heapster:
+      enabled: false
+    kubernetes-dashboard:
+      enabled: true
+    cluster-autoscaler:
+      enabled: true
+    nginx-ingress:
+      enabled: true
+      loadBalancerSourceRanges: []
+    kube-lego:
+      enabled: true
+      email: john.doe@example.com
+    monocular:
+      enabled: false

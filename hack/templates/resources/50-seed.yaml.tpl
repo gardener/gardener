@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -28,6 +28,8 @@
     region="westeurope"
   elif cloud == "gcp":
     region="europe-west1"
+  elif cloud == "alicloud":
+    region="cn-beijing"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "local":
