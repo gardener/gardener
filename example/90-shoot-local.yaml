@@ -57,6 +57,8 @@ spec:
   dns:
     provider: unmanaged
     domain: <minikube-ip>.nip.io
+# hibernation:
+#   enabled: false
   maintenance:
     timeWindow:
       begin: 220000+0100

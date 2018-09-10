@@ -71,6 +71,8 @@ spec:
   dns:
     provider: aws-route53
     domain: johndoe-aws.garden-dev.example.com
+# hibernation:
+#   enabled: false
   maintenance:
     timeWindow:
       begin: 220000+0100

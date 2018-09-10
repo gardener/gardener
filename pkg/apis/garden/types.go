@@ -15,8 +15,9 @@
 package garden
 
 import (
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -608,6 +609,9 @@ type ShootSpec struct {
 	Cloud Cloud
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS DNS
+	// Hibernation contains information whether the Shoot is suspended or not.
+	// +optional
+	Hibernation *Hibernation
 	// Kubernetes contains the version and configuration settings of the control plane components.
 	Kubernetes Kubernetes
 	// Maintenance contains information about the time window for maintenance operations and which
@@ -1051,6 +1055,12 @@ const (
 
 // CIDR is a string alias.
 type CIDR string
+
+// Hibernation contains information whether the Shoot is suspended or not.
+type Hibernation struct {
+	// Enabled is true if Shoot is hibernated, false otherwise.
+	Enabled bool
+}
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
 type Kubernetes struct {

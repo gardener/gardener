@@ -1,8 +1,12 @@
 #!/bin/bash -eu
 
 # install python requirements if needed
-if ! pip list 2>&1 | grep Mako &>/dev/null; then
+if ! pip list 2>&1 | grep -i Mako &>/dev/null; then
   pip install Mako
+fi
+
+if ! pip list 2>&1 | grep -i PyYaml &>/dev/null; then
+  pip install PyYaml
 fi
 
 PATH_TEMPLATES="$(dirname $0)/templates/resources"

@@ -16,9 +16,10 @@ package validation_test
 
 import (
 	"fmt"
+	"time"
+
 	. "github.com/onsi/ginkgo/extensions/table"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
@@ -33,6 +34,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("validation", func() {
@@ -1788,7 +1790,7 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidateWorkers", func() {
+	Describe("#ValidateWorker", func() {
 		DescribeTable("reject when maxUnavailable and maxSurge are invalid",
 			func(maxUnavailable, maxSurge intstr.IntOrString, expectType field.ErrorType) {
 				worker := garden.Worker{
@@ -1818,6 +1820,34 @@ var _ = Describe("validation", func() {
 			Entry("percentage is not less than zero", intstr.FromString("-90%"), intstr.FromString("90%"), field.ErrorTypeInvalid),
 		)
 	})
+
+	Describe("#ValidateWorkers", func() {
+		DescribeTable("validate min and max for worker pools if hibernation is configured",
+			func(min1, max1, min2, max2 int, hibernation *garden.Hibernation, matcher gomegatypes.GomegaMatcher) {
+				workers := []garden.Worker{
+					{
+						AutoScalerMin: min1,
+						AutoScalerMax: max1,
+					},
+					{
+						AutoScalerMin: min2,
+						AutoScalerMax: max2,
+					},
+				}
+
+				errList := ValidateWorkers(workers, hibernation, nil)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("hibernation not set", 0, 0, 0, 0, nil, HaveLen(0)),
+			Entry("hibernation set and at least one worker pool min=max>0", 0, 0, 1, 1, &garden.Hibernation{}, HaveLen(0)),
+			Entry("hibernation set and all worker pools min=max=0", 0, 0, 0, 0, &garden.Hibernation{}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type": Equal(field.ErrorTypeForbidden),
+			})))),
+		)
+	})
+
 	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *garden.Shoot

@@ -17,12 +17,13 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"net"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -822,7 +823,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 
 	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateBackup(spec.Backup, fldPath.Child("backup"))...)
-	allErrs = append(allErrs, validateCloud(spec.Cloud, autoScalingEnabled, fldPath.Child("cloud"))...)
+	allErrs = append(allErrs, validateCloud(spec.Cloud, autoScalingEnabled, spec.Hibernation, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
@@ -922,7 +923,7 @@ func validateBackup(backup *garden.Backup, fldPath *field.Path) field.ErrorList 
 	return allErrs
 }
 
-func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.Path) field.ErrorList {
+func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	workerNames := make(map[string]bool)
 
@@ -977,12 +978,15 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 			allErrs = append(allErrs, validateCIDR(*(aws.Networks.VPC.CIDR), awsPath.Child("networks", "vpc", "cidr"))...)
 		}
 
+		workersPath := awsPath.Child("workers")
 		if len(aws.Workers) == 0 {
-			allErrs = append(allErrs, field.Required(awsPath.Child("workers"), "must specify at least one worker"))
+			allErrs = append(allErrs, field.Required(workersPath, "must specify at least one worker"))
 			return allErrs
 		}
+
+		var workers []garden.Worker
 		for i, worker := range aws.Workers {
-			idxPath := awsPath.Child("workers").Index(i)
+			idxPath := workersPath.Index(i)
 			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
@@ -991,7 +995,9 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			workers = append(workers, worker.Worker)
 		}
+		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
 	}
 
 	azure := cloud.Azure
@@ -1031,12 +1037,15 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 		// 	allErrs = append(allErrs, validateCIDR(*(azure.Networks.VNet.CIDR), azurePath.Child("networks", "vnet", "cidr"))...)
 		// }
 
+		workersPath := azurePath.Child("workers")
 		if len(azure.Workers) == 0 {
-			allErrs = append(allErrs, field.Required(azurePath.Child("workers"), "must specify at least one worker"))
+			allErrs = append(allErrs, field.Required(workersPath, "must specify at least one worker"))
 			return allErrs
 		}
+
+		var workers []garden.Worker
 		for i, worker := range azure.Workers {
-			idxPath := azurePath.Child("workers").Index(i)
+			idxPath := workersPath.Index(i)
 			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 35, idxPath.Child("volumeSize"))...)
@@ -1045,7 +1054,9 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			workers = append(workers, worker.Worker)
 		}
+		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
 	}
 
 	gcp := cloud.GCP
@@ -1070,12 +1081,15 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "vpc", "name"), gcp.Networks.VPC.Name, "vpc name must not be empty when vpc key is provided"))
 		}
 
+		workersPath := gcpPath.Child("workers")
 		if len(gcp.Workers) == 0 {
-			allErrs = append(allErrs, field.Required(gcpPath.Child("workers"), "must specify at least one worker"))
+			allErrs = append(allErrs, field.Required(workersPath, "must specify at least one worker"))
 			return allErrs
 		}
+
+		var workers []garden.Worker
 		for i, worker := range gcp.Workers {
-			idxPath := gcpPath.Child("workers").Index(i)
+			idxPath := workersPath.Index(i)
 			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
@@ -1084,7 +1098,9 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			workers = append(workers, worker.Worker)
 		}
+		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
 	}
 
 	openStack := cloud.OpenStack
@@ -1117,18 +1133,23 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, fldPath *field.P
 			allErrs = append(allErrs, field.Invalid(openStackPath.Child("networks", "router", "id"), openStack.Networks.Router.ID, "router id must not be empty when router key is provided"))
 		}
 
+		workersPath := openStackPath.Child("workers")
 		if len(openStack.Workers) == 0 {
-			allErrs = append(allErrs, field.Required(openStackPath.Child("workers"), "must specify at least one worker"))
+			allErrs = append(allErrs, field.Required(workersPath, "must specify at least one worker"))
 			return allErrs
 		}
+
+		var workers []garden.Worker
 		for i, worker := range openStack.Workers {
-			idxPath := openStackPath.Child("workers").Index(i)
+			idxPath := workersPath.Index(i)
 			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
+			workers = append(workers, worker.Worker)
 		}
+		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
 	}
 
 	return allErrs
@@ -1399,6 +1420,7 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 	return allErrs
 }
 
+// ValidateWorker validates the worker object.
 func ValidateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -1433,6 +1455,31 @@ func ValidateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *fiel
 	if getIntOrPercentValue(worker.MaxUnavailable) == 0 && getIntOrPercentValue(worker.MaxSurge) == 0 {
 		// Both MaxSurge and MaxUnavailable cannot be zero.
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "may not be 0 when `maxSurge` is 0"))
+	}
+
+	return allErrs
+}
+
+// ValidateWorkers validates worker objects.
+func ValidateWorkers(workers []garden.Worker, hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// We want to allow that all expect one of the worker pools can be set to min=max=0 if hibernation is set because we might otherwise
+	// get into an inconsistent state as there are now two ways of hibernating a Shoot.
+	if hibernation == nil {
+		return allErrs
+	}
+
+	atLeastOneActivePool := false
+	for _, worker := range workers {
+		if worker.AutoScalerMin != 0 && worker.AutoScalerMax != 0 {
+			atLeastOneActivePool = true
+			break
+		}
+	}
+
+	if !atLeastOneActivePool {
+		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min=max > 0 needed if hibernation object is configured"))
 	}
 
 	return allErrs

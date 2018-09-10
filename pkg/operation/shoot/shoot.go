@@ -80,11 +80,15 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 	shootObj.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 
 	// Check whether the Shoot should be hibernated
-	workers := shootObj.GetWorkers()
-	for _, worker := range workers {
-		if worker.AutoScalerMax != 0 {
-			shootObj.Hibernated = false
-			break
+	if shoot.Spec.Hibernation != nil {
+		shootObj.Hibernated = shoot.Spec.Hibernation.Enabled
+	} else {
+		workers := shootObj.GetWorkers()
+		for _, worker := range workers {
+			if worker.AutoScalerMax != 0 {
+				shootObj.Hibernated = false
+				break
+			}
 		}
 	}
 
