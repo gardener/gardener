@@ -85,6 +85,22 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 	}
 
+	if cloud.Alicloud != nil {
+		if cloud.Alicloud.Networks.Pods == nil {
+			obj.Spec.Cloud.Alicloud.Networks.Pods = &defaultPodCIDR
+		}
+		if cloud.Alicloud.Networks.Services == nil {
+			obj.Spec.Cloud.Alicloud.Networks.Services = &defaultServiceCIDR
+		}
+		if cloud.Alicloud.Networks.Nodes == nil {
+			if cloud.Alicloud.Networks.VPC.CIDR != nil {
+				obj.Spec.Cloud.Alicloud.Networks.Nodes = cloud.Alicloud.Networks.VPC.CIDR
+			} else if len(cloud.Alicloud.Networks.Workers) > 0 {
+				obj.Spec.Cloud.Alicloud.Networks.Nodes = &cloud.Alicloud.Networks.Workers[0]
+			}
+		}
+	}
+
 	if cloud.OpenStack != nil {
 		if cloud.OpenStack.Networks.Pods == nil {
 			obj.Spec.Cloud.OpenStack.Networks.Pods = &defaultPodCIDR
