@@ -42,12 +42,13 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		calicoConfig = map[string]interface{}{
 			"cloudProvider": b.Shoot.CloudProvider,
 		}
-
-		kubeDNSConfig = map[string]interface{}{
-			"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
-			// TODO: resolve conformance test issue before changing:
-			// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
-			"domain": gardenv1beta1.DefaultDomain,
+		coreDNSConfig = map[string]interface{}{
+			"service": map[string]interface{}{
+				"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
+				// TODO: resolve conformance test issue before changing:
+				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
+				"domain": gardenv1beta1.DefaultDomain,
+			},
 		}
 		kubeProxyConfig = map[string]interface{}{
 			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
@@ -88,7 +89,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
-	kubeDNS, err := b.Botanist.InjectImages(kubeDNSConfig, b.K8sShootClient.Version(), map[string]string{"kube-dns": "kube-dns", "kube-dns-dnsmasq": "kube-dns-dnsmasq", "kube-dns-sidecar": "kube-dns-sidecar", "kube-dns-autoscaler": "cluster-proportional-autoscaler"})
+	coreDNS, err := b.Botanist.InjectImages(coreDNSConfig, b.K8sShootClient.Version(), map[string]string{"coredns": "coredns"})
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +116,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":         global,
-		"kube-dns":       kubeDNS,
+		"coredns":        coreDNS,
 		"kube-proxy":     kubeProxy,
 		"vpn-shoot":      vpnShoot,
 		"calico":         calico,

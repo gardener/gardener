@@ -20,7 +20,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// DeployKubeAddonManager deploys the Kubernetes Addon Manager which will use labelled Kubernetes resources in order
+// DeployKubeAddonManager deploys the Kubernetes Addon Manager which will use labeled Kubernetes resources in order
 // to ensure that they exist in a cluster/reconcile them in case somebody changed something.
 func (b *HybridBotanist) DeployKubeAddonManager() error {
 	var (

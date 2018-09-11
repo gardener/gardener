@@ -12,30 +12,32 @@ setup.
 # High Level Overview
 
 In this example we'll follow these steps to create a Seed cluster on AKS:
-1. [Prerequisites](#prerequisites)
-   * [AWS credentials for Route 53 Hosted Zone](#aws-credentials-for-route-53-hosted-zone)
-   * [Deploy AKS cluster](#deploy-aks-cluster)
-     * [Install default ClusterRoles](#install-default-clusterroles)
-     * [Install Tiller to AKS](#install-tiller-to-aks)
-     * [Deploy stable/nginx-ingress chart to AKS](#deploy-stablenginx-ingress-chart-to-aks)
-	 * [Create wildcard DNS record for Seed ingress](#create-wildcard-dns-record-for-seed-ingress)
-   * [Create Azure Service Principle to get Azure credentials](#create-azure-service-principle-to-get-azure-credentials)
-   * [Install gardenctl](#install-gardenctl)
-2. [Install Gardener](#install-gardener)
-   * [Create garden namespace](#create-garden-namespace)
-   * [Deploy etcd](#deploy-etcd)
-   * [Deploy Gardener Helm Chart](#deploy-gardener-helm-chart)
-3. [Create a CloudProfile](#create-a-cloudprofile)
-4. [Define Seed cluster in Gardener](#define-seed-cluster-in-gardener)
-   * [Create the Seed resource definition with its Secret](#create-the-seed-resource-definition-with-its-secret)
-5. [Create a Shoot cluster](#create-a-shoot-cluster)
-   * [Create a Project (namespace) for Shoots](#create-a-project-namespace-for-shoots)
-   * [Create a SecretBinding and related Secret](#create-a-secretbinding-and-related-secret)
-   * [Create the Shoot resource](#create-the-shoot-resource)
-     * [Cluster Resources After Shoot is Created](#cluster-resources-after-shoot-is-created)
-     * [Troubleshooting Shoot Creation Issues](#troubleshooting-shoot-creation-issues)
-6. [Access Shoot cluster](#access-shoot-cluster)
-7. [Delete Shoot cluster](#delete-shoot-cluster)
+- [Deploying the Gardener and a Seed into an AKS cluster](#deploying-the-gardener-and-a-seed-into-an-aks-cluster)
+- [High Level Overview](#high-level-overview)
+- [Prerequisites](#prerequisites)
+  - [AWS credentials for Route 53 Hosted Zone](#aws-credentials-for-route-53-hosted-zone)
+  - [Deploy AKS cluster](#deploy-aks-cluster)
+    - [Install default ClusterRoles](#install-default-clusterroles)
+    - [Install Tiller to AKS](#install-tiller-to-aks)
+    - [Deploy stable/nginx-ingress chart to AKS](#deploy-stablenginx-ingress-chart-to-aks)
+    - [Create wildcard DNS record for the ingress](#create-wildcard-dns-record-for-the-ingress)
+  - [Create Azure Service Principle to get Azure credentials](#create-azure-service-principle-to-get-azure-credentials)
+  - [Install gardenctl](#install-gardenctl)
+- [Install Gardener](#install-gardener)
+  - [Create garden namespace](#create-garden-namespace)
+  - [Deploy etcd](#deploy-etcd)
+  - [Deploy Gardener Helm Chart](#deploy-gardener-helm-chart)
+- [Create a CloudProfile](#create-a-cloudprofile)
+- [Define Seed cluster in Gardener](#define-seed-cluster-in-gardener)
+  - [Create the Seed resource definition with its Secret](#create-the-seed-resource-definition-with-its-secret)
+- [Create a Shoot cluster](#create-a-shoot-cluster)
+  - [Create a Project (namespace) for Shoots](#create-a-project-namespace-for-shoots)
+  - [Create a SecretBinding and related Secret](#create-a-secretbinding-and-related-secret)
+  - [Create the Shoot resource](#create-the-shoot-resource)
+    - [Cluster Resources After Shoot is Created](#cluster-resources-after-shoot-is-created)
+    - [Troubleshooting Shoot Creation Issues](#troubleshooting-shoot-creation-issues)
+- [Access Shoot cluster](#access-shoot-cluster)
+- [Delete Shoot cluster](#delete-shoot-cluster)
 
 # Prerequisites
 
@@ -623,7 +625,7 @@ $ gardenctl target shoot johndoe-azure
 KUBECONFIG=/Users/user/.garden/cache/projects/garden-dev/johndoe-azure/kubeconfig.yaml
 $ gardenctl kubectl cluster-info
 Kubernetes master is running at https://api.johndoe-azure.garden-dev.your.domain.here
-KubeDNS is running at https://api.johndoe-azure.garden-dev.your.domain.here/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+CoreDNS is running at https://api.johndoe-azure.garden-dev.your.domain.here/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
 kubernetes-dashboard is running at https://api.johndoe-azure.garden-dev.your.domain.here/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy
 
 To further debug and diagnose cluster problems, use 'kubectl cluster-info dump'.

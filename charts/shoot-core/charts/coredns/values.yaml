@@ -1,0 +1,72 @@
+# The values here match the ones on the upstream deployment repo (https://github.com/coredns/deployment/blob/master/kubernetes/coredns.yaml.sed). 
+# They may need to be updated in the future
+
+service:
+  type: "ClusterIP"
+  clusterDNS: 100.64.0.10
+  domain: cluster.local in-addr.arpa ip6.arpa
+  port: 53
+  targetPort: 8053
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9153"
+    prometheus.io/name: coredns
+
+images:
+   coredns: image-repository:image-tag
+
+deployment:
+  spec:
+    containers:
+      imagePullPolicy: IfNotPresent
+      resources:
+        limits:
+          cpu: 200m
+          memory: 80Mi
+        requests:
+          cpu: 100m
+          memory: 15Mi
+      ports:
+        dns: 8053
+
+configmap:
+  servers:
+  - zones:
+    - zone: .
+    port: 8053
+    plugins:
+    - name: errors
+    - name: log
+    - name: health
+    - name: kubernetes
+      parameters: cluster.local in-addr.arpa ip6.arpa
+      configBlock: |-
+        pods insecure
+        upstream
+        fallthrough in-addr.arpa ip6.arpa
+    - name: prometheus
+      parameters: 0.0.0.0:9153
+    - name: proxy
+      parameters: . /etc/resolv.conf
+    - name: cache
+      parameters: 30
+    - name: loop
+    - name: reload
+    - name: loadbalance
+      parameters: round_robin
+  zoneFiles: []  # configure custom zone files as per https://coredns.io/2017/05/08/custom-dns-entries-for-kubernetes/
+  #  - filename: example.db
+  #    domain: example.com
+  #    contents: |
+  #      example.com.   IN SOA sns.dns.icann.com. noc.dns.icann.com. 2015082541 7200 3600 1209600 3600
+  #      example.com.   IN NS  b.iana-servers.net.
+  #      example.com.   IN NS  a.iana-servers.net.
+  #      example.com.   IN A   192.168.99.102
+  #      *.example.com. IN A   192.168.99.102
+
+horizontalPodAutoScaler:
+  spec:
+    maxReplicas: 5
+    minReplicas: 1
+    metrics:
+      targetAverageUtilization: 80

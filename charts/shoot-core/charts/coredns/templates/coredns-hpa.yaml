@@ -1,0 +1,19 @@
+apiVersion: {{ include "hpaversion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: coredns
+  namespace: {{ .Release.Namespace }}
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  maxReplicas: {{ .Values.horizontalPodAutoScaler.spec.maxReplicas }}
+  minReplicas: {{ .Values.horizontalPodAutoScaler.spec.minReplicas }}
+  scaleTargetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: coredns
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: {{ .Values.horizontalPodAutoScaler.spec.metrics.targetAverageUtilization }}

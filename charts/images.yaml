@@ -88,22 +88,10 @@ images:
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
   tag: "0.13.0"
-- name: kube-dns
-  sourceRepository: github.com/kubernetes/dns
-  repository: k8s.gcr.io/k8s-dns-kube-dns-amd64
-  tag: "1.14.10"
-- name: kube-dns-dnsmasq
-  sourceRepository: github.com/kubernetes/dns
-  repository: k8s.gcr.io/k8s-dns-dnsmasq-nanny-amd64
-  tag: "1.14.10"
-- name: kube-dns-sidecar
-  sourceRepository: github.com/kubernetes/dns
-  repository: k8s.gcr.io/k8s-dns-sidecar-amd64
-  tag: "1.14.10"
-- name: cluster-proportional-autoscaler
-  sourceRepository: github.com/kubernetes-incubator/cluster-proportional-autoscaler
-  repository: k8s.gcr.io/cluster-proportional-autoscaler-amd64
-  tag: "1.2.0"
+- name: coredns
+  sourceRepository: github.com/coredns/coredns
+  repository: coredns/coredns
+  tag: "1.2.2"
 
 # Shoot optional addons
 - name: kubernetes-dashboard

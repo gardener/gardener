@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+data:
+  Corefile: |-
+    {{ range .Values.configmap.servers }}
+    {{- range $idx, $zone := .zones }}{{ if $idx }} {{ else }}{{ end }}{{ default "" $zone.scheme }}{{ default "." $zone.zone }}{{ else }}.{{ end -}}
+    {{- if .port }}:{{ .port }} {{ end -}}
+    { {{ $domain:=$.Values.service.domain}}
+      {{- range .plugins }}
+        {{ if eq .name "kubernetes"}}{{ .name }} {{if $domain}}{{$domain}}{{ end }}{{else}}{{ .name }}{{ if .parameters }} {{ .parameters }}{{ end }}{{end}}{{ if .configBlock }} {
+{{ .configBlock | indent 12 }}
+        }{{ end }}
+      {{- end }}
+    }
+    {{ end }}
+  {{- range .Values.configmap.zoneFiles }}
+  {{ .filename }}: {{ toYaml .contents | indent 4 }}
+  {{- end }}

@@ -1,0 +1,14 @@
+groups:
+- name: coredns.rules
+  rules:
+  - alert: CoreDNSDown
+    expr: absent(up{job="coredns"} == 1)
+    for: 6m
+    labels:
+      job: coredns
+      service: kube-dns
+      severity: critical
+      type: shoot
+    annotations:
+      description: Prometheus could not scrape CoreDNS (which is exposed by the kube-dns service).
+      summary: CoreDNS is down
