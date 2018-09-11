@@ -75,8 +75,6 @@ data:
       retryPeriod: {{ required ".Values.controller.config.leaderElection.retryPeriod is required" .Values.controller.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.controller.config.leaderElection.resourceLock is required" .Values.controller.config.leaderElection.resourceLock }}
     logLevel: {{ required ".Values.controller.config.logLevel is required" .Values.controller.config.logLevel }}
-    metrics:
-      interval: {{ required ".Values.controller.config.metrics.interval is required" .Values.controller.config.metrics.interval }}
     server:
       http:
         bindAddress: {{ required ".Values.controller.config.server.http.bindAddress is required" .Values.controller.config.server.http.bindAddress }}

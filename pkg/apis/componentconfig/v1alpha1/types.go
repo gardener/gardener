@@ -39,8 +39,6 @@ type ControllerManagerConfiguration struct {
 	LogLevel string `json:"logLevel"`
 	// KubernetesLogLevel is the log level used for Kubernetes' glog functions.
 	KubernetesLogLevel glog.Level `json:"kubernetesLogLevel"`
-	// Metrics defines the metrics configuration.
-	Metrics MetricsConfiguration `json:"metrics"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
@@ -242,12 +240,6 @@ type LeaderElectionConfiguration struct {
 	LockObjectNamespace string `json:"lockObjectNamespace"`
 	// LockObjectName defines the lock object name.
 	LockObjectName string `json:"lockObjectName"`
-}
-
-// MetricsConfiguration contains options to configure the metrics.
-type MetricsConfiguration struct {
-	// The interval defines how frequently metrics get scraped.
-	Interval metav1.Duration `json:"interval"`
 }
 
 // ServerConfiguration contains details for the HTTP(S) servers.

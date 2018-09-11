@@ -20,11 +20,13 @@ import (
 
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 
+	gardenmetrics "github.com/gardener/gardener/pkg/metrics"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -123,4 +125,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 // RunningWorkers returns the number of running workers.
 func (c *Controller) RunningWorkers() int {
 	return c.numberOfRunningWorkers
+}
+
+// CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
+func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
+	metric, err := prometheus.NewConstMetric(gardenmetrics.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "cloudprofile")
+	if err != nil {
+		gardenmetrics.ScrapeFailures.With(prometheus.Labels{"kind": "cloudprofile-controller"}).Inc()
+		return
+	}
+	ch <- metric
 }

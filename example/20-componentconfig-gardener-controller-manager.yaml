@@ -36,8 +36,6 @@ leaderElection:
   resourceLock: configmaps
 logLevel: info
 kubernetesLogLevel: 0
-metrics:
-  interval: 30s
 server:
   http:
     bindAddress: 0.0.0.0

@@ -25,10 +25,11 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/handlers"
 	"github.com/gardener/gardener/pkg/server/handlers/webhooks"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Serve starts a HTTP and a HTTPS server.
-func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.ServerConfiguration, metricsInterval time.Duration, stopCh chan struct{}) {
+func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.ServerConfiguration, stopCh chan struct{}) {
 	var (
 		listenAddressHTTP  = fmt.Sprintf("%s:%d", serverConfig.HTTP.BindAddress, serverConfig.HTTP.Port)
 		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverConfig.HTTPS.BindAddress, serverConfig.HTTPS.Port)
@@ -41,7 +42,7 @@ func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.Serve
 	)
 
 	// Add handlers to HTTP server and start it.
-	serverMuxHTTP.Handle("/metrics", handlers.InitMetrics(k8sGardenClient, metricsInterval))
+	serverMuxHTTP.Handle("/metrics", promhttp.Handler())
 	serverMuxHTTP.HandleFunc("/healthz", handlers.Healthz)
 
 	go func() {

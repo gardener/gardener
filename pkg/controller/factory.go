@@ -31,6 +31,7 @@ import (
 	seedcontroller "github.com/gardener/gardener/pkg/controller/seed"
 	shootcontroller "github.com/gardener/gardener/pkg/controller/shoot"
 	"github.com/gardener/gardener/pkg/logger"
+	gardenmetrics "github.com/gardener/gardener/pkg/metrics"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -113,6 +114,9 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	}
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
+	// Initialize the workqueue metrics collection.
+	gardenmetrics.RegisterWorkqueMetrics()
+
 	var (
 		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.config, f.recorder)
@@ -122,6 +126,9 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		secretBindingController        = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 		backupInfrastructureController = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.config, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 	)
+
+	// Initialize the Controller metrics collection.
+	gardenmetrics.RegisterControllerMetrics(shootController, seedController, quotaController, cloudProfileController, secretBindingController, backupInfrastructureController)
 
 	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs, stopCh)
 	go seedController.Run(f.config.Controllers.Seed.ConcurrentSyncs, stopCh)
