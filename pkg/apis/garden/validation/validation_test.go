@@ -16,6 +16,7 @@ package validation_test
 
 import (
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -2144,6 +2145,96 @@ var _ = Describe("validation", func() {
 			Entry("all worker pools min=max=0", 0, 0, 0, 0, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeForbidden),
 			})))),
+		)
+	})
+
+	Describe("#ValidateHibernationSchedules", func() {
+		DescribeTable("validate hibernation schedules",
+			func(schedules []garden.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
+				Expect(ValidateHibernationSchedules(schedules, nil)).To(matcher)
+			},
+			Entry("valid schedules", []garden.HibernationSchedule{{Start: "1 * * * *", End: "2 * * * *"}}, BeEmpty()),
+			Entry("nil schedules", nil, BeEmpty()),
+			Entry("duplicate start and end value in same schedule",
+				[]garden.HibernationSchedule{{Start: "* * * * *", End: "* * * * *"}},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeDuplicate),
+				})))),
+			Entry("duplicate start and end value in different schedules",
+				[]garden.HibernationSchedule{{Start: "1 * * * *", End: "2 * * * *"}, {Start: "1 * * * *", End: "3 * * * *"}},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeDuplicate),
+				})))),
+			Entry("invalid schedule",
+				[]garden.HibernationSchedule{{Start: "foo", End: "* * * * *"}},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeInvalid),
+				})))))
+	})
+
+	Describe("#ValidateHibernationCronSpec", func() {
+		DescribeTable("validate cron spec",
+			func(seenSpecs sets.String, spec string, matcher gomegatypes.GomegaMatcher) {
+				Expect(ValidateHibernationCronSpec(seenSpecs, spec, nil)).To(matcher)
+			},
+			Entry("invalid spec", sets.NewString(), "foo", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type": Equal(field.ErrorTypeInvalid),
+			})))),
+			Entry("duplicate spec", sets.NewString("* * * * *"), "* * * * *", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type": Equal(field.ErrorTypeDuplicate),
+			})))),
+		)
+
+		It("should add the inspected cron spec to the set if there were no issues", func() {
+			var (
+				s    = sets.NewString()
+				spec = "* * * * *"
+			)
+			Expect(ValidateHibernationCronSpec(s, spec, nil)).To(BeEmpty())
+			Expect(s.Has(spec)).To(BeTrue())
+		})
+
+		It("should not add the inspected cron spec to the set if there were issues", func() {
+			var (
+				s    = sets.NewString()
+				spec = "foo"
+			)
+			Expect(ValidateHibernationCronSpec(s, spec, nil)).NotTo(BeEmpty())
+			Expect(s.Has(spec)).To(BeFalse())
+		})
+	})
+
+	Describe("#ValidateHibernationSchedule", func() {
+		DescribeTable("validate schedule",
+			func(seenSpecs sets.String, schedule *garden.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateHibernationSchedule(seenSpecs, schedule, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid schedule", sets.NewString(), &garden.HibernationSchedule{Start: "1 * * * *", End: "2 * * * *"}, BeEmpty()),
+			Entry("invalid start value", sets.NewString(), &garden.HibernationSchedule{Start: "", End: "* * * * *"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal(field.NewPath("start").String()),
+			})))),
+			Entry("invalid end value", sets.NewString(), &garden.HibernationSchedule{Start: "* * * * *", End: ""}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal(field.NewPath("end").String()),
+			})))),
+			Entry("equal start and end value", sets.NewString(), &garden.HibernationSchedule{Start: "* * * * *", End: "* * * * *"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeDuplicate),
+				"Field": Equal(field.NewPath("end").String()),
+			})))),
+			Entry("invalid start and end value", sets.NewString(), &garden.HibernationSchedule{Start: "", End: ""},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("start").String()),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("end").String()),
+					})),
+				)),
 		)
 	})
 

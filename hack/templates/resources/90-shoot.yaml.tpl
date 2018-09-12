@@ -296,6 +296,9 @@ spec:
   % else:
 # hibernation:
 #   enabled: false
+#   schedules:
+#   - start: "0 20 * * *" # Start hibernation every day at 8PM
+#     end: "0 6 * * *"    # Stop hibernation every day at 6AM
   % endif
   maintenance:
     timeWindow:

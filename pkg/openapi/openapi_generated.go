@@ -91,6 +91,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster":                      schema_pkg_apis_garden_v1beta1_Heapster(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HelmTiller":                    schema_pkg_apis_garden_v1beta1_HelmTiller(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation":                   schema_pkg_apis_garden_v1beta1_Hibernation(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HibernationSchedule":           schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig": schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks":                   schema_pkg_apis_garden_v1beta1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM":                      schema_pkg_apis_garden_v1beta1_Kube2IAM(ref),
@@ -2846,8 +2847,50 @@ func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"schedules": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Schedule determines the hibernation schedule.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.HibernationSchedule"),
+									},
+								},
+							},
+						},
+					},
 				},
 				Required: []string{"enabled"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HibernationSchedule"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "HibernationSchedule determines the hibernation schedule of a Shoot. A Shoot will be regularly hibernated at each start time and will be woken up at each end time.",
+				Properties: map[string]spec.Schema{
+					"start": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Start is a Cron spec at which time a Shoot will be hibernated.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"end": {
+						SchemaProps: spec.SchemaProps{
+							Description: "End is a Cron spec at which time a Shoot will be woken up.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"start", "end"},
 			},
 		},
 		Dependencies: []string{},

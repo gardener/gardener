@@ -1182,6 +1182,18 @@ type CIDR string
 type Hibernation struct {
 	// Enabled is true if Shoot is hibernated, false otherwise.
 	Enabled bool `json:"enabled"`
+	// Schedules determine the hibernation schedules.
+	// +optional
+	Schedules []HibernationSchedule `json:"schedules,omitempty"`
+}
+
+// HibernationSchedule determines the hibernation schedule of a Shoot.
+// A Shoot will be regularly hibernated at each start time and will be woken up at each end time.
+type HibernationSchedule struct {
+	// Start is a Cron spec at which time a Shoot will be hibernated.
+	Start string `json:"start"`
+	// End is a Cron spec at which time a Shoot will be woken up.
+	End string `json:"end"`
 }
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.

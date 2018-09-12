@@ -965,6 +965,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
+	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
 
 	if spec.DNS.Provider == garden.DNSUnmanaged {
 		if spec.Addons != nil && spec.Addons.Monocular != nil && spec.Addons.Monocular.Enabled {
@@ -1718,6 +1719,59 @@ func ValidateWorkers(workers []garden.Worker, fldPath *field.Path) field.ErrorLi
 	if !atLeastOneActivePool {
 		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min>0 and max> 0 needed"))
 	}
+
+	return allErrs
+}
+
+// ValidateHibernation validates a Hibernation object.
+func ValidateHibernation(hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if hibernation == nil {
+		return allErrs
+	}
+
+	allErrs = append(allErrs, ValidateHibernationSchedules(hibernation.Schedules, fldPath.Child("schedules"))...)
+
+	return allErrs
+}
+
+func ValidateHibernationSchedules(schedules []garden.HibernationSchedule, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		seen    = sets.NewString()
+	)
+
+	for i, schedule := range schedules {
+		allErrs = append(allErrs, ValidateHibernationSchedule(seen, &schedule, fldPath.Index(i))...)
+	}
+
+	return allErrs
+}
+
+func ValidateHibernationCronSpec(seenSpecs sets.String, spec string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	_, err := cron.ParseStandard(spec)
+	switch {
+	case err != nil:
+		allErrs = append(allErrs, field.Invalid(fldPath, spec, fmt.Sprintf("not a valid cron spec: %v", err)))
+	case seenSpecs.Has(spec):
+		allErrs = append(allErrs, field.Duplicate(fldPath, spec))
+	default:
+		seenSpecs.Insert(spec)
+	}
+
+	return allErrs
+}
+
+// ValidateHibernationSchedule validates the correctness of a HibernationSchedule.
+// It checks whether the set start and end time are valid cron specs.
+func ValidateHibernationSchedule(seenSpecs sets.String, schedule *garden.HibernationSchedule, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, schedule.Start, fldPath.Child("start"))...)
+	allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, schedule.End, fldPath.Child("end"))...)
 
 	return allErrs
 }

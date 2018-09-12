@@ -93,6 +93,9 @@ spec:
     domain: johndoe-aws.garden-dev.example.com
 # hibernation:
 #   enabled: false
+#   schedules:
+#   - start: "0 20 * * *" # Start hibernation every day at 8PM
+#     end: "0 6 * * *"    # Stop hibernation every day at 6AM
   maintenance:
     timeWindow:
       begin: 220000+0100
