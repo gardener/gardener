@@ -241,32 +241,54 @@ func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value st
 	return regexp.MustCompile(fmt.Sprintf("%s%s(.*)\n", key, separator)).ReplaceAllString(cloudProviderConfig, fmt.Sprintf("%s%s%s\n", key, separator, value))
 }
 
-// DetermineErrorCode determines the Garden error code for the given error message.
-func DetermineErrorCode(message string) error {
-	var (
-		code                         gardenv1beta1.ErrorCode
-		unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token)`)
-		quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
-		insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
-		dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict)`)
-	)
+type errorWithCode struct {
+	code    gardenv1beta1.ErrorCode
+	message string
+}
 
+// NewErrorWithCode creates a new error that additionally exposes the given code via the Coder interface.
+func NewErrorWithCode(code gardenv1beta1.ErrorCode, message string) error {
+	return &errorWithCode{code, message}
+}
+
+func (e *errorWithCode) Code() gardenv1beta1.ErrorCode {
+	return e.code
+}
+
+func (e *errorWithCode) Error() string {
+	return e.message
+}
+
+var (
+	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token)`)
+	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
+	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
+	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict)`)
+)
+
+func determineErrorCode(message string) gardenv1beta1.ErrorCode {
 	switch {
 	case unauthorizedRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraUnauthorized
+		return gardenv1beta1.ErrorInfraUnauthorized
 	case quotaExceededRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraQuotaExceeded
+		return gardenv1beta1.ErrorInfraQuotaExceeded
 	case insufficientPrivilegesRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraInsufficientPrivileges
+		return gardenv1beta1.ErrorInfraInsufficientPrivileges
 	case dependenciesRegexp.MatchString(message):
-		code = gardenv1beta1.ErrorInfraDependencies
+		return gardenv1beta1.ErrorInfraDependencies
+	default:
+		return ""
+	}
+}
+
+// DetermineError determines the Garden error code for the given error message.
+func DetermineError(message string) error {
+	code := determineErrorCode(message)
+	if code == "" {
+		return errors.New(message)
 	}
 
-	if len(code) != 0 {
-		message = fmt.Sprintf("CODE:%s %s", code, message)
-	}
-
-	return errors.New(message)
+	return &errorWithCode{code, message}
 }
 
 // ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace

@@ -1,0 +1,144 @@
+// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package flow
+
+import "sort"
+
+// TaskID is an id of a task.
+type TaskID string
+
+// TaskIDs retrieves this TaskID as a singleton slice.
+func (t TaskID) TaskIDs() []TaskID {
+	return []TaskID{t}
+}
+
+// TaskIDs is a set of TaskID.
+type TaskIDs map[TaskID]struct{}
+
+// TaskIDs retrieves all TaskIDs as an unsorted slice.
+func (t TaskIDs) TaskIDs() []TaskID {
+	return t.UnsortedList()
+}
+
+// TaskIDer can produce a slice of TaskIDs.
+// Default implementations of this are
+// TaskIDs, TaskID and TaskIDSlice
+type TaskIDer interface {
+	// TaskIDs reports all TaskIDs of this TaskIDer.
+	TaskIDs() []TaskID
+}
+
+// NewTaskIDs returns a new set of TaskIDs initialized
+// to contain all TaskIDs of the given TaskIDers.
+func NewTaskIDs(ids ...TaskIDer) TaskIDs {
+	set := make(TaskIDs)
+	set.Insert(ids...)
+	return set
+}
+
+// Insert inserts the TaskIDs of all TaskIDers into
+// this TaskIDs.
+func (t TaskIDs) Insert(iders ...TaskIDer) {
+	for _, ider := range iders {
+		for _, id := range ider.TaskIDs() {
+			t[id] = struct{}{}
+		}
+	}
+}
+
+// Delete deletes the TaskIDs of all TaskIDers from
+// this TaskIDs.
+func (t TaskIDs) Delete(iders ...TaskIDer) {
+	for _, ider := range iders {
+		for _, id := range ider.TaskIDs() {
+			delete(t, id)
+		}
+	}
+}
+
+// Len returns the amount of TaskIDs this contains.
+func (t TaskIDs) Len() int {
+	return len(t)
+}
+
+// Has checks if the given TaskID is present in this set.
+func (t TaskIDs) Has(id TaskID) bool {
+	_, ok := t[id]
+	return ok
+}
+
+// Copy makes a deep copy of this TaskIDs.
+func (t TaskIDs) Copy() TaskIDs {
+	out := make(TaskIDs, len(t))
+	for k := range t {
+		out[k] = struct{}{}
+	}
+	return out
+}
+
+// UnsortedList returns the elements of this in an unordered slice.
+func (t TaskIDs) UnsortedList() TaskIDSlice {
+	out := make([]TaskID, 0, len(t))
+	for k := range t {
+		out = append(out, k)
+	}
+	return out
+}
+
+// List returns the elements of this in an ordered slice.
+func (t TaskIDs) List() TaskIDSlice {
+	out := make(TaskIDSlice, 0, len(t))
+	for k := range t {
+		out = append(out, k)
+	}
+	sort.Sort(out)
+	return out
+}
+
+// UnsortedStringList returns the elements of this in an unordered string slice.
+func (t TaskIDs) UnsortedStringList() []string {
+	out := make([]string, 0, len(t))
+	for k := range t {
+		out = append(out, string(k))
+	}
+	return out
+}
+
+// StringList returns the elements of this in an ordered string slice.
+func (t TaskIDs) StringList() []string {
+	out := t.UnsortedStringList()
+	sort.Strings(out)
+	return out
+}
+
+// TaskIDSlice is a slice of TaskIDs.
+type TaskIDSlice []TaskID
+
+// TaskIDs returns this as a slice of TaskIDs.
+func (t TaskIDSlice) TaskIDs() []TaskID {
+	return t
+}
+
+func (t TaskIDSlice) Len() int {
+	return len(t)
+}
+
+func (t TaskIDSlice) Less(i1, i2 int) bool {
+	return t[i1] < t[i2]
+}
+
+func (t TaskIDSlice) Swap(i1, i2 int) {
+	t[i1], t[i2] = t[i2], t[i1]
+}

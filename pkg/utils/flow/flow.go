@@ -12,184 +12,265 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package flow provides utilities to construct a directed acyclic computational graph
+// that is then executed and monitored with maximum parallelism.
 package flow
 
 import (
 	"fmt"
-	"time"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	utilerrors "github.com/gardener/gardener/pkg/operation/errors"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/hashicorp/go-multierror"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"io/ioutil"
+	"time"
 )
 
-// New creates a new Flow object.
-func New(name string) *Flow {
-	return &Flow{
-		Name:           name,
-		DoneCh:         make(chan *Task),
-		ActiveTasks:    TaskList{},
-		RootTasks:      TaskList{},
-		ErrornousTasks: TaskList{},
+const (
+	logKeyFlow = "flow"
+	logKeyTask = "task"
+)
+
+// ProgressReporter is continuously called on progress in a flow.
+type ProgressReporter func(*Stats)
+
+type nodes map[TaskID]*node
+
+func (ns nodes) getOrCreate(id TaskID) *node {
+	n, ok := ns[id]
+	if !ok {
+		n = &node{}
+		ns[id] = n
+	}
+	return n
+}
+
+// Flow is a validated executable Graph.
+type Flow struct {
+	name  string
+	nodes nodes
+	roots TaskIDs
+}
+
+// Name retrieves the name of a flow.
+func (f *Flow) Name() string {
+	return f.name
+}
+
+// Len retrieves the amount of tasks in a Flow.
+func (f *Flow) Len() int {
+	return len(f.nodes)
+}
+
+// node is a compiled Task that contains the triggered Tasks, the
+// number of triggers the node itself requires and its payload function.
+type node struct {
+	targetIDs TaskIDs
+	required  int
+	fn        TaskFn
+}
+
+func (n *node) String() string {
+	return fmt.Sprintf("node{targets=%s, required=%d}", n.targetIDs.List(), n.required)
+}
+
+// addTargets adds the given TaskIDs as targets to the node.
+func (n *node) addTargets(taskIDs ...TaskID) {
+	if n.targetIDs == nil {
+		n.targetIDs = NewTaskIDs(TaskIDSlice(taskIDs))
+		return
+	}
+	n.targetIDs.Insert(TaskIDSlice(taskIDs))
+}
+
+// Opts are options for a Flow execution. If they are not set, they
+// are left blank and don't affect the Flow.
+type Opts struct {
+	Logger           logrus.FieldLogger
+	ProgressReporter func(stats *Stats)
+}
+
+// Run starts an execution of a Flow.
+// It blocks until the Flow has finished and returns the error, if any.
+func (f *Flow) Run(opts Opts) error {
+	return newExecution(f, opts.Logger, opts.ProgressReporter).run()
+}
+
+type nodeResult struct {
+	TaskID TaskID
+	Error  error
+}
+
+// Stats are the statistics of a Flow execution.
+type Stats struct {
+	All       TaskIDs
+	Succeeded TaskIDs
+	Failed    TaskIDs
+	Running   TaskIDs
+	Pending   TaskIDs
+}
+
+// ProgressPercent retrieves the progress of a Flow execution in percent.
+func (s *Stats) ProgressPercent() int {
+	return (100 * s.Succeeded.Len()) / s.All.Len()
+}
+
+// Copy deeply copies a Stats object.
+func (s *Stats) Copy() *Stats {
+	return &Stats{
+		s.All.Copy(),
+		s.Succeeded.Copy(),
+		s.Failed.Copy(),
+		s.Running.Copy(),
+		s.Pending.Copy(),
 	}
 }
 
-// AddTask takes a <function> and a <retryDuration> and returns a pointer to a Task object.
-func (f *Flow) AddTask(function func() error, retryDuration time.Duration, dependsOn ...*Task) *Task {
-	task := &Task{
-		Function:                    function,
-		RetryDuration:               retryDuration,
-		TriggerTasks:                TaskList{},
-		NumberOfPendingDependencies: len(dependsOn),
+// InitialStats creates a new Stats object with the given set of initial TaskIDs.
+// The initial TaskIDs are added to all TaskIDs as well as to the pending ones.
+func InitialStats(all TaskIDs) *Stats {
+	return &Stats{
+		all,
+		NewTaskIDs(),
+		NewTaskIDs(),
+		NewTaskIDs(),
+		all.Copy(),
 	}
-	if len(dependsOn) == 0 {
-		f.RootTasks = append(f.RootTasks, task)
-	}
-	for _, t := range dependsOn {
-		t.TriggerTasks = append(t.TriggerTasks, task)
-	}
-	f.NumberOfExecutableTasks++
-	return task
 }
 
-// AddTaskConditional takes a <function> and a <retryDuration> and returns a pointer to a Task object.
-// In case the <condition> is false, the task will be marked as "skipped".
-func (f *Flow) AddTaskConditional(function func() error, retryDuration time.Duration, condition bool, dependsOn ...*Task) *Task {
-	task := f.AddTask(function, retryDuration, dependsOn...)
-	if !condition {
-		f.NumberOfExecutableTasks--
-	}
-	task.Skip = !condition
-	return task
+func newNopLogger() logrus.FieldLogger {
+	logger := logrus.New()
+	logger.Out = ioutil.Discard
+	return logger
 }
 
-// AddSyncPoint takes a list of tasks and returns a dummy task which can be used by others
-// as dependency. With that, a long list of dependencies must only defined once.
-func (f *Flow) AddSyncPoint(dependsOn ...*Task) *Task {
-	return f.AddTaskConditional(func() error { return nil }, 0, false, dependsOn...)
-}
+func newExecution(flow *Flow, logger logrus.FieldLogger, reporter ProgressReporter) *execution {
+	all := NewTaskIDs()
 
-// SetProgressReporter will take a function <reporter> and store it on the Flow object. The
-// function will be called whenever the state changes. It will receive the percentage of compeleted
-// tasks of the Flow and the list of currently executed functions as arguments.
-func (f *Flow) SetProgressReporter(reporter func(int, string)) *Flow {
-	f.ProgressReporterFunc = reporter
-	return f
-}
-
-// SetLogger will take a <logger> and store it on the Flow object. The logger will be used at the begin of each
-// function invocation, and in case of errors.
-func (f *Flow) SetLogger(logger *logrus.Entry) *Flow {
-	f.Logger = logger
-	return f
-}
-
-// Execute will execute all tasks in the flow.
-func (f *Flow) Execute() *gardenv1beta1.LastError {
-	f.infof("Starting flow %s", f.Name)
-	for _, task := range f.RootTasks {
-		f.startTask(task)
-	}
-	f.handleFlow()
-
-	err := f.aggregateErrors()
-	if err != nil {
-		return err
+	for name := range flow.nodes {
+		all.Insert(name)
 	}
 
-	f.infof("Completed flow %s successfully", f.Name)
-	return nil
-}
-
-func (f *Flow) handleFlow() {
-	for len(f.ActiveTasks) > 0 {
-		t := <-f.DoneCh
-		if !t.Skip {
-			f.NumberOfCompletedTasks++
-		}
-		f.removeFromActiveTasks(t)
-		if t.Error != nil {
-			f.errorf("An error occurred while executing %s: %s", t, t.Error.Description)
-			f.ErrornousTasks = append(f.ErrornousTasks, t)
-		} else {
-			f.triggerDependencies(t)
-		}
-		if f.ProgressReporterFunc != nil {
-			f.ProgressReporterFunc(100*f.NumberOfCompletedTasks/(f.NumberOfExecutableTasks), f.ActiveTasks.String())
-		}
+	if logger == nil {
+		logger = newNopLogger()
 	}
-	close(f.DoneCh)
+	logger = logger.WithField(logKeyFlow, flow.name)
+
+	return &execution{
+		flow,
+		InitialStats(all),
+		nil,
+		logger,
+		reporter,
+		make(chan *nodeResult),
+		make(map[TaskID]int),
+	}
 }
 
-func (f *Flow) startTask(task *Task) {
-	f.ActiveTasks = append(f.ActiveTasks, task)
+type execution struct {
+	flow *Flow
+
+	stats *Stats
+	error error
+
+	log              logrus.FieldLogger
+	progressReporter ProgressReporter
+
+	done          chan *nodeResult
+	triggerCounts map[TaskID]int
+}
+
+func (e *execution) Log() logrus.FieldLogger {
+	return e.log
+}
+
+func (e *execution) runNode(id TaskID) {
+	e.stats.Pending.Delete(id)
+	e.stats.Running.Insert(id)
 	go func() {
-		if !task.Skip {
-			f.infof("Executing %s", task)
-			err := utils.Retry(f.Logger, task.RetryDuration, utils.RetryFunc(f.Logger, task.Function))
-			if err != nil {
-				task.Error = utilerrors.New(err)
-			}
+		log := e.log.WithField(logKeyTask, id)
+
+		start := time.Now().UTC()
+		log.Debugf("Started at %s", start)
+		err := e.flow.nodes[id].fn()
+		end := time.Now().UTC()
+		log.Debugf("Finished at %s and took %s", end, end.Sub(start))
+
+		if err != nil {
+			log.Errorf("Failure: %+v", err)
 		} else {
-			f.infof("Skipped %s", task)
+			log.Infof("Succeeded")
 		}
-		f.DoneCh <- task
+
+		err = errors.Wrapf(err, "task %q failed", id)
+		e.done <- &nodeResult{TaskID: id, Error: err}
 	}()
 }
 
-func (f *Flow) triggerDependencies(task *Task) {
-	for _, t := range task.TriggerTasks {
-		t.NumberOfPendingDependencies--
-		if t.NumberOfPendingDependencies == 0 {
-			f.startTask(t)
+func (e *execution) updateSuccess(id TaskID) {
+	e.stats.Running.Delete(id)
+	e.stats.Succeeded.Insert(id)
+}
+
+func (e *execution) updateFailure(id TaskID, err error) {
+	e.stats.Running.Delete(id)
+	e.stats.Failed.Insert(id)
+}
+
+func (e *execution) processTriggers(id TaskID) {
+	node := e.flow.nodes[id]
+	for target := range node.targetIDs {
+		e.triggerCounts[target]++
+		if e.triggerCounts[target] == e.flow.nodes[target].required {
+			e.runNode(target)
 		}
 	}
 }
 
-func (f *Flow) removeFromActiveTasks(task *Task) {
-	for i, t := range f.ActiveTasks {
-		if task == t {
-			f.ActiveTasks = append(f.ActiveTasks[:i], f.ActiveTasks[i+1:]...)
-			break
-		}
+func (e *execution) reportProgress() {
+	if e.progressReporter != nil {
+		e.progressReporter(e.stats.Copy())
 	}
 }
 
-func (f *Flow) aggregateErrors() *gardenv1beta1.LastError {
-	if len(f.ErrornousTasks) == 0 {
-		return nil
+func (e *execution) run() error {
+	defer close(e.done)
+	e.log.Infof("Starting flow")
+
+	e.reportProgress()
+	for name := range e.flow.roots {
+		e.runNode(name)
+		e.reportProgress()
 	}
 
+	for e.stats.Running.Len() > 0 {
+		result := <-e.done
+		if result.Error != nil {
+			e.error = multierror.Append(e.error, result.Error)
+			e.updateFailure(result.TaskID, result.Error)
+		} else {
+			e.updateSuccess(result.TaskID)
+			e.processTriggers(result.TaskID)
+		}
+		e.reportProgress()
+	}
+
+	e.log.Infof("Finished flow")
+	return errors.Wrapf(e.error, "flow %q failed", e.flow.name)
+}
+
+// Errors reports all wrapped Task errors of the given Flow error.
+func Errors(err error) *multierror.Error {
+	return multierror.Append(nil, errors.Cause(err))
+}
+
+// Causes reports the causes of all Task errors of the given Flow error.
+func Causes(err error) *multierror.Error {
 	var (
-		lastError = &gardenv1beta1.LastError{
-			Codes: []gardenv1beta1.ErrorCode{},
-		}
-		e   = "Errors occurred during flow execution: "
-		sep = ""
+		errs   = Errors(err).Errors
+		causes = make([]error, 0, len(errs))
 	)
-
-	for _, t := range f.ErrornousTasks {
-		if t.Error.Code != nil {
-			lastError.Codes = append(lastError.Codes, *(t.Error.Code))
-		}
-		e += sep + fmt.Sprintf("'%s' returned '%s'", t, t.Error.Description)
-		sep = ", "
+	for _, err := range errs {
+		causes = append(causes, errors.Cause(err))
 	}
-
-	lastError.Description = e
-
-	return lastError
-}
-
-func (f *Flow) infof(format string, args ...interface{}) {
-	if f.Logger != nil {
-		f.Logger.Infof(format, args...)
-	}
-}
-
-func (f *Flow) errorf(format string, args ...interface{}) {
-	if f.Logger != nil {
-		f.Logger.Errorf(format, args...)
-	}
+	return &multierror.Error{Errors: causes}
 }

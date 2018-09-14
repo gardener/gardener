@@ -31,6 +31,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // NewFromOperation takes an <o> operation object and initializes the Terraformer, and a
@@ -104,7 +105,7 @@ func (t *Terraformer) execute(scriptName string) error {
 	)
 
 	// We should retry the preparation check in order to allow the kube-apiserver to actually create the ConfigMaps.
-	if err := utils.Retry(t.logger, 30*time.Second, func() (bool, error) {
+	if err := wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
 		numberOfExistingResources, err := t.prepare()
 		if err != nil {
 			return false, err
@@ -222,7 +223,7 @@ func (t *Terraformer) execute(scriptName string) error {
 		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
 		}
-		return common.DetermineErrorCode(errorMessage)
+		return common.DetermineError(errorMessage)
 	}
 	return nil
 }

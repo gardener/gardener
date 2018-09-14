@@ -47,12 +47,12 @@ func (t *Terraformer) DefineConfig(chartName string, values map[string]interface
 	}
 	values["initializeEmptyState"] = t.IsStateEmpty()
 
-	if err := utils.Retry(t.logger, 30*time.Second, func() (bool, error) {
+	if err := utils.Retry(5*time.Second, 30*time.Second, func() (bool, bool, error) {
 		if err := common.ApplyChart(t.k8sClient, t.chartRenderer, filepath.Join(chartPath, chartName), chartName, t.namespace, nil, values); err != nil {
 			t.logger.Errorf("could not create Terraform ConfigMaps/Secrets: %s", err.Error())
-			return false, nil
+			return false, false, nil
 		}
-		return true, nil
+		return true, false, nil
 	}); err != nil {
 		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
 	} else {

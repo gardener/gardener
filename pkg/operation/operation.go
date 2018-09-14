@@ -17,7 +17,6 @@ package operation
 import (
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -29,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -177,16 +177,18 @@ func (o *Operation) GetSecretKeysOfRole(kind string) []string {
 	return common.GetSecretKeysWithPrefix(kind, o.Secrets)
 }
 
+func makeDescription(stats *flow.Stats) string {
+	if stats.ProgressPercent() == 100 {
+		return "Execution finished"
+	}
+	return strings.Join(stats.Running.StringList(), ", ")
+}
+
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
-func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
-	description := fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
-	if progress == 100 {
-		description = "Execution finished."
-	}
-
-	o.Shoot.Info.Status.LastOperation.Description = description
-	o.Shoot.Info.Status.LastOperation.Progress = progress
+func (o *Operation) ReportShootProgress(stats *flow.Stats) {
+	o.Shoot.Info.Status.LastOperation.Description = makeDescription(stats)
+	o.Shoot.Info.Status.LastOperation.Progress = stats.ProgressPercent()
 	o.Shoot.Info.Status.LastOperation.LastUpdateTime = metav1.Now()
 
 	if newShoot, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).UpdateStatus(o.Shoot.Info); err == nil {
@@ -196,24 +198,14 @@ func (o *Operation) ReportShootProgress(progress int, currentFunctions string) {
 
 // ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section
 // by the current progress of the Flow execution.
-func (o *Operation) ReportBackupInfrastructureProgress(progress int, currentFunctions string) {
-	description := fmt.Sprintf("Executing %s.", sanitizeFunctionNames(currentFunctions))
-	if progress == 100 {
-		description = "Execution finished."
-	}
-
-	o.BackupInfrastructure.Status.LastOperation.Description = description
-	o.BackupInfrastructure.Status.LastOperation.Progress = progress
+func (o *Operation) ReportBackupInfrastructureProgress(stats *flow.Stats) {
+	o.BackupInfrastructure.Status.LastOperation.Description = makeDescription(stats)
+	o.BackupInfrastructure.Status.LastOperation.Progress = stats.ProgressPercent()
 	o.BackupInfrastructure.Status.LastOperation.LastUpdateTime = metav1.Now()
 
 	if newBackupInfrastructure, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(o.BackupInfrastructure.Namespace).UpdateStatus(o.BackupInfrastructure); err == nil {
 		o.BackupInfrastructure = newBackupInfrastructure
 	}
-}
-
-func sanitizeFunctionNames(functions string) string {
-	re := regexp.MustCompile(`\([^)]*\)\.`)
-	return re.ReplaceAllString(functions, "")
 }
 
 // InjectImages injects images from the image vector into the provided <values> map.

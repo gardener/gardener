@@ -340,3 +340,28 @@ func IsUsedAsSeed(shoot *gardenv1beta1.Shoot) (bool, *bool, *bool) {
 
 	return useAsSeed, protected, visible
 }
+
+// Coder is an error that may produce an ErrorCode visible to the outside.
+type Coder interface {
+	error
+	Code() gardenv1beta1.ErrorCode
+}
+
+// ExtractErrorCodes extracts all error codes from the given error by using utils.Errors
+func ExtractErrorCodes(err error) []gardenv1beta1.ErrorCode {
+	var codes []gardenv1beta1.ErrorCode
+	for _, err := range utils.Errors(err) {
+		if coder, ok := err.(Coder); ok {
+			codes = append(codes, coder.Code())
+		}
+	}
+	return codes
+}
+
+func FormatLastErrDescription(err error) string {
+	errString := err.Error()
+	if len(errString) > 0 {
+		errString = strings.ToUpper(string(errString[0])) + errString[1:]
+	}
+	return errString
+}

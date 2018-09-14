@@ -367,6 +367,21 @@
   revision = "9cad4c3443a7200dd6400aef47183728de563a38"
 
 [[projects]]
+  digest = "1:f0d9d74edbd40fdeada436d5ac9cb5197407899af3fef85ff0137077ffe8ae19"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "8a6fb523712970c966eefc6b39ed2c5e74880354"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:2ed138049ab373f696db2081ca48f15c5abdf20893803612a284f2bdce2bf443"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "3d5d8f294aa03d8e98859feac328afbdf1ae0703"
+
+[[projects]]
   branch = "master"
   digest = "1:13e2fa5735a82a5fb044f290cfd0dba633d1c5e516b27da0509e0dbb3515a18e"
   name = "github.com/hashicorp/golang-lru"
@@ -525,6 +540,13 @@
   pruneopts = "NUT"
   revision = "5f041e8faa004a95c88a202771f4cc3e991971e6"
   version = "v2.0.1"
+
+[[projects]]
+  digest = "1:89fa4c7ac713710640c83ec0461b78fc21c2eda6deca064fe461eef1b8bca303"
+  name = "github.com/pkg/errors"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "816c9085562cd7ee03e7f8188a1cfd942858cded"
 
 [[projects]]
   digest = "1:03bca087b180bf24c4f9060775f137775550a0834e18f0bca0520a868679dbd7"
@@ -1254,10 +1276,12 @@
     "github.com/go-openapi/spec",
     "github.com/golang/glog",
     "github.com/golang/protobuf/proto",
+    "github.com/hashicorp/go-multierror",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/gstruct",
+    "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/robfig/cron",
@@ -1271,6 +1295,8 @@
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
     "gopkg.in/yaml.v2",
+    "k8s.io/api/admission/v1beta1",
+    "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/apps/v1",
     "k8s.io/api/batch/v1",
     "k8s.io/api/core/v1",
