@@ -73,6 +73,9 @@ spec:
         - --cluster-name={{ .Values.clusterName }}
         - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt
         - --cluster-signing-key-file=/srv/kubernetes/ca/ca.key
+        - --concurrent-deployment-syncs=10
+        - --concurrent-replicaset-syncs=10
+        - --concurrent-service-syncs=10
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
