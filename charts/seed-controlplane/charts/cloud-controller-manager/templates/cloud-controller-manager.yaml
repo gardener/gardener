@@ -64,6 +64,7 @@ spec:
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster-cidr={{ .Values.podNetwork }}
         - --cluster-name={{ .Values.clusterName }}
+        - --concurrent-service-syncs=10
         - --configure-cloud-routes={{ .Values.configureRoutes }}
         {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
