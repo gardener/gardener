@@ -107,7 +107,7 @@ func (b *Botanist) RefreshCloudControllerManagerChecksums() error {
 		}
 		return err
 	}
-	return b.patchDeploymentCloudProviderChecksum(common.CloudControllerManagerDeploymentName)
+	return b.patchDeploymentCloudProviderChecksums(common.CloudControllerManagerDeploymentName)
 }
 
 // RefreshKubeControllerManagerChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
@@ -118,7 +118,7 @@ func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
 		}
 		return err
 	}
-	return b.patchDeploymentCloudProviderChecksum(common.KubeControllerManagerDeploymentName)
+	return b.patchDeploymentCloudProviderChecksums(common.KubeControllerManagerDeploymentName)
 }
 
 // DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
@@ -389,8 +389,8 @@ func (b *Botanist) DeleteSeedMonitoring() error {
 	return err
 }
 
-// patchDeployment patches the given deployment with the provided patch.
-func (b *Botanist) patchDeploymentCloudProviderChecksum(deploymentName string) error {
+// patchDeploymentCloudProviderChecksums updates the cloud provider checksums on the given deployment.
+func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) error {
 	type jsonPatch struct {
 		Op    string `json:"op"`
 		Path  string `json:"path"`

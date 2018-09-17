@@ -24,9 +24,9 @@ data:
       "Successful")
             exec etcd --data-dir=/var/etcd/data \
                       --name=etcd-{{.Values.role}} \
-                      --cert-file=/var/etcd/server/ssl/tls.crt \
-                      --key-file=/var/etcd/server/ssl/tls.key \
-                      --trusted-ca-file=/srv/kubernetes/ca/ca.crt \
+                      --cert-file=/var/etcd/ssl/server/tls.crt \
+                      --key-file=/var/etcd/ssl/server/tls.key \
+                      --trusted-ca-file=/var/etcd/ssl/ca/ca.crt \
                       --client-cert-auth \
                       --advertise-client-urls=https://0.0.0.0:2379 \
                       --listen-client-urls=https://0.0.0.0:2379 \

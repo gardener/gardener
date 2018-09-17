@@ -65,9 +65,9 @@ spec:
             - -ec
             - ETCDCTL_API=3
             - etcdctl
-            - --cert=/var/etcd/client/ssl/tls.crt
-            - --key=/var/etcd/client/ssl/tls.key
-            - --cacert=/srv/kubernetes/ca/ca.crt
+            - --cert=/var/etcd/ssl/client/tls.crt
+            - --key=/var/etcd/ssl/client/tls.key
+            - --cacert=/var/etcd/ssl/ca/ca.crt
             - --endpoints=https://etcd-{{ .Values.role }}-0:2379
             - get
             - foo
@@ -92,12 +92,12 @@ spec:
           mountPath: /var/etcd/data
         - name: etcd-bootstrap
           mountPath: /bootstrap
-        - name: ca
-          mountPath: /srv/kubernetes/ca
+        - name: ca-etcd
+          mountPath: /var/etcd/ssl/ca
         - name: etcd-server-tls
-          mountPath: /var/etcd/server/ssl
+          mountPath: /var/etcd/ssl/server
         - name: etcd-client-tls
-          mountPath: /var/etcd/client/ssl
+          mountPath: /var/etcd/ssl/client
       - name: backup-restore
         command:
         - etcdbrctl
@@ -107,9 +107,9 @@ spec:
         - --data-dir=/var/etcd/data
         - --storage-provider={{ .Values.backup.storageProvider }}
         - --store-prefix=etcd-{{ .Values.role }}
-        - --cert=/var/etcd/ssl/tls.crt
-        - --key=/var/etcd/ssl/tls.key
-        - --cacert=/srv/kubernetes/ca/ca.crt
+        - --cert=/var/etcd/ssl/client/tls.crt
+        - --key=/var/etcd/ssl/client/tls.key
+        - --cacert=/var/etcd/ssl/ca/ca.crt
         - --insecure-transport=false
         - --insecure-skip-tls-verify=false
         - --endpoints=https://etcd-{{ .Values.role }}-0:2379
@@ -136,31 +136,31 @@ spec:
         volumeMounts:
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
-        - name: ca
-          mountPath: /srv/kubernetes/ca
+        - name: ca-etcd
+          mountPath: /var/etcd/ssl/ca
         - name: etcd-client-tls
-          mountPath: /var/etcd/ssl
+          mountPath: /var/etcd/ssl/client
 {{- if .Values.backup.volumeMounts }}
 {{ toYaml .Values.backup.volumeMounts | indent 8 }}
 {{- end }}
       volumes:
-        - name: etcd-bootstrap
-          configMap:
-            name: etcd-bootstrap-{{ .Values.role }}
-            defaultMode: 356
-        - name: etcd-server-tls
-          secret:
-            secretName: {{ .Values.tlsServerSecretName }}
-        - name: etcd-client-tls
-          secret:
-            secretName: {{ .Values.tlsClientSecretName }}
-        - name: ca
-          secret:
-            secretName: ca
+      - name: etcd-bootstrap
+        configMap:
+          name: etcd-bootstrap-{{ .Values.role }}
+          defaultMode: 356
+      - name: etcd-server-tls
+        secret:
+          secretName: {{ .Values.tlsServerSecretName }}
+      - name: etcd-client-tls
+        secret:
+          secretName: {{ .Values.tlsClientSecretName }}
+      - name: ca-etcd
+        secret:
+          secretName: ca-etcd
 {{- if .Values.backup.storageProvider }}
-        - name: {{ .Values.backup.backupSecret }}
-          secret:
-            secretName: {{ .Values.backup.backupSecret }}
+      - name: {{ .Values.backup.backupSecret }}
+        secret:
+          secretName: {{ .Values.backup.backupSecret }}
 {{- end }}
   volumeClaimTemplates:
   - metadata:

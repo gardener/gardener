@@ -1,2 +1,9 @@
 images:
   metrics-server: image-repository:image-tag
+podAnnotations: {}
+tls:
+  caBundle: ca-certificate-of-metrics-server
+secret:
+  data:
+    tls.crt: server-cert-of-metrics-server
+    tls.key: server-key-of-metrics-server

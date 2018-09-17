@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,8 +55,15 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
 			},
 		}
-		metricsServerConfig = map[string]interface{}{}
-		vpnShootConfig      = map[string]interface{}{
+		metricsServerConfig = map[string]interface{}{
+			"tls": map[string]interface{}{
+				"caBundle": b.Secrets["ca-metrics-server"].Data[secrets.DataKeyCertificateCA],
+			},
+			"secret": map[string]interface{}{
+				"data": b.Secrets["metrics-server"].Data,
+			},
+		}
+		vpnShootConfig = map[string]interface{}{
 			"podNetwork":     b.Shoot.GetPodNetwork(),
 			"serviceNetwork": b.Shoot.GetServiceNetwork(),
 			"nodeNetwork":    b.Shoot.GetNodeNetwork(),

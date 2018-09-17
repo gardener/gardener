@@ -90,7 +90,7 @@ func (b *HybridBotanist) DeployETCD() error {
 
 	etcdConfig := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":              b.CheckSums["ca"],
+			"checksum/secret-etcd-ca":         b.CheckSums["ca-etcd"],
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},
@@ -184,6 +184,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums["ca"],
+			"checksum/secret-ca-front-proxy":            b.CheckSums["ca-front-proxy"],
 			"checksum/secret-kube-apiserver":            b.CheckSums[common.KubeAPIServerDeploymentName],
 			"checksum/secret-kube-aggregator":           b.CheckSums["kube-aggregator"],
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
@@ -191,6 +192,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
 			"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
+			"checksum/secret-etcd-ca":                   b.CheckSums["ca-etcd"],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
 		},
 	}

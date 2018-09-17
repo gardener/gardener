@@ -2,7 +2,7 @@
 - path: /var/lib/kubelet/ca.crt
   permissions: 0644
   encoding: b64
-  content: {{ ( required "kubernetes.caCert is required" .kubernetes.caCert ) | b64enc }}
+  content: {{ ( required "kubernetes.kubelet.caCert is required" .kubernetes.kubelet.caCert ) | b64enc }}
 {{- if .cloudProvider.config }}
 - path: /var/lib/kubelet/cloudprovider.conf
   permissions: 0644
