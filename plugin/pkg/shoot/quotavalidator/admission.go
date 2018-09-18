@@ -463,6 +463,14 @@ func getShootWorkerResources(shoot garden.Shoot, cloudProvider garden.CloudProvi
 				}
 			}
 		}
+	case garden.CloudProviderAlicloud:
+		workers = make([]quotaWorker, len(shoot.Spec.Cloud.Alicloud.Workers))
+
+		for idx, aliWorker := range shoot.Spec.Cloud.Alicloud.Workers {
+			workers[idx].Worker = aliWorker.Worker
+			workers[idx].VolumeType = aliWorker.VolumeType
+			workers[idx].VolumeSize = resource.MustParse(aliWorker.VolumeSize)
+		}
 	}
 	return workers
 }
@@ -479,6 +487,11 @@ func getMachineTypes(provider garden.CloudProvider, cloudProfile garden.CloudPro
 	case garden.CloudProviderOpenStack:
 		machineTypes = make([]garden.MachineType, 0)
 		for _, element := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
+			machineTypes = append(machineTypes, element.MachineType)
+		}
+	case garden.CloudProviderAlicloud:
+		machineTypes = make([]garden.MachineType, 0)
+		for _, element := range cloudProfile.Spec.Alicloud.Constraints.MachineTypes {
 			machineTypes = append(machineTypes, element.MachineType)
 		}
 	}
@@ -512,6 +525,11 @@ func getVolumeTypes(provider garden.CloudProvider, cloudProfile garden.CloudProf
 					Class: machineType.VolumeType,
 				})
 			}
+		}
+	case garden.CloudProviderAlicloud:
+		volumeTypes = make([]garden.VolumeType, 0)
+		for _, element := range cloudProfile.Spec.Alicloud.Constraints.VolumeTypes {
+			volumeTypes = append(volumeTypes, element.VolumeType)
 		}
 	}
 	return volumeTypes
@@ -601,6 +619,21 @@ func quotaVerificationNeeded(new, old garden.Shoot, provider garden.CloudProvide
 				if worker.Name == oldWorker.Name {
 					oldHasWorker = true
 					if hasWorkerDiff(worker.Worker, oldWorker.Worker) {
+						return true
+					}
+				}
+			}
+			if !oldHasWorker {
+				return true
+			}
+		}
+	case garden.CloudProviderAlicloud:
+		for _, worker := range new.Spec.Cloud.Alicloud.Workers {
+			oldHasWorker := false
+			for _, oldWorker := range old.Spec.Cloud.Alicloud.Workers {
+				if worker.Name == oldWorker.Name {
+					oldHasWorker = true
+					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
 						return true
 					}
 				}

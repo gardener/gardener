@@ -1175,5 +1175,270 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 		})
+
+		Context("tests for Ali cloud", func() {
+			var (
+				alicloudProfile = &garden.AlicloudProfile{
+					Constraints: garden.AlicloudConstraints{
+						DNSProviders: []garden.DNSProviderConstraint{
+							{
+								Name: garden.DNSUnmanaged,
+							},
+						},
+						Kubernetes: garden.KubernetesConstraints{
+							Versions: []string{"1.6.4"},
+						},
+						MachineImages: []garden.AlicloudMachineImage{
+							{
+								Name: garden.MachineImageCoreOS,
+								ID:   "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
+							},
+						},
+						MachineTypes: []garden.AlicloudMachineType{
+							{
+								MachineType: garden.MachineType{
+									Name:   "machine-type-1",
+									CPU:    resource.MustParse("2"),
+									GPU:    resource.MustParse("0"),
+									Memory: resource.MustParse("100Gi"),
+								},
+								Zones: []string{
+									"europe-a",
+								},
+							},
+						},
+						VolumeTypes: []garden.AlicloudVolumeType{
+							{
+								VolumeType: garden.VolumeType{
+									Name:  "volume-type-1",
+									Class: "standard",
+								},
+								Zones: []string{
+									"europe-a",
+								},
+							},
+						},
+						Zones: []garden.Zone{
+							{
+								Region: "europe",
+								Names:  []string{"europe-a"},
+							},
+							{
+								Region: "asia",
+								Names:  []string{"asia-a"},
+							},
+						},
+					},
+				}
+				workers = []garden.AlicloudWorker{
+					{
+						Worker: garden.Worker{
+							Name:          "worker-name",
+							MachineType:   "machine-type-1",
+							AutoScalerMin: 1,
+							AutoScalerMax: 1,
+						},
+						VolumeSize: "10Gi",
+						VolumeType: "volume-type-1",
+					},
+				}
+				zones    = []string{"europe-a"}
+				aliCloud = &garden.Alicloud{}
+			)
+
+			BeforeEach(func() {
+				cloudProfile = cloudProfileBase
+				shoot = shootBase
+				aliCloud.Networks = garden.AlicloudNetworks{K8SNetworks: k8sNetworks}
+				aliCloud.Workers = workers
+				aliCloud.Zones = zones
+				cloudProfile.Spec.Alicloud = alicloudProfile
+				shoot.Spec.Cloud.Alicloud = aliCloud
+			})
+
+			It("should reject because the shoot node and the seed node networks intersect", func() {
+				shoot.Spec.Cloud.Alicloud.Networks.Nodes = &seedNodesCIDR
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the shoot pod and the seed pod networks intersect", func() {
+				shoot.Spec.Cloud.Alicloud.Networks.Pods = &seedPodsCIDR
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the shoot service and the seed service networks intersect", func() {
+				shoot.Spec.Cloud.Alicloud.Networks.Services = &seedServicesCIDR
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid dns provider", func() {
+				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid kubernetes version", func() {
+				shoot.Spec.Kubernetes.Version = "1.2.3"
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid machine image", func() {
+				shoot.Spec.Cloud.Alicloud.MachineImage = &garden.AlicloudMachineImage{
+					Name: garden.MachineImageName("not-supported"),
+					ID:   "not-supported",
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid machine type", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker: garden.Worker{
+							MachineType: "not-allowed",
+						},
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid volume type", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker: garden.Worker{
+							MachineType: "machine-type-1",
+						},
+						VolumeType: "not-allowed",
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an invalid zone", func() {
+				shoot.Spec.Cloud.Alicloud.Zones = []string{"invalid-zone"}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an machine type is not available in shoot zones", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						Worker: garden.Worker{
+							MachineType: "machine-type-1",
+						},
+					},
+				}
+
+				shoot.Spec.Cloud.Alicloud.Zones = []string{"cn-beijing-a"}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject due to an volume type is not available in shoot zones", func() {
+				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
+					{
+						VolumeType: "volume-type-1",
+					},
+				}
+
+				shoot.Spec.Cloud.Alicloud.Zones = []string{"cn-beijing-a"}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+		})
 	})
 })

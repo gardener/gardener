@@ -375,5 +375,79 @@ var _ = Describe("quotavalidator", func() {
 				Expect(err).To(HaveOccurred())
 			})
 		})
+
+		Context("tests for Alicloud Shoots, which have special logic for collecting volume and machine types", func() {
+			var (
+				cloudProfileAlicloudBase = garden.AlicloudProfile{
+					Constraints: garden.AlicloudConstraints{
+						MachineTypes: []garden.AlicloudMachineType{
+							{
+								MachineType: garden.MachineType{
+									Name:   machineTypeName,
+									CPU:    resource.MustParse("2"),
+									GPU:    resource.MustParse("0"),
+									Memory: resource.MustParse("5Gi"),
+								},
+							},
+						},
+						VolumeTypes: []garden.AlicloudVolumeType{
+							{
+								VolumeType: garden.VolumeType{
+									Name:  volumeTypeName,
+									Class: "standard",
+								},
+							},
+						},
+						Kubernetes: garden.KubernetesConstraints{
+							Versions: []string{
+								"1.0.1",
+								"1.1.1",
+							},
+						},
+					},
+				}
+
+				shootSpecCloudAlicloud = garden.Alicloud{
+					Workers: []garden.AlicloudWorker{
+						{
+							Worker: garden.Worker{
+								Name:          "test-worker-1",
+								MachineType:   machineTypeName,
+								AutoScalerMax: 1,
+								AutoScalerMin: 1,
+							},
+							VolumeType: volumeTypeName,
+							VolumeSize: "30Gi",
+						},
+					},
+				}
+			)
+
+			BeforeEach(func() {
+				cloudProfile.Spec.Alicloud = &cloudProfileAlicloudBase
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				shoot.Spec.Cloud.GCP = nil
+				shoot.Spec.Cloud.Alicloud = &shootSpecCloudAlicloud
+			})
+
+			It("should pass because quota is sufficient", func() {
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should pass because can update non worker property although quota is exceeded", func() {
+				oldShoot = *shoot.DeepCopy()
+				quotaProject.Spec.Metrics[garden.QuotaMetricCPU] = resource.MustParse("1")
+				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quotaProject)
+
+				shoot.Spec.Kubernetes.Version = "1.1.1"
+				attrs := admission.NewAttributesRecord(&shoot, &oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
