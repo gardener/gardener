@@ -118,6 +118,10 @@ func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
 		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
 			workers = append(workers, worker.Worker)
 		}
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, worker := range s.Info.Spec.Cloud.Alicloud.Workers {
+			workers = append(workers, worker.Worker)
+		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
 			workers = append(workers, worker.Worker)
@@ -164,6 +168,10 @@ func (s *Shoot) GetNodeCount() int {
 		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
 			nodeCount += worker.AutoScalerMax
 		}
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, worker := range s.Info.Spec.Cloud.Alicloud.Workers {
+			nodeCount += worker.AutoScalerMax
+		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
 			nodeCount += worker.AutoScalerMax
@@ -186,6 +194,8 @@ func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 		return &s.Info.Spec.Cloud.GCP.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderOpenStack:
 		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
+	case gardenv1beta1.CloudProviderAlicloud:
+		return &s.Info.Spec.Cloud.Alicloud.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderLocal:
 		return &s.Info.Spec.Cloud.Local.Networks.K8SNetworks
 	}
@@ -225,6 +235,8 @@ func (s *Shoot) GetMachineImageName() gardenv1beta1.MachineImageName {
 		return s.Info.Spec.Cloud.Azure.MachineImage.Name
 	case gardenv1beta1.CloudProviderGCP:
 		return s.Info.Spec.Cloud.GCP.MachineImage.Name
+	case gardenv1beta1.CloudProviderAlicloud:
+		return s.Info.Spec.Cloud.Alicloud.MachineImage.Name
 	case gardenv1beta1.CloudProviderOpenStack:
 		return s.Info.Spec.Cloud.OpenStack.MachineImage.Name
 	}

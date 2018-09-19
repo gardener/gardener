@@ -19,6 +19,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/alicloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/azurebotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
@@ -49,6 +50,8 @@ func New(o *operation.Operation, purpose string) (CloudBotanist, error) {
 		return azurebotanist.New(o, purpose)
 	case gardenv1beta1.CloudProviderGCP:
 		return gcpbotanist.New(o, purpose)
+	case gardenv1beta1.CloudProviderAlicloud:
+		return alicloudbotanist.New(o, purpose)
 	case gardenv1beta1.CloudProviderOpenStack:
 		return openstackbotanist.New(o, purpose)
 	case gardenv1beta1.CloudProviderLocal:

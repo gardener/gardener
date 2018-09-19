@@ -1,0 +1,11 @@
+# record:
+#   name: example.com
+#   hostRecord: my-dns-record
+#   value: 1.2.3.4
+
+# names:
+#   configuration: shoot.tf-config
+#   variables: shoot.tf-vars
+#   state: shoot.tf-state
+
+# initializeEmptyState: true
