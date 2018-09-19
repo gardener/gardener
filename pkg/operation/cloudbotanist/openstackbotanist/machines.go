@@ -85,6 +85,7 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, o
 				"keyName":          stateVariables[keyName],
 				"imageName":        b.Shoot.Info.Spec.Cloud.OpenStack.MachineImage.Image,
 				"networkID":        stateVariables[networkID],
+				"podNetworkCidr":   b.Shoot.GetPodNetwork(),
 				"securityGroups":   []string{stateVariables[securityGroupName]},
 				"tags": map[string]string{
 					fmt.Sprintf("kubernetes.io-cluster-%s", b.Shoot.SeedNamespace): "1",

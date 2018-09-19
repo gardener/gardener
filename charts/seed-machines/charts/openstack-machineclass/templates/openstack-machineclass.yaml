@@ -29,6 +29,7 @@ spec:
   keyName: {{ $machineClass.keyName }}
   imageName: {{ $machineClass.imageName }}
   networkID: {{ $machineClass.networkID }}
+  podNetworkCidr: {{ $machineClass.podNetworkCidr }}
   securityGroups:
 {{ toYaml $machineClass.securityGroups | indent 2 }}
   secretRef:
