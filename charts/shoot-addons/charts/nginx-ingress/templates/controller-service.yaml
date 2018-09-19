@@ -6,13 +6,13 @@ metadata:
 {{ toYaml .Values.controller.service.annotations | indent 4 }}
 {{- end }}
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "nginx-ingress.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     component: "{{ .Values.controller.name }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
-  name: {{ template "controller.fullname" . }}
+  name: {{ template "nginx-ingress.controller.fullname" . }}
   namespace: kube-system
 spec:
 {{- if .Values.controller.service.clusterIP }}
@@ -60,7 +60,7 @@ spec:
       targetPort: {{ $key }}
   {{- end }}
   selector:
-    app: {{ template "name" . }}
+    app: {{ template "nginx-ingress.name" . }}
     component: "{{ .Values.controller.name }}"
     release: {{ .Release.Name }}
   type: "{{ .Values.controller.service.type }}"

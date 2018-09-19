@@ -1,10 +1,10 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}
+  name: {{ template "kubernetes-dashboard.fullname" . }}
   namespace: kube-system
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "kubernetes-dashboard.name" . }}
     heritage: "{{ .Release.Service }}"
     release: "{{ .Release.Name }}"
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
@@ -16,7 +16,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: {{ template "name" . }}
+      app: {{ template "kubernetes-dashboard.name" . }}
       heritage: "{{ .Release.Service }}"
       release: "{{ .Release.Name }}"
       chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
@@ -32,7 +32,7 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         origin: gardener
-        app: {{ template "name" . }}
+        app: {{ template "kubernetes-dashboard.name" . }}
         heritage: "{{ .Release.Service }}"
         release: "{{ .Release.Name }}"
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
@@ -41,7 +41,7 @@ spec:
       tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
-      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "kubernetes-dashboard.fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 10 }}
       containers:

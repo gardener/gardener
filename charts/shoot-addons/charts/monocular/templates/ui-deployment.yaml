@@ -1,7 +1,7 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: {{ template "fullname" . }}-ui
+  name: {{ template "monocular.fullname" . }}-ui
   namespace: kube-system
   labels:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
@@ -12,12 +12,12 @@ spec:
   replicas: {{ .Values.ui.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "fullname" . }}-ui
+      app: {{ template "monocular.fullname" . }}-ui
   template:
     metadata:
       labels:
         origin: gardener
-        app: {{ template "fullname" . }}-ui
+        app: {{ template "monocular.fullname" . }}-ui
       annotations:
         checksum/config: {{ include (print $.Template.BasePath "/ui-config.yaml") . | sha256sum }}
         checksum/vhost: {{ include (print $.Template.BasePath "/ui-vhost.yaml") . | sha256sum }}
@@ -50,7 +50,7 @@ spec:
       volumes:
       - name: vhost
         configMap:
-          name: {{ template "fullname" . }}-ui-vhost
+          name: {{ template "monocular.fullname" . }}-ui-vhost
       - name: config
         configMap:
-          name: {{ template "fullname" . }}-ui-config
+          name: {{ template "monocular.fullname" . }}-ui-config

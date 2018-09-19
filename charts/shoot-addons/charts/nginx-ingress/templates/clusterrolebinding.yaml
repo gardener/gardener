@@ -3,18 +3,18 @@ apiVersion: {{include "rbacversion" .}}
 kind: ClusterRoleBinding
 metadata:
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "nginx-ingress.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
-  name: {{ template "fullname" . }}
+  name: {{ template "nginx-ingress.fullname" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ template "fullname" . }}
+  name: {{ template "nginx-ingress.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ template "fullname" . }}
+    name: {{ template "nginx-ingress.fullname" . }}
     namespace: {{ .Release.Namespace }}
 {{- end -}}

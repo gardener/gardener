@@ -9,12 +9,12 @@ metadata:
     {{ $key }}: {{ $value | quote }}
   {{- end }}
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "kubernetes-dashboard.name" . }}
     heritage: "{{ .Release.Service }}"
     release: "{{ .Release.Name }}"
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     addonmanager.kubernetes.io/mode: Reconcile
-  name: {{ template "fullname" . }}
+  name: {{ template "kubernetes-dashboard.fullname" . }}
   namespace: kube-system
 spec:
   rules:

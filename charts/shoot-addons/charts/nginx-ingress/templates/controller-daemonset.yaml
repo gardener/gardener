@@ -3,14 +3,14 @@ apiVersion: {{include "daemonsetversion" .}}
 kind: DaemonSet
 metadata:
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "nginx-ingress.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     component: "{{ .Values.controller.name }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
-  name: {{ template "controller.fullname" . }}
+  name: {{ template "nginx-ingress.controller.fullname" . }}
   namespace: kube-system
 spec:
   template:
@@ -22,19 +22,19 @@ spec:
     {{- end }}
       labels:
         origin: gardener
-        app: {{ template "name" . }}
+        app: {{ template "nginx-ingress.name" . }}
         component: "{{ .Values.controller.name }}"
         release: {{ .Release.Name }}
     spec:
       containers:
-        - name: {{ template "name" . }}-{{ .Values.controller.name }}
+        - name: {{ template "nginx-ingress.name" . }}-{{ .Values.controller.name }}
           image: {{ index .Values.images "nginx-ingress-controller" }}
           imagePullPolicy: "{{ .Values.controller.image.pullPolicy }}"
           args:
             - /nginx-ingress-controller
-            - --default-backend-service={{ if .Values.defaultBackend.enabled }}{{ .Release.Namespace }}/{{ template "defaultBackend.fullname" . }}{{ else }}{{ .Values.controller.defaultBackendService }}{{ end }}
+            - --default-backend-service={{ if .Values.defaultBackend.enabled }}{{ .Release.Namespace }}/{{ template "nginx-ingress.defaultBackend.fullname" . }}{{ else }}{{ .Values.controller.defaultBackendService }}{{ end }}
           {{- if and (contains "0.9" .Values.controller.image.tag) .Values.controller.publishService.enabled }}
-            - --publish-service={{ template "controller.publishServicePath" . }}
+            - --publish-service={{ template "nginx-ingress.controller.publishServicePath" . }}
           {{- end }}
           {{- if (contains "0.9" .Values.controller.image.tag) }}
             - --election-id={{ .Values.controller.electionID }}
@@ -43,12 +43,12 @@ spec:
             - --ingress-class={{ .Values.controller.ingressClass }}
           {{- end }}
           {{- if (contains "0.9" .Values.controller.image.tag) }}
-            - --configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
+            - --configmap={{ .Release.Namespace }}/{{ template "nginx-ingress.controller.fullname" . }}
           {{- else }}
-            - --nginx-configmap={{ .Release.Namespace }}/{{ template "controller.fullname" . }}
+            - --nginx-configmap={{ .Release.Namespace }}/{{ template "nginx-ingress.controller.fullname" . }}
           {{- end }}
           {{- if .Values.tcp }}
-            - --tcp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-tcp
+            - --tcp-services-configmap={{ .Release.Namespace }}/{{ template "nginx-ingress.fullname" . }}-tcp
           {{- end }}
           {{- if .Values.udp }}
             - --udp-services-configmap={{ .Release.Namespace }}/{{ template "fullname" . }}-udp
@@ -109,6 +109,6 @@ spec:
       nodeSelector:
 {{ toYaml .Values.controller.nodeSelector | indent 8 }}
     {{- end }}
-      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "nginx-ingress.fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
       terminationGracePeriodSeconds: 60
 {{- end }}

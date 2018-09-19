@@ -7,13 +7,13 @@ metadata:
 {{ toYaml .Values.controller.stats.service.annotations | indent 4 }}
 {{- end }}
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "nginx-ingress.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     component: "{{ .Values.controller.name }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
-  name: {{ template "controller.fullname" . }}-stats
+  name: {{ template "nginx-ingress.controller.fullname" . }}-stats
   namespace: kube-system
 spec:
 {{- if .Values.controller.stats.service.clusterIP }}
@@ -35,7 +35,7 @@ spec:
       port: {{ .Values.controller.stats.service.servicePort }}
       targetPort: 18080
   selector:
-    app: {{ template "name" . }}
+    app: {{ template "nginx-ingress.name" . }}
     component: "{{ .Values.controller.name }}"
     release: {{ .Release.Name }}
   type: "{{ .Values.controller.stats.service.type }}"

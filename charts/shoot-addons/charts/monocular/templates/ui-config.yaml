@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ template "fullname" . }}-ui-config
+  name: {{ template "monocular.fullname" . }}-ui-config
   namespace: kube-system
   labels:
-    app: {{ template "fullname" . }}
+    app: {{ template "monocular.fullname" . }}
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"

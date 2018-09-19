@@ -2,20 +2,20 @@ apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   labels:
-    app: {{ template "name" . }}
+    app: {{ template "kube-lego.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
-  name: {{ template "fullname" . }}
+  name: {{ template "kube-lego.fullname" . }}
   namespace: kube-system
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      app: {{ template "name" . }}
+      app: {{ template "kube-lego.name" . }}
       release: {{ .Release.Name }}
   template:
     metadata:
@@ -26,16 +26,16 @@ spec:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         origin: gardener
-        app: {{ template "name" . }}
+        app: {{ template "kube-lego.name" . }}
         release: {{ .Release.Name }}
     spec:
       tolerations:
       # Mark the pod as a critical add-on for rescheduling.
       - key: CriticalAddonsOnly
         operator: Exists
-      serviceAccountName: {{ if .Values.rbac.create }}{{ template "fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
+      serviceAccountName: {{ if .Values.rbac.create }}{{ template "kube-lego.fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
       containers:
-        - name: {{ template "name" . }}
+        - name: {{ template "kube-lego.name" . }}
           image: {{ index .Values.images "kube-lego" }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
           env:
