@@ -69,7 +69,7 @@ images:
 - name: metrics-server
   sourceRepository: github.com/kubernetes-incubator/metrics-server
   repository: k8s.gcr.io/metrics-server-amd64
-  tag: v0.3.0
+  tag: v0.3.1
 
 # Shoot core addons
 - name: calico-node
