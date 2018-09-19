@@ -17,7 +17,6 @@ package common
 import (
 	"errors"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"math"
 	"net"
 	"regexp"
@@ -26,11 +25,15 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
@@ -293,19 +296,19 @@ func DetermineError(message string) error {
 
 // ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace
 // name in the project statuses.
-func ProjectForNamespace(k8sGardenClient kubernetes.Client, namespace *corev1.Namespace) (*gardenv1beta1.Project, error) {
-	projectList, err := k8sGardenClient.GardenClientset().GardenV1beta1().Projects().List(metav1.ListOptions{})
+func ProjectForNamespace(projectLister gardenlisters.ProjectLister, namespaceName string) (*gardenv1beta1.Project, error) {
+	projectList, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
 
-	for _, project := range projectList.Items {
-		if project.Status.Namespace != nil && *project.Status.Namespace == namespace.Name {
-			return &project, nil
+	for _, project := range projectList {
+		if project.Spec.Namespace != nil && *project.Spec.Namespace == namespaceName {
+			return project, nil
 		}
 	}
 
-	return nil, nil
+	return nil, apierrors.NewNotFound(gardenv1beta1.Resource("Project"), fmt.Sprintf("for namespace %s", namespaceName))
 }
 
 // ProjectNameForNamespace determines the project name for a given <namespace>. It tries to identify it first per the namespace's ownerReferences.
@@ -328,4 +331,20 @@ func ProjectNameForNamespace(namespace *corev1.Namespace) string {
 	}
 
 	return namespace.Name
+}
+
+// MergeOwnerReferences merges the newReferences with the list of existing references.
+func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...metav1.OwnerReference) []metav1.OwnerReference {
+	uids := make(map[types.UID]struct{})
+	for _, reference := range references {
+		uids[reference.UID] = struct{}{}
+	}
+
+	for _, newReference := range newReferences {
+		if _, ok := uids[newReference.UID]; !ok {
+			references = append(references, newReference)
+		}
+	}
+
+	return references
 }

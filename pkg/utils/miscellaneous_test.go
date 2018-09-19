@@ -48,4 +48,41 @@ var _ = Describe("utils", func() {
 			Expect(val).To(Equal("140000+0100"))
 		})
 	})
+
+	Describe("#MergeStringMaps", func() {
+		It("should return nil", func() {
+			result := MergeStringMaps(nil, nil)
+
+			Expect(result).To(BeNil())
+		})
+
+		It("should return an empty map", func() {
+			emptyMap := map[string]string{}
+
+			result := MergeStringMaps(emptyMap, nil)
+
+			Expect(result).To(Equal(emptyMap))
+		})
+
+		It("should return a merged map", func() {
+			var (
+				oldMap = map[string]string{
+					"a": "1",
+					"b": "2",
+				}
+				newMap = map[string]string{
+					"b": "20",
+					"c": "3",
+				}
+			)
+
+			result := MergeStringMaps(oldMap, newMap)
+
+			Expect(result).To(Equal(map[string]string{
+				"a": "1",
+				"b": "20",
+				"c": "3",
+			}))
+		})
+	})
 })

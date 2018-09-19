@@ -118,11 +118,12 @@ func (c *defaultProjectNamespaceControl) ReconcileProjectNamespace(obj *corev1.N
 	)
 
 	// Determine project name for the given namespace object.
-	project, err = common.ProjectForNamespace(c.k8sGardenClient, namespace)
+	project, err = common.ProjectForNamespace(c.projectLister, namespace.Name)
 	if err != nil {
-		return err
-	}
-	if project == nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
 		mustCreateProject = true
 		project = &gardenv1beta1.Project{
 			ObjectMeta: metav1.ObjectMeta{
@@ -137,6 +138,7 @@ func (c *defaultProjectNamespaceControl) ReconcileProjectNamespace(obj *corev1.N
 					Kind:     rbacv1.UserKind,
 					Name:     "unknown",
 				},
+				Namespace: &namespace.Name,
 			},
 		}
 	}

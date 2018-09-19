@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 	deletionconfirmation "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+	projectnamespace "github.com/gardener/gardener/plugin/pkg/project/namespace"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
@@ -117,6 +118,7 @@ func (o *Options) complete() error {
 	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
 	shootseedmanager.Register(o.Recommended.Admission.Plugins)
+	projectnamespace.Register(o.Recommended.Admission.Plugins)
 	shootdnshostedzone.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
 
@@ -127,6 +129,7 @@ func (o *Options) complete() error {
 		shootquotavalidator.PluginName,
 		shootseedmanager.PluginName,
 		shootvalidator.PluginName,
+		projectnamespace.PluginName,
 	}
 
 	recommendedPluginOrder := sets.NewString(o.Recommended.Admission.RecommendedPluginOrder...)

@@ -21,15 +21,17 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
+	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/handlers"
 	"github.com/gardener/gardener/pkg/server/handlers/webhooks"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/client-go/tools/cache"
 )
 
 // Serve starts a HTTP and a HTTPS server.
-func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.ServerConfiguration, stopCh chan struct{}) {
+func Serve(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig componentconfig.ServerConfiguration, stopCh chan struct{}) {
 	var (
 		listenAddressHTTP  = fmt.Sprintf("%s:%d", serverConfig.HTTP.BindAddress, serverConfig.HTTP.Port)
 		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverConfig.HTTPS.BindAddress, serverConfig.HTTPS.Port)
@@ -52,8 +54,14 @@ func Serve(k8sGardenClient kubernetes.Client, serverConfig componentconfig.Serve
 		}
 	}()
 
+	projectInformer := k8sGardenInformers.Garden().V1beta1().Projects()
+	k8sGardenInformers.Start(stopCh)
+	if !cache.WaitForCacheSync(stopCh, projectInformer.Informer().HasSynced) {
+		panic("Timed out waiting for Garden caches to sync")
+	}
+
 	// Add handlers to HTTPS server and start it.
-	serverMuxHTTPS.HandleFunc("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient))
+	serverMuxHTTPS.HandleFunc("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient, projectInformer.Lister()))
 
 	go func() {
 		logger.Logger.Infof("Starting HTTPS server on %s", listenAddressHTTPS)

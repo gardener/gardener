@@ -30,7 +30,7 @@ metadata:
   % if labels != {}:
   labels: ${yaml.dump(labels, width=10000)}
   % endif
-spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", "") %>
+spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", ""); namespace = value("spec.namespace", "") %>
   % if owner != {}:
   owner: ${yaml.dump(owner, width=10000)}
   % else:
@@ -48,4 +48,9 @@ spec:<% owner = value("spec.owner", {}); description = value("spec.description",
   purpose: ${purpose}
   % else:
 # purpose: "Experimenting with Gardener"
+  % endif
+  % if namespace != "":
+  namespace: ${namespace}
+  % else:
+# namespace: "garden-dev" # Optional, will be initialized if unset.
   % endif

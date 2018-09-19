@@ -12,3 +12,4 @@ spec:
     name: john.doe@example.com
 # description: "This is my first project"
 # purpose: "Experimenting with Gardener"
+# namespace: "garden-dev" # Optional, will be initialized if unset.

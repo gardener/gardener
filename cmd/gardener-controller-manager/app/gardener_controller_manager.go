@@ -22,6 +22,8 @@ import (
 	"os"
 	"strings"
 
+	"k8s.io/client-go/informers"
+
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	componentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -210,13 +212,15 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener represents all the parameters required to start the
 // Gardener controller manager.
 type Gardener struct {
-	Config            *componentconfig.ControllerManagerConfiguration
-	Identity          *gardenv1beta1.Gardener
-	GardenerNamespace string
-	K8sGardenClient   kubernetes.Client
-	Logger            *logrus.Logger
-	Recorder          record.EventRecorder
-	LeaderElection    *leaderelection.LeaderElectionConfig
+	Config              *componentconfig.ControllerManagerConfiguration
+	Identity            *gardenv1beta1.Gardener
+	GardenerNamespace   string
+	K8sGardenClient     kubernetes.Client
+	K8sGardenInformers  gardeninformers.SharedInformerFactory
+	KubeInformerFactory informers.SharedInformerFactory
+	Logger              *logrus.Logger
+	Recorder            record.EventRecorder
+	LeaderElection      *leaderelection.LeaderElectionConfig
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
@@ -285,13 +289,15 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	}
 
 	return &Gardener{
-		Identity:          identity,
-		GardenerNamespace: gardenerNamespace,
-		Config:            config,
-		Logger:            logger,
-		Recorder:          recorder,
-		K8sGardenClient:   k8sGardenClient,
-		LeaderElection:    leaderElectionConfig,
+		Identity:            identity,
+		GardenerNamespace:   gardenerNamespace,
+		Config:              config,
+		Logger:              logger,
+		Recorder:            recorder,
+		K8sGardenClient:     k8sGardenClient,
+		K8sGardenInformers:  gardeninformers.NewSharedInformerFactory(k8sGardenClient.GardenClientset(), 0),
+		KubeInformerFactory: kubeinformers.NewSharedInformerFactory(k8sGardenClient.Clientset(), 0),
+		LeaderElection:      leaderElectionConfig,
 	}, nil
 }
 
@@ -299,7 +305,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 func (g *Gardener) Run(stopCh chan struct{}) error {
 	// Prepare a reusable run function.
 	run := func(stop <-chan struct{}) {
-		go startControllers(g, stopCh)
+		go g.startControllers(stopCh)
 		<-stop
 		select {
 		case <-stopCh:
@@ -310,7 +316,7 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 	}
 
 	// Start HTTP server
-	go server.Serve(g.K8sGardenClient, g.Config.Server, stopCh)
+	go server.Serve(g.K8sGardenClient, g.K8sGardenInformers, g.Config.Server, stopCh)
 	handlers.UpdateHealth(true)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
@@ -338,14 +344,11 @@ func (g *Gardener) Run(stopCh chan struct{}) error {
 	panic("unreachable")
 }
 
-func startControllers(g *Gardener, stopCh <-chan struct{}) {
-	gardenInformerFactory := gardeninformers.NewSharedInformerFactory(g.K8sGardenClient.GardenClientset(), 0)
-	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(g.K8sGardenClient.Clientset(), 0)
-
+func (g *Gardener) startControllers(stopCh <-chan struct{}) {
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
-		gardenInformerFactory,
-		kubeInformerFactory,
+		g.K8sGardenInformers,
+		g.KubeInformerFactory,
 		g.Config,
 		g.Identity,
 		g.GardenerNamespace,

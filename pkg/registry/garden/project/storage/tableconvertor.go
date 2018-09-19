@@ -76,13 +76,13 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 
 		cells = append(cells, project.Name)
 		cells = append(cells, project.Spec.Owner.Name)
-		if namespace := project.Status.Namespace; namespace != nil {
+		if namespace := project.Spec.Namespace; namespace != nil {
 			cells = append(cells, *namespace)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
 		if project.DeletionTimestamp == nil {
-			if project.Status.Namespace == nil {
+			if project.Spec.Namespace == nil {
 				cells = append(cells, "Pending")
 			} else {
 				cells = append(cells, "Active")

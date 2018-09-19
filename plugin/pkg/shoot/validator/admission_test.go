@@ -61,7 +61,7 @@ var _ = Describe("validator", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: projectName,
 				},
-				Status: garden.ProjectStatus{
+				Spec: garden.ProjectSpec{
 					Namespace: &namespaceName,
 				},
 			}

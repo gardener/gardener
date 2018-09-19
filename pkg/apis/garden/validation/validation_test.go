@@ -1385,8 +1385,8 @@ var _ = Describe("validation", func() {
 								Kubernetes:   kubernetesVersionConstraint,
 								MachineImages: []garden.AlicloudMachineImage{
 									{
-										Name:    "CoreOS",
-										ID:      "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
+										Name: "CoreOS",
+										ID:   "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
 									},
 								},
 								MachineTypes: []garden.AlicloudMachineType{
@@ -1879,6 +1879,20 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeNotSupported),
 				"Field": Equal("spec.owner.kind"),
 			}))
+		})
+
+		It("should forbid Project updates trying to change the namespace", func() {
+			project.Spec.Namespace = makeStringPointer("garden-dev")
+			newProject := project.DeepCopy()
+			newProject.ResourceVersion = "1"
+			newProject.Spec.Namespace = makeStringPointer("garden-core")
+
+			errorList := ValidateProjectUpdate(newProject, project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.namespace"),
+			}))))
 		})
 	})
 

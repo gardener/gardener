@@ -421,6 +421,9 @@ type ProjectSpec struct {
 	// Purpose is a human-readable explanation of the project's purpose.
 	// +optional
 	Purpose *string
+	// Namespace is the name of the namespace that has been created for the Project object.
+	// +optional
+	Namespace *string
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -428,10 +431,6 @@ type ProjectStatus struct {
 	// Conditions represents the latest available observations of a Projects's current state.
 	// +optional
 	Conditions []Condition
-	// Namespace is the name of the namespace that has been created for the Project object.
-	// A nil value means that no namespace has been created yet.
-	// +optional
-	Namespace *string
 }
 
 ////////////////////////////////////////////////////

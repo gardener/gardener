@@ -27,6 +27,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -124,16 +125,8 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 	var (
 		project       = obj.DeepCopy()
 		projectLogger = logger.NewFieldLogger(logger.Logger, "project", project.Name)
-		projectKind   = "Project"
 
-		namespace       = project.Status.Namespace
-		namespaceLabels = map[string]string{
-			common.GardenRole:  common.GardenRoleProject,
-			common.ProjectName: project.Name,
-		}
-		namespaceAnnotations = map[string]string{
-			common.ProjectOwner: project.Spec.Owner.Name,
-		}
+		namespace = project.Spec.Namespace
 
 		// Initialize conditions based on the current status.
 		newConditions                    = helper.NewConditions(project.Status.Conditions, gardenv1beta1.ProjectNamespaceReady, gardenv1beta1.ProjectNamespaceEmpty, gardenv1beta1.ProjectShootsWithErrors)
@@ -142,18 +135,8 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 		conditionProjectShootsWithErrors = newConditions[2]
 	)
 
-	if namespace == nil || len(*namespace) == 0 {
-		ns := fmt.Sprintf("%s%s", common.ProjectPrefix, project.Name)
-		if namespaceAnnotation, ok := project.Annotations[common.ProjectNamespace]; ok {
-			ns = namespaceAnnotation
-		}
-		namespace = &ns
-	}
-	if project.Spec.Description != nil {
-		namespaceAnnotations[common.ProjectDescription] = *project.Spec.Description
-	}
-	if project.Spec.Purpose != nil {
-		namespaceAnnotations[common.ProjectPurpose] = *project.Spec.Purpose
+	if namespace == nil {
+		return fmt.Errorf("cannot reconcile project %q as its namespace is empty", project.Name)
 	}
 
 	backupInfrastructureList, err := c.backupInfrastructureLister.BackupInfrastructures(*namespace).List(labels.Everything())
@@ -231,16 +214,9 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 		return nil
 	}
 
-	// Create or update namespace and check ProjectNamespaceReady condition.
-	namespaceObj := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            *namespace,
-			OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind(projectKind))},
-			Annotations:     namespaceAnnotations,
-			Labels:          namespaceLabels,
-		},
-	}
-	if _, err := c.k8sGardenClient.CreateNamespace(namespaceObj, true); err != nil {
+	// Update namespace and check ProjectNamespaceReady condition.
+	namespaceObj, err := c.updateNamespace(project)
+	if err != nil {
 		message := fmt.Sprintf("Error while creating/updating namespace %s for project: %+v", namespaceObj.Name, err)
 		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceCreationFailed, message)
 		projectLogger.Error(message)
@@ -248,15 +224,6 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 		return err
 	}
 	conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionTrue, gardenv1beta1.ProjectNamespaceReconciled, "Namespace has been reconciled.")
-
-	// Update namespace field in project status
-	if project.Status.Namespace == nil || len(*project.Status.Namespace) == 0 {
-		project.Status.Namespace = &namespaceObj.Name
-		project, err = c.updateProjectStatus(project)
-		if err != nil {
-			return err
-		}
-	}
 
 	// Create RBAC rules to allow project owner to read, update, and delete the project.
 	owners := []rbacv1.Subject{project.Spec.Owner}
@@ -318,4 +285,34 @@ func (c *defaultControl) updateProjectStatus(project *gardenv1beta1.Project, con
 	}
 
 	return project, err
+}
+
+func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) (*corev1.Namespace, error) {
+	var (
+		namespaceLabels = map[string]string{
+			common.GardenRole:  common.GardenRoleProject,
+			common.ProjectName: project.Name,
+		}
+		namespaceAnnotations = map[string]string{
+			common.ProjectOwner: project.Spec.Owner.Name,
+		}
+	)
+
+	if project.Spec.Description != nil {
+		namespaceAnnotations[common.ProjectDescription] = *project.Spec.Description
+	}
+	if project.Spec.Purpose != nil {
+		namespaceAnnotations[common.ProjectPurpose] = *project.Spec.Purpose
+	}
+
+	namespaceObj, err := c.k8sGardenClient.GetNamespace(*project.Spec.Namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	namespaceObj.OwnerReferences = common.MergeOwnerReferences(namespaceObj.OwnerReferences, *metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind("Project")))
+	namespaceObj.Annotations = utils.MergeStringMaps(namespaceObj.Annotations, namespaceAnnotations)
+	namespaceObj.Labels = utils.MergeStringMaps(namespaceObj.Labels, namespaceLabels)
+
+	return c.k8sGardenClient.UpdateNamespace(namespaceObj)
 }

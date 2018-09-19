@@ -82,12 +82,12 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	)
 
 	f.k8sGardenInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(make(<-chan struct{}), cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced, backupInfrastructureInformer.HasSynced) {
+	if !cache.WaitForCacheSync(stopCh, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced, backupInfrastructureInformer.HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
 	}
 
 	f.k8sInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(make(<-chan struct{}), namespaceInformer.HasSynced, secretInformer.HasSynced) {
+	if !cache.WaitForCacheSync(stopCh, namespaceInformer.HasSynced, secretInformer.HasSynced) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 

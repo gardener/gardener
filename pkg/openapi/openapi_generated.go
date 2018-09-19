@@ -4284,6 +4284,13 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"namespace": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"owner"},
 			},
@@ -4310,13 +4317,6 @@ func schema_pkg_apis_garden_v1beta1_ProjectStatus(ref common.ReferenceCallback) 
 									},
 								},
 							},
-						},
-					},
-					"namespace": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that no namespace has been created yet.",
-							Type:        []string{"string"},
-							Format:      "",
 						},
 					},
 				},

@@ -414,6 +414,10 @@ type ProjectSpec struct {
 	// Purpose is a human-readable explanation of the project's purpose.
 	// +optional
 	Purpose *string `json:"purpose,omitempty"`
+	// Namespace is the name of the namespace that has been created for the Project object.
+	// A nil value means that Gardener will determine the name of the namespace.
+	// +optional
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -421,10 +425,6 @@ type ProjectStatus struct {
 	// Conditions represents the latest available observations of a Projects's current state.
 	// +optional
 	Conditions []Condition `json:"conditions,omitempty"`
-	// Namespace is the name of the namespace that has been created for the Project object.
-	// A nil value means that no namespace has been created yet.
-	// +optional
-	Namespace *string `json:"namespace,omitempty"`
 }
 
 ////////////////////////////////////////////////////

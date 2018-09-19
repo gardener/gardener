@@ -181,7 +181,7 @@ func (c *Controller) Run(shootWorkers, shootCareWorkers, shootMaintenanceWorkers
 	// the Project object responsible for a respective Shoot object and, if it starts simultaneously to the Project
 	// controller, some of the needed objects are not yet created.
 	// This is only needed for backwards-compatibility and can be removed in a future version.
-	if err := wait.Poll(time.Second, 30*time.Second, func() (bool, error) {
+	if err := wait.Poll(time.Second, 5*time.Minute, func() (bool, error) {
 		selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleProject))
 		if err != nil {
 			return false, err

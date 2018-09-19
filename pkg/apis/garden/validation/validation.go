@@ -604,6 +604,10 @@ func ValidateProjectUpdate(newProject, oldProject *garden.Project) field.ErrorLi
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProject.ObjectMeta, &oldProject.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateProject(newProject)...)
 
+	if !apiequality.Semantic.DeepEqual(newProject.Spec.Namespace, oldProject.Spec.Namespace) {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProject.Spec.Namespace, oldProject.Spec.Namespace, field.NewPath("spec", "namespace"))...)
+	}
+
 	return allErrs
 }
 

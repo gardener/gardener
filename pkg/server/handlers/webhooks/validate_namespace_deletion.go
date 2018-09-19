@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -35,17 +36,18 @@ import (
 
 type namespaceDeletionHandler struct {
 	k8sGardenClient kubernetes.Client
+	projectLister   gardenlisters.ProjectLister
 	scheme          *runtime.Scheme
 	codecs          serializer.CodecFactory
 }
 
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Client) func(http.ResponseWriter, *http.Request) {
+func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Client, projectLister gardenlisters.ProjectLister) func(http.ResponseWriter, *http.Request) {
 	scheme := runtime.NewScheme()
 	corev1.AddToScheme(scheme)
 	admissionregistrationv1beta1.AddToScheme(scheme)
 
-	h := &namespaceDeletionHandler{k8sGardenClient, scheme, serializer.NewCodecFactory(scheme)}
+	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, scheme, serializer.NewCodecFactory(scheme)}
 	return h.ValidateNamespaceDeletion
 }
 
@@ -127,20 +129,20 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 		return errToAdmissionResponse(fmt.Errorf("expect resource to be %s", namespaceResource))
 	}
 
-	// We do not receive the namespace object in the `.object` field of the admission request. Hence, we need to get it ourselves.
-	namespace, err := h.k8sGardenClient.GetNamespace(request.Name)
-	if err != nil {
-		return errToAdmissionResponse(err)
-	}
-
 	// Determine project object for given namespace.
-	project, err := common.ProjectForNamespace(h.k8sGardenClient, namespace)
+	project, err := common.ProjectForNamespace(h.projectLister, request.Name)
 	if err != nil {
 		return errToAdmissionResponse(err)
 	}
 	if project == nil {
 		// Namespace does not belong to a project. Deletion is allowed.
 		return admissionResponse(true, "")
+	}
+
+	// We do not receive the namespace object in the `.object` field of the admission request. Hence, we need to get it ourselves.
+	namespace, err := h.k8sGardenClient.GetNamespace(request.Name)
+	if err != nil {
+		return errToAdmissionResponse(err)
 	}
 
 	switch {

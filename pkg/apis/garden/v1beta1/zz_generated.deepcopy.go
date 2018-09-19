@@ -2304,6 +2304,11 @@ func (in *ProjectSpec) DeepCopyInto(out *ProjectSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Namespace != nil {
+		in, out := &in.Namespace, &out.Namespace
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
@@ -2326,11 +2331,6 @@ func (in *ProjectStatus) DeepCopyInto(out *ProjectStatus) {
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
-	}
-	if in.Namespace != nil {
-		in, out := &in.Namespace, &out.Namespace
-		*out = new(string)
-		**out = **in
 	}
 	return
 }

@@ -2862,6 +2862,7 @@ func autoConvert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out 
 	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.Owner = in.Owner
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
+	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
 
@@ -2874,6 +2875,7 @@ func autoConvert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpe
 	out.Description = (*string)(unsafe.Pointer(in.Description))
 	out.Owner = in.Owner
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
+	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
 
@@ -2884,7 +2886,6 @@ func Convert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpec, o
 
 func autoConvert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, out *garden.ProjectStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
 
@@ -2895,7 +2896,6 @@ func Convert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, ou
 
 func autoConvert_garden_ProjectStatus_To_v1beta1_ProjectStatus(in *garden.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
-	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
 

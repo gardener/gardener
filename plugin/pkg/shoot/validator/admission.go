@@ -149,7 +149,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
 	for _, p := range projectList {
-		if p.Status.Namespace != nil && *p.Status.Namespace == shoot.Namespace {
+		if p.Spec.Namespace != nil && *p.Spec.Namespace == shoot.Namespace {
 			project = p
 			break
 		}

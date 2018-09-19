@@ -17,6 +17,7 @@ package garden
 import (
 	"fmt"
 
+	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -29,13 +30,8 @@ import (
 )
 
 // New creates a new Garden object (based on a Shoot object).
-func New(k8sGardenClient kubernetes.Client, namespace string) (*Garden, error) {
-	ns, err := k8sGardenClient.GetNamespace(namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	project, err := common.ProjectForNamespace(k8sGardenClient, ns)
+func New(projectLister gardenlisters.ProjectLister, namespace string) (*Garden, error) {
+	project, err := common.ProjectForNamespace(projectLister, namespace)
 	if err != nil {
 		return nil, err
 	}

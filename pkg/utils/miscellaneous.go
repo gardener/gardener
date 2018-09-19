@@ -66,6 +66,31 @@ func MergeMaps(a, b map[string]interface{}) map[string]interface{} {
 	return values
 }
 
+// MergeStringMaps merges the content of the newMaps with the oldMap. If a key already exists then
+// it gets overwritten by the last value with the same key.
+func MergeStringMaps(oldMap map[string]string, newMaps ...map[string]string) map[string]string {
+	var out map[string]string
+
+	if oldMap != nil {
+		out = make(map[string]string)
+	}
+	for k, v := range oldMap {
+		out[k] = v
+	}
+
+	for _, newMap := range newMaps {
+		if newMap != nil && out == nil {
+			out = make(map[string]string)
+		}
+
+		for k, v := range newMap {
+			out[k] = v
+		}
+	}
+
+	return out
+}
+
 // TimeElapsed takes a <timestamp> and a <duration> checks whether the elapsed time until now is less than the <duration>.
 // If yes, it returns true, otherwise it returns false.
 func TimeElapsed(timestamp *metav1.Time, duration time.Duration) bool {

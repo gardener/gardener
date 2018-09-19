@@ -16,11 +16,14 @@ package common_test
 
 import (
 	. "github.com/gardener/gardener/pkg/operation/common"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"errors"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/onsi/ginkgo/extensions/table"
 )
@@ -209,6 +212,30 @@ var _ = Describe("common", func() {
 					))
 				})
 			})
+		})
+	})
+
+	Describe("#MergeOwnerReferences", func() {
+		It("should merge the new references into the list of existing references", func() {
+			var (
+				references = []metav1.OwnerReference{
+					{
+						UID: types.UID("1234"),
+					},
+				}
+				newReferences = []metav1.OwnerReference{
+					{
+						UID: types.UID("1234"),
+					},
+					{
+						UID: types.UID("1235"),
+					},
+				}
+			)
+
+			result := MergeOwnerReferences(references, newReferences...)
+
+			Expect(result).To(ConsistOf(newReferences))
 		})
 	})
 })
