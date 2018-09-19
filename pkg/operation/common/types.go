@@ -170,6 +170,12 @@ const (
 	// by the Gardener Dashboard.
 	ProjectPurpose = "project.garden.sapcloud.io/purpose"
 
+	// ProjectMemberRoleBinding is the name of the role binding in a project that defines which users are members of the project.
+	ProjectMemberRoleBinding = "garden-project-members"
+
+	// ProjectMemberClusterRole is the name of the cluster role defining the permissions for project members.
+	ProjectMemberClusterRole = "garden.sapcloud.io:system:project-member"
+
 	// PrometheusDeploymentName is the name of the Prometheus deployment.
 	PrometheusDeploymentName = "prometheus"
 

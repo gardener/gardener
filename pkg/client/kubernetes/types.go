@@ -118,6 +118,7 @@ type Client interface {
 
 	// RoleBindings
 	ListRoleBindings(string, metav1.ListOptions) (*rbacv1.RoleBindingList, error)
+	CreateOrPatchRoleBinding(metav1.ObjectMeta, func(*rbacv1.RoleBinding) *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error)
 
 	// Arbitrary manifests
 	Apply([]byte) error

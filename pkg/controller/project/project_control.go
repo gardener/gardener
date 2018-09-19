@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -251,6 +252,14 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 		return err
 	}
 
+	if err := c.ensureMemberRoleBinding(project, owners); err != nil {
+		message := fmt.Sprintf("Error while creating member rolebinding %s for namespace: %+v", namespaceObj.Name, err)
+		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
+		projectLogger.Error(message)
+		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
+		return err
+	}
+
 	// Check ProjectNamespaceEmpty condition.
 	if namespaceEmpty {
 		conditionProjectNamespaceEmpty = helper.ModifyCondition(conditionProjectNamespaceEmpty, corev1.ConditionTrue, "NoShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
@@ -315,4 +324,35 @@ func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) (*corev
 	namespaceObj.Labels = utils.MergeStringMaps(namespaceObj.Labels, namespaceLabels)
 
 	return c.k8sGardenClient.UpdateNamespace(namespaceObj)
+}
+
+func (c *defaultControl) ensureMemberRoleBinding(project *gardenv1beta1.Project, owners []rbacv1.Subject) error {
+	_, err := c.k8sGardenClient.CreateOrPatchRoleBinding(metav1.ObjectMeta{
+		Name:      common.ProjectMemberRoleBinding,
+		Namespace: *project.Spec.Namespace,
+	}, func(rolebinding *rbacv1.RoleBinding) *rbacv1.RoleBinding {
+		if rolebinding.Labels == nil {
+			rolebinding.Labels = make(map[string]string)
+		}
+		rolebinding.Labels[common.GardenRole] = common.GardenRoleMembers
+
+		rolebinding.RoleRef = rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     common.ProjectMemberClusterRole,
+		}
+
+	outer:
+		for _, owner := range owners {
+			for _, subject := range rolebinding.Subjects {
+				if apiequality.Semantic.DeepEqual(subject, owner) {
+					continue outer
+				}
+			}
+			rolebinding.Subjects = append(rolebinding.Subjects, owner)
+		}
+
+		return rolebinding
+	})
+	return err
 }

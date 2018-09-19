@@ -15,12 +15,71 @@
 package kubernetesbase
 
 import (
+	"encoding/json"
+
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 )
 
 // ListRoleBindings returns a list of rolebindings in a given <namespace>.
 // The selection can be restricted by passsing an <selector>.
 func (c *Client) ListRoleBindings(namespace string, selector metav1.ListOptions) (*rbacv1.RoleBindingList, error) {
 	return c.clientset.RbacV1().RoleBindings(namespace).List(selector)
+}
+
+// CreateOrPatchRoleBinding either creates the object or patches the existing one with the strategic merge patch type.
+func (c *Client) CreateOrPatchRoleBinding(meta metav1.ObjectMeta, transform func(*rbacv1.RoleBinding) *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error) {
+	rolebinding, err := c.clientset.RbacV1().RoleBindings(meta.Namespace).Get(meta.Name, metav1.GetOptions{})
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return c.clientset.RbacV1().RoleBindings(meta.Namespace).Create(transform(&rbacv1.RoleBinding{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: rbacv1.SchemeGroupVersion.String(),
+					Kind:       "RoleBinding",
+				},
+				ObjectMeta: meta,
+			}))
+		}
+		return nil, err
+	}
+	return c.patchRoleBinding(rolebinding, transform(rolebinding.DeepCopy()))
+}
+
+func (c *Client) patchRoleBinding(oldObj, newObj *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error) {
+	oldJSON, err := json.Marshal(oldObj)
+	if err != nil {
+		return nil, err
+	}
+
+	newJSON, err := json.Marshal(newObj)
+	if err != nil {
+		return nil, err
+	}
+
+	patch, err := strategicpatch.CreateTwoWayMergePatch(oldJSON, newJSON, rbacv1.RoleBinding{})
+	if err != nil {
+		return nil, err
+	}
+
+	if isEmptyPatch(patch) {
+		return oldObj, nil
+	}
+
+	return c.clientset.RbacV1().RoleBindings(oldObj.Namespace).Patch(oldObj.Name, types.StrategicMergePatchType, patch)
+}
+
+func isEmptyPatch(patch []byte) bool {
+	if len(patch) == 0 {
+		return true
+	}
+
+	var m map[string]interface{}
+	if err := json.Unmarshal(patch, &m); err != nil {
+		return false
+	}
+
+	return len(m) == 0
 }
