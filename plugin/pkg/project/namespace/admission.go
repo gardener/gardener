@@ -21,12 +21,12 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -148,27 +148,11 @@ func (n *Namespace) Admit(a admission.Attributes) error {
 
 	// Project wants us to create the namespace.
 	if project.Spec.Namespace == nil {
-		// TODO: Remove the labels and annotations once all clients have caught up.
-		annotations := map[string]string{
-			common.ProjectOwner: project.Spec.Owner.Name,
-		}
-
-		if project.Spec.Purpose != nil {
-			annotations[common.ProjectPurpose] = *project.Spec.Purpose
-		}
-		if project.Spec.Description != nil {
-			annotations[common.ProjectDescription] = *project.Spec.Description
-		}
-
 		namespace, err := n.kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName:    fmt.Sprintf("%s%s", common.ProjectPrefix, project.Name),
-				OwnerReferences: []metav1.OwnerReference{*metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind("Project"))},
-				Labels: map[string]string{
-					common.GardenRole:  common.GardenRoleProject,
-					common.ProjectName: project.Name,
-				},
-				Annotations: annotations,
+				GenerateName: fmt.Sprintf("%s%s-", common.ProjectPrefix, project.Name),
+				Labels:       namespaceLabelsFromProject(project),
+				Annotations:  namespaceAnnotationsFromProject(project),
 			},
 		})
 		if err != nil {
@@ -183,13 +167,21 @@ func (n *Namespace) Admit(a admission.Attributes) error {
 	namespace, err := n.lookupNamespace(*project.Spec.Namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return apierrors.NewBadRequest(fmt.Sprintf("referenced namespace %s does not exist", *project.Spec.Namespace))
+			_, err = n.kubeClient.CoreV1().Namespaces().Create(&corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        *project.Spec.Namespace,
+					Labels:      namespaceLabelsFromProject(project),
+					Annotations: namespaceAnnotationsFromProject(project),
+				},
+			})
+			return err
 		}
 		return err
 	}
 
-	if val, ok := namespace.Labels[common.GardenRole]; !ok || val != common.GardenRoleProject {
-		return admission.NewForbidden(a, fmt.Errorf("namespace needs project label %s=%s", common.GardenRole, common.GardenRoleProject))
+	projectLabels := namespaceLabelsFromProject(project)
+	if !apiequality.Semantic.DeepDerivative(projectLabels, namespace.Labels) {
+		return admission.NewForbidden(a, fmt.Errorf("namespace needs project labels %#v", projectLabels))
 	}
 
 	projectList, err := n.projectLister.List(labels.Everything())
@@ -232,4 +224,28 @@ func (n *Namespace) lookupNamespace(name string) (*corev1.Namespace, error) {
 
 	// Third try to detect the secret, now by doing a live lookup instead of relying on the cache.
 	return n.kubeClient.CoreV1().Namespaces().Get(name, metav1.GetOptions{})
+}
+
+// TODO: Remove the labels and annotations once all clients have caught up.
+
+func namespaceAnnotationsFromProject(project *garden.Project) map[string]string {
+	annotations := map[string]string{
+		common.ProjectOwner: project.Spec.Owner.Name,
+	}
+
+	if project.Spec.Purpose != nil {
+		annotations[common.ProjectPurpose] = *project.Spec.Purpose
+	}
+	if project.Spec.Description != nil {
+		annotations[common.ProjectDescription] = *project.Spec.Description
+	}
+
+	return annotations
+}
+
+func namespaceLabelsFromProject(project *garden.Project) map[string]string {
+	return map[string]string{
+		common.GardenRole:  common.GardenRoleProject,
+		common.ProjectName: project.Name,
+	}
 }

@@ -86,19 +86,25 @@ var _ = Describe("namespace", func() {
 			Expect(project.Spec.Namespace).To(PointTo(Equal(namespace)))
 		})
 
-		It("should fail because the referenced namespace does not exist", func() {
+		It("should create the namespace because it does not exist", func() {
 			namespace := "garden-foo"
 			project.Spec.Namespace = &namespace
 
 			kubeClient.AddReactor("get", "namespaces", func(action testing.Action) (bool, runtime.Object, error) {
 				return true, nil, apierrors.NewNotFound(corev1.Resource("Namespace"), namespace)
 			})
+			kubeClient.AddReactor("create", "namespaces", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, &corev1.Namespace{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: namespace,
+					},
+				}, nil
+			})
 
 			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, nil)
 			err := admissionHandler.Admit(attrs)
 
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should fail because the referenced namespace does not have the project role label", func() {
@@ -151,7 +157,8 @@ var _ = Describe("namespace", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name: namespace,
 					Labels: map[string]string{
-						common.GardenRole: common.GardenRoleProject,
+						common.GardenRole:  common.GardenRoleProject,
+						common.ProjectName: project.Name,
 					},
 				},
 			})

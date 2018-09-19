@@ -159,12 +159,12 @@ func (c *defaultProjectNamespaceControl) ReconcileProjectNamespace(obj *corev1.N
 	if owner, ok := namespace.Annotations[common.ProjectOwner]; ok {
 		project.Spec.Owner.Name = owner
 	}
-	if purpose, ok := namespace.Annotations[common.ProjectPurpose]; ok {
+	if purpose, ok := namespace.Annotations[common.ProjectPurpose]; ok && len(purpose) > 0 {
 		project.Spec.Purpose = &purpose
 	} else {
 		project.Spec.Purpose = nil
 	}
-	if description, ok := namespace.Annotations[common.ProjectDescription]; ok {
+	if description, ok := namespace.Annotations[common.ProjectDescription]; ok && len(description) > 0 {
 		project.Spec.Description = &description
 	} else {
 		project.Spec.Description = nil
