@@ -32,7 +32,8 @@ data:
                       --listen-client-urls=https://0.0.0.0:2379 \
                       --initial-cluster-state=new \
                       --initial-cluster-token=new \
-                      --snapshot-count=75000
+                      --snapshot-count=75000 \
+                      --quota-backend-bytes=8589934592 
             ;;
       esac;
     done
