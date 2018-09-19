@@ -10,6 +10,7 @@ rules:
   - azuremachineclasses
   - gcpmachineclasses
   - openstackmachineclasses
+  - alicloudmachineclasses
   - machinedeployments
   - machines
   - machinesets

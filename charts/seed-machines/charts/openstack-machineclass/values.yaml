@@ -6,6 +6,7 @@ machineClasses:
   keyName: my-ssh-key
   imageName: coreos-v1.0
   networkID: 426428cd-5e88-4005-9fad-9555d4dfd0fb
+  podNetworkCidr: 100.96.0.0/11
   securityGroups:
   - my-security-group
   tags:
