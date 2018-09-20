@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	errwrap "github.com/pkg/errors"
 )
 
 var (
@@ -60,14 +61,12 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should fail due to a timeout containing the last error", func() {
-
 			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
 				return false, false, testErr
 			})
 
-			Expect(err).To(BeAssignableToTypeOf(&TimedOut{}))
-			timedOut := err.(*TimedOut)
-			Expect(timedOut.LastError).To(Equal(testErr))
+			Expect(err).To(HaveOccurred())
+			Expect(errwrap.Cause(err)).To(Equal(testErr))
 		})
 
 		It("should fail due to a timeout containing no last error", func() {
@@ -75,9 +74,8 @@ var _ = Describe("utils", func() {
 				return false, false, nil
 			})
 
-			Expect(err).To(BeAssignableToTypeOf(&TimedOut{}))
-			timedOut := err.(*TimedOut)
-			Expect(timedOut.LastError).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(errwrap.Cause(err)).To(Equal(err))
 		})
 	})
 })

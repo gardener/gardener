@@ -29,20 +29,36 @@ var NeverStop = make(chan struct{})
 // error has been sever enough to cancel a retrying computation.
 type ConditionFunc func() (ok, severe bool, err error)
 
-// TimedOut is an error that occurs if an operation times out. Optionally yields the LastError,
-// if any.
-type TimedOut struct {
-	// LastError is the last error that occurred before an operation timed out. May be nil.
-	LastError error
-	// WaitTime is the total time that was waited an operation to complete.
-	WaitTime time.Duration
+// NewTimedOut creates a new error that indicates a timeout after the given waitTime.
+func NewTimedOut(waitTime time.Duration) error {
+	return &timedOut{waitTime}
 }
 
-func (t *TimedOut) Error() string {
-	if t.LastError == nil {
-		return fmt.Sprintf("timed out after %s, no severe error occured", t.WaitTime)
-	}
-	return fmt.Sprintf("timed out after %s, last error: %v", t.WaitTime, t.LastError)
+// NewTimedOutWithError creates a new error that indicates a timeout after the given waitTime caused
+// by the given lastError.
+func NewTimedOutWithError(waitTime time.Duration, lastError error) error {
+	return &timedOutWithError{lastError, waitTime}
+}
+
+type timedOut struct {
+	waitTime time.Duration
+}
+
+type timedOutWithError struct {
+	lastError error
+	waitTime  time.Duration
+}
+
+func (t *timedOutWithError) Cause() error {
+	return t.lastError
+}
+
+func (t *timedOut) Error() string {
+	return fmt.Sprintf("timed out after %s", t.waitTime)
+}
+
+func (t *timedOutWithError) Error() string {
+	return fmt.Sprintf("timed out after %s, last error: %v", t.waitTime, t.lastError)
 }
 
 func newStopCh(timeout time.Duration, done <-chan struct{}) <-chan struct{} {
@@ -93,7 +109,11 @@ func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc)
 
 		select {
 		case <-stopCh:
-			return &TimedOut{LastError: lastError, WaitTime: time.Since(startTime)}
+			waitTime := time.Since(startTime)
+			if lastError == nil {
+				return NewTimedOut(waitTime)
+			}
+			return NewTimedOutWithError(waitTime, lastError)
 		default:
 		}
 
