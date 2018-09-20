@@ -214,6 +214,9 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 					OpenStack: &garden.OpenStackCloud{
 						MachineImage: &garden.OpenStackMachineImage{},
 					},
+					Alicloud: &garden.Alicloud{
+						MachineImage: &garden.AlicloudMachineImage{},
+					},
 				},
 			},
 		}
@@ -275,6 +278,16 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 			shoot.Spec.Cloud.OpenStack.MachineImage = image
 		}
 		allErrs = validateOpenStack(validationContext)
+
+	case garden.CloudProviderAlicloud:
+		if shoot.Spec.Cloud.Alicloud.MachineImage == nil {
+			image, err := getAliCloudMachineImage(shoot, cloudProfile)
+			if err != nil {
+				return apierrors.NewBadRequest(err.Error())
+			}
+			shoot.Spec.Cloud.Alicloud.MachineImage = image
+		}
+		allErrs = validateAlicloud(validationContext)
 	}
 
 	if len(allErrs) > 0 {
@@ -492,6 +505,62 @@ func validateOpenStack(c *validationContext) field.ErrorList {
 	return allErrs
 }
 
+func validateAlicloud(c *validationContext) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		path    = field.NewPath("spec", "cloud", "alicloud")
+	)
+
+	allErrs = append(allErrs, validateNetworkDisjointedness(c.seed.Spec.Networks, c.shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, path.Child("networks"))...)
+
+	if ok, validDNSProviders := validateDNSConstraints(c.cloudProfile.Spec.Alicloud.Constraints.DNSProviders, c.shoot.Spec.DNS.Provider, c.oldShoot.Spec.DNS.Provider); !ok {
+		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "dns", "provider"), c.shoot.Spec.DNS.Provider, validDNSProviders))
+	}
+	if ok, validKubernetesVersions := validateKubernetesVersionConstraints(c.cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions, c.shoot.Spec.Kubernetes.Version, c.oldShoot.Spec.Kubernetes.Version); !ok {
+		allErrs = append(allErrs, field.NotSupported(field.NewPath("spec", "kubernetes", "version"), c.shoot.Spec.Kubernetes.Version, validKubernetesVersions))
+	}
+	if ok, validMachineImages := validateAlicloudMachineImagesConstraints(c.cloudProfile.Spec.Alicloud.Constraints.MachineImages, c.shoot.Spec.Cloud.Alicloud.MachineImage, c.oldShoot.Spec.Cloud.Alicloud.MachineImage); !ok {
+		allErrs = append(allErrs, field.NotSupported(path.Child("machineImage"), *c.shoot.Spec.Cloud.Alicloud.MachineImage, validMachineImages))
+	}
+
+	for i, worker := range c.shoot.Spec.Cloud.Alicloud.Workers {
+		var oldWorker = garden.AlicloudWorker{}
+		for _, ow := range c.oldShoot.Spec.Cloud.Alicloud.Workers {
+			if ow.Name == worker.Name {
+				oldWorker = ow
+				break
+			}
+		}
+
+		idxPath := path.Child("workers").Index(i)
+		if ok, validMachineTypes := validateAlicloudMachineTypes(c.cloudProfile.Spec.Alicloud.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("machineType"), worker.MachineType, validMachineTypes))
+		}
+		if ok, machineType, validZones := validateAlicloudMachineTypesAvailableInZones(c.cloudProfile.Spec.Alicloud.Constraints.MachineTypes, worker.MachineType, oldWorker.MachineType, c.shoot.Spec.Cloud.Alicloud.Zones); !ok {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("machineType"), worker.MachineType, fmt.Sprintf("only zones %v define machine type %s", validZones, machineType)))
+		}
+		if ok, validateVolumeTypes := validateAlicloudVolumeTypes(c.cloudProfile.Spec.Alicloud.Constraints.VolumeTypes, worker.VolumeType, oldWorker.VolumeType); !ok {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("volumeType"), worker.VolumeType, validateVolumeTypes))
+		}
+		if ok, volumeType, validZones := validateAlicloudVolumeTypesAvailableInZones(c.cloudProfile.Spec.Alicloud.Constraints.VolumeTypes, worker.VolumeType, oldWorker.VolumeType, c.shoot.Spec.Cloud.Alicloud.Zones); !ok {
+			allErrs = append(allErrs, field.Invalid(idxPath.Child("volumeType"), worker.VolumeType, fmt.Sprintf("only zones %v define volume type %s", validZones, volumeType)))
+		}
+	}
+
+	for i, zone := range c.shoot.Spec.Cloud.Alicloud.Zones {
+		idxPath := path.Child("zones").Index(i)
+		if ok, validZones := validateZones(c.cloudProfile.Spec.Alicloud.Constraints.Zones, c.shoot.Spec.Cloud.Region, zone); !ok {
+			if len(validZones) == 0 {
+				allErrs = append(allErrs, field.Invalid(idxPath, c.shoot.Spec.Cloud.Region, "this region is not allowed"))
+			} else {
+				allErrs = append(allErrs, field.NotSupported(idxPath, zone, validZones))
+			}
+		}
+	}
+
+	return allErrs
+}
+
 // Helper functions
 
 func networksIntersect(cidr1, cidr2 garden.CIDR) bool {
@@ -560,6 +629,56 @@ func validateOpenStackMachineTypes(constraints []garden.OpenStackMachineType, ma
 	return validateMachineTypes(machineTypes, machineType, oldMachineType)
 }
 
+func validateAlicloudMachineTypes(constraints []garden.AlicloudMachineType, machineType, oldMachineType string) (bool, []string) {
+	machineTypes := []garden.MachineType{}
+	for _, t := range constraints {
+		machineTypes = append(machineTypes, t.MachineType)
+	}
+
+	return validateMachineTypes(machineTypes, machineType, oldMachineType)
+}
+
+//To check whether machine type of worker is available in zones of the shoot,
+//because in alicloud different zones may have different machine type
+func validateAlicloudMachineTypesAvailableInZones(constraints []garden.AlicloudMachineType, machineType, oldMachineType string, zones []string) (bool, string, []string) {
+	if machineType == oldMachineType {
+		return true, "", nil
+	}
+
+	for _, constraint := range constraints {
+		if constraint.Name == machineType {
+			ok, validValues := zonesCovered(zones, constraint.Zones)
+			if !ok {
+				return ok, machineType, validValues
+			}
+		}
+	}
+
+	return true, "", nil
+}
+
+//To check whether subzones are all covered by zones
+func zonesCovered(subzones, zones []string) (bool, []string) {
+	var (
+		covered     bool
+		validValues []string
+	)
+
+	for _, zoneS := range subzones {
+		covered = false
+		validValues = []string{}
+		for _, zoneL := range zones {
+			validValues = append(validValues, zoneL)
+			if zoneS == zoneL {
+				covered = true
+				break
+			}
+		}
+	}
+
+	return covered, validValues
+}
+
 func validateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
@@ -591,6 +710,34 @@ func validateVolumeTypes(constraints []garden.VolumeType, volumeType, oldVolumeT
 	}
 
 	return false, validValues
+}
+
+func validateAlicloudVolumeTypes(constraints []garden.AlicloudVolumeType, volumeType, oldVolumeType string) (bool, []string) {
+	volumeTypes := []garden.VolumeType{}
+	for _, t := range constraints {
+		volumeTypes = append(volumeTypes, t.VolumeType)
+	}
+
+	return validateVolumeTypes(volumeTypes, volumeType, oldVolumeType)
+}
+
+//To check whether volume type of worker is available in zones of the shoot,
+//because in alicloud different zones may have different volume type
+func validateAlicloudVolumeTypesAvailableInZones(constraints []garden.AlicloudVolumeType, volumeType, oldVolumeType string, zones []string) (bool, string, []string) {
+	if volumeType == oldVolumeType {
+		return true, "", nil
+	}
+
+	for _, constraint := range constraints {
+		if constraint.Name == volumeType {
+			ok, validValues := zonesCovered(zones, constraint.Zones)
+			if !ok {
+				return ok, volumeType, validValues
+			}
+		}
+	}
+
+	return true, "", nil
 }
 
 func validateZones(constraints []garden.Zone, region, zone string) (bool, []string) {
@@ -758,6 +905,31 @@ func getOpenStackMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudPro
 }
 
 func validateOpenStackMachineImagesConstraints(constraints []garden.OpenStackMachineImage, image, oldImage *garden.OpenStackMachineImage) (bool, []string) {
+	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
+		return true, nil
+	}
+
+	validValues := []string{}
+
+	for _, v := range constraints {
+		validValues = append(validValues, fmt.Sprintf("%+v", v))
+		if apiequality.Semantic.DeepEqual(v, *image) {
+			return true, nil
+		}
+	}
+
+	return false, validValues
+}
+
+func getAliCloudMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.AlicloudMachineImage, error) {
+	machineImages := cloudProfile.Spec.Alicloud.Constraints.MachineImages
+	if len(machineImages) != 1 {
+		return nil, errors.New("must provide a value for .spec.cloud.alicloud.machineImage as the referenced cloud profile contains more than one")
+	}
+	return &machineImages[0], nil
+}
+
+func validateAlicloudMachineImagesConstraints(constraints []garden.AlicloudMachineImage, image, oldImage *garden.AlicloudMachineImage) (bool, []string) {
 	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
 		return true, nil
 	}
