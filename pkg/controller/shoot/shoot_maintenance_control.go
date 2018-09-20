@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
@@ -38,6 +39,17 @@ func (c *Controller) shootMaintenanceAdd(obj interface{}) {
 		return
 	}
 	c.shootMaintenanceQueue.AddAfter(key, c.config.Controllers.ShootMaintenance.SyncPeriod.Duration)
+}
+
+func (c *Controller) shootMaintenanceUpdate(oldObj, newObj interface{}) {
+	newShoot := newObj.(*gardenv1beta1.Shoot)
+	if shouldMaintainNow(newShoot) {
+		key, err := cache.MetaNamespaceKeyFunc(newObj)
+		if err != nil {
+			return
+		}
+		c.shootMaintenanceQueue.Add(key)
+	}
 }
 
 func (c *Controller) shootMaintenanceDelete(obj interface{}) {
@@ -119,17 +131,21 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.ShootEventMaintenanceError, "[%s] %s", operationID, msg)
 			shootLogger.Error(msg)
 		}
+		shouldMaintain = shouldMaintainNow(shoot)
 	)
 
-	currentTimeWithinTimeWindow, err := NowWithinTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End, time.Now().UTC())
-	if err != nil {
-		handleError(err.Error())
-		return nil
+	if !shouldMaintain {
+		currentTimeWithinTimeWindow, err := NowWithinTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End, time.Now().UTC())
+		if err != nil {
+			handleError(err.Error())
+			return nil
+		}
+		shouldMaintain = currentTimeWithinTimeWindow
 	}
 
 	// Check if the current time is between the begin and the end of the maintenance time window.
 	// Only in this case we want to perform maintenance operations.
-	if currentTimeWithinTimeWindow {
+	if shouldMaintain {
 		shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
 
 		operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
@@ -173,6 +189,9 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 			}
 		}
 
+		// Remove operation annotation.
+		delete(shoot.Annotations, common.ShootOperation)
+
 		// Update the Shoot resource object.
 		if _, err := c.updater.UpdateShoot(shoot); err != nil {
 			handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
@@ -213,4 +232,9 @@ func NowWithinTimeWindow(begin, end string, nowTime time.Time) (bool, error) {
 
 	return (now.Equal(maintenanceWindowBegin) || now.After(maintenanceWindowBegin)) &&
 		(now.Equal(maintenanceWindowEnd) || now.Before(maintenanceWindowEnd)), nil
+}
+
+func shouldMaintainNow(shoot *gardenv1beta1.Shoot) bool {
+	operation, ok := shoot.Annotations[common.ShootOperation]
+	return ok && operation == common.ShootOperationMaintain
 }

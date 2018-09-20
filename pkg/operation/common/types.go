@@ -225,8 +225,15 @@ const (
 	// Shoot Care controller and can be used to easily identify Shoot clusters with issues.
 	ShootUnhealthy = "shoot.garden.sapcloud.io/unhealthy"
 
-	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that the operation should be retried.
+	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
 	ShootOperation = "shoot.garden.sapcloud.io/operation"
+
+	// ShootOperationMaintain is a constant for an annotation on a Shoot indicating that the Shoot maintenance shall be executed as soon as
+	// possible.
+	ShootOperationMaintain = "maintain"
+
+	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be retried.
+	ShootOperationRetry = "retry"
 
 	// ShootSyncPeriod is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
 	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation

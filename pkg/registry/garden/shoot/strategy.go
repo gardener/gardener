@@ -63,10 +63,6 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 	if mustIncreaseGeneration(oldShoot, newShoot) {
 		newShoot.Generation = oldShoot.Generation + 1
 	}
-
-	if newShoot.Annotations != nil {
-		delete(newShoot.Annotations, common.ShootOperation)
-	}
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
@@ -83,7 +79,8 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 	// The shoot state was failed but the retry annotation was set.
 	lastOperation := newShoot.Status.LastOperation
 	if lastOperation != nil && lastOperation.State == garden.ShootLastOperationStateFailed {
-		if val, ok := newShoot.Annotations[common.ShootOperation]; ok && val == "retry" {
+		if val, ok := newShoot.Annotations[common.ShootOperation]; ok && val == common.ShootOperationRetry {
+			delete(newShoot.Annotations, common.ShootOperation)
 			return true
 		}
 	}

@@ -137,6 +137,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 
 	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootMaintenanceAdd,
+		UpdateFunc: shootController.shootMaintenanceUpdate,
 		DeleteFunc: shootController.shootMaintenanceDelete,
 	})
 
