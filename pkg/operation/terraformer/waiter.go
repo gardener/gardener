@@ -57,7 +57,7 @@ func (t *Terraformer) waitForPod() int32 {
 	// job gets created.
 	var exitCode int32 = 2
 
-	wait.PollImmediate(5*time.Second, 120*time.Second, func() (bool, error) {
+	if err := wait.Poll(5*time.Second, 120*time.Second, func() (bool, error) {
 		t.logger.Infof("Waiting for Terraform validation Pod '%s' to be completed...", t.podName)
 		pod, err := t.k8sClient.GetPod(t.namespace, t.podName)
 		if apierrors.IsNotFound(err) {
@@ -65,7 +65,6 @@ func (t *Terraformer) waitForPod() int32 {
 			return true, nil
 		}
 		if err != nil {
-			exitCode = 1 // 'terraform plan' exit code for "errors"
 			return false, err
 		}
 
@@ -83,7 +82,10 @@ func (t *Terraformer) waitForPod() int32 {
 		}
 
 		return false, nil
-	})
+	}); err != nil {
+		exitCode = 1
+	}
+
 	return exitCode
 }
 
