@@ -27,7 +27,7 @@ spec:
         command:
         - sh
         - -c
-        - 'until nslookup kubernetes.default.svc > /dev/null; do echo waiting for kube-dns; sleep 2; done'
+        - 'until nslookup kubernetes.default.svc > /dev/null; do echo waiting for CoreDNS; sleep 2; done'
       containers:
       - name: {{ .Chart.Name }}
         image: {{ index .Values.images "monocular-api" }}

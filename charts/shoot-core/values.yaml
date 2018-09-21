@@ -6,13 +6,6 @@ kube-proxy:
   podAnnotations: {}
   images:
     hyperkube: image-repository
-kube-dns:
-  clusterDNS: 100.64.0.10
-  images:
-    kube-dns: image-repository:image-tag
-    kube-dns-dnsmasq: image-repository:image-tag
-    kube-dns-sidecar: image-repository:image-tag
-    kube-dns-autoscaler:  image-repository:image-tag
 vpn-shoot:
   serviceNetwork: 10.0.0.0/24
   podNetwork: 192.168.0.0/16

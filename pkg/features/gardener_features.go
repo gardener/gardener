@@ -43,9 +43,7 @@ var (
 
 	apiserverFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
 
-	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
-		CoreDNS: {Default: false, PreRelease: utilfeature.Alpha},
-	}
+	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
 )
 
 // RegisterAPIServerFeatureGate registers the feature gates

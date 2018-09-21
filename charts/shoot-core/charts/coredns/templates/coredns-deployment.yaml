@@ -1,0 +1,74 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: coredns
+  namespace: kube-system
+  labels:
+    k8s-app: kube-dns
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      k8s-app: kube-dns
+  template:
+    metadata:
+      labels:
+        k8s-app: kube-dns
+      # we won't be using the checksum of the configmap since coredns provides the "reload" plugins that does the reload if config changes.
+    spec:
+      serviceAccountName: coredns
+      tolerations:
+      - key: "CriticalAddonsOnly"
+        operator: "Exists"
+      containers:
+      - name: coredns
+        image: {{ index .Values.images "coredns" }}
+        imagePullPolicy: {{ default "IfNotPresent" .Values.deployment.spec.containers.imagePullPolicy }}
+        args:
+        - -conf
+        - /etc/coredns/Corefile
+        {{- if .Values.deployment.spec.containers.resources }}
+        resources:
+{{ .Values.deployment.spec.containers.resources | toYaml | trimSuffix "\n"| indent 10 }}
+        {{- end}}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/coredns
+          readOnly: true
+        ports:
+        - containerPort: {{ .Values.deployment.spec.containers.ports.dns }}
+          name: dns-udp
+          protocol:
+        - containerPort: {{ .Values.deployment.spec.containers.ports.dns }}
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 9153
+          name: metrics
+          protocol: TCP
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - all
+          readOnlyRootFilesystem: true
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 5
+      dnsPolicy: Default
+      volumes:
+        - name: config-volume
+          configMap:
+            name: coredns
+            items:
+            - key: Corefile
+              path: Corefile
