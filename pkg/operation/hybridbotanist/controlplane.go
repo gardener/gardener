@@ -17,6 +17,7 @@ package hybridbotanist
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -131,7 +132,7 @@ func (b *HybridBotanist) DeployCloudProviderConfig() error {
 	if err != nil {
 		return err
 	}
-	b.CheckSums[common.CloudProviderConfigName] = utils.ComputeSHA256Hex([]byte(cloudProviderConfig))
+	b.CheckSums[common.CloudProviderConfigName] = computeCloudProviderConfigChecksum(cloudProviderConfig)
 
 	defaultValues := map[string]interface{}{
 		"cloudProviderConfig": cloudProviderConfig,
@@ -151,11 +152,15 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 		return err
 	}
 
-	newConfig := b.ShootCloudBotanist.RefreshCloudProviderConfig(currentConfig.Data)
-	b.CheckSums[common.CloudProviderConfigName] = utils.ComputeSHA256Hex([]byte(newConfig[common.CloudProviderConfigMapKey]))
+	newConfigData := b.ShootCloudBotanist.RefreshCloudProviderConfig(currentConfig.Data)
+	b.CheckSums[common.CloudProviderConfigName] = computeCloudProviderConfigChecksum(newConfigData[common.CloudProviderConfigMapKey])
 
-	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfig)
+	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfigData)
 	return err
+}
+
+func computeCloudProviderConfigChecksum(cloudProviderConfig string) string {
+	return utils.ComputeSHA256Hex([]byte(strings.TrimSpace(cloudProviderConfig)))
 }
 
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
