@@ -216,9 +216,8 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 	}
 
 	// Update namespace and check ProjectNamespaceReady condition.
-	namespaceObj, err := c.updateNamespace(project)
-	if err != nil {
-		message := fmt.Sprintf("Error while creating/updating namespace %s for project: %+v", namespaceObj.Name, err)
+	if err := c.updateNamespace(project); err != nil {
+		message := fmt.Sprintf("Error while updating namespace for project %q: %+v", project.Name, err)
 		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceCreationFailed, message)
 		projectLogger.Error(message)
 		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
@@ -244,8 +243,8 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 			"owners": owners,
 		},
 	}
-	if err := common.ApplyChart(c.k8sGardenClient, chartRenderer, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), "project-rbac", namespaceObj.Name, values, nil); err != nil {
-		message := fmt.Sprintf("Error while creating RBAC rules %s for namespace: %+v", namespaceObj.Name, err)
+	if err := common.ApplyChart(c.k8sGardenClient, chartRenderer, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), "project-rbac", *namespace, values, nil); err != nil {
+		message := fmt.Sprintf("Error while creating RBAC rules for namespace %q: %+v", *namespace, err)
 		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
 		projectLogger.Error(message)
 		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
@@ -253,7 +252,7 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 	}
 
 	if err := c.ensureMemberRoleBinding(project, owners); err != nil {
-		message := fmt.Sprintf("Error while creating member rolebinding %s for namespace: %+v", namespaceObj.Name, err)
+		message := fmt.Sprintf("Error while creating member rolebinding for namespace %q: %+v", *namespace, err)
 		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
 		projectLogger.Error(message)
 		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
@@ -296,7 +295,7 @@ func (c *defaultControl) updateProjectStatus(project *gardenv1beta1.Project, con
 	return project, err
 }
 
-func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) (*corev1.Namespace, error) {
+func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) error {
 	var (
 		namespaceLabels = map[string]string{
 			common.GardenRole:  common.GardenRoleProject,
@@ -316,14 +315,15 @@ func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) (*corev
 
 	namespaceObj, err := c.k8sGardenClient.GetNamespace(*project.Spec.Namespace)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	namespaceObj.OwnerReferences = common.MergeOwnerReferences(namespaceObj.OwnerReferences, *metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind("Project")))
 	namespaceObj.Annotations = utils.MergeStringMaps(namespaceObj.Annotations, namespaceAnnotations)
 	namespaceObj.Labels = utils.MergeStringMaps(namespaceObj.Labels, namespaceLabels)
 
-	return c.k8sGardenClient.UpdateNamespace(namespaceObj)
+	_, err = c.k8sGardenClient.UpdateNamespace(namespaceObj)
+	return err
 }
 
 func (c *defaultControl) ensureMemberRoleBinding(project *gardenv1beta1.Project, owners []rbacv1.Subject) error {
