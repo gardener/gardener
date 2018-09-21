@@ -5,6 +5,10 @@ coreos:
   update:
     reboot-strategy: off
   units:
+  - name: update-engine.service
+    mask: true
+  - name: locksmithd.service
+    mask: true
 {{ include "docker" . | indent 2 }}
 {{ include "docker-monitor" . | indent 2 }}
 {{ include "kubelet" . | indent 2 }}
