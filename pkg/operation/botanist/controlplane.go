@@ -81,6 +81,12 @@ func (b *Botanist) deleteNamespace(name string) error {
 	return err
 }
 
+// DeployCloudMetadataServiceNetworkPolicy creates a global network policy that allows access to the meta-data service only from
+// the cloud-controller-manager and the kube-controller-manager
+func (b *Botanist) DeployCloudMetadataServiceNetworkPolicy() error {
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "cloud-metadata-service"), "cloud-metadata-service", b.Shoot.SeedNamespace, nil, nil)
+}
+
 // DeployKubeAPIServerService creates a Service of type 'LoadBalancer' in the Seed cluster which is used to expose the
 // kube-apiserver deployment (of the Shoot cluster). It waits until the load balancer is available and stores the address
 // on the Botanist's APIServerAddress attribute.

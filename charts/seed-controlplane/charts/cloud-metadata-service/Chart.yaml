@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Helm chart for kubernetes cloud-metadata-service
+name: cloud-metadata-service
+version: 0.1.0

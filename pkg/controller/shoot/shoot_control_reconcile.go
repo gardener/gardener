@@ -61,6 +61,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Name: "Deploying Shoot namespace in Seed",
 			Fn:   flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying cloud metadata service network policy",
+			Fn:           flow.TaskFn(botanist.DeployCloudMetadataServiceNetworkPolicy).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
