@@ -19,9 +19,11 @@ spec:
         origin: gardener
         app: {{ template "monocular.fullname" . }}-ui
       annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/config: {{ include (print $.Template.BasePath "/ui-config.yaml") . | sha256sum }}
         checksum/vhost: {{ include (print $.Template.BasePath "/ui-vhost.yaml") . | sha256sum }}
     spec:
+      priorityClassName: system-cluster-critical
       containers:
       - name: {{ .Chart.Name }}
         image: {{ index .Values.images "monocular-ui" }}

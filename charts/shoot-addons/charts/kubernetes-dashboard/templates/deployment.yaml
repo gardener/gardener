@@ -41,6 +41,7 @@ spec:
       tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
+      priorityClassName: system-cluster-critical
       serviceAccountName: {{ if .Values.rbac.create }}{{ template "kubernetes-dashboard.fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
       nodeSelector:
 {{ toYaml .Values.nodeSelector | indent 10 }}

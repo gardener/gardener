@@ -16,10 +16,13 @@ spec:
       k8s-app: kube-dns
   template:
     metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
         k8s-app: kube-dns
       # we won't be using the checksum of the configmap since coredns provides the "reload" plugins that does the reload if config changes.
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: coredns
       tolerations:
       - key: "CriticalAddonsOnly"
