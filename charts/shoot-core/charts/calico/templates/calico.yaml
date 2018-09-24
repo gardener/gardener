@@ -130,6 +130,9 @@ spec:
               value: "autodetect"
             - name: FELIX_HEALTHENABLED
               value: "true"
+            # Limit NAT port range: https://github.com/projectcalico/felix/pull/1838
+            - name: FELIX_NATPORTRANGE
+              value: "32768:65535"
           securityContext:
             privileged: true
           resources:
