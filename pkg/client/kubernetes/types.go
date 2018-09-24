@@ -112,6 +112,7 @@ type Client interface {
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)
 	CheckForwardPodPort(string, string, int, int) (bool, error)
 	DeletePod(string, string) error
+	DeletePodForcefully(string, string) error
 
 	// Nodes
 	ListNodes(metav1.ListOptions) (*corev1.NodeList, error)

@@ -108,6 +108,22 @@ func (c *Client) DeletePod(namespace, name string) error {
 	return c.clientset.CoreV1().Pods(namespace).Delete(name, &defaultDeleteOptions)
 }
 
+// DeletePodForcefully will forcefully delete a Pod with the given <name> in the given <namespace>.
+func (c *Client) DeletePodForcefully(namespace, name string) error {
+	var (
+		zero               int64
+		backgroundDeletion = metav1.DeletePropagationBackground
+
+		// forceful pod deletion options
+		forceDeleteOptions = metav1.DeleteOptions{
+			GracePeriodSeconds: &zero,
+			PropagationPolicy:  &backgroundDeletion,
+		}
+	)
+
+	return c.clientset.CoreV1().Pods(namespace).Delete(name, &forceDeleteOptions)
+}
+
 func (c *Client) setupForwardPodPort(namespace, name string, local, remote int) (*portforward.PortForwarder, chan struct{}, error) {
 	var (
 		stopChan  = make(chan struct{}, 1)
