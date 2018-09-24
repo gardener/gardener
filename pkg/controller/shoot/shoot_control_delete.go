@@ -208,7 +208,6 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			destroyInfrastructure,
 			destroyExternalDomainDNSRecord,
 		)
-
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -225,7 +224,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			Dependencies: flow.NewTaskIDs(syncPointTerraformers),
 		})
 		deleteNamespace = g.Add(flow.Task{
-			Name:         "Deleteing Shoot namespace in Seed",
+			Name:         "Deleting Shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncPointTerraformers, destroyInternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer),
 		})
