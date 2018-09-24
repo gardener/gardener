@@ -48,6 +48,7 @@ spec:
         operator: Exists
       hostNetwork: true
       hostPID: true
+      priorityClassName: system-cluster-critical
       containers:
       - name: node-exporter
         image: {{ index .Values.images "node-exporter" }}

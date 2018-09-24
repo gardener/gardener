@@ -60,6 +60,7 @@ spec:
         app: helm
         name: tiller
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: tiller
       containers:
       - env:

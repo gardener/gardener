@@ -16,6 +16,7 @@ spec:
   template:
     metadata:
       annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/config: {{ include (print $.Template.BasePath "/controller-configmap.yaml") . | sha256sum }}
     {{- if .Values.controller.podAnnotations }}
 {{ toYaml .Values.controller.podAnnotations | indent 8}}
@@ -26,6 +27,7 @@ spec:
         component: "{{ .Values.controller.name }}"
         release: {{ .Release.Name }}
     spec:
+      priorityClassName: system-cluster-critical
       containers:
         - name: {{ template "nginx-ingress.name" . }}-{{ .Values.controller.name }}
           image: {{ index .Values.images "nginx-ingress-controller" }}

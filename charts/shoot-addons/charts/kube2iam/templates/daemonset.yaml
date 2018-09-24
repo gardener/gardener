@@ -31,6 +31,7 @@ spec:
         app: {{ template "kube2iam.name" . }}
         release: {{ .Release.Name }}
     spec:
+      priorityClassName: system-cluster-critical
       tolerations:
       # Mark the pod as a critical add-on for rescheduling.
       - key: CriticalAddonsOnly

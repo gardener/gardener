@@ -19,11 +19,13 @@ spec:
         k8s-app: metrics-server
         origin: gardener
       annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
         checksum/secret-metrics-server: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
     spec:
+      priorityClassName: system-cluster-critical
       serviceAccountName: metrics-server
       containers:
       - name: metrics-server

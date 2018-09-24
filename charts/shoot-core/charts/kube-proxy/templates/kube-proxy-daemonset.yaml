@@ -28,6 +28,7 @@ spec:
         app: kubernetes
         role: proxy
     spec:
+      priorityClassName: system-cluster-critical
       tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
