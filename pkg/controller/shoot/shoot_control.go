@@ -19,6 +19,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/gardener/gardener/pkg/version"
+
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
@@ -214,8 +216,17 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	// We check whether the Shoot's last operation status field indicates that the last operation failed (i.e. the operation
 	// will not be retried unless the shoot generation changes).
 	if lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration {
-		shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
-		return false, nil
+		if shoot.Status.Gardener.Version == version.Version {
+			shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
+			return false, nil
+		}
+
+		if updateErr := c.updateShootStatusResetRetry(operation, operationType); err != nil {
+			shootLogger.Errorf("Could not reschedule failed shoot due to Gardener version update: %+v", updateErr)
+			return true, updateErr
+		}
+
+		shootLogger.Infof("Successfully rescheduled failed shoot %q for reconciliation due to Gardener version update", shoot.Name)
 	}
 
 	// When a Shoot clusters deletion timestamp is set we need to delete the cluster and must not trigger a new reconciliation operation.

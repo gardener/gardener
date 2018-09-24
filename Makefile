@@ -16,6 +16,7 @@ REGISTRY                           := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
 CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
 VERSION                            := $(shell cat VERSION)
+NEXT_VERSION                       := $(shell hack/get-next-version)
 IMAGE_TAG                          := ${VERSION}
 WORKDIR                            := $(shell pwd)
 PUSH_LATEST                        := true
@@ -39,7 +40,7 @@ start-api:
 .PHONY: start
 start:
 	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run \
-			-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=$(shell ./hack/get-next-version)" \
+			-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${NEXT_VERSION}" \
 			cmd/gardener-controller-manager/main.go \
 			--config=dev/20-componentconfig-gardener-controller-manager.yaml
 
