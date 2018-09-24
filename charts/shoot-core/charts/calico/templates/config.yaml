@@ -12,6 +12,11 @@ data:
   # below.  We recommend using Typha if you have more than 50 nodes. Above 100 nodes it is
   # essential.
   typha_service_name: "none"
+  # Configure the Calico backend to use.
+  calico_backend: {{- if ne .Values.cloudProvider "azure" }}"bird"{{ else }}"none"{{ end }}
+
+  # Configure the MTU to use
+  veth_mtu: "1440"
   # The CNI network configuration to install on each node.
   cni_network_config: |-
     {
@@ -23,7 +28,7 @@ data:
           "log_level": "info",
           "datastore_type": "kubernetes",
           "nodename": "__KUBERNETES_NODE_NAME__",
-          "mtu": 1500,
+          "mtu": __CNI_MTU__,
           "ipam": {
             "type": "host-local",
             "subnet": "usePodCidr"

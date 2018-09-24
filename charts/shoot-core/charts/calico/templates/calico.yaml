@@ -42,9 +42,11 @@ spec:
         checksum/configmap-calico: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
     spec:
       priorityClassName: system-cluster-critical
+      nodeSelector:
+        beta.kubernetes.io/os: linux
       hostNetwork: true
       tolerations:
-        # Make sure calico/node gets scheduled on all nodes.
+        # Make sure calico-node gets scheduled on all nodes.
         - effect: NoSchedule
           operator: Exists
         # Mark the pod as a critical add-on for rescheduling.
@@ -83,7 +85,10 @@ spec:
               value: "false"
             # Set MTU for tunnel device used if ipip is enabled
             - name: FELIX_IPINIPMTU
-              value: "1440"
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: veth_mtu
             # Wait for the datastore.
             - name: WAIT_FOR_DATASTORE
               value: "true"
@@ -95,6 +100,12 @@ spec:
             # Enable IPIP
             - name: CALICO_IPV4POOL_IPIP
               value: "Always"
+            # Choose the backend to use.
+            - name: CALICO_NETWORKING_BACKEND
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: calico_backend
             {{- if ne .Values.cloudProvider "azure"}}
             # Enable IP-in-IP within Felix.
             - name: FELIX_IPINIPENABLED
@@ -102,8 +113,6 @@ spec:
             {{- else }}
             - name: FELIX_IPINIPENABLED
               value: "false"
-            - name: CALICO_NETWORKING_BACKEND
-              value: "none"
             {{- end }}
             # Typha support: controlled by the ConfigMap.
             - name: FELIX_TYPHAK8SSERVICENAME
@@ -134,13 +143,16 @@ spec:
             httpGet:
               path: /liveness
               port: 9099
+              host: localhost
             periodSeconds: 10
             initialDelaySeconds: 10
             failureThreshold: 6
           readinessProbe:
-            httpGet:
-              path: /readiness
-              port: 9099
+            exec:
+              command:
+              - /bin/calico-node
+              - -bird-ready
+              - -felix-ready
             periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
@@ -172,6 +184,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            # CNI MTU Config variable
+            - name: CNI_MTU
+              valueFrom:
+                configMapKeyRef:
+                  name: calico-config
+                  key: veth_mtu
           volumeMounts:
             - mountPath: /host/opt/cni/bin
               name: cni-bin-dir
@@ -240,7 +258,7 @@ spec:
   # (when using the Kubernetes datastore).  Use one replica for every 100-200 nodes.  In
   # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
   replicas: 0
-  revisionHistoryLimit: 0
+  revisionHistoryLimit: 2
   template:
     metadata:
       labels:
@@ -252,7 +270,10 @@ spec:
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
       tolerations:
+      # Mark the pod as a critical add-on for rescheduling.
       - key: CriticalAddonsOnly
         operator: Exists
       # Since Calico can't network a pod until Typha is up, we need to run Typha itself
@@ -291,15 +312,19 @@ spec:
           #- name: TYPHA_PROMETHEUSMETRICSPORT
           #  value: "9093"
         livenessProbe:
-          httpGet:
-            path: /liveness
-            port: 9098
+          exec:
+            command:
+            - calico-typha
+            - check
+            - liveness
           periodSeconds: 30
           initialDelaySeconds: 30
         readinessProbe:
-          httpGet:
-            path: /readiness
-            port: 9098
+          exec:
+            command:
+            - calico-typha
+            - check
+            - readiness
           periodSeconds: 10
 
 # Create all the CustomResourceDefinitions needed for

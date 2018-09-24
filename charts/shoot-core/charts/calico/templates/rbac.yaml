@@ -1,5 +1,5 @@
-# Calico Version v3.1.0
-# https://docs.projectcalico.org/v3.1/releases#v3.1.0
+# Calico Version v3.2.1
+# https://docs.projectcalico.org/v3.2/releases#v3.2.1
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
@@ -10,6 +10,7 @@ rules:
 - apiGroups: [""]
   resources:
   - namespaces
+  - serviceaccounts
   verbs:
   - get
   - list
