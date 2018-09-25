@@ -241,7 +241,8 @@ func IsFollowingNewNamingConvention(seedNamespace string) bool {
 
 // ReplaceCloudProviderConfigKey replaces a key with the new value in the given cloud provider config.
 func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
-	return regexp.MustCompile(fmt.Sprintf("%s%s(.*)\n", key, separator)).ReplaceAllString(cloudProviderConfig, fmt.Sprintf("%s%s%s\n", key, separator, value))
+	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s"?)([^"\n]*)("?)`, key, separator))
+	return keyValueRegexp.ReplaceAllString(cloudProviderConfig, fmt.Sprintf("${1}%s${3}", value))
 }
 
 type errorWithCode struct {
