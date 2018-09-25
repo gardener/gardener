@@ -58,6 +58,14 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 			"checksum/secret-kube-addon-manager": b.CheckSums[name],
 		},
 		"replicas": replicas,
+		// we need to add capabilities for Shoot's API server.
+		"shootAPIServer": map[string]interface{}{
+			"Capabilities": map[string]interface{}{
+				"KubeVersion": map[string]interface{}{
+					"GitVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+				},
+			},
+		},
 	}
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"kube-addon-manager": "kube-addon-manager"})
