@@ -230,7 +230,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	return nil
 }
 
-func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
+func (c *defaultControl) updateShootStatusReconcile(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType, state gardenv1beta1.ShootLastOperationState) error {
 	var (
 		status = o.Shoot.Info.Status
 		now    = metav1.Now()
@@ -238,9 +238,6 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 
 	if len(status.UID) == 0 {
 		o.Shoot.Info.Status.UID = o.Shoot.Info.UID
-	}
-	if status.RetryCycleStartTime == nil || o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration {
-		o.Shoot.Info.Status.RetryCycleStartTime = &now
 	}
 	if len(status.TechnicalID) == 0 {
 		o.Shoot.Info.Status.TechnicalID = o.Shoot.SeedNamespace
@@ -251,7 +248,7 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 	o.Shoot.Info.Status.ObservedGeneration = o.Shoot.Info.Generation
 	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
 		Type:           operationType,
-		State:          gardenv1beta1.ShootLastOperationStateProcessing,
+		State:          state,
 		Progress:       1,
 		Description:    "Reconciliation of Shoot cluster state in progress.",
 		LastUpdateTime: now,
@@ -262,6 +259,24 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 		o.Shoot.Info = newShoot
 	}
 	return err
+}
+
+func (c *defaultControl) updateShootStatusResetRetry(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
+	now := metav1.Now()
+	o.Shoot.Info.Status.RetryCycleStartTime = &now
+	return c.updateShootStatusReconcile(o, operationType, gardenv1beta1.ShootLastOperationStateError)
+}
+
+func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
+	var (
+		status = o.Shoot.Info.Status
+		now    = metav1.Now()
+	)
+
+	if status.RetryCycleStartTime == nil || o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration {
+		o.Shoot.Info.Status.RetryCycleStartTime = &now
+	}
+	return c.updateShootStatusReconcile(o, operationType, gardenv1beta1.ShootLastOperationStateProcessing)
 }
 
 func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
