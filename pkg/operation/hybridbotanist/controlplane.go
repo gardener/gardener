@@ -185,6 +185,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
+		"maxReplicas":      4,
 		"securePort":       443,
 		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
 		"podAnnotations": map[string]interface{}{
@@ -217,20 +218,14 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			},
 		}
 	} else {
-		maxNodes := b.Shoot.GetNodeCount()
-		// Get current kube-apiserver deployment
+		// As kube-apiserver HPA manages the number of replicas, we have to maintain current number of replicas
+		// otherwise keep the value to default
 		existingAPIServerDeployment, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
-		if err == nil {
-			// As kube-apiserver HPA manages the number of replicas in big clusters
-			// maintain current number of replicas
-			// otherwise keep the value to default
-			if maxNodes >= common.EnableHPANodeCount && existingAPIServerDeployment.Spec.Replicas != nil && *existingAPIServerDeployment.Spec.Replicas > 0 {
-				defaultValues["replicas"] = *existingAPIServerDeployment.Spec.Replicas
-				defaultValues["maxReplicas"] = 4
-			}
+		if err == nil && existingAPIServerDeployment.Spec.Replicas != nil && *existingAPIServerDeployment.Spec.Replicas > 0 {
+			defaultValues["replicas"] = *existingAPIServerDeployment.Spec.Replicas
 		}
 
-		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(maxNodes)
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    cpuLimit,
