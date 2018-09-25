@@ -159,6 +159,11 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			Fn:           botanist.WaitUntilKubeAddonManagerDeleted,
 			Dependencies: flow.NewTaskIDs(deleteKubeAddonManager),
 		})
+		waitForControllersToBeActive = g.Add(flow.Task{
+			Name:         "Waiting until both cloud-controller-manager and kube-controller-manager are active",
+			Fn:           flow.TaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, waitUntilKubeAddonManagerDeleted),
+		})
 
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as
 		// LoadBalancers, volumes, ...). We do that by deleting all namespaces other than the three standard
@@ -168,7 +173,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		cleanCustomResourceDefinitions = g.Add(flow.Task{
 			Name:         "Cleaning custom resource definitions",
 			Fn:           flow.TaskFn(botanist.CleanCustomResourceDefinitions).RetryUntilTimeout(defaultInterval, 5*time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 		cleanKubernetesResources = g.Add(flow.Task{
 			Name:         "Cleaning kubernetes resources",

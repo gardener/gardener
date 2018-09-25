@@ -15,6 +15,7 @@
 package common
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -34,6 +35,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 )
 
 // ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
@@ -375,4 +377,40 @@ func RemoveInitializer(initializers *metav1.Initializers, name string) *metav1.I
 		}
 	}
 	return &metav1.Initializers{Pending: updatedInitializers, Result: initializers.Result}
+}
+
+// ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.
+func ReadLeaderElectionRecord(k8sClient kubernetes.Client, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
+	var (
+		leaderElectionRecord resourcelock.LeaderElectionRecord
+		annotations          map[string]string
+	)
+
+	switch lock {
+	case resourcelock.EndpointsResourceLock:
+		endpoint, err := k8sClient.Clientset().CoreV1().Endpoints(namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		annotations = endpoint.Annotations
+	case resourcelock.ConfigMapsResourceLock:
+		configmap, err := k8sClient.Clientset().CoreV1().ConfigMaps(namespace).Get(name, metav1.GetOptions{})
+		if err != nil {
+			return nil, err
+		}
+		annotations = configmap.Annotations
+	default:
+		return nil, fmt.Errorf("Unknown lock type: %s", lock)
+	}
+
+	leaderElection, ok := annotations[resourcelock.LeaderElectionRecordAnnotationKey]
+	if !ok {
+		return nil, fmt.Errorf("Could not find key %s in annotations", resourcelock.LeaderElectionRecordAnnotationKey)
+	}
+
+	if err := json.Unmarshal([]byte(leaderElection), &leaderElectionRecord); err != nil {
+		return nil, fmt.Errorf("Failed to unmarshal leader election record: %+v", err)
+	}
+
+	return &leaderElectionRecord, nil
 }
