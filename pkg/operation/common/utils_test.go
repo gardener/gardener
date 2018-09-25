@@ -238,4 +238,28 @@ var _ = Describe("common", func() {
 			Expect(result).To(ConsistOf(newReferences))
 		})
 	})
+
+	DescribeTable("#HasInitializer",
+		func(initializers *metav1.Initializers, name string, expected bool) {
+			Expect(HasInitializer(initializers, name)).To(Equal(expected))
+		},
+		Entry("nil initializers", nil, "foo", false),
+		Entry("no matching initializer", &metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}}, "foo", false),
+		Entry("matching initializer", &metav1.Initializers{Pending: []metav1.Initializer{{Name: "foo"}}}, "foo", true),
+	)
+
+	DescribeTable("#RemoveInitializer",
+		func(initializers *metav1.Initializers, name string, expected *metav1.Initializers) {
+			Expect(RemoveInitializer(initializers, name)).To(Equal(expected))
+		},
+		Entry("nil initializers", nil, "foo", nil),
+		Entry("no matching initializer",
+			&metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}},
+			"foo",
+			&metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}}),
+		Entry("matching initializer",
+			&metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}, {Name: "foo"}}},
+			"foo",
+			&metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}}),
+	)
 })
