@@ -1,0 +1,16 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  name: kube-controller-manager-allow-metadata-service
+  namespace:  {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes
+      role: controller-manager
+  policyTypes:
+  - Egress
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 169.254.169.254/32
