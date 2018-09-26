@@ -107,6 +107,12 @@ spec:
             cpu: 200m
             memory: 2400Mi
         volumeMounts:
+        - mountPath: /srv/kubernetes/prometheus-kubelet
+          name: prometheus-kubelet
+        - mountPath: /srv/kubernetes/etcd/ca
+          name: ca-etcd
+        - mountPath: /srv/kubernetes/etcd/client
+          name: etcd-client-tls
         - mountPath: /etc/prometheus/config
           name: config
           readOnly: true
@@ -226,12 +232,21 @@ spec:
         secret:
           defaultMode: 420
           secretName: ca
+      - name: ca-etcd
+        secret:
+          secretName: ca-etcd
+      - name: etcd-client-tls
+        secret:
+          secretName: etcd-client-tls
       - name: kube-apiserver-basic-auth
         secret:
           secretName: kube-apiserver-basic-auth
       - name: prometheus-kubeconfig
         secret:
           secretName: prometheus
+      - name: prometheus-kubelet
+        secret:
+          secretName: prometheus-kubelet
       - name: blackbox-exporter-config-prometheus
         configMap:
           name: blackbox-exporter-config-prometheus

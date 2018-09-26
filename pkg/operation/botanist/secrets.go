@@ -330,6 +330,21 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			APIServerURL:       b.computeAPIServerURL(true, false),
 		},
 
+		// Secret definition for prometheus to kubelets communication
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "prometheus-kubelet",
+
+				CommonName:   fmt.Sprintf("%s:monitoring:prometheus", garden.GroupName),
+				Organization: []string{fmt.Sprintf("%s:monitoring", garden.GroupName)},
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[caKubelet],
+			},
+		},
+
 		// Secret definition for kubecfg
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
