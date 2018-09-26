@@ -41,7 +41,8 @@ var exceptions = map[string]map[string]bool{
 		fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):  true,
 	},
 	kubernetesbase.Deployments: {
-		fmt.Sprintf("%s/coredns", metav1.NamespaceSystem): true,
+		fmt.Sprintf("%s/coredns", metav1.NamespaceSystem):        true,
+		fmt.Sprintf("%s/metrics-server", metav1.NamespaceSystem): true,
 	},
 	kubernetesbase.Namespaces: {
 		metav1.NamespacePublic:  true,
