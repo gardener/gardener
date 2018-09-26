@@ -15,20 +15,29 @@
 package kubernetesv111
 
 import (
-	kubernetesv110 "github.com/gardener/gardener/pkg/client/kubernetes/v110"
-	"k8s.io/client-go/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/base"
+	"github.com/gardener/gardener/pkg/client/kubernetes/v110"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
-// New returns a new Kubernetes v1.11 client.
-func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clientcmd.ClientConfig) (*Client, error) {
-	v111Client, err := kubernetesv110.New(config, clientset, clientConfig)
+// NewForConfig returns a new Kubernetes v1.11 client.
+func NewForConfig(config *rest.Config) (*Client, error) {
+	v110Client, err := kubernetesv110.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
+	return NewFrom(v110Client), nil
+}
+
+// NewFrom creates a new client from the given kubernetesv110.Client.
+func NewFrom(v110Client *kubernetesv110.Client) *Client {
 	return &Client{
-		Client: v111Client,
-	}, nil
+		Client: v110Client,
+	}
+}
+
+// NewFromBase creates a new client from the given kubernetesbase.Client.
+func NewFromBase(client *kubernetesbase.Client) *Client {
+	return NewFrom(kubernetesv110.NewFromBase(client))
 }

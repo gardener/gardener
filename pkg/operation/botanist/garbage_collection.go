@@ -15,15 +15,15 @@
 package botanist
 
 import (
-	"strings"
-	"time"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"strings"
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
@@ -34,10 +34,7 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 		return err
 	}
 
-	if err := b.deleteEvictedPods(b.K8sSeedClient, podList); err != nil {
-		return err
-	}
-	if err := b.deleteStuckTerminatingPods(b.K8sSeedClient, podList); err != nil {
+	if err := b.deleteStalePods(b.K8sSeedClient, podList); err != nil {
 		return err
 	}
 
@@ -82,44 +79,24 @@ func (b *Botanist) PerformGarbageCollectionShoot() error {
 		return err
 	}
 
-	if err := b.deleteEvictedPods(b.K8sShootClient, podList); err != nil {
-		return err
-	}
-	return b.deleteStuckTerminatingPods(b.K8sShootClient, podList)
+	return b.deleteStalePods(b.K8sShootClient, podList)
 }
 
-// deleteEvictedPods determines pods in state 'Evicted' in a given namespace and deletes them.
-func (b *Botanist) deleteEvictedPods(client kubernetes.Client, podList *corev1.PodList) error {
+func (b *Botanist) deleteStalePods(client kubernetes.Client, podList *corev1.PodList) error {
+	var result error
 	for _, pod := range podList.Items {
 		if strings.Contains(pod.Status.Reason, "Evicted") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
 			if err := client.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
-				return err
+				result = multierror.Append(result, err)
 			}
+			continue
 		}
-	}
-	return nil
-}
 
-// deleteStuckTerminatingPods determines stuck pods in state 'Terminating' in a given namespace and deletes them.
-func (b *Botanist) deleteStuckTerminatingPods(client kubernetes.Client, podList *corev1.PodList) error {
-	var (
-		now                 = metav1.Now()
-		gardenerGracePeriod = time.Minute
-	)
-
-	for _, pod := range podList.Items {
-		if pod.DeletionTimestamp != nil {
-			podDeletionGracePeriod := gardenerGracePeriod
-			if pod.DeletionGracePeriodSeconds != nil {
-				podDeletionGracePeriod += time.Duration(*pod.DeletionGracePeriodSeconds) * time.Second
-			}
-			podMaximumAliveTime := pod.DeletionTimestamp.Add(podDeletionGracePeriod)
-
-			if now.After(podMaximumAliveTime) {
-				if err := client.DeletePodForcefully(pod.Namespace, pod.Name); err != nil {
-					return nil
-				}
+		if common.ShouldObjectBeRemoved(&pod, common.GardenerDeletionGracePeriod) {
+			b.Logger.Debugf("Deleting stuck terminating pod %q", pod.Name)
+			if err := client.DeletePodForcefully(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+				result = multierror.Append(result, err)
 			}
 		}
 	}

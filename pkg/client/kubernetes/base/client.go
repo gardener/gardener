@@ -17,9 +17,11 @@ package kubernetesbase
 import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
+	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 // DiscoverAPIGroups will fetch all Kubernetes server resources, i.e. all registered API groups and the
@@ -60,6 +62,16 @@ func (c *Client) MachineClientset() *machineclientset.Clientset {
 	return c.machineClientset
 }
 
+// APIExtensionsClientset will return the apiextensionsClientset attribute of the Client object.
+func (c *Client) APIExtensionsClientset() *apiextensionclientset.Clientset {
+	return c.apiextensionClientset
+}
+
+// APIRegistrationClientset will return the apiregistrationClientset attribute of the Client object.
+func (c *Client) APIRegistrationClientset() *apiregistrationclientset.Clientset {
+	return c.apiregistrationClientset
+}
+
 // RESTClient will return the restClient attribute of the Client object.
 func (c *Client) RESTClient() rest.Interface {
 	return c.restClient
@@ -93,4 +105,9 @@ func (c *Client) SetRESTClient(client rest.Interface) {
 // SetResourceAPIGroups set the resourceAPIGroups attribute of the Client object.
 func (c *Client) SetResourceAPIGroups(groups map[string][]string) {
 	c.resourceAPIGroups = groups
+}
+
+// SetResourceAPIGroup sets the specified resource API group path.
+func (c *Client) SetResourceAPIGroup(group string, path []string) {
+	c.resourceAPIGroups[group] = path
 }

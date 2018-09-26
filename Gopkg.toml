@@ -29,6 +29,14 @@ ignored = [
   version = "kubernetes-1.11.0"
 
 [[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  version = "kubernetes-1.11.0"
+
+[[override]]
+  name = "k8s.io/kube-aggregator"
+  version = "kubernetes-1.11.0"
+
+[[override]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.11.0"
 

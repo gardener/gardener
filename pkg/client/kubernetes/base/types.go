@@ -17,10 +17,12 @@ package kubernetesbase
 import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 var (
@@ -29,6 +31,12 @@ var (
 	defaultDeleteOptions = metav1.DeleteOptions{
 		PropagationPolicy:  &propagationPolicy,
 		GracePeriodSeconds: &gracePeriodSeconds,
+	}
+	zero               int64
+	backgroundDeletion = metav1.DeletePropagationBackground
+	forceDeleteOptions = metav1.DeleteOptions{
+		GracePeriodSeconds: &zero,
+		PropagationPolicy:  &backgroundDeletion,
 	}
 )
 
@@ -40,15 +48,17 @@ var (
 // allowing requests to arbitrary URLs.
 // The version string contains only the major/minor part in the form <major>.<minor>.
 type Client struct {
-	apiResourceList   []*metav1.APIResourceList
-	config            *rest.Config
-	clientConfig      clientcmd.ClientConfig
-	clientset         *kubernetes.Clientset
-	gardenClientset   *gardenclientset.Clientset
-	machineClientset  *machineclientset.Clientset
-	restClient        rest.Interface
-	resourceAPIGroups map[string][]string
-	version           string
+	apiResourceList          []*metav1.APIResourceList
+	config                   *rest.Config
+	clientConfig             clientcmd.ClientConfig
+	clientset                *kubernetes.Clientset
+	gardenClientset          *gardenclientset.Clientset
+	machineClientset         *machineclientset.Clientset
+	apiextensionClientset    *apiextensionsclientset.Clientset
+	apiregistrationClientset *apiserviceclientset.Clientset
+	restClient               rest.Interface
+	resourceAPIGroups        map[string][]string
+	version                  string
 }
 
 const (
@@ -57,6 +67,9 @@ const (
 
 	// CustomResourceDefinitions is a constant for a Kubernetes resource with the same name.
 	CustomResourceDefinitions = "customresourcedefinitions"
+
+	// APIServices is a constant for a Kubernetes resource with the same name.
+	APIServices = "apiservices"
 
 	// DaemonSets is a constant for a Kubernetes resource with the same name.
 	DaemonSets = "daemonsets"

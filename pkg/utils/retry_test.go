@@ -77,5 +77,13 @@ var _ = Describe("utils", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(errwrap.Cause(err)).To(Equal(err))
 		})
+
+		It("should timeout early and don't use the value of the delayed function", func() {
+			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
+				time.Sleep(10 * time.Second)
+				return true, false, nil
+			})
+			Expect(err).To(HaveOccurred())
+		})
 	})
 })

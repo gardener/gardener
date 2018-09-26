@@ -24,10 +24,14 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 // Client is an interface which is used to wrap the interactions with a Kubernetes cluster
@@ -40,16 +44,18 @@ type Client interface {
 	Clientset() *kubernetes.Clientset
 	GardenClientset() *gardenclientset.Clientset
 	MachineClientset() *machineclientset.Clientset
+	APIExtensionsClientset() *apiextensionsclientset.Clientset
+	APIRegistrationClientset() *apiregistrationclientset.Clientset
 	GetAPIResourceList() []*metav1.APIResourceList
 	GetConfig() *rest.Config
 	GetResourceAPIGroups() map[string][]string
 	RESTClient() rest.Interface
-	SetConfig(*rest.Config)
 	SetClientset(*kubernetes.Clientset)
 	SetGardenClientset(*gardenclientset.Clientset)
 	SetMachineClientset(*machineclientset.Clientset)
 	SetRESTClient(rest.Interface)
 	SetResourceAPIGroups(map[string][]string)
+	SetResourceAPIGroup(string, []string)
 
 	// Cleanup
 	ListResources(...string) (unstructured.Unstructured, error)
@@ -120,6 +126,14 @@ type Client interface {
 	// RoleBindings
 	ListRoleBindings(string, metav1.ListOptions) (*rbacv1.RoleBindingList, error)
 	CreateOrPatchRoleBinding(metav1.ObjectMeta, func(*rbacv1.RoleBinding) *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error)
+
+	// CustomResourceDefinitions
+	ListCRDs(metav1.ListOptions) (*apiextensionsv1beta1.CustomResourceDefinitionList, error)
+	DeleteCRDForcefully(name string) error
+
+	// APIServices
+	ListAPIServices(metav1.ListOptions) (*apiregistrationv1.APIServiceList, error)
+	DeleteAPIServiceForcefully(name string) error
 
 	// Arbitrary manifests
 	Apply([]byte) error

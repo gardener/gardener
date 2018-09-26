@@ -15,20 +15,28 @@
 package kubernetesv110
 
 import (
-	kubernetesv19 "github.com/gardener/gardener/pkg/client/kubernetes/v19"
-	"k8s.io/client-go/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/base"
+	"github.com/gardener/gardener/pkg/client/kubernetes/v19"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
-// New returns a new Kubernetes v1.10 client.
-func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clientcmd.ClientConfig) (*Client, error) {
-	v110Client, err := kubernetesv19.New(config, clientset, clientConfig)
+// NewForConfig returns a new Kubernetes v1.10 client.
+func NewForConfig(config *rest.Config) (*Client, error) {
+	v19Client, err := kubernetesv19.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Client{
-		Client: v110Client,
-	}, nil
+	return NewFrom(v19Client), nil
+}
+
+// NewFrom creates a new client from the given kubernetesv19.Client.
+func NewFrom(v19Client *kubernetesv19.Client) *Client {
+	v19Client.SetResourceAPIGroup(kubernetesbase.APIServices, []string{"apis", "apiregistration.k8s.io", "v1"})
+	return &Client{Client: v19Client}
+}
+
+// NewFromBase creates a new client from the given kubernetesbase.Client.
+func NewFromBase(baseClient *kubernetesbase.Client) *Client {
+	return NewFrom(kubernetesv19.NewFrom(baseClient))
 }

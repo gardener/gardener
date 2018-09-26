@@ -26,6 +26,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/onsi/ginkgo/extensions/table"
+	"time"
 )
 
 var _ = Describe("common", func() {
@@ -261,5 +262,17 @@ var _ = Describe("common", func() {
 			&metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}, {Name: "foo"}}},
 			"foo",
 			&metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}}),
+	)
+
+	DescribeTable("#ShouldObjectBeRemoved",
+		func(obj metav1.Object, gracePeriod time.Duration, expected bool) {
+			Expect(ShouldObjectBeRemoved(obj, gracePeriod)).To(Equal(expected))
+		},
+		Entry("nil timestamp",
+			&metav1.ObjectMeta{}, 0*time.Second, false),
+		Entry("due timestamp",
+			&metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now().Add(-10 * time.Second)}}, 0*time.Second, true),
+		Entry("due timestamp but grace period",
+			&metav1.ObjectMeta{DeletionTimestamp: &metav1.Time{Time: time.Now().Add(-10 * time.Second)}}, 20*time.Second, false),
 	)
 })

@@ -22,6 +22,9 @@ import (
 // TaskFn is a payload function of a task.
 type TaskFn func() error
 
+// RecoverFn is a function that can recover an error.
+type RecoverFn func(error) error
+
 // EmptyTaskFn is a TaskFn that does nothing (returns nil).
 var EmptyTaskFn TaskFn = func() error { return nil }
 
@@ -70,4 +73,31 @@ func (t TaskFn) RetryUntilTimeout(interval time.Duration, timeout time.Duration)
 	return func() error {
 		return utils.Retry(interval, timeout, t.ToSimpleConditionFunc())
 	}
+}
+
+// ToRecoverFn converts the TaskFn to a RecoverFn that ignores the incoming error.
+func (t TaskFn) ToRecoverFn() RecoverFn {
+	return func(_ error) error {
+		return t()
+	}
+}
+
+// Recover creates a new TaskFn that recovers an error with the given RecoverFn.
+func (t TaskFn) Recover(recoverFn RecoverFn) TaskFn {
+	return func() error {
+		if err := t(); err != nil {
+			return recoverFn(err)
+		}
+		return nil
+	}
+}
+
+// RecoverTimeout creates a new TaskFn that recovers a timeout error with the given RecoverFn.
+func (t TaskFn) RecoverTimeout(recoverFn RecoverFn) TaskFn {
+	return t.Recover(func(err error) error {
+		if utils.IsTimedOut(err) {
+			return recoverFn(err)
+		}
+		return err
+	})
 }
