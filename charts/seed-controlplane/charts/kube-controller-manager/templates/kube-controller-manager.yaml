@@ -76,6 +76,8 @@ spec:
         - --concurrent-deployment-syncs=10
         - --concurrent-replicaset-syncs=10
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
+        - --horizontal-pod-autoscaler-downscale-delay=15m
+        - --horizontal-pod-autoscaler-upscale-delay=1m
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
         - --pod-eviction-timeout=2m0s
