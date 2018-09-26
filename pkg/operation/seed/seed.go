@@ -124,6 +124,10 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 	if err != nil {
 		return err
 	}
+	gardenerExternalAdmissionController, err := imageVector.FindImage("gardener-external-admission-controller", k8sGardenClient.Version())
+	if err != nil {
+		return err
+	}
 
 	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
@@ -140,9 +144,10 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 	return common.ApplyChart(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"images": map[string]interface{}{
-			"prometheus":         prometheusVersion.String(),
-			"configmap-reloader": configMapReloader.String(),
-			"pause-container":    pauseContainer.String(),
+			"prometheus":                             prometheusVersion.String(),
+			"configmap-reloader":                     configMapReloader.String(),
+			"pause-container":                        pauseContainer.String(),
+			"gardener-external-admission-controller": gardenerExternalAdmissionController.String(),
 		},
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{

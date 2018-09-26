@@ -31,11 +31,8 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
 )
-
-const pvLabelInitializerName = "pvlabel.kubernetes.io"
 
 func (c *Controller) shootCareAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
@@ -159,8 +156,6 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	// Trigger garbage collection
 	go garbageCollection(botanist)
 
-	go mitigatePvLabels(botanist)
-
 	// Trigger health check
 	conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = healthCheck(botanist, cloudBotanist, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)
 
@@ -178,36 +173,6 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	c.labelShoot(shoot, healthy)
 
 	return nil
-}
-
-func isCloudSpecificPersistentVolume(pv *corev1.PersistentVolume) bool {
-	volumeSource := pv.Spec.PersistentVolumeSource
-	return volumeSource.AWSElasticBlockStore != nil ||
-		volumeSource.GCEPersistentDisk != nil ||
-		volumeSource.AzureDisk != nil ||
-		volumeSource.AzureFile != nil ||
-		volumeSource.VsphereVolume != nil ||
-		volumeSource.PhotonPersistentDisk != nil
-}
-
-func mitigatePvLabels(botanist *botanistpkg.Botanist) {
-	pvs, err := botanist.K8sShootClient.Clientset().CoreV1().PersistentVolumes().List(metav1.ListOptions{IncludeUninitialized: true})
-	if err != nil {
-		botanist.Logger.Warn("Could not fetch persistent volumes, skipping PV label mitigation")
-		return
-	}
-	for _, pv := range pvs.Items {
-		if common.HasInitializer(pv.Initializers, pvLabelInitializerName) && !isCloudSpecificPersistentVolume(&pv) {
-			pv.Initializers = common.RemoveInitializer(pv.Initializers, pvLabelInitializerName)
-			_, err := botanist.K8sShootClient.Clientset().CoreV1().PersistentVolumes().Update(&pv)
-			if err != nil {
-				botanist.Logger.Warnf("Could not remove PV label initializer from %q", pv.Name)
-				continue
-			}
-
-			botanist.Logger.Infof("Removed PV initializer from %q", pv.Name)
-		}
-	}
 }
 
 func (c *defaultCareControl) updateShootStatus(shoot *gardenv1beta1.Shoot, conditions ...gardenv1beta1.Condition) (*gardenv1beta1.Shoot, error) {

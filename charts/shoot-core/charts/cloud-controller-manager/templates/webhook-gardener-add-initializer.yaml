@@ -1,0 +1,51 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: persistent-volume-binder-initializer
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - persistentvolumes
+  verbs:
+  - initialize
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: persistent-volume-binder-initializer
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: persistent-volume-binder-initializer
+subjects:
+- kind: ServiceAccount
+  name: persistent-volume-binder
+  namespace: kube-system
+---
+apiVersion: {{ include "webhookadmissionregistration" . }}
+kind: MutatingWebhookConfiguration
+metadata:
+  name: add-initializers-only-for-cloud-pvs
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+webhooks:
+- name: add-initializers-only-for-cloud-pvs.gardener.cloud
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - persistentvolumes
+  failurePolicy: Fail
+  clientConfig:
+    url: https://gardener-external-admission-controller.garden/webhooks/mutate-pv-initializers
+    caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURZRENDQWtpZ0F3SUJBZ0lVUy94QmlSMW5Ob2EyK2NseVJRenBQYVJTcmtJd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1NERUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdUQWtOQk1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaApibU5wYzJOdk1SUXdFZ1lEVlFRREV3dGxlR0Z0Y0d4bExtNWxkREFlRncweE9EQTVNall4TURJMU1EQmFGdzB5Ck16QTVNalV4TURJMU1EQmFNRWd4Q3pBSkJnTlZCQVlUQWxWVE1Rc3dDUVlEVlFRSUV3SkRRVEVXTUJRR0ExVUUKQnhNTlUyRnVJRVp5WVc1amFYTmpiekVVTUJJR0ExVUVBeE1MWlhoaGJYQnNaUzV1WlhRd2dnRWlNQTBHQ1NxRwpTSWIzRFFFQkFRVUFBNElCRHdBd2dnRUtBb0lCQVFDM0F2TXZRM01FQndXak5tZjRFR0RyZ1p6dGY3dldBRXZBCmltNUZRYmpQSkdqME1ZZThBRHJwTHh3Y0RGZzQzWXdnVjcvVTVOaGl0a3lpREU3SUh1QnNoa2VkaWFCK3JadkIKaldqQ3EzVytpOVEvN3dUMWY5VVRwOG52RC9WYVBGc0tkNnhNeklPSjlKdGU2NCtyTkRTUzBkcDRVb1grZEdvKwo3NUNXZzNXc1BuU0J6ZEpUYk5uSVJtZ2pRdCsrZWg0VXdvaHIrUTNyZmUvckwxcm5mVUNkbEdSUDl6ZEdhMUFmCmtVMkVNTjBmQWZRUXVwcEdBM1hiaHJMT0Q4MzFFYzVKV2JudTNuTUNLUWlxa0cwZXZDZW9EYk1iMEtuOHRUNGcKM3BOWXF4NWZ4WlBwdm5FZHdtYlY2TytSdDNpQ256TWFmakk3WUlWV3lFdjdtMGVTaURCakFnTUJBQUdqUWpCQQpNQTRHQTFVZER3RUIvd1FFQXdJQkJqQVBCZ05WSFJNQkFmOEVCVEFEQVFIL01CMEdBMVVkRGdRV0JCVFdhQlp6CnJuUHBlUFNDT3Y2b252QUlwWTdQbHpBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQXRoQzdkdTNUeW82WDRPZXEKdjNZMjd5cTlQSkJzVkhKZk5udnJDanp1dDVtOHVBc1hoY1o5OEE3YmxOUlFKSHV3S0JrWFkzams1dEJObnhRKwpyWis3U3U1Ty8rYUFTQXJNT2gwR21XUXhMaE5yaEFtVmEyU3l4bGZvdk9RRHNKYjhza1JKbHcwbUtUK0w4VG1pClBsV2h4RGR5WjhOQ3ZlOFZGdVgxcEZZUjd6YkFPak1CcmNvSjNTdllDVWYwYWY4VFRybkx3b0lrUW9YTS9SbC8KZENjVlc0OHRrR29xdjVBWWpTSWpiUnpXa2s3R0dHRXV4TC9VWThZNmI5bWg3TjVRa3YvVXVBaXdUeDBYbXBPbQpQdmo0VXZmejcwT0NRRnQ3VW5md3VDc1JIVit3aXVlNVRFa2dZWmk3endTM0kzMzNOY3NZWXlGR2tEMGNNUmt4CjRJWU1yUT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
