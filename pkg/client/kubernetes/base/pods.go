@@ -110,17 +110,6 @@ func (c *Client) DeletePod(namespace, name string) error {
 
 // DeletePodForcefully will forcefully delete a Pod with the given <name> in the given <namespace>.
 func (c *Client) DeletePodForcefully(namespace, name string) error {
-	var (
-		zero               int64
-		backgroundDeletion = metav1.DeletePropagationBackground
-
-		// forceful pod deletion options
-		forceDeleteOptions = metav1.DeleteOptions{
-			GracePeriodSeconds: &zero,
-			PropagationPolicy:  &backgroundDeletion,
-		}
-	)
-
 	return c.clientset.CoreV1().Pods(namespace).Delete(name, &forceDeleteOptions)
 }
 

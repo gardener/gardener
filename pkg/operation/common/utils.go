@@ -15,7 +15,6 @@
 package common
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -29,6 +28,7 @@ import (
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/json-iterator/go"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +36,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"time"
 )
+
+var json = jsoniter.ConfigFastest
 
 // ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
 // release's namespace <namespace> and two maps <defaultValues>, <additionalValues>, and renders the template
@@ -352,7 +355,7 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 	return references
 }
 
-// HasInitializer checks whether the passed name is part of the pending initializers
+// HasInitializer checks whether the passed name is part of the pending initializers.
 func HasInitializer(initializers *metav1.Initializers, name string) bool {
 	if initializers == nil {
 		return false
@@ -365,7 +368,7 @@ func HasInitializer(initializers *metav1.Initializers, name string) bool {
 	return false
 }
 
-// RemoveInitializer removes the passed initializer name from the pending initializers
+// RemoveInitializer removes the passed initializer name from the pending initializers.
 func RemoveInitializer(initializers *metav1.Initializers, name string) *metav1.Initializers {
 	if initializers == nil {
 		return nil
@@ -413,4 +416,21 @@ func ReadLeaderElectionRecord(k8sClient kubernetes.Client, lock, namespace, name
 	}
 
 	return &leaderElectionRecord, nil
+}
+
+// GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
+var GardenerDeletionGracePeriod = 1 * time.Minute
+
+// ShouldObjectBeRemoved determines whether the given object should be gone now.
+// This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
+// is unset, the object should not be removed - i.e. this returns false.
+// Otherwise, it is checked whether the deletionTimestamp is before the current time minus the
+// grace period.
+func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
+	deletionTimestamp := obj.GetDeletionTimestamp()
+	if deletionTimestamp == nil {
+		return false
+	}
+
+	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }

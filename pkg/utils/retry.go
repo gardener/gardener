@@ -40,6 +40,18 @@ func NewTimedOutWithError(waitTime time.Duration, lastError error) error {
 	return &timedOutWithError{lastError, waitTime}
 }
 
+// IsTimedOut determines whether the given error is a timed out error.
+func IsTimedOut(err error) bool {
+	switch err.(type) {
+	case *timedOut:
+		return true
+	case *timedOutWithError:
+		return true
+	default:
+		return false
+	}
+}
+
 type timedOut struct {
 	waitTime time.Duration
 }
@@ -90,22 +102,21 @@ func Retry(interval time.Duration, timeout time.Duration, f ConditionFunc) error
 // RetryUntil retries <f> until it either succeeds, fails severely or the given channel <stopCh>
 // is closed. Between each tries, it sleeps for <interval>.
 func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc) error {
+	type result struct {
+		success bool
+		severe  bool
+		err     error
+	}
 	var (
 		lastError error
 		startTime = time.Now()
+		out       = make(chan result)
 	)
 	for {
-		success, severe, err := f()
-		if err != nil {
-			if severe {
-				return err
-			}
-
-			lastError = err
-			logger.Logger.Error(err)
-		} else if success {
-			return nil
-		}
+		go func() {
+			success, severe, err := f()
+			out <- result{success, severe, err}
+		}()
 
 		select {
 		case <-stopCh:
@@ -114,7 +125,17 @@ func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc)
 				return NewTimedOut(waitTime)
 			}
 			return NewTimedOutWithError(waitTime, lastError)
-		default:
+		case res := <-out:
+			if res.err != nil {
+				if res.severe {
+					return res.err
+				}
+
+				lastError = res.err
+				logger.Logger.Error(res.err)
+			} else if res.success {
+				return nil
+			}
 		}
 
 		time.Sleep(interval)

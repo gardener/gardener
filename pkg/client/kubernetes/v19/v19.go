@@ -15,19 +15,23 @@
 package kubernetesv19
 
 import (
-	kubernetesbase "github.com/gardener/gardener/pkg/client/kubernetes/base"
-	"k8s.io/client-go/kubernetes"
+	"github.com/gardener/gardener/pkg/client/kubernetes/base"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
-// New returns a new Kubernetes v1.9 client.
-func New(config *rest.Config, clientset *kubernetes.Clientset, clientConfig clientcmd.ClientConfig) (*Client, error) {
-	baseClient, err := kubernetesbase.New(config, clientset, clientConfig)
+// NewForConfig returns a new Kubernetes v1.9 client.
+func NewForConfig(config *rest.Config) (*Client, error) {
+	baseClient, err := kubernetesbase.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
+
+	return NewFrom(baseClient), nil
+}
+
+// NewFrom creates a new client from the given kubernetesbase.Client.
+func NewFrom(baseClient *kubernetesbase.Client) *Client {
 	return &Client{
 		Client: baseClient,
-	}, nil
+	}
 }

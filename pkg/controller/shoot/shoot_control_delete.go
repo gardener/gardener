@@ -168,17 +168,24 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as
 		// LoadBalancers, volumes, ...). We do that by deleting all namespaces other than the three standard
 		// namespaces which cannot be deleted (kube-system, default, kube-public). In those three namespaces
-		// we delete all CRDs, workload, services and PVCs. Only if none of those resources remain, we go
-		// ahead and trigger the infrastructure deletion.
+		// we delete all CRDs, workload, services and PVCs.
+		// If the deletion of a CRD or an API service fails, then it is force deleted.
 		cleanCustomResourceDefinitions = g.Add(flow.Task{
-			Name:         "Cleaning custom resource definitions",
-			Fn:           flow.TaskFn(botanist.CleanCustomResourceDefinitions).RetryUntilTimeout(defaultInterval, 5*time.Minute).DoIf(cleanupShootResources),
+			Name: "Cleaning custom resource definitions",
+			Fn: flow.TaskFn(botanist.CleanCustomResourceDefinitions).RetryUntilTimeout(defaultInterval, 5*time.Minute).DoIf(cleanupShootResources).
+				RecoverTimeout(flow.TaskFn(botanist.ForceDeleteCustomResourceDefinitions).RetryUntilTimeout(defaultInterval, 2*time.Minute).ToRecoverFn()),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive),
+		})
+		cleanCustomAPIServices = g.Add(flow.Task{
+			Name: "Cleaning custom API service definitions",
+			Fn: flow.TaskFn(botanist.CleanupCustomAPIServices).RetryUntilTimeout(defaultInterval, 5*time.Minute).DoIf(cleanupShootResources).
+				RecoverTimeout(flow.TaskFn(botanist.ForceDeleteCustomAPIServices).RetryUntilTimeout(defaultInterval, 2*time.Minute).ToRecoverFn()),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive),
 		})
 		cleanKubernetesResources = g.Add(flow.Task{
 			Name:         "Cleaning kubernetes resources",
 			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).RetryUntilTimeout(defaultInterval, 5*time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(cleanCustomResourceDefinitions),
+			Dependencies: flow.NewTaskIDs(cleanCustomResourceDefinitions, cleanCustomAPIServices),
 		})
 		destroyMachines = g.Add(flow.Task{
 			Name:         "Destroying Shoot workers",
