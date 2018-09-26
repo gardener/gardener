@@ -29,6 +29,7 @@ import (
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -132,11 +133,11 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 	// Determine project object for given namespace.
 	project, err := common.ProjectForNamespace(h.projectLister, request.Name)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Namespace does not belong to a project. Deletion is allowed.
+			return admissionResponse(true, "")
+		}
 		return errToAdmissionResponse(err)
-	}
-	if project == nil {
-		// Namespace does not belong to a project. Deletion is allowed.
-		return admissionResponse(true, "")
 	}
 
 	// We do not receive the namespace object in the `.object` field of the admission request. Hence, we need to get it ourselves.
