@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 
+	"time"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
@@ -36,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"time"
 )
 
 var json = jsoniter.ConfigFastest
@@ -366,20 +367,6 @@ func HasInitializer(initializers *metav1.Initializers, name string) bool {
 		}
 	}
 	return false
-}
-
-// RemoveInitializer removes the passed initializer name from the pending initializers.
-func RemoveInitializer(initializers *metav1.Initializers, name string) *metav1.Initializers {
-	if initializers == nil {
-		return nil
-	}
-	var updatedInitializers []metav1.Initializer
-	for _, initializer := range initializers.Pending {
-		if initializer.Name != name {
-			updatedInitializers = append(updatedInitializers, initializer)
-		}
-	}
-	return &metav1.Initializers{Pending: updatedInitializers, Result: initializers.Result}
 }
 
 // ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.

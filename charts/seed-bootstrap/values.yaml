@@ -52,3 +52,4 @@ replicas:
 images:
   pause-container: image-repository:image-tag
   prometheus: image-repository:image-tag
+  gardener-external-admission-controller: image-repository:image-tag

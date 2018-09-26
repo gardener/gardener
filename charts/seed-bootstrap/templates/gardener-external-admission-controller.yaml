@@ -1,0 +1,78 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gardener-external-admission-controller-tls
+  namespace: garden
+type: kubernetes.io/tls
+data:
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVSRENDQXl5Z0F3SUJBZ0lVYlBtK3NXanI1TXhhSlREemxudGNqZ1FOSGIwd0RRWUpLb1pJaHZjTkFRRUwKQlFBd1NERUxNQWtHQTFVRUJoTUNWVk14Q3pBSkJnTlZCQWdUQWtOQk1SWXdGQVlEVlFRSEV3MVRZVzRnUm5KaApibU5wYzJOdk1SUXdFZ1lEVlFRREV3dGxlR0Z0Y0d4bExtNWxkREFnRncweE9EQTVNall4TURVM01EQmFHQTh5Ck1URTRNRGt3TWpFd05UY3dNRm93UlRFTE1Ba0dBMVVFQmhNQ1ZWTXhDekFKQmdOVkJBZ1RBa05CTVJZd0ZBWUQKVlFRSEV3MVRZVzRnUm5KaGJtTnBjMk52TVJFd0R3WURWUVFERXdobllYSmtaVzVsY2pDQ0FTSXdEUVlKS29aSQpodmNOQVFFQkJRQURnZ0VQQURDQ0FRb0NnZ0VCQUxzUEJidzQxbnJkVkpwaTFQV2ZXVEZkYktnRmlrR2w5N2FUCnJZQUN0bUVYdWlhMzdja2k2SGVwR0R3SlNwc3ZUcWsrbFZJdHgxaERlMTlRQkxheHpBSTJqNjZIUmt6aWY3czQKL3NlaWg2OHR5RnJ1QXdsbXpoekEzbThWZ1hISm9QSVdEeEZ3YVJCR1paMmVTZzJ5Uk1nU0xIeTB6K1loaG5CWApwd0FQd05OdU5pNEJDZm4zZ3pFeXdzNGd6amozMSsxNkNDQzBGdzcyT3ZNdW1aRlhhOTZnYUEyNUNrdDRPWXJlCmdmaU0wNnNtek1zQlRPRnNaMzhjN1FqMWlBbUtESytObWkxMVB4UittcGkrYXQza2thakY3SS9GcTdWT05reEsKV1lHVWIxS2NqQm9BOVR2U3BvRkx3cnFOTENjUGtld3E0c2pSN0xQMzU2OWdweSt1Y0ZNQ0F3RUFBYU9DQVNVdwpnZ0VoTUE0R0ExVWREd0VCL3dRRUF3SUZvREFUQmdOVkhTVUVEREFLQmdnckJnRUZCUWNEQVRBTUJnTlZIUk1CCkFmOEVBakFBTUIwR0ExVWREZ1FXQkJSRVQvL3dYUUVyNGhJUzE4V3E5WGpKekNyaEd6QWZCZ05WSFNNRUdEQVcKZ0JUV2FCWnpyblBwZVBTQ092Nm9udkFJcFk3UGx6Q0Jxd1lEVlIwUkJJR2pNSUdnZ2labllYSmtaVzVsY2kxbAplSFJsY201aGJDMWhaRzFwYzNOcGIyNHRZMjl1ZEhKdmJHeGxjb0l0WjJGeVpHVnVaWEl0WlhoMFpYSnVZV3d0CllXUnRhWE56YVc5dUxXTnZiblJ5YjJ4c1pYSXVaMkZ5WkdWdWdqRm5ZWEprWlc1bGNpMWxlSFJsY201aGJDMWgKWkcxcGMzTnBiMjR0WTI5dWRISnZiR3hsY2k1bllYSmtaVzR1YzNaamdoUm9iM04wTG1SdlkydGxjaTVwYm5SbApjbTVoYkRBTkJna3Foa2lHOXcwQkFRc0ZBQU9DQVFFQWtqQ05zaTdwcjZiYmFncUcwUVFyZllPeEhpZWlwYmdMCnYzK3Zuc012V2xHSWJweGM4c2RxdVpxYkpob2NFOGUzbGF4NnNCeW5WZG9Geld6VlhhRDhaWHNmU092V0w2ZXUKWnZuZklFN2laUVkxUERldlIyN2dvTE0xY2ZPQTJJM0FxalI4eng0ZUVJQnlNenBTeElseWJLaHRtcTJtOTNuVwpick1nVUFuR2pvbEtmTEt6QnZaUU85RVFRbXhETy9kTG5UQ3JyaHg2cU00NWk5b0lrOWszMDZOQmtoU3FtelpNCmFvUDg4OGtkTDhWQ1BxYUNoVVZvUHg2R3JpSnZiNnROcm01cWFzTEZWOU1ONE5rUGlJZ1lpSlVKdGZBUEpiOWoKMlhibDNKU0lHWElrWW1NZDJTVE5sM0FXa3pmWGM5TVlqVTgxK3czKzFiM2lzM1Q3MjRzMVBnPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBdXc4RnZEaldldDFVbW1MVTlaOVpNVjFzcUFXS1FhWDN0cE90Z0FLMllSZTZKcmZ0CnlTTG9kNmtZUEFsS215OU9xVDZWVWkzSFdFTjdYMUFFdHJITUFqYVByb2RHVE9KL3V6ait4NktIcnkzSVd1NEQKQ1diT0hNRGVieFdCY2NtZzhoWVBFWEJwRUVabG5aNUtEYkpFeUJJc2ZMVFA1aUdHY0ZlbkFBL0EwMjQyTGdFSgorZmVETVRMQ3ppRE9PUGZYN1hvSUlMUVhEdlk2OHk2WmtWZHIzcUJvRGJrS1MzZzVpdDZCK0l6VHF5Yk15d0ZNCjRXeG5meHp0Q1BXSUNZb01yNDJhTFhVL0ZINmFtTDVxM2VTUnFNWHNqOFdydFU0MlRFcFpnWlJ2VXB5TUdnRDEKTzlLbWdVdkN1bzBzSncrUjdDcml5Tkhzcy9mbnIyQ25MNjV3VXdJREFRQUJBb0lCQUdSNzFHUGcwRzVkMk9XNgpNNVhpVEtKMUFqcGNCNEh1YXR2OEJwYWVYbVJYdjVxdThTQThEVTdDV2c5ZUdtSzBqZmZpYzRvYXAxd2xtKzkrClo1blFkcnUxbllkdWlYZ2hyK1hkM3hkVW1yaWl5bDcyUGxGZGxWaml6bG96M2o1R3hwdGsrQ0V4Rm04MHNiOXkKMldyMEdYaTBNb3VuQVlzbzlUUUNFZWE1ajZiRFFPSi82b25uaEVjQlpGa1J3TVVjSExkLzVlcXRWMnlyYUhPVQo1OVVKUFltV0llYkhrWDNuSnVhS043Szh2RXllZWRyM1RoNkpVbnN3OU43aldrdWUwZ1FQNFF3UEtFckdYMjVvCjRQSlVXRGxDU1B4ZHE5VGZMRjhzZVNZcDNCSGFJQzVnMFp5c3FXckV6aEdJZjhzOXlhK1IzRlprVlA2V0p3YUoKL0FnQTBNa0NnWUVBelFWTEo0QjRCZXNZYW1KMnZOTVRMaDdCYStwM3VzU3VIZTk5blk2U0NLM09VbStYOC9HKwpMbFBDTGViMWpMN1V1RlBlazM5bkplU0FRT1IwakZFRkJKa20rSmdZU2pkd3lMUVVvTkRYOWdaTFRqNVFKSElvCnQzMUVmNGJ1RDViSTAxWGlCdTM3NkRRUEx1YUtncGxFM1kwNUJDdVEvQ1FsMkFyRy9JT3pLRzBDZ1lFQTZaSloKQy9KRjdyelEwM1JMaTF3ZzBPY29KYzlZd1hmcmlWa2pjQmk1U0g5aEVIRGQ1dk05OStPc3BBVjFaZUJMZlFPNwprVGowUFlrTU5JbjA5eWxnSVdFYWtZY3EwcWh1WVJUc1dEQnorSmQxYXRvSUFnaWIrb01oR250TzFBM0hFWm5JCjl3aWxqTGhja3ZlM3NpL3dhS21rbUE0Z2w2YkJJTTV4Qno5eUE3OENnWUVBd2ExcGhPU1kvY1pNcDF0akhoZ3MKTzFwMGtKVE1ESlQyZzNNVjhMeVplamR1L0hOTlVmY2lHVE9vOGFJSWY3QmExZEx0SmR1cVBxS3hBaHlQZVdxawpXZWF3YVJHTmlMYjlCYTBRKzZhdkRVeCs0V2grWHgrMUZUbnlkcUtweS9JK3YxNlhpc0pSUWRmRUxDTS80QVlZCmgwOTgrRktMd1pZSVppSXdQcVhQbnJVQ2dZQlI2RFk5MERuaDNHakduak9YclRqOHlQTDFQMTc2aVZrWmt4NncKUXB0RzV4UmN0WmU3VTNWWnBvZDJCVXdENjhITkZ6QUJYeDJYTHFZUERvbk8ycjJSTndJZ0lteEw3ekMxN3FacQp6cUw4ZS9CN0JmWms4Q3Z5ajJWZWFmdGN0WEFucGV3cFpPalpEaFc0bkJIWTlLS3pzVG04OE1kUkp2TDIxQzRpCndvYnk5UUtCZ0QyS1pkZ3ZCVXZrYURjU3krMDkyUCtGY3RvOHQ0SkdKQk8yOS9aVmdXa284T25BRER1aTJiSnUKcGZFeWRNQjJHQmhNU3IyZncxRU5YKzBDc2ZZNnZiNFprbHBScG1RMmYrczZtRTFUWVFhTC9xWDJjVzhxWDUrOQo4OXh0aS81aWNZYzhUb1VhOEZTeU53UCtiYU9tR3doVnNZRUExOGFqVzA5Q3BLWEdlRUhuCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: gardener-external-admission-controller
+  namespace: garden
+  labels:
+    app: gardener
+    role: external-admission-controller
+spec:
+  revisionHistoryLimit: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gardener
+      role: external-admission-controller
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+      labels:
+        app: gardener
+        role: external-admission-controller
+    spec:
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: gardener-external-admission-controller
+        image: {{ index .Values.images "gardener-external-admission-controller" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -secure-port=2730
+        - -tls-cert-file=/srv/gardener-external-admission-controller/tls.crt
+        - -tls-private-key-file=/srv/gardener-external-admission-controller/tls.key
+        env:
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - mountPath: /srv/gardener-external-admission-controller
+          name: gardener-external-admission-controller-tls
+          readOnly: true
+      volumes:
+      - name: gardener-external-admission-controller-tls
+        secret:
+          secretName: gardener-external-admission-controller-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardener-external-admission-controller
+  namespace: garden
+  labels:
+    app: gardener
+    role: external-admission-controller
+spec:
+  type: ClusterIP
+  selector:
+    app: gardener
+    role: external-admission-controller
+  ports:
+  - name: web
+    port: 443
+    protocol: TCP
+    targetPort: 2730
