@@ -261,7 +261,7 @@ spec:
   # (when using the Kubernetes datastore).  Use one replica for every 100-200 nodes.  In
   # production, we recommend running at least 3 replicas to reduce the impact of rolling upgrade.
   replicas: 0
-  revisionHistoryLimit: 2
+  revisionHistoryLimit: 0
   template:
     metadata:
       labels:
