@@ -49,7 +49,6 @@ func NewForConfig(config *rest.Config) (*Client, error) {
 		restClient: clientset.Discovery().RESTClient(),
 
 		resourceAPIGroups: map[string][]string{
-			APIServices:               {"apis", "apiregistration.k8s.io", "v1beta1"},
 			CronJobs:                  {"apis", "batch", "v1beta1"},
 			CustomResourceDefinitions: {"apis", "apiextensions.k8s.io", "v1beta1"},
 			DaemonSets:                {"apis", "apps", "v1"},

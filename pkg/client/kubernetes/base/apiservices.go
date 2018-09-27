@@ -32,6 +32,11 @@ func (c *Client) ListAPIServices(opts metav1.ListOptions) (*apiregistrationv1.AP
 	return c.apiServices().List(opts)
 }
 
+// DeleteAPIService will gracefully delete an APIService with the given <name>.
+func (c *Client) DeleteAPIService(name string) error {
+	return c.apiServices().Delete(name, &defaultDeleteOptions)
+}
+
 // DeleteAPIServiceForcefully will forcefully delete an APIService with the given <name>.
 func (c *Client) DeleteAPIServiceForcefully(name string) error {
 	apiService, err := c.apiServices().Get(name, metav1.GetOptions{})

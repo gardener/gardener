@@ -32,7 +32,6 @@ func NewForConfig(config *rest.Config) (*Client, error) {
 
 // NewFrom creates a new client from the given kubernetesv19.Client.
 func NewFrom(v19Client *kubernetesv19.Client) *Client {
-	v19Client.SetResourceAPIGroup(kubernetesbase.APIServices, []string{"apis", "apiregistration.k8s.io", "v1"})
 	return &Client{Client: v19Client}
 }
 

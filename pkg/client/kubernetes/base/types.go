@@ -68,9 +68,6 @@ const (
 	// CustomResourceDefinitions is a constant for a Kubernetes resource with the same name.
 	CustomResourceDefinitions = "customresourcedefinitions"
 
-	// APIServices is a constant for a Kubernetes resource with the same name.
-	APIServices = "apiservices"
-
 	// DaemonSets is a constant for a Kubernetes resource with the same name.
 	DaemonSets = "daemonsets"
 

@@ -27,20 +27,18 @@ import (
 )
 
 var (
-	customResourceDefinitionExceptions = map[string]bool{
-		"felixconfigurations.crd.projectcalico.org":   true,
-		"bgppeers.crd.projectcalico.org":              true,
-		"bgpconfigurations.crd.projectcalico.org":     true,
-		"ippools.crd.projectcalico.org":               true,
-		"clusterinformations.crd.projectcalico.org":   true,
-		"globalnetworkpolicies.crd.projectcalico.org": true,
-		"globalnetworksets.crd.projectcalico.org":     true,
-		"networkpolicies.crd.projectcalico.org":       true,
-		"hostendpoints.crd.projectcalico.org":         true,
-	}
-
 	exceptions = map[string]map[string]bool{
-		kubernetesbase.CustomResourceDefinitions: customResourceDefinitionExceptions,
+		kubernetesbase.CustomResourceDefinitions: map[string]bool{
+			"felixconfigurations.crd.projectcalico.org":   true,
+			"bgppeers.crd.projectcalico.org":              true,
+			"bgpconfigurations.crd.projectcalico.org":     true,
+			"ippools.crd.projectcalico.org":               true,
+			"clusterinformations.crd.projectcalico.org":   true,
+			"globalnetworkpolicies.crd.projectcalico.org": true,
+			"globalnetworksets.crd.projectcalico.org":     true,
+			"networkpolicies.crd.projectcalico.org":       true,
+			"hostendpoints.crd.projectcalico.org":         true,
+		},
 		kubernetesbase.DaemonSets: {
 			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem): true,
 			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):  true,
@@ -117,7 +115,7 @@ func (b *Botanist) ForceDeleteCustomResourceDefinitions() error {
 
 	var result error
 	for _, crd := range crdList.Items {
-		if omit, ok := customResourceDefinitionExceptions[crd.Name]; !ok || !omit {
+		if omit, ok := exceptions[kubernetesbase.CustomResourceDefinitions][crd.Name]; !ok || !omit {
 			if err := b.K8sShootClient.DeleteCRDForcefully(crd.Name); err != nil && !apierrors.IsNotFound(err) {
 				result = multierror.Append(result, err)
 			}
@@ -129,16 +127,20 @@ func (b *Botanist) ForceDeleteCustomResourceDefinitions() error {
 // CleanupCustomAPIServices deletes all the custom API services in the Kubernetes cluster.
 // It will wait until all resources have been cleaned up.
 func (b *Botanist) CleanupCustomAPIServices() error {
-	var (
-		apiGroups           = b.K8sShootClient.GetResourceAPIGroups()
-		resource            = kubernetesbase.APIServices
-		apiServiceGroupPath = apiGroups[resource]
-	)
-
-	if err := b.K8sShootClient.CleanupAPIGroupResources(exceptions, resource, apiServiceGroupPath); err != nil {
+	apiServiceList, err := b.K8sShootClient.ListAPIServices(metav1.ListOptions{})
+	if err != nil {
 		return err
 	}
-	return b.waitForAPIGroupCleanedUp(apiServiceGroupPath, resource)
+
+	var result error
+	for _, apiService := range apiServiceList.Items {
+		if apiService.Spec.Service != nil {
+			if err := b.K8sShootClient.DeleteAPIService(apiService.Name); err != nil && !apierrors.IsNotFound(err) {
+				result = multierror.Append(result, err)
+			}
+		}
+	}
+	return result
 }
 
 // ForceDeleteCustomAPIServices forcefully deletes all custom API services,

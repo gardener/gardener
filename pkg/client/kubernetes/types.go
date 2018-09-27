@@ -133,6 +133,7 @@ type Client interface {
 
 	// APIServices
 	ListAPIServices(metav1.ListOptions) (*apiregistrationv1.APIServiceList, error)
+	DeleteAPIService(name string) error
 	DeleteAPIServiceForcefully(name string) error
 
 	// Arbitrary manifests
