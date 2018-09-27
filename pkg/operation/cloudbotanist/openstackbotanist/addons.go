@@ -41,7 +41,6 @@ func (b *OpenStackBotanist) GenerateAdmissionControlConfig() (map[string]interfa
 				"Provisioner":    "kubernetes.io/cinder",
 				"Parameters": map[string]interface{}{
 					"availability": b.Shoot.Info.Spec.Cloud.OpenStack.Zones[0],
-					"type":         "default",
 				},
 			},
 		},
