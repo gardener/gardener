@@ -310,6 +310,10 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 				"memory": "1Gi",
 			},
 		}
+		defaultValues["horizontalPodAutoscaler"] = map[string]interface{}{
+			"downscaleDelay": "24h",
+			"upscaleDelay":   "1m",
+		}
 	}
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
