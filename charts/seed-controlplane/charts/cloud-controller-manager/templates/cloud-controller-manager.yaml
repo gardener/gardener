@@ -6,10 +6,6 @@ metadata:
   labels:
     app: kubernetes
     role: cloud-controller-manager
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "10253"
-    prometheus.io/name: cloud-controller-manager
 spec:
   type: ClusterIP
   clusterIP: None

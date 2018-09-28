@@ -37,6 +37,11 @@ Drops metrics which produce lots of time-series without much gain.
   action: drop
 {{- end -}}
 
+{{- define "prometheus.keep-metrics.metric-relabel-config" -}}
+- source_labels: [ __name__ ]
+  regex: ^({{ . | join "|" }})$
+  action: keep
+{{- end -}}
 
 {{- define "prometheus.tls-config.kube-cert-auth" -}}
 ca_file: /etc/prometheus/seed/ca.crt

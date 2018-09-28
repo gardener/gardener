@@ -5,16 +5,13 @@ metadata:
   namespace: {{ .Release.Namespace }}
 data:
   prometheus.yaml: |
-    # All services in the {{ .Release.Namespace }} and shoot's kube-system that are annotated with
+    # All services in the {{ .Release.Namespace }} and that are annotated with
     # * `prometheus.io/scrape`: Only scrape services that have a value of `true`
     # * `prometheus.io/scheme`: If the metrics endpoint is secured then you will need to set this to `https` & most likely set the `tls_config` of the scrape config.
     # * `prometheus.io/path`: If the metrics path is not `/metrics` override this.
     # * `prometheus.io/port`: If the metrics are exposed on a different port to the service then set this appropriately. Use this when multiple ports are avaible by the pod.
     # * `prometheus.io/name`: job name label to be applied to all metrics from that service.
-    # exceptions are:
-    # * kube-apiserver
-    # * kubelet (both in seed and shoot)
-    # * kube-state-metrics (both in seed and shoot)
+    # take note that there is a limit of 500 samples per target
 
     global:
       evaluation_interval: 30s
@@ -34,37 +31,42 @@ data:
             names: [{{ .Release.Namespace }}]
         scheme: http
         relabel_configs:
-        - source_labels: [__meta_kubernetes_service_label_component]
+        - source_labels: [ __meta_kubernetes_service_label_component ]
           action: keep
           regex: alertmanager
-        - source_labels: [__meta_kubernetes_service_label_role]
+        - source_labels: [ __meta_kubernetes_service_label_role ]
           action: keep
           regex: monitoring
-        - source_labels: [__meta_kubernetes_endpoint_port_name]
+        - source_labels: [ __meta_kubernetes_endpoint_port_name ]
           action: keep
           regex: metrics
     scrape_configs:
-    - job_name: 'kube-etcd3'
+    - job_name: kube-etcd3
       scheme: https
       tls_config:
-        ca_file: /srv/kubernetes/etcd/ca/ca.crt
+        # This is needed because the etcd's certificates are not are generated
+        # for a specific pod IP
+        insecure_skip_verify: true
         cert_file: /srv/kubernetes/etcd/client/tls.crt
         key_file: /srv/kubernetes/etcd/client/tls.key
       kubernetes_sd_configs:
-      - role: service
+      - role: endpoints
         namespaces:
           names: [{{ .Release.Namespace }}]
       relabel_configs:
-      - source_labels: [__meta_kubernetes_service_label_app]
+      - source_labels:
+        - __meta_kubernetes_service_label_app
+        - __meta_kubernetes_endpoint_port_name
         action: keep
-        regex: etcd-statefulset
-      - source_labels: [__meta_kubernetes_service_label_role]
+        regex: etcd-statefulset;client
+      - source_labels: [ __meta_kubernetes_service_label_role ]
         target_label: role
-      - source_labels: [__meta_kubernetes_service_port_name]
-        action: keep
-        regex: client
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeETCD3 | indent 6 }}
 
-    - job_name: 'kube-apiserver'
+    - job_name: kube-apiserver
       scheme: https
       kubernetes_sd_configs:
       - role: endpoints
@@ -77,21 +79,19 @@ data:
         cert_file: /etc/prometheus/seed/prometheus.crt
         key_file: /etc/prometheus/seed/prometheus.key
       relabel_configs:
-      - source_labels: [__meta_kubernetes_service_name]
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
         action: keep
-        regex: kube-apiserver
-      - source_labels: [__meta_kubernetes_endpoint_port_name]
-        action: keep
-        regex: kube-apiserver
-      - source_labels: [__meta_kubernetes_pod_name]
+        regex: kube-apiserver;kube-apiserver
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod
       metric_relabel_configs:
-      - source_labels: [ __name__ ]
-        regex: ^apiserver_admission_.+$
-        action: drop
-{{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeAPIServer | indent 6 }}
 
-    - job_name: 'kube-kubelet'
+    - job_name: kube-kubelet
       honor_labels: false
       scheme: https
       tls_config:
@@ -106,7 +106,7 @@ data:
         tls_config:
 {{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
-      - source_labels: [__meta_kubernetes_node_address_InternalIP]
+      - source_labels: [ __meta_kubernetes_node_address_InternalIP ]
         target_label: instance
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
@@ -114,26 +114,9 @@ data:
         replacement: shoot
       # get system services
       metric_relabel_configs:
-      - source_labels: [id]
-        action: replace
-        regex: '^/system\.slice/(.+)\.service$'
-        target_label: systemd_service_name
-        replacement: '${1}'
-      # We want to keep only metrics in kube-system namespace
-      - source_labels: [namespace]
-        action: keep
-        regex: kube-system
-      # Drop metrics that are useless and high-volume
-      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
-      - source_labels: [ __name__ ]
-        regex: ^rest_client_request_latency_seconds.+$
-        action: drop
-      - source_labels: [ __name__ ]
-        regex: ^(etcd|reflector)_.+
-        action: drop
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubelet | indent 6 }}
 
-    # As of K8S v1.7.3 cAdvisor metrics are located at <kubelet-address>/metrics/cadvisor
-    - job_name: 'cadvisor'
+    - job_name: cadvisor
       honor_labels: false
       scheme: https
       metrics_path: /metrics/cadvisor
@@ -149,7 +132,7 @@ data:
         tls_config:
 {{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
-      - source_labels: [__meta_kubernetes_node_address_InternalIP]
+      - source_labels: [ __meta_kubernetes_node_address_InternalIP ]
         target_label: instance
       - action: labelmap
         regex: __meta_kubernetes_node_label_(.+)
@@ -157,16 +140,14 @@ data:
         replacement: shoot
       metric_relabel_configs:
       # We want to keep only metrics in kube-system namespace
-      - source_labels: [namespace]
+      - source_labels: [ namespace ]
         action: keep
-        regex: kube-system
-      # Drop metrics that are useless and high-volume
-      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
-      - source_labels: [ __name__ ]
-        regex: ^container_({{ .Values.cadvisorAllowedMetrics | join "|" }})$
-        action: keep
+        # systemd containers don't have namespaces
+        regex: (^$|^kube-system$)
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
       - source_labels: [ container_name ]
-        regex: ^POD$
+        # The system container POD is used for networking
+        regex: ^POD$;^({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})$
         action: drop
       # get system services
       - source_labels: [ id ]
@@ -179,7 +160,7 @@ data:
 
     # We fetch kubelet metrics from seed's kube-system Prometheus and filter
     # the metrics in shoot's namespace
-    - job_name: 'kube-kubelet-seed'
+    - job_name: kube-kubelet-seed
       metrics_path: /federate
       params:
         'match[]':
@@ -192,7 +173,7 @@ data:
       - target_label: namespace
         replacement: kube-system
 
-    - job_name: 'kube-state-metrics'
+    - job_name: kube-state-metrics
       scheme: http
       honor_labels: false
       # Service is used, because we only care about metric from one kube-state-metrics instance
@@ -202,12 +183,12 @@ data:
         namespaces:
           names: [{{ .Release.Namespace }}]
       relabel_configs:
-      - source_labels: [__meta_kubernetes_service_label_component]
+      - source_labels: [ __meta_kubernetes_service_label_component ]
         action: keep
         regex: kube-state-metrics
-      - source_labels: [__meta_kubernetes_service_port_name]
+      - source_labels: [ __meta_kubernetes_service_port_name ]
         action: keep
-      - source_labels: [__meta_kubernetes_service_label_type]
+      - source_labels: [ __meta_kubernetes_service_label_type ]
         regex: (.+)
         target_label: type
         replacement: ${1}
@@ -217,6 +198,10 @@ data:
       # we make the shoot's pods in the shoot's namepsace to apear in as its in the kube-system
       - target_label: namespace
         replacement: kube-system
+      - source_labels: [ pod ]
+        regex: ^.+\.tf-pod.+$
+        action: drop
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeStateMetrics | indent 6 }}
 
     - job_name: 'annotated-seed-service-endpoints'
       honor_labels: false
@@ -224,29 +209,159 @@ data:
       - role: endpoints
         namespaces:
           names: [{{ .Release.Namespace }}]
+      sample_limit: 500
       relabel_configs:
 {{ include "prometheus.service-endpoints.relabel-config" . | indent 6 }}
       metric_relabel_configs:
 {{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
 
-    - job_name: 'annotated-shoot-service-endpoints'
+    - job_name: kube-controller-manager
       honor_labels: false
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
-          names: [kube-system]
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: kube-controller-manager;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeControllerManager | indent 6 }}
+
+    - job_name: kube-scheduler
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: kube-scheduler;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeScheduler | indent 6 }}
+
+    - job_name: cloud-controller-manager
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: cloud-controller-manager;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cloudControllerManager | indent 6 }}
+
+    - job_name: alertmanager
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: alertmanager-client;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
+
+    - job_name: prometheus
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: prometheus-web;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.prometheus | indent 6 }}
+
+    - job_name: coredns
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [ kube-system ]
         api_server: kube-apiserver
         tls_config:
 {{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
-      - source_labels: [__meta_kubernetes_service_label_addonmanager_kubernetes_io_mode]
-        regex: (.+)
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
         action: keep
-{{ include "prometheus.service-endpoints.relabel-config" . | indent 6 }}
+        regex: kube-dns;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
       metric_relabel_configs:
-{{ include "prometheus.drop-metrics.metric-relabel-config" . | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.coredns | indent 6 }}
 
-    - job_name: 'vpn-connection'
+    - job_name: node-exporter
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [ kube-system ]
+        api_server: kube-apiserver
+        tls_config:
+{{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: node-exporter;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
+
+    - job_name: vpn-connection
       honor_labels: false
       scrape_interval: 15s
       scrape_timeout: 5s
@@ -261,10 +376,10 @@ data:
         namespaces:
           names: [{{ .Release.Namespace }}]
       relabel_configs:
-      - source_labels: [__meta_kubernetes_pod_container_port_name]
+      - source_labels: [ __meta_kubernetes_pod_container_port_name ]
         action: keep
         regex: blackbox-export
       - action: labelmap
         regex: __meta_kubernetes_pod_label_(.+)
-      - source_labels: [__meta_kubernetes_pod_name]
+      - source_labels: [ __meta_kubernetes_pod_name ]
         target_label: pod

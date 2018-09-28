@@ -6,10 +6,6 @@ metadata:
   labels:
     component: alertmanager
     role: monitoring
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "9093"
-    prometheus.io/name: alertmanager
 spec:
   ports:
   - port: 9093

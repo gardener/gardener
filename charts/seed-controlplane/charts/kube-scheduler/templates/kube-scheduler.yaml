@@ -6,17 +6,13 @@ metadata:
   labels:
     app: kubernetes
     role: scheduler
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "10251"
-    prometheus.io/name: kube-scheduler
 spec:
   type: ClusterIP
   clusterIP: None
   ports:
-    - name: metrics
-      port: 10251
-      protocol: TCP
+  - name: metrics
+    port: 10251
+    protocol: TCP
   selector:
     app: kubernetes
     role: scheduler

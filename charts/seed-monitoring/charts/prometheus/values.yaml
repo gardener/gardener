@@ -8,8 +8,8 @@
 
 images:
   prometheus: image-repository:image-tag
-  configmap-reloader: image-repository:image-tag
   vpn-seed: image-repository:image-tag
+  blackbox-exporter: image-repository:image-tag
 
 ingress:
   host: p.seed-1.example.com
@@ -24,18 +24,122 @@ replicas: 1
 apiserverServiceIP: 100.10.10.10
 port: 9090
 
-cadvisorAllowedMetrics:
-# container metrics without the container_
-- last_seen
-- fs_usage_bytes
-- fs_inodes_total
-- fs_limit_bytes
-- network_receive_bytes_total
-- network_transmit_bytes_total
-- cpu_cfs_periods_total
-- cpu_usage_seconds_total
-- memory_usage_bytes
-- memory_working_set_bytes
+allowedMetrics:
+  alertManager:
+  - alertmanager_config_hash
+  - alertmanager_config_last_reload_successful
+  - process_max_fds
+  - process_open_fds
+  cAdvisor:
+  - container_cpu_cfs_periods_total
+  - container_cpu_usage_seconds_total
+  - container_fs_inodes_total
+  - container_fs_limit_bytes
+  - container_fs_usage_bytes
+  - container_last_seen
+  - container_memory_cache
+  - container_memory_failcnt
+  - container_memory_failures_total
+  - container_memory_rss
+  - container_memory_usage_bytes
+  - container_memory_working_set_bytes
+  - container_network_receive_bytes_total
+  - container_network_transmit_bytes_total
+  - container_spec_cpu_shares
+  - container_spec_memory_limit_bytes
+  - machine_cpu_cores
+  - machine_memory_bytes
+  coredns:
+  - process_max_fds
+  - process_open_fds
+  cloudControllerManager:
+  - process_max_fds
+  - process_open_fds
+  kubeAPIServer:
+  - apiserver_request_count
+  - apiserver_request_latencies_bucket
+  - process_max_fds
+  - process_open_fds
+  kubeControllerManager:
+  - process_max_fds
+  - process_open_fds
+  kubelet:
+  - kubelet_pod_start_latency_microseconds
+  - kubelet_running_pod_count
+  - process_max_fds
+  - process_open_fds
+  kubeETCD3:
+  - etcd_disk_backend_commit_duration_seconds_bucket
+  - etcd_disk_wal_fsync_duration_seconds_bucket
+  - etcd_server_has_leader
+  - etcd_server_leader_changes_seen_total
+  - etcd_server_proposals_failed_total
+  - process_max_fds
+  - process_open_fds
+  kubeScheduler:
+  - scheduler_binding_latency_microseconds_bucket
+  - scheduler_e2e_scheduling_latency_microseconds_bucket
+  - scheduler_scheduling_algorithm_latency_microseconds_bucket
+  - process_max_fds
+  - process_open_fds
+  kubeStateMetrics:
+  - kube_deployment_metadata_generation
+  - kube_deployment_spec_replicas
+  - kube_deployment_status_observed_generation
+  - kube_deployment_status_replicas
+  - kube_deployment_status_replicas_available
+  - kube_deployment_status_replicas_unavailable
+  - kube_deployment_status_replicas_updated
+  - kube_node_spec_unschedulable
+  - kube_node_status_allocatable_cpu_cores
+  - kube_node_status_allocatable_memory_bytes
+  - kube_node_status_capacity_pods
+  - kube_node_status_condition
+  - kube_pod_container_info
+  - kube_pod_container_resource_limits_cpu_cores
+  - kube_pod_container_resource_limits_memory_bytes
+  - kube_pod_container_resource_requests_memory_bytes
+  - kube_pod_container_status_restarts_total
+  - kube_pod_info
+  - kube_pod_labels
+  - kube_pod_status_phase
+  - kube_statefulset_metadata_generation
+  - kube_statefulset_replicas
+  - kube_statefulset_status_observed_generation
+  - kube_statefulset_status_replicas
+  - process_max_fds
+  - process_open_fds
+  nodeExporter:
+  - node_load1
+  - node_load5
+  - node_load15
+  - node_nf_conntrack_entries
+  - node_nf_conntrack_entries_limit
+  - process_max_fds
+  - process_open_fds
+  prometheus:
+  - process_max_fds
+  - process_open_fds
+  - process_resident_memory_bytes
+  - process_virtual_memory_bytes
+  - prometheus_config_last_reload_successful
+  - prometheus_engine_query_duration_seconds
+  - prometheus_rule_group_duration_seconds
+  - prometheus_rule_group_iterations_missed_total
+  - prometheus_rule_group_iterations_total
+  - prometheus_tsdb_blocks_loaded
+  - prometheus_tsdb_compactions_failed_total
+  - prometheus_tsdb_compactions_total
+  - prometheus_tsdb_compactions_triggered_total
+  - prometheus_tsdb_head_active_appenders
+  - prometheus_tsdb_head_chunks
+  - prometheus_tsdb_head_gc_duration_seconds
+  - prometheus_tsdb_head_gc_duration_seconds_count
+  - prometheus_tsdb_head_samples_appended_total
+  - prometheus_tsdb_head_series
+  - prometheus_tsdb_reloads_failures_total
+  - prometheus_tsdb_reloads_total
+  - prometheus_tsdb_wal_corruptions_total
 
 seed:
   apiserver: https://api.foo.bar

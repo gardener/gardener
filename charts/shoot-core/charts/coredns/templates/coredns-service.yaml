@@ -3,8 +3,10 @@ kind: Service
 metadata:
   name: kube-dns
   namespace: kube-system
+{{- if .Values.service.annotations }}
   annotations:
 {{ .Values.service.annotations | toYaml | trimSuffix "\n" | indent 4  }}
+{{- end }}
   labels:
     k8s-app: kube-dns
     kubernetes.io/cluster-service: "true"
@@ -25,3 +27,6 @@ spec:
     port: {{ .Values.service.port }}
     targetPort: {{ .Values.service.targetPort }}
     protocol: TCP
+  - name: metrics
+    port: {{ .Values.service.metricsPort }}
+    targetPort: {{ .Values.service.metricsPort }}

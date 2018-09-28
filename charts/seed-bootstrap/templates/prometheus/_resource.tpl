@@ -10,3 +10,9 @@ resource per object, object weight and base resource quantity.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "prometheus.keep-metrics.metric-relabel-config" -}}
+- source_labels: [ __name__ ]
+  regex: ^({{ . | join "|" }})$
+  action: keep
+{{- end -}}
