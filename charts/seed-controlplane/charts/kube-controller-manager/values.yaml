@@ -19,3 +19,6 @@ resources:
   limits:
     cpu: 500m
     memory: 512Mi
+horizontalPodAutoscaler:
+  downscaleDelay: 15m
+  upscaleDelay: 1m
