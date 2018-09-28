@@ -8,9 +8,9 @@ metadata:
   {{- if $storageClass.IsDefaultClass }}
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
-  {{- end}}
+  {{- end }}
   labels:
-    addonmanager.kubernetes.io/mode: Exists
+    addonmanager.kubernetes.io/mode: Reconcile
 provisioner: {{ $storageClass.Provisioner }}
 parameters:
 {{- if $storageClass.Parameters }}
