@@ -36,7 +36,7 @@ func (b *OpenStackBotanist) GenerateAdmissionControlConfig() (map[string]interfa
 	return map[string]interface{}{
 		"StorageClasses": []map[string]interface{}{
 			{
-				"Name":           "default",
+				"Name":           "default-class",
 				"IsDefaultClass": true,
 				"Provisioner":    "kubernetes.io/cinder",
 				"Parameters": map[string]interface{}{
