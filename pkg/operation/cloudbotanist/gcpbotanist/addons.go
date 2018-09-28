@@ -31,8 +31,8 @@ func (b *GCPBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateAdmissionControlConfig generates values which are required to render the chart admissions-controls properly.
-func (b *GCPBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
+// GenerateStorageClassesConfig generates values which are required to render the chart storage-classes properly.
+func (b *GCPBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"StorageClasses": []map[string]interface{}{
 			{

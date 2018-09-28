@@ -1,8 +1,9 @@
 cloudConfigContent: {}
+storageClassesContent: {}
 coreAddonsContent: {}
-admissionControlsContent: {}
-replicas: 1
 optionalAddonsContent: {}
+
+replicas: 1
 podAnnotations: {}
 images:
   kube-addon-manager: image-repository:image-tag

@@ -32,11 +32,11 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 	if err != nil {
 		return err
 	}
-	coreAddons, err := b.generateCoreAddonsChart()
+	storageClasses, err := b.generateStorageClassesChart()
 	if err != nil {
 		return err
 	}
-	admissionControls, err := b.generateAdmissionControlsChart()
+	coreAddons, err := b.generateCoreAddonsChart()
 	if err != nil {
 		return err
 	}
@@ -50,10 +50,10 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 	}
 
 	defaultValues := map[string]interface{}{
-		"cloudConfigContent":       cloudConfig.Files,
-		"coreAddonsContent":        coreAddons.Files,
-		"admissionControlsContent": admissionControls.Files,
-		"optionalAddonsContent":    optionalAddons.Files,
+		"cloudConfigContent":    cloudConfig.Files,
+		"storageClassesContent": storageClasses.Files,
+		"coreAddonsContent":     coreAddons.Files,
+		"optionalAddonsContent": optionalAddons.Files,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-addon-manager": b.CheckSums[name],
 		},

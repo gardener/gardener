@@ -14,7 +14,11 @@
 
 package openstackbotanist
 
-import "github.com/gardener/gardener/pkg/operation/common"
+import (
+	"github.com/gardener/gardener/pkg/operation/common"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // DeployKube2IAMResources - Not needed on OpenStack
 func (b *OpenStackBotanist) DeployKube2IAMResources() error {
@@ -31,8 +35,14 @@ func (b *OpenStackBotanist) GenerateKube2IAMConfig() (map[string]interface{}, er
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateAdmissionControlConfig generates values which are required to render the chart admissions-controls properly.
-func (b *OpenStackBotanist) GenerateAdmissionControlConfig() (map[string]interface{}, error) {
+// GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
+func (b *OpenStackBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
+	// Delete legacy storage class (named "default") as we can't update the parameters (this legacy class
+	// did set `.parameters.type=default`).
+	if err := b.K8sShootClient.Clientset().StorageV1().StorageClasses().Delete("default", &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
 	return map[string]interface{}{
 		"StorageClasses": []map[string]interface{}{
 			{

@@ -236,14 +236,14 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	})
 }
 
-// generateAdmissionControlsChart renders the kube-addon-manager configuration for the admission control
-// extensions. It will be stored as a ConfigMap and mounted into the Pod. The configuration contains
-// specially labelled Kubernetes manifests which will be created and periodically reconciled.
-func (b *HybridBotanist) generateAdmissionControlsChart() (*chartrenderer.RenderedChart, error) {
-	config, err := b.ShootCloudBotanist.GenerateAdmissionControlConfig()
+// generateStorageClassesChart renders the kube-addon-manager configuration for the storage classes.
+// It will be stored as a ConfigMap and mounted into the Pod. The configuration contains specially labelled
+// Kubernetes manifests which will be created and periodically reconciled.
+func (b *HybridBotanist) generateStorageClassesChart() (*chartrenderer.RenderedChart, error) {
+	config, err := b.ShootCloudBotanist.GenerateStorageClassesConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-admission-controls"), "admission-controls", metav1.NamespaceSystem, config)
+	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-storageclasses"), "storageclasses", metav1.NamespaceSystem, config)
 }

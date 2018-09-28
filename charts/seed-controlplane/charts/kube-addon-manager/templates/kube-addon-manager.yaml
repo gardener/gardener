@@ -17,7 +17,8 @@ spec:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        checksum/configmap-admission-controls: {{ include (print $.Template.BasePath "/admission-controls.yaml") . | sha256sum }}
+        checksum/secret-cloud-config: {{ include (print $.Template.BasePath "/cloud-config.yaml") . | sha256sum }}
+        checksum/secret-storageclasses: {{ include (print $.Template.BasePath "/storageclasses.yaml") . | sha256sum }}
         checksum/secret-core-addons: {{ include (print $.Template.BasePath "/core-addons.yaml") . | sha256sum }}
         checksum/secret-optional-addons: {{ include (print $.Template.BasePath "/optional-addons.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
@@ -42,7 +43,7 @@ spec:
           # addon-manager executes kubectl apply -f /etc/kubernetes/addons/, but because there are hidden ../data files,
           # it applies every single file 2 times.
         - name: ADDON_PATH
-          value: "/etc/kubernetes/addons/cloud-config/..data/.,/etc/kubernetes/addons/core/..data/.{{ if .Values.optionalAddonsContent }},/etc/kubernetes/addons/optional/..data/.{{ end }}"
+          value: "/etc/kubernetes/addons/storageclasses/..data/.,/etc/kubernetes/addons/cloud-config/..data/.,/etc/kubernetes/addons/core/..data/.{{ if .Values.optionalAddonsContent }},/etc/kubernetes/addons/optional/..data/.{{ end }}"
         resources:
           requests:
             cpu: 100m
@@ -54,14 +55,14 @@ spec:
         - mountPath: /etc/kubernetes/addons/cloud-config
           name: cloud-config
           readOnly: true
+        - mountPath: /etc/kubernetes/addons/storageclasses
+          name: storageclasses
+          readOnly: true
         - mountPath: /etc/kubernetes/addons/core
           name: core-addons
           readOnly: true
         - mountPath: /etc/kubernetes/addons/optional
           name: optional-addons
-          readOnly: true
-        - mountPath: /etc/kubernetes/admission-controls
-          name: admission-controls
           readOnly: true
         - mountPath: /var/lib/kube-addon-manager
           name: kube-addon-manager
@@ -70,12 +71,12 @@ spec:
       - name: kube-addon-manager
         secret:
           secretName: kube-addon-manager
-      - name: admission-controls
-        configMap:
-          name: kube-addon-manager-admission-controls
       - name: cloud-config
         secret:
           secretName: kube-addon-manager-cloud-config
+      - name: storageclasses
+        secret:
+          secretName: kube-addon-manager-storageclasses
       - name: core-addons
         secret:
           secretName: kube-addon-manager-core-addons
