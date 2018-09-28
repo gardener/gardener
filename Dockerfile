@@ -9,7 +9,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
   ./...
 
 #############      apiserver     #############
-FROM alpine:3.7 AS apiserver
+FROM alpine:3.8 AS apiserver
 
 RUN apk add --update bash curl
 
@@ -20,7 +20,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-apiserver"]
 
 ############# controller-manager #############
-FROM alpine:3.7 AS controller-manager
+FROM alpine:3.8 AS controller-manager
 
 RUN apk add --update bash curl openvpn
 
@@ -32,7 +32,7 @@ WORKDIR /
 ENTRYPOINT ["/gardener-controller-manager"]
 
 ############# external-admission-controller #############
-FROM alpine:3.7 AS external-admission-controller
+FROM alpine:3.8 AS external-admission-controller
 
 RUN apk add --update bash curl
 

@@ -12,7 +12,7 @@ images:
 - name: gardener-external-admission-controller
   sourceRepository: github.com/gardener/gardener
   repository: eu.gcr.io/gardener-project/gardener/external-admission-controller
-  tag: "v1"
+  tag: "v2"
 
 # Seed controlplane
 - name: etcd
