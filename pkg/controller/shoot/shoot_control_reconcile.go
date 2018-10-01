@@ -215,8 +215,8 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace
 	if o.Shoot.Info.Namespace == common.GardenNamespace {
-		if shootUsedAsSeed, protected, visible := helper.IsUsedAsSeed(o.Shoot.Info); shootUsedAsSeed {
-			if err := botanist.RegisterAsSeed(protected, visible); err != nil {
+		if o.ShootedSeed != nil {
+			if err := botanist.RegisterAsSeed(o.ShootedSeed.Protected, o.ShootedSeed.Visible); err != nil {
 				o.Logger.Errorf("Could not register Shoot %q as Seed: %+v", o.Shoot.Info.Name, err)
 			}
 		} else {

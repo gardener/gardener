@@ -26,6 +26,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"strconv"
 )
 
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
@@ -293,52 +295,234 @@ func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, c
 	return false, "", nil
 }
 
-// IsUsedAsSeed determines whether the Shoot has been marked to be registered automatically as a Seed cluster.
-// The first return value indicates whether it has been marked at all.
-// The second return value indicates whether the Shoot should be registered as "protected" Seed.
-// The third return value indicates whether the Shoot should be registered as "visible" Seed.
-func IsUsedAsSeed(shoot *gardenv1beta1.Shoot) (bool, *bool, *bool) {
-	if shoot.Namespace != common.GardenNamespace {
-		return false, nil, nil
+type ShootedSeed struct {
+	Protected *bool
+	Visible   *bool
+	APIServer *ShootedSeedAPIServer
+}
+
+type ShootedSeedAPIServer struct {
+	Replicas   *int32
+	Autoscaler *ShootedSeedAPIServerAutoscaler
+}
+
+type ShootedSeedAPIServerAutoscaler struct {
+	MinReplicas *int32
+	MaxReplicas int32
+}
+
+func parseInt32(s string) (int32, error) {
+	i64, err := strconv.ParseInt(s, 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return int32(i64), nil
+}
+
+func parseShootedSeed(annotation string) (*ShootedSeed, error) {
+	var (
+		flags    = make(map[string]struct{})
+		settings = make(map[string]string)
+
+		trueVar  = true
+		falseVar = false
+
+		shootedSeed ShootedSeed
+	)
+
+	for _, fragment := range strings.Split(annotation, ",") {
+		parts := strings.SplitN(fragment, "=", 2)
+		if len(parts) == 1 {
+			flags[fragment] = struct{}{}
+			continue
+		}
+
+		settings[parts[0]] = parts[1]
+	}
+
+	if _, ok := flags["true"]; !ok {
+		return nil, nil
+	}
+
+	apiServer, err := parseShootedSeedAPIServer(settings)
+	if err != nil {
+		return nil, err
+	}
+
+	shootedSeed.APIServer = apiServer
+
+	if _, ok := flags["protected"]; ok {
+		shootedSeed.Protected = &trueVar
+	}
+	if _, ok := flags["unprotected"]; ok {
+		shootedSeed.Protected = &falseVar
+	}
+	if _, ok := flags["visible"]; ok {
+		shootedSeed.Visible = &trueVar
+	}
+	if _, ok := flags["invisible"]; ok {
+		shootedSeed.Visible = &falseVar
+	}
+
+	return &shootedSeed, nil
+}
+
+func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServer, error) {
+	apiServerAutoscaler, err := parseShootedSeedAPIServerAutoscaler(settings)
+	if err != nil {
+		return nil, err
+	}
+
+	replicasString, ok := settings["apiServer.replicas"]
+	if !ok && apiServerAutoscaler == nil {
+		return nil, nil
+	}
+
+	var apiServer ShootedSeedAPIServer
+
+	apiServer.Autoscaler = apiServerAutoscaler
+
+	if ok {
+		replicas, err := parseInt32(replicasString)
+		if err != nil {
+			return nil, err
+		}
+
+		apiServer.Replicas = &replicas
+	}
+
+	return &apiServer, nil
+}
+
+func parseShootedSeedAPIServerAutoscaler(settings map[string]string) (*ShootedSeedAPIServerAutoscaler, error) {
+	minReplicasString, ok1 := settings["apiServer.autoscaler.minReplicas"]
+	maxReplicasString, ok2 := settings["apiServer.autoscaler.maxReplicas"]
+	if !ok1 && !ok2 {
+		return nil, nil
+	}
+	if !ok2 {
+		return nil, fmt.Errorf("apiSrvMaxReplicas has to be specified for shooted seed API server autoscaler")
+	}
+
+	var apiServerAutoscaler ShootedSeedAPIServerAutoscaler
+
+	if ok1 {
+		minReplicas, err := parseInt32(minReplicasString)
+		if err != nil {
+			return nil, err
+		}
+		apiServerAutoscaler.MinReplicas = &minReplicas
+	}
+
+	maxReplicas, err := parseInt32(maxReplicasString)
+	if err != nil {
+		return nil, err
+	}
+	apiServerAutoscaler.MaxReplicas = maxReplicas
+
+	return &apiServerAutoscaler, nil
+}
+
+func validateShootedSeed(shootedSeed *ShootedSeed, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if shootedSeed.APIServer != nil {
+		allErrs = append(validateShootedSeedAPIServer(shootedSeed.APIServer, fldPath.Child("apiServer")))
+	}
+
+	return allErrs
+}
+
+func validateShootedSeedAPIServer(apiServer *ShootedSeedAPIServer, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if apiServer.Replicas != nil && *apiServer.Replicas < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("replicas"), *apiServer.Replicas, "must be greater than 0"))
+	}
+	if apiServer.Autoscaler != nil {
+		allErrs = append(allErrs, validateShootedSeedAPIServerAutoscaler(apiServer.Autoscaler, fldPath.Child("autoscaler"))...)
+	}
+
+	return allErrs
+}
+
+func validateShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServerAutoscaler, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if autoscaler.MinReplicas != nil && *autoscaler.MinReplicas < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("minReplicas"), *autoscaler.MinReplicas, "must be greater than 0"))
+	}
+	if autoscaler.MaxReplicas < 1 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxReplicas"), autoscaler.MaxReplicas, "must be greater than 0"))
+	}
+	if autoscaler.MinReplicas != nil && autoscaler.MaxReplicas < *autoscaler.MinReplicas {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxReplicas"), autoscaler.MaxReplicas, "must be greater than or equal to `minReplicas`"))
+	}
+
+	return allErrs
+}
+
+func setDefaults_ShootedSeed(shootedSeed *ShootedSeed) {
+	if shootedSeed.APIServer == nil {
+		shootedSeed.APIServer = &ShootedSeedAPIServer{}
+	}
+	setDefaults_ShootedSeedAPIServer(shootedSeed.APIServer)
+}
+
+func setDefaults_ShootedSeedAPIServer(apiServer *ShootedSeedAPIServer) {
+	if apiServer.Replicas == nil {
+		three := int32(3)
+		apiServer.Replicas = &three
+	}
+	if apiServer.Autoscaler == nil {
+		apiServer.Autoscaler = &ShootedSeedAPIServerAutoscaler{
+			MaxReplicas: 3,
+		}
+	}
+	setDefaults_ShootedSeedAPIServerAutoscaler(apiServer.Autoscaler)
+}
+
+func minInt32(a int32, b int32) int32 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func setDefaults_ShootedSeedAPIServerAutoscaler(autoscaler *ShootedSeedAPIServerAutoscaler) {
+	if autoscaler.MinReplicas == nil {
+		minReplicas := minInt32(3, autoscaler.MaxReplicas)
+		autoscaler.MinReplicas = &minReplicas
+	}
+}
+
+// ReadShootedSeed determines whether the Shoot has been marked to be registered automatically as a Seed cluster.
+func ReadShootedSeed(shoot *gardenv1beta1.Shoot) (*ShootedSeed, error) {
+	if shoot.Namespace != common.GardenNamespace || shoot.Annotations == nil {
+		return nil, nil
 	}
 
 	val, ok := shoot.Annotations[common.ShootUseAsSeed]
 	if !ok {
-		return false, nil, nil
+		return nil, nil
 	}
 
-	var (
-		trueVar  = true
-		falseVar = false
-
-		usages = map[string]bool{}
-
-		useAsSeed bool
-		protected *bool
-		visible   *bool
-	)
-
-	for _, u := range strings.Split(val, ",") {
-		usages[u] = true
+	shootedSeed, err := parseShootedSeed(val)
+	if err != nil {
+		return nil, err
 	}
 
-	if _, ok := usages["true"]; ok {
-		useAsSeed = true
-	}
-	if _, ok := usages["protected"]; ok {
-		protected = &trueVar
-	}
-	if _, ok := usages["unprotected"]; ok {
-		protected = &falseVar
-	}
-	if _, ok := usages["visible"]; ok {
-		visible = &trueVar
-	}
-	if _, ok := usages["invisible"]; ok {
-		visible = &falseVar
+	if shootedSeed == nil {
+		return nil, nil
 	}
 
-	return useAsSeed, protected, visible
+	setDefaults_ShootedSeed(shootedSeed)
+
+	if errs := validateShootedSeed(shootedSeed, nil); len(errs) > 0 {
+		return nil, errs.ToAggregate()
+	}
+
+	return shootedSeed, nil
 }
 
 // Coder is an error that may produce an ErrorCode visible to the outside.
