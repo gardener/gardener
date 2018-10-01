@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -207,10 +206,14 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
-		defaultValues["replicas"] = 3
-		defaultValues["minReplicas"] = 3
-		defaultValues["maxReplicas"] = 3
+	if b.ShootedSeed != nil {
+		var (
+			apiServer  = b.ShootedSeed.APIServer
+			autoscaler = apiServer.Autoscaler
+		)
+		defaultValues["replicas"] = *apiServer.Replicas
+		defaultValues["minReplicas"] = *autoscaler.MinReplicas
+		defaultValues["maxReplicas"] = autoscaler.MaxReplicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "1500m",
@@ -303,7 +306,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+	if b.ShootedSeed != nil {
 		defaultValues["resources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "750m",
@@ -348,7 +351,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		return err
 	}
 
-	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+	if b.ShootedSeed != nil {
 		defaultValues["resources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "500m",
@@ -384,7 +387,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+	if b.ShootedSeed != nil {
 		defaultValues["resources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "300m",

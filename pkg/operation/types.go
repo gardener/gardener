@@ -16,6 +16,7 @@ package operation
 
 import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -38,6 +39,7 @@ type Operation struct {
 	Garden               *garden.Garden
 	Seed                 *seed.Seed
 	Shoot                *shoot.Shoot
+	ShootedSeed          *helper.ShootedSeed
 	K8sGardenClient      kubernetes.Client
 	K8sGardenInformers   gardeninformers.Interface
 	K8sSeedClient        kubernetes.Client

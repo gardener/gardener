@@ -24,6 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	trueVar  = true
+	falseVar = false
+)
+
 var _ = Describe("helper", func() {
 	Describe("#GetCondition", func() {
 		It("should return the found condition", func() {
@@ -53,8 +58,27 @@ var _ = Describe("helper", func() {
 		})
 	})
 
-	Describe("#IsUsedAsSeed", func() {
-		var shoot *gardenv1beta1.Shoot
+	Describe("#ReadShootedSeed", func() {
+		var (
+			shoot              *gardenv1beta1.Shoot
+			defaultReplicas    int32 = 3
+			defaultMinReplicas int32 = 3
+			defaultMaxReplicas int32 = 3
+
+			defaultAPIServerAutoscaler = ShootedSeedAPIServerAutoscaler{
+				MinReplicas: &defaultMinReplicas,
+				MaxReplicas: defaultMaxReplicas,
+			}
+
+			defaultAPIServer = ShootedSeedAPIServer{
+				Replicas:   &defaultReplicas,
+				Autoscaler: &defaultAPIServerAutoscaler,
+			}
+
+			defaultShootedSeed = ShootedSeed{
+				APIServer: &defaultAPIServer,
+			}
+		)
 
 		BeforeEach(func() {
 			shoot = &gardenv1beta1.Shoot{
@@ -68,19 +92,17 @@ var _ = Describe("helper", func() {
 		It("should return false,nil,nil because shoot is not in the garden namespace", func() {
 			shoot.Namespace = "default"
 
-			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+			shootedSeed, err := ReadShootedSeed(shoot)
 
-			Expect(useAsSeed).To(BeFalse())
-			Expect(protected).To(BeNil())
-			Expect(visible).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(BeNil())
 		})
 
 		It("should return false,nil,nil because annotation is not set", func() {
-			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+			shootedSeed, err := ReadShootedSeed(shoot)
 
-			Expect(useAsSeed).To(BeFalse())
-			Expect(protected).To(BeNil())
-			Expect(visible).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(BeNil())
 		})
 
 		It("should return false,nil,nil because annotation is set with no usages", func() {
@@ -88,11 +110,10 @@ var _ = Describe("helper", func() {
 				common.ShootUseAsSeed: "",
 			}
 
-			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+			shootedSeed, err := ReadShootedSeed(shoot)
 
-			Expect(useAsSeed).To(BeFalse())
-			Expect(protected).To(BeNil())
-			Expect(visible).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(BeNil())
 		})
 
 		It("should return true,nil,nil because annotation is set with normal usage", func() {
@@ -100,11 +121,10 @@ var _ = Describe("helper", func() {
 				common.ShootUseAsSeed: "true",
 			}
 
-			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+			shootedSeed, err := ReadShootedSeed(shoot)
 
-			Expect(useAsSeed).To(BeTrue())
-			Expect(protected).To(BeNil())
-			Expect(visible).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(Equal(&defaultShootedSeed))
 		})
 
 		It("should return true,true,true because annotation is set with protected and visible usage", func() {
@@ -112,13 +132,14 @@ var _ = Describe("helper", func() {
 				common.ShootUseAsSeed: "true,protected,visible",
 			}
 
-			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+			shootedSeed, err := ReadShootedSeed(shoot)
 
-			Expect(useAsSeed).To(BeTrue())
-			Expect(protected).NotTo(BeNil())
-			Expect(visible).NotTo(BeNil())
-			Expect(*protected).To(BeTrue())
-			Expect(*visible).To(BeTrue())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(Equal(&ShootedSeed{
+				Protected: &trueVar,
+				Visible:   &trueVar,
+				APIServer: &defaultAPIServer,
+			}))
 		})
 
 		It("should return true,true,true because annotation is set with unprotected and invisible usage", func() {
@@ -126,13 +147,84 @@ var _ = Describe("helper", func() {
 				common.ShootUseAsSeed: "true,unprotected,invisible",
 			}
 
-			useAsSeed, protected, visible := IsUsedAsSeed(shoot)
+			shootedSeed, err := ReadShootedSeed(shoot)
 
-			Expect(useAsSeed).To(BeTrue())
-			Expect(protected).NotTo(BeNil())
-			Expect(visible).NotTo(BeNil())
-			Expect(*protected).To(BeFalse())
-			Expect(*visible).To(BeFalse())
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(Equal(&ShootedSeed{
+				Protected: &falseVar,
+				Visible:   &falseVar,
+				APIServer: &defaultAPIServer,
+			}))
+		})
+
+		It("should return a filled apiserver config", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,apiServer.replicas=1,apiServer.autoscaler.minReplicas=2,apiServer.autoscaler.maxReplicas=3",
+			}
+
+			shootedSeed, err := ReadShootedSeed(shoot)
+
+			var (
+				one   int32 = 1
+				two   int32 = 2
+				three int32 = 3
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(Equal(&ShootedSeed{
+				APIServer: &ShootedSeedAPIServer{
+					Replicas: &one,
+					Autoscaler: &ShootedSeedAPIServerAutoscaler{
+						MinReplicas: &two,
+						MaxReplicas: three,
+					},
+				},
+			}))
+		})
+
+		It("should fail due to maxReplicas not being specified", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=2",
+			}
+
+			_, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail due to API server replicas being less than one", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,apiServer.replicas=0",
+			}
+
+			_, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail due to API server autoscaler minReplicas being less than one", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,apiServer.autoscaler.minReplicas=0,apiServer.autoscaler.maxReplicas=1",
+			}
+
+			_, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail due to API server autoscaler maxReplicas being less than one", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=0",
+			}
+
+			_, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail due to API server autoscaler minReplicas being greater than maxReplicas", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,apiServer.autoscaler.maxReplicas=1,apiServer.autoscaler.minReplicas=2",
+			}
+
+			_, err := ReadShootedSeed(shoot)
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })
