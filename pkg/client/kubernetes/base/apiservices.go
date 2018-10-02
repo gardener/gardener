@@ -19,16 +19,16 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
-	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1"
+	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
+	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/typed/apiregistration/v1beta1"
 )
 
 func (c *Client) apiServices() apiregistrationclientset.APIServiceInterface {
-	return c.apiregistrationClientset.ApiregistrationV1().APIServices()
+	return c.apiregistrationClientset.ApiregistrationV1beta1().APIServices()
 }
 
 // ListAPIServices will list all the APIServices for the given <listOptions>.
-func (c *Client) ListAPIServices(opts metav1.ListOptions) (*apiregistrationv1.APIServiceList, error) {
+func (c *Client) ListAPIServices(opts metav1.ListOptions) (*apiregistrationv1beta1.APIServiceList, error) {
 	return c.apiServices().List(opts)
 }
 

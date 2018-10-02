@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	apiregistrationv1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
+	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
@@ -132,7 +132,7 @@ type Client interface {
 	DeleteCRDForcefully(name string) error
 
 	// APIServices
-	ListAPIServices(metav1.ListOptions) (*apiregistrationv1.APIServiceList, error)
+	ListAPIServices(metav1.ListOptions) (*apiregistrationv1beta1.APIServiceList, error)
 	DeleteAPIService(name string) error
 	DeleteAPIServiceForcefully(name string) error
 
