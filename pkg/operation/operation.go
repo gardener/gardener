@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -99,6 +100,13 @@ func newOperation(
 			return nil, err
 		}
 		operation.Shoot = shootObj
+
+		shootedSeed, err := helper.ReadShootedSeed(shoot)
+		if err != nil {
+			logger.Warnf("Cannot use shoot %s/%s as shooted seed: %+v", shoot.Namespace, shoot.Name, err)
+		} else {
+			operation.ShootedSeed = shootedSeed
+		}
 	}
 
 	return operation, nil
