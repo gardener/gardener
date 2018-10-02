@@ -17,8 +17,6 @@ package utils
 import (
 	"fmt"
 	"time"
-
-	"github.com/gardener/gardener/pkg/logger"
 )
 
 // NeverStop is a channel that is always open. Can be used for never stopping a Retry computation.
@@ -29,36 +27,64 @@ var NeverStop = make(chan struct{})
 // error has been sever enough to cancel a retrying computation.
 type ConditionFunc func() (ok, severe bool, err error)
 
-// NewTimedOut creates a new error that indicates a timeout after the given waitTime.
-func NewTimedOut(waitTime time.Duration) error {
+func newTimedOut(waitTime time.Duration, lastError error) error {
+	if lastError != nil {
+		return &timedOutWithError{lastError, waitTime}
+	}
 	return &timedOut{waitTime}
-}
-
-// NewTimedOutWithError creates a new error that indicates a timeout after the given waitTime caused
-// by the given lastError.
-func NewTimedOutWithError(waitTime time.Duration, lastError error) error {
-	return &timedOutWithError{lastError, waitTime}
 }
 
 // IsTimedOut determines whether the given error is a timed out error.
 func IsTimedOut(err error) bool {
 	switch err.(type) {
-	case *timedOut:
-		return true
-	case *timedOutWithError:
+	case *timedOut, *timedOutWithError:
 		return true
 	default:
 		return false
 	}
 }
 
+// WaitTimeOfTimedOut returns the wait time of the given error if it implements the
+// waitTimer interface:
+// ```
+// type waitTimer interface {
+// 	WaitTime() time.Duration
+// }
+// If the given error does not implement the waitTimer interface, it just returns 0.
+func WaitTimeOfTimedOut(err error) time.Duration {
+	type waitTimer interface {
+		WaitTime() time.Duration
+	}
+	if w, ok := err.(waitTimer); ok {
+		return w.WaitTime()
+	}
+	return 0
+}
+
+// LastErrorOfTimedOutWithError returns the last error if the given error was a <timedOutWithError>.
+// Otherwise, it just returns nil.
+func LastErrorOfTimedOutWithError(err error) error {
+	if t, ok := err.(*timedOutWithError); ok {
+		return t.lastError
+	}
+	return nil
+}
+
 type timedOut struct {
 	waitTime time.Duration
+}
+
+func (t *timedOut) WaitTime() time.Duration {
+	return t.waitTime
 }
 
 type timedOutWithError struct {
 	lastError error
 	waitTime  time.Duration
+}
+
+func (t *timedOutWithError) WaitTime() time.Duration {
+	return t.waitTime
 }
 
 func (t *timedOutWithError) Cause() error {
@@ -100,44 +126,39 @@ func Retry(interval time.Duration, timeout time.Duration, f ConditionFunc) error
 }
 
 // RetryUntil retries <f> until it either succeeds, fails severely or the given channel <stopCh>
-// is closed. Between each tries, it sleeps for <interval>.
+// is closed. Between each tries, it sleeps for <interval>. The function f is guaranteed to
+// be executed at least once. During each execution, f can't be prematurely killed, thus an operation
+// may run considerably longer than anticipated after closing the <stopCh>.
 func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc) error {
-	type result struct {
-		success bool
-		severe  bool
-		err     error
-	}
 	var (
 		lastError error
 		startTime = time.Now()
-		out       = make(chan result)
 	)
 	for {
-		go func() {
-			success, severe, err := f()
-			out <- result{success, severe, err}
-		}()
+		success, severe, err := f()
+		if err != nil {
+			if severe {
+				return err
+			}
+
+			lastError = err
+		} else if success {
+			return nil
+		}
 
 		select {
 		case <-stopCh:
 			waitTime := time.Since(startTime)
-			if lastError == nil {
-				return NewTimedOut(waitTime)
-			}
-			return NewTimedOutWithError(waitTime, lastError)
-		case res := <-out:
-			if res.err != nil {
-				if res.severe {
-					return res.err
-				}
-
-				lastError = res.err
-				logger.Logger.Error(res.err)
-			} else if res.success {
-				return nil
-			}
+			return newTimedOut(waitTime, lastError)
+		default:
 		}
 
 		time.Sleep(interval)
+		select {
+		case <-stopCh:
+			waitTime := time.Since(startTime)
+			return newTimedOut(waitTime, lastError)
+		default:
+		}
 	}
 }
