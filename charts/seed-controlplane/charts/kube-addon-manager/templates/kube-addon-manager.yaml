@@ -17,7 +17,12 @@ spec:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
-        checksum/secret-cloud-config: {{ include (print $.Template.BasePath "/cloud-config.yaml") . | sha256sum }}
+        # The cloud-config secret is excluded from this list on purpose as it contains the bootstrap token which is refreshed every 60 minutes.
+        # In order to not restarting the kube-addon-manager unnecessarily we exclude the checksum of this secret. If the content of the secret
+        # changes it will get re-mounted automatically into the running kube-addon-manager pod (after ~60s). Hence, we can be sure that the
+        # running kube-addon-manager will definitely see the changes and apply them (although it is a little later than if we would restart it
+        # explicitly).
+        # We should again include the checksum when the secret does no longer contain the bootstrap token.
         checksum/secret-storageclasses: {{ include (print $.Template.BasePath "/storageclasses.yaml") . | sha256sum }}
         checksum/secret-core-addons: {{ include (print $.Template.BasePath "/core-addons.yaml") . | sha256sum }}
         checksum/secret-optional-addons: {{ include (print $.Template.BasePath "/optional-addons.yaml") . | sha256sum }}
