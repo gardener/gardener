@@ -215,8 +215,17 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 		return nil
 	}
 
+	// If the namespace does no longer exist we delete the project.
+	namespaceObj, err := c.k8sGardenClient.GetNamespace(*namespace)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return c.k8sGardenClient.GardenClientset().GardenV1beta1().Projects().Delete(project.Name, &metav1.DeleteOptions{})
+		}
+		return err
+	}
+
 	// Update namespace and check ProjectNamespaceReady condition.
-	if err := c.updateNamespace(project); err != nil {
+	if err := c.updateNamespace(namespaceObj, project); err != nil {
 		message := fmt.Sprintf("Error while updating namespace for project %q: %+v", project.Name, err)
 		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceCreationFailed, message)
 		projectLogger.Error(message)
@@ -295,7 +304,7 @@ func (c *defaultControl) updateProjectStatus(project *gardenv1beta1.Project, con
 	return project, err
 }
 
-func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) error {
+func (c *defaultControl) updateNamespace(namespace *corev1.Namespace, project *gardenv1beta1.Project) error {
 	var (
 		namespaceLabels = map[string]string{
 			common.GardenRole:  common.GardenRoleProject,
@@ -313,16 +322,11 @@ func (c *defaultControl) updateNamespace(project *gardenv1beta1.Project) error {
 		namespaceAnnotations[common.ProjectPurpose] = *project.Spec.Purpose
 	}
 
-	namespaceObj, err := c.k8sGardenClient.GetNamespace(*project.Spec.Namespace)
-	if err != nil {
-		return err
-	}
+	namespace.OwnerReferences = common.MergeOwnerReferences(namespace.OwnerReferences, *metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind("Project")))
+	namespace.Annotations = utils.MergeStringMaps(namespace.Annotations, namespaceAnnotations)
+	namespace.Labels = utils.MergeStringMaps(namespace.Labels, namespaceLabels)
 
-	namespaceObj.OwnerReferences = common.MergeOwnerReferences(namespaceObj.OwnerReferences, *metav1.NewControllerRef(project, gardenv1beta1.SchemeGroupVersion.WithKind("Project")))
-	namespaceObj.Annotations = utils.MergeStringMaps(namespaceObj.Annotations, namespaceAnnotations)
-	namespaceObj.Labels = utils.MergeStringMaps(namespaceObj.Labels, namespaceLabels)
-
-	_, err = c.k8sGardenClient.UpdateNamespace(namespaceObj)
+	_, err := c.k8sGardenClient.UpdateNamespace(namespace)
 	return err
 }
 
