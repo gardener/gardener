@@ -99,6 +99,7 @@ var _ = Describe("validator", func() {
 					},
 					DNS: garden.DNS{
 						Provider: garden.DNSUnmanaged,
+						Domain:   makeStrPointer("shoot.example.com"),
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.6.4",
@@ -384,6 +385,23 @@ var _ = Describe("validator", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
 
 				err := admissionHandler.Admit(attrs)
@@ -1082,6 +1100,20 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
+			It("should reject due to an undefined dns domain", func() {
+				shoot.Spec.DNS.Domain = nil
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
 			It("should reject due to an invalid floating pool name", func() {
 				shoot.Spec.Cloud.OpenStack.FloatingPoolName = "invalid-pool"
 
@@ -1442,3 +1474,8 @@ var _ = Describe("validator", func() {
 		})
 	})
 })
+
+func makeStrPointer(in string) *string {
+	out := in
+	return &out
+}
