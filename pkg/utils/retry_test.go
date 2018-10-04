@@ -15,11 +15,9 @@
 package utils_test
 
 import (
-	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/pkg/utils"
 
 	"errors"
-	"io/ioutil"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -33,6 +31,9 @@ var (
 
 var _ = Describe("utils", func() {
 	Context("#RetryUntil", func() {
+		closedChan := make(chan struct{})
+		close(closedChan)
+
 		It("should abort immediately on a severe error and return it", func() {
 			ct := 0
 			err := RetryUntil(0*time.Second, NeverStop, func() (ok, severe bool, err error) {
@@ -52,38 +53,77 @@ var _ = Describe("utils", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
-	})
 
-	Context("#Retry", func() {
-		BeforeSuite(func() {
-			logger.NewLogger("")
-			logger.Logger.Out = ioutil.Discard
+		It("should not timeout early and use the value of the delayed function", func() {
+			err := RetryUntil(0*time.Second, closedChan, func() (ok, severe bool, err error) {
+				return true, false, nil
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should exit with a timeout after the interval sleep due to a closed channel", func() {
+			c := make(chan struct{})
+			ct := 0
+			err := RetryUntil(0*time.Second, c, func() (ok, severe bool, err error) {
+				ct++
+				close(c)
+				return false, false, nil
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(IsTimedOut(err)).To(BeTrue())
 		})
 
 		It("should fail due to a timeout containing the last error", func() {
-			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
+			err := RetryUntil(0*time.Second, closedChan, func() (ok, severe bool, err error) {
 				return false, false, testErr
 			})
 
 			Expect(err).To(HaveOccurred())
+			Expect(IsTimedOut(err)).To(BeTrue())
+			Expect(LastErrorOfTimedOutWithError(err)).To(Equal(testErr))
 			Expect(errwrap.Cause(err)).To(Equal(testErr))
 		})
 
 		It("should fail due to a timeout containing no last error", func() {
+			err := RetryUntil(0*time.Second, closedChan, func() (ok, severe bool, err error) {
+				return false, false, nil
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(IsTimedOut(err)).To(BeTrue())
+			Expect(errwrap.Cause(err)).To(Equal(err))
+		})
+
+		It("should fail with a wait time greater or equal to the sleep time of a function", func() {
+			leastWaitTime := 10 * time.Millisecond
+			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
+				time.Sleep(leastWaitTime)
+				return false, false, nil
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(IsTimedOut(err)).To(BeTrue())
+			Expect(WaitTimeOfTimedOut(err)).To(BeNumerically(">=", leastWaitTime))
+		})
+	})
+
+	Context("#Retry", func() {
+		It("should fail due to a timeout", func() {
 			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
 				return false, false, nil
 			})
 
 			Expect(err).To(HaveOccurred())
-			Expect(errwrap.Cause(err)).To(Equal(err))
+			Expect(IsTimedOut(err)).To(BeTrue())
 		})
 
-		It("should timeout early and don't use the value of the delayed function", func() {
-			err := Retry(0*time.Second, 0*time.Second, func() (ok, severe bool, err error) {
-				time.Sleep(10 * time.Second)
+		It("should not fail due to a timeout", func() {
+			err := Retry(0*time.Second, 10*time.Second, func() (ok, severe bool, err error) {
 				return true, false, nil
 			})
-			Expect(err).To(HaveOccurred())
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })
