@@ -230,18 +230,29 @@ func (b *Botanist) WaitForControllersToBeActive() error {
 	}
 
 	var (
-		controllers = []controllerInfo{
-			{
-				name:          "cloud-controller-manager",
-				labelSelector: "app=kubernetes,role=cloud-controller-manager",
-			},
-			{
-				name:          "kube-controller-manager",
-				labelSelector: "app=kubernetes,role=controller-manager",
-			},
-		}
+		controllers  = []controllerInfo{}
 		pollInterval = 5 * time.Second
 	)
+
+	// Check whether the cloud-controller-manager deployment exists
+	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName); err == nil {
+		controllers = append(controllers, controllerInfo{
+			name:          common.CloudControllerManagerDeploymentName,
+			labelSelector: "app=kubernetes,role=cloud-controller-manager",
+		})
+	} else if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Check whether the kube-controller-manager deployment exists
+	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName); err == nil {
+		controllers = append(controllers, controllerInfo{
+			name:          common.KubeControllerManagerDeploymentName,
+			labelSelector: "app=kubernetes,role=controller-manager",
+		})
+	} else if err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
 
 	return utils.Retry(pollInterval, 90*time.Second, func() (bool, bool, error) {
 		var (

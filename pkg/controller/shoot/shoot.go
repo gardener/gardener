@@ -317,7 +317,7 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
 	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok {
-		if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(shoot); shootUsedAsSeed {
+		if shootedSeed, err := helper.ReadShootedSeed(shoot); err == nil && shootedSeed != nil {
 			return c.shootSeedQueue
 		}
 	}

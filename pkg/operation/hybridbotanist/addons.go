@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -168,7 +167,7 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 			},
 		})
 
-		if shootUsedAsSeed, _, _ := helper.IsUsedAsSeed(b.Shoot.Info); shootUsedAsSeed {
+		if b.ShootedSeed != nil {
 			nginxIngressConfig = utils.MergeMaps(nginxIngressConfig, map[string]interface{}{
 				"controller": map[string]interface{}{
 					"resources": map[string]interface{}{

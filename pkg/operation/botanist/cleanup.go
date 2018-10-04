@@ -163,7 +163,7 @@ func (b *Botanist) ForceDeleteCustomAPIServices() error {
 }
 
 func (b *Botanist) waitForAPIGroupCleanedUp(apiGroupPath []string, resource string) error {
-	if err := wait.PollImmediate(5*time.Second, 10*time.Minute, func() (bool, error) {
+	if err := wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
 		return b.K8sShootClient.CheckResourceCleanup(b.Logger, exceptions, resource, apiGroupPath)
 	}); err != nil {
 		return fmt.Errorf("Error while waiting for cleanup of '%s' resources: '%s'", resource, err.Error())
