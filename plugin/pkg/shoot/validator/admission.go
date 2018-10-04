@@ -28,6 +28,7 @@ import (
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
@@ -50,6 +51,7 @@ type ValidateShoot struct {
 	*admission.Handler
 	cloudProfileLister listers.CloudProfileLister
 	seedLister         listers.SeedLister
+	shootLister        listers.ShootLister
 	projectLister      listers.ProjectLister
 	readyFunc          admission.ReadyFunc
 }
@@ -78,13 +80,16 @@ func (v *ValidateShoot) SetInternalGardenInformerFactory(f informers.SharedInfor
 	seedInformer := f.Garden().InternalVersion().Seeds()
 	v.seedLister = seedInformer.Lister()
 
+	shootInformer := f.Garden().InternalVersion().Shoots()
+	v.shootLister = shootInformer.Lister()
+
 	cloudProfileInformer := f.Garden().InternalVersion().CloudProfiles()
 	v.cloudProfileLister = cloudProfileInformer.Lister()
 
 	projectInformer := f.Garden().InternalVersion().Projects()
 	v.projectLister = projectInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced, cloudProfileInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
@@ -94,6 +99,9 @@ func (v *ValidateShoot) ValidateInitialization() error {
 	}
 	if v.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if v.shootLister == nil {
+		return errors.New("missing shoot lister")
 	}
 	if v.projectLister == nil {
 		return errors.New("missing project lister")
@@ -290,14 +298,18 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 		allErrs = validateAlicloud(validationContext)
 	}
 
+	dnsErrors, err := validateDNSConfiguration(v.shootLister, shoot.Spec.DNS)
+	if err != nil {
+		return apierrors.NewInternalError(err)
+	}
+	allErrs = append(allErrs, dnsErrors...)
+
 	if len(allErrs) > 0 {
 		return admission.NewForbidden(a, fmt.Errorf("%+v", allErrs))
 	}
 
 	return nil
 }
-
-// Cloud specific validation
 
 type validationContext struct {
 	cloudProfile *garden.CloudProfile
@@ -561,8 +573,6 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 	return allErrs
 }
 
-// Helper functions
-
 func networksIntersect(cidr1, cidr2 garden.CIDR) bool {
 	_, net1, err1 := net.ParseCIDR(string(cidr1))
 	_, net2, err2 := net.ParseCIDR(string(cidr2))
@@ -584,6 +594,32 @@ func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider
 	}
 
 	return false, validValues
+}
+
+func validateDNSConfiguration(shootLister listers.ShootLister, dns garden.DNS) (field.ErrorList, error) {
+	var (
+		allErrs = field.ErrorList{}
+		dnsPath = field.NewPath("spec", "dns", "domain")
+	)
+
+	if dns.Domain == nil {
+		allErrs = append(allErrs, field.Required(dnsPath, "domain field is required"))
+		return allErrs, nil
+	}
+
+	shoots, err := shootLister.Shoots(metav1.NamespaceAll).List(labels.Everything())
+	if err != nil {
+		return allErrs, err
+	}
+
+	for _, shoot := range shoots {
+		if domain := shoot.Spec.DNS.Domain; domain != nil && *domain == *dns.Domain {
+			allErrs = append(allErrs, field.Duplicate(dnsPath, *dns.Domain))
+			break
+		}
+	}
+
+	return allErrs, nil
 }
 
 func validateKubernetesVersionConstraints(constraints []string, version, oldVersion string) (bool, []string) {
@@ -638,8 +674,8 @@ func validateAlicloudMachineTypes(constraints []garden.AlicloudMachineType, mach
 	return validateMachineTypes(machineTypes, machineType, oldMachineType)
 }
 
-//To check whether machine type of worker is available in zones of the shoot,
-//because in alicloud different zones may have different machine type
+// To check whether machine type of worker is available in zones of the shoot,
+// because in alicloud different zones may have different machine type
 func validateAlicloudMachineTypesAvailableInZones(constraints []garden.AlicloudMachineType, machineType, oldMachineType string, zones []string) (bool, string, []string) {
 	if machineType == oldMachineType {
 		return true, "", nil
@@ -657,7 +693,7 @@ func validateAlicloudMachineTypesAvailableInZones(constraints []garden.AlicloudM
 	return true, "", nil
 }
 
-//To check whether subzones are all covered by zones
+// To check whether subzones are all covered by zones
 func zonesCovered(subzones, zones []string) (bool, []string) {
 	var (
 		covered     bool
