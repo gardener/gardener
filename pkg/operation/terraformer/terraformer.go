@@ -113,7 +113,7 @@ func (t *Terraformer) execute(scriptName string) error {
 		if numberOfExistingResources == 0 {
 			t.logger.Debug("All ConfigMaps/Secrets do not exist, can not execute the Terraform Job.")
 			return true, nil
-		} else if numberOfExistingResources == 3 {
+		} else if numberOfExistingResources == numberOfConfigResources {
 			t.logger.Debug("All ConfigMaps/Secrets exist, will execute the Terraform Job.")
 			execute = true
 			return true, nil
