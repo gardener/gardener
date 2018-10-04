@@ -164,7 +164,7 @@ func (p *pvInitializerHandler) mutate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	patch := "[]"
-	if isCloudSpecificPersistentVolume(pv) {
+	if pv.DeletionTimestamp == nil && isCloudSpecificPersistentVolume(pv) {
 		switch {
 		case pv.Initializers == nil:
 			patch = fmt.Sprintf(`[{"op": "add", "path": "/metadata/initializers", "value": {"pending": [{"name": "%s"}]}}]`, pvLabelInitializerName)
@@ -173,7 +173,7 @@ func (p *pvInitializerHandler) mutate(w http.ResponseWriter, r *http.Request) {
 		}
 		logger.Infof("Added initializer '%s' for PersistentVolume '%s'", pvLabelInitializerName, pv.Name)
 	} else {
-		logger.Infof("Skipped PersistentVolume '%s' as it is not cloud specific", pv.Name)
+		logger.Infof("Skipped PersistentVolume '%s' as it is marked for deletion or not cloud specific", pv.Name)
 	}
 
 	respond(w, &admissionv1beta1.AdmissionResponse{
