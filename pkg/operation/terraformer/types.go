@@ -56,3 +56,5 @@ type Terraformer struct {
 }
 
 var chartPath = filepath.Join(common.ChartPath, "seed-terraformer", "charts")
+
+const numberOfConfigResources = 3

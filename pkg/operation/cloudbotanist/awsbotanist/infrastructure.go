@@ -63,12 +63,17 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 		return err
 	}
 
+	canSkipTerraform, err := tf.ConfigExists()
+	if err != nil {
+		return err
+	}
+
 	var (
 		g = flow.NewGraph("AWS infrastructure destruction")
 
 		destroyKubernetesLoadBalancersAndSecurityGroups = g.Add(flow.Task{
 			Name: "Destroying Kubernetes load balancers and security groups",
-			Fn:   flow.TaskFn(b.destroyKubernetesLoadBalancersAndSecurityGroups).RetryUntilTimeout(10*time.Second, 5*time.Minute),
+			Fn:   flow.TaskFn(b.destroyKubernetesLoadBalancersAndSecurityGroups).RetryUntilTimeout(10*time.Second, 5*time.Minute).DoIf(!canSkipTerraform),
 		})
 
 		_ = g.Add(flow.Task{
