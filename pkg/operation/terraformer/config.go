@@ -65,6 +65,24 @@ func (t *Terraformer) DefineConfig(chartName string, values map[string]interface
 // prepare checks whether all required ConfigMaps and Secrets exist. It returns the number of
 // existing ConfigMaps/Secrets, or the error in case something unexpected happens.
 func (t *Terraformer) prepare() (int, error) {
+	numberOfExistingResources, err := t.verifyConfigExists()
+	if err != nil {
+		return -1, err
+	}
+
+	if t.variablesEnvironment == nil {
+		return -1, errors.New("no Terraform variables environment provided")
+	}
+
+	// Clean up possible existing job/pod artifacts from previous runs
+	if err := t.EnsureCleanedUp(); err != nil {
+		return -1, err
+	}
+
+	return numberOfExistingResources, nil
+}
+
+func (t *Terraformer) verifyConfigExists() (int, error) {
 	numberOfExistingResources := 0
 
 	if _, err := t.k8sClient.GetConfigMap(t.namespace, t.stateName); err == nil {
@@ -85,21 +103,12 @@ func (t *Terraformer) prepare() (int, error) {
 		return -1, err
 	}
 
-	if t.variablesEnvironment == nil {
-		return -1, errors.New("no Terraform variables environment provided")
-	}
-
-	// Clean up possible existing job/pod artifacts from previous runs
-	if err := t.EnsureCleanedUp(); err != nil {
-		return -1, err
-	}
-
 	return numberOfExistingResources, nil
 }
 
 // ConfigExists returns true if all three Terraform configuration secrets/configmaps exist, and false otherwise.
 func (t *Terraformer) ConfigExists() (bool, error) {
-	numberOfExistingResources, err := t.prepare()
+	numberOfExistingResources, err := t.verifyConfigExists()
 	return numberOfExistingResources == numberOfConfigResources, err
 }
 
