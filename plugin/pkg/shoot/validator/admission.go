@@ -298,7 +298,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 		allErrs = validateAlicloud(validationContext)
 	}
 
-	dnsErrors, err := validateDNSConfiguration(v.shootLister, shoot.Spec.DNS)
+	dnsErrors, err := validateDNSConfiguration(v.shootLister, shoot.Name, shoot.Spec.DNS)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -596,7 +596,7 @@ func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider
 	return false, validValues
 }
 
-func validateDNSConfiguration(shootLister listers.ShootLister, dns garden.DNS) (field.ErrorList, error) {
+func validateDNSConfiguration(shootLister listers.ShootLister, name string, dns garden.DNS) (field.ErrorList, error) {
 	var (
 		allErrs = field.ErrorList{}
 		dnsPath = field.NewPath("spec", "dns", "domain")
@@ -613,6 +613,9 @@ func validateDNSConfiguration(shootLister listers.ShootLister, dns garden.DNS) (
 	}
 
 	for _, shoot := range shoots {
+		if shoot.Name == name {
+			continue
+		}
 		if domain := shoot.Spec.DNS.Domain; domain != nil && *domain == *dns.Domain {
 			allErrs = append(allErrs, field.Duplicate(dnsPath, *dns.Domain))
 			break
