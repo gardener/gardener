@@ -12,7 +12,7 @@ Fixes #
 
 Format of block header: <category> <target_group>
 Possible values:
-- category:       improvement|noteworthy
+- category:       improvement|noteworthy|action
 - target_group:   user|operator
 -->
 ```improvement operator
