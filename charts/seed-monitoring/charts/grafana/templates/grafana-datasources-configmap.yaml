@@ -12,8 +12,8 @@ data:
 
     # list of datasources that should be deleted from the database
     deleteDatasources:
-      - name: Graphite
-        orgId: 1
+    - name: Graphite
+      orgId: 1
 
     # list of datasources to insert/update depending
     # whats available in the database

@@ -42,19 +42,19 @@ groups:
         kube-apiserver is higher than 1s.
       summary: Kubernetes apiserver latency is high
   ### API latency ###
-  - record: cluster_resource_verb:apiserver_latency:quantile_seconds
-    expr: histogram_quantile(0.99, sum(apiserver_request_latencies_bucket) BY (le,
-      cluster, job, resource, verb)) / 1e+06
+  - record: apiserver_latency_seconds:quantile
+    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) /
+      1e+06
     labels:
       quantile: "0.99"
-  - record: cluster_resource_verb:apiserver_latency:quantile_seconds
-    expr: histogram_quantile(0.9, sum(apiserver_request_latencies_bucket) BY (le,
-      cluster, job, resource, verb)) / 1e+06
+  - record: apiserver_latency:quantile_seconds
+    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) /
+      1e+06
     labels:
       quantile: "0.9"
-  - record: cluster_resource_verb:apiserver_latency:quantile_seconds
-    expr: histogram_quantile(0.5, sum(apiserver_request_latencies_bucket) BY (le,
-      cluster, job, resource, verb)) / 1e+06
+  - record: apiserver_latency_seconds:quantile
+    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) /
+      1e+06
     labels:
       quantile: "0.5"
   ### Container resources ###
