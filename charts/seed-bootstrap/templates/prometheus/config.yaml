@@ -40,11 +40,10 @@ data:
       # Drop metrics that are useless and high-volume
       # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
       metric_relabel_configs:
-      - source_labels: [ __name__ ]
-        regex: ^container_({{ .Values.prometheus.cadvisorAllowedMetrics | join "|" }})$
-        action: keep
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
       - source_labels: [ container_name ]
-        regex: ^POD$
+        # The system container POD is used for networking
+        regex: ^POD$;^({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})$
         action: drop
         # drop terraform pods
       - source_labels: [ pod_name ]

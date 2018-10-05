@@ -2,18 +2,27 @@ cloudProvider: aws
 
 prometheus:
   port: 9090
-  cadvisorAllowedMetrics:
-  # container metrics without the container_
-  - last_seen
-  - fs_usage_bytes
-  - fs_inodes_total
-  - fs_limit_bytes
-  - network_receive_bytes_total
-  - network_transmit_bytes_total
-  - cpu_cfs_periods_total
-  - cpu_usage_seconds_total
-  - memory_usage_bytes
-  - memory_working_set_bytes
+
+allowedMetrics:
+  cAdvisor:
+  - container_cpu_cfs_periods_total
+  - container_cpu_usage_seconds_total
+  - container_fs_inodes_total
+  - container_fs_limit_bytes
+  - container_fs_usage_bytes
+  - container_last_seen
+  - container_memory_cache
+  - container_memory_failcnt
+  - container_memory_failures_total
+  - container_memory_rss
+  - container_memory_usage_bytes
+  - container_memory_working_set_bytes
+  - container_network_receive_bytes_total
+  - container_network_transmit_bytes_total
+  - container_spec_cpu_shares
+  - container_spec_memory_limit_bytes
+  - machine_cpu_cores
+  - machine_memory_bytes
 
   # object can be any object you want to scale Prometheus on:
   # - number of Pods

@@ -15,13 +15,9 @@ metadata:
   labels:
     app: prometheus
     role: monitoring
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "9090"
-    prometheus.io/name: prometheus
 spec:
   ports:
-  - name: web
+  - name: metrics
     port: 80
     protocol: TCP
     targetPort: {{ .Values.port }}
@@ -125,43 +121,6 @@ spec:
         # we mount the Shoot cluster's CA and certs
         - mountPath: /etc/prometheus/seed
           name: prometheus-kubeconfig
-      - name: prometheus-config-reloader
-        image: {{ index .Values.images "configmap-reloader" }}
-        imagePullPolicy: IfNotPresent
-        args:
-        - -webhook-url=http://localhost:9090/-/reload
-        - -volume-dir=/etc/prometheus/config
-        - -volume-dir=/etc/prometheus/rules
-        resources:
-          requests:
-            cpu: 5m
-            memory: 10Mi
-          limits:
-            cpu: 10m
-            memory: 20Mi
-        volumeMounts:
-        - mountPath: /etc/prometheus/config
-          name: config
-          readOnly: true
-        - mountPath: /etc/prometheus/rules
-          name: rules
-      - name: blackbox-exporter-config-reloader
-        image: {{ index .Values.images "configmap-reloader" }}
-        imagePullPolicy: IfNotPresent
-        args:
-        - -webhook-url=http://localhost:9115/-/reload
-        - -volume-dir=/vpn
-        resources:
-          requests:
-            cpu: 5m
-            memory: 10Mi
-          limits:
-            cpu: 10m
-            memory: 20Mi
-        volumeMounts:
-        - mountPath: /vpn
-          name: blackbox-exporter-config-prometheus
-          readOnly: true
       - image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         name: vpn-seed

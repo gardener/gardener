@@ -6,10 +6,6 @@ metadata:
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
-  annotations:
-    prometheus.io/scrape: "true"
-    prometheus.io/port: "9100"
-    prometheus.io/name: node-exporter
 spec:
   type: ClusterIP
   clusterIP: None
