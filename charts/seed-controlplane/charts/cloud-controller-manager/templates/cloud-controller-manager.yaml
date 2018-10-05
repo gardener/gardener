@@ -65,6 +65,9 @@ spec:
         {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --leader-elect=true
+        {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
+        - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
+        {{- end }}
         - --use-service-account-credentials
         - --v=2
         {{- range $index, $param := $.Values.additionalParameters }}

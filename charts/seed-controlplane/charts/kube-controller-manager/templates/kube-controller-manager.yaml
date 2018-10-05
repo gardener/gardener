@@ -80,6 +80,9 @@ spec:
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{ .Values.serviceNetwork }}
+        {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
+        - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
+        {{- end }}
         - --use-service-account-credentials=true
         - --v=2
         {{- range $index, $param := $.Values.additionalParameters }}

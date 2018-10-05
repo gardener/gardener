@@ -80,6 +80,9 @@ spec:
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
+        {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
+        - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
+        {{- end }}
         - --v=2
 {{- range $index, $param := $.Values.additionalParameters }}
         - {{ $param }}
