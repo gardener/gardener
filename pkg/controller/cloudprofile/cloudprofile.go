@@ -15,6 +15,7 @@
 package cloudprofile
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -81,11 +82,11 @@ func NewCloudProfileController(k8sGardenClient kubernetes.Client, k8sGardenInfor
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
 	// Check if informers cache has been populated
-	if !cache.WaitForCacheSync(stopCh, c.cloudprofileSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.cloudprofileSynced) {
 		logger.Logger.Error("Time out waiting for caches to sync")
 		return
 	}
@@ -104,10 +105,10 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 
 	// Start the workers
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.cloudProfileQueue, "cloudprofile", c.reconcileCloudProfileKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.cloudProfileQueue, "cloudprofile", c.reconcileCloudProfileKey, &waitGroup, c.workerCh)
 	}
 
-	<-stopCh
+	<-ctx.Done()
 	c.cloudProfileQueue.ShutDown()
 
 	for {

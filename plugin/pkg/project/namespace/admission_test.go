@@ -79,7 +79,7 @@ var _ = Describe("namespace", func() {
 				}, nil
 			})
 
-			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, nil)
+			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, nil)
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -101,7 +101,7 @@ var _ = Describe("namespace", func() {
 				}, nil
 			})
 
-			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, nil)
+			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, nil)
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -117,7 +117,7 @@ var _ = Describe("namespace", func() {
 				},
 			})
 
-			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, nil)
+			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, nil)
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).To(HaveOccurred())
@@ -142,7 +142,7 @@ var _ = Describe("namespace", func() {
 				},
 			})
 
-			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, nil)
+			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, nil)
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).To(HaveOccurred())
@@ -163,7 +163,7 @@ var _ = Describe("namespace", func() {
 				},
 			})
 
-			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, nil)
+			attrs := admission.NewAttributesRecord(project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, nil)
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())

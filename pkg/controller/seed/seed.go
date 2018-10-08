@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -95,10 +96,10 @@ func NewSeedController(k8sGardenClient kubernetes.Client, gardenInformerFactory 
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.seedSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.seedSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -117,11 +118,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	logger.Logger.Info("Seed controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.seedQueue, "Seed", c.reconcileSeedKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
-	<-stopCh
+	<-ctx.Done()
 	c.seedQueue.ShutDown()
 
 	for {

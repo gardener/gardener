@@ -15,6 +15,7 @@
 package secretbinding
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -87,10 +88,10 @@ func NewSecretBindingController(k8sGardenClient kubernetes.Client, gardenInforme
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.secretBindingSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.secretBindingSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -109,11 +110,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	logger.Logger.Info("SecretBinding controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.secretBindingQueue, "SecretBinding", c.reconcileSecretBindingKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconcileSecretBindingKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
-	<-stopCh
+	<-ctx.Done()
 	c.secretBindingQueue.ShutDown()
 
 	for {

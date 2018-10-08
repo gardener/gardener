@@ -71,7 +71,7 @@ func (s *storage) GetShoot(ctx context.Context, shootID string, options *metav1.
 }
 
 func (s *storage) CreateShoot(ctx context.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc) (*garden.Shoot, error) {
-	obj, err := s.Create(ctx, shoot, rest.ValidateAllObjectFunc, false)
+	obj, err := s.Create(ctx, shoot, rest.ValidateAllObjectFunc, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *storage) CreateShoot(ctx context.Context, shoot *garden.Shoot, createVa
 }
 
 func (s *storage) UpdateShoot(ctx context.Context, shoot *garden.Shoot, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Shoot, error) {
-	obj, _, err := s.Update(ctx, shoot.Name, rest.DefaultUpdatedObjectInfo(shoot), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, shoot.Name, rest.DefaultUpdatedObjectInfo(shoot), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}

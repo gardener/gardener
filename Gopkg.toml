@@ -14,39 +14,43 @@ ignored = [
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/kube-aggregator"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.11.0"
+  version = "kubernetes-1.12.1"
 
 [[override]]
   name = "k8s.io/kube-openapi"
-  revision = "d8ea2fe547a448256204cfc68dfee7b26c720acb" # "kubernetes-1.11"
+  revision = "9dfdf9be683f61f82cda12362c44c784e0778b56" # kubernetes-1.12.1
+
+[[override]]
+  name = "github.com/coreos/etcd"
+  version = "3.2.24"
 
 [[constraint]]
   name = "github.com/gardener/machine-controller-manager"
-  version = "0.5.0"
+  revision = "d0161dd1856eb2ad4e956865d2ecd92c5b21b182"
 
 [[constraint]]
   name = "k8s.io/helm"
@@ -80,20 +84,16 @@ ignored = [
   name = "github.com/robfig/cron"
   revision = "2315d5715e36303a941d907f038da7f7c44c773b"
 
-[[override]]
-  name = "github.com/coreos/etcd"
-  version = "3.2.13"
-
 # https://github.com/kubernetes/kubernetes/issues/17162
 # https://github.com/kubernetes-incubator/service-catalog/pull/1204
 [[override]]
   name = "github.com/golang/glog"
   revision = "44145f04b68cf362d9c4df2182967c2275eaefed"
 
-# https://github.com/kubernetes/apimachinery/issues/46
+# use the same version that is referenced by k8s.io/apiserver
 [[override]]
-  name = "github.com/json-iterator/go"
-  revision = "f2b4162afba35581b6d4a50d3b8f34e33c144682"
+  name = "github.com/docker/docker"
+  revision = "a9fbbdc8dd8794b20af358382ab780559bca589d"
 
 [[constraint]]
   name = "github.com/hashicorp/go-multierror"

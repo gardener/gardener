@@ -15,6 +15,7 @@
 package app
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -147,7 +148,7 @@ func (o *Options) applyDefaults(in *componentconfig.ControllerManagerConfigurati
 	return out, nil
 }
 
-func (o *Options) run(stopCh chan struct{}) error {
+func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
@@ -167,11 +168,11 @@ func (o *Options) run(stopCh chan struct{}) error {
 		return err
 	}
 
-	return gardener.Run(stopCh)
+	return gardener.Run(ctx, cancel)
 }
 
 // NewCommandStartGardenerControllerManager creates a *cobra.Command object with default parameters
-func NewCommandStartGardenerControllerManager(stopCh chan struct{}) *cobra.Command {
+func NewCommandStartGardenerControllerManager(ctx context.Context, cancel context.CancelFunc) *cobra.Command {
 	opts, err := NewOptions()
 	if err != nil {
 		panic(err)
@@ -195,7 +196,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 			if err := opts.validate(args); err != nil {
 				panic(err)
 			}
-			if err := opts.run(stopCh); err != nil {
+			if err := opts.run(ctx, cancel); err != nil {
 				panic(err)
 			}
 		},
@@ -302,49 +303,47 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 }
 
 // Run runs the Gardener. This should never exit.
-func (g *Gardener) Run(stopCh chan struct{}) error {
+func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
+	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
+
 	// Prepare a reusable run function.
-	run := func(stop <-chan struct{}) {
-		go g.startControllers(stopCh)
-		<-stop
-		select {
-		case <-stopCh:
-			// can only happen if stopCh is already closed because it's never written to it
-		default:
-			close(stopCh)
-		}
+	run := func(ctx context.Context) {
+		g.startControllers(ctx)
 	}
 
 	// Start HTTP server
-	go server.Serve(g.K8sGardenClient, g.K8sGardenInformers, g.Config.Server, stopCh)
+	go server.Serve(ctx, g.K8sGardenClient, g.K8sGardenInformers, g.Config.Server)
 	handlers.UpdateHealth(true)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
 	if g.LeaderElection != nil {
 		g.LeaderElection.Callbacks = leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(stop <-chan struct{}) {
+			OnStartedLeading: func(_ context.Context) {
 				g.Logger.Info("Acquired leadership, starting controllers.")
-				run(stop)
+				run(ctx)
+				<-ctx.Done()
+				leaderElectionCancel()
 			},
 			OnStoppedLeading: func() {
-				g.Logger.Info("Lost leadership, cleaning up.")
-				close(stopCh)
+				g.Logger.Info("Lost leadership, terminating.")
+				cancel()
 			},
 		}
 		leaderElector, err := leaderelection.NewLeaderElector(*g.LeaderElection)
 		if err != nil {
 			return fmt.Errorf("couldn't create leader elector: %v", err)
 		}
-		leaderElector.Run()
-		return fmt.Errorf("lost lease")
+		leaderElector.Run(leaderElectionCtx)
+		return nil
 	}
 
 	// Leader election is disabled, thus run directly until done.
-	run(stopCh)
+	go run(ctx)
+	<-ctx.Done()
 	panic("unreachable")
 }
 
-func (g *Gardener) startControllers(stopCh <-chan struct{}) {
+func (g *Gardener) startControllers(ctx context.Context) {
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
 		g.K8sGardenInformers,
@@ -353,7 +352,7 @@ func (g *Gardener) startControllers(stopCh <-chan struct{}) {
 		g.Identity,
 		g.GardenerNamespace,
 		g.Recorder,
-	).Run(stopCh)
+	).Run(ctx)
 }
 
 func createRecorder(kubeClient *k8s.Clientset) record.EventRecorder {

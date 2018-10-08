@@ -15,6 +15,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -39,18 +41,23 @@ func main() {
 	}
 
 	// Setup signal handler if running inside a Kubernetes cluster
-	stopCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
 	c := make(chan os.Signal, 2)
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer func() {
+		signal.Stop(c)
+		cancel()
+	}()
 	go func() {
 		<-c
-		close(stopCh)
+		cancel()
 		<-c
 		os.Exit(1)
 	}()
 
-	command := app.NewCommandStartGardenerControllerManager(stopCh)
+	command := app.NewCommandStartGardenerControllerManager(ctx, cancel)
 	if err := command.Execute(); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 }

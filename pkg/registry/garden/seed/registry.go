@@ -68,7 +68,7 @@ func (s *storage) GetSeed(ctx context.Context, name string, options *metav1.GetO
 }
 
 func (s *storage) CreateSeed(ctx context.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc) (*garden.Seed, error) {
-	obj, err := s.Create(ctx, seed, createValidation, false)
+	obj, err := s.Create(ctx, seed, createValidation, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *storage) CreateSeed(ctx context.Context, seed *garden.Seed, createValid
 }
 
 func (s *storage) UpdateSeed(ctx context.Context, seed *garden.Seed, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Seed, error) {
-	obj, _, err := s.Update(ctx, seed.Name, rest.DefaultUpdatedObjectInfo(seed), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, seed.Name, rest.DefaultUpdatedObjectInfo(seed), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
