@@ -40,6 +40,7 @@ type CloudBotanist interface {
 	GenerateCloudControllerManagerConfig() (map[string]interface{}, error)
 	GenerateKubeControllerManagerConfig() (map[string]interface{}, error)
 	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
+	DeployCloudSpecificControlPlane() error
 
 	// Machines
 	GetMachineClassInfo() (string, string, string)
@@ -54,7 +55,4 @@ type CloudBotanist interface {
 	GenerateKube2IAMConfig() (map[string]interface{}, error)
 	GenerateStorageClassesConfig() (map[string]interface{}, error)
 	GenerateNginxIngressConfig() (map[string]interface{}, error)
-
-	// Hooks
-	ApplyCreateHook() error
 }

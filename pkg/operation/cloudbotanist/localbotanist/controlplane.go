@@ -66,3 +66,8 @@ func (b *LocalBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 
 	return nil, backupConfigData, nil
 }
+
+// DeployCloudSpecificControlPlane does currently nothing for Local.
+func (b *LocalBotanist) DeployCloudSpecificControlPlane() error {
+	return nil
+}

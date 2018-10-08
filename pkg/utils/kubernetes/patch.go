@@ -16,11 +16,12 @@ package kubernetes
 
 import (
 	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/json-iterator/go"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
-	"reflect"
-	"strings"
 )
 
 var json = jsoniter.ConfigFastest

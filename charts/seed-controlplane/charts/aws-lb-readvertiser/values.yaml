@@ -1,5 +1,5 @@
 domain: cluster.local
 replicas: 1
-
+podAnnotations: {}
 images:
   aws-lb-readvertiser: image-repository:image-tag

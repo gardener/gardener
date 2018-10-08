@@ -132,6 +132,9 @@ const (
 	// KubeAPIServerDeploymentName is the name of the kube-apiserver deployment.
 	KubeAPIServerDeploymentName = "kube-apiserver"
 
+	// AWSLBReadvertiserDeploymentName is the name for the aws-lb-readvertiser
+	AWSLBReadvertiserDeploymentName = "aws-lb-readvertiser"
+
 	// EnableHPANodeCount is the number of nodes in shoot cluster after which HPA is deployed to autoscale kube-apiserver.
 	EnableHPANodeCount = 5
 

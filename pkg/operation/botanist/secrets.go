@@ -178,6 +178,25 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			APIServerURL:       b.computeAPIServerURL(true, false),
 		},
 
+		// Secret definition for the aws-lb-readvertiser
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "aws-lb-readvertiser",
+
+				CommonName:   "aws-lb-readvertiser",
+				Organization: []string{user.SystemPrivilegedGroup},
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[caCluster],
+			},
+
+			KubeconfigRequired: true,
+			ClusterName:        b.Shoot.SeedNamespace,
+			APIServerURL:       b.computeAPIServerURL(true, false),
+		},
+
 		// Secret definition for cloud-controller-manager
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{

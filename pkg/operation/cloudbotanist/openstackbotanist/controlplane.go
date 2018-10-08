@@ -94,13 +94,10 @@ func (b *OpenStackBotanist) RefreshCloudProviderConfig(currentConfig map[string]
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
-	loadBalancerIP, err := utils.WaitUntilDNSNameResolvable(b.APIServerAddress)
-	if err != nil {
-		return nil, err
-	}
 	return map[string]interface{}{
+		"advertiseAddress": b.APIServerAddressIP,
 		"additionalParameters": []string{
-			fmt.Sprintf("--external-hostname=%s", loadBalancerIP),
+			fmt.Sprintf("--external-hostname=%s", b.APIServerAddressIP),
 		},
 	}, nil
 }
@@ -202,4 +199,9 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 		"volumeMount": []map[string]interface{}{},
 	}
 	return secretData, backupConfigData, nil
+}
+
+// DeployCloudSpecificControlPlane does currently nothing for OpenStack.
+func (b *OpenStackBotanist) DeployCloudSpecificControlPlane() error {
+	return nil
 }
