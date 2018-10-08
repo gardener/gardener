@@ -162,6 +162,22 @@ func computeCloudProviderConfigChecksum(cloudProviderConfig string) string {
 	return utils.ComputeSHA256Hex([]byte(strings.TrimSpace(cloudProviderConfig)))
 }
 
+// DeployKubeAPIServerService asks the Cloud Botanist to provide the cloud specific configuration values for the
+// kube-apiserver service.
+func (b *HybridBotanist) DeployKubeAPIServerService() error {
+	var (
+		name          = "kube-apiserver-service"
+		defaultValues = map[string]interface{}{}
+	)
+
+	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerServiceConfig()
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, defaultValues, cloudSpecificValues)
+}
+
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {

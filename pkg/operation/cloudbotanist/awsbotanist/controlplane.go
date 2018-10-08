@@ -58,6 +58,23 @@ func (b *AWSBotanist) RefreshCloudProviderConfig(currentConfig map[string]string
 	return currentConfig
 }
 
+// GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the
+// Service manifest of the kube-apiserver-service properly.
+func (b *AWSBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"annotations": map[string]interface{}{
+			"service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout":         "3600",
+			"service.beta.kubernetes.io/aws-load-balancer-backend-protocol":                "ssl",
+			"service.beta.kubernetes.io/aws-load-balancer-ssl-ports":                       "443",
+			"service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout":             "5",
+			"service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval":            "30",
+			"service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold":   "2",
+			"service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold": "2",
+			"service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy":          "ELBSecurityPolicy-TLS-1-2-2017-01",
+		},
+	}, nil
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
