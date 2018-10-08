@@ -26,7 +26,7 @@ spec:
         maxUnavailable: 0
       zones: ['europe-1a']
   kubernetes:
-    version: 1.11.0
+    version: 1.12.1
   # kubeAPIServer:
   #   featureGates:
   #     SomeKubernetesFeature: true
@@ -43,9 +43,6 @@ spec:
   #     issuerURL: https://identity.example.com
   #     requiredClaims:
   #       key: value
-  #     signingAlgs: RS256,some-other-algorithm
-  #     usernameClaim: username-claim
-  #     usernamePrefix: username-prefix
   #   admissionPlugins:
   #   - name: PodNodeSelector
   #     config: |
