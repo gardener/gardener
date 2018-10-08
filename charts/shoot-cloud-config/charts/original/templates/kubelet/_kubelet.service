@@ -15,7 +15,7 @@
     Restart=always
     RestartSec=10
     EnvironmentFile=/etc/environment
-    ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .images.hyperkube }}:v{{ required "kubernetes.version is required" .kubernetes.version }} cp /hyperkube /opt/bin/
+    ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .images.hyperkube }} cp /hyperkube /opt/bin/
 {{- if .kubernetes.kubelet.hostnameOverride }}
     ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
 {{- end }}

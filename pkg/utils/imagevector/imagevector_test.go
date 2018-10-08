@@ -21,7 +21,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("imagevector", func() {
@@ -34,113 +33,103 @@ var _ = Describe("imagevector", func() {
 
 		Describe("#FindImage", func() {
 			var (
-				image1 = &Image{
+				k8s164 = "1.6.4"
+				k8s180 = "1.8.0"
+
+				imageSrc1 = &ImageSource{
 					Name:       "image1",
 					Repository: "repo1",
 					Tag:        "tag1",
 					Versions:   "",
 				}
-				image2 = &Image{
+				imageSrc2 = &ImageSource{
 					Name:       "image1",
 					Repository: "repo1",
 					Tag:        "tag1",
 					Versions:   ">= 1.6",
 				}
-				image3 = &Image{
+				imageSrc3 = &ImageSource{
 					Name:       "image3",
 					Repository: "repo3",
 					Tag:        "tag3",
 					Versions:   ">= 1.6, < 1.8",
 				}
-				image4 = &Image{
+				imageSrc4 = &ImageSource{
 					Name:       "image3",
 					Repository: "repo3",
 					Tag:        "tag3",
 					Versions:   ">= 1.8",
 				}
+				imageSrc5 = &ImageSource{
+					Name:       "image5",
+					Repository: "repo5",
+				}
 			)
 
 			It("should return an error because no image was found", func() {
-				image, err := vector.FindImage("test", "1.6.4")
+				image, err := vector.FindImage("test", k8s164, k8s164)
 
 				Expect(err).To(HaveOccurred())
 				Expect(image).To(BeNil())
 			})
 
 			It("should return an image because it only exists once in the vector", func() {
-				vector = ImageVector{image1}
+				vector = ImageVector{imageSrc1}
 
-				image, err := vector.FindImage(image1.Name, "1.6.4")
+				image, err := vector.FindImage(imageSrc1.Name, k8s164, k8s180)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(*image).To(MatchFields(IgnoreExtras, Fields{
-					"Name":       Equal(image1.Name),
-					"Repository": Equal(image1.Repository),
-					"Tag":        Equal(image1.Tag),
-					"Versions":   Equal(image1.Versions),
-				}))
+				Expect(image).To(Equal(imageSrc1.ToImage(k8s180)))
 			})
 
 			It("should return an image which exists multiple times after it has checked the constraints (first image returned)", func() {
-				vector = ImageVector{image3, image4}
+				vector = ImageVector{imageSrc3, imageSrc4}
 
-				image, err := vector.FindImage(image3.Name, "1.6.4")
+				image, err := vector.FindImage(imageSrc3.Name, k8s164, k8s164)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(*image).To(MatchFields(IgnoreExtras, Fields{
-					"Name":       Equal(image3.Name),
-					"Repository": Equal(image3.Repository),
-					"Tag":        Equal(image3.Tag),
-					"Versions":   Equal(image3.Versions),
-				}))
+				Expect(image).To(Equal(imageSrc3.ToImage(k8s164)))
 			})
 
 			It("should return an image which exists multiple times after it has checked the constraints (second image returned)", func() {
-				vector = ImageVector{image3, image4}
+				vector = ImageVector{imageSrc3, imageSrc4}
 
-				image, err := vector.FindImage(image3.Name, "1.8.0")
+				image, err := vector.FindImage(imageSrc3.Name, k8s180, k8s180)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(*image).To(MatchFields(IgnoreExtras, Fields{
-					"Name":       Equal(image4.Name),
-					"Repository": Equal(image4.Repository),
-					"Tag":        Equal(image4.Tag),
-					"Versions":   Equal(image4.Versions),
-				}))
+				Expect(image).To(Equal(imageSrc4.ToImage(k8s180)))
 			})
 
 			It("should return an error for an image which exists multiple times after it has checked the constraints (no constraints met)", func() {
-				vector = ImageVector{image3, image4}
+				vector = ImageVector{imageSrc3, imageSrc4}
 
-				image, err := vector.FindImage(image3.Name, "1.5.9")
+				image, err := vector.FindImage(imageSrc3.Name, "1.5.9", "1.5.9")
 
 				Expect(err).To(HaveOccurred())
 				Expect(image).To(BeNil())
 			})
 
 			It("should return an image which exists multiple times (no version constraints provided)", func() {
-				vector = ImageVector{image1, image2}
+				vector = ImageVector{imageSrc1, imageSrc2}
 
-				image, err := vector.FindImage(image1.Name, "1.6.4")
+				image, err := vector.FindImage(imageSrc1.Name, k8s164, k8s164)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(*image).To(MatchFields(IgnoreExtras, Fields{
-					"Name":       Equal(image1.Name),
-					"Repository": Equal(image1.Repository),
-					"Tag":        Equal(image1.Tag),
-					"Versions":   Equal(image1.Versions),
-				}))
+				Expect(image).To(Equal(imageSrc1.ToImage(k8s164)))
+			})
+
+			It("should return an image where the version was correctly applied", func() {
+				vector = ImageVector{imageSrc5}
+
+				image, err := vector.FindImage(imageSrc5.Name, k8s164, k8s164)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image).To(Equal(imageSrc5.ToImage(k8s164)))
 			})
 		})
 	})
 
 	Describe("> Image", func() {
-		var image Image
-
-		BeforeEach(func() {
-			image = Image{}
-		})
-
 		Describe("#String", func() {
 			It("should return the string representation of the image (w/o tag)", func() {
 				var (
@@ -148,7 +137,7 @@ var _ = Describe("imagevector", func() {
 					tag  = "1.2.3"
 				)
 
-				image = Image{
+				image := Image{
 					Name:       "my-image",
 					Repository: repo,
 					Tag:        tag,
@@ -160,12 +149,59 @@ var _ = Describe("imagevector", func() {
 			It("should return the string representation of the image (w/ tag)", func() {
 				repo := "my-repo"
 
-				image = Image{
+				image := Image{
 					Name:       "my-image",
 					Repository: repo,
 				}
 
 				Expect(image.String()).To(Equal(repo))
+			})
+		})
+	})
+
+	Describe("> ImageSource", func() {
+		Describe("#ToImage", func() {
+			It("should return an image with the same tag", func() {
+				var (
+					name       = "foo"
+					repository = "repo"
+					tag        = "v1"
+
+					source = ImageSource{
+						Name:       name,
+						Repository: repository,
+						Tag:        tag,
+					}
+				)
+
+				image := source.ToImage("1.8.0")
+
+				Expect(image).To(Equal(&Image{
+					Name:       name,
+					Repository: repository,
+					Tag:        tag,
+				}))
+			})
+
+			It("should return an image with the given version as tag", func() {
+				var (
+					name       = "foo"
+					repository = "repo"
+					version    = "1.8.0"
+
+					source = ImageSource{
+						Name:       name,
+						Repository: repository,
+					}
+				)
+
+				image := source.ToImage(version)
+
+				Expect(image).To(Equal(&Image{
+					Name:       name,
+					Repository: repository,
+					Tag:        fmt.Sprintf("v%s", version),
+				}))
 			})
 		})
 	})

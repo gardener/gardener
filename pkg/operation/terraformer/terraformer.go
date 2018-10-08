@@ -51,7 +51,7 @@ func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, names
 		podSuffix = utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5]
 		image     string
 	)
-	if img, _ := imageVector.FindImage("terraformer", k8sClient.Version()); img != nil {
+	if img, _ := imageVector.FindImage(common.TerraformerImageName, k8sClient.Version(), k8sClient.Version()); img != nil {
 		image = img.String()
 	}
 

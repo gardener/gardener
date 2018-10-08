@@ -47,7 +47,7 @@ spec:
         operator: Exists
       containers:
       - name: cloud-controller-manager
-        image: {{ index .Values.images "hyperkube" }}:v{{ .Values.kubernetesVersion }}
+        image: {{ index .Values.images "hyperkube" }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube

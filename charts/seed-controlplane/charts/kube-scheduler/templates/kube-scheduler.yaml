@@ -48,7 +48,7 @@ spec:
         operator: Exists
       containers:
       - name: kube-scheduler
-        image: {{ index .Values.images "hyperkube" }}:v{{ .Values.kubernetesVersion }}
+        image: {{ index .Values.images "hyperkube" }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube

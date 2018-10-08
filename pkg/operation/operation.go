@@ -221,7 +221,7 @@ func (o *Operation) ReportBackupInfrastructureProgress(stats *flow.Stats) {
 }
 
 // InjectImages injects images from the image vector into the provided <values> map.
-func (o *Operation) InjectImages(values map[string]interface{}, version string, imageMap map[string]string) (map[string]interface{}, error) {
+func (o *Operation) InjectImages(values map[string]interface{}, k8sVersionRuntime, k8sVersionTarget string, images ...string) (map[string]interface{}, error) {
 	var (
 		copy = make(map[string]interface{})
 		i    = make(map[string]interface{})
@@ -231,12 +231,12 @@ func (o *Operation) InjectImages(values map[string]interface{}, version string, 
 		copy[k] = v
 	}
 
-	for keyInChart, imageName := range imageMap {
-		image, err := o.ImageVector.FindImage(imageName, version)
+	for _, imageName := range images {
+		image, err := o.ImageVector.FindImage(imageName, k8sVersionRuntime, k8sVersionTarget)
 		if err != nil {
 			return nil, err
 		}
-		i[keyInChart] = image.String()
+		i[imageName] = image.String()
 	}
 
 	copy["images"] = i
@@ -252,7 +252,7 @@ func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrende
 		"secretName": o.Shoot.ComputeCloudConfigSecretName(workerName),
 	}
 
-	values, err := o.InjectImages(config, o.K8sShootClient.Version(), map[string]string{"ruby": "ruby"})
+	values, err := o.InjectImages(config, o.ShootVersion(), o.ShootVersion(), common.RubyImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -265,6 +265,16 @@ func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrende
 // units once it finds a newer state.
 func (o *Operation) ComputeOriginalCloudConfig(config map[string]interface{}) (*chartrenderer.RenderedChart, error) {
 	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "original"), "shoot-cloud-config-original", metav1.NamespaceSystem, config)
+}
+
+// SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
+func (o *Operation) SeedVersion() string {
+	return o.K8sSeedClient.Version()
+}
+
+// ShootVersion is a shorthand for the desired kubernetes version of the operation's shoot.
+func (o *Operation) ShootVersion() string {
+	return o.Shoot.Info.Spec.Kubernetes.Version
 }
 
 // constructInternalDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster

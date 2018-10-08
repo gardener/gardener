@@ -35,7 +35,7 @@ spec:
       hostNetwork: true
       containers:
       - name: kube-proxy
-        image: {{ index .Values.images "hyperkube" }}:{{ .Capabilities.KubeVersion }}
+        image: {{ index .Values.images "hyperkube" }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube

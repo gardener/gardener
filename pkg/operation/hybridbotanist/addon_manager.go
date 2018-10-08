@@ -68,7 +68,7 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 		},
 	}
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"kube-addon-manager": "kube-addon-manager"})
+	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.KubeAddonManagerImageName)
 	if err != nil {
 		return err
 	}
