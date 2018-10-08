@@ -27,6 +27,16 @@ func (b *LocalBotanist) RefreshCloudProviderConfig(currentConfig map[string]stri
 	return currentConfig
 }
 
+// GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the
+// Service manifest of the kube-apiserver-service properly.
+func (b *LocalBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"type":       "NodePort",
+		"targetPort": 31443,
+		"nodePort":   31443,
+	}, nil
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *LocalBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
