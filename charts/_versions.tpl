@@ -8,7 +8,11 @@ kubelet.config.k8s.io/v1beta1
 {{- end -}}
 
 {{- define "schedulercomponentconfigversion" -}}
+{{- if semverCompare ">= 1.12" .Capabilities.KubeVersion.GitVersion -}}
+kubescheduler.config.k8s.io/v1alpha1
+{{- else -}}
 componentconfig/v1alpha1
+{{- end -}}
 {{- end -}}
 
 {{- define "proxycomponentconfigversion" -}}
