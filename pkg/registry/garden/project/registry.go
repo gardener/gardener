@@ -68,7 +68,7 @@ func (s *storage) GetProject(ctx context.Context, name string, options *metav1.G
 }
 
 func (s *storage) CreateProject(ctx context.Context, project *garden.Project, createValidation rest.ValidateObjectFunc) (*garden.Project, error) {
-	obj, err := s.Create(ctx, project, createValidation, false)
+	obj, err := s.Create(ctx, project, createValidation, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *storage) CreateProject(ctx context.Context, project *garden.Project, cr
 }
 
 func (s *storage) UpdateProject(ctx context.Context, project *garden.Project, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Project, error) {
-	obj, _, err := s.Update(ctx, project.Name, rest.DefaultUpdatedObjectInfo(project), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, project.Name, rest.DefaultUpdatedObjectInfo(project), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}

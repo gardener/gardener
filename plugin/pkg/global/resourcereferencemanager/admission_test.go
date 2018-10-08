@@ -176,7 +176,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -195,7 +195,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -209,7 +209,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				})
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -221,7 +221,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -232,7 +232,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -244,7 +244,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota)
 
 				user := &user.DefaultInfo{Name: "disallowed-user"}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -276,7 +276,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -308,7 +308,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Quotas().Informer().GetStore().Add(&quota2)
 
 				user := &user.DefaultInfo{Name: allowedUser}
-				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, user)
+				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -321,7 +321,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 
-				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -339,7 +339,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					}, nil
 				})
 
-				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -349,7 +349,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced cloud profile does not exist", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&secret)
 
-				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -362,7 +362,7 @@ var _ = Describe("resourcereferencemanager", func() {
 					return true, nil, fmt.Errorf("nope, out of luck")
 				})
 
-				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -376,7 +376,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
 
@@ -391,7 +391,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -402,7 +402,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -413,7 +413,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -424,7 +424,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -436,7 +436,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should add the created-by annotation", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 
-				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, defaultUserInfo)
+				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
 				Expect(project.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
 

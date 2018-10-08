@@ -120,7 +120,7 @@ var _ = Describe("quotavalidator", func() {
 		})
 
 		It("should do nothing because the shoot specifies the 'unmanaged' dns provider", func() {
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 			err := admissionHandler.Admit(attrs)
 
@@ -135,7 +135,7 @@ var _ = Describe("quotavalidator", func() {
 					shoot.Spec.DNS.Domain = makeStringPointer("my-shoot." + domain)
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -149,7 +149,7 @@ var _ = Describe("quotavalidator", func() {
 					shoot.Spec.DNS.Domain = makeStringPointer("my-shoot." + domain)
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -166,7 +166,7 @@ var _ = Describe("quotavalidator", func() {
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
 					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -182,7 +182,7 @@ var _ = Describe("quotavalidator", func() {
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
 					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -198,7 +198,7 @@ var _ = Describe("quotavalidator", func() {
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
 					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -218,7 +218,7 @@ var _ = Describe("quotavalidator", func() {
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
 					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -236,7 +236,7 @@ var _ = Describe("quotavalidator", func() {
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
 					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -259,7 +259,7 @@ var _ = Describe("quotavalidator", func() {
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&cloudProviderSecret)
 					gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -273,7 +273,7 @@ var _ = Describe("quotavalidator", func() {
 					shoot.Spec.DNS.SecretName = makeStringPointer(referencedSecretName)
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&referencedSecret)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -292,7 +292,7 @@ var _ = Describe("quotavalidator", func() {
 					}
 
 					kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&referencedSecret)
-					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+					attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 					err := admissionHandler.Admit(attrs)
 
@@ -306,7 +306,7 @@ var _ = Describe("quotavalidator", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 				shoot.Spec.DNS.Domain = makeStringPointer("my-shoot." + domain)
 
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -319,7 +319,7 @@ var _ = Describe("quotavalidator", func() {
 				shoot.Spec.DNS.Domain = makeStringPointer("my-shoot.my-domain.com")
 
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -332,7 +332,7 @@ var _ = Describe("quotavalidator", func() {
 				shoot.Spec.DNS.Domain = makeStringPointer("my-shoot." + domain)
 
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, nil)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 

@@ -68,7 +68,7 @@ func (s *storage) GetCloudProfile(ctx context.Context, name string, options *met
 }
 
 func (s *storage) CreateCloudProfile(ctx context.Context, cloudProfile *garden.CloudProfile, createValidation rest.ValidateObjectFunc) (*garden.CloudProfile, error) {
-	obj, err := s.Create(ctx, cloudProfile, createValidation, false)
+	obj, err := s.Create(ctx, cloudProfile, createValidation, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *storage) CreateCloudProfile(ctx context.Context, cloudProfile *garden.C
 }
 
 func (s *storage) UpdateCloudProfile(ctx context.Context, cloudProfile *garden.CloudProfile, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.CloudProfile, error) {
-	obj, _, err := s.Update(ctx, cloudProfile.Name, rest.DefaultUpdatedObjectInfo(cloudProfile), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, cloudProfile.Name, rest.DefaultUpdatedObjectInfo(cloudProfile), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}

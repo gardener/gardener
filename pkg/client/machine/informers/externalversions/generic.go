@@ -39,6 +39,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	// Group=machine.sapcloud.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithResource("awsmachineclasses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Machine().V1alpha1().AWSMachineClasses().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("alicloudmachineclasses"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Machine().V1alpha1().AlicloudMachineClasses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("azuremachineclasses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Machine().V1alpha1().AzureMachineClasses().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("gcpmachineclasses"):

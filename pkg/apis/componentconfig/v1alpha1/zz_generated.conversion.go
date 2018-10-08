@@ -36,45 +36,188 @@ func init() {
 
 // RegisterConversions adds conversion functions to the given scheme.
 // Public to allow building arbitrary schemes.
-func RegisterConversions(scheme *runtime.Scheme) error {
-	return scheme.AddGeneratedConversionFuncs(
-		Convert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentconfig_BackupInfrastructureControllerConfiguration,
-		Convert_componentconfig_BackupInfrastructureControllerConfiguration_To_v1alpha1_BackupInfrastructureControllerConfiguration,
-		Convert_v1alpha1_ClientConnectionConfiguration_To_componentconfig_ClientConnectionConfiguration,
-		Convert_componentconfig_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration,
-		Convert_v1alpha1_CloudProfileControllerConfiguration_To_componentconfig_CloudProfileControllerConfiguration,
-		Convert_componentconfig_CloudProfileControllerConfiguration_To_v1alpha1_CloudProfileControllerConfiguration,
-		Convert_v1alpha1_ControllerManagerConfiguration_To_componentconfig_ControllerManagerConfiguration,
-		Convert_componentconfig_ControllerManagerConfiguration_To_v1alpha1_ControllerManagerConfiguration,
-		Convert_v1alpha1_ControllerManagerControllerConfiguration_To_componentconfig_ControllerManagerControllerConfiguration,
-		Convert_componentconfig_ControllerManagerControllerConfiguration_To_v1alpha1_ControllerManagerControllerConfiguration,
-		Convert_v1alpha1_HTTPSServer_To_componentconfig_HTTPSServer,
-		Convert_componentconfig_HTTPSServer_To_v1alpha1_HTTPSServer,
-		Convert_v1alpha1_LeaderElectionConfiguration_To_componentconfig_LeaderElectionConfiguration,
-		Convert_componentconfig_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration,
-		Convert_v1alpha1_ProjectControllerConfiguration_To_componentconfig_ProjectControllerConfiguration,
-		Convert_componentconfig_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration,
-		Convert_v1alpha1_QuotaControllerConfiguration_To_componentconfig_QuotaControllerConfiguration,
-		Convert_componentconfig_QuotaControllerConfiguration_To_v1alpha1_QuotaControllerConfiguration,
-		Convert_v1alpha1_SecretBindingControllerConfiguration_To_componentconfig_SecretBindingControllerConfiguration,
-		Convert_componentconfig_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindingControllerConfiguration,
-		Convert_v1alpha1_SeedControllerConfiguration_To_componentconfig_SeedControllerConfiguration,
-		Convert_componentconfig_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration,
-		Convert_v1alpha1_Server_To_componentconfig_Server,
-		Convert_componentconfig_Server_To_v1alpha1_Server,
-		Convert_v1alpha1_ServerConfiguration_To_componentconfig_ServerConfiguration,
-		Convert_componentconfig_ServerConfiguration_To_v1alpha1_ServerConfiguration,
-		Convert_v1alpha1_ShootCareControllerConfiguration_To_componentconfig_ShootCareControllerConfiguration,
-		Convert_componentconfig_ShootCareControllerConfiguration_To_v1alpha1_ShootCareControllerConfiguration,
-		Convert_v1alpha1_ShootControllerConfiguration_To_componentconfig_ShootControllerConfiguration,
-		Convert_componentconfig_ShootControllerConfiguration_To_v1alpha1_ShootControllerConfiguration,
-		Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_componentconfig_ShootMaintenanceControllerConfiguration,
-		Convert_componentconfig_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration,
-		Convert_v1alpha1_ShootQuotaControllerConfiguration_To_componentconfig_ShootQuotaControllerConfiguration,
-		Convert_componentconfig_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaControllerConfiguration,
-		Convert_v1alpha1_TLSServer_To_componentconfig_TLSServer,
-		Convert_componentconfig_TLSServer_To_v1alpha1_TLSServer,
-	)
+func RegisterConversions(s *runtime.Scheme) error {
+	if err := s.AddGeneratedConversionFunc((*BackupInfrastructureControllerConfiguration)(nil), (*componentconfig.BackupInfrastructureControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentconfig_BackupInfrastructureControllerConfiguration(a.(*BackupInfrastructureControllerConfiguration), b.(*componentconfig.BackupInfrastructureControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.BackupInfrastructureControllerConfiguration)(nil), (*BackupInfrastructureControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_BackupInfrastructureControllerConfiguration_To_v1alpha1_BackupInfrastructureControllerConfiguration(a.(*componentconfig.BackupInfrastructureControllerConfiguration), b.(*BackupInfrastructureControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ClientConnectionConfiguration)(nil), (*componentconfig.ClientConnectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ClientConnectionConfiguration_To_componentconfig_ClientConnectionConfiguration(a.(*ClientConnectionConfiguration), b.(*componentconfig.ClientConnectionConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ClientConnectionConfiguration)(nil), (*ClientConnectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ClientConnectionConfiguration_To_v1alpha1_ClientConnectionConfiguration(a.(*componentconfig.ClientConnectionConfiguration), b.(*ClientConnectionConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*CloudProfileControllerConfiguration)(nil), (*componentconfig.CloudProfileControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_CloudProfileControllerConfiguration_To_componentconfig_CloudProfileControllerConfiguration(a.(*CloudProfileControllerConfiguration), b.(*componentconfig.CloudProfileControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.CloudProfileControllerConfiguration)(nil), (*CloudProfileControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_CloudProfileControllerConfiguration_To_v1alpha1_CloudProfileControllerConfiguration(a.(*componentconfig.CloudProfileControllerConfiguration), b.(*CloudProfileControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ControllerManagerConfiguration)(nil), (*componentconfig.ControllerManagerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ControllerManagerConfiguration_To_componentconfig_ControllerManagerConfiguration(a.(*ControllerManagerConfiguration), b.(*componentconfig.ControllerManagerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ControllerManagerConfiguration)(nil), (*ControllerManagerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ControllerManagerConfiguration_To_v1alpha1_ControllerManagerConfiguration(a.(*componentconfig.ControllerManagerConfiguration), b.(*ControllerManagerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ControllerManagerControllerConfiguration)(nil), (*componentconfig.ControllerManagerControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ControllerManagerControllerConfiguration_To_componentconfig_ControllerManagerControllerConfiguration(a.(*ControllerManagerControllerConfiguration), b.(*componentconfig.ControllerManagerControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ControllerManagerControllerConfiguration)(nil), (*ControllerManagerControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ControllerManagerControllerConfiguration_To_v1alpha1_ControllerManagerControllerConfiguration(a.(*componentconfig.ControllerManagerControllerConfiguration), b.(*ControllerManagerControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*HTTPSServer)(nil), (*componentconfig.HTTPSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_HTTPSServer_To_componentconfig_HTTPSServer(a.(*HTTPSServer), b.(*componentconfig.HTTPSServer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.HTTPSServer)(nil), (*HTTPSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_HTTPSServer_To_v1alpha1_HTTPSServer(a.(*componentconfig.HTTPSServer), b.(*HTTPSServer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*LeaderElectionConfiguration)(nil), (*componentconfig.LeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_LeaderElectionConfiguration_To_componentconfig_LeaderElectionConfiguration(a.(*LeaderElectionConfiguration), b.(*componentconfig.LeaderElectionConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.LeaderElectionConfiguration)(nil), (*LeaderElectionConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfiguration(a.(*componentconfig.LeaderElectionConfiguration), b.(*LeaderElectionConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ProjectControllerConfiguration)(nil), (*componentconfig.ProjectControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ProjectControllerConfiguration_To_componentconfig_ProjectControllerConfiguration(a.(*ProjectControllerConfiguration), b.(*componentconfig.ProjectControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ProjectControllerConfiguration)(nil), (*ProjectControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ProjectControllerConfiguration_To_v1alpha1_ProjectControllerConfiguration(a.(*componentconfig.ProjectControllerConfiguration), b.(*ProjectControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*QuotaControllerConfiguration)(nil), (*componentconfig.QuotaControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_QuotaControllerConfiguration_To_componentconfig_QuotaControllerConfiguration(a.(*QuotaControllerConfiguration), b.(*componentconfig.QuotaControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.QuotaControllerConfiguration)(nil), (*QuotaControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_QuotaControllerConfiguration_To_v1alpha1_QuotaControllerConfiguration(a.(*componentconfig.QuotaControllerConfiguration), b.(*QuotaControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SecretBindingControllerConfiguration)(nil), (*componentconfig.SecretBindingControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SecretBindingControllerConfiguration_To_componentconfig_SecretBindingControllerConfiguration(a.(*SecretBindingControllerConfiguration), b.(*componentconfig.SecretBindingControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.SecretBindingControllerConfiguration)(nil), (*SecretBindingControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_SecretBindingControllerConfiguration_To_v1alpha1_SecretBindingControllerConfiguration(a.(*componentconfig.SecretBindingControllerConfiguration), b.(*SecretBindingControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SeedControllerConfiguration)(nil), (*componentconfig.SeedControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SeedControllerConfiguration_To_componentconfig_SeedControllerConfiguration(a.(*SeedControllerConfiguration), b.(*componentconfig.SeedControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.SeedControllerConfiguration)(nil), (*SeedControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_SeedControllerConfiguration_To_v1alpha1_SeedControllerConfiguration(a.(*componentconfig.SeedControllerConfiguration), b.(*SeedControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*Server)(nil), (*componentconfig.Server)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_Server_To_componentconfig_Server(a.(*Server), b.(*componentconfig.Server), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.Server)(nil), (*Server)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_Server_To_v1alpha1_Server(a.(*componentconfig.Server), b.(*Server), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ServerConfiguration)(nil), (*componentconfig.ServerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ServerConfiguration_To_componentconfig_ServerConfiguration(a.(*ServerConfiguration), b.(*componentconfig.ServerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ServerConfiguration)(nil), (*ServerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ServerConfiguration_To_v1alpha1_ServerConfiguration(a.(*componentconfig.ServerConfiguration), b.(*ServerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootCareControllerConfiguration)(nil), (*componentconfig.ShootCareControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootCareControllerConfiguration_To_componentconfig_ShootCareControllerConfiguration(a.(*ShootCareControllerConfiguration), b.(*componentconfig.ShootCareControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ShootCareControllerConfiguration)(nil), (*ShootCareControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ShootCareControllerConfiguration_To_v1alpha1_ShootCareControllerConfiguration(a.(*componentconfig.ShootCareControllerConfiguration), b.(*ShootCareControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootControllerConfiguration)(nil), (*componentconfig.ShootControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootControllerConfiguration_To_componentconfig_ShootControllerConfiguration(a.(*ShootControllerConfiguration), b.(*componentconfig.ShootControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ShootControllerConfiguration)(nil), (*ShootControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ShootControllerConfiguration_To_v1alpha1_ShootControllerConfiguration(a.(*componentconfig.ShootControllerConfiguration), b.(*ShootControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootMaintenanceControllerConfiguration)(nil), (*componentconfig.ShootMaintenanceControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_componentconfig_ShootMaintenanceControllerConfiguration(a.(*ShootMaintenanceControllerConfiguration), b.(*componentconfig.ShootMaintenanceControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ShootMaintenanceControllerConfiguration)(nil), (*ShootMaintenanceControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration(a.(*componentconfig.ShootMaintenanceControllerConfiguration), b.(*ShootMaintenanceControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootQuotaControllerConfiguration)(nil), (*componentconfig.ShootQuotaControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_ShootQuotaControllerConfiguration_To_componentconfig_ShootQuotaControllerConfiguration(a.(*ShootQuotaControllerConfiguration), b.(*componentconfig.ShootQuotaControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.ShootQuotaControllerConfiguration)(nil), (*ShootQuotaControllerConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_ShootQuotaControllerConfiguration_To_v1alpha1_ShootQuotaControllerConfiguration(a.(*componentconfig.ShootQuotaControllerConfiguration), b.(*ShootQuotaControllerConfiguration), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*TLSServer)(nil), (*componentconfig.TLSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_TLSServer_To_componentconfig_TLSServer(a.(*TLSServer), b.(*componentconfig.TLSServer), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*componentconfig.TLSServer)(nil), (*TLSServer)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_componentconfig_TLSServer_To_v1alpha1_TLSServer(a.(*componentconfig.TLSServer), b.(*TLSServer), scope)
+	}); err != nil {
+		return err
+	}
+	return nil
 }
 
 func autoConvert_v1alpha1_BackupInfrastructureControllerConfiguration_To_componentconfig_BackupInfrastructureControllerConfiguration(in *BackupInfrastructureControllerConfiguration, out *componentconfig.BackupInfrastructureControllerConfiguration, s conversion.Scope) error {

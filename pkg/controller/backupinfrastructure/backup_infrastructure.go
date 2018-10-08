@@ -15,6 +15,7 @@
 package backupinfrastructure
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -89,12 +90,10 @@ func NewBackupInfrastructureController(k8sGardenClient kubernetes.Client, garden
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
-	var (
-		waitGroup sync.WaitGroup
-	)
+func (c *Controller) Run(ctx context.Context, workers int) {
+	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.backupInfrastructureSynced, c.seedSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.backupInfrastructureSynced, c.seedSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -113,11 +112,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	logger.Logger.Info("BackupInfrastructure controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.backupInfrastructureQueue, "backupinfrastructure", c.reconcileBackupInfrastructureKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.backupInfrastructureQueue, "backupinfrastructure", c.reconcileBackupInfrastructureKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
-	<-stopCh
+	<-ctx.Done()
 	c.backupInfrastructureQueue.ShutDown()
 
 	for {

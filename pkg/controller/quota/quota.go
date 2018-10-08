@@ -15,6 +15,7 @@
 package quota
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -82,10 +83,10 @@ func NewQuotaController(k8sGardenClient kubernetes.Client, gardenInformerFactory
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.quotaSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.quotaSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -104,11 +105,11 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	logger.Logger.Info("Quota controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.quotaQueue, "Quota", c.reconcileQuotaKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.quotaQueue, "Quota", c.reconcileQuotaKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
-	<-stopCh
+	<-ctx.Done()
 	c.quotaQueue.ShutDown()
 
 	for {

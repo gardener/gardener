@@ -71,7 +71,7 @@ func (s *storage) GetBackupInfrastructure(ctx context.Context, backupInfrastruct
 }
 
 func (s *storage) CreateBackupInfrastructure(ctx context.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc) (*garden.BackupInfrastructure, error) {
-	obj, err := s.Create(ctx, backupInfrastructure, rest.ValidateAllObjectFunc, false)
+	obj, err := s.Create(ctx, backupInfrastructure, rest.ValidateAllObjectFunc, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *storage) CreateBackupInfrastructure(ctx context.Context, backupInfrastr
 }
 
 func (s *storage) UpdateBackupInfrastructure(ctx context.Context, backupInfrastructure *garden.BackupInfrastructure, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.BackupInfrastructure, error) {
-	obj, _, err := s.Update(ctx, backupInfrastructure.Name, rest.DefaultUpdatedObjectInfo(backupInfrastructure), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, backupInfrastructure.Name, rest.DefaultUpdatedObjectInfo(backupInfrastructure), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}

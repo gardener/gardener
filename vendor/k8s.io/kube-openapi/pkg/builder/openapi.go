@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 
 	restful "github.com/emicklei/go-restful"
@@ -58,7 +57,7 @@ func BuildOpenAPIDefinitionsForResource(model interface{}, config *common.Config
 	o := newOpenAPI(config)
 	// We can discard the return value of toSchema because all we care about is the side effect of calling it.
 	// All the models created for this resource get added to o.swagger.Definitions
-	_, err := o.toSchema(getCanonicalTypeName(model))
+	_, err := o.toSchema(util.GetCanonicalTypeName(model))
 	if err != nil {
 		return nil, err
 	}
@@ -133,21 +132,6 @@ func (o *openAPI) finalizeSwagger() (*spec.Swagger, error) {
 	}
 
 	return o.swagger, nil
-}
-
-func getCanonicalTypeName(model interface{}) string {
-	t := reflect.TypeOf(model)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-	if t.PkgPath() == "" {
-		return t.Name()
-	}
-	path := t.PkgPath()
-	if strings.Contains(path, "/vendor/") {
-		path = path[strings.Index(path, "/vendor/")+len("/vendor/"):]
-	}
-	return path + "." + t.Name()
 }
 
 func (o *openAPI) buildDefinitionRecursively(name string) error {
@@ -335,7 +319,7 @@ func (o *openAPI) buildOperations(route restful.Route, inPathCommonParamsMap map
 }
 
 func (o *openAPI) buildResponse(model interface{}, description string) (spec.Response, error) {
-	schema, err := o.toSchema(getCanonicalTypeName(model))
+	schema, err := o.toSchema(util.GetCanonicalTypeName(model))
 	if err != nil {
 		return spec.Response{}, err
 	}
@@ -413,7 +397,7 @@ func (o *openAPI) buildParameter(restParam restful.ParameterData, bodySample int
 	case restful.BodyParameterKind:
 		if bodySample != nil {
 			ret.In = "body"
-			ret.Schema, err = o.toSchema(getCanonicalTypeName(bodySample))
+			ret.Schema, err = o.toSchema(util.GetCanonicalTypeName(bodySample))
 			return ret, err
 		} else {
 			// There is not enough information in the body parameter to build the definition.

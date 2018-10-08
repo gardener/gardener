@@ -68,7 +68,7 @@ func (s *storage) GetQuota(ctx context.Context, name string, options *metav1.Get
 }
 
 func (s *storage) CreateQuota(ctx context.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc) (*garden.Quota, error) {
-	obj, err := s.Create(ctx, quota, createValidation, false)
+	obj, err := s.Create(ctx, quota, createValidation, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *storage) CreateQuota(ctx context.Context, quota *garden.Quota, createVa
 }
 
 func (s *storage) UpdateQuota(ctx context.Context, quota *garden.Quota, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.Quota, error) {
-	obj, _, err := s.Update(ctx, quota.Name, rest.DefaultUpdatedObjectInfo(quota), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, quota.Name, rest.DefaultUpdatedObjectInfo(quota), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
