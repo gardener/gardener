@@ -69,9 +69,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.2
-        - 1.10.7
-        - 1.9.10
+        - 1.12.1
+        - 1.11.3
+        - 1.10.8
+        - 1.9.11
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -165,9 +166,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.2
-        - 1.10.7
-        - 1.9.10
+        - 1.12.1
+        - 1.11.3
+        - 1.10.8
+        - 1.9.11
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
@@ -259,9 +261,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.2
-        - 1.10.7
-        - 1.9.10
+        - 1.12.1
+        - 1.11.3
+        - 1.10.8
+        - 1.9.11
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -339,8 +342,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
         versions:
-        - 1.11.0
-        - 1.10.5
+        - 1.12.1
+        - 1.11.3
+        - 1.10.8
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -398,7 +402,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       - region: cn-beijing
         names:
         - cn-beijing-f  # Avalibility zone
-      % endif      
+      % endif
   % endif
   % if cloud == "openstack" or cloud == "os":
   openstack:
@@ -421,9 +425,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.11.2
-        - 1.10.7
-        - 1.9.10
+        - 1.12.1
+        - 1.11.3
+        - 1.10.8
+        - 1.9.11
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:

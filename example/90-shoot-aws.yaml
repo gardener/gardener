@@ -29,7 +29,7 @@ spec:
         maxUnavailable: 0
       zones: ['eu-west-1a']
   kubernetes:
-    version: 1.11.0
+    version: 1.12.1
   # kubeAPIServer:
   #   featureGates:
   #     SomeKubernetesFeature: true

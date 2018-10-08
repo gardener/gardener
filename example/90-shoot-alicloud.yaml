@@ -23,9 +23,9 @@ spec:
         volumeSize: 30Gi
         autoScalerMin: 1
         autoScalerMax: 2
-      zones: ['cn-beijing-f'] 
+      zones: ['cn-beijing-f']
   kubernetes:
-    version: 1.11.0
+    version: 1.12.1
   # kubeAPIServer:
   #   featureGates:
   #     SomeKubernetesFeature: true
