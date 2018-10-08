@@ -27,6 +27,7 @@ spec:
         app: kubernetes
         role: apiserver
     spec:
+      priorityClassName: gardener-shoot-controlplane
       tolerations:
       - effect: NoExecute
         operator: Exists
