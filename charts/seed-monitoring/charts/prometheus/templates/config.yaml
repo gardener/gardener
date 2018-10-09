@@ -217,6 +217,7 @@ data:
 
     - job_name: kube-controller-manager
       honor_labels: false
+      scrape_timeout: 15s
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
