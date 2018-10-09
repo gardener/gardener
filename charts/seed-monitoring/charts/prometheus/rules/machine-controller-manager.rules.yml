@@ -1,0 +1,15 @@
+groups:
+- name: machine-controller-manager.rules
+  rules:
+  - alert: MachineControllerManagerDown
+    expr: absent(up{job="machine-controller-manager"} == 1)
+    for: 5m
+    labels:
+      job: machine-controller-manager
+      service: machine-controller-manager
+      severity: critical
+      type: seed
+    annotations:
+      description: There is no running machine controller manager. No Shoot Nodes
+        can be created.
+      summary: Machine controller manager is down

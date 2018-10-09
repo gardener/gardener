@@ -55,6 +55,9 @@ allowedMetrics:
   cloudControllerManager:
   - process_max_fds
   - process_open_fds
+  clusterAutoscaler:
+  - process_max_fds
+  - process_open_fds
   kubeAPIServer:
   - apiserver_request_count
   - apiserver_request_latencies_bucket
@@ -112,6 +115,9 @@ allowedMetrics:
   - kube_statefulset_replicas
   - kube_statefulset_status_observed_generation
   - kube_statefulset_status_replicas
+  - process_max_fds
+  - process_open_fds
+  machineControllerManager:
   - process_max_fds
   - process_open_fds
   nodeExporter:

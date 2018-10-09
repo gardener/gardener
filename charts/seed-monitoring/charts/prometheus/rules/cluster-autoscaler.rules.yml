@@ -1,0 +1,15 @@
+groups:
+- name: cluster-autoscaler.rules
+  rules:
+  - alert: ClusterAutoscallerDown
+    expr: absent(up{job="cluster-autoscaler"} == 1)
+    for: 7m
+    labels:
+      job: cluster-autoscaler
+      service: cluster-autoscaler
+      severity: critical
+      type: seed
+    annotations:
+      description: There is no running cluster autoscaler. Shoot's Nodes wont
+        be scaled dynamically, based on the load.
+      summary: Cluster autoscaler is down

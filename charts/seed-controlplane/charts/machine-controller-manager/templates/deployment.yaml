@@ -39,12 +39,13 @@ spec:
         - --machine-set-scale-timeout=40
         - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
         - --namespace={{ .Release.Namespace }}
+        - --port={{ .Values.metricsPort }}
         - --v=2
         livenessProbe:
           failureThreshold: 3
           httpGet:
             path: /healthz
-            port: 10258
+            port: {{ .Values.metricsPort }}
             scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 10

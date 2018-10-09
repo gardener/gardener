@@ -33,6 +33,7 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - ./cluster-autoscaler
+        - --address=:{{ .Values.metricsPort }}
         - --kubeconfig=/var/lib/cluster-autoscaler/kubeconfig
         - --cloud-provider=mcm
         {{- range $key, $pool := .Values.workerPools }}
