@@ -150,10 +150,15 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           botanist.WaitUntilKubeAPIServerReady,
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
+		deployCloudSpecificControlPlane = g.Add(flow.Task{
+			Name:         "Deploying cloud-specific control plane components",
+			Fn:           flow.TaskFn(shootCloudBotanist.DeployCloudSpecificControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+		})
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.TaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployCloudSpecificControlPlane),
 		})
 		deployKubeAddonManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes addon manager",
@@ -185,15 +190,10 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.Hibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, reconcileMachines),
 		})
-		applyCreateHook = g.Add(flow.Task{
-			Name:         "Applying create hooks",
-			Fn:           flow.TaskFn(seedCloudBotanist.ApplyCreateHook).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilVPNConnectionExists),
-		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
 			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines, applyCreateHook),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploy cluster autoscaler",

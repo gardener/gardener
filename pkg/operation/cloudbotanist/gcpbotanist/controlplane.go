@@ -50,7 +50,9 @@ func (b *GCPBotanist) RefreshCloudProviderConfig(currentConfig map[string]string
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
-	return nil, nil
+	return map[string]interface{}{
+		"advertiseAddress": b.APIServerAddressIP,
+	}, nil
 }
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
@@ -126,4 +128,9 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	return secretData, backupConfigData, nil
+}
+
+// DeployCloudSpecificControlPlane does currently nothing for GCP.
+func (b *GCPBotanist) DeployCloudSpecificControlPlane() error {
+	return nil
 }

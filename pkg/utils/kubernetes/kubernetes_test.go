@@ -15,11 +15,13 @@
 package kubernetes
 
 import (
+	"testing"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"testing"
 )
 
 func TestKubernetes(t *testing.T) {
@@ -54,5 +56,29 @@ var _ = Describe("kubernetes", func() {
 		Entry("empty string with spaces", `  `, true),
 		Entry("empty json object", `{}`, true),
 		Entry("empty json object with spaces", ` { } `, true),
+	)
+
+	DescribeTable("#ValidDeploymentContainerImageVersion",
+		func(containerName, minVersion string, expected bool) {
+			fakeImage := "test:0.3.0"
+			deployment := appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name:  "aws-lb-readvertiser",
+									Image: fakeImage,
+								},
+							},
+						},
+					},
+				},
+			}
+			ok, _ := ValidDeploymentContainerImageVersion(&deployment, containerName, minVersion)
+			Expect(ok).To(Equal(expected))
+		},
+		Entry("invalid version", "aws-lb-readvertiser", `0.4.0`, false),
+		Entry("invalid container name", "aws-readvertiser", "0.3.0", false),
 	)
 })

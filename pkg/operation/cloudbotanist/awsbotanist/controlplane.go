@@ -15,6 +15,11 @@
 package awsbotanist
 
 import (
+	"path/filepath"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
@@ -56,7 +61,34 @@ func (b *AWSBotanist) RefreshCloudProviderConfig(currentConfig map[string]string
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
-	return nil, nil
+	// For older versions of Gardener the old readvertiser would be deployed which is incompatible with the way we
+	// configure the kube-apiserver now, therefore, we need to check if the version is < 0.4.0.
+	mustDeleteOldReadvertiser := false
+	readvertiserDeployment, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.AWSLBReadvertiserDeploymentName)
+	if err == nil {
+		mustDeleteOldReadvertiser = true
+	} else if !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if mustDeleteOldReadvertiser {
+		validDeploymentVersion, err := kutil.ValidDeploymentContainerImageVersion(readvertiserDeployment, "aws-lb-readvertiser", "0.4.0")
+		if err != nil {
+			return nil, err
+		}
+
+		// If the version is less than the 0.4.0, delete the old readvertiser deployment to prevent modifications of the kube-apiserver deployment.
+		if !validDeploymentVersion {
+			b.Logger.Info("Detected an old version of the aws-lb-readvertiser, deleting it")
+			if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.AWSLBReadvertiserDeploymentName); err != nil && !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		}
+	}
+
+	return map[string]interface{}{
+		"endpointReconcilerType": "none",
+	}, nil
 }
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
@@ -167,4 +199,36 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	return secretData, backupConfigData, nil
+}
+
+// DeployCloudSpecificControlPlane updates the AWS ELB health check to SSL and deploys the aws-lb-readvertiser.
+// https://github.com/gardener/aws-lb-readvertiser
+func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
+	var (
+		name          = "aws-lb-readvertiser"
+		defaultValues = map[string]interface{}{
+			"domain": b.APIServerAddress,
+			"podAnnotations": map[string]interface{}{
+				"checksum/secret-aws-lb-readvertiser": b.CheckSums[name],
+			},
+		}
+	)
+
+	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
+	if err != nil {
+		return err
+	}
+
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values); err != nil {
+		return err
+	}
+
+	// Change ELB health check to SSL (avoid TLS handshake errors because of AWS ELB health checks)
+	loadBalancerName := b.APIServerAddress[:32]
+	elb, err := b.AWSClient.GetELB(loadBalancerName)
+	if err != nil {
+		return err
+	}
+	targetPort := (*elb.LoadBalancerDescriptions[0].HealthCheck.Target)[4:]
+	return b.AWSClient.UpdateELBHealthCheck(loadBalancerName, targetPort)
 }
