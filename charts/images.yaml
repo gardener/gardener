@@ -45,7 +45,7 @@ images:
 - name: aws-lb-readvertiser
   sourceRepository: github.com/gardener/aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
-  tag: "0.3.0"
+  tag: "0.4.0"
 
 # Monitoring
 - name: alertmanager
