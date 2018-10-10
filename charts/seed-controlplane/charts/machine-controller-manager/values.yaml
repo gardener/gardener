@@ -6,3 +6,5 @@ images:
 
 namespace:
   uid: uuid-of-namespace
+
+metricsPort: 10258

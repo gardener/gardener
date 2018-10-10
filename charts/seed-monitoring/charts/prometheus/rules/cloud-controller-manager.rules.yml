@@ -1,0 +1,15 @@
+groups:
+- name: cloud-controller-manager.rules
+  rules:
+  - alert: CloudControllerManagerDown
+    expr: absent(up{job="cloud-controller-manager"} == 1)
+    for: 7m
+    labels:
+      job: cloud-controller-manager
+      service: cloud-controller-manager
+      severity: critical
+      type: seed
+    annotations:
+      description: There is no running K8S cloud controller manager. Cloud specific resources
+        such as loadbalancers and persistent volumes are not reconcilded.
+      summary: Cloud controller manager is down
