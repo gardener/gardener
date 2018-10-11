@@ -65,6 +65,12 @@ spec:
         {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --leader-elect=true
+        {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
+        - --authentication-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
+        - --authorization-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
+        - --tls-cert-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.crt
+        - --tls-private-key-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.key
+        {{- end }}
         {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
         {{- end }}
@@ -94,6 +100,8 @@ spec:
         volumeMounts:
         - name: cloud-controller-manager
           mountPath: /var/lib/cloud-controller-manager
+        - name: cloud-controller-manager-server
+          mountPath: /var/lib/cloud-controller-manager-server
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
         - name: cloudprovider
@@ -106,6 +114,9 @@ spec:
       - name: cloud-controller-manager
         secret:
           secretName: cloud-controller-manager
+      - name: cloud-controller-manager-server
+        secret:
+          secretName: cloud-controller-manager-server
       - name: cloud-provider-config
         configMap:
           name: cloud-provider-config

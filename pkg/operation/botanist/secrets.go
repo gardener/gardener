@@ -82,18 +82,16 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			net.ParseIP("127.0.0.1"),
 			net.ParseIP(common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1)),
 		}
-		apiServerCertDNSNames = []string{
+		apiServerCertDNSNames = append([]string{
+			"kube-apiserver",
 			fmt.Sprintf("kube-apiserver.%s", b.Shoot.SeedNamespace),
 			fmt.Sprintf("kube-apiserver.%s.svc", b.Shoot.SeedNamespace),
-			// TODO: Determine Seed cluster's domain that is configured for kubelet and kube-dns/coredns
-			// fmt.Sprintf("kube-apiserver.%s.svc.%s", b.Shoot.SeedNamespace, seed-kube-domain),
-			"kube-apiserver",
-			"kubernetes",
-			"kubernetes.default",
-			"kubernetes.default.svc",
-			fmt.Sprintf("kubernetes.default.svc.%s", gardenv1beta1.DefaultDomain),
 			b.Shoot.InternalClusterDomain,
-		}
+		}, dnsNamesForService("kubernetes", "default")...)
+
+		kubeControllerManagerCertDNSNames = dnsNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
+
+		cloudControllerManagerCertDNSNames = dnsNamesForService("cloud-controller-manager", b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = []string{
 			fmt.Sprintf("etcd-%s-0", common.EtcdRoleMain),
@@ -178,12 +176,27 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			APIServerURL:       b.computeAPIServerURL(true, false),
 		},
 
-		// Secret definition for the aws-lb-readvertiser
+		// Secret definition for kube-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "aws-lb-readvertiser",
+				Name: "kube-controller-manager-server",
 
-				CommonName:   "aws-lb-readvertiser",
+				CommonName:   "kube-controller-manager",
+				Organization: nil,
+				DNSNames:     kubeControllerManagerCertDNSNames,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[caCluster],
+			},
+		},
+
+		// Secret definition for cloud-controller-manager
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "cloud-controller-manager",
+
+				CommonName:   "system:cloud-controller-manager",
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
@@ -197,12 +210,27 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			APIServerURL:       b.computeAPIServerURL(true, false),
 		},
 
-		// Secret definition for cloud-controller-manager
+		// Secret definition for cloud-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "cloud-controller-manager",
+				Name: "cloud-controller-manager-server",
 
-				CommonName:   "system:cloud-controller-manager",
+				CommonName:   "cloud-controller-manager",
+				Organization: nil,
+				DNSNames:     cloudControllerManagerCertDNSNames,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[caCluster],
+			},
+		},
+
+		// Secret definition for the aws-lb-readvertiser
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "aws-lb-readvertiser",
+
+				CommonName:   "aws-lb-readvertiser",
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,
@@ -963,4 +991,15 @@ func computeSecretCheckSum(data map[string][]byte) string {
 
 func generateGardenSecretName(shootName, secretName string) string {
 	return fmt.Sprintf("%s.%s", shootName, secretName)
+}
+
+func dnsNamesForService(name, namespace string) []string {
+	return []string{
+		name,
+		fmt.Sprintf("%s.%s", name, namespace),
+		fmt.Sprintf("%s.%s.svc", name, namespace),
+		fmt.Sprintf("%s.%s.svc.%s", name, namespace, gardenv1beta1.DefaultDomain),
+		// TODO: Determine Seed cluster's domain that is configured for kubelet and kube-dns/coredns
+		// fmt.Sprintf("%s.%s.svc.%s", name, namespace, seed-kube-domain),
+	}
 }
