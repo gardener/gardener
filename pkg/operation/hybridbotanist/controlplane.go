@@ -37,31 +37,31 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 
 	switch {
 	case nodeCount <= 2:
-		cpuRequest = "100m"
-		memoryRequest = "512Mi"
+		cpuRequest = "800m"
+		memoryRequest = "600Mi"
 
-		cpuLimit = "400m"
-		memoryLimit = "700Mi"
+		cpuLimit = "1000m"
+		memoryLimit = "900Mi"
 	case nodeCount <= 10:
-		cpuRequest = "400m"
-		memoryRequest = "700Mi"
+		cpuRequest = "1000m"
+		memoryRequest = "800Mi"
 
-		cpuLimit = "800m"
-		memoryLimit = "1000Mi"
+		cpuLimit = "1200m"
+		memoryLimit = "1400Mi"
 	case nodeCount <= 50:
-		cpuRequest = "700m"
-		memoryRequest = "1000Mi"
+		cpuRequest = "1200m"
+		memoryRequest = "1200Mi"
 
-		cpuLimit = "1300m"
-		memoryLimit = "2000Mi"
+		cpuLimit = "1500m"
+		memoryLimit = "3000Mi"
 	case nodeCount <= 100:
-		cpuRequest = "1500m"
-		memoryRequest = "3000Mi"
+		cpuRequest = "2500m"
+		memoryRequest = "4000Mi"
 
 		cpuLimit = "3000m"
-		memoryLimit = "4000Mi"
+		memoryLimit = "4500Mi"
 	default:
-		cpuRequest = "2500m"
+		cpuRequest = "3000m"
 		memoryRequest = "4000Mi"
 
 		cpuLimit = "4000m"
@@ -184,7 +184,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
-		"maxReplicas":      4,
+		"maxReplicas":      3,
 		"securePort":       443,
 		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data["username"], b.Secrets["kubecfg"].Data["password"]))),
 		"podAnnotations": map[string]interface{}{
