@@ -82,6 +82,12 @@ spec:
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{ .Values.serviceNetwork }}
+        {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
+        - --authentication-kubeconfig=/var/lib/kube-controller-manager/kubeconfig
+        - --authorization-kubeconfig=/var/lib/kube-controller-manager/kubeconfig
+        - --tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt
+        - --tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key
+        {{- end }}
         {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
         {{- end }}
@@ -115,6 +121,8 @@ spec:
           mountPath: /srv/kubernetes/service-account-key
         - name: kube-controller-manager
           mountPath: /var/lib/kube-controller-manager
+        - name: kube-controller-manager-server
+          mountPath: /var/lib/kube-controller-manager-server
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
         - name: cloudprovider
@@ -139,6 +147,9 @@ spec:
       - name: kube-controller-manager
         secret:
           secretName: kube-controller-manager
+      - name: kube-controller-manager-server
+        secret:
+          secretName: kube-controller-manager-server
       - name: cloud-provider-config
         configMap:
           name: cloud-provider-config

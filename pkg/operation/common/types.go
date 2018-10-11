@@ -141,8 +141,14 @@ const (
 	// CloudControllerManagerDeploymentName is the name of the cloud-controller-manager deployment.
 	CloudControllerManagerDeploymentName = "cloud-controller-manager"
 
+	// CloudControllerManagerServerName is the name of the cloud-controller-manager server.
+	CloudControllerManagerServerName = "cloud-controller-manager-server"
+
 	// KubeControllerManagerDeploymentName is the name of the kube-controller-manager deployment.
 	KubeControllerManagerDeploymentName = "kube-controller-manager"
+
+	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
+	KubeControllerManagerServerName = "kube-controller-manager-server"
 
 	// KubeSchedulerDeploymentName is the name of the kube-scheduler deployment.
 	KubeSchedulerDeploymentName = "kube-scheduler"
