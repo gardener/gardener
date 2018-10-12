@@ -316,6 +316,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		defaultValues["horizontalPodAutoscaler"] = map[string]interface{}{
 			"downscaleDelay": "24h",
 			"upscaleDelay":   "1m",
+			"tolerance":      0.2,
 		}
 	}
 

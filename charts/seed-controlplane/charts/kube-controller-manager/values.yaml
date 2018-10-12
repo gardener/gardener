@@ -22,4 +22,4 @@ resources:
 horizontalPodAutoscaler:
   downscaleDelay: 15m
   upscaleDelay: 1m
-  tolerance: 0.2
+  tolerance: 0.1
