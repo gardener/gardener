@@ -36,7 +36,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		vpnShootSecret   = b.Secrets["vpn-shoot"]
 		vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
 		global           = map[string]interface{}{
-			"podNetwork": b.Shoot.GetPodNetwork(),
+			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
+			"podNetwork":        b.Shoot.GetPodNetwork(),
 		}
 		calicoConfig = map[string]interface{}{
 			"cloudProvider": b.Shoot.CloudProvider,
