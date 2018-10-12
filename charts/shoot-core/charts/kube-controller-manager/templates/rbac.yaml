@@ -1,0 +1,15 @@
+{{- if semverCompare ">= 1.12" .Values.global.kubernetesVersion }}
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: system:controller:kube-controller-manager
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: User
+  name: system:kube-controller-manager
+{{- end }}
