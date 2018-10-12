@@ -152,7 +152,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
 			Name:         "Deploying cloud-specific control plane components",
-			Fn:           flow.TaskFn(shootCloudBotanist.DeployCloudSpecificControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(seedCloudBotanist.DeployCloudSpecificControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady),
 		})
 		initializeShootClients = g.Add(flow.Task{
