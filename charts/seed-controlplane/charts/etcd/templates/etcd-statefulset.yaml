@@ -46,6 +46,7 @@ spec:
         app: etcd-statefulset
         role: {{ .Values.role }}
     spec:
+      priorityClassName: gardener-shoot-controlplane
       containers:
       - name: etcd
         image: {{ index .Values.images "etcd" }}

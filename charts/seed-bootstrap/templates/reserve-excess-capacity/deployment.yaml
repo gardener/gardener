@@ -32,5 +32,5 @@ spec:
           limits:
             cpu: 500m
             memory: 1200Mi
-      priorityClassName: reserve-excess-capacity
+      priorityClassName: gardener-reserve-excess-capacity
 {{- end }}
