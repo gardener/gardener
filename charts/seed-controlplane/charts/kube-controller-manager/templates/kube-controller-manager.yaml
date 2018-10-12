@@ -74,6 +74,7 @@ spec:
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --horizontal-pod-autoscaler-downscale-delay={{ .Values.horizontalPodAutoscaler.downscaleDelay }}
         - --horizontal-pod-autoscaler-upscale-delay={{ .Values.horizontalPodAutoscaler.upscaleDelay }}
+        - --horizontal-pod-autoscaler-tolerance={{ .Values.horizontalPodAutoscaler.tolerance }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
         - --pod-eviction-timeout=2m0s

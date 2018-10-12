@@ -100,7 +100,7 @@ spec:
             cpu: 50m
             memory: 1200Mi
           limits:
-            cpu: 200m
+            cpu: 500m
             memory: 2400Mi
         volumeMounts:
         - mountPath: /srv/kubernetes/prometheus-kubelet
