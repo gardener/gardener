@@ -38,7 +38,7 @@ On other OS please check the [Dep installation documentation](https://golang.git
 In order to perform linting on the Go source code, please install [Golint](https://github.com/golang/lint):
 
 ```bash
-$ go get -u github.com/golang/lint/golint
+$ go get -u golang.org/x/lint/golint
 ```
 
 ### Ginkgo and Gomega
