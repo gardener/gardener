@@ -46,7 +46,9 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				"clusterDNS": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 10),
 				// TODO: resolve conformance test issue before changing:
 				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
-				"domain": gardenv1beta1.DefaultDomain,
+				"domain": map[string]interface{}{
+					"clusterDomain": gardenv1beta1.DefaultDomain,
+				},
 			},
 		}
 		kubeProxyConfig = map[string]interface{}{
