@@ -16,8 +16,10 @@ package botanist
 
 import (
 	"fmt"
+	"strings"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/alicloudbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
@@ -80,37 +82,59 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 		}
 	}
 
+	var config map[string]interface{}
+
 	switch b.determineDNSProvider(purposeInternalDomain) {
 	case gardenv1beta1.DNSAWSRoute53:
+		hostedZoneID, err := b.getHostedZoneID(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
 		tfvarsEnvironment, err = b.GenerateTerraformRoute53VariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
 		chartName = "aws-route53"
+		config = b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})
 	case gardenv1beta1.DNSGoogleCloudDNS:
+		hostedZoneID, err := b.getHostedZoneID(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
 		tfvarsEnvironment, err = b.GenerateTerraformCloudDNSVariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
 		chartName = "gcp-clouddns"
+		config = b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})
+	case gardenv1beta1.DNSAlicloud:
+		tfvarsEnvironment, err = b.GenerateTerraformAlicloudDNSVariablesEnvironment(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
+		chartName = "alicloud-dns"
+		config, err = b.generateTerraformAlicloudDNSConfig(name, targetType, target, purposeInternalDomain)
+		if err != nil {
+			return err
+		}
 	case gardenv1beta1.DNSOpenstackDesignate:
+		hostedZoneID, err := b.getHostedZoneID(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
 		tfvarsEnvironment, err = b.GenerateTerraformDesignateDNSVariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
 		chartName = "openstack-designate"
+		config = b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})
 	default:
 		return nil
 	}
 
-	hostedZoneID, err := b.getHostedZoneID(purposeInternalDomain)
-	if err != nil {
-		return err
-	}
-
 	return tf.
 		SetVariablesEnvironment(tfvarsEnvironment).
-		DefineConfig(chartName, b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})).
+		DefineConfig(chartName, config).
 		Apply()
 }
 
@@ -134,6 +158,11 @@ func (b *Botanist) DestroyDNSRecord(terraformerPurpose string, purposeInternalDo
 		}
 	case gardenv1beta1.DNSOpenstackDesignate:
 		tfvarsEnvironment, err = b.GenerateTerraformDesignateDNSVariablesEnvironment(purposeInternalDomain)
+		if err != nil {
+			return err
+		}
+	case gardenv1beta1.DNSAlicloud:
+		tfvarsEnvironment, err = b.GenerateTerraformAlicloudDNSVariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
@@ -164,8 +193,24 @@ func (b *Botanist) GenerateTerraformRoute53VariablesEnvironment(purposeInternalD
 	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
 }
 
-// GenerateTerraformCloudDNSVariablesEnvironment generates the environment containing the credentials which
+// GenerateTerraformAlicloudDNSVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *Botanist) GenerateTerraformAlicloudDNSVariablesEnvironment(purposeInternalDomain bool) ([]map[string]interface{}, error) {
+	secret, err := b.getDomainCredentials(purposeInternalDomain, alicloudbotanist.AccessKeyID, alicloudbotanist.AccessKeySecret)
+	if err != nil {
+		return nil, err
+	}
+
+	keyValueMap := map[string]string{
+		"ACCESS_KEY_ID":     alicloudbotanist.AccessKeyID,
+		"ACCESS_KEY_SECRET": alicloudbotanist.AccessKeySecret,
+	}
+
+	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
+}
+
+// GenerateTerraformCloudDNSVariablesEnvironment generates the environment containing the credentials which
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *Botanist) GenerateTerraformCloudDNSVariablesEnvironment(purposeInternalDomain bool) ([]map[string]interface{}, error) {
 	secret, err := b.getDomainCredentials(purposeInternalDomain, gcpbotanist.ServiceAccountJSON)
@@ -223,6 +268,36 @@ func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID, targetType str
 			"values":       values,
 		},
 	}
+}
+
+// generateTerraformAlicloudDNSConfig To adapt Alicloud Terraform,
+// @input Param domain should be split as name and host_record.
+// name is registered in Alicloud. It is always like xxx.xxx. If there is an exception, this function should be rewritten !!!
+// host_record is the host name in A or CNAME record
+func (b *Botanist) generateTerraformAlicloudDNSConfig(domain, targetType string, value string, purposeInternalDomain bool) (map[string]interface{}, error) {
+	secret, err := b.getDomainCredentials(purposeInternalDomain)
+	if err != nil {
+		return nil, err
+	}
+	name, ok := secret.Annotations[common.DNSDomain]
+	// if the secret is not default domain secret or internal domain secret
+	if !ok {
+		// domain should be generated from shoot.spec.dns.domain
+		splits := strings.Split(domain, ".")
+		// Shoot validation promises the shoot.spec.dns.domain has at least one ".", and domain has more than one "."
+		l := len(splits)
+		name = fmt.Sprintf("%s.%s", splits[l-2], splits[l-1])
+	}
+	hostRecord := strings.TrimSuffix(domain, "."+name)
+
+	return map[string]interface{}{
+		"record": map[string]interface{}{
+			"name":       name,
+			"hostRecord": hostRecord,
+			"type":       targetType,
+			"value":      value,
+		},
+	}, nil
 }
 
 func (b *Botanist) determineDNSProvider(purposeInternalDomain bool) gardenv1beta1.DNSProvider {

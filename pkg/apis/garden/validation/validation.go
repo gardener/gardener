@@ -35,9 +35,22 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
+
+var availableDNS sets.String
+
+func init() {
+	availableDNS = sets.NewString(
+		string(garden.DNSUnmanaged),
+		string(garden.DNSAWSRoute53),
+		string(garden.DNSGoogleCloudDNS),
+		string(garden.DNSAlicloud),
+		string(garden.DNSOpenstackDesignate),
+	)
+}
 
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
 func ValidateName(name string, prefix bool) []string {
@@ -114,7 +127,7 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	allErrs := field.ErrorList{}
 
 	if _, err := helper.DetermineCloudProviderInProfile(*spec); err != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/alicloud/openstack/local"), "cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/alicloud/openstack/local"), "cloud profile must only contain exactly one field of aws/azure/gcp/alicloud/openstack/local"))
 		return allErrs
 	}
 
@@ -214,8 +227,8 @@ func validateDNSProviders(providers []garden.DNSProviderConstraint, fldPath *fie
 
 	for i, provider := range providers {
 		idxPath := fldPath.Index(i)
-		if provider.Name != garden.DNSUnmanaged && provider.Name != garden.DNSAWSRoute53 && provider.Name != garden.DNSGoogleCloudDNS && provider.Name != garden.DNSOpenstackDesignate {
-			allErrs = append(allErrs, field.NotSupported(idxPath, provider.Name, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53), string(garden.DNSGoogleCloudDNS), string(garden.DNSOpenstackDesignate)}))
+		if !availableDNS.Has(string(provider.Name)) {
+			allErrs = append(allErrs, field.NotSupported(idxPath, provider.Name, availableDNS.List()))
 		}
 	}
 
@@ -924,7 +937,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 
 	cloudPath := fldPath.Child("cloud")
 	if _, err := helper.DetermineCloudProviderInShoot(spec.Cloud); err != nil {
-		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/openstack/local"), "cloud section must only contain exactly one field of aws/azure/gcp/openstack/local"))
+		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/alicloud/openstack/local"), "cloud section must only contain exactly one field of aws/azure/gcp/alicloud/openstack/local"))
 		return allErrs
 	}
 
@@ -1424,12 +1437,15 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 
 func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	if dns.Provider != garden.DNSUnmanaged && dns.Provider != garden.DNSAWSRoute53 && dns.Provider != garden.DNSGoogleCloudDNS && dns.Provider != garden.DNSOpenstackDesignate {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("provider"), dns.Provider, []string{string(garden.DNSUnmanaged), string(garden.DNSAWSRoute53), string(garden.DNSGoogleCloudDNS), string(garden.DNSOpenstackDesignate)}))
+	if !availableDNS.Has(string(dns.Provider)) {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("provider"), dns.Provider, availableDNS.List()))
 	}
 
-	if dns.HostedZoneID != nil {
+	if dns.Provider == garden.DNSAlicloud {
+		if dns.HostedZoneID != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("hostedZoneID"), dns.HostedZoneID, "hosted zone id should be empty for alicloud-dns"))
+		}
+	} else if dns.HostedZoneID != nil {
 		if len(*dns.HostedZoneID) == 0 {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("hostedZoneID"), dns.HostedZoneID, "hosted zone id cannot be empty when key is provided"))
 		}

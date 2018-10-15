@@ -25,6 +25,7 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
+
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -132,6 +133,12 @@ func (d *DNSHostedZone) Admit(a admission.Attributes) error {
 
 	// If the Shoot manifest specifies the 'unmanaged' DNS provider, then we do nothing.
 	if shoot.Spec.DNS.Provider == garden.DNSUnmanaged {
+		return nil
+	}
+
+	// Alicloud DNS needs no HostedZoneID, no need to do check by now
+	// As about credentials needed by shoot DNS, they are checked in operation/botanist/dns.go
+	if shoot.Spec.DNS.Provider == garden.DNSAlicloud {
 		return nil
 	}
 
