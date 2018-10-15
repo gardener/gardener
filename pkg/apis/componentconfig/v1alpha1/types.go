@@ -181,9 +181,6 @@ type ShootMaintenanceControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
-	// SyncPeriod is the duration how often the existing resources are reconciled (how
-	// often it is checked whether Shoot resources need maintenance).
-	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
 // ShootQuotaControllerConfiguration defines the configuration of the

@@ -507,7 +507,6 @@ func Convert_componentconfig_ShootControllerConfiguration_To_v1alpha1_ShootContr
 
 func autoConvert_v1alpha1_ShootMaintenanceControllerConfiguration_To_componentconfig_ShootMaintenanceControllerConfiguration(in *ShootMaintenanceControllerConfiguration, out *componentconfig.ShootMaintenanceControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
 
@@ -518,7 +517,6 @@ func Convert_v1alpha1_ShootMaintenanceControllerConfiguration_To_componentconfig
 
 func autoConvert_componentconfig_ShootMaintenanceControllerConfiguration_To_v1alpha1_ShootMaintenanceControllerConfiguration(in *componentconfig.ShootMaintenanceControllerConfiguration, out *ShootMaintenanceControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
 

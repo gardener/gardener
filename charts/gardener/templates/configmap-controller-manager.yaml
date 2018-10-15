@@ -58,7 +58,6 @@ data:
         syncPeriod: {{ required ".Values.controller.config.controllers.shootCare.syncPeriod is required" .Values.controller.config.controllers.shootCare.syncPeriod }}
       shootMaintenance:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shootMaintenance.concurrentSyncs is required" .Values.controller.config.controllers.shootMaintenance.concurrentSyncs }}
-        syncPeriod: {{ required ".Values.controller.config.controllers.shootMaintenance.syncPeriod is required" .Values.controller.config.controllers.shootMaintenance.syncPeriod }}
       shootQuota:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shootQuota.concurrentSyncs is required" .Values.controller.config.controllers.shootQuota.concurrentSyncs }}
         syncPeriod: {{ required ".Values.controller.config.controllers.shootQuota.syncPeriod is required" .Values.controller.config.controllers.shootQuota.syncPeriod }}
