@@ -81,34 +81,6 @@ func (c *Client) GetInternetGateway(vpcID string) (string, error) {
 	return "", fmt.Errorf("no attached internet gateway found for vpc %s", vpcID)
 }
 
-// GetELB returns the AWS LoadBalancer object for the given name <loadBalancerName>.
-func (c *Client) GetELB(loadBalancerName string) (*elb.DescribeLoadBalancersOutput, error) {
-	describeLoadBalancersInput := &elb.DescribeLoadBalancersInput{
-		LoadBalancerNames: []*string{
-			aws.String(loadBalancerName),
-		},
-		PageSize: aws.Int64(1),
-	}
-	return c.ELB.DescribeLoadBalancers(describeLoadBalancersInput)
-}
-
-// UpdateELBHealthCheck updates the AWS LoadBalancer health check target protocol to SSL for a given
-// LoadBalancer <loadBalancerName>.
-func (c *Client) UpdateELBHealthCheck(loadBalancerName string, targetPort string) error {
-	configureHealthCheckInput := &elb.ConfigureHealthCheckInput{
-		HealthCheck: &elb.HealthCheck{
-			Target:             aws.String("SSL:" + targetPort),
-			Timeout:            aws.Int64(5),
-			Interval:           aws.Int64(30),
-			HealthyThreshold:   aws.Int64(2),
-			UnhealthyThreshold: aws.Int64(6),
-		},
-		LoadBalancerName: aws.String(loadBalancerName),
-	}
-	_, err := c.ELB.ConfigureHealthCheck(configureHealthCheckInput)
-	return err
-}
-
 // The following functions are only temporary needed due to https://github.com/gardener/gardener/issues/129.
 
 // ListKubernetesELBs returns the list of load balancers in the given <vpcID> tagged with <clusterName>.
