@@ -14,8 +14,6 @@
 package utils_test
 
 import (
-	"time"
-
 	. "github.com/gardener/gardener/pkg/utils"
 
 	. "github.com/onsi/ginkgo"
@@ -23,32 +21,6 @@ import (
 )
 
 var _ = Describe("utils", func() {
-	Describe("#ParseMaintenanceTime", func() {
-		It("should return the time object in UTC", func() {
-			time, err := ParseMaintenanceTime("222200+0100")
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(time.String()).To(ContainSubstring("21:22:00 +0000"))
-		})
-
-		It("should return an error", func() {
-			_, err := ParseMaintenanceTime("abcinvalidformat")
-
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Describe("#FormatMaintenanceTime", func() {
-		It("should return the formatted time", func() {
-			cet, _ := time.LoadLocation("CET")
-			t := time.Date(1970, 1, 1, 14, 0, 0, 0, cet)
-
-			val := FormatMaintenanceTime(t)
-
-			Expect(val).To(Equal("140000+0100"))
-		})
-	})
-
 	Describe("#MergeStringMaps", func() {
 		It("should return nil", func() {
 			result := MergeStringMaps(nil, nil)

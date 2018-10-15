@@ -18,20 +18,20 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo/extensions/table"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
@@ -4619,15 +4619,10 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.maintenance.timeWindow.begin"),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.maintenance.timeWindow.end"),
-				}))
+					"Field": Equal("spec.maintenance.timeWindow.begin/end"),
+				}))))
 			})
 
 			It("should forbid time windows greater than 6 hours", func() {
@@ -4636,11 +4631,10 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.maintenance.timeWindow"),
-				}))
+				}))))
 			})
 
 			It("should forbid time windows smaller than 30 minutes", func() {
@@ -4649,24 +4643,10 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
 					"Field": Equal("spec.maintenance.timeWindow"),
-				}))
-			})
-
-			It("should forbid time windows where end is before begin", func() {
-				shoot.Spec.Maintenance.TimeWindow.Begin = "225000+0100"
-				shoot.Spec.Maintenance.TimeWindow.End = "224900+0100"
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.maintenance.timeWindow"),
-				}))
+				}))))
 			})
 
 			It("should allow time windows which overlap over two days", func() {

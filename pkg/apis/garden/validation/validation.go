@@ -1588,30 +1588,18 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 	if maintenance.TimeWindow == nil {
 		allErrs = append(allErrs, field.Required(fldPath.Child("timeWindow"), "time window information is required"))
 	} else {
-		begin, beginErr := utils.ParseMaintenanceTime(maintenance.TimeWindow.Begin)
-		if beginErr != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "begin"), maintenance.TimeWindow.Begin, "time window begin is not in the correct format (HHMMSS+ZONE)"))
+		maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "begin/end"), maintenance.TimeWindow, err.Error()))
 		}
 
-		end, endErr := utils.ParseMaintenanceTime(maintenance.TimeWindow.End)
-		if endErr != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("timeWindow", "end"), maintenance.TimeWindow.End, "time window end is not in the correct format (HHMMSS+ZONE)"))
-		}
-
-		if end.Sub(begin) < 0 {
-			end = end.Add(24 * time.Hour)
-		}
-
-		if beginErr == nil && endErr == nil {
-			if end.Sub(begin) < 0 {
-				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window end must not be before time window begin"))
-				return allErrs
-			}
-			if end.Sub(begin) > 6*time.Hour {
+		if err == nil {
+			duration := maintenanceTimeWindow.Duration()
+			if duration > 6*time.Hour {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window must not be greater than 6 hours"))
 				return allErrs
 			}
-			if end.Sub(begin) < 30*time.Minute {
+			if duration < 30*time.Minute {
 				allErrs = append(allErrs, field.Forbidden(fldPath.Child("timeWindow"), "time window must not be smaller than 30 minutes"))
 				return allErrs
 			}
