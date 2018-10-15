@@ -18,7 +18,7 @@ images:
 - name: etcd
   sourceRepository: github.com/coreos/etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.9
+  tag: v3.3.10
 - name: etcd-backup-restore
   sourceRepository: github.com/gardener/etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
@@ -51,11 +51,11 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.15.1
+  tag: v0.15.2
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
-  tag: v2.3.2
+  tag: v2.4.3
 - name: configmap-reloader
   sourceRepository: github.com/jimmidyson/configmap-reload
   repository: quay.io/coreos/configmap-reload
@@ -63,7 +63,7 @@ images:
 - name: kube-state-metrics
   sourceRepository: github.com/kubernetes/kube-state-metrics
   repository: quay.io/coreos/kube-state-metrics
-  tag: v1.3.1
+  tag: v1.4.0
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
@@ -71,7 +71,7 @@ images:
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
-  tag: "5.2.2"
+  tag: "5.3.0"
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
@@ -85,15 +85,15 @@ images:
 - name: calico-node
   sourceRepository: github.com/projectcalico/calico
   repository: quay.io/calico/node
-  tag: v3.2.1
+  tag: v3.2.3
 - name: calico-cni
   sourceRepository: github.com/projectcalico/cni-plugin
   repository: quay.io/calico/cni
-  tag: v3.2.1
+  tag: v3.2.3
 - name: calico-typha
   sourceRepository: github.com/projectcalico/typha
   repository: quay.io/calico/typha
-  tag: v3.2.1
+  tag: v3.2.3
 - name: vpn-shoot
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
@@ -107,7 +107,7 @@ images:
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
-  tag: v1.8.3
+  tag: v1.10.0
 - name: kube-lego
   sourceRepository: github.com/jetstack/kube-lego
   repository: jetstack/kube-lego
@@ -115,11 +115,11 @@ images:
 - name: kube2iam
   sourceRepository: github.com/jtblin/kube2iam
   repository: jtblin/kube2iam
-  tag: "0.10.1"
+  tag: "0.10.4"
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.17.1"
+  tag: "0.20.0"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
