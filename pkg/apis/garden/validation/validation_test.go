@@ -2418,7 +2418,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
 			}))
 		})
 
@@ -2877,7 +2877,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
 				}))
 			})
 		})
@@ -3253,7 +3253,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
 				}))
 			})
 		})
@@ -3573,7 +3573,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
 				}))
 			})
 		})
@@ -3892,7 +3892,7 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid removing the AWS section", func() {
+			It("should forbid removing the Alicloud section", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.Cloud.Alicloud = nil
 
@@ -3905,7 +3905,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
 				}))
 			})
 		})
@@ -4213,7 +4213,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
 				}))
 			})
 		})
@@ -4314,6 +4314,19 @@ var _ = Describe("validation", func() {
 
 			It("should forbid specifying a hosted zone id when provider equals 'unmanaged'", func() {
 				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
+				shoot.Spec.Addons.Monocular.Enabled = false
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(1))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.hostedZoneID"),
+				}))
+			})
+
+			It("should forbid specifying a hosted zone id when provider equals 'alicloud-dns'", func() {
+				shoot.Spec.DNS.Provider = garden.DNSAlicloud
 				shoot.Spec.Addons.Monocular.Enabled = false
 
 				errorList := ValidateShoot(shoot)

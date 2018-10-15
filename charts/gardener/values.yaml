@@ -65,7 +65,7 @@ controller:
       cpu: 750m
       memory: 512Mi
   internalDomain:
-    provider: aws-route53 # aws-route53, google-clouddns or openstack-designate
+    provider: aws-route53 # aws-route53, google-clouddns, alicloud-dns or openstack-designate
     hostedZoneID: Z3ABCDE1FGHIJK
     domain: example.com
     credentials:
@@ -75,6 +75,10 @@ controller:
       #
       # for google-clouddns we need to provide the following keys:
       # serviceaccount.json: '{"type": "service_account", "project_id": "...", ...}'
+      # 
+      # for alicloud-dns we need to provide the following keys:
+      # accessKeyID: access-key-id-with-aliclouddns-privileges
+      # accessKeySecret: access-key-secret-with-aliclouddns-privileges
       #
       # for openstack-designate we need to provide the following keys:
       # authURL: my-keystone-url
