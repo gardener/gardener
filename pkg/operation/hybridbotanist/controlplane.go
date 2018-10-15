@@ -313,16 +313,15 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 				"memory": "1Gi",
 			},
 		}
-		defaultValues["horizontalPodAutoscaler"] = map[string]interface{}{
-			"downscaleDelay": "24h",
-			"upscaleDelay":   "1m",
-			"tolerance":      0.2,
-		}
 	}
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
 	if controllerManagerConfig != nil {
 		defaultValues["featureGates"] = controllerManagerConfig.FeatureGates
+
+		if controllerManagerConfig.HorizontalPodAutoscalerConfig != nil {
+			defaultValues["horizontalPodAutoscaler"] = controllerManagerConfig.HorizontalPodAutoscalerConfig
+		}
 	}
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})

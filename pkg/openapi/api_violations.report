@@ -6,6 +6,8 @@ API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1b
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,AzureNetworks,VNet
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Cloud,OpenStack
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,CloudProfileSpec,OpenStack
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,GardenerDuration,Duration
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,KubeControllerManagerConfig,HorizontalPodAutoscalerConfig
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,KubeLego,Mail
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,OpenStackProfile,KeyStoneURL
 API rule violation: names_match,k8s.io/api/core/v1,AzureDiskVolumeSource,DataDiskURI
