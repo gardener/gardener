@@ -10,7 +10,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "5"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "30"
-    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "1"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "2"
     service.beta.kubernetes.io/aws-load-balancer-ssl-negotiation-policy: "ELBSecurityPolicy-TLS-1-2-2017-01"
   {{end -}}
