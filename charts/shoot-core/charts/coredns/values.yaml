@@ -4,7 +4,9 @@
 service:
   type: "ClusterIP"
   clusterDNS: 100.64.0.10
-  domain: cluster.local in-addr.arpa ip6.arpa
+  domain:
+    clusterDomain: cluster.local
+    additionalDomains: in-addr.arpa ip6.arpa
   port: 53
   targetPort: 8053
   annotations: {}
