@@ -219,16 +219,5 @@ func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
 		return err
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values); err != nil {
-		return err
-	}
-
-	// Change ELB health check to SSL (avoid TLS handshake errors because of AWS ELB health checks)
-	loadBalancerName := b.APIServerAddress[:32]
-	elb, err := b.AWSClient.GetELB(loadBalancerName)
-	if err != nil {
-		return err
-	}
-	targetPort := (*elb.LoadBalancerDescriptions[0].HealthCheck.Target)[4:]
-	return b.AWSClient.UpdateELBHealthCheck(loadBalancerName, targetPort)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values)
 }
