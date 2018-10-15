@@ -12,7 +12,7 @@ data:
     {{- if .port }}:{{ .port }} {{ end -}}
     { {{ $domain:=$.Values.service.domain}}
       {{- range .plugins }}
-        {{ if eq .name "kubernetes"}}{{ .name }} {{if $domain}}{{$domain}}{{ end }}{{else}}{{ .name }}{{ if .parameters }} {{ .parameters }}{{ end }}{{end}}{{ if .configBlock }} {
+        {{ if eq .name "kubernetes"}}{{ .name }}{{if $domain}} {{$domain.clusterDomain}} {{$domain.additionalDomains}}{{ end }}{{else}}{{ .name }}{{ if .parameters }} {{ .parameters }}{{ end }}{{end}}{{ if .configBlock }} {
 {{ .configBlock | indent 12 }}
         }{{ end }}
       {{- end }}
