@@ -310,7 +310,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		defaultValues["resources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "750m",
-				"memory": "1Gi",
+				"memory": "1.5Gi",
 			},
 		}
 	}
