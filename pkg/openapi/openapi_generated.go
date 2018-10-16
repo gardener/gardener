@@ -2829,6 +2829,24 @@ func schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref common.Ref
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
 						},
 					},
+					"downscaleStabilization": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The configurable window at which the controller will choose the highest recommendation for autoscaling.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
+						},
+					},
+					"initialReadinessDelay": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
+						},
+					},
+					"cpuInitializationPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The period after which a ready pod transition is considered to be the first.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
+						},
+					},
 				},
 			},
 		},

@@ -2804,6 +2804,9 @@ func autoConvert_v1beta1_HorizontalPodAutoscalerConfig_To_garden_HorizontalPodAu
 	out.SyncPeriod = (*v1.Duration)(unsafe.Pointer(in.SyncPeriod))
 	out.Tolerance = (*float64)(unsafe.Pointer(in.Tolerance))
 	out.UpscaleDelay = (*v1.Duration)(unsafe.Pointer(in.UpscaleDelay))
+	out.DownscaleStabilization = (*v1.Duration)(unsafe.Pointer(in.DownscaleStabilization))
+	out.InitialReadinessDelay = (*v1.Duration)(unsafe.Pointer(in.InitialReadinessDelay))
+	out.CPUInitializationPeriod = (*v1.Duration)(unsafe.Pointer(in.CPUInitializationPeriod))
 	return nil
 }
 
@@ -2817,6 +2820,9 @@ func autoConvert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAu
 	out.SyncPeriod = (*GardenerDuration)(unsafe.Pointer(in.SyncPeriod))
 	out.Tolerance = (*float64)(unsafe.Pointer(in.Tolerance))
 	out.UpscaleDelay = (*GardenerDuration)(unsafe.Pointer(in.UpscaleDelay))
+	out.DownscaleStabilization = (*GardenerDuration)(unsafe.Pointer(in.DownscaleStabilization))
+	out.InitialReadinessDelay = (*GardenerDuration)(unsafe.Pointer(in.InitialReadinessDelay))
+	out.CPUInitializationPeriod = (*GardenerDuration)(unsafe.Pointer(in.CPUInitializationPeriod))
 	return nil
 }
 
