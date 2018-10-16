@@ -20,6 +20,7 @@ spec:
         - {{ .Values.seedNetworks.pod }}
         - {{ .Values.seedNetworks.node }}
         - {{ .Values.seedNetworks.service }}
+        - 169.254.169.254/32
 ---
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy

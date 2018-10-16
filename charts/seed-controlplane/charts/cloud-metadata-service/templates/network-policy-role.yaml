@@ -12,4 +12,5 @@ spec:
         values:
         - controller-manager
         - cloud-controller-manager
+        - apiserver
 {{include "egress" . | indent 2}}
