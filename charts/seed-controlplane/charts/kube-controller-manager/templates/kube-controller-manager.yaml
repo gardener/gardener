@@ -72,10 +72,12 @@ spec:
         - --concurrent-deployment-syncs=10
         - --concurrent-replicaset-syncs=10
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
+        {{- if semverCompare "< 1.12" .Values.kubernetesVersion }}
         - --horizontal-pod-autoscaler-downscale-delay={{ .Values.horizontalPodAutoscaler.downscaleDelay }}
+        - --horizontal-pod-autoscaler-upscale-delay={{ .Values.horizontalPodAutoscaler.upscaleDelay }}
+        {{- end}}
         - --horizontal-pod-autoscaler-sync-period={{ .Values.horizontalPodAutoscaler.syncPeriod }}
         - --horizontal-pod-autoscaler-tolerance={{ .Values.horizontalPodAutoscaler.tolerance }}
-        - --horizontal-pod-autoscaler-upscale-delay={{ .Values.horizontalPodAutoscaler.upscaleDelay }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
         - --pod-eviction-timeout=2m0s
@@ -83,6 +85,9 @@ spec:
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{ .Values.serviceNetwork }}
         {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
+        - --horizontal-pod-autoscaler-downscale-stabilization={{ .Values.horizontalPodAutoscaler.downscaleStabilization }}
+        - --horizontal-pod-autoscaler-initial-readiness-delay={{ .Values.horizontalPodAutoscaler.readinessDelay }}
+        - --horizontal-pod-autoscaler-cpu-initialization-period={{ .Values.horizontalPodAutoscaler.cpuInitializationPeriod }}
         - --authentication-kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --authorization-kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt

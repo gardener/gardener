@@ -12,7 +12,7 @@ metadata:
 data:
   audit-policy.yaml: |-
     ---
-    apiVersion: audit.k8s.io/v1beta1
+    apiVersion: {{ include "auditkubernetesversion" .}}
     kind: Policy
     rules:
     - level: None
