@@ -130,6 +130,8 @@ func SetDefaults_Shoot(obj *Shoot) {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
 	}
 
+	setDefaults_ShootKubeControllerManager(&obj.Spec.Kubernetes)
+
 	if obj.Spec.Maintenance == nil {
 		begin, end := utils.ComputeRandomTimeWindow()
 		obj.Spec.Maintenance = &Maintenance{
@@ -160,6 +162,34 @@ func SetDefaults_Shoot(obj *Shoot) {
 	if obj.Spec.DNS.Provider == DNSUnmanaged && obj.Spec.DNS.Domain == nil {
 		defaultDomain := DefaultDomain
 		obj.Spec.DNS.Domain = &defaultDomain
+	}
+}
+
+func setDefaults_ShootKubeControllerManager(kubernetes *Kubernetes) {
+	kcm := kubernetes.KubeControllerManager
+	if kcm == nil {
+		kcm = &KubeControllerManagerConfig{}
+		kubernetes.KubeControllerManager = kcm
+	}
+
+	hpa := kcm.HorizontalPodAutoscalerConfig
+	if hpa == nil {
+		hpa = &HorizontalPodAutoscalerConfig{}
+		kcm.HorizontalPodAutoscalerConfig = hpa
+	}
+
+	if hpa.DownscaleDelay == nil {
+		hpa.DownscaleDelay = &GardenerDuration{Duration: DefaultHPADownscaleDelay}
+	}
+	if hpa.SyncPeriod == nil {
+		hpa.SyncPeriod = &GardenerDuration{Duration: DefaultHPASyncPeriod}
+	}
+	if hpa.Tolerance == nil {
+		defaultTolerance := DefaultHPATolerance
+		hpa.Tolerance = &defaultTolerance
+	}
+	if hpa.UpscaleDelay == nil {
+		hpa.UpscaleDelay = &GardenerDuration{Duration: DefaultHPAUpscaleDelay}
 	}
 }
 

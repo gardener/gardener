@@ -15,6 +15,7 @@
 package v1beta1
 
 import (
+	"encoding/json"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -1252,7 +1253,74 @@ type CloudControllerManagerConfig struct {
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
 	KubernetesConfig `json:",inline"`
+	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
+	// +optional
+	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig `json:"horizontalPodAutoscaler,omitempty"`
 }
+
+// GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.
+type GardenerDuration struct {
+	time.Duration `protobuf:"varint,1,opt,name=duration,casttype=time.Duration"`
+}
+
+// OpenAPISchemaType is used by the kube-openapi generator when constructing
+// the OpenAPI spec of this type.
+//
+// See: https://github.com/kubernetes/kube-openapi/tree/master/pkg/generators
+func (GardenerDuration) OpenAPISchemaType() []string { return []string{"string"} }
+
+// OpenAPISchemaFormat is used by the kube-openapi generator when constructing
+// the OpenAPI spec of this type.
+func (GardenerDuration) OpenAPISchemaFormat() string { return "date-time" }
+
+// UnmarshalJSON implements the json.Unmarshaller interface.
+func (d *GardenerDuration) UnmarshalJSON(b []byte) error {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
+		return err
+	}
+
+	pd, err := time.ParseDuration(str)
+	if err != nil {
+		return err
+	}
+	d.Duration = pd
+	return nil
+}
+
+// MarshalJSON implements the json.Marshaler interface.
+func (d *GardenerDuration) MarshalJSON() ([]byte, error) {
+	return json.Marshal(d.Duration.String())
+}
+
+// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
+// Note: Descriptions were taken from the Kubernetes documentation.
+type HorizontalPodAutoscalerConfig struct {
+	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
+	// +optional
+	DownscaleDelay *GardenerDuration `json:"downscaleDelay,omitempty"`
+	// The period for syncing the number of pods in horizontal pod autoscaler.
+	// +optional
+	SyncPeriod *GardenerDuration `json:"syncPeriod,omitempty"`
+	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
+	// +optional
+	Tolerance *float64 `json:"tolerance,omitempty"`
+	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
+	// +optional
+	UpscaleDelay *GardenerDuration `json:"upscaleDelay,omitempty"`
+}
+
+const (
+	// DefaultHPADownscaleDelay is a constant for the default HPA downscale delay for a Shoot cluster.
+	DefaultHPADownscaleDelay = 15 * time.Minute
+	// DefaultHPASyncPeriod is a constant for the default HPA sync period for a Shoot cluster.
+	DefaultHPASyncPeriod = 30 * time.Second
+	// DefaultHPATolerance is a constant for the default HPA tolerance for a Shoot cluster.
+	DefaultHPATolerance = 0.1
+	// DefaultHPAUpscaleDelay is a constant for the default HPA upscale delay for a Shoot cluster.
+	DefaultHPAUpscaleDelay = 1 * time.Minute
+)
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
 type KubeSchedulerConfig struct {

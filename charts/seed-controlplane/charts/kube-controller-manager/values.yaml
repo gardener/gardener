@@ -21,5 +21,6 @@ resources:
     memory: 512Mi
 horizontalPodAutoscaler:
   downscaleDelay: 15m
-  upscaleDelay: 1m
+  syncPeriod: 30s
   tolerance: 0.1
+  upscaleDelay: 1m

@@ -1546,6 +1546,30 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 		}
 	}
 
+	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
+
+	return allErrs
+}
+
+func validateKubeControllerManager(kcm *garden.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if kcm != nil {
+		if hpa := kcm.HorizontalPodAutoscalerConfig; hpa != nil {
+			fldPath = fldPath.Child("horizontalPodAutoscaler")
+			if hpa.DownscaleDelay != nil && hpa.DownscaleDelay.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleDelay"), *hpa.DownscaleDelay, "downscale delay must not be negative"))
+			}
+			if hpa.SyncPeriod != nil && hpa.SyncPeriod.Duration < 1*time.Second {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), *hpa.SyncPeriod, "syncPeriod must not be less than a second"))
+			}
+			if hpa.Tolerance != nil && *hpa.Tolerance <= 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("tolerance"), *hpa.Tolerance, "tolerance of must be greater than 0"))
+			}
+			if hpa.UpscaleDelay != nil && hpa.UpscaleDelay.Duration < 0 {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("upscaleDelay"), *hpa.UpscaleDelay, "upscale delay must not be negative"))
+			}
+		}
+	}
 	return allErrs
 }
 

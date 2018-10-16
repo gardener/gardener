@@ -249,6 +249,11 @@ spec:
   # kubeControllerManager:
   #   featureGates:
   #     SomeKubernetesFeature: true
+  #   horizontalPodAutoscaler:
+  #     downscaleDelay: 15m0s
+  #     syncPeriod: 30s
+  #     tolerance: 0.1
+  #     upscaleDelay: 1m0s
   % endif
     % if kubeScheduler != {}:
     kubeScheduler: ${yaml.dump(kubeScheduler, width=10000)}

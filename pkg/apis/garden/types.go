@@ -1261,6 +1261,26 @@ type CloudControllerManagerConfig struct {
 // KubeControllerManagerConfig contains configuration settings for the kube-controller-manager.
 type KubeControllerManagerConfig struct {
 	KubernetesConfig
+	// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
+	// +optional
+	HorizontalPodAutoscalerConfig *HorizontalPodAutoscalerConfig
+}
+
+// HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
+// Note: Descriptions were taken from the Kubernetes documentation.
+type HorizontalPodAutoscalerConfig struct {
+	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
+	// +optional
+	DownscaleDelay *metav1.Duration
+	// The period for syncing the number of pods in horizontal pod autoscaler.
+	// +optional
+	SyncPeriod *metav1.Duration
+	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
+	// +optional
+	Tolerance *float64
+	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
+	// +optional
+	UpscaleDelay *metav1.Duration
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.

@@ -2361,6 +2361,14 @@ var _ = Describe("validation", func() {
 								},
 							},
 						},
+						KubeControllerManager: &garden.KubeControllerManagerConfig{
+							HorizontalPodAutoscalerConfig: &garden.HorizontalPodAutoscalerConfig{
+								DownscaleDelay: makeDurationPointer(15 * time.Minute),
+								SyncPeriod:     makeDurationPointer(30 * time.Second),
+								Tolerance:      makeFloat64Pointer(0.1),
+								UpscaleDelay:   makeDurationPointer(1 * time.Minute),
+							},
+						},
 					},
 					Maintenance: &garden.Maintenance{
 						AutoUpdate: &garden.MaintenanceAutoUpdate{
@@ -4484,6 +4492,35 @@ var _ = Describe("validation", func() {
 			})
 		})
 
+		Context("KubeControllerManager validation", func() {
+			It("should forbid unsupported HPA configuration", func() {
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = makeDurationPointer(-1 * time.Second)
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.SyncPeriod = makeDurationPointer(100 * time.Millisecond)
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.Tolerance = makeFloat64Pointer(0)
+				shoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = makeDurationPointer(-1 * time.Second)
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(4))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.downscaleDelay"),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.syncPeriod"),
+				}))
+				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.tolerance"),
+				}))
+				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeControllerManager.horizontalPodAutoscaler.upscaleDelay"),
+				}))
+			})
+		})
+
 		It("should require a kubernetes version", func() {
 			shoot.Spec.Kubernetes.Version = ""
 
@@ -4817,6 +4854,15 @@ var _ = Describe("validation", func() {
 
 func makeStringPointer(s string) *string {
 	ptr := s
+	return &ptr
+}
+
+func makeDurationPointer(d time.Duration) *metav1.Duration {
+	return &metav1.Duration{Duration: d}
+}
+
+func makeFloat64Pointer(f float64) *float64 {
+	ptr := f
 	return &ptr
 }
 

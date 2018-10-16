@@ -23,6 +23,7 @@ limitations under the License.
 package openapi
 
 import (
+	v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	spec "github.com/go-openapi/spec"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,9 +85,11 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPVPC":                        schema_pkg_apis_garden_v1beta1_GCPVPC(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPWorker":                     schema_pkg_apis_garden_v1beta1_GCPWorker(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener":                      schema_pkg_apis_garden_v1beta1_Gardener(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration":              schema_pkg_apis_garden_v1beta1_GardenerDuration(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster":                      schema_pkg_apis_garden_v1beta1_Heapster(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HelmTiller":                    schema_pkg_apis_garden_v1beta1_HelmTiller(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation":                   schema_pkg_apis_garden_v1beta1_Hibernation(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig": schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks":                   schema_pkg_apis_garden_v1beta1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM":                      schema_pkg_apis_garden_v1beta1_Kube2IAM(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole":                  schema_pkg_apis_garden_v1beta1_Kube2IAMRole(ref),
@@ -2717,6 +2720,18 @@ func schema_pkg_apis_garden_v1beta1_Gardener(ref common.ReferenceCallback) commo
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_GardenerDuration(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "GardenerDuration is a workaround for missing OpenAPI functions on metav1.Duration struct.",
+				Type:        v1beta1.GardenerDuration{}.OpenAPISchemaType(),
+				Format:      v1beta1.GardenerDuration{}.OpenAPISchemaFormat(),
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_Heapster(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -2777,6 +2792,45 @@ func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager. Note: Descriptions were taken from the Kubernetes documentation.",
+				Properties: map[string]spec.Schema{
+					"downscaleDelay": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
+						},
+					},
+					"syncPeriod": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The period for syncing the number of pods in horizontal pod autoscaler.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
+						},
+					},
+					"tolerance": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.",
+							Type:        []string{"number"},
+							Format:      "double",
+						},
+					},
+					"upscaleDelay": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GardenerDuration"},
 	}
 }
 
@@ -2965,10 +3019,17 @@ func schema_pkg_apis_garden_v1beta1_KubeControllerManagerConfig(ref common.Refer
 							},
 						},
 					},
+					"horizontalPodAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig"),
+						},
+					},
 				},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig"},
 	}
 }
 
