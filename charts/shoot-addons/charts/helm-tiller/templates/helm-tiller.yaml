@@ -33,6 +33,7 @@ apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   labels:
+    garden.sapcloud.io/role: optional-addon
     addonmanager.kubernetes.io/mode: Reconcile
     app: helm
     name: tiller
@@ -56,6 +57,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        garden.sapcloud.io/role: optional-addon
         origin: gardener
         app: helm
         name: tiller

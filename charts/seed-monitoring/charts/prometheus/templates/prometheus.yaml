@@ -33,6 +33,7 @@ metadata:
   name: prometheus
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: monitoring
     app: prometheus
     role: monitoring
 spec:
@@ -54,6 +55,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        garden.sapcloud.io/role: monitoring
         app: prometheus
         role: monitoring
     spec:

@@ -22,6 +22,7 @@ metadata:
   name: node-exporter
   namespace: kube-system
   labels:
+    garden.sapcloud.io/role: monitoring
     addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
     origin: gardener
@@ -36,6 +37,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        garden.sapcloud.io/role: monitoring
         origin: gardener
         component: node-exporter
     spec:

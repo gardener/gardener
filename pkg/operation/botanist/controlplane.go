@@ -160,7 +160,7 @@ func (b *Botanist) DeleteKubeAddonManager() error {
 // for managing the worker nodes of the Shoot.
 func (b *Botanist) DeployMachineControllerManager() error {
 	var (
-		name          = "machine-controller-manager"
+		name          = common.MachineControllerManagerDeploymentName
 		defaultValues = map[string]interface{}{
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-machine-controller-manager": b.CheckSums[name],
@@ -379,14 +379,14 @@ func (b *Botanist) DeploySeedMonitoring() error {
 // during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
 // deleted.
 func (b *Botanist) DeleteSeedMonitoring() error {
-	err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.AlertManagerDeploymentName)
+	err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.AlertManagerStatefulSetName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
 	if err != nil {
 		return err
 	}
-	err = b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.PrometheusDeploymentName)
+	err = b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.PrometheusStatefulSetName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}

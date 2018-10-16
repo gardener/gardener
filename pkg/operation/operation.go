@@ -16,6 +16,8 @@ package operation
 
 import (
 	"fmt"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"path/filepath"
 	"strings"
 
@@ -199,13 +201,31 @@ func makeDescription(stats *flow.Stats) string {
 // ReportShootProgress will update the last operation object in the Shoot manifest `status` section
 // by the current progress of the Flow execution.
 func (o *Operation) ReportShootProgress(stats *flow.Stats) {
-	o.Shoot.Info.Status.LastOperation.Description = makeDescription(stats)
-	o.Shoot.Info.Status.LastOperation.Progress = stats.ProgressPercent()
-	o.Shoot.Info.Status.LastOperation.LastUpdateTime = metav1.Now()
+	var (
+		description    = makeDescription(stats)
+		progress       = stats.ProgressPercent()
+		lastUpdateTime = metav1.Now()
+	)
 
-	if newShoot, err := o.K8sGardenClient.GardenClientset().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).UpdateStatus(o.Shoot.Info); err == nil {
-		o.Shoot.Info = newShoot
+	newShoot, err := kutil.TryUpdateShootStatus(o.K8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			if shoot.Status.LastOperation == nil {
+				return nil, fmt.Errorf("last operation of Shoot %s/%s is unset", shoot.Namespace, shoot.Name)
+			}
+			if shoot.Status.LastOperation.LastUpdateTime.After(lastUpdateTime.Time) {
+				return nil, fmt.Errorf("last operation of Shoot %s/%s was updated mid-air", shoot.Namespace, shoot.Name)
+			}
+			shoot.Status.LastOperation.Description = description
+			shoot.Status.LastOperation.Progress = progress
+			shoot.Status.LastOperation.LastUpdateTime = lastUpdateTime
+			return shoot, nil
+		})
+	if err != nil {
+		o.Logger.Errorf("Could not report shoot progress: %v", err)
+		return
 	}
+
+	o.Shoot.Info = newShoot
 }
 
 // ReportBackupInfrastructureProgress will update the phase and error in the BackupInfrastructure manifest `status` section

@@ -4,6 +4,7 @@ metadata:
   name: aws-lb-readvertiser
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: controlplane
     app: aws-lb-readvertiser
 spec:
   revisionHistoryLimit: 0
@@ -14,6 +15,7 @@ spec:
   template:
     metadata:
       labels:
+        garden.sapcloud.io/role: controlplane
         app: aws-lb-readvertiser
 {{- if .Values.podAnnotations }}
       annotations:

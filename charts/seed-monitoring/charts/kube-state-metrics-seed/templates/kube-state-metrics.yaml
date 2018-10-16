@@ -53,6 +53,7 @@ metadata:
   name: kube-state-metrics-seed
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: monitoring
     component: kube-state-metrics
     type: seed
 spec:
@@ -69,6 +70,7 @@ spec:
   template:
     metadata:
       labels:
+        garden.sapcloud.io/role: monitoring
         component: kube-state-metrics
         type: seed
     spec:

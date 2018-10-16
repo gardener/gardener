@@ -24,6 +24,7 @@ metadata:
   name: etcd-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: controlplane
     app: etcd-statefulset
     role: {{ .Values.role }}
 spec:
@@ -43,6 +44,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        garden.sapcloud.io/role: controlplane
         app: etcd-statefulset
         role: {{ .Values.role }}
     spec:

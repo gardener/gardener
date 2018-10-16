@@ -2,6 +2,7 @@ apiVersion: {{ include "daemonsetversion" . }}
 kind: DaemonSet
 metadata:
   labels:
+    garden.sapcloud.io/role: optional-addon
     app: {{ template "kube2iam.name" . }}
     chart: {{ .Chart.Name }}-{{ .Chart.Version }}
     heritage: {{ .Release.Service }}
@@ -27,6 +28,7 @@ spec:
 {{- end }}
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        garden.sapcloud.io/role: optional-addon
         origin: gardener
         app: {{ template "kube2iam.name" . }}
         release: {{ .Release.Name }}

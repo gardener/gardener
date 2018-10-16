@@ -18,6 +18,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
@@ -192,16 +194,17 @@ func (c *Controller) reconcileShootKey(key string) error {
 }
 
 func (c *Controller) updateShootStatusPending(shoot *gardenv1beta1.Shoot, message string) error {
-	shoot = shoot.DeepCopy()
-	shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
-		Type:           controllerutils.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
-		State:          gardenv1beta1.ShootLastOperationStateProcessing,
-		Progress:       0,
-		Description:    message,
-		LastUpdateTime: metav1.Now(),
-	}
-
-	_, err := c.updater.UpdateShootStatus(shoot)
+	_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, shoot.ObjectMeta,
+		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
+				Type:           controllerutils.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
+				State:          gardenv1beta1.ShootLastOperationStateProcessing,
+				Progress:       0,
+				Description:    message,
+				LastUpdateTime: metav1.Now(),
+			}
+			return shoot, nil
+		})
 	return err
 }
 
@@ -259,8 +262,8 @@ type ControlInterface interface {
 // implements the documented semantics for Shoots. updater is the UpdaterInterface used
 // to update the status of Shoots. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, gardenerNamespace string, recorder record.EventRecorder, updater UpdaterInterface) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, gardenerNamespace, recorder, updater}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, gardenerNamespace string, recorder record.EventRecorder) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, gardenerNamespace, recorder}
 }
 
 type defaultControl struct {
@@ -272,7 +275,6 @@ type defaultControl struct {
 	config             *componentconfig.ControllerManagerConfiguration
 	gardenerNamespace  string
 	recorder           record.EventRecorder
-	updater            UpdaterInterface
 }
 
 func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key string) (bool, error) {

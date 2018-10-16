@@ -9,9 +9,11 @@ fluentd:
   ports:
     forward: 24224
   labels:
+    garden.sapcloud.io/role: logging
     app: fluentd-es
     role: logging
 fluentbit:
   labels:
+    garden.sapcloud.io/role: logging
     app: fluent-bit
     role: logging

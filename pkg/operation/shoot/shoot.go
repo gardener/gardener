@@ -57,7 +57,7 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 		SeedNamespace:         ComputeTechnicalID(projectName, shoot),
 		InternalClusterDomain: internalDomain,
 
-		IsHibernated:           false,
+		IsHibernated:           helper.IsShootHibernated(shoot),
 		WantsClusterAutoscaler: false,
 	}
 
@@ -82,18 +82,12 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 	}
 	shootObj.KubernetesMajorMinorVersion = fmt.Sprintf("%d.%d", v.Major(), v.Minor())
 
-	// Check whether the Shoot should be hibernated
-	if shoot.Spec.Hibernation != nil {
-		shootObj.IsHibernated = shoot.Spec.Hibernation.Enabled
+	needsAutoscaler, err := helper.ShootWantsClusterAutoscaler(shoot)
+	if err != nil {
+		return nil, err
 	}
 
-	// Check whether the Shoot needs the cluster-autoscaler component
-	for _, worker := range shootObj.GetWorkers() {
-		if worker.AutoScalerMax > worker.AutoScalerMin {
-			shootObj.WantsClusterAutoscaler = true
-			break
-		}
-	}
+	shootObj.WantsClusterAutoscaler = needsAutoscaler
 
 	return shootObj, nil
 }
@@ -106,34 +100,7 @@ func (s *Shoot) GetIngressFQDN(subDomain string) string {
 
 // GetWorkers returns a list of worker objects of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
-	workers := []gardenv1beta1.Worker{}
-
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		for _, worker := range s.Info.Spec.Cloud.AWS.Workers {
-			workers = append(workers, worker.Worker)
-		}
-	case gardenv1beta1.CloudProviderAzure:
-		for _, worker := range s.Info.Spec.Cloud.Azure.Workers {
-			workers = append(workers, worker.Worker)
-		}
-	case gardenv1beta1.CloudProviderGCP:
-		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
-			workers = append(workers, worker.Worker)
-		}
-	case gardenv1beta1.CloudProviderOpenStack:
-		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
-			workers = append(workers, worker.Worker)
-		}
-	case gardenv1beta1.CloudProviderLocal:
-		workers = append(workers, gardenv1beta1.Worker{
-			Name:          "local",
-			AutoScalerMax: 1,
-			AutoScalerMin: 1,
-		})
-	}
-
-	return workers
+	return helper.GetShootCloudProviderWorkers(s.CloudProvider, s.Info)
 }
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
