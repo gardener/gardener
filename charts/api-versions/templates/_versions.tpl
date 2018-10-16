@@ -18,6 +18,14 @@ kubeproxy.config.k8s.io/v1alpha1
 apiserver.k8s.io/v1alpha1
 {{- end -}}
 
+{{- define "auditkubernetesversion" -}}
+{{- if semverCompare ">= 1.12" .Capabilities.KubeVersion.GitVersion -}}
+audit.k8s.io/v1
+{{- else -}}
+audit.k8s.io/v1beta1
+{{- end -}}
+{{- end -}}
+
 {{- define "rbacversion" -}}
 rbac.authorization.k8s.io/v1
 {{- end -}}
