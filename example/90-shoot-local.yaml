@@ -30,6 +30,11 @@ spec:
   #     groupsClaim: groups-claim
   #     groupsPrefix: groups-prefix
   #     issuerURL: https://identity.example.com
+  #     usernameClaim: username-claim
+  #     usernamePrefix: username-prefix
+  #-#-# only usable with Kubernetes >= 1.10
+  #     signingAlgs: RS256,some-other-algorithm
+  #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:
   #       key: value
   #   admissionPlugins:
@@ -46,10 +51,15 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   #   horizontalPodAutoscaler:
-  #     downscaleDelay: 15m0s
   #     syncPeriod: 30s
   #     tolerance: 0.1
+  #-#-# only usable with Kubernetes < 1.12
+  #     downscaleDelay: 15m0s
   #     upscaleDelay: 1m0s
+  #-#-# only usable with Kubernetes >= 1.12
+  #     downscaleStabilization: 5m0s
+  #     initialReadinessDelay: 30s
+  #     cpuInitializationPeriod: 5m0s
   # kubeScheduler:
   #   featureGates:
   #     SomeKubernetesFeature: true

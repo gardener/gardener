@@ -1275,18 +1275,27 @@ type KubeControllerManagerConfig struct {
 // HorizontalPodAutoscalerConfig contains horizontal pod autoscaler configuration settings for the kube-controller-manager.
 // Note: Descriptions were taken from the Kubernetes documentation.
 type HorizontalPodAutoscalerConfig struct {
-	// The period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
+	// DownscaleDelay is the period since last downscale, before another downscale can be performed in horizontal pod autoscaler.
 	// +optional
 	DownscaleDelay *metav1.Duration
-	// The period for syncing the number of pods in horizontal pod autoscaler.
+	// SyncPeriod is the period for syncing the number of pods in horizontal pod autoscaler.
 	// +optional
 	SyncPeriod *metav1.Duration
-	// The minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
+	// Tolerance is the minimum change (from 1.0) in the desired-to-actual metrics ratio for the horizontal pod autoscaler to consider scaling.
 	// +optional
 	Tolerance *float64
-	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
+	// UpscaleDelay is the period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
 	// +optional
 	UpscaleDelay *metav1.Duration
+	// DownscaleStabilization is the period for which autoscaler will look backwards and not scale down below any recommendation it made during that period.
+	// +optional
+	DownscaleStabilization *metav1.Duration
+	// InitialReadinessDelay is the  period after pod start during which readiness changes will be treated as initial readiness.
+	// +optional
+	InitialReadinessDelay *metav1.Duration
+	// CPUInitializationPeriod is the period after pod start when CPU samples might be skipped.
+	// +optional
+	CPUInitializationPeriod *metav1.Duration
 }
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.

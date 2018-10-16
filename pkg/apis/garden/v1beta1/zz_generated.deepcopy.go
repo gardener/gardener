@@ -1434,6 +1434,21 @@ func (in *HorizontalPodAutoscalerConfig) DeepCopyInto(out *HorizontalPodAutoscal
 		*out = new(GardenerDuration)
 		**out = **in
 	}
+	if in.DownscaleStabilization != nil {
+		in, out := &in.DownscaleStabilization, &out.DownscaleStabilization
+		*out = new(GardenerDuration)
+		**out = **in
+	}
+	if in.InitialReadinessDelay != nil {
+		in, out := &in.InitialReadinessDelay, &out.InitialReadinessDelay
+		*out = new(GardenerDuration)
+		**out = **in
+	}
+	if in.CPUInitializationPeriod != nil {
+		in, out := &in.CPUInitializationPeriod, &out.CPUInitializationPeriod
+		*out = new(GardenerDuration)
+		**out = **in
+	}
 	return
 }
 

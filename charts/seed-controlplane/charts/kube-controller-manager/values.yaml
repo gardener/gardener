@@ -24,3 +24,6 @@ horizontalPodAutoscaler:
   syncPeriod: 30s
   tolerance: 0.1
   upscaleDelay: 1m
+  downscaleStabilization: 5m0s
+  readinessDelay: 30s
+  cpuInitializationPeriod: 5m0s

@@ -1544,27 +1544,61 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 		}
 	}
 
-	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
+	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.Version, kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
 
 	return allErrs
 }
 
-func validateKubeControllerManager(kcm *garden.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
+func validateKubeControllerManager(kubernetesVersion string, kcm *garden.KubeControllerManagerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	k8sVersionLessThan112, err := utils.CompareVersions(kubernetesVersion, "<", "1.12")
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, kubernetesVersion, err.Error()))
+	}
 	if kcm != nil {
 		if hpa := kcm.HorizontalPodAutoscalerConfig; hpa != nil {
 			fldPath = fldPath.Child("horizontalPodAutoscaler")
-			if hpa.DownscaleDelay != nil && hpa.DownscaleDelay.Duration < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleDelay"), *hpa.DownscaleDelay, "downscale delay must not be negative"))
-			}
+
 			if hpa.SyncPeriod != nil && hpa.SyncPeriod.Duration < 1*time.Second {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("syncPeriod"), *hpa.SyncPeriod, "syncPeriod must not be less than a second"))
 			}
 			if hpa.Tolerance != nil && *hpa.Tolerance <= 0 {
 				allErrs = append(allErrs, field.Invalid(fldPath.Child("tolerance"), *hpa.Tolerance, "tolerance of must be greater than 0"))
 			}
-			if hpa.UpscaleDelay != nil && hpa.UpscaleDelay.Duration < 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("upscaleDelay"), *hpa.UpscaleDelay, "upscale delay must not be negative"))
+
+			if k8sVersionLessThan112 {
+				if hpa.DownscaleDelay != nil && hpa.DownscaleDelay.Duration < 0 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleDelay"), *hpa.DownscaleDelay, "downscale delay must not be negative"))
+				}
+				if hpa.UpscaleDelay != nil && hpa.UpscaleDelay.Duration < 0 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("upscaleDelay"), *hpa.UpscaleDelay, "upscale delay must not be negative"))
+				}
+				if hpa.DownscaleStabilization != nil {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("downscaleStabilization"), "downscale stabilization is not supported in k8s versions < 1.12"))
+				}
+				if hpa.InitialReadinessDelay != nil {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("initialReadinessDelay"), "initial readiness delay is not supported in k8s versions < 1.12"))
+				}
+				if hpa.CPUInitializationPeriod != nil {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("cpuInitializationPeriod"), "cpu initialization period is not supported in k8s versions < 1.12"))
+				}
+			} else {
+				if hpa.DownscaleDelay != nil {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("downscaleDelay"), "downscale delay is not supported in k8s versions >= 1.12"))
+				}
+				if hpa.UpscaleDelay != nil {
+					allErrs = append(allErrs, field.Forbidden(fldPath.Child("upscaleDelay"), "upscale delay is not supported in k8s versions >= 1.12"))
+				}
+				if hpa.DownscaleStabilization != nil && hpa.DownscaleStabilization.Duration < 1*time.Second {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("downscaleStabilization"), *hpa.DownscaleStabilization, "downScale stabilization must not be less than a second"))
+				}
+				if hpa.InitialReadinessDelay != nil && hpa.InitialReadinessDelay.Duration <= 0 {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("initialReadinessDelay"), *hpa.InitialReadinessDelay, "initial readiness delay must be greater than 0"))
+				}
+				if hpa.CPUInitializationPeriod != nil && hpa.CPUInitializationPeriod.Duration < 1*time.Second {
+					allErrs = append(allErrs, field.Invalid(fldPath.Child("cpuInitializationPeriod"), *hpa.CPUInitializationPeriod, "cpu initialization period must not be less than a second"))
+				}
 			}
 		}
 	}

@@ -1315,6 +1315,15 @@ type HorizontalPodAutoscalerConfig struct {
 	// The period since last upscale, before another upscale can be performed in horizontal pod autoscaler.
 	// +optional
 	UpscaleDelay *GardenerDuration `json:"upscaleDelay,omitempty"`
+	// The configurable window at which the controller will choose the highest recommendation for autoscaling.
+	// +optional
+	DownscaleStabilization *GardenerDuration `json:"downscaleStabilization,omitempty"`
+	// The configurable period at which the horizontal pod autoscaler considers a Pod “not yet ready” given that it’s unready and it has  transitioned to unready during that time.
+	// +optional
+	InitialReadinessDelay *GardenerDuration `json:"initialReadinessDelay,omitempty"`
+	// The period after which a ready pod transition is considered to be the first.
+	// +optional
+	CPUInitializationPeriod *GardenerDuration `json:"cpuInitializationPeriod,omitempty"`
 }
 
 const (
@@ -1324,8 +1333,14 @@ const (
 	DefaultHPASyncPeriod = 30 * time.Second
 	// DefaultHPATolerance is a constant for the default HPA tolerance for a Shoot cluster.
 	DefaultHPATolerance = 0.1
-	// DefaultHPAUpscaleDelay is a constant for the default HPA upscale delay for a Shoot cluster.
+	// DefaultHPAUpscaleDelay is for the default HPA upscale delay for a Shoot cluster.
 	DefaultHPAUpscaleDelay = 1 * time.Minute
+	// DefaultDownscaleStabilization is the default HPA downscale stabilization window for a Shoot cluster
+	DefaultDownscaleStabilization = 5 * time.Minute
+	// DefaultInitialReadinessDelay is for the default HPA  ReadinessDelay value in the Shoot cluster
+	DefaultInitialReadinessDelay = 30 * time.Second
+	// DefaultCPUInitializationPeriod is the for the default value of the CPUInitializationPeriod in the Shoot cluster
+	DefaultCPUInitializationPeriod = 5 * time.Minute
 )
 
 // KubeSchedulerConfig contains configuration settings for the kube-scheduler.
