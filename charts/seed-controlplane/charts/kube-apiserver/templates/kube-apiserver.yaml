@@ -33,7 +33,7 @@ spec:
         operator: Exists
       containers:
       - name: kube-apiserver
-        image: {{ index .Values.images "hyperkube" }}:v{{ .Values.kubernetesVersion }}
+        image: {{ index .Values.images "hyperkube" }}
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube

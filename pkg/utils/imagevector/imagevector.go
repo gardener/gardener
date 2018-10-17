@@ -23,10 +23,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	yaml "gopkg.in/yaml.v2"
+	"strings"
 )
 
 // ReadImageVector reads the image.yaml in the chart directory, unmarshals it
-// into a []*Image type and returns it.
+// into a []*ImageSource type and returns it.
 func ReadImageVector() (ImageVector, error) {
 	var (
 		path   = filepath.Join(common.ChartPath, "images.yaml")
@@ -47,42 +48,50 @@ func ReadImageVector() (ImageVector, error) {
 	return vector.Images, nil
 }
 
-// FindImage returns the image with the given <name> in the image vector. If multiple entries were
-// found, the provided <k8sVersion> is compared with the constraints stated in the image definition.
+func checkConstraintMatchesK8sVersion(constraint, k8sVersion string) (bool, error) {
+	if constraint == "" {
+		return true, nil
+	}
+	return utils.CheckVersionMeetsConstraint(k8sVersion, constraint)
+}
+
+// FindImage returns an image with the given <name> from the sources in the image vector.
+// The <k8sVersion> specifies the kubernetes version the image will be running on.
+// The <targetK8sVersion> specifies the kubernetes version the image shall target.
+// If multiple entries were found, the provided <k8sVersion> is compared with the constraints
+// stated in the image definition.
 // In case multiple images match the search, the first which was found is returned.
 // In case no image was found, an error is returned.
-func (v ImageVector) FindImage(name, k8sVersion string) (*Image, error) {
-	foundImages := []*Image{}
+func (v ImageVector) FindImage(name, k8sVersionRuntime, k8sVersionTarget string) (*Image, error) {
+	for _, source := range v {
+		if source.Name == name {
+			matches, err := checkConstraintMatchesK8sVersion(source.Versions, k8sVersionRuntime)
+			if err != nil {
+				return nil, err
+			}
 
-	for _, image := range v {
-		if image.Name == name {
-			foundImages = append(foundImages, image)
+			if matches {
+				return source.ToImage(k8sVersionTarget), nil
+			}
 		}
 	}
 
-	if len(foundImages) == 0 {
-		return nil, fmt.Errorf("could not find image '%s' in the image vector", name)
+	return nil, fmt.Errorf("could not find image %q for Kubernetes runtime version %q in the image vector", name, k8sVersionRuntime)
+}
+
+// ToImage applies the given <targetK8sVersion> to the source to produce an output image.
+// If the tag of an image source is empty, it will use the given <k8sVersion> as tag.
+func (i *ImageSource) ToImage(targetK8sVersion string) *Image {
+	tag := i.Tag
+	if tag == "" {
+		tag = fmt.Sprintf("v%s", strings.TrimLeft(targetK8sVersion, "v"))
 	}
 
-	if len(foundImages) == 1 {
-		return foundImages[0], nil
+	return &Image{
+		Name:       i.Name,
+		Repository: i.Repository,
+		Tag:        tag,
 	}
-
-	for _, image := range foundImages {
-		if len(image.Versions) == 0 {
-			return image, nil
-		}
-
-		k8sVersionMeetsConstraint, err := utils.CheckVersionMeetsConstraint(k8sVersion, image.Versions)
-		if err != nil {
-			return nil, err
-		}
-		if k8sVersionMeetsConstraint {
-			return image, nil
-		}
-	}
-
-	return nil, fmt.Errorf("could not find image '%s' matching the version constraint", name)
 }
 
 // String will returns the string representation of the image.

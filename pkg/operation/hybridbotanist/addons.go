@@ -86,27 +86,27 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 	}
 
-	calico, err := b.Botanist.InjectImages(calicoConfig, b.K8sShootClient.Version(), map[string]string{"calico-node": "calico-node", "calico-cni": "calico-cni", "calico-typha": "calico-typha"})
+	calico, err := b.Botanist.InjectImages(calicoConfig, b.ShootVersion(), b.ShootVersion(), common.CalicoNodeImageName, common.CalicoCNIImageName, common.CalicoTyphaImageName)
 	if err != nil {
 		return nil, err
 	}
-	coreDNS, err := b.Botanist.InjectImages(coreDNSConfig, b.K8sShootClient.Version(), map[string]string{"coredns": "coredns"})
+	coreDNS, err := b.Botanist.InjectImages(coreDNSConfig, b.ShootVersion(), b.ShootVersion(), common.CoreDNSImageName)
 	if err != nil {
 		return nil, err
 	}
-	kubeProxy, err := b.Botanist.InjectImages(kubeProxyConfig, b.K8sShootClient.Version(), map[string]string{"hyperkube": "hyperkube"})
+	kubeProxy, err := b.Botanist.InjectImages(kubeProxyConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return nil, err
 	}
-	metricsServer, err := b.Botanist.InjectImages(metricsServerConfig, b.K8sShootClient.Version(), map[string]string{"metrics-server": "metrics-server"})
+	metricsServer, err := b.Botanist.InjectImages(metricsServerConfig, b.ShootVersion(), b.ShootVersion(), common.MetricsServerImageName)
 	if err != nil {
 		return nil, err
 	}
-	vpnShoot, err := b.Botanist.InjectImages(vpnShootConfig, b.K8sShootClient.Version(), map[string]string{"vpn-shoot": "vpn-shoot"})
+	vpnShoot, err := b.Botanist.InjectImages(vpnShootConfig, b.ShootVersion(), b.ShootVersion(), common.VPNShootImageName)
 	if err != nil {
 		return nil, err
 	}
-	nodeExporter, err := b.Botanist.InjectImages(nodeExporterConfig, b.K8sShootClient.Version(), map[string]string{"node-exporter": "node-exporter"})
+	nodeExporter, err := b.Botanist.InjectImages(nodeExporterConfig, b.ShootVersion(), b.ShootVersion(), common.NodeExporterImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -183,27 +183,27 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		}
 	}
 
-	helmTiller, err := b.Botanist.InjectImages(helmTillerConfig, b.K8sShootClient.Version(), map[string]string{"helm-tiller": "helm-tiller"})
+	helmTiller, err := b.Botanist.InjectImages(helmTillerConfig, b.ShootVersion(), b.ShootVersion(), common.HelmTillerImageName)
 	if err != nil {
 		return nil, err
 	}
-	kubeLego, err := b.Botanist.InjectImages(kubeLegoConfig, b.K8sShootClient.Version(), map[string]string{"kube-lego": "kube-lego"})
+	kubeLego, err := b.Botanist.InjectImages(kubeLegoConfig, b.ShootVersion(), b.ShootVersion(), common.KubeLegoImageName)
 	if err != nil {
 		return nil, err
 	}
-	kube2IAM, err := b.Botanist.InjectImages(kube2IAMConfig, b.K8sShootClient.Version(), map[string]string{"kube2iam": "kube2iam"})
+	kube2IAM, err := b.Botanist.InjectImages(kube2IAMConfig, b.ShootVersion(), b.ShootVersion(), common.Kube2IAMImageName)
 	if err != nil {
 		return nil, err
 	}
-	kubernetesDashboard, err := b.Botanist.InjectImages(kubernetesDashboardConfig, b.K8sShootClient.Version(), map[string]string{"kubernetes-dashboard": "kubernetes-dashboard"})
+	kubernetesDashboard, err := b.Botanist.InjectImages(kubernetesDashboardConfig, b.ShootVersion(), b.ShootVersion(), common.KubernetesDashboardImageName)
 	if err != nil {
 		return nil, err
 	}
-	monocular, err := b.Botanist.InjectImages(monocularConfig, b.K8sShootClient.Version(), map[string]string{"monocular-api": "monocular-api", "monocular-ui": "monocular-ui", "busybox": "busybox"})
+	monocular, err := b.Botanist.InjectImages(monocularConfig, b.ShootVersion(), b.ShootVersion(), common.MonocularAPIImageName, common.MonocularUIImageName, common.BusyboxImageName)
 	if err != nil {
 		return nil, err
 	}
-	nginxIngress, err := b.Botanist.InjectImages(nginxIngressConfig, b.K8sShootClient.Version(), map[string]string{"nginx-ingress-controller": "nginx-ingress-controller", "ingress-default-backend": "ingress-default-backend"})
+	nginxIngress, err := b.Botanist.InjectImages(nginxIngressConfig, b.ShootVersion(), b.ShootVersion(), common.NginxIngressControllerImageName, common.IngressDefaultBackendImageName)
 	if err != nil {
 		return nil, err
 	}

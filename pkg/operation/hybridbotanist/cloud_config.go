@@ -55,11 +55,6 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		cloudProvider["config"] = cloudProviderConfig
 	}
 
-	hyperKube, err := b.ImageVector.FindImage("hyperkube", b.Shoot.Info.Spec.Kubernetes.Version)
-	if err != nil {
-		return nil, err
-	}
-
 	workers := []map[string]interface{}{}
 	for _, workerName := range userDataConfig.WorkerNames {
 		workers = append(workers, map[string]interface{}{
@@ -83,10 +78,12 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 			},
 			"version": b.Shoot.Info.Spec.Kubernetes.Version,
 		},
-		"images": map[string]interface{}{
-			"hyperkube": hyperKube.String(),
-		},
 		"workers": workers,
+	}
+
+	config, err = b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	if err != nil {
+		return nil, err
 	}
 
 	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet

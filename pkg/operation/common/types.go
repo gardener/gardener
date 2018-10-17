@@ -251,6 +251,108 @@ const (
 
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
+
+	// KubeAddonManagerImageName is the name of the KubeAddonManager image.
+	KubeAddonManagerImageName = "kube-addon-manager"
+
+	// CalicoNodeImageName is the name of the CalicoNode image.
+	CalicoNodeImageName = "calico-node"
+
+	// CalicoCNIImageName is the name of the CalicoCNI image.
+	CalicoCNIImageName = "calico-cni"
+
+	// CalicoTyphaImageName is the name of the CalicoTypha image.
+	CalicoTyphaImageName = "calico-typha"
+
+	// CoreDNSImageName is the name of the CoreDNS image.
+	CoreDNSImageName = "coredns"
+
+	// HyperkubeImageName is the name of the Hyperkube image.
+	HyperkubeImageName = "hyperkube"
+
+	// MetricsServerImageName is the name of the MetricsServer image.
+	MetricsServerImageName = "metrics-server"
+
+	// VPNShootImageName is the name of the VPNShoot image.
+	VPNShootImageName = "vpn-shoot"
+
+	// VPNSeedImageName is the name of the VPNSeed image.
+	VPNSeedImageName = "vpn-seed"
+
+	// NodeExporterImageName is the name of the NodeExporter image.
+	NodeExporterImageName = "node-exporter"
+
+	// HelmTillerImageName is the name of the HelmTiller image.
+	HelmTillerImageName = "helm-tiller"
+
+	// KubeLegoImageName is the name of the KubeLego image.
+	KubeLegoImageName = "kube-lego"
+
+	// Kube2IAMImageName is the name of the Kube2IAM image.
+	Kube2IAMImageName = "kube2iam"
+
+	// KubernetesDashboardImageName is the name of the KubernetesDashboard image.
+	KubernetesDashboardImageName = "kubernetes-dashboard"
+
+	// MonocularAPIImageName is the name of the MonocularAPI image.
+	MonocularAPIImageName = "monocular-api"
+
+	// MonocularUIImageName is the name of the MonocularUI image.
+	MonocularUIImageName = "monocular-ui"
+
+	// BusyboxImageName is the name of the Busybox image.
+	BusyboxImageName = "busybox"
+
+	// NginxIngressControllerImageName is the name of the NginxIngressController image.
+	NginxIngressControllerImageName = "nginx-ingress-controller"
+
+	// IngressDefaultBackendImageName is the name of the IngressDefaultBackend image.
+	IngressDefaultBackendImageName = "ingress-default-backend"
+
+	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
+	MachineControllerManagerImageName = "machine-controller-manager"
+
+	// ClusterAutoscalerImageName is the name of the ClusterAutoscaler image.
+	ClusterAutoscalerImageName = "cluster-autoscaler"
+
+	// AlertManagerImageName is the name of the AlertManager image.
+	AlertManagerImageName = "alertmanager"
+
+	// ConfigMapReloaderImageName is the name of the ConfigMapReloader image.
+	ConfigMapReloaderImageName = "configmap-reloader"
+
+	// GrafanaImageName is the name of the Grafana image.
+	GrafanaImageName = "grafana"
+
+	// PrometheusImageName is the name of the Prometheus image.
+	PrometheusImageName = "prometheus"
+
+	// BlackboxExporterImageName is the name of the BlackboxExporter image.
+	BlackboxExporterImageName = "blackbox-exporter"
+
+	// KubeStateMetricsImageName is the name of the KubeStateMetrics image.
+	KubeStateMetricsImageName = "kube-state-metrics"
+
+	// ETCDImageName is the name of the ETCD image.
+	ETCDImageName = "etcd"
+
+	// ETCDBackupRestoreImageName is the name of the ETCDBackupRestore image.
+	ETCDBackupRestoreImageName = "etcd-backup-restore"
+
+	// RubyImageName is the name of the Ruby image.
+	RubyImageName = "ruby"
+
+	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
+	AWSLBReadvertiserImageName = "aws-lb-readvertiser"
+
+	// PauseContainerImageName is the name of the PauseContainer image.
+	PauseContainerImageName = "pause-container"
+
+	// GardenerExternalAdmissionControllerImageName is the name of the GardenerExternalAdmissionController image.
+	GardenerExternalAdmissionControllerImageName = "gardener-external-admission-controller"
+
+	// TerraformerImageName is the name of the Terraformer image.
+	TerraformerImageName = "terraformer"
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

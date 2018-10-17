@@ -112,21 +112,19 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	prometheusVersion, err := imageVector.FindImage("prometheus", k8sGardenClient.Version())
-	if err != nil {
-		return err
+	imageNames := []string{
+		common.PrometheusImageName,
+		common.ConfigMapReloaderImageName,
+		common.PauseContainerImageName,
+		common.GardenerExternalAdmissionControllerImageName,
 	}
-	configMapReloader, err := imageVector.FindImage("configmap-reloader", k8sGardenClient.Version())
-	if err != nil {
-		return err
-	}
-	pauseContainer, err := imageVector.FindImage("pause-container", k8sGardenClient.Version())
-	if err != nil {
-		return err
-	}
-	gardenerExternalAdmissionController, err := imageVector.FindImage("gardener-external-admission-controller", k8sGardenClient.Version())
-	if err != nil {
-		return err
+	images := make(map[string]string, len(imageNames))
+	for _, imageName := range imageNames {
+		image, err := imageVector.FindImage(imageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+		if err != nil {
+			return err
+		}
+		images[imageName] = image.String()
 	}
 
 	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
@@ -142,13 +140,8 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 	}
 
 	return common.ApplyChart(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
-		"cloudProvider": seed.CloudProvider,
-		"images": map[string]interface{}{
-			"prometheus":                             prometheusVersion.String(),
-			"configmap-reloader":                     configMapReloader.String(),
-			"pause-container":                        pauseContainer.String(),
-			"gardener-external-admission-controller": gardenerExternalAdmissionController.String(),
-		},
+		"cloudProvider":         seed.CloudProvider,
+		"images":                images,
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),

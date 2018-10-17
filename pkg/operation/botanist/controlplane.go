@@ -180,7 +180,7 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		}
 	)
 
-	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
+	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
 	if err != nil {
 		return err
 	}
@@ -229,7 +229,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		"workerPools": workerPools,
 	}
 
-	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
+	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.ClusterAutoscalerImageName)
 	if err != nil {
 		return err
 	}
@@ -312,28 +312,28 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		}
 	)
 
-	alertManager, err := b.InjectImages(alertManagerConfig, b.K8sSeedClient.Version(), map[string]string{"alertmanager": "alertmanager", "configmap-reloader": "configmap-reloader"})
+	alertManager, err := b.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
 	if err != nil {
 		return err
 	}
-	grafana, err := b.InjectImages(grafanaConfig, b.K8sSeedClient.Version(), map[string]string{"grafana": "grafana", "busybox": "busybox"})
+	grafana, err := b.InjectImages(grafanaConfig, b.SeedVersion(), b.ShootVersion(), common.GrafanaImageName, common.BusyboxImageName)
 	if err != nil {
 		return err
 	}
-	prometheus, err := b.InjectImages(prometheusConfig, b.K8sSeedClient.Version(), map[string]string{
-		"prometheus":         "prometheus",
-		"configmap-reloader": "configmap-reloader",
-		"vpn-seed":           "vpn-seed",
-		"blackbox-exporter":  "blackbox-exporter",
-	})
+	prometheus, err := b.InjectImages(prometheusConfig, b.SeedVersion(), b.ShootVersion(),
+		common.PrometheusImageName,
+		common.ConfigMapReloaderImageName,
+		common.VPNSeedImageName,
+		common.BlackboxExporterImageName,
+	)
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsSeed, err := b.InjectImages(kubeStateMetricsSeedConfig, b.K8sSeedClient.Version(), map[string]string{"kube-state-metrics": "kube-state-metrics"})
+	kubeStateMetricsSeed, err := b.InjectImages(kubeStateMetricsSeedConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsShoot, err := b.InjectImages(kubeStateMetricsShootConfig, b.K8sSeedClient.Version(), map[string]string{"kube-state-metrics": "kube-state-metrics"})
+	kubeStateMetricsShoot, err := b.InjectImages(kubeStateMetricsShootConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
 	}

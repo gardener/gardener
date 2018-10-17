@@ -101,7 +101,7 @@ func (b *HybridBotanist) DeployETCD() error {
 		etcdConfig["backup"] = backupConfigData
 	}
 
-	etcd, err := b.Botanist.InjectImages(etcdConfig, b.K8sSeedClient.Version(), map[string]string{"etcd": "etcd", "etcd-backup-restore": "etcd-backup-restore"})
+	etcd, err := b.Botanist.InjectImages(etcdConfig, b.SeedVersion(), b.ShootVersion(), common.ETCDImageName, common.ETCDBackupRestoreImageName)
 	if err != nil {
 		return err
 	}
@@ -272,11 +272,11 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	}
 	defaultValues["admissionPlugins"] = admissionPlugins
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{
-		"hyperkube":         "hyperkube",
-		"vpn-seed":          "vpn-seed",
-		"blackbox-exporter": "blackbox-exporter",
-	})
+	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(),
+		common.HyperkubeImageName,
+		common.VPNSeedImageName,
+		common.BlackboxExporterImageName,
+	)
 	if err != nil {
 		return err
 	}
@@ -324,7 +324,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		}
 	}
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})
+	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		defaultValues["featureGates"] = cloudControllerManagerConfig.FeatureGates
 	}
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})
+	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}
@@ -401,7 +401,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		defaultValues["featureGates"] = schedulerConfig.FeatureGates
 	}
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{"hyperkube": "hyperkube"})
+	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}

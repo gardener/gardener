@@ -14,15 +14,22 @@
 
 package imagevector
 
-// Image contains the repository and the tag of a Docker container image. If the respective
+// ImageSource contains the repository and the tag of a Docker container image. If the respective
 // image is only valid for a specific Kubernetes version, then it must also contain the 'versions'
 // field describing for which versions it can be used.
-type Image struct {
+type ImageSource struct {
 	Name       string `json:"name" yaml:"name"`
 	Repository string `json:"repository" yaml:"repository"`
 	Tag        string `json:"tag" yaml:"tag"`
 	Versions   string `json:"versions" yaml:"versions"`
 }
 
-// ImageVector is a list of Docker container images.
-type ImageVector []*Image
+// Image is a concrete, pullable image with a nonempty tag.
+type Image struct {
+	Name       string
+	Repository string
+	Tag        string
+}
+
+// ImageVector is a list of image sources.
+type ImageVector []*ImageSource

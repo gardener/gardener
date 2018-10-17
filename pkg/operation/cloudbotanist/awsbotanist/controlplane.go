@@ -214,7 +214,7 @@ func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
 		}
 	)
 
-	values, err := b.InjectImages(defaultValues, b.K8sSeedClient.Version(), map[string]string{name: name})
+	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.AWSLBReadvertiserImageName)
 	if err != nil {
 		return err
 	}
