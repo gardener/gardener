@@ -311,7 +311,11 @@ func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.S
 		secretBindings   []garden.SecretBinding
 	)
 
-	allSecretBindings, err := q.secretBindingLister.SecretBindings(v1.NamespaceAll).List(labels.Everything())
+	namespace := v1.NamespaceAll
+	if quota.Spec.Scope == garden.QuotaScopeProject {
+		namespace = shoot.Namespace
+	}
+	allSecretBindings, err := q.secretBindingLister.SecretBindings(namespace).List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
