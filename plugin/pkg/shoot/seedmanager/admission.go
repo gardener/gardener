@@ -24,9 +24,12 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -45,8 +48,9 @@ func Register(plugins *admission.Plugins) {
 // SeedManager contains listers and and admission handler.
 type SeedManager struct {
 	*admission.Handler
-	seedLister gardenlisters.SeedLister
-	readyFunc  admission.ReadyFunc
+	seedLister  gardenlisters.SeedLister
+	shootLister gardenlisters.ShootLister
+	readyFunc   admission.ReadyFunc
 }
 
 var (
@@ -73,13 +77,19 @@ func (s *SeedManager) SetInternalGardenInformerFactory(f gardeninformers.SharedI
 	seedInformer := f.Garden().InternalVersion().Seeds()
 	s.seedLister = seedInformer.Lister()
 
-	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced)
+	shootInformer := f.Garden().InternalVersion().Shoots()
+	s.shootLister = shootInformer.Lister()
+
+	readyFuncs = append(readyFuncs, seedInformer.Informer().HasSynced, shootInformer.Informer().HasSynced)
 }
 
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (s *SeedManager) ValidateInitialization() error {
 	if s.seedLister == nil {
 		return errors.New("missing seed lister")
+	}
+	if s.shootLister == nil {
+		return errors.New("missing shoot lister")
 	}
 	return nil
 }
@@ -133,7 +143,7 @@ func (s *SeedManager) Admit(a admission.Attributes) error {
 	}
 
 	// If no Seed is referenced, we try to determine an adequate one.
-	seed, err := determineSeed(shoot, s.seedLister)
+	seed, err := determineSeed(shoot, s.seedLister, s.shootLister)
 	if err != nil {
 		return admission.NewForbidden(a, err)
 	}
@@ -143,20 +153,59 @@ func (s *SeedManager) Admit(a admission.Attributes) error {
 }
 
 // determineSeed returns an appropriate Seed cluster (or nil).
-func determineSeed(shoot *garden.Shoot, lister gardenlisters.SeedLister) (*garden.Seed, error) {
-	list, err := lister.List(labels.Everything())
+func determineSeed(shoot *garden.Shoot, seedLister gardenlisters.SeedLister, shootLister gardenlisters.ShootLister) (*garden.Seed, error) {
+	seedList, err := seedLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	shootList, err := shootLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
 	}
 
-	for _, seed := range list {
-		// We return the first matching seed cluster.
-		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) {
-			return seed, nil
+	// Map seeds to number of managed shoots.
+	var (
+		seedUsage  = generateSeedUsageMap(shootList)
+		candidates []*garden.Seed
+	)
+
+	// Determine all candidate seed cluster matching the shoot's cloud and region.
+	for _, seed := range seedList {
+		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) && haveDisjointedNetworks(seed, shoot) {
+			candidates = append(candidates, seed)
 		}
 	}
 
-	return nil, errors.New("failed to determine an adequate Seed cluster for this cloud profile and region")
+	var (
+		bestCandidate *garden.Seed
+		min           *int
+	)
+
+	// Find the best candidate (i.e. the one managing the smallest number of shoots right now).
+	for _, seed := range candidates {
+		if numberOfManagedShoots := seedUsage[seed.Name]; min == nil || numberOfManagedShoots < *min {
+			bestCandidate = seed
+			min = &numberOfManagedShoots
+		}
+	}
+
+	if bestCandidate == nil {
+		return nil, errors.New("no adequate seed cluster found for this cloud profile and region")
+	}
+
+	return bestCandidate, nil
+}
+
+func generateSeedUsageMap(shootList []*garden.Shoot) map[string]int {
+	m := map[string]int{}
+
+	for _, shoot := range shootList {
+		if seed := shoot.Spec.Cloud.Seed; seed != nil {
+			m[*seed]++
+		}
+	}
+
+	return m
 }
 
 func verifySeedAvailability(seed *garden.Seed) bool {
@@ -164,4 +213,10 @@ func verifySeedAvailability(seed *garden.Seed) bool {
 		return cond.Status == corev1.ConditionTrue
 	}
 	return false
+}
+
+func haveDisjointedNetworks(seed *garden.Seed, shoot *garden.Shoot) bool {
+	// error cannot occur due to our static validation
+	k8sNetworks, _ := helper.GetK8SNetworks(shoot)
+	return len(admissionutils.ValidateNetworkDisjointedness(seed.Spec.Networks, k8sNetworks, field.NewPath(""))) == 0
 }
