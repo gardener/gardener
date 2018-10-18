@@ -105,7 +105,7 @@ spec:
         - server
         - --schedule={{ .Values.backup.schedule }}
         - --max-backups={{ .Values.backup.maxBackups }}
-        - --data-dir=/var/etcd/data
+        - --data-dir=/var/etcd/data/new.etcd
         - --storage-provider={{ .Values.backup.storageProvider }}
         - --store-prefix=etcd-{{ .Values.role }}
         - --cert=/var/etcd/ssl/client/tls.crt

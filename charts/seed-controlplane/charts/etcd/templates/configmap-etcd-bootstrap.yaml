@@ -9,6 +9,10 @@ metadata:
 data:
   bootstrap.sh: |-
     #!/bin/sh
+    if [ -d /var/etcd/data/member ]; then
+        mkdir /var/etcd/data/new.etcd
+        mv /var/etcd/data/member /var/etcd/data/new.etcd/member
+    fi
     while true;
     do
       wget http://localhost:8080/initialization/status -S -O status;
@@ -22,18 +26,51 @@ data:
       "Failed")
             continue;;
       "Successful")
-            exec etcd --data-dir=/var/etcd/data \
-                      --name=etcd-{{.Values.role}} \
-                      --cert-file=/var/etcd/ssl/server/tls.crt \
-                      --key-file=/var/etcd/ssl/server/tls.key \
-                      --trusted-ca-file=/var/etcd/ssl/ca/ca.crt \
-                      --client-cert-auth \
-                      --advertise-client-urls=https://0.0.0.0:2379 \
-                      --listen-client-urls=https://0.0.0.0:2379 \
-                      --initial-cluster-state=new \
-                      --initial-cluster-token=new \
-                      --snapshot-count=75000 \
-                      --quota-backend-bytes=8589934592 
+            exec etcd --config-file /bootstrap/etcd.conf.yml
             ;;
       esac;
     done
+  etcd.conf.yml: |-
+      # This is the configuration file for the etcd server.
+
+      # Human-readable name for this member.
+      name: etcd-{{.Values.role}}
+
+      client-transport-security:
+        # Path to the client server TLS cert file.
+        cert-file: /var/etcd/ssl/server/tls.crt
+
+        # Path to the client server TLS key file.
+        key-file: /var/etcd/ssl/server/tls.key
+
+        # Enable client cert authentication.
+        client-cert-auth: true
+
+        # Path to the client server TLS trusted CA cert file.
+        trusted-ca-file: /var/etcd/ssl/ca/ca.crt
+
+        # Client TLS using generated certificates
+        auto-tls: false
+
+      # Path to the data directory.
+      data-dir: /var/etcd/data/new.etcd
+
+      # List of this member's client URLs to advertise to the public.
+      # The URLs needed to be a comma-separated list.
+      advertise-client-urls: https://0.0.0.0:2379
+
+      # List of comma separated URLs to listen on for client traffic.
+      listen-client-urls: https://0.0.0.0:2379
+
+      # Initial cluster token for the etcd cluster during bootstrap.
+      initial-cluster-token: 'new'
+
+      # Initial cluster state ('new' or 'existing').
+      initial-cluster-state: 'new'
+
+      # Number of committed transactions to trigger a snapshot to disk.
+      snapshot-count: 75000  
+
+      # Raise alarms when backend size exceeds the given quota. 0 means use the
+      # default quota.
+      quota-backend-bytes: 8589934592
