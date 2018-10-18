@@ -170,18 +170,18 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				CertType:  secrets.ClientCert,
 				SigningCA: certificateAuthorities[caCluster],
 			},
-
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for kube-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-controller-manager-server",
+				Name: common.KubeControllerManagerServerName,
 
-				CommonName:   "kube-controller-manager",
+				CommonName:   common.KubeControllerManagerDeploymentName,
 				Organization: nil,
 				DNSNames:     kubeControllerManagerCertDNSNames,
 				IPAddresses:  nil,
@@ -205,17 +205,18 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for cloud-controller-manager server
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "cloud-controller-manager-server",
+				Name: common.CloudControllerManagerServerName,
 
-				CommonName:   "cloud-controller-manager",
+				CommonName:   common.CloudControllerManagerDeploymentName,
 				Organization: nil,
 				DNSNames:     cloudControllerManagerCertDNSNames,
 				IPAddresses:  nil,
@@ -239,9 +240,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for kube-scheduler
@@ -258,9 +260,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for machine-controller-manager
@@ -277,9 +280,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for cluster-autoscaler
@@ -296,9 +300,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for kube-addon-manager
@@ -315,9 +320,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for kube-proxy
@@ -334,9 +340,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(false, true),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(false, true),
+			},
 		},
 
 		// Secret definition for kube-state-metrics
@@ -353,9 +360,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for prometheus
@@ -372,9 +380,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(true, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(true, false),
+			},
 		},
 
 		// Secret definition for prometheus to kubelets communication
@@ -408,9 +417,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 			BasicAuth: basicAuthAPIServer,
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(false, false),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(false, false),
+			},
 		},
 
 		// Secret definition for gardener
@@ -427,9 +437,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(false, true),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(false, true),
+			},
 		},
 
 		// Secret definition for cloud-config-downloader
@@ -446,9 +457,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				SigningCA: certificateAuthorities[caCluster],
 			},
 
-			KubeconfigRequired: true,
-			ClusterName:        b.Shoot.SeedNamespace,
-			APIServerURL:       b.computeAPIServerURL(false, true),
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.computeAPIServerURL(false, true),
+			},
 		},
 
 		// Secret definition for monitoring
