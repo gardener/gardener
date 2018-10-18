@@ -53,6 +53,8 @@ func NewREST(optsGetter generic.RESTOptionsGetter) *REST {
 		CreateStrategy: quota.Strategy,
 		UpdateStrategy: quota.Strategy,
 		DeleteStrategy: quota.Strategy,
+
+		TableConvertor: newTableConvertor(),
 	}
 	options := &generic.StoreOptions{RESTOptions: optsGetter}
 	if err := store.CompleteWithOptions(options); err != nil {
@@ -67,5 +69,5 @@ var _ rest.ShortNamesProvider = &REST{}
 
 // ShortNames implements the ShortNamesProvider interface. Returns a list of short names for a resource.
 func (r *REST) ShortNames() []string {
-	return []string{}
+	return []string{"squota"}
 }
