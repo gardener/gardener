@@ -128,7 +128,6 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 		},
 		"create": map[string]interface{}{
 			"vpc": createVPC,
-			"clusterAutoscalerPolicies": b.Shoot.ClusterAutoscalerEnabled() && !b.Shoot.Kube2IAMEnabled(),
 		},
 		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
 		"vpc": map[string]interface{}{

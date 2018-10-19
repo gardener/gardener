@@ -1,28 +1,28 @@
-# azure:
-#   subscriptionID: 81dde535-61b4-442a-96e6-6e30c6e55039
-#   tenantID: e9ec4533-d130-4d00-a7c3-d85f1c750c5a
-#   region: westeurope
-#   countUpdateDomains: 5
-#   countFaultDomains: 2
+azure:
+  subscriptionID: 81dde535-61b4-442a-96e6-6e30c6e55039
+  tenantID: e9ec4533-d130-4d00-a7c3-d85f1c750c5a
+  region: westeurope
+  countUpdateDomains: 5
+  countFaultDomains: 2
 
-# create:
-#   resourceGroup: true
-#   vnet: true
+create:
+  resourceGroup: true
+  vnet: true
 
-# resourceGroup:
-#   name: my-resource-group
-#   vnet:
-#     name: my-vnet
-#     cidr: 10.10.10.10/6
+resourceGroup:
+  name: my-resource-group
+  vnet:
+    name: my-vnet
+    cidr: 10.10.10.10/6
 
-# clusterName: test-namespace
+clusterName: test-namespace
 
-# names:
-#   configuration: shoot.tf-config
-#   variables: shoot.tf-vars
-#   state: shoot.tf-state
+names:
+  configuration: shoot.tf-config
+  variables: shoot.tf-vars
+  state: shoot.tf-state
 
-# initializeEmptyState: true
+initializeEmptyState: true
 
-# networks:
-#   worker: 10.250.0.0/19
+networks:
+  worker: 10.250.0.0/19

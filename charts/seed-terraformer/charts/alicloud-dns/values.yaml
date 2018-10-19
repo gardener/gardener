@@ -1,12 +1,12 @@
-# record:
-#   name: example.com
-#   hostRecord: my-dns-record
-#   value: 1.2.3.4
-#   type: ip
+record:
+  name: example.com
+  hostRecord: my-dns-record
+  value: 1.2.3.4
+  type: ip
 
-# names:
-#   configuration: shoot.tf-config
-#   variables: shoot.tf-vars
-#   state: shoot.tf-state
+names:
+  configuration: shoot.tf-config
+  variables: shoot.tf-vars
+  state: shoot.tf-state
 
-# initializeEmptyState: true
+initializeEmptyState: true

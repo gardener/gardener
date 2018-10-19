@@ -1,13 +1,13 @@
-# record:
-#   hostedZoneID: ABCD1234
-#   name: my-dns-record.example.com
-#   type: "ip"
-#   values:
-#   - google.com
+record:
+  hostedZoneID: ABCD1234
+  name: my-dns-record.example.com
+  type: "ip"
+  values:
+  - google.com
 
-# names:
-#   configuration: shoot.tf-config
-#   variables: shoot.tf-vars
-#   state: shoot.tf-state
+names:
+  configuration: shoot.tf-config
+  variables: shoot.tf-vars
+  state: shoot.tf-state
 
-# initializeEmptyState: true
+initializeEmptyState: true
