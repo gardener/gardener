@@ -120,6 +120,10 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 		for _, worker := range cloud.GCP.Workers {
 			workers = append(workers, worker.Worker)
 		}
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, worker := range cloud.Alicloud.Workers {
+			workers = append(workers, worker.Worker)
+		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, worker := range cloud.OpenStack.Workers {
 			workers = append(workers, worker.Worker)
