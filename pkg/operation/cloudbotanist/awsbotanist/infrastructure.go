@@ -157,6 +157,10 @@ func (b *AWSBotanist) destroyKubernetesLoadBalancersAndSecurityGroups() error {
 	vpcIDKey := "vpc_id"
 	stateVariables, err := t.GetStateOutputVariables(vpcIDKey)
 	if err != nil {
+		if terraformer.IsVariablesNotFoundError(err) {
+			b.Logger.Infof("Skipping explicit AWS load balancer and security group deletion because not all variables have been found in the Terraform state.")
+			return nil
+		}
 		return err
 	}
 	vpcID := stateVariables[vpcIDKey]
