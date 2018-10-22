@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+source $(dirname "${0}")/common
+
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
 MINIKUBE_IP=$(minikube ip)
@@ -29,7 +31,7 @@ kubectl apply -f ${EXAMPLE_DIR}/80-secretbinding-cloudprovider-local.yaml
 kubectl config set-cluster gardener-dev \
   --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
   --certificate-authority $HOME/.minikube/ca.crt \
-  --server https://${MINIKUBE_IP}:8443 \
+  --server https://${MINIKUBE_IP}:$API_SERVER_SECURE_PORT \
   --embed-certs=true
 
 kubectl config set-credentials gardener-dev \

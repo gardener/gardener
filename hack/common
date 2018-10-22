@@ -20,6 +20,8 @@ DOCKER_FOR_DESKTOP="docker-for-desktop"
 MINIKUBE="minikube"
 SUPPORTED_K8S_ENVS=($DOCKER_FOR_DESKTOP $MINIKUBE)
 
+API_SERVER_SECURE_PORT="${API_SERVER_SECURE_PORT:-8443}"
+
 __k8s_env=""
 k8s_env() {
     if [[ "$__k8s_env" == "" ]]; then
