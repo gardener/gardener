@@ -133,14 +133,15 @@ func SetDefaults_Shoot(obj *Shoot) {
 	setDefaults_ShootKubeControllerManager(&obj.Spec.Kubernetes)
 
 	if obj.Spec.Maintenance == nil {
-		begin, end := utils.ComputeRandomTimeWindow()
+		mt := utils.RandomMaintenanceTimeWindow()
+
 		obj.Spec.Maintenance = &Maintenance{
 			AutoUpdate: &MaintenanceAutoUpdate{
 				KubernetesVersion: trueVar,
 			},
 			TimeWindow: &MaintenanceTimeWindow{
-				Begin: begin,
-				End:   end,
+				Begin: mt.Begin().Formatted(),
+				End:   mt.End().Formatted(),
 			},
 		}
 	} else {
@@ -151,10 +152,11 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 
 		if obj.Spec.Maintenance.TimeWindow == nil {
-			begin, end := utils.ComputeRandomTimeWindow()
+			mt := utils.RandomMaintenanceTimeWindow()
+
 			obj.Spec.Maintenance.TimeWindow = &MaintenanceTimeWindow{
-				Begin: begin,
-				End:   end,
+				Begin: mt.Begin().Formatted(),
+				End:   mt.End().Formatted(),
 			}
 		}
 	}

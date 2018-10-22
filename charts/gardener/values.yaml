@@ -133,7 +133,6 @@ controller:
         syncPeriod: 30s
       shootMaintenance:
         concurrentSyncs: 5
-        syncPeriod: 15m
       shootQuota:
         concurrentSyncs: 5
         syncPeriod: 60m

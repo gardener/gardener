@@ -57,11 +57,11 @@ func NewForConfig(config *rest.Config) (*Client, error) {
 			Jobs:                      {"apis", "batch", "v1"},
 			Namespaces:                {"api", "v1"},
 			PersistentVolumeClaims:    {"api", "v1"},
-			Pods:                      {"api", "v1"},
-			ReplicaSets:               {"apis", "apps", "v1"},
-			ReplicationControllers:    {"api", "v1"},
-			Services:                  {"api", "v1"},
-			StatefulSets:              {"apis", "apps", "v1"},
+			Pods:                   {"api", "v1"},
+			ReplicaSets:            {"apis", "apps", "v1"},
+			ReplicationControllers: {"api", "v1"},
+			Services:               {"api", "v1"},
+			StatefulSets:           {"apis", "apps", "v1"},
 		},
 	}
 

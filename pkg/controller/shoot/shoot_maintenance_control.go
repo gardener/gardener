@@ -27,10 +27,20 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+)
+
+const (
+	// BestGuessMaintenanceMinutes is the average duration of a maintenance operation. It is subtracted from the end
+	// of a maintenance time window to use a best-effort kind of finishing the operation before the end.
+	// Generally, we can't make sure that the maintenance operation is done by the end of the time window anyway (considering large
+	// clusters with hundreds of nodes, a rolling update will take several hours).
+	BestGuessMaintenanceMinutes = 15
 )
 
 func (c *Controller) shootMaintenanceAdd(obj interface{}) {
@@ -38,17 +48,18 @@ func (c *Controller) shootMaintenanceAdd(obj interface{}) {
 	if err != nil {
 		return
 	}
-	c.shootMaintenanceQueue.AddAfter(key, c.config.Controllers.ShootMaintenance.SyncPeriod.Duration)
+	c.shootMaintenanceQueue.Add(key)
 }
 
 func (c *Controller) shootMaintenanceUpdate(oldObj, newObj interface{}) {
-	newShoot := newObj.(*gardenv1beta1.Shoot)
-	if shouldMaintainNow(newShoot) {
-		key, err := cache.MetaNamespaceKeyFunc(newObj)
-		if err != nil {
-			return
-		}
-		c.shootMaintenanceQueue.Add(key)
+	newShoot, ok1 := newObj.(*gardenv1beta1.Shoot)
+	oldShoot, ok2 := oldObj.(*gardenv1beta1.Shoot)
+	if !ok1 || !ok2 {
+		return
+	}
+
+	if hasMaintainNowAnnotation(newShoot) || !apiequality.Semantic.DeepEqual(oldShoot.Spec.Maintenance.TimeWindow, newShoot.Spec.Maintenance.TimeWindow) {
+		c.shootMaintenanceAdd(newObj)
 	}
 }
 
@@ -75,7 +86,7 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 		return nil
 	}
 	if err != nil {
-		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - unable to retrieve object from store: %v", key, err)
+		logger.Logger.Errorf("[SHOOT MAINTENANCE] %s - unable to retrieve object from store: %v", key, err)
 		return err
 	}
 	if shoot.DeletionTimestamp != nil {
@@ -83,15 +94,33 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 		return nil
 	}
 
-	defer c.shootMaintenanceAdd(shoot)
+	maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End)
+	if err != nil {
+		logger.Logger.Errorf("[SHOOT MAINTENANCE] %s - invalid time window: %v", key, err)
+		return err
+	}
+	maintenanceTimeWindow = maintenanceTimeWindow.WithEnd(maintenanceTimeWindow.End().Add(0, -BestGuessMaintenanceMinutes, 0))
 
-	// Either ignore Shoots which are marked as to-be-ignored or execute maintenance operations.
-	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
-		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot is marked as 'to-be-ignored'.", key)
+	var now = time.Now().UTC()
+
+	defer c.shootMaintenanceRequeue(key, maintenanceTimeWindow, now)
+
+	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) || !mustMaintainNow(shoot, maintenanceTimeWindow, now) {
+		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot (it is either marked as 'to-be-ignored' or must not be maintained now).", key)
 		return nil
 	}
 
 	return c.maintenanceControl.Maintain(shoot, key)
+}
+
+// newRandomTimeWindow computes a new random time window either for today or the next day (depending on <today>).
+func (c *Controller) shootMaintenanceRequeue(key string, maintenanceTimeWindow *utils.MaintenanceTimeWindow, now time.Time) {
+	var (
+		duration        = maintenanceTimeWindow.RandomDurationUntilNext(now)
+		nextMaintenance = now.Add(duration)
+	)
+	logger.Logger.Infof("[SHOOT MAINTENANCE] %s - Scheduled maintenance in %s at %s", key, duration, nextMaintenance.UTC())
+	c.shootMaintenanceQueue.AddAfter(key, duration)
 }
 
 // MaintenanceControlInterface implements the control logic for maintaining Shoots. It is implemented as an interface to allow
@@ -131,110 +160,71 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.ShootEventMaintenanceError, "[%s] %s", operationID, msg)
 			shootLogger.Error(msg)
 		}
-		shouldMaintain = shouldMaintainNow(shoot)
 	)
 
-	if !shouldMaintain {
-		currentTimeWithinTimeWindow, err := NowWithinTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End, time.Now().UTC())
-		if err != nil {
-			handleError(err.Error())
-			return nil
-		}
-		shouldMaintain = currentTimeWithinTimeWindow
+	shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
+
+	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
+	if err != nil {
+		handleError(fmt.Sprintf("Could not initialize a new operation: %s", err.Error()))
+		return nil
 	}
 
-	// Check if the current time is between the begin and the end of the maintenance time window.
-	// Only in this case we want to perform maintenance operations.
-	if shouldMaintain {
-		shootLogger.Infof("[SHOOT MAINTENANCE] %s", key)
-
-		operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
-		if err != nil {
-			handleError(fmt.Sprintf("Could not initialize a new operation: %s", err.Error()))
-			return nil
-		}
-
-		// Check if the CloudProfile contains another version of the machine image.
-		machineImageFound, machineImage, err := helper.DetermineMachineImage(*operation.Shoot.CloudProfile, operation.Shoot.GetMachineImageName(), shoot.Spec.Cloud.Region)
-		if err != nil {
-			handleError(fmt.Sprintf("Failure while determining the machine image in the CloudProfile: %s", err.Error()))
-			return nil
-		}
-		if machineImageFound {
-			switch operation.Shoot.CloudProvider {
-			case gardenv1beta1.CloudProviderAWS:
-				image := machineImage.(*gardenv1beta1.AWSMachineImage)
-				shoot.Spec.Cloud.AWS.MachineImage = image
-			case gardenv1beta1.CloudProviderAzure:
-				image := machineImage.(*gardenv1beta1.AzureMachineImage)
-				shoot.Spec.Cloud.Azure.MachineImage = image
-			case gardenv1beta1.CloudProviderGCP:
-				image := machineImage.(*gardenv1beta1.GCPMachineImage)
-				shoot.Spec.Cloud.GCP.MachineImage = image
-			case gardenv1beta1.CloudProviderOpenStack:
-				image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
-				shoot.Spec.Cloud.OpenStack.MachineImage = image
-			}
-		}
-
-		// Check if the CloudProfile contains a newer Kubernetes patch version.
-		if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
-			newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesVersion(*operation.Shoot.CloudProfile, operation.Shoot.Info.Spec.Kubernetes.Version)
-			if err != nil {
-				handleError(fmt.Sprintf("Failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error()))
-				return nil
-			}
-			if newerPatchVersionFound {
-				shoot.Spec.Kubernetes.Version = latestPatchVersion
-			}
-		}
-
-		// Remove operation annotation.
-		delete(shoot.Annotations, common.ShootOperation)
-
-		// Update the Shoot resource object.
-		if _, err := c.updater.UpdateShoot(shoot); err != nil {
-			handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
-			return nil
-		}
-		msg := "Completed; updated the Shoot specification successfully."
-		shootLogger.Infof("[SHOOT MAINTENANCE] %s", msg)
-		c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.ShootEventMaintenanceDone, "[%s] %s", operationID, msg)
+	// Check if the CloudProfile contains another version of the machine image.
+	machineImageFound, machineImage, err := helper.DetermineMachineImage(*operation.Shoot.CloudProfile, operation.Shoot.GetMachineImageName(), shoot.Spec.Cloud.Region)
+	if err != nil {
+		handleError(fmt.Sprintf("Failure while determining the machine image in the CloudProfile: %s", err.Error()))
+		return nil
 	}
+	if machineImageFound {
+		switch operation.Shoot.CloudProvider {
+		case gardenv1beta1.CloudProviderAWS:
+			image := machineImage.(*gardenv1beta1.AWSMachineImage)
+			shoot.Spec.Cloud.AWS.MachineImage = image
+		case gardenv1beta1.CloudProviderAzure:
+			image := machineImage.(*gardenv1beta1.AzureMachineImage)
+			shoot.Spec.Cloud.Azure.MachineImage = image
+		case gardenv1beta1.CloudProviderGCP:
+			image := machineImage.(*gardenv1beta1.GCPMachineImage)
+			shoot.Spec.Cloud.GCP.MachineImage = image
+		case gardenv1beta1.CloudProviderOpenStack:
+			image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
+			shoot.Spec.Cloud.OpenStack.MachineImage = image
+		}
+	}
+
+	// Check if the CloudProfile contains a newer Kubernetes patch version.
+	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
+		newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesVersion(*operation.Shoot.CloudProfile, operation.Shoot.Info.Spec.Kubernetes.Version)
+		if err != nil {
+			handleError(fmt.Sprintf("Failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error()))
+			return nil
+		}
+		if newerPatchVersionFound {
+			shoot.Spec.Kubernetes.Version = latestPatchVersion
+		}
+	}
+
+	// Remove operation annotation.
+	delete(shoot.Annotations, common.ShootOperation)
+
+	// Update the Shoot resource object.
+	if _, err := c.updater.UpdateShoot(shoot); err != nil {
+		handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
+		return nil
+	}
+	msg := "Completed; updated the Shoot specification successfully."
+	shootLogger.Infof("[SHOOT MAINTENANCE] %s", msg)
+	c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.ShootEventMaintenanceDone, "[%s] %s", operationID, msg)
 
 	return nil
 }
 
-// NowWithinTimeWindow returns true in case the current time is within <begin> and <end>.
-// <begin> and <end> must be in the following format: HHMMSS+ZZZZ. In case one of the
-// times can not be parsed, an error is returned.
-func NowWithinTimeWindow(begin, end string, nowTime time.Time) (bool, error) {
-	maintenanceWindowBegin, err := utils.ParseMaintenanceTime(begin)
-	if err != nil {
-		return false, fmt.Errorf("Could not parse the maintenance time window begin value: %s", err.Error())
-	}
-	maintenanceWindowEnd, err := utils.ParseMaintenanceTime(end)
-	if err != nil {
-		return false, fmt.Errorf("Could not parse the maintenance time window end value: %s", err.Error())
-	}
-	now, err := utils.ParseMaintenanceTime(utils.FormatMaintenanceTime(nowTime.UTC()))
-	if err != nil {
-		return false, fmt.Errorf("Could not parse the current time into the maintenance format: %s", err.Error())
-	}
-
-	// Handle time windows whose end is on a different day than the beginning.
-	if maintenanceWindowEnd.Sub(maintenanceWindowBegin) < 0 {
-		if now.Sub(maintenanceWindowEnd) <= 0 {
-			now = now.Add(24 * time.Hour)
-		}
-		maintenanceWindowEnd = maintenanceWindowEnd.Add(24 * time.Hour)
-	}
-
-	return (now.Equal(maintenanceWindowBegin) || now.After(maintenanceWindowBegin)) &&
-		(now.Equal(maintenanceWindowEnd) || now.Before(maintenanceWindowEnd)), nil
+func mustMaintainNow(shoot *gardenv1beta1.Shoot, maintenanceTimeWindow *utils.MaintenanceTimeWindow, now time.Time) bool {
+	return hasMaintainNowAnnotation(shoot) || maintenanceTimeWindow.Contains(now)
 }
 
-func shouldMaintainNow(shoot *gardenv1beta1.Shoot) bool {
+func hasMaintainNowAnnotation(shoot *gardenv1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[common.ShootOperation]
 	return ok && operation == common.ShootOperationMaintain
 }
