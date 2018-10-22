@@ -857,30 +857,6 @@ func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.
 			SchemaProps: spec.SchemaProps{
 				Description: "Addons is a collection of configuration for specific addons which are managed by the Gardener.",
 				Properties: map[string]spec.Schema{
-					"cluster-autoscaler": {
-						SchemaProps: spec.SchemaProps{
-							Description: "ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler"),
-						},
-					},
-					"heapster": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Heapster holds configuration settings for the heapster addon.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster"),
-						},
-					},
-					"kube2iam": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Kube2IAM holds configuration settings for the kube2iam addon (only AWS).",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM"),
-						},
-					},
-					"kube-lego": {
-						SchemaProps: spec.SchemaProps{
-							Description: "KubeLego holds configuration settings for the kube-lego addon.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego"),
-						},
-					},
 					"kubernetes-dashboard": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.",
@@ -893,9 +869,33 @@ func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress"),
 						},
 					},
+					"cluster-autoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterAutoscaler holds configuration settings for the cluster autoscaler addon. DEPRECATED: This field will be removed in a future version.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler"),
+						},
+					},
+					"heapster": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Heapster holds configuration settings for the heapster addon. DEPRECATED: This field will be removed in a future version.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster"),
+						},
+					},
+					"kube2iam": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kube2IAM holds configuration settings for the kube2iam addon (only AWS). DEPRECATED: This field will be removed in a future version.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM"),
+						},
+					},
+					"kube-lego": {
+						SchemaProps: spec.SchemaProps{
+							Description: "KubeLego holds configuration settings for the kube-lego addon. DEPRECATED: This field will be removed in a future version.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego"),
+						},
+					},
 					"monocular": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Monocular holds configuration settings for the monocular addon.",
+							Description: "Monocular holds configuration settings for the monocular addon. DEPRECATED: This field will be removed in a future version.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular"),
 						},
 					},

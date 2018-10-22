@@ -999,25 +999,31 @@ type Worker struct {
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
-	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
-	// +optional
-	ClusterAutoscaler *ClusterAutoscaler
-	// Heapster holds configuration settings for the heapster addon.
-	// +optional
-	Heapster *Heapster
-	// Kube2IAM holds configuration settings for the kube2iam addon (only AWS).
-	// +optional
-	Kube2IAM *Kube2IAM
-	// KubeLego holds configuration settings for the kube-lego addon.
-	// +optional
-	KubeLego *KubeLego
 	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
 	// +optional
 	KubernetesDashboard *KubernetesDashboard
 	// NginxIngress holds configuration settings for the nginx-ingress addon.
 	// +optional
 	NginxIngress *NginxIngress
+
+	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	ClusterAutoscaler *ClusterAutoscaler
+	// Heapster holds configuration settings for the heapster addon.
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	Heapster *Heapster
+	// Kube2IAM holds configuration settings for the kube2iam addon (only AWS).
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	Kube2IAM *Kube2IAM
+	// KubeLego holds configuration settings for the kube-lego addon.
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	KubeLego *KubeLego
 	// Monocular holds configuration settings for the monocular addon.
+	// DEPRECATED: This field will be removed in a future version.
 	// +optional
 	Monocular *Monocular
 }

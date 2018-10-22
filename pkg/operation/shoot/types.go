@@ -21,13 +21,16 @@ import (
 
 // Shoot is an object containing information about a Shoot cluster.
 type Shoot struct {
-	Info                        *gardenv1beta1.Shoot
-	Secret                      *corev1.Secret
-	CloudProfile                *gardenv1beta1.CloudProfile
-	CloudProvider               gardenv1beta1.CloudProvider
+	Info          *gardenv1beta1.Shoot
+	Secret        *corev1.Secret
+	CloudProfile  *gardenv1beta1.CloudProfile
+	CloudProvider gardenv1beta1.CloudProvider
+
 	SeedNamespace               string
 	InternalClusterDomain       string
 	ExternalClusterDomain       *string
 	KubernetesMajorMinorVersion string
-	Hibernated                  bool
+
+	WantsClusterAutoscaler bool
+	IsHibernated           bool
 }

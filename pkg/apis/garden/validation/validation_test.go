@@ -2133,7 +2133,7 @@ var _ = Describe("validation", func() {
 					MaxUnavailable: maxUnavailable,
 					MaxSurge:       maxSurge,
 				}
-				errList := ValidateWorker(worker, false, nil)
+				errList := ValidateWorker(worker, nil)
 
 				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(expectType),
@@ -2156,8 +2156,8 @@ var _ = Describe("validation", func() {
 	})
 
 	Describe("#ValidateWorkers", func() {
-		DescribeTable("validate min and max for worker pools if hibernation is configured",
-			func(min1, max1, min2, max2 int, hibernation *garden.Hibernation, matcher gomegatypes.GomegaMatcher) {
+		DescribeTable("validate that at least one active worker pool is configured",
+			func(min1, max1, min2, max2 int, matcher gomegatypes.GomegaMatcher) {
 				workers := []garden.Worker{
 					{
 						AutoScalerMin: min1,
@@ -2169,14 +2169,13 @@ var _ = Describe("validation", func() {
 					},
 				}
 
-				errList := ValidateWorkers(workers, hibernation, nil)
+				errList := ValidateWorkers(workers, nil)
 
 				Expect(errList).To(matcher)
 			},
 
-			Entry("hibernation not set", 0, 0, 0, 0, nil, HaveLen(0)),
-			Entry("hibernation set and at least one worker pool min=max>0", 0, 0, 1, 1, &garden.Hibernation{}, HaveLen(0)),
-			Entry("hibernation set and all worker pools min=max=0", 0, 0, 0, 0, &garden.Hibernation{}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("at least one worker pool min>0, max>0", 0, 0, 1, 1, HaveLen(0)),
+			Entry("all worker pools min=max=0", 0, 0, 0, 0, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type": Equal(field.ErrorTypeForbidden),
 			})))),
 		)
@@ -2243,14 +2242,6 @@ var _ = Describe("validation", func() {
 				MaxSurge:       intstr.FromInt(1),
 				MaxUnavailable: intstr.FromInt(0),
 			}
-			workerAutoScaling = garden.Worker{
-				Name:           "cpu-worker",
-				MachineType:    "large",
-				AutoScalerMin:  1,
-				AutoScalerMax:  2,
-				MaxSurge:       intstr.FromInt(1),
-				MaxUnavailable: intstr.FromInt(0),
-			}
 			workerAutoScalingInvalid = garden.Worker{
 				Name:           "cpu-worker",
 				MachineType:    "large",
@@ -2259,7 +2250,7 @@ var _ = Describe("validation", func() {
 				MaxSurge:       intstr.FromInt(1),
 				MaxUnavailable: intstr.FromInt(0),
 			}
-			workerAutoScalingHibernated = garden.Worker{
+			workerAutoScalingMinMaxZero = garden.Worker{
 				Name:           "cpu-worker",
 				MachineType:    "large",
 				AutoScalerMin:  0,
@@ -2740,11 +2731,16 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+			It("should enforce workers min > 0 if max > 0", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
 						Worker:     workerAutoScalingInvalid,
 						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "40Gi",
 						VolumeType: "default",
 					},
 				}
@@ -2758,10 +2754,15 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+			It("should allow workers having min=max=0 if at least one pool is active", func() {
 				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
 					{
-						Worker:     workerAutoScalingHibernated,
+						Worker:     worker,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     workerAutoScalingMinMaxZero,
 						VolumeSize: "20Gi",
 						VolumeType: "default",
 					},
@@ -2769,28 +2770,7 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should enforce workers min=max if autoscaler is disabled", func() {
-				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
-					{
-						Worker:     workerAutoScaling,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
-				shoot.Spec.Addons.ClusterAutoscaler.Addon = garden.Addon{
-					Enabled: false,
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin/autoScalerMax", fldPath)),
-				}))
+				Expect(errorList).To(BeEmpty())
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -3104,10 +3084,15 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+			It("should enforce workers min > 0 if max > 0", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
 						Worker:     workerAutoScalingInvalid,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
 						VolumeSize: "40Gi",
 						VolumeType: "default",
 					},
@@ -3122,10 +3107,15 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+			It("should allow workers having min=max=0 if at least one pool is active", func() {
 				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
 					{
-						Worker:     workerAutoScalingHibernated,
+						Worker:     worker,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     workerAutoScalingMinMaxZero,
 						VolumeSize: "40Gi",
 						VolumeType: "default",
 					},
@@ -3134,27 +3124,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should enforce workers min=max if autoscaler is disabled", func() {
-				shoot.Spec.Cloud.Azure.Workers = []garden.AzureWorker{
-					{
-						Worker:     workerAutoScaling,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
-				shoot.Spec.Addons.ClusterAutoscaler.Addon = garden.Addon{
-					Enabled: false,
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin/autoScalerMax", fldPath)),
-				}))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -3436,11 +3405,16 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+			It("should enforce workers min > 0 if max > 0", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
 					{
 						Worker:     workerAutoScalingInvalid,
 						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "40Gi",
 						VolumeType: "default",
 					},
 				}
@@ -3454,10 +3428,15 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+			It("should allow workers having min=max=0 if at least one pool is active", func() {
 				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
 					{
-						Worker:     workerAutoScalingHibernated,
+						Worker:     worker,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     workerAutoScalingMinMaxZero,
 						VolumeSize: "20Gi",
 						VolumeType: "default",
 					},
@@ -3466,27 +3445,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should enforce workers min=max if autoscaler is disabled", func() {
-				shoot.Spec.Cloud.GCP.Workers = []garden.GCPWorker{
-					{
-						Worker:     workerAutoScaling,
-						VolumeSize: "20Gi",
-						VolumeType: "default",
-					},
-				}
-				shoot.Spec.Addons.ClusterAutoscaler.Addon = garden.Addon{
-					Enabled: false,
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin/autoScalerMax", fldPath)),
-				}))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -3768,11 +3726,16 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+			It("should enforce workers min > 0 if max > 0", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
 					{
 						Worker:     workerAutoScalingInvalid,
 						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "40Gi",
 						VolumeType: "default",
 					},
 				}
@@ -3786,10 +3749,15 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+			It("should allow workers having min=max=0 if at least one pool is active", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
 					{
-						Worker:     workerAutoScalingHibernated,
+						Worker:     worker,
+						VolumeSize: "40Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     workerAutoScalingMinMaxZero,
 						VolumeSize: "40Gi",
 						VolumeType: "default",
 					},
@@ -3798,27 +3766,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should enforce workers min=max if autoscaler is disabled", func() {
-				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
-					{
-						Worker:     workerAutoScaling,
-						VolumeSize: "40Gi",
-						VolumeType: "default",
-					},
-				}
-				shoot.Spec.Addons.ClusterAutoscaler.Addon = garden.Addon{
-					Enabled: false,
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin/autoScalerMax", fldPath)),
-				}))
 			})
 
 			It("should forbid worker pools with too less volume size", func() {
@@ -4098,11 +4045,14 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should enforce workers min > 0 if autoscaler is enabled and max > 0", func() {
+			It("should enforce workers min > 0 if max > 0", func() {
 				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
 					{
 						Worker: workerAutoScalingInvalid,
 					},
+								{
+									Worker: worker,
+								},
 				}
 
 				errorList := ValidateShoot(shoot)
@@ -4114,35 +4064,19 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should allow workers min=0 if autoscaler is enabled and max=0", func() {
+			It("should allow workers having min=max=0 if at least one pool is active", func() {
 				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
 					{
-						Worker: workerAutoScalingHibernated,
+						Worker: workerAutoScalingMinMaxZero,
+					},
+					{
+						Worker: worker,
 					},
 				}
 
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should enforce workers min=max if autoscaler is disabled", func() {
-				shoot.Spec.Cloud.OpenStack.Workers = []garden.OpenStackWorker{
-					{
-						Worker: workerAutoScaling,
-					},
-				}
-				shoot.Spec.Addons.ClusterAutoscaler.Addon = garden.Addon{
-					Enabled: false,
-				}
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].autoScalerMin/autoScalerMax", fldPath)),
-				}))
 			})
 
 			It("should forbid too long worker names", func() {

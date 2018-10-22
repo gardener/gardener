@@ -191,7 +191,7 @@ func (b *Botanist) DeployMachineControllerManager() error {
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
 // for automatically scaling the worker pools of the Shoot.
 func (b *Botanist) DeployClusterAutoscaler() error {
-	if !b.Shoot.ClusterAutoscalerEnabled() {
+	if !b.Shoot.WantsClusterAutoscaler {
 		return b.DeleteClusterAutoscaler()
 	}
 
@@ -214,7 +214,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		})
 	}
 
-	if b.Shoot.Hibernated {
+	if b.Shoot.IsHibernated {
 		replicas = 0
 	}
 
@@ -258,7 +258,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		replicas         = 1
 	)
 
-	if b.Shoot.Hibernated {
+	if b.Shoot.IsHibernated {
 		replicas = 0
 	}
 

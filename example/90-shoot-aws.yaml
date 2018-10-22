@@ -91,6 +91,15 @@ spec:
     schedule: "0 */24 * * *"
     maximum: 7
   addons:
+    nginx-ingress:
+      enabled: true
+      loadBalancerSourceRanges: []
+    kubernetes-dashboard:
+      enabled: true
+    # kube2iam addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy kube2iam as well as
+    # the desired AWS IAM roles on your own instead of enabling it here. Please do not
+    # use this field anymore.
     kube2iam:
       enabled: true
       roles:
@@ -118,18 +127,22 @@ spec:
     # Heapster addon is deprecated and no longer supported. Gardener deploys the Kubernetes metrics-server
     # into the kube-system namespace of shoots (cannot be turned off) for fetching metrics and enabling
     # horizontal pod auto-scaling.
-    # This field will be removed in the future. Do not use it anymore.
+    # This field will be removed in the future. Please do not use it anymore.
     heapster:
       enabled: false
-    kubernetes-dashboard:
-      enabled: true
+    # cluster-autoscaler addon is automatically enabled if at least one of the configured
+    # worker pools (see above) uses max>min. You do not need to enable it separately anymore. Any value
+    # you put here has no effect. This field will be removed in the future. Please do not use it anymore.
     cluster-autoscaler:
       enabled: true
-    nginx-ingress:
-      enabled: true
-      loadBalancerSourceRanges: []
+    # kube-lego addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
+    # instead of enabling it here. You should not use this field anymore.
     kube-lego:
       enabled: true
       email: john.doe@example.com
+    # monocular addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy monocular on your own
+    # instead of enabling it here. Please do not use this field anymore.
     monocular:
       enabled: false

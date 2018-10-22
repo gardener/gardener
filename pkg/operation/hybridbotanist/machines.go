@@ -58,7 +58,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 
 	// During the time a rolling update happens we do not want the cluster autoscaler to interfer, hence it
 	// is removed (and later, at the end of the flow, deployed again).
-	if b.Shoot.ClusterAutoscalerEnabled() {
+	if b.Shoot.WantsClusterAutoscaler {
 		rollingUpdate := false
 		// Check whether new machine classes have been computed (resulting in a rolling update of the nodes).
 		for _, machineDeployment := range wantedMachineDeployments {
@@ -70,7 +70,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 
 		// When the Shoot gets hibernated we want to remove the cluster auto scaler so that it does not interfer
 		// with Gardeners modifications on the machine deployment's replicas fields.
-		if b.Shoot.Hibernated || rollingUpdate {
+		if b.Shoot.IsHibernated || rollingUpdate {
 			if err := b.Botanist.DeleteClusterAutoscaler(); err != nil {
 				return err
 			}
@@ -228,11 +228,11 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployme
 
 		switch {
 		// If the Shoot is hibernated then the machine deployment's replicas should be zero.
-		case b.Shoot.Hibernated:
+		case b.Shoot.IsHibernated:
 			replicas = 0
 		// If the cluster autoscaler is not enabled then min=max (as per API validation), hence
 		// we can use either min or max.
-		case !b.Shoot.ClusterAutoscalerEnabled():
+		case !b.Shoot.WantsClusterAutoscaler:
 			replicas = deployment.Minimum
 		// If the machine deployment does not yet exist we set replicas to min so that the cluster
 		// autoscaler can scale them as required.
@@ -240,7 +240,7 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployme
 			replicas = deployment.Minimum
 		// If the Shoot was hibernated and is now woken up we set replicas to min so that the cluster
 		// autoscaler can scale them as required.
-		case shootIsWokenUp(b.Shoot.Hibernated, existingMachineDeployments):
+		case shootIsWokenUp(b.Shoot.IsHibernated, existingMachineDeployments):
 			replicas = deployment.Minimum
 		// If the shoot worker pool minimum was updated and if the current machine deployment replica
 		// count is less than minimum, we update the machine deployment replica count to updated minimum.
@@ -308,7 +308,7 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 		// Collect the numbers of ready and desired replicas.
 		for _, existingMachineDeployment := range existingMachineDeployments.Items {
 			// If the Shoots get hibernated we want to wait until all machine deployments have been deleted entirely.
-			if b.Shoot.Hibernated {
+			if b.Shoot.IsHibernated {
 				numberOfAwakeMachines += existingMachineDeployment.Status.Replicas
 				continue
 			}
@@ -331,7 +331,7 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 		}
 
 		switch {
-		case !b.Shoot.Hibernated:
+		case !b.Shoot.IsHibernated:
 			b.Logger.Infof("Waiting until all machines are healthy/ready (%d/%d OK)...", numReady, numDesired)
 			if numReady >= numDesired {
 				return true, nil

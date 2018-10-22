@@ -535,12 +535,12 @@ func Convert_garden_Addon_To_v1beta1_Addon(in *garden.Addon, out *Addon, s conve
 }
 
 func autoConvert_v1beta1_Addons_To_garden_Addons(in *Addons, out *garden.Addons, s conversion.Scope) error {
+	out.KubernetesDashboard = (*garden.KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
+	out.NginxIngress = (*garden.NginxIngress)(unsafe.Pointer(in.NginxIngress))
 	out.ClusterAutoscaler = (*garden.ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
 	out.Heapster = (*garden.Heapster)(unsafe.Pointer(in.Heapster))
 	out.Kube2IAM = (*garden.Kube2IAM)(unsafe.Pointer(in.Kube2IAM))
 	out.KubeLego = (*garden.KubeLego)(unsafe.Pointer(in.KubeLego))
-	out.KubernetesDashboard = (*garden.KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
-	out.NginxIngress = (*garden.NginxIngress)(unsafe.Pointer(in.NginxIngress))
 	out.Monocular = (*garden.Monocular)(unsafe.Pointer(in.Monocular))
 	return nil
 }
@@ -551,12 +551,12 @@ func Convert_v1beta1_Addons_To_garden_Addons(in *Addons, out *garden.Addons, s c
 }
 
 func autoConvert_garden_Addons_To_v1beta1_Addons(in *garden.Addons, out *Addons, s conversion.Scope) error {
+	out.KubernetesDashboard = (*KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
+	out.NginxIngress = (*NginxIngress)(unsafe.Pointer(in.NginxIngress))
 	out.ClusterAutoscaler = (*ClusterAutoscaler)(unsafe.Pointer(in.ClusterAutoscaler))
 	out.Heapster = (*Heapster)(unsafe.Pointer(in.Heapster))
 	out.Kube2IAM = (*Kube2IAM)(unsafe.Pointer(in.Kube2IAM))
 	out.KubeLego = (*KubeLego)(unsafe.Pointer(in.KubeLego))
-	out.KubernetesDashboard = (*KubernetesDashboard)(unsafe.Pointer(in.KubernetesDashboard))
-	out.NginxIngress = (*NginxIngress)(unsafe.Pointer(in.NginxIngress))
 	out.Monocular = (*Monocular)(unsafe.Pointer(in.Monocular))
 	return nil
 }
