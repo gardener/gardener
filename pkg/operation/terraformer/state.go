@@ -16,9 +16,10 @@ package terraformer
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 type terraformState struct {
@@ -42,6 +43,9 @@ func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 	var (
 		state  terraformState
 		output = make(map[string]string)
+
+		wantedVariables = sets.NewString(variables...)
+		foundVariables  = sets.NewString()
 	)
 
 	stateConfigMap, err := t.GetState()
@@ -56,11 +60,12 @@ func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 	for _, variable := range variables {
 		if value, ok := state.Modules[0].Outputs[variable]["value"]; ok {
 			output[variable] = value.(string)
+			foundVariables.Insert(variable)
 		}
 	}
 
-	if len(output) != len(variables) {
-		return nil, errors.New("could not find all requested variables")
+	if wantedVariables.Len() != foundVariables.Len() {
+		return nil, &variablesNotFoundError{wantedVariables.Difference(foundVariables).List()}
 	}
 
 	return output, nil
@@ -76,4 +81,22 @@ func (t *Terraformer) IsStateEmpty() bool {
 		return false
 	}
 	return len(state) == 0
+}
+
+type variablesNotFoundError struct {
+	variables []string
+}
+
+// Error prints the error message of the variablesNotFound error.
+func (e *variablesNotFoundError) Error() string {
+	return fmt.Sprintf("could not find all requested variables: %+v", e.variables)
+}
+
+// IsVariablesNotFoundError returns true if the error indicates that not all variables have been found.
+func IsVariablesNotFoundError(err error) bool {
+	switch err.(type) {
+	case *variablesNotFoundError:
+		return true
+	}
+	return false
 }
