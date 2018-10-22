@@ -9,8 +9,10 @@ metadata:
 data:
   bootstrap.sh: |-
     #!/bin/sh
-    if [ -d /var/etcd/data/member ]; then
+    if [ ! -d /var/etcd/data/new.etcd ]; then
         mkdir /var/etcd/data/new.etcd
+    fi
+    if [ -d /var/etcd/data/member ]; then
         mv /var/etcd/data/member /var/etcd/data/new.etcd/member
     fi
     while true;
