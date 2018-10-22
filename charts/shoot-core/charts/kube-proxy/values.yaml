@@ -1,3 +1,5 @@
+global:
+  podNetwork: 1.2.3.4/24
 kubeconfig: dummy-b64-data-here
 featureGates: {}
   # CustomResourceValidation: true

@@ -46,3 +46,18 @@ go fmt ${PACKAGES}
 for package in ${LINT_FOLDERS}; do
   golint -set_exit_status $(find $package -maxdepth 1 -name "*.go" | grep -vE 'zz_generated|_test.go')
 done
+
+# Check for chart symlink errors
+BROKEN_SYMLINKS=$(find -L ${SOURCE_PATH}/charts -type l)
+if [[ -n ${BROKEN_SYMLINKS} ]]; then
+  echo "Found broken symlinks:"
+  echo ${BROKEN_SYMLINKS}
+  exit 1
+fi
+
+# Render chart dirs
+ALL_CHART_DIRS=$(find ${SOURCE_PATH}/charts -type f -name "Chart.yaml" -exec dirname {} \; | sort -r)
+for dir in ${ALL_CHART_DIRS}
+do
+  helm template ${dir} 1> /dev/null
+done
