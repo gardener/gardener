@@ -1,4 +1,4 @@
-{{- if .Values.defaultCCM -}}
+{{- if eq .Values.cloudProvider "alicloud" -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -12,7 +12,7 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: {{ include "cloud-controller-manager.port" . }}
+    port: 10253
     protocol: TCP
   selector:
     app: kubernetes
@@ -24,7 +24,6 @@ metadata:
   name: cloud-controller-manager
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: controlplane
     app: kubernetes
     role: cloud-controller-manager
 spec:
@@ -41,57 +40,38 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
-        garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: cloud-controller-manager
     spec:
-      tolerations:
-      - effect: NoExecute
-        operator: Exists
       containers:
       - name: cloud-controller-manager
-        image: {{ index .Values.images "hyperkube" }}
+        image: {{ index .Values.images "alicloud-ccm" }}
         imagePullPolicy: IfNotPresent
         command:
-        - /hyperkube
-        - cloud-controller-manager
+        - /cloud-controller-manager
+        - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
+        - --address=0.0.0.0
+        - --allow-untagged-cloud=true
         - --allocate-node-cidrs=true
         - --cloud-provider={{ .Values.cloudProvider }}
-        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
-        - --cluster-cidr={{ .Values.podNetwork }}
-        - --cluster-name={{ .Values.clusterName }}
-        - --concurrent-service-syncs=10
-        - --configure-cloud-routes={{ .Values.configureRoutes }}
-        {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
-        - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --leader-elect=true
-        {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
-        - --secure-port={{ include "cloud-controller-manager.port" . }}
-        - --port=0
-        {{- end }}
-        {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
-        - --authentication-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
-        - --authorization-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
-        - --tls-cert-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.crt
-        - --tls-private-key-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.key
-        {{- end }}
-        - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
-        - --use-service-account-credentials
+        - --cluster-cidr={{ .Values.podNetwork }}
+        - --use-service-account-credentials=false
         - --v=2
-        {{- range $index, $param := $.Values.additionalParameters }}
-        - {{ $param }}
-        {{- end }}
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        - --cluster-name={{ .Values.clusterName }}
+        - --configure-cloud-routes={{ .Values.configureRoutes }}
+        ports:
+        - containerPort: 10253
+          name: metrics
+          protocol: TCP
         env:
 {{ toYaml .Values.environment | indent 10 }}
         livenessProbe:
           httpGet:
             path: /healthz
-            {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
-            scheme: HTTPS
-            {{- else }}
             scheme: HTTP
-            {{- end }}
-            port: {{ include "cloud-controller-manager.port" . }}
+            port: 10253
           successThreshold: 1
           failureThreshold: 2
           initialDelaySeconds: 15
@@ -106,8 +86,6 @@ spec:
         volumeMounts:
         - name: cloud-controller-manager
           mountPath: /var/lib/cloud-controller-manager
-        - name: cloud-controller-manager-server
-          mountPath: /var/lib/cloud-controller-manager-server
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
         - name: cloudprovider
@@ -120,9 +98,6 @@ spec:
       - name: cloud-controller-manager
         secret:
           secretName: cloud-controller-manager
-      - name: cloud-controller-manager-server
-        secret:
-          secretName: cloud-controller-manager-server
       - name: cloud-provider-config
         configMap:
           name: cloud-provider-config

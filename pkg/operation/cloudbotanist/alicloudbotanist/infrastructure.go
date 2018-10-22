@@ -14,9 +14,22 @@
 
 package alicloudbotanist
 
+import (
+	"github.com/gardener/gardener/pkg/operation/terraformer"
+
+	"github.com/gardener/gardener/pkg/operation/common"
+)
+
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
 func (b *AlicloudBotanist) DeployInfrastructure() error {
-	return nil
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+
+	return tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
+		DefineConfig("alicloud-infra", b.generateTerraformInfraConfig()).
+		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
@@ -33,4 +46,44 @@ func (b *AlicloudBotanist) DeployBackupInfrastructure() error {
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
 	return nil
+}
+
+// generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
+// are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *AlicloudBotanist) generateTerraformInfraVariablesEnvironment() []map[string]interface{} {
+	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
+		"ACCESS_KEY_ID":     AccessKeyID,
+		"ACCESS_KEY_SECRET": AccessKeySecret,
+	})
+}
+
+// generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
+// and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
+func (b *AlicloudBotanist) generateTerraformInfraConfig() map[string]interface{} {
+	var (
+		sshSecret = b.Secrets["ssh-keypair"]
+		zones     = []map[string]interface{}{}
+	)
+
+	for idx, zone := range b.Shoot.Info.Spec.Cloud.Alicloud.Zones {
+		zones = append(zones, map[string]interface{}{
+			"name": zone,
+			"cidr": map[string]interface{}{
+				"worker": b.Shoot.Info.Spec.Cloud.Alicloud.Networks.Workers[idx],
+			},
+		})
+	}
+
+	return map[string]interface{}{
+		"alicloud": map[string]interface{}{
+			"region": b.Shoot.Info.Spec.Cloud.Region,
+		},
+		"vpc": map[string]interface{}{
+			"cidr": b.Shoot.Info.Spec.Cloud.Alicloud.Networks.VPC.CIDR,
+		},
+		"clusterName":  b.Shoot.SeedNamespace,
+		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
+		"zones":        zones,
+	}
 }

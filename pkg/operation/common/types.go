@@ -444,6 +444,9 @@ const (
 	// RubyImageName is the name of the Ruby image.
 	RubyImageName = "ruby"
 
+	// AlicloudControllerManagerImageName is the name of the AlicloudControllerManager image.
+	AlicloudControllerManagerImageName = "alicloud-controller-manager"
+
 	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
 	AWSLBReadvertiserImageName = "aws-lb-readvertiser"
 

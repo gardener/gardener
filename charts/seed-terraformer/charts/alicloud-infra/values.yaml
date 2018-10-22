@@ -1,0 +1,18 @@
+# alicloud:
+#   region: cn-beijing
+
+# clusterName: test-namespace
+
+# sshPublicKey: sshkey-12345
+
+# vpc:
+#   cidr: 10.10.10.10/6
+
+
+# zones:
+# - name: cn-beijing-a
+#   cidr:
+#     worker: 10.250.0.0/19
+# - name: cn-beijing-b
+#   cidr:
+#     worker: 10.250.32.0/19

@@ -1,3 +1,4 @@
+defaultCCM: true
 cloudProvider: aws
 replicas: 1
 kubernetesVersion: 1.7.5
@@ -12,6 +13,7 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository
+  alicloud-controller-manager: image-repository
 resources:
   requests:
     cpu: 100m
