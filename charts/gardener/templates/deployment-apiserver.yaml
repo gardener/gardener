@@ -42,6 +42,7 @@ spec:
         - --audit-policy-file=/etc/gardener-apiserver/audit/audit-policy.yaml
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
+        - --authorization-always-allow-paths=/healthz
         {{- if .Values.apiserver.etcd.useSidecar }}
         - --etcd-servers=http://localhost:2379
         {{- else }}

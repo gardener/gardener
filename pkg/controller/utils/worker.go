@@ -15,6 +15,7 @@
 package utils
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -26,11 +27,11 @@ import (
 // CreateWorker creates and runs a worker thread that just processes items in the
 // specified queue. The worker will run until stopCh is closed. The worker will be
 // added to the wait group when started and marked done when finished.
-func CreateWorker(queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error, stopCh <-chan struct{}, waitGroup *sync.WaitGroup, workerCh chan int) {
+func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error, waitGroup *sync.WaitGroup, workerCh chan int) {
 	waitGroup.Add(1)
 	workerCh <- 1
 	go func() {
-		wait.Until(worker(queue, resourceType, reconciler), time.Second, stopCh)
+		wait.Until(worker(queue, resourceType, reconciler), time.Second, ctx.Done())
 		workerCh <- -1
 		waitGroup.Done()
 	}()

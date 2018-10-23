@@ -16,11 +16,9 @@ package secrets_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils/secrets"
-
+	"github.com/ghodss/yaml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/ghodss/yaml"
 	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
@@ -55,8 +53,10 @@ var _ = Describe("utils", func() {
 						Password: basicAuthPass,
 					},
 
-					ClusterName:  clusterName,
-					APIServerURL: apiServerURL,
+					KubeConfigRequest: &KubeConfigRequest{
+						ClusterName:  clusterName,
+						APIServerURL: apiServerURL,
+					},
 				}
 
 				certificate = &Certificate{

@@ -87,15 +87,6 @@ func (b *Botanist) DeployCloudMetadataServiceNetworkPolicy() error {
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "cloud-metadata-service"), "cloud-metadata-service", b.Shoot.SeedNamespace, nil, nil)
 }
 
-// DeployKubeAPIServerService creates a Service of type 'LoadBalancer' in the Seed cluster which is used to expose the
-// kube-apiserver deployment (of the Shoot cluster). It waits until the load balancer is available and stores the address
-// on the Botanist's APIServerAddress attribute.
-func (b *Botanist) DeployKubeAPIServerService() error {
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", "kube-apiserver-service"), "kube-apiserver-service", b.Shoot.SeedNamespace, nil, map[string]interface{}{
-		"cloudProvider": b.Seed.CloudProvider,
-	})
-}
-
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer() error {
 	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)

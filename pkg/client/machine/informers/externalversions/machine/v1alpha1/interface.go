@@ -10,6 +10,8 @@ import (
 type Interface interface {
 	// AWSMachineClasses returns a AWSMachineClassInformer.
 	AWSMachineClasses() AWSMachineClassInformer
+	// AlicloudMachineClasses returns a AlicloudMachineClassInformer.
+	AlicloudMachineClasses() AlicloudMachineClassInformer
 	// AzureMachineClasses returns a AzureMachineClassInformer.
 	AzureMachineClasses() AzureMachineClassInformer
 	// GCPMachineClasses returns a GCPMachineClassInformer.
@@ -40,6 +42,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // AWSMachineClasses returns a AWSMachineClassInformer.
 func (v *version) AWSMachineClasses() AWSMachineClassInformer {
 	return &aWSMachineClassInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// AlicloudMachineClasses returns a AlicloudMachineClassInformer.
+func (v *version) AlicloudMachineClasses() AlicloudMachineClassInformer {
+	return &alicloudMachineClassInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // AzureMachineClasses returns a AzureMachineClassInformer.

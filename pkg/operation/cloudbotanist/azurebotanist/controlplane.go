@@ -97,6 +97,27 @@ func (b *AzureBotanist) RefreshCloudProviderConfig(currentConfig map[string]stri
 	}
 }
 
+// GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the
+// Service manifest of the kube-apiserver-service properly.
+func (b *AzureBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error) {
+	var values map[string]interface{}
+
+	seedK8s112, err := utils.CompareVersions(b.K8sSeedClient.Version(), ">=", "1.12")
+	if err != nil {
+		return nil, err
+	}
+
+	if seedK8s112 {
+		values = map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"service.beta.kubernetes.io/azure-load-balancer-tcp-idle-timeout": "60",
+			},
+		}
+	}
+
+	return values, nil
+}
+
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *AzureBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {

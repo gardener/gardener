@@ -36,6 +36,7 @@ type CloudBotanist interface {
 	RefreshCloudProviderConfig(map[string]string) map[string]string
 	GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig
 	GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error)
+	GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error)
 	GenerateKubeAPIServerConfig() (map[string]interface{}, error)
 	GenerateCloudControllerManagerConfig() (map[string]interface{}, error)
 	GenerateKubeControllerManagerConfig() (map[string]interface{}, error)

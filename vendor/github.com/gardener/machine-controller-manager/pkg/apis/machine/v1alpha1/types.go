@@ -157,7 +157,7 @@ type MachineStatus struct {
 	CurrentStatus CurrentStatus `json:"currentStatus,omitempty"`
 }
 
-// LastOperation
+// LastOperation suggests the last operation performed on the object
 type LastOperation struct {
 	// Description of the current operation
 	Description string `json:"description,omitempty"`
@@ -169,7 +169,7 @@ type LastOperation struct {
 	State MachineState `json:"state,omitempty"`
 
 	// Type of operation
-	Type string `json:"type,omitempty"`
+	Type MachineOperationType `json:"type,omitempty"`
 }
 
 // MachinePhase is a label for the condition of a machines at the current time.
@@ -183,7 +183,7 @@ const (
 	// MachineAvailable means that machine is present on provider but hasn't joined cluster yet
 	MachineAvailable MachinePhase = "Available"
 
-	// MachineRunning means node is ready and running succesfully
+	// MachineRunning means node is ready and running successfully
 	MachineRunning MachinePhase = "Running"
 
 	// MachineRunning means node is terminating
@@ -211,6 +211,24 @@ const (
 	MachineStateSuccessful MachineState = "Successful"
 )
 
+// MachineOperationType is a label for the operation performed on a machine object.
+type MachineOperationType string
+
+// These are the valid statuses of machines.
+const (
+	// MachineOperationCreate indicates that the operation was a create
+	MachineOperationCreate MachineOperationType = "Create"
+
+	// MachineOperationUpdate indicates that the operation was an update
+	MachineOperationUpdate MachineOperationType = "Update"
+
+	// MachineOperationHealthCheck indicates that the operation was a create
+	MachineOperationHealthCheck MachineOperationType = "HealthCheck"
+
+	// MachineOperationDelete indicates that the operation was a create
+	MachineOperationDelete MachineOperationType = "Delete"
+)
+
 // The below types are used by kube_client and api_server.
 
 type ConditionStatus string
@@ -224,22 +242,6 @@ const (
 	ConditionFalse   ConditionStatus = "False"
 	ConditionUnknown ConditionStatus = "Unknown"
 )
-
-//MachineSummary store the summary of machine.
-type MachineSummary struct {
-	// +optional
-	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
-
-	// ProviderID represents the provider's unique ID given to a machine
-	// +optional
-	ProviderID string `json:"providerID,omitempty"`
-
-	// Last operation refers to the status of the last operation performed
-	LastOperation LastOperation `json:"lastOperation,omitempty"`
-
-	// OwnerRef
-	OwnerRef string `json:"ownerRef,omitempty"`
-}
 
 /********************** MachineSet APIs ***************/
 
@@ -327,31 +329,52 @@ type MachineSetCondition struct {
 	Message string `json:"message,omitempty" protobuf:"bytes,5,opt,name=message"`
 }
 
-// MachineSetStatus TODO
+// MachineSetStatus represents the status of a machineSet object
 type MachineSetStatus struct {
+	// Replicas is the number of actual replicas.
+	Replicas int32 `json:"replicas,inline"`
+
+	// The number of pods that have labels matching the labels of the pod template of the replicaset.
+	// +optional
+	FullyLabeledReplicas int32 `json:"fullyLabeledReplicas,inline"`
+
+	// The number of ready replicas for this replica set.
+	// +optional
+	ReadyReplicas int32 `json:"readyReplicas,inline"`
+
+	// The number of available replicas (ready for at least minReadySeconds) for this replica set.
+	// +optional
+	AvailableReplicas int32 `json:"availableReplicas,inline"`
+
+	// ObservedGeneration is the most recent generation observed by the controller.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,inline"`
+
+	// Represents the latest available observations of a replica set's current state.
+	// +optional
+	Conditions []MachineSetCondition `json:"machineSetCondition,inline"`
+
 	// LastOperation performed
 	LastOperation LastOperation `json:"lastOperation,omitempty"`
 
-	// No of Replicas required
-	Replicas int32 `json:"replicas,inline"`
-
-	// FullyLabeledReplicas represetnts the number of machines with same labels
-	FullyLabeledReplicas int32 `json:"fullyLabeledReplicas,inline"`
-
-	// ReadyReplicas represetnts the number of ready machines
-	ReadyReplicas int32 `json:"readyReplicas,inline"`
-
-	// AvailableReplicas represetnts the number of available machines
-	AvailableReplicas int32 `json:"availableReplicas,inline"`
-
-	// MachineSet Conditions
-	Conditions []MachineSetCondition `json:"machineSetCondition,inline"`
-
-	// ObservedGeneration
-	ObservedGeneration int64 `json:"observedGeneration,inline"`
-
 	// FailedMachines has summary of machines on which lastOperation Failed
+	// +optional
 	FailedMachines *[]MachineSummary `json:"failedMachines,inline"`
+}
+
+// MachineSummary store the summary of machine.
+type MachineSummary struct {
+	// Name of the machine object
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+
+	// ProviderID represents the provider's unique ID given to a machine
+	ProviderID string `json:"providerID,omitempty"`
+
+	// Last operation refers to the status of the last operation performed
+	LastOperation LastOperation `json:"lastOperation,omitempty"`
+
+	// OwnerRef
+	OwnerRef string `json:"ownerRef,omitempty"`
 }
 
 /********************** MachineDeployment APIs ***************/
@@ -554,7 +577,8 @@ type MachineDeploymentStatus struct {
 	CollisionCount *int32 `json:"collisionCount,omitempty" protobuf:"varint,8,opt,name=collisionCount"`
 
 	// FailedMachines has summary of machines on which lastOperation Failed
-	FailedMachines []*MachineSummary `json:"failedMachines,omitempty" patchStrategy:"merge" patchMergeKey:"name" protobuf:"bytes,9,rep,name=failedMachines"`
+	// +optional
+	FailedMachines []*MachineSummary `json:"failedMachines,omitempty" protobuf:"bytes,9,rep,name=failedMachines"`
 }
 
 type MachineDeploymentConditionType string
@@ -702,6 +726,7 @@ type OpenStackMachineClassSpec struct {
 	Tags             map[string]string       `json:"tags,omitempty"`
 	NetworkID        string                  `json:"networkID"`
 	SecretRef        *corev1.SecretReference `json:"secretRef,omitempty"`
+	PodNetworkCidr   string                  `json:"podNetworkCidr"`
 }
 
 /********************** AWSMachineClass APIs ***************/
@@ -1128,4 +1153,67 @@ const (
 	OpenStackClientCert string = "clientCert"
 	// OpenStackClientKey is a constant for a key name that is part of the OpenStack cloud credentials.
 	OpenStackClientKey string = "clientKey"
+
+	// AlicloudAccessKeyID is a constant for a key name that is part of the Alibaba cloud credentials.
+	AlicloudAccessKeyID string = "alicloudAccessKeyID"
+	// AlicloudAccessKeySecret is a constant for a key name that is part of the Alibaba cloud credentials.
+	AlicloudAccessKeySecret string = "alicloudAccessKeySecret"
 )
+
+/********************** AlicloudMachineClass APIs ***************/
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AlicloudMachineClass TODO
+type AlicloudMachineClass struct {
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// +optional
+	metav1.TypeMeta `json:",inline"`
+
+	// +optional
+	Spec AlicloudMachineClassSpec `json:"spec,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AlicloudMachineClassList is a collection of AlicloudMachineClasses.
+type AlicloudMachineClassList struct {
+	// +optional
+	metav1.TypeMeta `json:",inline"`
+
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	// +optional
+	Items []AlicloudMachineClass `json:"items"`
+}
+
+// AlicloudMachineClassSpec is the specification of a cluster.
+type AlicloudMachineClassSpec struct {
+	ImageID                 string                  `json:"imageID"`
+	InstanceType            string                  `json:"instanceType"`
+	Region                  string                  `json:"region"`
+	ZoneID                  string                  `json:"zoneID,omitempty"`
+	SecurityGroupID         string                  `json:"securityGroupID,omitempty"`
+	VSwitchID               string                  `json:"vSwitchID"`
+	PrivateIPAddress        string                  `json:"privateIPAddress,omitempty"`
+	SystemDisk              *AlicloudSystemDisk     `json:"systemDisk,omitempty"`
+	InstanceChargeType      string                  `json:"instanceChargeType,omitempty"`
+	InternetChargeType      string                  `json:"internetChargeType,omitempty"`
+	InternetMaxBandwidthIn  *int                    `json:"internetMaxBandwidthIn,omitempty"`
+	InternetMaxBandwidthOut *int                    `json:"internetMaxBandwidthOut,omitempty"`
+	SpotStrategy            string                  `json:"spotStrategy,omitempty"`
+	IoOptimized             string                  `json:"IoOptimized,omitempty"`
+	Tags                    map[string]string       `json:"tags,omitempty"`
+	KeyPairName             string                  `json:"keyPairName"`
+	SecretRef               *corev1.SecretReference `json:"secretRef,omitempty"`
+}
+
+// AlicloudSystemDisk describes SystemDisk for Alicloud.
+type AlicloudSystemDisk struct {
+	Category string `json:"category"`
+	Size     int    `json:"size"`
+}

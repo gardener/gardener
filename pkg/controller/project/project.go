@@ -15,6 +15,7 @@
 package project
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -110,10 +111,10 @@ func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFacto
 }
 
 // Run runs the Controller until the given stop channel can be read from.
-func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
+func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(stopCh, c.projectSynced, c.namespaceSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.projectSynced, c.namespaceSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -132,14 +133,14 @@ func (c *Controller) Run(workers int, stopCh <-chan struct{}) {
 	logger.Logger.Info("Project controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.projectQueue, "Project", c.reconcileProjectKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.reconcileProjectKey, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(c.namespaceQueue, "Project Namespaces", c.reconcileProjectNamespaceKey, stopCh, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.namespaceQueue, "Project Namespaces", c.reconcileProjectNamespaceKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
-	<-stopCh
+	<-ctx.Done()
 	c.projectQueue.ShutDown()
 
 	for {

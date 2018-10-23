@@ -67,7 +67,7 @@ var _ = Describe("deleteconfirmation", func() {
 		})
 
 		It("should do nothing because the resource is not Shoot or Project", func() {
-			attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Foo").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("foos").WithVersion("version"), "", admission.Delete, nil)
+			attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Foo").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("foos").WithVersion("version"), "", admission.Delete, false, nil)
 
 			err := admissionHandler.Admit(attrs)
 
@@ -76,7 +76,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 		Context("Shoot resources", func() {
 			It("should do nothing because the resource is already removed", func() {
-				attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, nil)
+				attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -86,7 +86,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			Context("no annotation", func() {
 				It("should reject for nil annotation field", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
 					shootStore.Add(&shoot)
 
@@ -97,7 +97,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should reject for false annotation value", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
 					shoot.Annotations = map[string]string{
 						common.ConfirmationDeletion: "false",
@@ -111,7 +111,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should succeed for true annotation value", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
 					shoot.Annotations = map[string]string{
 						common.ConfirmationDeletion: "true",
@@ -127,7 +127,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 		Context("Project resources", func() {
 			It("should do nothing because the resource is already removed", func() {
-				attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, nil)
+				attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
 
 				err := admissionHandler.Admit(attrs)
 
@@ -137,7 +137,7 @@ var _ = Describe("deleteconfirmation", func() {
 
 			Context("no annotation", func() {
 				It("should reject for nil annotation field", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
 
 					projectStore.Add(&project)
 
@@ -148,7 +148,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should reject for false annotation value", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
 
 					project.Annotations = map[string]string{
 						common.ConfirmationDeletion: "false",
@@ -162,7 +162,7 @@ var _ = Describe("deleteconfirmation", func() {
 				})
 
 				It("should succeed for true annotation value", func() {
-					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, nil)
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
 
 					project.Annotations = map[string]string{
 						common.ConfirmationDeletion: "true",

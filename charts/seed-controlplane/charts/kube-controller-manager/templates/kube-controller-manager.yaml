@@ -72,16 +72,27 @@ spec:
         - --concurrent-deployment-syncs=10
         - --concurrent-replicaset-syncs=10
         {{- include "kube-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
+        {{- if semverCompare "< 1.12" .Values.kubernetesVersion }}
         - --horizontal-pod-autoscaler-downscale-delay={{ .Values.horizontalPodAutoscaler.downscaleDelay }}
+        - --horizontal-pod-autoscaler-upscale-delay={{ .Values.horizontalPodAutoscaler.upscaleDelay }}
+        {{- end}}
         - --horizontal-pod-autoscaler-sync-period={{ .Values.horizontalPodAutoscaler.syncPeriod }}
         - --horizontal-pod-autoscaler-tolerance={{ .Values.horizontalPodAutoscaler.tolerance }}
-        - --horizontal-pod-autoscaler-upscale-delay={{ .Values.horizontalPodAutoscaler.upscaleDelay }}
         - --kubeconfig=/var/lib/kube-controller-manager/kubeconfig
         - --leader-elect=true
         - --pod-eviction-timeout=2m0s
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{ .Values.serviceNetwork }}
+        {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
+        - --horizontal-pod-autoscaler-downscale-stabilization={{ .Values.horizontalPodAutoscaler.downscaleStabilization }}
+        - --horizontal-pod-autoscaler-initial-readiness-delay={{ .Values.horizontalPodAutoscaler.readinessDelay }}
+        - --horizontal-pod-autoscaler-cpu-initialization-period={{ .Values.horizontalPodAutoscaler.cpuInitializationPeriod }}
+        - --authentication-kubeconfig=/var/lib/kube-controller-manager/kubeconfig
+        - --authorization-kubeconfig=/var/lib/kube-controller-manager/kubeconfig
+        - --tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt
+        - --tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key
+        {{- end }}
         {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
         {{- end }}
@@ -115,6 +126,8 @@ spec:
           mountPath: /srv/kubernetes/service-account-key
         - name: kube-controller-manager
           mountPath: /var/lib/kube-controller-manager
+        - name: kube-controller-manager-server
+          mountPath: /var/lib/kube-controller-manager-server
         - name: cloud-provider-config
           mountPath: /etc/kubernetes/cloudprovider
         - name: cloudprovider
@@ -139,6 +152,9 @@ spec:
       - name: kube-controller-manager
         secret:
           secretName: kube-controller-manager
+      - name: kube-controller-manager-server
+        secret:
+          secretName: kube-controller-manager-server
       - name: cloud-provider-config
         configMap:
           name: cloud-provider-config

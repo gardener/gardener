@@ -15,8 +15,8 @@
 package controller
 
 import (
+	"context"
 	"fmt"
-	"os"
 	"text/tabwriter"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
@@ -67,7 +67,7 @@ func NewGardenControllerFactory(k8sGardenClient kubernetes.Client, gardenInforme
 }
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
-func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
+func (f *GardenControllerFactory) Run(ctx context.Context) {
 	var (
 		cloudProfileInformer         = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
 		secretBindingInformer        = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
@@ -81,13 +81,13 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
 	)
 
-	f.k8sGardenInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(stopCh, cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced, backupInfrastructureInformer.HasSynced) {
+	f.k8sGardenInformers.Start(ctx.Done())
+	if !cache.WaitForCacheSync(ctx.Done(), cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced, backupInfrastructureInformer.HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
 	}
 
-	f.k8sInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(stopCh, namespaceInformer.HasSynced, secretInformer.HasSynced) {
+	f.k8sInformers.Start(ctx.Done())
+	if !cache.WaitForCacheSync(ctx.Done(), namespaceInformer.HasSynced, secretInformer.HasSynced) {
 		panic("Timed out waiting for Kube caches to sync")
 	}
 
@@ -130,18 +130,18 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(shootController, seedController, quotaController, cloudProfileController, secretBindingController, backupInfrastructureController)
 
-	go shootController.Run(f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs, stopCh)
-	go seedController.Run(f.config.Controllers.Seed.ConcurrentSyncs, stopCh)
-	go quotaController.Run(f.config.Controllers.Quota.ConcurrentSyncs, stopCh)
-	go projectController.Run(f.config.Controllers.Project.ConcurrentSyncs, stopCh)
-	go cloudProfileController.Run(f.config.Controllers.CloudProfile.ConcurrentSyncs, stopCh)
-	go secretBindingController.Run(f.config.Controllers.SecretBinding.ConcurrentSyncs, stopCh)
-	go backupInfrastructureController.Run(f.config.Controllers.BackupInfrastructure.ConcurrentSyncs, stopCh)
+	go shootController.Run(ctx, f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs)
+	go seedController.Run(ctx, f.config.Controllers.Seed.ConcurrentSyncs)
+	go quotaController.Run(ctx, f.config.Controllers.Quota.ConcurrentSyncs)
+	go projectController.Run(ctx, f.config.Controllers.Project.ConcurrentSyncs)
+	go cloudProfileController.Run(ctx, f.config.Controllers.CloudProfile.ConcurrentSyncs)
+	go secretBindingController.Run(ctx, f.config.Controllers.SecretBinding.ConcurrentSyncs)
+	go backupInfrastructureController.Run(ctx, f.config.Controllers.BackupInfrastructure.ConcurrentSyncs)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
 
 	// Shutdown handling
-	<-stopCh
+	<-ctx.Done()
 
 	tw := tabwriter.NewWriter(logger.Logger.Writer(), 1, 1, 1, ' ', tabwriter.TabIndent)
 	fmt.Fprintf(tw, "BackupInfrastructure:\t%d\n", backupInfrastructureController.RunningWorkers())
@@ -157,7 +157,5 @@ func (f *GardenControllerFactory) Run(stopCh <-chan struct{}) {
 	logger.Logger.Infof("============================")
 	tw.Flush()
 	logger.Logger.Infof("============================")
-	logger.Logger.Infof("Bye bye!")
-
-	os.Exit(0)
+	logger.Logger.Infof("Bye Bye!")
 }

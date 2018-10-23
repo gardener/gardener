@@ -20,6 +20,8 @@ package v1alpha1
 
 type AWSMachineClassExpansion interface{}
 
+type AlicloudMachineClassExpansion interface{}
+
 type AzureMachineClassExpansion interface{}
 
 type GCPMachineClassExpansion interface{}

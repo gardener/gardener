@@ -31,7 +31,7 @@ import (
 )
 
 // Serve starts a HTTP and a HTTPS server.
-func Serve(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig componentconfig.ServerConfiguration, stopCh chan struct{}) {
+func Serve(ctx context.Context, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig componentconfig.ServerConfiguration) {
 	var (
 		listenAddressHTTP  = fmt.Sprintf("%s:%d", serverConfig.HTTP.BindAddress, serverConfig.HTTP.Port)
 		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverConfig.HTTPS.BindAddress, serverConfig.HTTPS.Port)
@@ -55,8 +55,8 @@ func Serve(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers
 	}()
 
 	projectInformer := k8sGardenInformers.Garden().V1beta1().Projects()
-	k8sGardenInformers.Start(stopCh)
-	if !cache.WaitForCacheSync(stopCh, projectInformer.Informer().HasSynced) {
+	k8sGardenInformers.Start(ctx.Done())
+	if !cache.WaitForCacheSync(ctx.Done(), projectInformer.Informer().HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
 	}
 
@@ -71,8 +71,8 @@ func Serve(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers
 	}()
 
 	// Server shutdown logic.
-	<-stopCh
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	<-ctx.Done()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	if err := serverHTTP.Shutdown(ctx); err != nil {
 		logger.Logger.Errorf("Error when shutting down HTTP server: %v", err)

@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes/base"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v110"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v111"
+	"github.com/gardener/gardener/pkg/client/kubernetes/v112"
 	"github.com/gardener/gardener/pkg/client/kubernetes/v19"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
@@ -102,6 +103,10 @@ func newKubernetesClient(config *rest.Config) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	k8s112, err := utils.CompareVersions(gitVersion, "~", "1.12")
+	if err != nil {
+		return nil, err
+	}
 
 	switch {
 	case k8s19:
@@ -110,6 +115,8 @@ func newKubernetesClient(config *rest.Config) (Client, error) {
 		k8sClient = kubernetesv110.NewFromBase(baseClient)
 	case k8s111:
 		k8sClient = kubernetesv111.NewFromBase(baseClient)
+	case k8s112:
+		k8sClient = kubernetesv112.NewFromBase(baseClient)
 	default:
 		return nil, fmt.Errorf("Kubernetes cluster has version %s which is not supported", gitVersion)
 	}

@@ -27,9 +27,13 @@ type ControlPlaneSecretConfig struct {
 
 	BasicAuth *BasicAuth
 
-	KubeconfigRequired bool
-	ClusterName        string
-	APIServerURL       string
+	KubeConfigRequest *KubeConfigRequest
+}
+
+// KubeConfigRequest is a struct which holds information about a Kubeconfig to be generated.
+type KubeConfigRequest struct {
+	ClusterName  string
+	APIServerURL string
 }
 
 // ControlPlane contains the certificate, and optionally the basic auth. information as well as a Kubeconfig.
@@ -66,7 +70,7 @@ func (s *ControlPlaneSecretConfig) Generate() (Interface, error) {
 		BasicAuth:   s.BasicAuth,
 	}
 
-	if s.KubeconfigRequired {
+	if s.KubeConfigRequest != nil {
 		kubeconfig, err := generateKubeconfig(s, cert)
 		if err != nil {
 			return nil, err
@@ -102,12 +106,12 @@ func (c *ControlPlane) SecretData() map[string][]byte {
 // containing the Basic Authentication credentials is added to the Kubeconfig.
 func generateKubeconfig(secret *ControlPlaneSecretConfig, certificate *Certificate) ([]byte, error) {
 	values := map[string]interface{}{
-		"APIServerURL": secret.APIServerURL,
+		"APIServerURL": secret.KubeConfigRequest.APIServerURL,
 
 		"CACertificate":     utils.EncodeBase64(secret.CertificateSecretConfig.SigningCA.CertificatePEM),
 		"ClientCertificate": utils.EncodeBase64(certificate.CertificatePEM),
 		"ClientKey":         utils.EncodeBase64(certificate.PrivateKeyPEM),
-		"ClusterName":       secret.ClusterName,
+		"ClusterName":       secret.KubeConfigRequest.ClusterName,
 	}
 
 	if secret.BasicAuth != nil {

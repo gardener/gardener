@@ -68,7 +68,7 @@ func (s *storage) GetSecretBinding(ctx context.Context, name string, options *me
 }
 
 func (s *storage) CreateSecretBinding(ctx context.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc) (*garden.SecretBinding, error) {
-	obj, err := s.Create(ctx, binding, createValidation, false)
+	obj, err := s.Create(ctx, binding, createValidation, &metav1.CreateOptions{IncludeUninitialized: false})
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *storage) CreateSecretBinding(ctx context.Context, binding *garden.Secre
 }
 
 func (s *storage) UpdateSecretBinding(ctx context.Context, binding *garden.SecretBinding, createValidation rest.ValidateObjectFunc, updateValidation rest.ValidateObjectUpdateFunc) (*garden.SecretBinding, error) {
-	obj, _, err := s.Update(ctx, binding.Name, rest.DefaultUpdatedObjectInfo(binding), createValidation, updateValidation)
+	obj, _, err := s.Update(ctx, binding.Name, rest.DefaultUpdatedObjectInfo(binding), createValidation, updateValidation, false, &metav1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}

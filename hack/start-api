@@ -24,6 +24,7 @@ case $(k8s_env) in
         go run cmd/gardener-apiserver/main.go \
           --authentication-kubeconfig ~/.kube/config \
           --authorization-kubeconfig ~/.kube/config \
+          --authorization-always-allow-paths=/healthz \
           --etcd-servers http://localhost:32379 \
           --kubeconfig ~/.kube/config \
           --tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \

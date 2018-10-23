@@ -162,6 +162,22 @@ func computeCloudProviderConfigChecksum(cloudProviderConfig string) string {
 	return utils.ComputeSHA256Hex([]byte(strings.TrimSpace(cloudProviderConfig)))
 }
 
+// DeployKubeAPIServerService asks the Cloud Botanist to provide the cloud specific configuration values for the
+// kube-apiserver service.
+func (b *HybridBotanist) DeployKubeAPIServerService() error {
+	var (
+		name          = "kube-apiserver-service"
+		defaultValues = map[string]interface{}{}
+	)
+
+	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerServiceConfig()
+	if err != nil {
+		return err
+	}
+
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, defaultValues, cloudSpecificValues)
+}
+
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
@@ -294,11 +310,12 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-ca":                       b.CheckSums["ca"],
-			"checksum/secret-kube-controller-manager":  b.CheckSums[common.KubeControllerManagerDeploymentName],
-			"checksum/secret-service-account-key":      b.CheckSums["service-account-key"],
-			"checksum/secret-cloudprovider":            b.CheckSums[common.CloudProviderSecretName],
-			"checksum/configmap-cloud-provider-config": b.CheckSums[common.CloudProviderConfigName],
+			"checksum/secret-ca":                             b.CheckSums["ca"],
+			"checksum/secret-kube-controller-manager":        b.CheckSums[common.KubeControllerManagerDeploymentName],
+			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
+			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
+			"checksum/secret-cloudprovider":                  b.CheckSums[common.CloudProviderSecretName],
+			"checksum/configmap-cloud-provider-config":       b.CheckSums[common.CloudProviderConfigName],
 		},
 	}
 	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
@@ -341,9 +358,10 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cloud-controller-manager": b.CheckSums[common.CloudControllerManagerDeploymentName],
-			"checksum/secret-cloudprovider":            b.CheckSums[common.CloudProviderSecretName],
-			"checksum/configmap-cloud-provider-config": b.CheckSums[common.CloudProviderConfigName],
+			"checksum/secret-cloud-controller-manager":        b.CheckSums[common.CloudControllerManagerDeploymentName],
+			"checksum/secret-cloud-controller-manager-server": b.CheckSums[common.CloudControllerManagerServerName],
+			"checksum/secret-cloudprovider":                   b.CheckSums[common.CloudProviderSecretName],
+			"checksum/configmap-cloud-provider-config":        b.CheckSums[common.CloudProviderConfigName],
 		},
 	}
 	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()

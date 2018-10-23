@@ -3,11 +3,13 @@
 To add this chart to another as dependency, execute
 
 ```bash
-ln -sr ./charts/api-versions ./charts/PATH-TO-MY-CHART/charts
+mkdir -p ./charts/PATH-TO-MY-CHART/charts
+ln -sr ./charts/api-versions ./charts/PATH-TO-MY-CHART/charts/api-versions
 
 # for example
 
-ln -sr ./charts/api-versions ./charts/seed-controlplane/charts/kube-apiserver/charts
+mkdir -p ./charts/seed-controlplane/charts/kube-apiserver/charts
+ln -sr ./charts/api-versions ./charts/seed-controlplane/charts/kube-apiserver/charts/api-versions
 ```
 
 Then check for broken links with
