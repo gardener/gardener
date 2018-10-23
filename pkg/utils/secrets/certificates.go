@@ -19,11 +19,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
 	"math/big"
 	"net"
+	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type certType string
@@ -211,4 +215,148 @@ func signCertificate(certificateTemplate *x509.Certificate, privateKey *rsa.Priv
 		return nil, err
 	}
 	return utils.EncodeCertificate(certificate), nil
+}
+
+func generateCA(k8sClusterClient kubernetes.Client, config *CertificateSecretConfig, namespace string) (*corev1.Secret, Interface, error) {
+	certificate, err := config.Generate()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secret, err := k8sClusterClient.CreateSecret(namespace, config.GetName(), corev1.SecretTypeOpaque, certificate.SecretData(), false)
+	if err != nil {
+		return nil, nil, err
+	}
+	return secret, certificate, nil
+}
+
+func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, Interface, error) {
+	certificate, err := LoadCertificate(name, existingSecret.Data[DataKeyPrivateKeyCA], existingSecret.Data[DataKeyCertificateCA])
+	if err != nil {
+		return nil, nil, err
+	}
+	return existingSecret, certificate, nil
+}
+
+// GenerateCertificateAuthorities get a map of wanted cerificated and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding
+// existing secret and makes a certificate Interface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
+// a secret with that  certificate and then return the newly existing secret. The function returns a map of secrets contaning the wanted CA, a map with the wanted CA certificate and an error.
+func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Client, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
+	type caOutput struct {
+		secret      *corev1.Secret
+		certificate Interface
+		err         error
+	}
+
+	var (
+		certificateAuthorities = map[string]*Certificate{}
+		generatedSecrets       = map[string]*corev1.Secret{}
+		results                = make(chan *caOutput)
+		wg                     sync.WaitGroup
+		errorList              = []error{}
+	)
+
+	for name, config := range wantedCertificateAuthorities {
+		wg.Add(1)
+
+		if existingSecret, ok := existingSecretsMap[name]; !ok {
+			go func(config *CertificateSecretConfig) {
+				defer wg.Done()
+				secret, certificate, err := generateCA(k8sClusterClient, config, namespace)
+				results <- &caOutput{secret, certificate, err}
+			}(config)
+		} else {
+			go func(name string, existingSecret *corev1.Secret) {
+				defer wg.Done()
+				secret, certificate, err := loadCA(name, existingSecret)
+				results <- &caOutput{secret, certificate, err}
+			}(name, existingSecret)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for out := range results {
+		if out.err != nil {
+			errorList = append(errorList, out.err)
+			continue
+		}
+		generatedSecrets[out.secret.Name] = out.secret
+		certificateAuthorities[out.secret.Name] = out.certificate.(*Certificate)
+	}
+
+	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
+	if len(errorList) > 0 {
+		return nil, nil, fmt.Errorf("Errors occurred during certificate authority generation: %+v", errorList)
+	}
+
+	return generatedSecrets, certificateAuthorities, nil
+}
+
+// GenerateClusterSecrets try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
+// The function returns a map with all of the successfuly deployed wanted secrets plus those alredy deployed(only from the wantedSecretsList)
+func GenerateClusterSecrets(k8sClusterClient kubernetes.Client, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
+	type secretOutput struct {
+		secret *corev1.Secret
+		err    error
+	}
+
+	var (
+		results                = make(chan *secretOutput)
+		deployedClusterSecrets = map[string]*corev1.Secret{}
+		wg                     sync.WaitGroup
+		errorList              = []error{}
+	)
+
+	for _, s := range wantedSecretsList {
+		name := s.GetName()
+
+		if existingSecret, ok := existingSecretsMap[name]; ok {
+			deployedClusterSecrets[name] = existingSecret
+			continue
+		}
+
+		wg.Add(1)
+		go func(s ConfigInterface) {
+			defer wg.Done()
+
+			obj, err := s.Generate()
+			if err != nil {
+				results <- &secretOutput{err: err}
+				return
+			}
+
+			secretType := corev1.SecretTypeOpaque
+			if _, isTLSSecret := s.(*CertificateSecretConfig); isTLSSecret {
+				secretType = corev1.SecretTypeTLS
+			}
+
+			secret, err := k8sClusterClient.CreateSecret(namespace, s.GetName(), secretType, obj.SecretData(), false)
+			results <- &secretOutput{secret: secret, err: err}
+		}(s)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for out := range results {
+		if out.err != nil {
+			errorList = append(errorList, out.err)
+			continue
+		}
+
+		deployedClusterSecrets[out.secret.Name] = out.secret
+	}
+
+	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
+	if len(errorList) > 0 {
+		return deployedClusterSecrets, fmt.Errorf("Errors occurred during shoot secrets generation: %+v", errorList)
+	}
+
+	return deployedClusterSecrets, nil
 }

@@ -17,6 +17,8 @@ package shoot
 import (
 	"time"
 
+	"github.com/gardener/gardener/pkg/features"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation"
@@ -55,6 +57,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		defaultInterval = 5 * time.Second
 		managedDNS      = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
 		isCloud         = o.Shoot.Info.Spec.Cloud.Local == nil
+		loggingEnabled  = features.ControllerFeatureGate.Enabled(features.Logging)
 
 		g               = flow.NewGraph("Shoot cluster reconciliation")
 		deployNamespace = g.Add(flow.Task{
@@ -196,10 +199,16 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
 		})
 		_ = g.Add(flow.Task{
+			Name:         "Deploy shoot logging stack in Seed",
+			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(loggingEnabled),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
+		})
+		_ = g.Add(flow.Task{
 			Name:         "Deploy cluster autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(reconcileMachines, deployKubeAddonManager, deploySeedMonitoring),
 		})
+
 		f = g.Compile()
 	)
 

@@ -18,19 +18,34 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+const (
+	caSeed = "ca-seed"
+)
+
+var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
+	caSeed: &secrets.CertificateSecretConfig{
+		Name:       caSeed,
+		CommonName: "kubernetes",
+		CertType:   secrets.CACert,
+	},
+}
 
 // New takes a <k8sGardenClient>, the <k8sGardenInformers> and a <seed> manifest, and creates a new Seed representation.
 // It will add the CloudProfile and identify the cloud provider.
@@ -89,9 +104,64 @@ func List(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.
 	return seedList, nil
 }
 
+// generateWantedSecrets returns a list of Secret configuration objects satisfying the secret config intface,
+// each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
+// authentication credentials, etc.
+func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
+	var (
+		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
+	)
+
+	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
+		return nil, fmt.Errorf("missing certificate authorities")
+	}
+
+	secretList := []secrets.ConfigInterface{
+		&secrets.CertificateSecretConfig{
+			Name: "kibana-tls",
+
+			CommonName:   "kibana",
+			Organization: []string{fmt.Sprintf("%s:logging:ingress", garden.GroupName)},
+			DNSNames:     []string{kibanaHost},
+			IPAddresses:  nil,
+
+			CertType:  secrets.ServerCert,
+			SigningCA: certificateAuthorities[caSeed],
+		},
+		// Secret definition for monitoring
+		&secrets.BasicAuthSecretConfig{
+			Name:   "seed-logging-ingress-credentials",
+			Format: secrets.BasicAuthFormatNormal,
+
+			Username:       "admin",
+			PasswordLength: 32,
+		},
+	}
+
+	return secretList, nil
+}
+
+// deployCertificates deploys CA and TLS certificates inside the garden namespace
+// It takes a map[string]*corev1.Secret object which contains secrets that have already been deployed inside that namespace to avoid duplication errors.
+func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Client, existingSecretsMap map[string]*corev1.Secret) (map[string]*corev1.Secret, error) {
+
+	_, certificateAuthorities, err := secrets.GenerateCertificateAuthorities(k8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, common.GardenNamespace)
+	if err != nil {
+		return nil, err
+	}
+
+	wantedSecretsList, err := generateWantedSecrets(seed, certificateAuthorities)
+	if err != nil {
+		return nil, err
+	}
+
+	return secrets.GenerateClusterSecrets(k8sSeedClient, existingSecretsMap, wantedSecretsList, common.GardenNamespace)
+}
+
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
 	const chartName = "seed-bootstrap"
+	var existingSecretsMap = map[string]*corev1.Secret{}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret)
 	if err != nil {
@@ -127,6 +197,63 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		images[imageName] = image.String()
 	}
 
+	elasticsearchVersion, err := imageVector.FindImage(common.ElasticsearchImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+	fluentdEsVersion, err := imageVector.FindImage(common.FluentdEsImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+	fluentBitVersion, err := imageVector.FindImage(common.FluentBitImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+	curatorEsVersion, err := imageVector.FindImage(common.CuratorImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+	kibanaVersion, err := imageVector.FindImage(common.KibanaImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+	alpineVersion, err := imageVector.FindImage(common.AlpineImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+
+	var (
+		basicAuth  string
+		kibanaHost string
+		replicas   int
+	)
+
+	loggingEnabled := features.ControllerFeatureGate.Enabled(features.Logging)
+
+	if loggingEnabled {
+		existingSecrets, err := k8sSeedClient.ListSecrets(common.GardenNamespace, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, secret := range existingSecrets.Items {
+			secretObj := secret
+			existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
+		}
+
+		// currently the generated certificates are only used by the kibana so they are all disabled/enabled when the logging feature is disabled/enabled
+		deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
+		if err != nil {
+			return err
+		}
+
+		credentials := deployedSecretsMap["seed-logging-ingress-credentials"]
+		basicAuth = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
+
+		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
+		replicas = 1
+	}
+
 	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -148,6 +275,28 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		},
 		"prometheus": map[string]interface{}{
 			"objectCount": nodeCount,
+		},
+		"elastic-kibana-curator": map[string]interface{}{
+			"enabled": loggingEnabled,
+			"ingress": map[string]interface{}{
+				"basicAuthSecret": basicAuth,
+				"host":            kibanaHost,
+			},
+			"kibanaReplicas":        replicas,
+			"elasticsearchReplicas": replicas,
+			"images": map[string]interface{}{
+				"elasticsearch-oss": elasticsearchVersion.String(),
+				"curator-es":        curatorEsVersion.String(),
+				"kibana-oss":        kibanaVersion.String(),
+				"alpine":            alpineVersion.String(),
+			},
+		},
+		"fluentd-es": map[string]interface{}{
+			"enabled": loggingEnabled,
+			"images": map[string]interface{}{
+				"fluentd-es": fluentdEsVersion.String(),
+				"fluent-bit": fluentBitVersion.String(),
+			},
 		},
 	})
 }
@@ -176,6 +325,9 @@ func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The
 // end result is '<subDomain>.<shootName>.<projectName>.<seed-ingress-domain>'.
 func (s *Seed) GetIngressFQDN(subDomain, shootName, projectName string) string {
+	if shootName == "" {
+		return fmt.Sprintf("%s.%s.%s", subDomain, projectName, s.Info.Spec.IngressDomain)
+	}
 	return fmt.Sprintf("%s.%s.%s.%s", subDomain, shootName, projectName, s.Info.Spec.IngressDomain)
 }
 

@@ -9,6 +9,7 @@
 .vscode
 .idea
 .DS_Store
+*~
 
 ./gardener-apiserver
 ./gardener-controller-manager

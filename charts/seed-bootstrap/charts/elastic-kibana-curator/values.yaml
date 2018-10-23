@@ -1,0 +1,22 @@
+global:
+  elasticsearchPorts:
+    db: 9200
+    transport: 9300
+kibanaPort: 5601
+
+ingress:
+  enabled: true
+  host: k.seed-1.example.com
+  # admin : admin base64 encoded
+  basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
+
+elasticsearchReplicas: 1
+kibanaReplicas: 1
+
+elasticsearchVolumeSizeGB: 30
+
+images:
+  elasticsearch-oss: image-repository:image-tag
+  curator-es: image-repository:image-tag
+  kibana-oss: image-repository:image-tag
+  alpine: image-repository:image-tag

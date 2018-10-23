@@ -1,0 +1,74 @@
+# Elasticsearch deployment itself
+apiVersion: {{ include "statefulsetversion" . }}
+kind: StatefulSet
+metadata:
+  name: elasticsearch-logging
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: elasticsearch-logging
+    role: logging
+spec:
+  serviceName: elasticsearch-logging
+  selector:
+    matchLabels:
+      app: elasticsearch-logging
+      role: logging
+  replicas: {{ .Values.elasticsearchReplicas }}
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-logging
+        role: logging
+    spec:
+      # Elasticsearch requires vm.max_map_count to be at least 262144.
+      # If your OS already sets up this number to a higher value, feel free
+      # to remove this init container.
+      initContainers:
+      - image: {{ index .Values.images "alpine" }}
+        command: ["sh", "-c", "if [ $(sysctl -n vm.max_map_count) -lt 262144 ]; then sysctl -w vm.max_map_count=262144; fi"]
+        name: elasticsearch-logging-init
+        securityContext:
+          privileged: true
+      containers:
+      - name: elasticsearch-logging
+        image: {{ index .Values.images "elasticsearch-oss" }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          # need more cpu upon initialization, therefore burstable class
+          limits:
+            cpu: 600m
+            memory: 1792Mi
+          requests:
+            cpu: 200m
+            memory: 1792Mi
+        ports:
+        - containerPort: {{ .Values.global.elasticsearchPorts.db }}
+          name: http
+          protocol: TCP
+        - containerPort: {{ .Values.global.elasticsearchPorts.transport }}
+          name: transport
+          protocol: TCP
+        livenessProbe:
+          tcpSocket:
+            port: transport
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /_cluster/health
+            port: http
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: elasticsearch-logging
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: elasticsearch-logging
+      labels:
+        role: logging
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: {{ .Values.elasticsearchVolumeSizeGB }}Gi

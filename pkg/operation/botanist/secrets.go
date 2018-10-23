@@ -20,10 +20,10 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"sync"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -569,6 +569,32 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		})
 	}
 
+	loggingEnabled := features.ControllerFeatureGate.Enabled(features.Logging)
+	if loggingEnabled {
+		kibanaHost := b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
+		secretList = append(secretList,
+			&secrets.CertificateSecretConfig{
+				Name: "kibana-tls",
+
+				CommonName:   "kibana",
+				Organization: []string{fmt.Sprintf("%s:logging:ingress", garden.GroupName)},
+				DNSNames:     []string{kibanaHost},
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[caCluster],
+			},
+			// Secret definition for logging
+			&secrets.BasicAuthSecretConfig{
+				Name:   "logging-ingress-credentials",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:       "admin",
+				PasswordLength: 32,
+			},
+		)
+	}
+
 	return secretList, nil
 }
 
@@ -701,80 +727,16 @@ func (b *Botanist) deleteOldCertificates(existingSecretsMap map[string]*corev1.S
 }
 
 func (b *Botanist) generateCertificateAuthorities(existingSecretsMap map[string]*corev1.Secret) (map[string]*secrets.Certificate, error) {
-	type caOutput struct {
-		secret      *corev1.Secret
-		certificate secrets.Interface
-		err         error
+	generatedSecrets, certificateAuthorities, err := secrets.GenerateCertificateAuthorities(b.K8sSeedClient, existingSecretsMap, wantedCertificateAuthorities, b.Shoot.SeedNamespace)
+	if err != nil {
+		return nil, err
 	}
 
-	var (
-		certificateAuthorities = map[string]*secrets.Certificate{}
-		results                = make(chan *caOutput)
-		wg                     sync.WaitGroup
-		errorList              = []error{}
-	)
-
-	for name, config := range wantedCertificateAuthorities {
-		wg.Add(1)
-
-		if existingSecret, ok := existingSecretsMap[name]; !ok {
-			go func(config *secrets.CertificateSecretConfig) {
-				defer wg.Done()
-				secret, certificate, err := b.generateCA(config)
-				results <- &caOutput{secret, certificate, err}
-			}(config)
-		} else {
-			go func(name string, existingSecret *corev1.Secret) {
-				defer wg.Done()
-				secret, certificate, err := b.loadCA(name, existingSecret)
-				results <- &caOutput{secret, certificate, err}
-			}(name, existingSecret)
-		}
-	}
-
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	for out := range results {
-		if out.err != nil {
-			errorList = append(errorList, out.err)
-			continue
-		}
-
-		b.Secrets[out.secret.Name] = out.secret
-		certificateAuthorities[out.secret.Name] = out.certificate.(*secrets.Certificate)
-	}
-
-	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
-	if len(errorList) > 0 {
-		return nil, fmt.Errorf("Errors occurred during certificate authority generation: %+v", errorList)
+	for secretName, caSecret := range generatedSecrets {
+		b.Secrets[secretName] = caSecret
 	}
 
 	return certificateAuthorities, nil
-}
-
-func (b *Botanist) generateCA(config *secrets.CertificateSecretConfig) (*corev1.Secret, secrets.Interface, error) {
-	certificate, err := config.Generate()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	secret, err := b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, config.GetName(), corev1.SecretTypeOpaque, certificate.SecretData(), false)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return secret, certificate, nil
-}
-
-func (b *Botanist) loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, secrets.Interface, error) {
-	certificate, err := secrets.LoadCertificate(name, existingSecret.Data[secrets.DataKeyPrivateKeyCA], existingSecret.Data[secrets.DataKeyCertificateCA])
-	if err != nil {
-		return nil, nil, err
-	}
-	return existingSecret, certificate, nil
 }
 
 func (b *Botanist) generateBasicAuthAPIServer(existingSecretsMap map[string]*corev1.Secret) (*secrets.BasicAuth, error) {
@@ -809,63 +771,15 @@ func (b *Botanist) generateBasicAuthAPIServer(existingSecretsMap map[string]*cor
 }
 
 func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []secrets.ConfigInterface) error {
-	type secretOutput struct {
-		secret *corev1.Secret
-		err    error
+	deployedClusterSecrets, err := secrets.GenerateClusterSecrets(b.K8sSeedClient, existingSecretsMap, wantedSecretsList, b.Shoot.SeedNamespace)
+	if err != nil {
+		return err
 	}
 
-	var (
-		results   = make(chan *secretOutput)
-		wg        sync.WaitGroup
-		errorList = []error{}
-	)
-
-	for _, s := range wantedSecretsList {
-		name := s.GetName()
-
-		if existingSecret, ok := existingSecretsMap[name]; ok {
-			b.Secrets[name] = existingSecret
-			continue
-		}
-
-		wg.Add(1)
-		go func(s secrets.ConfigInterface) {
-			defer wg.Done()
-
-			obj, err := s.Generate()
-			if err != nil {
-				results <- &secretOutput{err: err}
-				return
-			}
-
-			secretType := corev1.SecretTypeOpaque
-			if _, isTLSSecret := s.(*secrets.CertificateSecretConfig); isTLSSecret {
-				secretType = corev1.SecretTypeTLS
-			}
-
-			secret, err := b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, s.GetName(), secretType, obj.SecretData(), false)
-			results <- &secretOutput{secret: secret, err: err}
-		}(s)
+	for secretName, secret := range deployedClusterSecrets {
+		b.Secrets[secretName] = secret
 	}
 
-	go func() {
-		wg.Wait()
-		close(results)
-	}()
-
-	for out := range results {
-		if out.err != nil {
-			errorList = append(errorList, out.err)
-			continue
-		}
-
-		b.Secrets[out.secret.Name] = out.secret
-	}
-
-	// Wait and check wether an error occurred during the parallel processing of the Secret creation.
-	if len(errorList) > 0 {
-		return fmt.Errorf("Errors occurred during shoot secrets generation: %+v", errorList)
-	}
 	return nil
 }
 

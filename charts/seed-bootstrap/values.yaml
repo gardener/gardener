@@ -62,3 +62,27 @@ images:
   pause-container: image-repository:image-tag
   prometheus: image-repository:image-tag
   gardener-external-admission-controller: image-repository:image-tag
+
+prometheusPort: 9090
+
+global:
+  elasticsearchPorts:
+    db: 9200
+    transport: 9300
+
+elastic-kibana-curator:
+  enabled: true
+  elasticsearchReplicas: 1
+  kibanaReplicas: 1
+  kibanaPort: 5601
+  elasticsearchVolumeSizeGB: 30
+  images:
+    elasticsearch-oss: image-repository:image-tag
+    curator-es: image-repository:image-tag
+    kibana-oss: image-repository:image-tag
+    alpine: image-repository:image-tag
+
+fluentd-es:
+  enabled: true
+  images:
+    fluentd-es: image-repository:image-tag

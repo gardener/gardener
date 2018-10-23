@@ -150,3 +150,28 @@ images:
   sourceRepository: github.com/docker-library/ruby
   repository: ruby
   tag: "2.5.1-alpine"
+- name: alpine
+  repository: alpine
+  tag: "3.8"
+
+# Logging
+- name: fluentd-es
+  sourceRepository: github.com/gardener/logging
+  repository: eu.gcr.io/gardener-project/gardener/fluentd-es
+  tag: "0.9.0"
+- name: fluent-bit
+  sourceRepository: https://github.com/fluent/fluent-bit
+  repository: fluent/fluent-bit
+  tag: "0.13.4"
+- name: elasticsearch-oss
+  sourceRepository: github.com/gardener/logging
+  repository: eu.gcr.io/gardener-project/gardener/elasticsearch-oss
+  tag: "0.9.0"
+- name: curator-es
+  sourceRepository: github.com/gardener/logging
+  repository: eu.gcr.io/gardener-project/gardener/curator-es
+  tag: "0.9.0"
+- name: kibana-oss
+  sourceRepository: github.com/elastic/kibana-docker
+  repository: docker.elastic.co/kibana/kibana-oss
+  tag: "6.2.4"
