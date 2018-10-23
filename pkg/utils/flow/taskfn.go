@@ -15,42 +15,26 @@
 package flow
 
 import (
+	"context"
 	"github.com/gardener/gardener/pkg/utils"
 	"time"
 )
 
 // TaskFn is a payload function of a task.
-type TaskFn func() error
+type TaskFn func(ctx context.Context) error
 
 // RecoverFn is a function that can recover an error.
-type RecoverFn func(error) error
+type RecoverFn func(ctx context.Context, err error) error
 
 // EmptyTaskFn is a TaskFn that does nothing (returns nil).
-var EmptyTaskFn TaskFn = func() error { return nil }
+var EmptyTaskFn TaskFn = func(ctx context.Context) error { return nil }
 
-// AlwaysNonSevere is an error predicate that always reports an error as non severe.
-func AlwaysNonSevere(_ error) bool {
-	return false
-}
-
-// ToConditionFunc converts a TaskFn to a wait.ConditionFunc. This is useful if
-// retry utilities of the wait library should be used.
-// The isSevereError function determines if an error is severe enough that the retrying
-// shall immediately be canceled.
-func (t TaskFn) ToConditionFunc(isSevereErr func(error) bool) utils.ConditionFunc {
-	return func() (ok bool, severe bool, err error) {
-		err = t()
-		if err != nil {
-			return false, isSevereErr(err), err
-		}
-		return true, false, nil
+// SimpleTaskFn converts the given function to a TaskFn, disrespecting any context.Context it is being given.
+// deprecated: Only used during transition period. Do not use for new functions.
+func SimpleTaskFn(f func() error) TaskFn {
+	return func(ctx context.Context) error {
+		return f()
 	}
-}
-
-// ToSimpleConditionFunc converts a TaskFn to a wait.ConditionFunc that always reports
-// its errors as non severe such that a retry will always be done.
-func (t TaskFn) ToSimpleConditionFunc() utils.ConditionFunc {
-	return t.ToConditionFunc(AlwaysNonSevere)
 }
 
 // SkipIf returns a TaskFn that does nothing if the condition is true, otherwise the function
@@ -68,35 +52,56 @@ func (t TaskFn) DoIf(condition bool) TaskFn {
 	return t.SkipIf(!condition)
 }
 
+// Retry returns a TaskFn that is retried until the timeout is reached.
+func (t TaskFn) Retry(interval time.Duration) TaskFn {
+	return func(ctx context.Context) error {
+		return utils.RetryUntil(ctx, interval, func() (ok, severe bool, err error) {
+			if err := t(ctx); err != nil {
+				return false, false, err
+			}
+			return true, false, nil
+		})
+	}
+}
+
 // RetryUntilTimeout returns a TaskFn that is retried until the timeout is reached.
-func (t TaskFn) RetryUntilTimeout(interval time.Duration, timeout time.Duration) TaskFn {
-	return func() error {
-		return utils.Retry(interval, timeout, t.ToSimpleConditionFunc())
+func (t TaskFn) RetryUntilTimeout(interval, timeout time.Duration) TaskFn {
+	return func(ctx context.Context) error {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		return utils.RetryUntil(ctx, interval, func() (ok, severe bool, err error) {
+			if err := t(ctx); err != nil {
+				return false, false, err
+			}
+			return true, false, nil
+		})
 	}
 }
 
 // ToRecoverFn converts the TaskFn to a RecoverFn that ignores the incoming error.
 func (t TaskFn) ToRecoverFn() RecoverFn {
-	return func(_ error) error {
-		return t()
+	return func(ctx context.Context, _ error) error {
+		return t(ctx)
 	}
 }
 
 // Recover creates a new TaskFn that recovers an error with the given RecoverFn.
 func (t TaskFn) Recover(recoverFn RecoverFn) TaskFn {
-	return func() error {
-		if err := t(); err != nil {
-			return recoverFn(err)
+	return func(ctx context.Context) error {
+		if err := t(ctx); err != nil {
+			return recoverFn(ctx, err)
 		}
 		return nil
 	}
 }
 
-// RecoverTimeout creates a new TaskFn that recovers a timeout error with the given RecoverFn.
+// RecoverTimeout creates a new TaskFn that recovers an error that satisfies `utils.IsTimedOut` with the given RecoverFn.
 func (t TaskFn) RecoverTimeout(recoverFn RecoverFn) TaskFn {
-	return t.Recover(func(err error) error {
+	return t.Recover(func(ctx context.Context, err error) error {
 		if utils.IsTimedOut(err) {
-			return recoverFn(err)
+			return recoverFn(ctx, err)
 		}
 		return err
 	})

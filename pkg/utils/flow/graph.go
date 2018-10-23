@@ -104,6 +104,5 @@ func (g *Graph) Compile() *Flow {
 	return &Flow{
 		g.name,
 		nodes,
-		roots,
 	}
 }

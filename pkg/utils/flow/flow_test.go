@@ -15,6 +15,7 @@
 package flow_test
 
 import (
+	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -58,11 +59,14 @@ func (a *AtomicStringList) Values() []string {
 }
 
 var _ = Describe("Flow", func() {
+	canceledCtx, cancel := context.WithCancel(context.Background())
+	cancel()
+
 	Describe("#Run", func() {
 		It("should execute in the correct sequence", func() {
 			list := NewAtomicStringList()
 			mkListAppender := func(value string) flow.TaskFn {
-				return func() error {
+				return func(ctx context.Context) error {
 					list.Append(value)
 					return nil
 				}
@@ -94,8 +98,8 @@ var _ = Describe("Flow", func() {
 				err2 = errors.New("err2")
 
 				g = flow.NewGraph("foo")
-				_ = g.Add(flow.Task{Name: "x", Fn: func() error { return err1 }})
-				_ = g.Add(flow.Task{Name: "y", Fn: func() error { return err2 }})
+				_ = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error { return err1 }})
+				_ = g.Add(flow.Task{Name: "y", Fn: func(ctx context.Context) error { return err2 }})
 				f = g.Compile()
 			)
 
@@ -103,6 +107,43 @@ var _ = Describe("Flow", func() {
 			Expect(err).To(HaveOccurred())
 			causes := flow.Causes(err)
 			Expect(causes.Errors).To(ConsistOf(err1, err2))
+		})
+
+		It("should not process any function due to a canceled context", func() {
+			var (
+				g = flow.NewGraph("foo")
+				_ = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+					Fail("Task has been called")
+					return nil
+				}})
+				f = g.Compile()
+			)
+
+			err := f.Run(flow.Opts{Context: canceledCtx})
+			Expect(err).To(HaveOccurred())
+			Expect(flow.WasCanceled(err)).To(BeTrue())
+		})
+
+		It("should stop the execution after the context has been canceled in between tasks", func() {
+			var (
+				g           = flow.NewGraph("foo")
+				ctx, cancel = context.WithCancel(context.Background())
+				x           = g.Add(flow.Task{Name: "x", Fn: func(ctx context.Context) error {
+					cancel()
+					return nil
+				}})
+				_ = g.Add(flow.Task{Name: "y", Fn: func(ctx context.Context) error {
+					Fail("Task has been called")
+					return nil
+				}, Dependencies: flow.NewTaskIDs(x)})
+				f = g.Compile()
+			)
+			// prevent leakage
+			defer cancel()
+
+			err := f.Run(flow.Opts{Context: ctx})
+			Expect(err).To(HaveOccurred())
+			Expect(flow.WasCanceled(err)).To(BeTrue())
 		})
 	})
 })
