@@ -23,10 +23,7 @@ import (
 // DeployKubeAddonManager deploys the Kubernetes Addon Manager which will use labeled Kubernetes resources in order
 // to ensure that they exist in a cluster/reconcile them in case somebody changed something.
 func (b *HybridBotanist) DeployKubeAddonManager() error {
-	var (
-		name     = "kube-addon-manager"
-		replicas = 1
-	)
+	var name = "kube-addon-manager"
 
 	cloudConfig, err := b.generateCloudConfigChart()
 	if err != nil {
@@ -45,10 +42,6 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 		return err
 	}
 
-	if b.Shoot.IsHibernated {
-		replicas = 0
-	}
-
 	defaultValues := map[string]interface{}{
 		"cloudConfigContent":    cloudConfig.Files,
 		"storageClassesContent": storageClasses.Files,
@@ -57,7 +50,7 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-addon-manager": b.CheckSums[name],
 		},
-		"replicas": replicas,
+		"replicas": b.Shoot.GetReplicas(1),
 		// we need to add capabilities for Shoot's API server.
 		"shootAPIServer": map[string]interface{}{
 			"Capabilities": map[string]interface{}{

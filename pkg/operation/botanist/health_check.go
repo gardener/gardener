@@ -28,6 +28,10 @@ import (
 // CheckConditionControlPlaneHealthy checks whether the control plane of the Shoot cluster is healthy,
 // i.e. whether all containers running in the relevant namespace in the Seed cluster are healthy.
 func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	if b.Shoot.IsHibernated {
+		return helper.ModifyCondition(condition, corev1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
+	}
+
 	response, err := b.K8sShootClient.Curl("healthz")
 	if err != nil {
 		return helper.ModifyCondition(condition, corev1.ConditionFalse, "KubeAPIServerNotHealthy", fmt.Sprintf("Could not reach Shoot cluster kube-apiserver's /healthz endpoint: '%s'", err.Error()))
@@ -54,6 +58,10 @@ func (b *Botanist) CheckConditionControlPlaneHealthy(condition *gardenv1beta1.Co
 // CheckConditionEveryNodeReady checks whether every node registered at the Shoot cluster is in "Ready" state, that
 // as many nodes are registered as desired, and that every machine is running.
 func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	if b.Shoot.IsHibernated {
+		return helper.ModifyCondition(condition, corev1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
+	}
+
 	// Check whether every Node registered to the API server is ready.
 	nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
 	if err != nil {

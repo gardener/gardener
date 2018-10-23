@@ -122,6 +122,13 @@ func (b *HybridBotanist) ReconcileMachines() error {
 		return fmt.Errorf("The CloudBotanist failed to cleanup the orphaned machine class secrets: '%s'", err.Error())
 	}
 
+	// Scale down machine-controller-manager if shoot is hibernated.
+	if b.Shoot.IsHibernated {
+		if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName, 0); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -150,6 +150,9 @@ const (
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
 
+	// MachineControllerManagerDeploymentName is the name of the machine-controller-manager deployment.
+	MachineControllerManagerDeploymentName = "machine-controller-manager"
+
 	// KubeSchedulerDeploymentName is the name of the kube-scheduler deployment.
 	KubeSchedulerDeploymentName = "kube-scheduler"
 

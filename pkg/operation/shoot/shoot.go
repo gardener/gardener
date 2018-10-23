@@ -247,6 +247,14 @@ func (s *Shoot) ComputeCloudConfigSecretName(workerName string) string {
 	return fmt.Sprintf("%s-%s-%s", common.CloudConfigPrefix, workerName, utils.ComputeSHA256Hex([]byte(s.KubernetesMajorMinorVersion))[:5])
 }
 
+// GetReplicas returns the given <wokenUp> number if the shoot is not hibernated, or zero otherwise.
+func (s *Shoot) GetReplicas(wokenUp int) int {
+	if s.IsHibernated {
+		return 0
+	}
+	return wokenUp
+}
+
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {

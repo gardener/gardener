@@ -131,6 +131,10 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			Fn:           flow.TaskFn(botanist.RefreshKubeControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
 		})
+		wakeUpControllers = g.Add(flow.Task{
+			Name: "Waking up kube-/cloud-/machine-controller-manager to ensure proper cleanup of resources",
+			Fn:   flow.TaskFn(botanist.WakeUpControllers).DoIf(o.Shoot.IsHibernated && cleanupShootResources),
+		})
 
 		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
 		// resources).
@@ -162,7 +166,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		waitForControllersToBeActive = g.Add(flow.Task{
 			Name:         "Waiting until both cloud-controller-manager and kube-controller-manager are active",
 			Fn:           flow.TaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, waitUntilKubeAddonManagerDeleted),
+			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControllers, waitUntilKubeAddonManagerDeleted),
 		})
 
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as

@@ -171,6 +171,16 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		}
 	)
 
+	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
+	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
+	if b.Shoot.IsHibernated {
+		deployment, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName)
+		if err != nil {
+			return err
+		}
+		defaultValues["replicas"] = *deployment.Spec.Replicas
+	}
+
 	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
 	if err != nil {
 		return err
@@ -189,7 +199,6 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 	var (
 		name        = "cluster-autoscaler"
 		workerPools = []map[string]interface{}{}
-		replicas    = 1
 	)
 
 	for _, worker := range b.MachineDeployments {
@@ -205,10 +214,6 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		})
 	}
 
-	if b.Shoot.IsHibernated {
-		replicas = 0
-	}
-
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cluster-autoscaler": b.CheckSums[name],
@@ -216,7 +221,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		"namespace": map[string]interface{}{
 			"uid": b.SeedNamespaceObject.UID,
 		},
-		"replicas":    replicas,
+		"replicas":    b.Shoot.GetReplicas(1),
 		"workerPools": workerPools,
 	}
 
@@ -246,12 +251,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name)
 		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.Project.Name)
-		replicas         = 1
 	)
-
-	if b.Shoot.IsHibernated {
-		replicas = 0
-	}
 
 	var (
 		alertManagerConfig = map[string]interface{}{
@@ -259,14 +259,14 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"basicAuthSecret": basicAuth,
 				"host":            alertManagerHost,
 			},
-			"replicas": replicas,
+			"replicas": b.Shoot.GetReplicas(1),
 		}
 		grafanaConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{
 				"basicAuthSecret": basicAuth,
 				"host":            grafanaHost,
 			},
-			"replicas": replicas,
+			"replicas": b.Shoot.GetReplicas(1),
 		}
 		prometheusConfig = map[string]interface{}{
 			"networks": map[string]interface{}{
@@ -287,7 +287,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"checksum/secret-vpn-seed":                  b.CheckSums["vpn-seed"],
 				"checksum/secret-vpn-seed-tlsauth":          b.CheckSums["vpn-seed-tlsauth"],
 			},
-			"replicas":           replicas,
+			"replicas":           b.Shoot.GetReplicas(1),
 			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),
 			"seed": map[string]interface{}{
 				"apiserver": b.K8sSeedClient.GetConfig().Host,
@@ -296,10 +296,10 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
-			"replicas": replicas,
+			"replicas": b.Shoot.GetReplicas(1),
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
-			"replicas": replicas,
+			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
 
@@ -418,25 +418,19 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging() error {
-
 	var (
 		credentials = b.Secrets["logging-ingress-credentials"]
 		basicAuth   = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
 		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
-		replicas    = 1
 	)
-
-	if b.Shoot.IsHibernated {
-		replicas = 0
-	}
 
 	var kibanaConfig = map[string]interface{}{
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": basicAuth,
 			"host":            kibanaHost,
 		},
-		"elasticsearchReplicas": replicas,
-		"kibanaReplicas":        replicas,
+		"elasticsearchReplicas": b.Shoot.GetReplicas(1),
+		"kibanaReplicas":        b.Shoot.GetReplicas(1),
 	}
 
 	elasticKibanaCurator, err := b.InjectImages(kibanaConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
@@ -450,4 +444,21 @@ func (b *Botanist) DeploySeedLogging() error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)
+}
+
+// WakeUpControllers scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
+// * cloud-controller-manager
+// * kube-controller-manager
+// * machine-controller-manager
+func (b *Botanist) WakeUpControllers() error {
+	if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName, 1); err != nil {
+		return err
+	}
+	if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName, 1); err != nil {
+		return err
+	}
+	if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName, 1); err != nil {
+		return err
+	}
+	return nil
 }
