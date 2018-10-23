@@ -941,11 +941,9 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 		return allErrs
 	}
 
-	autoScalingEnabled := spec.Addons != nil && spec.Addons.ClusterAutoscaler != nil && spec.Addons.ClusterAutoscaler.Enabled
-
 	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateBackup(spec.Backup, fldPath.Child("backup"))...)
-	allErrs = append(allErrs, validateCloud(spec.Cloud, autoScalingEnabled, spec.Hibernation, fldPath.Child("cloud"))...)
+	allErrs = append(allErrs, validateCloud(spec.Cloud, spec.Hibernation, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
@@ -1045,7 +1043,7 @@ func validateBackup(backup *garden.Backup, fldPath *field.Path) field.ErrorList 
 	return allErrs
 }
 
-func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
+func validateCloud(cloud garden.Cloud, hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	workerNames := make(map[string]bool)
 
@@ -1109,7 +1107,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 		var workers []garden.Worker
 		for i, worker := range aws.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -1119,7 +1117,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 			workerNames[worker.Name] = true
 			workers = append(workers, worker.Worker)
 		}
-		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
+		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
 
 	azure := cloud.Azure
@@ -1168,7 +1166,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 		var workers []garden.Worker
 		for i, worker := range azure.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 35, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -1178,7 +1176,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 			workerNames[worker.Name] = true
 			workers = append(workers, worker.Worker)
 		}
-		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
+		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
 
 	gcp := cloud.GCP
@@ -1212,7 +1210,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 		var workers []garden.Worker
 		for i, worker := range gcp.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -1222,7 +1220,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 			workerNames[worker.Name] = true
 			workers = append(workers, worker.Worker)
 		}
-		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
+		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
 
 	openStack := cloud.OpenStack
@@ -1264,14 +1262,14 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 		var workers []garden.Worker
 		for i, worker := range openStack.Workers {
 			idxPath := workersPath.Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
 			if workerNames[worker.Name] {
 				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
 			}
 			workerNames[worker.Name] = true
 			workers = append(workers, worker.Worker)
 		}
-		allErrs = append(allErrs, ValidateWorkers(workers, hibernation, workersPath)...)
+		allErrs = append(allErrs, ValidateWorkers(workers, workersPath)...)
 	}
 
 	alicloud := cloud.Alicloud
@@ -1305,7 +1303,7 @@ func validateCloud(cloud garden.Cloud, autoScalingEnabled bool, hibernation *gar
 		}
 		for i, worker := range alicloud.Workers {
 			idxPath := alicloudPath.Child("workers").Index(i)
-			allErrs = append(allErrs, ValidateWorker(worker.Worker, autoScalingEnabled, idxPath)...)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
 			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
 			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
@@ -1610,7 +1608,7 @@ func validateMaintenance(maintenance *garden.Maintenance, fldPath *field.Path) f
 }
 
 // ValidateWorker validates the worker object.
-func ValidateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *field.Path) field.ErrorList {
+func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	allErrs = append(allErrs, validateDNS1123Label(worker.Name, fldPath.Child("name"))...)
@@ -1630,11 +1628,8 @@ func ValidateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *fiel
 	if worker.AutoScalerMax < worker.AutoScalerMin {
 		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMax"), "maximum value must not be less or equal than minimum value"))
 	}
-	if !autoScalingEnabled && worker.AutoScalerMin != worker.AutoScalerMax {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin/autoScalerMax"), "maximum value must be equal to minimum value if cluster autoscaler addon is disabled"))
-	}
-	if autoScalingEnabled && worker.AutoScalerMax != 0 && worker.AutoScalerMin == 0 {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin"), "minimum value must be larger than 0 if autoscaling is enabled and maximum is not equals zero"))
+	if worker.AutoScalerMax != 0 && worker.AutoScalerMin == 0 {
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("autoScalerMin"), "minimum value must be >= 1 if maximum value > 0 (cluster-autoscaler cannot handle min=0)"))
 	}
 
 	allErrs = append(allErrs, ValidatePositiveIntOrPercent(worker.MaxSurge, fldPath.Child("maxSurge"))...)
@@ -1650,14 +1645,8 @@ func ValidateWorker(worker garden.Worker, autoScalingEnabled bool, fldPath *fiel
 }
 
 // ValidateWorkers validates worker objects.
-func ValidateWorkers(workers []garden.Worker, hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
+func ValidateWorkers(workers []garden.Worker, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	// We want to allow that all expect one of the worker pools can be set to min=max=0 if hibernation is set because we might otherwise
-	// get into an inconsistent state as there are now two ways of hibernating a Shoot.
-	if hibernation == nil {
-		return allErrs
-	}
 
 	atLeastOneActivePool := false
 	for _, worker := range workers {
@@ -1668,7 +1657,7 @@ func ValidateWorkers(workers []garden.Worker, hibernation *garden.Hibernation, f
 	}
 
 	if !atLeastOneActivePool {
-		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min=max > 0 needed if hibernation object is configured"))
+		allErrs = append(allErrs, field.Forbidden(fldPath, "at least one worker pool with min>0 and max> 0 needed"))
 	}
 
 	return allErrs

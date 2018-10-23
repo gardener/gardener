@@ -45,7 +45,7 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 		return err
 	}
 
-	if b.Shoot.Hibernated {
+	if b.Shoot.IsHibernated {
 		replicas = 0
 	}
 

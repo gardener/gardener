@@ -144,7 +144,7 @@ spec:
         autoScalerMin: 1
         autoScalerMax: 2
       % endif
-      zones: ${value("spec.cloud.alicloud.zones", ["cn-beijing-f"])} 
+      zones: ${value("spec.cloud.alicloud.zones", ["cn-beijing-f"])}
     % endif
     % if cloud == "gcp":
     gcp:
@@ -297,7 +297,16 @@ spec:
     maximum: ${value("backup.maximum", "7")}
   % endif
   addons:
+    nginx-ingress:
+      enabled: ${value("spec.addons.nginx-ingress.enabled", "true")}
+      loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
+    kubernetes-dashboard:
+      enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
   % if cloud == "aws":
+    # kube2iam addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy kube2iam as well as
+    # the desired AWS IAM roles on your own instead of enabling it here. Please do not
+    # use this field anymore.
     kube2iam:
       enabled: ${value("spec.addons.kube2iam.enabled", "true")}
       roles:<% roles=value("spec.addons.kube2iam.roles", []) %>
@@ -330,18 +339,22 @@ spec:
     # Heapster addon is deprecated and no longer supported. Gardener deploys the Kubernetes metrics-server
     # into the kube-system namespace of shoots (cannot be turned off) for fetching metrics and enabling
     # horizontal pod auto-scaling.
-    # This field will be removed in the future. Do not use it anymore.
+    # This field will be removed in the future. Please do not use it anymore.
     heapster:
       enabled: ${value("spec.addons.heapster.enabled", "false")}
-    kubernetes-dashboard:
-      enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
+    # cluster-autoscaler addon is automatically enabled if at least one of the configured
+    # worker pools (see above) uses max>min. You do not need to enable it separately anymore. Any value
+    # you put here has no effect. This field will be removed in the future. Please do not use it anymore.
     cluster-autoscaler:
       enabled: ${value("spec.addons.cluster-autoscaler.enabled", "true")}
-    nginx-ingress:
-      enabled: ${value("spec.addons.nginx-ingress.enabled", "true")}
-      loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
+    # kube-lego addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
+    # instead of enabling it here. You should not use this field anymore.
     kube-lego:
       enabled: ${value("spec.addons.kube-lego.enabled", "true")}
       email: ${value("spec.addons.kube-lego.email", "john.doe@example.com")}
+    # monocular addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy monocular on your own
+    # instead of enabling it here. Please do not use this field anymore.
     monocular:
       enabled: ${value("spec.addons.monocular.enabled", "false")}

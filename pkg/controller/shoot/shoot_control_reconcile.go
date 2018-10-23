@@ -187,7 +187,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
-			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.Hibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, reconcileMachines),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{

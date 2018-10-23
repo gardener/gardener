@@ -991,25 +991,31 @@ var (
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
-	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
-	// +optional
-	ClusterAutoscaler *ClusterAutoscaler `json:"cluster-autoscaler,omitempty"`
-	// Heapster holds configuration settings for the heapster addon.
-	// +optional
-	Heapster *Heapster `json:"heapster,omitempty"`
-	// Kube2IAM holds configuration settings for the kube2iam addon (only AWS).
-	// +optional
-	Kube2IAM *Kube2IAM `json:"kube2iam,omitempty"`
-	// KubeLego holds configuration settings for the kube-lego addon.
-	// +optional
-	KubeLego *KubeLego `json:"kube-lego,omitempty"`
 	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
 	// +optional
 	KubernetesDashboard *KubernetesDashboard `json:"kubernetes-dashboard,omitempty"`
 	// NginxIngress holds configuration settings for the nginx-ingress addon.
 	// +optional
 	NginxIngress *NginxIngress `json:"nginx-ingress,omitempty"`
+
+	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	ClusterAutoscaler *ClusterAutoscaler `json:"cluster-autoscaler,omitempty"`
+	// Heapster holds configuration settings for the heapster addon.
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	Heapster *Heapster `json:"heapster,omitempty"`
+	// Kube2IAM holds configuration settings for the kube2iam addon (only AWS).
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	Kube2IAM *Kube2IAM `json:"kube2iam,omitempty"`
+	// KubeLego holds configuration settings for the kube-lego addon.
+	// DEPRECATED: This field will be removed in a future version.
+	// +optional
+	KubeLego *KubeLego `json:"kube-lego,omitempty"`
 	// Monocular holds configuration settings for the monocular addon.
+	// DEPRECATED: This field will be removed in a future version.
 	// +optional
 	Monocular *Monocular `json:"monocular,omitempty"`
 }

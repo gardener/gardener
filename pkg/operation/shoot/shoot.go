@@ -50,12 +50,15 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 	}
 
 	shootObj := &Shoot{
-		Info:                  shoot,
-		Secret:                secret,
-		CloudProfile:          cloudProfile,
+		Info:         shoot,
+		Secret:       secret,
+		CloudProfile: cloudProfile,
+
 		SeedNamespace:         ComputeTechnicalID(projectName, shoot),
 		InternalClusterDomain: internalDomain,
-		Hibernated:            true,
+
+		IsHibernated:           false,
+		WantsClusterAutoscaler: false,
 	}
 
 	// Determine the external Shoot cluster domain, i.e. the domain which will be put into the Kubeconfig handed out
@@ -81,14 +84,14 @@ func New(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.I
 
 	// Check whether the Shoot should be hibernated
 	if shoot.Spec.Hibernation != nil {
-		shootObj.Hibernated = shoot.Spec.Hibernation.Enabled
-	} else {
-		workers := shootObj.GetWorkers()
-		for _, worker := range workers {
-			if worker.AutoScalerMax != 0 {
-				shootObj.Hibernated = false
-				break
-			}
+		shootObj.IsHibernated = shoot.Spec.Hibernation.Enabled
+	}
+
+	// Check whether the Shoot needs the cluster-autoscaler component
+	for _, worker := range shootObj.GetWorkers() {
+		if worker.AutoScalerMax > worker.AutoScalerMin {
+			shootObj.WantsClusterAutoscaler = true
+			break
 		}
 	}
 
@@ -135,43 +138,19 @@ func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
 
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkerNames() []string {
-	var (
-		workers     = s.GetWorkers()
-		workerNames = []string{}
-	)
-
-	for _, worker := range workers {
+	workerNames := []string{}
+	for _, worker := range s.GetWorkers() {
 		workerNames = append(workerNames, worker.Name)
 	}
-
 	return workerNames
 }
 
 // GetNodeCount returns the sum of all 'autoScalerMax' fields of all worker groups of the Shoot.
 func (s *Shoot) GetNodeCount() int {
 	nodeCount := 0
-
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		for _, worker := range s.Info.Spec.Cloud.AWS.Workers {
-			nodeCount += worker.AutoScalerMax
-		}
-	case gardenv1beta1.CloudProviderAzure:
-		for _, worker := range s.Info.Spec.Cloud.Azure.Workers {
-			nodeCount += worker.AutoScalerMax
-		}
-	case gardenv1beta1.CloudProviderGCP:
-		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
-			nodeCount += worker.AutoScalerMax
-		}
-	case gardenv1beta1.CloudProviderOpenStack:
-		for _, worker := range s.Info.Spec.Cloud.OpenStack.Workers {
-			nodeCount += worker.AutoScalerMax
-		}
-	case gardenv1beta1.CloudProviderLocal:
-		nodeCount = 1
+	for _, worker := range s.GetWorkers() {
+		nodeCount += worker.AutoScalerMax
 	}
-
 	return nodeCount
 }
 

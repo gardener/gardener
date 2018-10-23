@@ -113,7 +113,7 @@ func (b *Botanist) CheckConditionEveryNodeReady(condition *gardenv1beta1.Conditi
 func (b *Botanist) CheckConditionSystemComponentsHealthy(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
 	// If the cluster has been hibernated then we do not want to check whether all system components are running (because there are not any
 	// nodes/machines, i.e. this condition would be false everytime.
-	if b.Shoot.Hibernated {
+	if b.Shoot.IsHibernated {
 		return helper.ModifyCondition(condition, corev1.ConditionTrue, "ConditionNotChecked", "Shoot cluster has been hibernated.")
 	}
 
