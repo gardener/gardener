@@ -18,3 +18,8 @@
 ## Usage
 
 * [Creating, deleting and updating Shoot clusters](usage/shoots.md)
+* [Supported Kubernetes versions](usage/supported_k8s_versions.md)
+
+## Proposals
+
+* [Gardener extensibility and extraction of cloud-specific/OS-specific knowledge](proposals/01-extensibility.md)

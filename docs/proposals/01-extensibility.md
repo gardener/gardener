@@ -117,6 +117,7 @@ spec:
     apiVersion: aws.cloud.gardener.cloud/v1alpha1
     kind: CloudProfileConfig
     constraints:
+      minimumVolumeSize: 20Gi
       machineImages:
       - name: CoreOS
         regions:
