@@ -28,8 +28,23 @@ if [[ "${SOURCE_PATH}" != *"src/github.com/gardener/gardener" ]]; then
   export PATH="${GOBIN}:${PATH}"
 fi
 
-# Install Golint (linting tool).
-go get -u golang.org/x/lint/golint
+# Install Golint.
+if ! which golint 1>/dev/null; then
+  echo -n "Installing golint... "
+  go get -u golang.org/x/lint/golint
+  echo "done."
+fi
+
+# Install Helm (see https://docs.helm.sh/using_helm/#from-script).
+if ! which helm 1>/dev/null; then
+  echo -n "Installing helm... "
+  install_helm_path="./get_helm.sh"
+  curl https://raw.githubusercontent.com/helm/helm/v2.9.1/scripts/get > "${install_helm_path}"
+  chmod 700 "${install_helm_path}"
+  bash "${install_helm_path}"
+  rm ./"${install_helm_path}"
+  echo "done."
+fi
 
 ###############################################################################
 
