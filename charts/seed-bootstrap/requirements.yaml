@@ -1,0 +1,11 @@
+dependencies:
+- name: elastic-kibana-curator
+  repository: http://localhost:10191
+  version: 0.1.0
+  # needed for the logging feature gate
+  condition: elastic-kibana-curator.enabled
+- name: fluentd-es
+  repository: http://localhost:10191
+  version: 0.1.0
+  # needed for the logging feature gate
+  condition: fluentd-es.enabled
