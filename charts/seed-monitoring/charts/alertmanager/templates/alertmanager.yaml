@@ -65,7 +65,7 @@ spec:
         - --config.file=/etc/alertmanager/config/alertmanager.yaml
         - --web.listen-address=:9093
         - --web.external-url=https://{{ .Values.ingress.host }}
-        - --storage.path=/etc/alertmanager/data
+        - --storage.path=/var/alertmanager/data
         - --log.level=info
         env:
         - name: ALERTMANAGER_NAMESPACE
