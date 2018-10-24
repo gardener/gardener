@@ -417,6 +417,9 @@ type ProjectList struct {
 
 // ProjectSpec is the specification of a Project.
 type ProjectSpec struct {
+	// CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
+	// who created the project.
+	CreatedBy rbacv1.Subject
 	// Description is a human-readable description of what the project is used for.
 	// +optional
 	Description *string
@@ -426,6 +429,9 @@ type ProjectSpec struct {
 	// Purpose is a human-readable explanation of the project's purpose.
 	// +optional
 	Purpose *string
+	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user
+	// that should be part of this project.
+	Members []rbacv1.Subject
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// +optional
 	Namespace *string

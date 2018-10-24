@@ -179,6 +179,17 @@ func SetDefaults_Seed(obj *Seed) {
 
 // SetDefaults_Project sets default values for Project objects.
 func SetDefaults_Project(obj *Project) {
+	if len(obj.Spec.CreatedBy.APIGroup) == 0 {
+		switch obj.Spec.Owner.Kind {
+		case rbacv1.ServiceAccountKind:
+			obj.Spec.Owner.APIGroup = ""
+		case rbacv1.UserKind:
+			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+		case rbacv1.GroupKind:
+			obj.Spec.Owner.APIGroup = rbacv1.GroupName
+		}
+	}
+
 	if len(obj.Spec.Owner.APIGroup) == 0 {
 		switch obj.Spec.Owner.Kind {
 		case rbacv1.ServiceAccountKind:
@@ -188,6 +199,16 @@ func SetDefaults_Project(obj *Project) {
 		case rbacv1.GroupKind:
 			obj.Spec.Owner.APIGroup = rbacv1.GroupName
 		}
+	}
+
+	ownerPartOfMember := false
+	for _, member := range obj.Spec.Members {
+		if member == obj.Spec.Owner {
+			ownerPartOfMember = true
+		}
+	}
+	if !ownerPartOfMember {
+		obj.Spec.Members = append(obj.Spec.Members, obj.Spec.Owner)
 	}
 }
 

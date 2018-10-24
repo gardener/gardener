@@ -26,6 +26,8 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -225,14 +227,13 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		if skipVerification(operation, project.ObjectMeta) {
 			return nil
 		}
-		// Add createdBy annotation to Project
+		// Set createdBy field in Project
 		if a.GetOperation() == admission.Create {
-			annotations := project.Annotations
-			if annotations == nil {
-				annotations = map[string]string{}
+			project.Spec.CreatedBy = rbacv1.Subject{
+				APIGroup: "rbac.authorization.k8s.io",
+				Kind:     rbacv1.UserKind,
+				Name:     a.GetUserInfo().GetName(),
 			}
-			annotations[common.GardenCreatedBy] = a.GetUserInfo().GetName()
-			project.Annotations = annotations
 		}
 	}
 

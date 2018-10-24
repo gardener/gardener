@@ -4374,6 +4374,12 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 			SchemaProps: spec.SchemaProps{
 				Description: "ProjectSpec is the specification of a Project.",
 				Properties: map[string]spec.Schema{
+					"createdBy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project.",
+							Ref:         ref("k8s.io/api/rbac/v1.Subject"),
+						},
+					},
 					"description": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Description is a human-readable description of what the project is used for.",
@@ -4392,6 +4398,19 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 							Description: "Purpose is a human-readable explanation of the project's purpose.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"members": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Members is a list of subjects representing a user name, an email address, or any other identifier of a user that should be part of this project.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/rbac/v1.Subject"),
+									},
+								},
+							},
 						},
 					},
 					"namespace": {

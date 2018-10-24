@@ -10,6 +10,10 @@ spec:
     apiGroup: rbac.authorization.k8s.io
     kind: User
     name: john.doe@example.com
+  members:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: alice.doe@example.com
 # description: "This is my first project"
 # purpose: "Experimenting with Gardener"
 # namespace: "garden-dev" # Optional, will be initialized if unset.

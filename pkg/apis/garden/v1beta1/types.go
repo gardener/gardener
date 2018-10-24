@@ -411,6 +411,9 @@ type ProjectList struct {
 
 // ProjectSpec is the specification of a Project.
 type ProjectSpec struct {
+	// CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
+	// who created the project.
+	CreatedBy rbacv1.Subject `json:"createdBy,omitempty"`
 	// Description is a human-readable description of what the project is used for.
 	// +optional
 	Description *string `json:"description,omitempty"`
@@ -420,6 +423,9 @@ type ProjectSpec struct {
 	// Purpose is a human-readable explanation of the project's purpose.
 	// +optional
 	Purpose *string `json:"purpose,omitempty"`
+	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user
+	// that should be part of this project.
+	Members []rbacv1.Subject `json:"members,omitempty"`
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
 	// +optional

@@ -617,7 +617,10 @@ func ValidateProjectUpdate(newProject, oldProject *garden.Project) field.ErrorLi
 	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newProject.ObjectMeta, &oldProject.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateProject(newProject)...)
 
-	if !apiequality.Semantic.DeepEqual(newProject.Spec.Namespace, oldProject.Spec.Namespace) {
+	if oldProject.Spec.CreatedBy != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProject.Spec.CreatedBy, oldProject.Spec.CreatedBy, field.NewPath("spec", "createdBy"))...)
+	}
+	if oldProject.Spec.Namespace != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProject.Spec.Namespace, oldProject.Spec.Namespace, field.NewPath("spec", "namespace"))...)
 	}
 
@@ -628,6 +631,10 @@ func ValidateProjectUpdate(newProject, oldProject *garden.Project) field.ErrorLi
 func ValidateProjectSpec(projectSpec *garden.ProjectSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
+	for i, member := range projectSpec.Members {
+		allErrs = append(allErrs, ValidateSubject(member, fldPath.Child("members").Index(i))...)
+	}
+	allErrs = append(allErrs, ValidateSubject(projectSpec.CreatedBy, fldPath.Child("createdBy"))...)
 	allErrs = append(allErrs, ValidateSubject(projectSpec.Owner, fldPath.Child("owner"))...)
 	if description := projectSpec.Description; description != nil && len(*description) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("description"), "must provide a description when key is present"))

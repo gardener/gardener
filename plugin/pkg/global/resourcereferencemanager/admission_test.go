@@ -21,7 +21,9 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
@@ -433,17 +435,19 @@ var _ = Describe("resourcereferencemanager", func() {
 		})
 
 		Context("tests for Project objects", func() {
-			It("should add the created-by annotation", func() {
+			It("should set the created-by field", func() {
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 
 				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				Expect(project.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
-
 				err := admissionHandler.Admit(attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(project.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+				Expect(project.Spec.CreatedBy).To(Equal(rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     defaultUserName,
+				}))
 			})
 		})
 	})

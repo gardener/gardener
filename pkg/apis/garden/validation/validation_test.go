@@ -1690,7 +1690,7 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidateProject", func() {
+	Describe("#ValidateProject, #ValidateProjectUpdate", func() {
 		var project *garden.Project
 
 		BeforeEach(func() {
@@ -1699,10 +1699,22 @@ var _ = Describe("validation", func() {
 					Name: "project-1",
 				},
 				Spec: garden.ProjectSpec{
+					CreatedBy: rbacv1.Subject{
+						APIGroup: "rbac.authorization.k8s.io",
+						Kind:     rbacv1.UserKind,
+						Name:     "john.doe@example.com",
+					},
 					Owner: rbacv1.Subject{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     rbacv1.UserKind,
 						Name:     "john.doe@example.com",
+					},
+					Members: []rbacv1.Subject{
+						{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     rbacv1.UserKind,
+							Name:     "alice.doe@example.com",
+						},
 					},
 				},
 			}
@@ -1711,7 +1723,7 @@ var _ = Describe("validation", func() {
 		It("should not return any errors", func() {
 			errorList := ValidateProject(project)
 
-			Expect(len(errorList)).To(Equal(0))
+			Expect(errorList).To(BeEmpty())
 		})
 
 		It("should forbid Project resources with empty metadata", func() {
@@ -1719,11 +1731,10 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateProject(project)
 
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
-			}))
+			}))))
 		})
 
 		It("should forbid Projects having too long names", func() {
@@ -1731,11 +1742,10 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateProject(project)
 
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeTooLong),
 				"Field": Equal("metadata.name"),
-			}))
+			}))))
 		})
 
 		It("should forbid Projects having two consecutive hyphens", func() {
@@ -1743,11 +1753,10 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateProject(project)
 
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("metadata.name"),
-			}))
+			}))))
 		})
 
 		It("should forbid Project specification with empty or invalid keys for description/purpose", func() {
@@ -1756,142 +1765,87 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateProject(project)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.description"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.purpose"),
-			}))
+			}))))
 		})
 
-		It("should forbid Project specification with owners having an empty name", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup: "rbac.authorization.k8s.io",
-				Kind:     rbacv1.UserKind,
-				Name:     "",
-			}
+		DescribeTable("owner validation",
+			func(apiGroup, kind, name, namespace string, expectType field.ErrorType, field string) {
+				subject := rbacv1.Subject{
+					APIGroup:  apiGroup,
+					Kind:      kind,
+					Name:      name,
+					Namespace: namespace,
+				}
 
-			errorList := ValidateProject(project)
+				project.Spec.Owner = subject
+				project.Spec.CreatedBy = subject
+				project.Spec.Members = []rbacv1.Subject{subject}
 
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.owner.name"),
-			}))
-		})
+				errList := ValidateProject(project)
 
-		It("should forbid Project specification with serviceaccount owners having an invalid api group name", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup:  "apps/v1beta1",
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      "foo",
-				Namespace: "default",
-			}
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(expectType),
+					"Field": Equal(fmt.Sprintf("spec.owner.%s", field)),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(expectType),
+					"Field": Equal(fmt.Sprintf("spec.createdBy.%s", field)),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(expectType),
+					"Field": Equal(fmt.Sprintf("spec.members[0].%s", field)),
+				}))))
+			},
 
-			errorList := ValidateProject(project)
+			// general
+			Entry("empty name", "rbac.authorization.k8s.io", rbacv1.UserKind, "", "", field.ErrorTypeRequired, "name"),
+			Entry("unknown kind", "rbac.authorization.k8s.io", "unknown", "foo", "", field.ErrorTypeNotSupported, "kind"),
 
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.owner.apiGroup"),
-			}))
-		})
+			// serviceaccounts
+			Entry("invalid api group name", "apps/v1beta1", rbacv1.ServiceAccountKind, "foo", "default", field.ErrorTypeNotSupported, "apiGroup"),
+			Entry("invalid name", "", rbacv1.ServiceAccountKind, "foo-", "default", field.ErrorTypeInvalid, "name"),
+			Entry("no namespace", "", rbacv1.ServiceAccountKind, "foo", "", field.ErrorTypeRequired, "namespace"),
 
-		It("should forbid Project specification with serviceaccount owners having an invalid name", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup:  "",
-				Kind:      rbacv1.ServiceAccountKind,
-				Name:      "foo-",
-				Namespace: "default",
-			}
+			// users
+			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.UserKind, "john.doe@example.com", "", field.ErrorTypeNotSupported, "apiGroup"),
 
-			errorList := ValidateProject(project)
+			// groups
+			Entry("invalid api group name", "rbac.authorization.invalid", rbacv1.GroupKind, "groupname", "", field.ErrorTypeNotSupported, "apiGroup"),
+		)
 
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+		DescribeTable("namespace immutability",
+			func(old, new *string, matcher gomegatypes.GomegaMatcher) {
+				project.Spec.Namespace = old
+				newProject := prepareProjectForUpdate(project)
+				newProject.Spec.Namespace = new
+
+				errList := ValidateProjectUpdate(newProject, project)
+
+				Expect(errList).To(matcher)
+			},
+
+			Entry("namespace change w/  preset namespace", makeStringPointer("garden-dev"), makeStringPointer("garden-core"), ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.owner.name"),
-			}))
-		})
+				"Field": Equal("spec.namespace"),
+			})))),
+			Entry("namespace change w/o preset namespace", nil, makeStringPointer("garden-core"), BeEmpty()),
+			Entry("no change (both unset)", nil, nil, BeEmpty()),
+			Entry("no change (same value)", makeStringPointer("garden-dev"), makeStringPointer("garden-dev"), BeEmpty()),
+		)
 
-		It("should forbid Project specification with serviceaccount owners having no namespace", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup: "",
-				Kind:     rbacv1.ServiceAccountKind,
-				Name:     "foo",
-			}
-
-			errorList := ValidateProject(project)
-
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.owner.namespace"),
-			}))
-		})
-
-		It("should forbid Project specification with user owners having an invalid api group name", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup: "rbac.authorization.invalid",
-				Kind:     rbacv1.UserKind,
-				Name:     "john.doe@example.com",
-			}
-
-			errorList := ValidateProject(project)
-
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.owner.apiGroup"),
-			}))
-		})
-
-		It("should forbid Project specification with group owners having an invalid api group name", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup: "rbac.authorization.invalid",
-				Kind:     rbacv1.GroupKind,
-				Name:     "groupname",
-			}
-
-			errorList := ValidateProject(project)
-
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.owner.apiGroup"),
-			}))
-		})
-
-		It("should forbid Project specification with an unknown kind", func() {
-			project.Spec.Owner = rbacv1.Subject{
-				APIGroup: "rbac.authorization.invalid",
-				Kind:     "unknown",
-				Name:     "foo",
-			}
-
-			errorList := ValidateProject(project)
-
-			Expect(len(errorList)).To(Equal(1))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeNotSupported),
-				"Field": Equal("spec.owner.kind"),
-			}))
-		})
-
-		It("should forbid Project updates trying to change the namespace", func() {
-			project.Spec.Namespace = makeStringPointer("garden-dev")
-			newProject := project.DeepCopy()
-			newProject.ResourceVersion = "1"
-			newProject.Spec.Namespace = makeStringPointer("garden-core")
+		It("should forbid Project updates trying to change the createdBy field", func() {
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.CreatedBy.Name = "some-other-user"
 
 			errorList := ValidateProjectUpdate(newProject, project)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.namespace"),
+				"Field": Equal("spec.createdBy"),
 			}))))
 		})
 	})
@@ -4861,4 +4815,10 @@ func prepareSecretBindingForUpdate(secretBinding *garden.SecretBinding) *garden.
 	s := secretBinding.DeepCopy()
 	s.ResourceVersion = "1"
 	return s
+}
+
+func prepareProjectForUpdate(project *garden.Project) *garden.Project {
+	p := project.DeepCopy()
+	p.ResourceVersion = "1"
+	return p
 }

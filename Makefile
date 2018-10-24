@@ -137,3 +137,8 @@ test-cov:
 test-clean:
 	@find . -name "*.coverprofile" -type f -delete
 	@rm -f gardener.coverage.html
+
+.PHONY: generate
+generate:
+	@./hack/generate-code
+	@./hack/generate-examples
