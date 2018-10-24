@@ -623,6 +623,9 @@ func ValidateProjectUpdate(newProject, oldProject *garden.Project) field.ErrorLi
 	if oldProject.Spec.Namespace != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newProject.Spec.Namespace, oldProject.Spec.Namespace, field.NewPath("spec", "namespace"))...)
 	}
+	if oldProject.Spec.Owner != nil && newProject.Spec.Owner == nil {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "owner"), newProject.Spec.Owner, "owner cannot be reset"))
+	}
 
 	return allErrs
 }
@@ -634,8 +637,12 @@ func ValidateProjectSpec(projectSpec *garden.ProjectSpec, fldPath *field.Path) f
 	for i, member := range projectSpec.Members {
 		allErrs = append(allErrs, ValidateSubject(member, fldPath.Child("members").Index(i))...)
 	}
-	allErrs = append(allErrs, ValidateSubject(projectSpec.CreatedBy, fldPath.Child("createdBy"))...)
-	allErrs = append(allErrs, ValidateSubject(projectSpec.Owner, fldPath.Child("owner"))...)
+	if createdBy := projectSpec.CreatedBy; createdBy != nil {
+		allErrs = append(allErrs, ValidateSubject(*createdBy, fldPath.Child("createdBy"))...)
+	}
+	if owner := projectSpec.Owner; owner != nil {
+		allErrs = append(allErrs, ValidateSubject(*owner, fldPath.Child("owner"))...)
+	}
 	if description := projectSpec.Description; description != nil && len(*description) == 0 {
 		allErrs = append(allErrs, field.Required(fldPath.Child("description"), "must provide a description when key is present"))
 	}
@@ -683,6 +690,10 @@ func ValidateSubject(subject rbacv1.Subject, fldPath *field.Path) field.ErrorLis
 // ValidateProjectStatusUpdate validates the status field of a Project object.
 func ValidateProjectStatusUpdate(newProject, oldProject *garden.Project) field.ErrorList {
 	allErrs := field.ErrorList{}
+
+	if len(oldProject.Status.Phase) > 0 && len(newProject.Status.Phase) == 0 {
+		allErrs = append(allErrs, field.Forbidden(field.NewPath("status").Child("phase"), "phase cannot be updated to an empty string"))
+	}
 
 	return allErrs
 }

@@ -20,35 +20,40 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	"k8s.io/api/admission/v1beta1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 )
 
 type namespaceDeletionHandler struct {
 	k8sGardenClient kubernetes.Client
-	projectLister   gardenlisters.ProjectLister
-	scheme          *runtime.Scheme
-	codecs          serializer.CodecFactory
+
+	projectLister              gardenlisters.ProjectLister
+	backupInfrastructureLister gardenlisters.BackupInfrastructureLister
+	shootLister                gardenlisters.ShootLister
+
+	scheme *runtime.Scheme
+	codecs serializer.CodecFactory
 }
 
 // NewValidateNamespaceDeletionHandler creates a new handler for validating namespace deletions.
-func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Client, projectLister gardenlisters.ProjectLister) func(http.ResponseWriter, *http.Request) {
+func NewValidateNamespaceDeletionHandler(k8sGardenClient kubernetes.Client, projectLister gardenlisters.ProjectLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister, shootLister gardenlisters.ShootLister) func(http.ResponseWriter, *http.Request) {
 	scheme := runtime.NewScheme()
 	corev1.AddToScheme(scheme)
 	admissionregistrationv1beta1.AddToScheme(scheme)
 
-	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, scheme, serializer.NewCodecFactory(scheme)}
+	h := &namespaceDeletionHandler{k8sGardenClient, projectLister, backupInfrastructureLister, shootLister, scheme, serializer.NewCodecFactory(scheme)}
 	return h.ValidateNamespaceDeletion
 }
 
@@ -107,21 +112,6 @@ func (h *namespaceDeletionHandler) ValidateNamespaceDeletion(w http.ResponseWrit
 	respond(w, reviewResponse)
 }
 
-func respond(w http.ResponseWriter, response *v1beta1.AdmissionResponse) {
-	responseObj := v1beta1.AdmissionReview{}
-	if response != nil {
-		responseObj.Response = response
-	}
-
-	jsonResponse, err := json.Marshal(responseObj)
-	if err != nil {
-		logger.Logger.Error(err)
-	}
-	if _, err := w.Write(jsonResponse); err != nil {
-		logger.Logger.Error(err)
-	}
-}
-
 // admitNamespaces does only allow the request if no Shoots and no BackupInfrastructures exist in this
 // specific namespace anymore.
 func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionRequest) *v1beta1.AdmissionResponse {
@@ -143,6 +133,9 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 	// We do not receive the namespace object in the `.object` field of the admission request. Hence, we need to get it ourselves.
 	namespace, err := h.k8sGardenClient.GetNamespace(request.Name)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return admissionResponse(true, "")
+		}
 		return errToAdmissionResponse(err)
 	}
 
@@ -150,21 +143,52 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 	case namespace.DeletionTimestamp != nil:
 		// Namespace is already marked to be deleted so we can allow the request.
 		return admissionResponse(true, "")
-	case namespace.DeletionTimestamp == nil && project.DeletionTimestamp != nil:
-		// Namespace is not yet marked to be deleted but the project is. We look up the project condition which indicates that it's safe to admit
-		// the namespace deletion.
-		for _, condition := range project.Status.Conditions {
-			if condition.Type == gardenv1beta1.ProjectNamespaceReady && condition.Status == corev1.ConditionFalse && condition.Reason == gardenv1beta1.ProjectNamespaceDeletionAllowed {
-				return admissionResponse(true, "")
-			}
-			if condition.Type == gardenv1beta1.ProjectNamespaceEmpty && condition.Status == corev1.ConditionTrue {
-				return admissionResponse(true, "")
-			}
+	case project.DeletionTimestamp != nil:
+		namespaceEmpty, err := h.isNamespaceEmpty(namespace.Name)
+		if err != nil {
+			return errToAdmissionResponse(err)
 		}
-		return admissionResponse(false, fmt.Sprintf("Deletion of namespace '%s' is not permitted (please check the status conditions of project '%s': they indicate that it's safe to delete the namespace).", namespace.Name, project.Name))
+
+		if namespaceEmpty {
+			return admissionResponse(true, "")
+		}
+		return admissionResponse(false, fmt.Sprintf("Deletion of namespace %q is not permitted (there are still Shoots or BackupInfrastructures).", namespace.Name))
 	}
 
 	// Namespace is not yet marked to be deleted and project is not marked as well. We do not admit and respond that namespace deletion is only
 	// allowed via project deletion.
-	return admissionResponse(false, fmt.Sprintf("Direct deletion of namespace '%s' is not permitted (you must delete the corresponding project '%s').", namespace.Name, project.Name))
+	return admissionResponse(false, fmt.Sprintf("Direct deletion of namespace %q is not permitted (you must delete the corresponding project %q).", namespace.Name, project.Name))
+}
+
+func (h *namespaceDeletionHandler) isNamespaceEmpty(namespace string) (bool, error) {
+	backupInfrastructureList, err := h.backupInfrastructureLister.BackupInfrastructures(namespace).List(labels.Everything())
+	if err != nil {
+		return false, err
+	}
+
+	if len(backupInfrastructureList) != 0 {
+		return false, nil
+	}
+
+	shootList, err := h.shootLister.Shoots(namespace).List(labels.Everything())
+	if err != nil {
+		return false, err
+	}
+
+	return len(shootList) == 0, nil
+}
+
+func respond(w http.ResponseWriter, response *v1beta1.AdmissionResponse) {
+	responseObj := v1beta1.AdmissionReview{}
+	if response != nil {
+		responseObj.Response = response
+	}
+
+	jsonResponse, err := json.Marshal(responseObj)
+	if err != nil {
+		logger.Logger.Error(err)
+	}
+	if _, err := w.Write(jsonResponse); err != nil {
+		logger.Logger.Error(err)
+	}
 }

@@ -35,12 +35,9 @@ import (
 type Controller struct {
 	k8sGardenClient    kubernetes.Client
 	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sInformers       kubeinformers.SharedInformerFactory
 
-	k8sInformers kubeinformers.SharedInformerFactory
-
-	control                 ControlInterface
-	projectNamespaceControl ControlInterfaceProjectNamespace
-
+	control  ControlInterface
 	recorder record.EventRecorder
 
 	projectLister gardenlisters.ProjectLister
@@ -71,26 +68,19 @@ func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFacto
 		namespaceInformer = corev1Informer.Namespaces()
 		namespaceLister   = namespaceInformer.Lister()
 
-		backupInfrastructureInformer = gardenv1beta1Informer.BackupInfrastructures()
-		backupInfrastructureLister   = backupInfrastructureInformer.Lister()
-
-		shootInformer = gardenv1beta1Informer.Shoots()
-		shootLister   = shootInformer.Lister()
-
 		projectUpdater = NewRealUpdater(k8sGardenClient, projectLister)
 	)
 
 	projectController := &Controller{
-		k8sGardenClient:         k8sGardenClient,
-		k8sGardenInformers:      gardenInformerFactory,
-		control:                 NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, projectUpdater, backupInfrastructureLister, shootLister, namespaceLister),
-		projectNamespaceControl: NewDefaultProjectNamespaceControl(k8sGardenClient, kubeInformerFactory, namespaceLister, projectLister),
-		recorder:                recorder,
-		projectLister:           projectLister,
-		projectQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
-		namespaceLister:         namespaceLister,
-		namespaceQueue:          workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Namespace"),
-		workerCh:                make(chan int),
+		k8sGardenClient:    k8sGardenClient,
+		k8sGardenInformers: gardenInformerFactory,
+		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, recorder, projectUpdater, namespaceLister),
+		recorder:           recorder,
+		projectLister:      projectLister,
+		projectQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Project"),
+		namespaceLister:    namespaceLister,
+		namespaceQueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "Namespace"),
+		workerCh:           make(chan int),
 	}
 
 	projectInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -99,12 +89,6 @@ func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFacto
 		DeleteFunc: projectController.projectDelete,
 	})
 	projectController.projectSynced = projectInformer.Informer().HasSynced
-
-	namespaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    projectController.namespaceAdd,
-		UpdateFunc: projectController.namespaceUpdate,
-		DeleteFunc: projectController.namespaceDelete,
-	})
 	projectController.namespaceSynced = namespaceInformer.Informer().HasSynced
 
 	return projectController
@@ -134,9 +118,6 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for i := 0; i < workers; i++ {
 		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.reconcileProjectKey, &waitGroup, c.workerCh)
-	}
-	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.namespaceQueue, "Project Namespaces", c.reconcileProjectNamespaceKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

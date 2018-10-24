@@ -2,7 +2,7 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: garden.sapcloud.io:system:project:{{ .Values.project.name }}
+  name: garden.sapcloud.io:system:project-member:{{ .Values.project.name }}
   ownerReferences:
   - apiVersion: garden.sapcloud.io/v1beta1
     kind: Project

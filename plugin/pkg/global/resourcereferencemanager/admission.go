@@ -229,10 +229,35 @@ func (r *ReferenceManager) Admit(a admission.Attributes) error {
 		}
 		// Set createdBy field in Project
 		if a.GetOperation() == admission.Create {
-			project.Spec.CreatedBy = rbacv1.Subject{
+			project.Spec.CreatedBy = &rbacv1.Subject{
 				APIGroup: "rbac.authorization.k8s.io",
 				Kind:     rbacv1.UserKind,
 				Name:     a.GetUserInfo().GetName(),
+			}
+			if project.Spec.Owner == nil {
+				project.Spec.Owner = project.Spec.CreatedBy
+			}
+		}
+		if a.GetOperation() == admission.Update {
+			if createdBy, ok := project.Annotations[common.GardenCreatedBy]; ok {
+				project.Spec.CreatedBy = &rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     createdBy,
+				}
+				delete(project.Annotations, common.GardenCreatedBy)
+			}
+		}
+
+		if project.Spec.Owner != nil {
+			ownerPartOfMember := false
+			for _, member := range project.Spec.Members {
+				if member == *project.Spec.Owner {
+					ownerPartOfMember = true
+				}
+			}
+			if !ownerPartOfMember {
+				project.Spec.Members = append(project.Spec.Members, *project.Spec.Owner)
 			}
 		}
 	}

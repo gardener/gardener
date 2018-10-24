@@ -443,11 +443,41 @@ var _ = Describe("resourcereferencemanager", func() {
 				err := admissionHandler.Admit(attrs)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(project.Spec.CreatedBy).To(Equal(rbacv1.Subject{
+				Expect(project.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
 					APIGroup: "rbac.authorization.k8s.io",
 					Kind:     rbacv1.UserKind,
 					Name:     defaultUserName,
 				}))
+			})
+
+			It("should set the owner field", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+
+				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(project.Spec.Owner).To(Equal(&rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     defaultUserName,
+				}))
+			})
+
+			It("should add the owner to members", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+
+				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(project.Spec.Members).To(ContainElement(Equal(rbacv1.Subject{
+					APIGroup: "rbac.authorization.k8s.io",
+					Kind:     rbacv1.UserKind,
+					Name:     defaultUserName,
+				})))
 			})
 		})
 	})

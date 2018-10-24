@@ -16,11 +16,8 @@ package storage
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metatable "k8s.io/apimachinery/pkg/api/meta/table"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,10 +36,10 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Owner", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["owner"]},
 			{Name: "Namespace", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["namespace"]},
-			{Name: "Status", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["status"]},
-			{Name: "Ready", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["ready"]},
+			{Name: "Status", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["phase"]},
+			{Name: "Owner", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["owner"]},
+			{Name: "Creator", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["creator"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -75,27 +72,23 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, project.Name)
-		cells = append(cells, project.Spec.Owner.Name)
 		if namespace := project.Spec.Namespace; namespace != nil {
 			cells = append(cells, *namespace)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
-		if project.DeletionTimestamp == nil {
-			if project.Spec.Namespace == nil {
-				cells = append(cells, "Pending")
-			} else {
-				cells = append(cells, "Active")
-			}
+		if phase := project.Status.Phase; len(phase) > 0 {
+			cells = append(cells, phase)
 		} else {
-			cells = append(cells, "Terminating")
+			cells = append(cells, "<unknown>")
 		}
-		if cond := helper.GetCondition(project.Status.Conditions, garden.ProjectNamespaceReady); cond != nil {
-			if cond.Status == corev1.ConditionTrue {
-				cells = append(cells, cond.Status)
-			} else {
-				cells = append(cells, fmt.Sprintf("%s (%s)", cond.Status, cond.Reason))
-			}
+		if owner := project.Spec.Owner; owner != nil {
+			cells = append(cells, owner.Name)
+		} else {
+			cells = append(cells, "<unknown>")
+		}
+		if createdBy := project.Spec.CreatedBy; createdBy != nil {
+			cells = append(cells, createdBy.Name)
 		} else {
 			cells = append(cells, "<unknown>")
 		}

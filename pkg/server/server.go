@@ -54,14 +54,19 @@ func Serve(ctx context.Context, k8sGardenClient kubernetes.Client, k8sGardenInfo
 		}
 	}()
 
-	projectInformer := k8sGardenInformers.Garden().V1beta1().Projects()
+	var (
+		projectInformer              = k8sGardenInformers.Garden().V1beta1().Projects()
+		backupInfrastructureInformer = k8sGardenInformers.Garden().V1beta1().BackupInfrastructures()
+		shootInformer                = k8sGardenInformers.Garden().V1beta1().Shoots()
+	)
+
 	k8sGardenInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), projectInformer.Informer().HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), projectInformer.Informer().HasSynced, backupInfrastructureInformer.Informer().HasSynced, shootInformer.Informer().HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
 	}
 
 	// Add handlers to HTTPS server and start it.
-	serverMuxHTTPS.HandleFunc("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient, projectInformer.Lister()))
+	serverMuxHTTPS.HandleFunc("/webhooks/validate-namespace-deletion", webhooks.NewValidateNamespaceDeletionHandler(k8sGardenClient, projectInformer.Lister(), backupInfrastructureInformer.Lister(), shootInformer.Lister()))
 
 	go func() {
 		logger.Logger.Infof("Starting HTTPS server on %s", listenAddressHTTPS)

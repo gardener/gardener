@@ -29,7 +29,6 @@ import (
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
 	gardenmetrics "github.com/gardener/gardener/pkg/metrics"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
 
@@ -38,7 +37,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/wait"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
@@ -192,33 +190,6 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 			}
 		}
 	}()
-
-	// Now that we have Project resources we should wait for the Project controller to create the Project resources
-	// for all namespaces before starting the Shoot controller. This is because the Shoot controller wants to read
-	// the Project object responsible for a respective Shoot object and, if it starts simultaneously to the Project
-	// controller, some of the needed objects are not yet created.
-	// This is only needed for backwards-compatibility and can be removed in a future version.
-	if err := wait.Poll(time.Second, 5*time.Minute, func() (bool, error) {
-		selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleProject))
-		if err != nil {
-			return false, err
-		}
-		namespaceList, err := c.namespaceLister.List(selector)
-		if err != nil {
-			return false, err
-		}
-		projectList, err := c.projectLister.List(labels.Everything())
-		if err != nil {
-			return false, err
-		}
-
-		if len(namespaceList) != len(projectList) {
-			return false, nil
-		}
-		return true, nil
-	}); err != nil {
-		panic(fmt.Sprintf("error occurred while waiting for the project controller to create all project resources: %+v", err))
-	}
 
 	// Update Shoots before starting the workers.
 	shoots, err := c.shootLister.List(labels.Everything())

@@ -1699,12 +1699,12 @@ var _ = Describe("validation", func() {
 					Name: "project-1",
 				},
 				Spec: garden.ProjectSpec{
-					CreatedBy: rbacv1.Subject{
+					CreatedBy: &rbacv1.Subject{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     rbacv1.UserKind,
 						Name:     "john.doe@example.com",
 					},
-					Owner: rbacv1.Subject{
+					Owner: &rbacv1.Subject{
 						APIGroup: "rbac.authorization.k8s.io",
 						Kind:     rbacv1.UserKind,
 						Name:     "john.doe@example.com",
@@ -1783,8 +1783,8 @@ var _ = Describe("validation", func() {
 					Namespace: namespace,
 				}
 
-				project.Spec.Owner = subject
-				project.Spec.CreatedBy = subject
+				project.Spec.Owner = &subject
+				project.Spec.CreatedBy = &subject
 				project.Spec.Members = []rbacv1.Subject{subject}
 
 				errList := ValidateProject(project)
@@ -1846,6 +1846,18 @@ var _ = Describe("validation", func() {
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.createdBy"),
+			}))))
+		})
+
+		It("should forbid Project updates trying to reset the owner field", func() {
+			newProject := prepareProjectForUpdate(project)
+			newProject.Spec.Owner = nil
+
+			errorList := ValidateProjectUpdate(newProject, project)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("spec.owner"),
 			}))))
 		})
 	})

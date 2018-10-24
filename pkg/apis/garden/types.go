@@ -419,18 +419,21 @@ type ProjectList struct {
 type ProjectSpec struct {
 	// CreatedBy is a subject representing a user name, an email address, or any other identifier of a user
 	// who created the project.
-	CreatedBy rbacv1.Subject
+	// +optional
+	CreatedBy *rbacv1.Subject
 	// Description is a human-readable description of what the project is used for.
 	// +optional
 	Description *string
 	// Owner is a subject representing a user name, an email address, or any other identifier of a user owning
 	// the project.
-	Owner rbacv1.Subject
+	// +optional
+	Owner *rbacv1.Subject
 	// Purpose is a human-readable explanation of the project's purpose.
 	// +optional
 	Purpose *string
 	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user
 	// that should be part of this project.
+	// +optional
 	Members []rbacv1.Subject
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// +optional
@@ -439,10 +442,26 @@ type ProjectSpec struct {
 
 // ProjectStatus holds the most recently observed status of the project.
 type ProjectStatus struct {
-	// Conditions represents the latest available observations of a Projects's current state.
+	// ObservedGeneration is the most recent generation observed for this project.
 	// +optional
-	Conditions []Condition
+	ObservedGeneration int64
+	// Phase is the current phase of the project.
+	Phase ProjectPhase
 }
+
+// ProjectPhase is a label for the condition of a project at the current time.
+type ProjectPhase string
+
+const (
+	// ProjectPending indicates that the project reconciliation is pending.
+	ProjectPending ProjectPhase = "Pending"
+	// ProjectReady indicates that the project reconciliation was successful.
+	ProjectReady ProjectPhase = "Ready"
+	// ProjectFailed indicates that the project reconciliation failed.
+	ProjectFailed ProjectPhase = "Failed"
+	// ProjectTerminating indicates that the project is in termination process.
+	ProjectTerminating ProjectPhase = "Terminating"
+)
 
 ////////////////////////////////////////////////////
 //                      SEEDS                     //
@@ -1459,10 +1478,20 @@ const (
 	EventDeleted = "Deleted"
 	// EventDeleteError indicates that the a Delete operation failed.
 	EventDeleteError = "DeleteError"
+
 	// ShootEventMaintenanceDone indicates that a maintenance operation has been performed.
 	ShootEventMaintenanceDone = "MaintenanceDone"
 	// ShootEventMaintenanceError indicates that a maintenance operation has failed.
 	ShootEventMaintenanceError = "MaintenanceError"
+
+	// ProjectEventNamespaceReconcileFailed indicates that the namespace reconciliation has failed.
+	ProjectEventNamespaceReconcileFailed = "NamespaceReconcileFailed"
+	// ProjectEventNamespaceReconcileSuccessful indicates that the namespace reconciliation has succeeded.
+	ProjectEventNamespaceReconcileSuccessful = "NamespaceReconcileSuccessful"
+	// ProjectEventNamespaceDeletionFailed indicates that the namespace deletion failed.
+	ProjectEventNamespaceDeletionFailed = "NamespaceDeletionFailed"
+	// ProjectEventNamespaceMarkedForDeletion indicates that the namespace has been successfully marked for deletion.
+	ProjectEventNamespaceMarkedForDeletion = "NamespaceMarkedForDeletion"
 )
 
 const (
@@ -1496,29 +1525,6 @@ type Condition struct {
 type ConditionType string
 
 const (
-	// ProjectNamespaceEmpty is a constant for a condition type indicating the Project namespace has no Shoots or
-	// BackupInfrastructures.
-	ProjectNamespaceEmpty ConditionType = "NamespaceEmpty"
-	// ProjectShootsWithErrors is a constant for a condition type indicating that Shoots within the project have
-	// errors.
-	ProjectShootsWithErrors ConditionType = "ShootsWithErrors"
-	// ProjectNamespaceReady is a constant for a condition type indicating the Project namespace has been created.
-	ProjectNamespaceReady ConditionType = "NamespaceReady"
-	// ProjectNamespaceCreationFailed is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceCreationFailed string = "NamespaceCreationFailed"
-	// ProjectNamespaceReconciled is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceReconciled string = "NamespaceReconciled"
-	// ProjectNamespaceReconcileFailed is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceReconcileFailed string = "NamespaceReconcileFailed"
-	// ProjectNamespaceDeletionAllowed is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceDeletionAllowed string = "NamespaceDeletionAllowed"
-	// ProjectNamespaceDeletionProcessing is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceDeletionProcessing string = "NamespaceDeletionProcessing"
-	// ProjectNamespaceDeletionImpossible is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceDeletionImpossible string = "NamespaceDeletionImpossible"
-	// ProjectNamespaceDeletionFailed is a constant for a reason for the status of condition type ProjectNamespaceReady.
-	ProjectNamespaceDeletionFailed string = "NamespaceDeletionFailed"
-
 	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
 	SeedAvailable ConditionType = "Available"
 
