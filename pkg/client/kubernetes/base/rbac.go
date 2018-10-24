@@ -58,3 +58,13 @@ func (c *Client) patchRoleBinding(oldObj, newObj *rbacv1.RoleBinding) (*rbacv1.R
 
 	return c.clientset.RbacV1().RoleBindings(oldObj.Namespace).Patch(oldObj.Name, types.StrategicMergePatchType, patch)
 }
+
+// DeleteClusterRole deletes a ClusterRole object.
+func (c *Client) DeleteClusterRole(name string) error {
+	return c.Clientset().RbacV1().ClusterRoles().Delete(name, &defaultDeleteOptions)
+}
+
+// DeleteRoleBinding deletes a RoleBindung object.
+func (c *Client) DeleteRoleBinding(namespace, name string) error {
+	return c.Clientset().RbacV1().RoleBindings(namespace).Delete(name, &defaultDeleteOptions)
+}

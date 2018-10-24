@@ -1,0 +1,104 @@
+# Default values for cert-manager.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+replicaCount: 1
+enabled: true
+
+createCustomResource: true
+
+# Override the namespace used to store DNS provider credentials etc. for ClusterIssuer
+# resources. By default, the same namespace as cert-manager is deployed within is
+# used. This namespace will not be automatically created by the Helm chart.
+clusterResourceNamespace: ""
+
+leaderElection:
+  # Override the namespace used to store the ConfigMap for leader election
+  namespace: ""
+
+certificateResourceShortNames: ["cert", "certs"]
+
+rbac:
+  # Specifies whether RBAC resources should be created
+  create: true
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name:
+
+# Optional additional arguments
+extraArgs: []
+  # Use this flag to set a namespace that cert-manager will use to store
+  # supporting resources required for each ClusterIssuer (default is kube-system)
+  # - --cluster-resource-namespace=kube-system
+
+extraEnv: []
+# - name: SOME_VAR
+#   value: 'some value'
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+podAnnotations: {}
+
+podLabels: {}
+# Optional DNS settings, useful if you have a public and private DNS zone for
+# the same domain on Route 53. What follows is an example of ensuring
+# cert-manager can access an ingress or DNS TXT records at all times.
+# NOTE: This requires Kubernetes 1.10 or `CustomPodDNS` feature gate enabled for
+# the cluster to work.
+# podDnsPolicy: "None"
+# podDnsConfig:
+#   nameservers:
+#     - "1.1.1.1"
+#     - "8.8.8.8"
+
+nodeSelector: {}
+
+ingressShim: {}
+  # defaultIssuerName: ""
+  # defaultIssuerKind: ""
+  # defaultACMEChallengeType: ""
+  # defaultACMEDNS01ChallengeProvider: ""
+
+# This is used by the static manifest generator in order to create a static
+# namespace manifest for the namespace that cert-manager is being installed
+# within. It should **not** be used if you are using Helm for deployment.
+createNamespaceResource: false
+
+# Use these variables to configure the HTTP_PROXY environment variables
+# http_proxy: "http://proxy:8080"
+# http_proxy: "http://proxy:8080"
+# no_proxy: 127.0.0.1,localhost
+
+name: cert-manager
+
+images:
+  cert-manager: image-repository:image-tag
+
+clusterissuer:
+  name: issuer
+  acme:
+    email: john.doe@example.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    letsEncrypt:
+      name: lets-encrypt
+      key:
+    dns01:
+      providers:
+      - name: prod-route53
+        type: aws-route53
+        region: us-east-1
+        accessKeyID:
+        accessKey: your-access-key
+      - name: prod-clouddns
+        type: google-clouddns
+        project:
+        accessKey: your-access-key

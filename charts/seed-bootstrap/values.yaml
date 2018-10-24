@@ -55,6 +55,7 @@ images:
   pause-container: image-repository:image-tag
   prometheus: image-repository:image-tag
   gardener-external-admission-controller: image-repository:image-tag
+  cert-manager: image-repository:image-tag
 
 prometheusPort: 9090
 
@@ -79,3 +80,6 @@ fluentd-es:
   enabled: true
   images:
     fluentd-es: image-repository:image-tag
+
+cert-manager:
+  enabled: true

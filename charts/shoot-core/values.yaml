@@ -32,3 +32,5 @@ metrics-server:
     metrics-server: image-repository:image-tag
 podsecuritypolicies:
   allowPrivilegedContainers: false
+cert-broker:
+  enabled: true

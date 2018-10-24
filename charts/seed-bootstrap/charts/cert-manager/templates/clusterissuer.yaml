@@ -1,0 +1,54 @@
+# CluserIssuer
+apiVersion: certmanager.k8s.io/v1alpha1
+kind: ClusterIssuer
+metadata:
+  name: {{ .Values.clusterissuer.name }}
+spec:
+  acme:
+    email: {{ .Values.clusterissuer.acme.email }}
+    server: {{ .Values.clusterissuer.acme.server }}
+    privateKeySecretRef:
+      name: {{ .Values.clusterissuer.acme.letsEncrypt.name }}
+    dns01:
+      providers:
+      {{- range .Values.clusterissuer.acme.dns01.providers }}
+      - name: {{ .name }}
+      {{- if eq .type "aws-route53" }}
+        route53:
+          region: {{ .region }}
+          accessKeyID: {{ .accessKeyID }}
+          secretAccessKeySecretRef:
+            name: {{ .name }}
+            key: accessKey
+      {{- else if eq .type "google-clouddns" }}
+        clouddns:
+          project: {{ .project }}
+          serviceAccountSecretRef:
+            name: {{ .name }}
+            key: accessKey
+      {{- end }}
+      {{- end }}
+{{- range .Values.clusterissuer.acme.dns01.providers }}
+# Secret for DNS provider used for DNS01 challenge.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+type: Opaque
+data:
+  accessKey: {{ .accessKey | b64enc }}
+{{- end }}
+{{- if .Values.clusterissuer.acme.letsEncrypt.key }}
+# Secret for Let's Encrypt account.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .Values.clusterissuer.acme.letsEncrypt.name }}
+  namespace: {{ .Release.Namespace }}
+type: Opaque
+data:
+  tls.key: {{ .Values.clusterissuer.acme.letsEncrypt.key | b64enc }}
+{{- end }}

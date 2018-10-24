@@ -9,3 +9,8 @@ dependencies:
   version: 0.1.0
   # needed for the logging feature gate
   condition: fluentd-es.enabled
+- name: cert-manager
+  repository: http://localhost:10191
+  version: 0.4.1
+  # needed for the CertificateManagement feature gate
+  condition: cert-manager.enabled
