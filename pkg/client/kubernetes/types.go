@@ -97,6 +97,8 @@ type Client interface {
 	GetDeployment(string, string) (*appsv1.Deployment, error)
 	ListDeployments(string, metav1.ListOptions) (*appsv1.DeploymentList, error)
 	PatchDeployment(string, string, []byte) (*appsv1.Deployment, error)
+	StrategicMergePatchDeployment(*appsv1.Deployment, *appsv1.Deployment) (*appsv1.Deployment, error)
+	ScaleDeployment(string, string, int32) (*appsv1.Deployment, error)
 	DeleteDeployment(string, string) error
 
 	// StatefulSets

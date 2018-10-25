@@ -22,8 +22,10 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -332,6 +334,18 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		}
 	}
 
+	// If a shoot is hibernated we only want to scale down the KCM if no nodes exist anymore. The node-lifecycle-controller
+	// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs.
+	if b.Shoot.IsHibernated {
+		nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+		if len(nodeList.Items) == 0 {
+			defaultValues["replicas"] = 0
+		}
+	}
+
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
 	if controllerManagerConfig != nil {
 		defaultValues["featureGates"] = controllerManagerConfig.FeatureGates
@@ -357,6 +371,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		"clusterName":       b.Shoot.SeedNamespace,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
+		"replicas":          b.Shoot.GetReplicas(1),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cloud-controller-manager":        b.CheckSums[common.CloudControllerManagerDeploymentName],
 			"checksum/secret-cloud-controller-manager-server": b.CheckSums[common.CloudControllerManagerServerName],
@@ -395,6 +410,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 // kube-scheduler deployment.
 func (b *HybridBotanist) DeployKubeScheduler() error {
 	defaultValues := map[string]interface{}{
+		"replicas":          b.Shoot.GetReplicas(1),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-scheduler": b.CheckSums[common.KubeSchedulerDeploymentName],

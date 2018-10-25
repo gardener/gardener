@@ -224,7 +224,8 @@ func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
 	var (
 		name          = "aws-lb-readvertiser"
 		defaultValues = map[string]interface{}{
-			"domain": b.APIServerAddress,
+			"domain":   b.APIServerAddress,
+			"replicas": b.Shoot.GetReplicas(1),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-aws-lb-readvertiser": b.CheckSums[name],
 			},
