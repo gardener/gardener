@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -57,4 +58,14 @@ func computeLabelsWithShootHealthiness(healthy bool) func(map[string]string) map
 func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
 	_, ignore := annotations[common.ShootIgnore]
 	return respectSyncPeriodOverwrite != nil && ignore && *respectSyncPeriodOverwrite
+}
+
+func seedIsShoot(seed *gardenv1beta1.Seed) bool {
+	hasOwnerReference, _ := seedHasShootOwnerReference(seed.ObjectMeta)
+	return hasOwnerReference
+}
+
+func shootIsSeed(shoot *gardenv1beta1.Shoot) bool {
+	shootedSeed, err := helper.ReadShootedSeed(shoot)
+	return err == nil && shootedSeed != nil
 }
