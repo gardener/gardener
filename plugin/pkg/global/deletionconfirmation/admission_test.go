@@ -15,17 +15,23 @@
 package deletionconfirmation_test
 
 import (
-	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
+	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion/fake"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	. "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("deleteconfirmation", func() {
@@ -41,6 +47,7 @@ var _ = Describe("deleteconfirmation", func() {
 			admissionHandler *DeletionConfirmation
 
 			gardenInformerFactory gardeninformers.SharedInformerFactory
+			gardenClient          *fake.Clientset
 		)
 
 		BeforeEach(func() {
@@ -49,6 +56,9 @@ var _ = Describe("deleteconfirmation", func() {
 
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+
+			gardenClient = &fake.Clientset{}
+			admissionHandler.SetInternalGardenClientset(gardenClient)
 
 			shootStore = gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore()
 			projectStore = gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore()
@@ -77,6 +87,11 @@ var _ = Describe("deleteconfirmation", func() {
 		Context("Shoot resources", func() {
 			It("should do nothing because the resource is already removed", func() {
 				attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
+				msg := `shoot.garden.sapcloud.io "dummy" not found`
+
+				gardenClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf(msg)
+				})
 
 				err := admissionHandler.Admit(attrs)
 
@@ -110,7 +125,7 @@ var _ = Describe("deleteconfirmation", func() {
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
 				})
 
-				It("should succeed for true annotation value", func() {
+				It("should succeed for true annotation value (cache lookup)", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
 					shoot.Annotations = map[string]string{
@@ -122,17 +137,43 @@ var _ = Describe("deleteconfirmation", func() {
 
 					Expect(err).NotTo(HaveOccurred())
 				})
+
+				It("should succeed for true annotation value (live lookup)", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
+
+					shootStore.Add(&shoot)
+					gardenClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
+						return true, &garden.Shoot{
+							ObjectMeta: metav1.ObjectMeta{
+								Name:      shoot.Name,
+								Namespace: shoot.Namespace,
+								Annotations: map[string]string{
+									common.ConfirmationDeletion: "true",
+								},
+							},
+						}, nil
+					})
+
+					err := admissionHandler.Admit(attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 
 		Context("Project resources", func() {
 			It("should do nothing because the resource is already removed", func() {
 				attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
+				msg := `project.garden.sapcloud.io "dummy" not found`
+
+				gardenClient.AddReactor("get", "projects", func(action testing.Action) (bool, runtime.Object, error) {
+					return true, nil, fmt.Errorf(msg)
+				})
 
 				err := admissionHandler.Admit(attrs)
 
 				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(Equal(`project.garden.sapcloud.io "dummy" not found`))
+				Expect(err.Error()).To(Equal(msg))
 			})
 
 			Context("no annotation", func() {
@@ -161,13 +202,32 @@ var _ = Describe("deleteconfirmation", func() {
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
 				})
 
-				It("should succeed for true annotation value", func() {
+				It("should succeed for true annotation value (cache lookup)", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
 
 					project.Annotations = map[string]string{
 						common.ConfirmationDeletion: "true",
 					}
 					projectStore.Add(&project)
+
+					err := admissionHandler.Admit(attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should succeed for true annotation value (live lookup)", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
+
+					gardenClient.AddReactor("get", "projects", func(action testing.Action) (bool, runtime.Object, error) {
+						return true, &garden.Project{
+							ObjectMeta: metav1.ObjectMeta{
+								Name: project.Name,
+								Annotations: map[string]string{
+									common.ConfirmationDeletion: "true",
+								},
+							},
+						}, nil
+					})
 
 					err := admissionHandler.Admit(attrs)
 
