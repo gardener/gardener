@@ -22,6 +22,15 @@ import (
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
+const cloudProviderConfigTemplate = `
+[Global]
+project-id=%q
+network-name=%q
+multizone=true
+token-url=nil
+node-tags=%q
+`
+
 // GenerateCloudProviderConfig generates the GCE cloud provider config.
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/gce/gce.go
@@ -31,12 +40,12 @@ func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 		networkName = b.Shoot.SeedNamespace
 	}
 
-	return `[Global]
-project-id="` + b.Project + `"
-network-name="` + networkName + `"
-multizone=true
-token-url=nil
-node-tags="` + b.Shoot.SeedNamespace + `"`, nil
+	return fmt.Sprintf(
+		cloudProviderConfigTemplate,
+		b.Project,
+		networkName,
+		b.Shoot.SeedNamespace,
+	), nil
 }
 
 // RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud

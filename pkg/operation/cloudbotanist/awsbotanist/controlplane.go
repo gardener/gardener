@@ -15,6 +15,7 @@
 package awsbotanist
 
 import (
+	"fmt"
 	"path/filepath"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -23,6 +24,16 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
+
+const cloudProviderConfigTemplate = `
+[Global]
+VPC=%q
+SubnetID=%q
+DisableSecurityGroupIngress=true
+KubernetesClusterTag=%q
+KubernetesClusterID=%q
+Zone=%q
+`
 
 // GenerateCloudProviderConfig generates the AWS cloud provider config.
 // See this for more details:
@@ -41,13 +52,14 @@ func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
 		return "", err
 	}
 
-	return `[Global]
-VPC="` + stateVariables[vpcID] + `"
-SubnetID="` + stateVariables[subnetID] + `"
-DisableSecurityGroupIngress=true
-KubernetesClusterTag="` + b.Shoot.SeedNamespace + `"
-KubernetesClusterID="` + b.Shoot.SeedNamespace + `"
-Zone="` + b.Shoot.Info.Spec.Cloud.AWS.Zones[0] + `"`, nil
+	return fmt.Sprintf(
+		cloudProviderConfigTemplate,
+		stateVariables[vpcID],
+		stateVariables[subnetID],
+		b.Shoot.SeedNamespace,
+		b.Shoot.SeedNamespace,
+		b.Shoot.Info.Spec.Cloud.AWS.Zones[0],
+	), nil
 }
 
 // RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud

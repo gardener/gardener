@@ -15,6 +15,9 @@
 package common_test
 
 import (
+	"fmt"
+	"strings"
+
 	. "github.com/gardener/gardener/pkg/operation/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -243,8 +246,29 @@ var _ = Describe("common", func() {
 		func(initializers *metav1.Initializers, name string, expected bool) {
 			Expect(HasInitializer(initializers, name)).To(Equal(expected))
 		},
+
 		Entry("nil initializers", nil, "foo", false),
 		Entry("no matching initializer", &metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}}, "foo", false),
 		Entry("matching initializer", &metav1.Initializers{Pending: []metav1.Initializer{{Name: "foo"}}}, "foo", true),
+	)
+
+	DescribeTable("#ReplaceCloudProviderConfigKey",
+		func(key, oldValue, newValue string) {
+			var (
+				separator = ": "
+
+				configWithoutQuotes = fmt.Sprintf("%s%s%s", key, separator, oldValue)
+				configWithQuotes    = fmt.Sprintf("%s%s\"%s\"", key, separator, strings.Replace(oldValue, `"`, `\"`, -1))
+				expected            = fmt.Sprintf("%s%s\"%s\"", key, separator, strings.Replace(newValue, `"`, `\"`, -1))
+			)
+
+			Expect(ReplaceCloudProviderConfigKey(configWithoutQuotes, separator, key, newValue)).To(Equal(expected))
+			Expect(ReplaceCloudProviderConfigKey(configWithQuotes, separator, key, newValue)).To(Equal(expected))
+		},
+
+		Entry("no special characters", "foo", "bar", "baz"),
+		Entry("no special characters", "foo", "bar", "baz"),
+		Entry("with special characters", "foo", `C*ko4P++$"x`, `"$++*ab*$c4k`),
+		Entry("with special characters", "foo", "P+*4", `P*$8uOkv6+4`),
 	)
 })

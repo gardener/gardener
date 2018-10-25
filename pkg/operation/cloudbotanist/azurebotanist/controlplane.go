@@ -22,6 +22,29 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const cloudProviderConfigTemplate = `
+cloud: AZUREPUBLICCLOUD
+tenantId: %q
+subscriptionId: %q
+resourceGroup: %q
+location: %q
+vnetName: %q
+subnetName: %q
+securityGroupName: %q
+routeTableName: %q
+primaryAvailabilitySetName: %q
+aadClientId: %q
+aadClientSecret: %q
+cloudProviderBackoff: true
+cloudProviderBackoffRetries: 6
+cloudProviderBackoffExponent: 1.5
+cloudProviderBackoffDuration: 5
+cloudProviderBackoffJitter: 1.0
+cloudProviderRateLimit: true
+cloudProviderRateLimitQPS: 10.0
+cloudProviderRateLimitBucket: 100
+`
+
 // GenerateCloudProviderConfig returns a cloud provider config for the Azure cloud provider
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/azure/azure.go
@@ -43,26 +66,20 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 		return "", err
 	}
 
-	cloudProviderConfig := `cloud: AZUREPUBLICCLOUD
-tenantId: "` + string(b.Shoot.Secret.Data[TenantID]) + `"
-subscriptionId: "` + string(b.Shoot.Secret.Data[SubscriptionID]) + `"
-resourceGroup: "` + stateVariables[resourceGroupName] + `"
-location: "` + b.Shoot.Info.Spec.Cloud.Region + `"
-vnetName: "` + stateVariables[vnetName] + `"
-subnetName: "` + stateVariables[subnetName] + `"
-securityGroupName: "` + stateVariables[securityGroupName] + `"
-routeTableName: "` + stateVariables[routeTableName] + `"
-primaryAvailabilitySetName: "` + stateVariables[availabilitySetName] + `"
-aadClientId: "` + string(b.Shoot.Secret.Data[ClientID]) + `"
-aadClientSecret: "` + string(b.Shoot.Secret.Data[ClientSecret]) + `"
-cloudProviderBackoff: true
-cloudProviderBackoffRetries: 6
-cloudProviderBackoffExponent: 1.5
-cloudProviderBackoffDuration: 5
-cloudProviderBackoffJitter: 1.0
-cloudProviderRateLimit: true
-cloudProviderRateLimitQPS: 10.0
-cloudProviderRateLimitBucket: 100`
+	cloudProviderConfig := fmt.Sprintf(
+		cloudProviderConfigTemplate,
+		string(b.Shoot.Secret.Data[TenantID]),
+		string(b.Shoot.Secret.Data[SubscriptionID]),
+		stateVariables[resourceGroupName],
+		b.Shoot.Info.Spec.Cloud.Region,
+		stateVariables[vnetName],
+		stateVariables[subnetName],
+		stateVariables[securityGroupName],
+		stateVariables[routeTableName],
+		stateVariables[availabilitySetName],
+		string(b.Shoot.Secret.Data[ClientID]),
+		string(b.Shoot.Secret.Data[ClientSecret]),
+	)
 
 	configHasWriteRateLimits, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.10")
 	if err != nil {
