@@ -22,7 +22,7 @@ data:
         seed_region: {{ .Values.seed.region }}
         seed_profile: {{ .Values.seed.profile }}
     rule_files:
-    - /etc/prometheus/rules/*.yml
+    - /etc/prometheus/rules/*.yaml
     alerting:
       alertmanagers:
       - kubernetes_sd_configs:
@@ -145,7 +145,9 @@ data:
         # systemd containers don't have namespaces
         regex: (^$|^kube-system$)
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
-      - source_labels: [ container_name ]
+      - source_labels:
+        - container_name
+        - __name__
         # The system container POD is used for networking
         regex: ^POD$;^({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})$
         action: drop
@@ -276,6 +278,7 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cloudControllerManager | indent 6 }}
 
+{{- if  (index .Values.rules.optional "cluster-autoscaler" ).enabled }}
     - job_name: cluster-autoscaler
       honor_labels: false
       kubernetes_sd_configs:
@@ -295,6 +298,7 @@ data:
         target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.clusterAutoscaler | indent 6 }}
+{{- end }}
 
     - job_name: machine-controller-manager
       honor_labels: false

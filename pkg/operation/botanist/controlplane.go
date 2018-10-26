@@ -294,6 +294,13 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"region":    b.Seed.Info.Spec.Cloud.Region,
 				"profile":   b.Seed.Info.Spec.Cloud.Profile,
 			},
+			"rules": map[string]interface{}{
+				"optional": map[string]interface{}{
+					"cluster-autoscaler": map[string]interface{}{
+						"enabled": b.Shoot.WantsClusterAutoscaler,
+					},
+				},
+			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),

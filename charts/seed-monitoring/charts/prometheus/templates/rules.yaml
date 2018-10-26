@@ -6,3 +6,10 @@ metadata:
   namespace: {{.Release.Namespace}}
 data:
 {{ (.Files.Glob "rules/**").AsConfig | indent 2 }}
+# optional rules
+{{- $files := .Files }}
+{{- range $k, $v := .Values.rules.optional }}
+{{- if $v.enabled }}
+{{ ($files.Glob ( printf "optional-rules/%s.rules.yaml" $k)).AsConfig | indent 2 }}
+{{- end }}
+{{- end }}

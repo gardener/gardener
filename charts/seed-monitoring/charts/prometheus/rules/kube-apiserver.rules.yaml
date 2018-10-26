@@ -1,0 +1,84 @@
+#ALERT KubeApiserverNotHA
+#  IF count(up{job="kube-apiserver"}) <= 1
+#  FOR 15m
+#  LABELS {
+#    service = "k8s",
+#    severity = "warning"
+#  }
+#  ANNOTATIONS {
+#    summary = "API server is not HA",
+#    description = "An API server needs to be HA.",
+#  }
+
+groups:
+- name: kube-apiserver.rules
+  rules:
+  - alert: KubeApiserverDown
+    expr: absent(up{job="kube-apiserver"} == 1)
+    for: 5m
+    labels:
+      job: kube-apiserver
+      service: kube-apiserver
+      severity: critical
+      type: seed
+    annotations:
+      description: Prometheus failed to scrape API server(s), or all API servers have disappeared from service discovery.
+      summary: API server unreachable
+  # Some verbs excluded because they are expected to be long-lasting:
+  # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
+  - alert: KubeApiServerLatency
+    expr: |
+      histogram_quantile(
+        0.99,
+        sum without (instance,resource) (apiserver_request_latencies_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY|proxy"})
+      ) / 1e6 > 1.0
+    for: 10m
+    labels:
+      service: kube-apiserver
+      severity: warning
+      type: seed
+    annotations:
+      description: 99th percentile Latency for {{ $labels.verb }} requests to the
+        kube-apiserver is higher than 1s.
+      summary: Kubernetes apiserver latency is high
+  ### API latency ###
+  - record: apiserver_latency_seconds:quantile
+    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) /
+      1e+06
+    labels:
+      quantile: "0.99"
+  - record: apiserver_latency:quantile_seconds
+    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) /
+      1e+06
+    labels:
+      quantile: "0.9"
+  - record: apiserver_latency_seconds:quantile
+    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) /
+      1e+06
+    labels:
+      quantile: "0.5"
+  # TODO: DRY?
+  - alert: KubeTooManyOpenFiles
+    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds >
+      50
+    for: 10m
+    labels:
+      service: kube-apiserver
+      severity: warning
+      type: seed
+    annotations:
+      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
+        descriptors.'
+      summary: '{{ $labels.job }} has too many open file descriptors'
+  - alert: KubeTooManyOpenFiles
+    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds >
+      80
+    for: 10m
+    labels:
+      service: kube-apiserver
+      severity: critical
+      type: seed
+    annotations:
+      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
+        descriptors.'
+      summary: '{{ $labels.job }} has too many open file descriptors'
