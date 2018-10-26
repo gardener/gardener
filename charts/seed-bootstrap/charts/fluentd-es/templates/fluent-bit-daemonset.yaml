@@ -16,7 +16,6 @@ spec:
       labels:
 {{ toYaml .Values.fluentbit.labels | indent 8 }}
     spec:
-      automountServiceAccountToken: false
       containers:
       - name: fluent-bit
         image: {{ index .Values.images "fluent-bit" }}
