@@ -10,7 +10,7 @@ data:
       evaluation_interval: 30s
       scrape_interval: 30s
     rule_files:
-    - /etc/prometheus/rules/*.yml
+    - /etc/prometheus/rules/*.yaml
 
     scrape_configs:
     - job_name: cadvisor
@@ -37,17 +37,23 @@ data:
       - target_label: type
         replacement: seed
 
-      # Drop metrics that are useless and high-volume
-      # Use topk(20, count by (__name__, job)({__name__=~".+"})) to find offending time-series
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
-      - source_labels: [ container_name ]
+      - source_labels:
+        - container_name
+        - __name__
         # The system container POD is used for networking
         regex: ^POD$;^({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})$
         action: drop
-        # drop terraform pods
+      # drop terraform pods
       - source_labels: [ pod_name ]
         regex: ^.+\.tf-pod.+$
         action: drop
+      # get system services
+      - source_labels: [ id ]
+        action: replace
+        regex: ^/system\.slice/(.+)\.service$
+        target_label: systemd_service_name
+        replacement: '${1}'
       - regex: ^id$
         action: labeldrop

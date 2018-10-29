@@ -51,11 +51,11 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by(container_name) (container_memory_usage_bytes{pod_name=\"$pod\", container_name=~\"$container\", container_name!=\"POD\"})",
+          "expr": "sum by(container_name) (container_memory_working_set_bytes{pod_name=\"$pod\", container_name=~\"$container\", container_name!=\"POD\"})",
           "interval": "10s",
           "intervalFactor": 1,
           "legendFormat": "Current: {{ container_name }}",
-          "metric": "container_memory_usage_bytes",
+          "metric": "container_memory_working_set_bytes",
           "refId": "A",
           "step": 10
         },

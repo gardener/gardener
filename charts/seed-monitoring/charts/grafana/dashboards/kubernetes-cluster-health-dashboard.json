@@ -1250,6 +1250,7 @@
         {
           "expr": "sum(ALERTS{alertstate=\"firing\",alertname!=\"DeadMansSwitch\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 2,
           "legendFormat": "",
           "refId": "A",
@@ -1343,6 +1344,7 @@
         {
           "expr": "sum(ALERTS{alertstate=\"pending\",alertname!=\"DeadMansSwitch\"})",
           "format": "time_series",
+          "instant": true,
           "intervalFactor": 2,
           "legendFormat": "",
           "refId": "A",

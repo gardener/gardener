@@ -11,18 +11,9 @@ allowedMetrics:
   - container_fs_limit_bytes
   - container_fs_usage_bytes
   - container_last_seen
-  - container_memory_cache
-  - container_memory_failcnt
-  - container_memory_failures_total
-  - container_memory_rss
-  - container_memory_usage_bytes
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
-  - container_spec_cpu_shares
-  - container_spec_memory_limit_bytes
-  - machine_cpu_cores
-  - machine_memory_bytes
 
   # object can be any object you want to scale Prometheus on:
   # - number of Pods

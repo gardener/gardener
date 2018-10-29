@@ -154,7 +154,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(container_memory_usage_bytes{pod_name=~\"$deployment_name.*\"}) / 1024^3",
+          "expr": "sum(container_memory_working_set_bytes{pod_name=~\"$deployment_name.*\"}) / 1024^3",
           "intervalFactor": 2,
           "refId": "A",
           "step": 600
