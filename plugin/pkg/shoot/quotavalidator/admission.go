@@ -405,15 +405,15 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (v1.ResourceList,
 		}
 
 		// For now we always use the max. amount of resources for quota calculation
-		resources[garden.QuotaMetricCPU] = multiplyQuantity(machineType.CPU, worker.AutoScalerMax)
-		resources[garden.QuotaMetricGPU] = multiplyQuantity(machineType.GPU, worker.AutoScalerMax)
-		resources[garden.QuotaMetricMemory] = multiplyQuantity(machineType.Memory, worker.AutoScalerMax)
+		resources[garden.QuotaMetricCPU] = sumQuantity(resources[garden.QuotaMetricCPU], multiplyQuantity(machineType.CPU, worker.AutoScalerMax))
+		resources[garden.QuotaMetricGPU] = sumQuantity(resources[garden.QuotaMetricGPU], multiplyQuantity(machineType.GPU, worker.AutoScalerMax))
+		resources[garden.QuotaMetricMemory] = sumQuantity(resources[garden.QuotaMetricMemory], multiplyQuantity(machineType.Memory, worker.AutoScalerMax))
 
 		switch volumeType.Class {
 		case garden.VolumeClassStandard:
-			resources[garden.QuotaMetricStorageStandard] = multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax)
+			resources[garden.QuotaMetricStorageStandard] = sumQuantity(resources[garden.QuotaMetricStorageStandard], multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax))
 		case garden.VolumeClassPremium:
-			resources[garden.QuotaMetricStoragePremium] = multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax)
+			resources[garden.QuotaMetricStoragePremium] = sumQuantity(resources[garden.QuotaMetricStoragePremium], multiplyQuantity(worker.VolumeSize, worker.AutoScalerMax))
 		default:
 			return nil, fmt.Errorf("Unknown volumeType class %s", volumeType.Class)
 		}

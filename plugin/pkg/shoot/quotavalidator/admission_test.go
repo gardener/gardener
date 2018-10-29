@@ -152,6 +152,31 @@ var _ = Describe("quotavalidator", func() {
 				},
 			}
 
+			shootSpecCloudGCE2Worker = garden.GCPCloud{
+				Workers: []garden.GCPWorker{
+					{
+						Worker: garden.Worker{
+							Name:          "test-worker-1",
+							MachineType:   machineTypeName,
+							AutoScalerMax: 1,
+							AutoScalerMin: 1,
+						},
+						VolumeType: volumeTypeName,
+						VolumeSize: "30Gi",
+					},
+					{
+						Worker: garden.Worker{
+							Name:          "test-worker-2",
+							MachineType:   machineTypeName,
+							AutoScalerMax: 1,
+							AutoScalerMin: 1,
+						},
+						VolumeType: volumeTypeName,
+						VolumeSize: "30Gi",
+					},
+				},
+			}
+
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: namespace,
@@ -221,6 +246,14 @@ var _ = Describe("quotavalidator", func() {
 				shoot2.Name = "test-shoot-2"
 				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(&shoot2)
 
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should fail because shoot with 2 workers exhaust quota limits", func() {
+				shoot.Spec.Cloud.GCP = &shootSpecCloudGCE2Worker
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 				err := admissionHandler.Admit(attrs)
