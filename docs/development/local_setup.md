@@ -197,20 +197,23 @@ kubectl is now configured to use the cluster.
 
 #### Prepare the Gardener
 
-The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
-You need to have control over a domain (or subdomain) for which these records will be created.
-Please provide an *internal domain secret* (see [this](../../example/10-secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../deployment/configuration.md).
-
 ```bash
 $ make dev-setup
 namespace "garden" created
 namespace "garden-dev" created
-secret "internal-domain-unmanaged" created
 deployment "etcd" created
 service "etcd" created
 service "gardener-apiserver" created
 endpoints "gardener-apiserver" created
 apiservice "v1beta1.garden.sapcloud.io" created
+```
+The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
+You need to have control over a domain (or subdomain) for which these records will be created.
+Please provide an *internal domain secret* (see [this](../../example/10-secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../deployment/configuration.md).
+
+```bash
+$ kubectl apply -f example/10-secret-internal-domain-unmanaged.yaml
+secret/internal-domain-unmanaged created
 ```
 
 #### Run the Gardener API Server and the Gardener Controller Manager
