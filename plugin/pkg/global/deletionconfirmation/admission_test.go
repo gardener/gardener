@@ -159,6 +159,23 @@ var _ = Describe("deleteconfirmation", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 			})
+
+			Context("no ignore annotation", func() {
+				It("should reject if the ignore-shoot annotation is set field", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
+
+					shoot.Annotations = map[string]string{
+						common.ConfirmationDeletion: "true",
+						common.ShootIgnore:          "",
+					}
+					shootStore.Add(&shoot)
+
+					err := admissionHandler.Admit(attrs)
+
+					Expect(err).To(HaveOccurred())
+					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+				})
+			})
 		})
 
 		Context("Project resources", func() {

@@ -109,27 +109,39 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 		obj         metav1.Object
 		cacheLookup func() (metav1.Object, error)
 		liveLookup  func() (metav1.Object, error)
+		checkFunc   func(metav1.Object) error
+
+		objectGroupKind = a.GetKind().GroupKind()
+		kindShoot       = garden.Kind("Shoot")
+		kindProject     = garden.Kind("Project")
 	)
 
 	// Ignore all kinds other than Shoot or Project.
 	// TODO: in future the Kinds should be configurable
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
-	switch a.GetKind().GroupKind() {
-	case garden.Kind("Shoot"):
+	switch objectGroupKind {
+	case kindShoot:
 		cacheLookup = func() (metav1.Object, error) {
 			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
 		}
 		liveLookup = func() (metav1.Object, error) {
 			return d.gardenClient.Garden().Shoots(a.GetNamespace()).Get(a.GetName(), metav1.GetOptions{})
 		}
+		checkFunc = func(obj metav1.Object) error {
+			if shootIgnored(obj) {
+				return fmt.Errorf("cannot delete shoot if %s annotation is set", common.ShootIgnore)
+			}
+			return checkIfDeletionIsConfirmed(obj)
+		}
 
-	case garden.Kind("Project"):
+	case kindProject:
 		cacheLookup = func() (metav1.Object, error) {
 			return d.projectLister.Get(a.GetName())
 		}
 		liveLookup = func() (metav1.Object, error) {
 			return d.gardenClient.Garden().Projects().Get(a.GetName(), metav1.GetOptions{})
 		}
+		checkFunc = checkIfDeletionIsConfirmed
 
 	default:
 		return nil
@@ -152,9 +164,11 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 
 	// Read the object from the cache
 	obj, err := cacheLookup()
-	if err == nil && checkIfDeletionAllowed(a, obj) == nil {
-		return nil
-	} else if err != nil && !apierrors.IsNotFound(err) {
+	if err == nil {
+		if checkFunc(obj) == nil {
+			return nil
+		}
+	} else if !apierrors.IsNotFound(err) {
 		return err
 	}
 
@@ -165,18 +179,31 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 	if err != nil {
 		return err
 	}
-	return checkIfDeletionAllowed(a, obj)
-}
 
-func checkIfDeletionAllowed(a admission.Attributes, meta metav1.Object) error {
-	annotations := meta.GetAnnotations()
-	if annotations == nil {
-		return admission.NewForbidden(a, annotationRequiredError())
-	}
-	if present, _ := strconv.ParseBool(annotations[common.ConfirmationDeletion]); !present {
-		return admission.NewForbidden(a, annotationRequiredError())
+	if err := checkFunc(obj); err != nil {
+		return admission.NewForbidden(a, err)
 	}
 	return nil
+}
+
+func checkIfDeletionIsConfirmed(obj metav1.Object) error {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return annotationRequiredError()
+	}
+	if present, _ := strconv.ParseBool(annotations[common.ConfirmationDeletion]); !present {
+		return annotationRequiredError()
+	}
+	return nil
+}
+
+func shootIgnored(obj metav1.Object) bool {
+	annotations := obj.GetAnnotations()
+	if annotations == nil {
+		return false
+	}
+	_, ignore := annotations[common.ShootIgnore]
+	return ignore
 }
 
 func annotationRequiredError() error {

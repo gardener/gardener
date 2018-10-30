@@ -46,7 +46,7 @@ func shootHealthyLabelTransform(healthy bool) func(*gardenv1beta1.Shoot) (*garde
 
 func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
 	_, ignore := annotations[common.ShootIgnore]
-	return respectSyncPeriodOverwrite != nil && ignore && *respectSyncPeriodOverwrite
+	return respectSyncPeriodOverwrite != nil && *respectSyncPeriodOverwrite && ignore
 }
 
 func shootIsFailed(shoot *gardenv1beta1.Shoot) bool {
