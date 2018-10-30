@@ -31,12 +31,14 @@ spec:
         cpu: "2"
         gpu: "0"
         memory: 4Gi
+        usable: true
         volumeType: default
         volumeSize: 20Gi
       - name: medium_4_8
         cpu: "4"
         gpu: "0"
         memory: 8Gi
+        usable: true
         volumeType: default
         volumeSize: 40Gi
       zones:

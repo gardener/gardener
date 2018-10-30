@@ -3305,6 +3305,7 @@ func Convert_garden_LocalProfile_To_v1beta1_LocalProfile(in *garden.LocalProfile
 
 func autoConvert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	out.CPU = in.CPU
 	out.GPU = in.GPU
 	out.Memory = in.Memory
@@ -3318,6 +3319,7 @@ func Convert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *gar
 
 func autoConvert_garden_MachineType_To_v1beta1_MachineType(in *garden.MachineType, out *MachineType, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	out.CPU = in.CPU
 	out.GPU = in.GPU
 	out.Memory = in.Memory
@@ -4297,6 +4299,7 @@ func Convert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, o
 
 func autoConvert_v1beta1_VolumeType_To_garden_VolumeType(in *VolumeType, out *garden.VolumeType, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	out.Class = in.Class
 	return nil
 }
@@ -4308,6 +4311,7 @@ func Convert_v1beta1_VolumeType_To_garden_VolumeType(in *VolumeType, out *garden
 
 func autoConvert_garden_VolumeType_To_v1beta1_VolumeType(in *garden.VolumeType, out *VolumeType, s conversion.Scope) error {
 	out.Name = in.Name
+	out.Usable = (*bool)(unsafe.Pointer(in.Usable))
 	out.Class = in.Class
 	return nil
 }

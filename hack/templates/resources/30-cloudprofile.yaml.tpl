@@ -93,26 +93,32 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         cpu: "2"
         gpu: "0"
         memory: 8Gi
+        usable: true
       - name: m4.xlarge
         cpu: "4"
         gpu: "0"
         memory: 16Gi
+        usable: true
       - name: m4.2xlarge
         cpu: "8"
         gpu: "0"
         memory: 32Gi
+        usable: true
       - name: m4.4xlarge
         cpu: "16"
         gpu: "0"
         memory: 64Gi
+        usable: true
       - name: m4.10xlarge
         cpu: "40"
         gpu: "0"
         memory: 160Gi
+        usable: true
       - name: m4.16xlarge
         cpu: "64"
         gpu: "0"
         memory: 256Gi
+        usable: false
       - name: p2.xlarge
         cpu: "4"
         gpu: "1"
@@ -132,8 +138,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % else:
       - name: gp2
         class: standard
+        usable: true
       - name: io1
         class: premium
+        usable: false
       % endif
       zones:<% zones=value("spec.aws.constraints.zones", []) %>
       % if zones != []:
@@ -189,18 +197,22 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         cpu: "2"
         gpu: "0"
         memory: 7Gi
+        usable: true
       - name: Standard_DS3_v2
         cpu: "4"
         gpu: "0"
         memory: 14Gi
+        usable: true
       - name: Standard_DS4_v2
         cpu: "8"
         gpu: "0"
         memory: 28Gi
+        usable: true
       - name: Standard_DS5_v2
         cpu: "16"
         gpu: "0"
         memory: 56Gi
+        usable: false
       - name: Standard_F2s
         cpu: "2"
         gpu: "0"
@@ -224,8 +236,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % else:
       - name: standard
         class: standard
+        usable: true
       - name: premium
         class: premium
+        usable: false
       % endif
     countUpdateDomains:<% countUpdateDomains=value("spec.azure.countUpdateDomains", []) %>
     % if countUpdateDomains != []:
@@ -281,26 +295,32 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         cpu: "2"
         gpu: "0"
         memory: 7500Mi
+        usable: true
       - name: n1-standard-4
         cpu: "4"
         gpu: "0"
         memory: 15Gi
+        usable: true
       - name: n1-standard-8
         cpu: "8"
         gpu: "0"
         memory: 30Gi
+        usable: true
       - name: n1-standard-16
         cpu: "16"
         gpu: "0"
         memory: 60Gi
+        usable: true
       - name: n1-standard-32
         cpu: "32"
         gpu: "0"
         memory: 120Gi
+        usable: true
       - name: n1-standard-64
         cpu: "64"
         gpu: "0"
         memory: 240Gi
+        usable: false
       % endif
       volumeTypes:<% volumeTypes=value("spec.gcp.constraints.volumeTypes", []) %>
       % if volumeTypes != []:
@@ -308,8 +328,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % else:
       - name: pd-standard
         class: standard
+        usable: true
       - name: pd-ssd
         class: premium
+        usable: false
       % endif
       zones:<% zones=value("spec.gcp.constraints.zones", []) %>
       % if zones != []:
@@ -361,24 +383,28 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         cpu: "2"
         gpu: "0"
         memory: 8Gi
+        usable: true
         zones:
         - cn-beijing-f
       - name: ecs.sn2ne.xlarge
         cpu: "4"
         gpu: "0"
         memory: 16Gi
+        usable: true
         zones:
         - cn-beijing-f
       - name: ecs.sn2ne.2xlarge
         cpu: "8"
         gpu: "0"
         memory: 32Gi
+        usable: true
         zones:
         - cn-beijing-f
       - name: ecs.sn2ne.3xlarge
         cpu: "12"
         gpu: "0"
         memory: 48Gi
+        usable: false
         zones:
         - cn-beijing-f
       % endif
@@ -388,10 +414,12 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % else:
       - name: cloud_efficiency
         class: standard
+        usable: true
         zones:
         - cn-beijing-f
       - name: ssd
         class: premium
+        usable: false
         zones:
         - cn-beijing-f
       % endif
@@ -451,12 +479,14 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         cpu: "2"
         gpu: "0"
         memory: 4Gi
+        usable: true
         volumeType: default
         volumeSize: 20Gi
       - name: medium_4_8
         cpu: "4"
         gpu: "0"
         memory: 8Gi
+        usable: true
         volumeType: default
         volumeSize: 40Gi
       % endif

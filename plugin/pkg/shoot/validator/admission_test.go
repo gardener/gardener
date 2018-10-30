@@ -20,14 +20,13 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("validator", func() {
@@ -264,6 +263,7 @@ var _ = Describe("validator", func() {
 
 		Context("tests for AWS cloud", func() {
 			var (
+				falseVar   = false
 				awsProfile = &garden.AWSProfile{
 					Constraints: garden.AWSConstraints{
 						DNSProviders: []garden.DNSProviderConstraint{
@@ -291,6 +291,13 @@ var _ = Describe("validator", func() {
 								CPU:    resource.MustParse("2"),
 								GPU:    resource.MustParse("0"),
 								Memory: resource.MustParse("100Gi"),
+							},
+							{
+								Name:   "machine-type-old",
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("100Gi"),
+								Usable: &falseVar,
 							},
 						},
 						VolumeTypes: []garden.VolumeType{
@@ -323,7 +330,11 @@ var _ = Describe("validator", func() {
 						VolumeType: "volume-type-1",
 					},
 				}
-				zones    = []string{"europe-a"}
+				zones        = []string{"europe-a"}
+				machineImage = &garden.AWSMachineImage{
+					Name: garden.MachineImageCoreOS,
+					AMI:  "ami-12345678",
+				}
 				awsCloud = &garden.AWSCloud{}
 			)
 
@@ -333,6 +344,7 @@ var _ = Describe("validator", func() {
 				awsCloud.Networks = garden.AWSNetworks{K8SNetworks: k8sNetworks}
 				awsCloud.Workers = workers
 				awsCloud.Zones = zones
+				awsCloud.MachineImage = machineImage
 				cloudProfile.Spec.AWS = awsProfile
 				shoot.Spec.Cloud.AWS = awsCloud
 			})
@@ -428,6 +440,45 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Cloud.AWS.MachineImage = &garden.AWSMachineImage{
 					Name: garden.MachineImageName("not-supported"),
 					AMI:  "not-supported",
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should not reject due to an usable machine type", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker: garden.Worker{
+							MachineType: "machine-type-1",
+						},
+					},
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should reject due to a not usable machine type", func() {
+				shoot.Spec.Cloud.AWS.Workers = []garden.AWSWorker{
+					{
+						Worker: garden.Worker{
+							MachineType: "machine-type-old",
+						},
+					},
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)

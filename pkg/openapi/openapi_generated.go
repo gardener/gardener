@@ -1119,6 +1119,13 @@ func schema_pkg_apis_garden_v1beta1_AlicloudMachineType(ref common.ReferenceCall
 							Format:      "",
 						},
 					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the machine type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"cpu": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CPU is the number of CPUs for this machine type.",
@@ -1273,6 +1280,13 @@ func schema_pkg_apis_garden_v1beta1_AlicloudVolumeType(ref common.ReferenceCallb
 						SchemaProps: spec.SchemaProps{
 							Description: "Name is the name of the volume type.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the volume type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
@@ -3527,6 +3541,13 @@ func schema_pkg_apis_garden_v1beta1_MachineType(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the machine type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 					"cpu": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CPU is the number of CPUs for this machine type.",
@@ -4022,6 +4043,13 @@ func schema_pkg_apis_garden_v1beta1_OpenStackMachineType(ref common.ReferenceCal
 						SchemaProps: spec.SchemaProps{
 							Description: "Name is the name of the machine type.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the machine type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},
@@ -5126,6 +5154,13 @@ func schema_pkg_apis_garden_v1beta1_VolumeType(ref common.ReferenceCallback) com
 						SchemaProps: spec.SchemaProps{
 							Description: "Name is the name of the volume type.",
 							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"usable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Usable defines if the volume type can be used for shoot clusters.",
+							Type:        []string{"boolean"},
 							Format:      "",
 						},
 					},

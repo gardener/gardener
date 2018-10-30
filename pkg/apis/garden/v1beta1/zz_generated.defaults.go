@@ -12,6 +12,8 @@ import (
 // Public to allow building arbitrary schemes.
 // All generated defaulters are covering - they call all nested defaulters.
 func RegisterDefaults(scheme *runtime.Scheme) error {
+	scheme.AddTypeDefaultingFunc(&CloudProfile{}, func(obj interface{}) { SetObjectDefaults_CloudProfile(obj.(*CloudProfile)) })
+	scheme.AddTypeDefaultingFunc(&CloudProfileList{}, func(obj interface{}) { SetObjectDefaults_CloudProfileList(obj.(*CloudProfileList)) })
 	scheme.AddTypeDefaultingFunc(&Project{}, func(obj interface{}) { SetObjectDefaults_Project(obj.(*Project)) })
 	scheme.AddTypeDefaultingFunc(&ProjectList{}, func(obj interface{}) { SetObjectDefaults_ProjectList(obj.(*ProjectList)) })
 	scheme.AddTypeDefaultingFunc(&SecretBinding{}, func(obj interface{}) { SetObjectDefaults_SecretBinding(obj.(*SecretBinding)) })
@@ -21,6 +23,62 @@ func RegisterDefaults(scheme *runtime.Scheme) error {
 	scheme.AddTypeDefaultingFunc(&Shoot{}, func(obj interface{}) { SetObjectDefaults_Shoot(obj.(*Shoot)) })
 	scheme.AddTypeDefaultingFunc(&ShootList{}, func(obj interface{}) { SetObjectDefaults_ShootList(obj.(*ShootList)) })
 	return nil
+}
+
+func SetObjectDefaults_CloudProfile(in *CloudProfile) {
+	if in.Spec.AWS != nil {
+		for i := range in.Spec.AWS.Constraints.MachineTypes {
+			a := &in.Spec.AWS.Constraints.MachineTypes[i]
+			SetDefaults_MachineType(a)
+		}
+		for i := range in.Spec.AWS.Constraints.VolumeTypes {
+			a := &in.Spec.AWS.Constraints.VolumeTypes[i]
+			SetDefaults_VolumeType(a)
+		}
+	}
+	if in.Spec.Azure != nil {
+		for i := range in.Spec.Azure.Constraints.MachineTypes {
+			a := &in.Spec.Azure.Constraints.MachineTypes[i]
+			SetDefaults_MachineType(a)
+		}
+		for i := range in.Spec.Azure.Constraints.VolumeTypes {
+			a := &in.Spec.Azure.Constraints.VolumeTypes[i]
+			SetDefaults_VolumeType(a)
+		}
+	}
+	if in.Spec.GCP != nil {
+		for i := range in.Spec.GCP.Constraints.MachineTypes {
+			a := &in.Spec.GCP.Constraints.MachineTypes[i]
+			SetDefaults_MachineType(a)
+		}
+		for i := range in.Spec.GCP.Constraints.VolumeTypes {
+			a := &in.Spec.GCP.Constraints.VolumeTypes[i]
+			SetDefaults_VolumeType(a)
+		}
+	}
+	if in.Spec.OpenStack != nil {
+		for i := range in.Spec.OpenStack.Constraints.MachineTypes {
+			a := &in.Spec.OpenStack.Constraints.MachineTypes[i]
+			SetDefaults_MachineType(&a.MachineType)
+		}
+	}
+	if in.Spec.Alicloud != nil {
+		for i := range in.Spec.Alicloud.Constraints.MachineTypes {
+			a := &in.Spec.Alicloud.Constraints.MachineTypes[i]
+			SetDefaults_MachineType(&a.MachineType)
+		}
+		for i := range in.Spec.Alicloud.Constraints.VolumeTypes {
+			a := &in.Spec.Alicloud.Constraints.VolumeTypes[i]
+			SetDefaults_VolumeType(&a.VolumeType)
+		}
+	}
+}
+
+func SetObjectDefaults_CloudProfileList(in *CloudProfileList) {
+	for i := range in.Items {
+		a := &in.Items[i]
+		SetObjectDefaults_CloudProfile(a)
+	}
 }
 
 func SetObjectDefaults_Project(in *Project) {
