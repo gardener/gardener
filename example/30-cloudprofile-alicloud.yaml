@@ -26,33 +26,39 @@ spec:
         cpu: "2"
         gpu: "0"
         memory: 8Gi
+        usable: true
         zones:
         - cn-beijing-f
       - name: ecs.sn2ne.xlarge
         cpu: "4"
         gpu: "0"
         memory: 16Gi
+        usable: true
         zones:
         - cn-beijing-f
       - name: ecs.sn2ne.2xlarge
         cpu: "8"
         gpu: "0"
         memory: 32Gi
+        usable: true
         zones:
         - cn-beijing-f
       - name: ecs.sn2ne.3xlarge
         cpu: "12"
         gpu: "0"
         memory: 48Gi
+        usable: false
         zones:
         - cn-beijing-f
       volumeTypes:
       - name: cloud_efficiency
         class: standard
+        usable: true
         zones:
         - cn-beijing-f
       - name: ssd
         class: premium
+        usable: false
         zones:
         - cn-beijing-f
       zones: # List of availablity zones together with resource contraints in a specific region

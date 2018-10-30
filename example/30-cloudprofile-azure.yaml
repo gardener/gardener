@@ -30,18 +30,22 @@ spec:
         cpu: "2"
         gpu: "0"
         memory: 7Gi
+        usable: true
       - name: Standard_DS3_v2
         cpu: "4"
         gpu: "0"
         memory: 14Gi
+        usable: true
       - name: Standard_DS4_v2
         cpu: "8"
         gpu: "0"
         memory: 28Gi
+        usable: true
       - name: Standard_DS5_v2
         cpu: "16"
         gpu: "0"
         memory: 56Gi
+        usable: false
       - name: Standard_F2s
         cpu: "2"
         gpu: "0"
@@ -61,8 +65,10 @@ spec:
       volumeTypes:
       - name: standard
         class: standard
+        usable: true
       - name: premium
         class: premium
+        usable: false
     countUpdateDomains:
     - region: westeurope
       count: 5

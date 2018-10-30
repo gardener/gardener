@@ -31,26 +31,32 @@ spec:
         cpu: "2"
         gpu: "0"
         memory: 8Gi
+        usable: true
       - name: m4.xlarge
         cpu: "4"
         gpu: "0"
         memory: 16Gi
+        usable: true
       - name: m4.2xlarge
         cpu: "8"
         gpu: "0"
         memory: 32Gi
+        usable: true
       - name: m4.4xlarge
         cpu: "16"
         gpu: "0"
         memory: 64Gi
+        usable: true
       - name: m4.10xlarge
         cpu: "40"
         gpu: "0"
         memory: 160Gi
+        usable: true
       - name: m4.16xlarge
         cpu: "64"
         gpu: "0"
         memory: 256Gi
+        usable: false
       - name: p2.xlarge
         cpu: "4"
         gpu: "1"
@@ -66,8 +72,10 @@ spec:
       volumeTypes:
       - name: gp2
         class: standard
+        usable: true
       - name: io1
         class: premium
+        usable: false
       zones:
       - region: eu-west-1
         names:

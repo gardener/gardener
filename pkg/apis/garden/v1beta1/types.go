@@ -18,13 +18,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/intstr"
-
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 ////////////////////////////////////////////////////
@@ -329,6 +328,9 @@ type KubernetesConstraints struct {
 type MachineType struct {
 	// Name is the name of the machine type.
 	Name string `json:"name"`
+	// Usable defines if the machine type can be used for shoot clusters.
+	// +optional
+	Usable *bool `json:"usable,omitempty"`
 	// CPU is the number of CPUs for this machine type.
 	CPU resource.Quantity `json:"cpu"`
 	// GPU is the number of GPUs for this machine type.
@@ -350,6 +352,9 @@ type OpenStackMachineType struct {
 type VolumeType struct {
 	// Name is the name of the volume type.
 	Name string `json:"name"`
+	// Usable defines if the volume type can be used for shoot clusters.
+	// +optional
+	Usable *bool `json:"usable,omitempty"`
 	// Class is the class of the volume type.
 	Class string `json:"class"`
 }

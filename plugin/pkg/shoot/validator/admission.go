@@ -26,7 +26,6 @@ import (
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
-
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -645,6 +644,9 @@ func validateMachineTypes(constraints []garden.MachineType, machineType, oldMach
 	validValues := []string{}
 
 	for _, t := range constraints {
+		if t.Usable != nil && !*t.Usable {
+			continue
+		}
 		validValues = append(validValues, t.Name)
 		if t.Name == machineType {
 			return true, nil
@@ -721,6 +723,9 @@ func validateVolumeTypes(constraints []garden.VolumeType, volumeType, oldVolumeT
 	validValues := []string{}
 
 	for _, v := range constraints {
+		if v.Usable != nil && !*v.Usable {
+			continue
+		}
 		validValues = append(validValues, v.Name)
 		if v.Name == volumeType {
 			return true, nil

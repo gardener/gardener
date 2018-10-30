@@ -212,3 +212,19 @@ func SetDefaults_SecretBinding(obj *SecretBinding) {
 		}
 	}
 }
+
+// SetDefaults_MachineType sets default values for MachineType objects.
+func SetDefaults_MachineType(obj *MachineType) {
+	trueVar := true
+	if obj.Usable == nil {
+		obj.Usable = &trueVar
+	}
+}
+
+// SetDefaults_VolumeType sets default values for VolumeType objects.
+func SetDefaults_VolumeType(obj *VolumeType) {
+	trueVar := true
+	if obj.Usable == nil {
+		obj.Usable = &trueVar
+	}
+}
