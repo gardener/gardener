@@ -12,7 +12,7 @@ This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kub
 
 ## Installing Golang environment
 
-Install the latest version of Golang (at least `v1.10.x` is required). For Mac OS you could use [Homebrew](https://brew.sh/):
+Install the Golang `v1.11`. For Mac OS you could use [Homebrew](https://brew.sh/):
 
 ```bash
 $ brew install golang

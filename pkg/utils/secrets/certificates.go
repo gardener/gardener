@@ -178,11 +178,11 @@ func (s *CertificateSecretConfig) generateCertificateTemplate() *x509.Certificat
 
 		template = &x509.Certificate{
 			BasicConstraintsValid: true,
-			IsCA:         isCA,
-			SerialNumber: serialNumber,
-			NotBefore:    now,
-			NotAfter:     now.AddDate(10, 0, 0), // + 10 years
-			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+			IsCA:                  isCA,
+			SerialNumber:          serialNumber,
+			NotBefore:             now,
+			NotAfter:              now.AddDate(10, 0, 0), // + 10 years
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 			Subject: pkix.Name{
 				CommonName:   s.CommonName,
 				Organization: s.Organization,
