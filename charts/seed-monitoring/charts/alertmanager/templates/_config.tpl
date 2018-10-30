@@ -21,7 +21,7 @@ route:
 
   # If an alert has successfully been sent, wait 'repeat_interval' to
   # resend them.
-  repeat_interval: 3h
+  repeat_interval: 12h
 
   # Send alerts by default to nowhere
   receiver: dev-null
