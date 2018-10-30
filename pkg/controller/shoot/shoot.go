@@ -23,7 +23,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -32,8 +31,11 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/metrics"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -51,17 +53,21 @@ type Controller struct {
 
 	config             *componentconfig.ControllerManagerConfiguration
 	control            ControlInterface
+	updater            UpdaterInterface
 	careControl        CareControlInterface
 	maintenanceControl MaintenanceControlInterface
 	quotaControl       QuotaControlInterface
 	recorder           record.EventRecorder
 	secrets            map[string]*corev1.Secret
 	imageVector        imagevector.ImageVector
+	scheduler          reconcilescheduler.Interface
 
+	seedLister      gardenlisters.SeedLister
 	shootLister     gardenlisters.ShootLister
 	projectLister   gardenlisters.ProjectLister
 	namespaceLister kubecorev1listers.NamespaceLister
 
+	seedQueue             workqueue.RateLimitingInterface
 	shootQueue            workqueue.RateLimitingInterface
 	shootCareQueue        workqueue.RateLimitingInterface
 	shootMaintenanceQueue workqueue.RateLimitingInterface
@@ -92,6 +98,9 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 		shootLister   = shootInformer.Lister()
 		shootUpdater  = NewRealUpdater(k8sGardenClient, shootLister)
 
+		seedInformer = gardenv1beta1Informer.Seeds()
+		seedLister   = seedInformer.Lister()
+
 		projectInformer = gardenv1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
@@ -105,17 +114,21 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 
 		config:             config,
 		control:            NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder, shootUpdater),
+		updater:            shootUpdater,
 		careControl:        NewDefaultCareControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, shootUpdater),
 		maintenanceControl: NewDefaultMaintenanceControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, recorder, shootUpdater),
 		quotaControl:       NewDefaultQuotaControl(k8sGardenClient, gardenv1beta1Informer),
 		recorder:           recorder,
 		secrets:            secrets,
 		imageVector:        imageVector,
+		scheduler:          reconcilescheduler.New(nil),
 
+		seedLister:      seedLister,
 		shootLister:     shootLister,
 		projectLister:   projectLister,
 		namespaceLister: namespaceLister,
 
+		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
 		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
 		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
 		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
@@ -124,6 +137,12 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 
 		workerCh: make(chan int),
 	}
+
+	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.seedAdd,
+		UpdateFunc: shootController.seedUpdate,
+		DeleteFunc: shootController.seedDelete,
+	})
 
 	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootAdd,
@@ -147,8 +166,8 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 		DeleteFunc: shootController.shootQuotaDelete,
 	})
 
+	shootController.seedSynced = seedInformer.Informer().HasSynced
 	shootController.shootSynced = shootInformer.Informer().HasSynced
-	shootController.seedSynced = gardenv1beta1Informer.Seeds().Informer().HasSynced
 	shootController.cloudProfileSynced = gardenv1beta1Informer.CloudProfiles().Informer().HasSynced
 	shootController.secretBindingSynced = gardenv1beta1Informer.SecretBindings().Informer().HasSynced
 	shootController.quotaSynced = gardenv1beta1Informer.Quotas().Informer().HasSynced
@@ -271,6 +290,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 	}
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds", c.reconcileShootKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed Queue", c.reconcileSeedKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
@@ -318,7 +338,7 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
 	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok {
-		if shootedSeed, err := helper.ReadShootedSeed(shoot); err == nil && shootedSeed != nil {
+		if shootIsSeed(shoot) {
 			return c.shootSeedQueue
 		}
 	}

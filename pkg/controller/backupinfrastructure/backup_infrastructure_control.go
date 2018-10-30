@@ -148,7 +148,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 		backupInfrastructure       = obj.DeepCopy()
 		backupInfrastructureLogger = logger.NewFieldLogger(logger.Logger, "backupinfrastructure", fmt.Sprintf("%s/%s", backupInfrastructure.Namespace, backupInfrastructure.Name))
 		lastOperation              = backupInfrastructure.Status.LastOperation
-		operationType              = controllerutils.ComputeOperationType(lastOperation)
+		operationType              = controllerutils.ComputeOperationType(obj.ObjectMeta, lastOperation)
 	)
 
 	logger.Logger.Infof("[BACKUPINFRASTRUCTURE RECONCILE] %s", key)
@@ -167,27 +167,27 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	if backupInfrastructure.DeletionTimestamp != nil {
 		gracePeriod := time.Hour * 24 * time.Duration(*c.config.Controllers.BackupInfrastructure.DeletionGracePeriodDays)
 		if time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
-			if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateProcessing, gardenv1beta1.ShootLastOperationTypeDelete, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
+			if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateProcessing, operationType, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
 				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion start: %+v", updateErr)
 				return updateErr
 			}
 
 			if deleteErr := c.deleteBackupInfrastructure(op); deleteErr != nil {
 				c.recorder.Eventf(backupInfrastructure, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "%s", deleteErr.Description)
-				if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateError, gardenv1beta1.ShootLastOperationTypeDelete, deleteErr.Description+" Operation will be retried.", 1, deleteErr); updateErr != nil {
+				if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateError, operationType, deleteErr.Description+" Operation will be retried.", 1, deleteErr); updateErr != nil {
 					backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion error: %+v", updateErr)
 					return updateErr
 				}
 				return errors.New(deleteErr.Description)
 			}
-			if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateSucceeded, gardenv1beta1.ShootLastOperationTypeDelete, "Backup Infrastructure has been successfully deleted.", 100, nil); updateErr != nil {
+			if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateSucceeded, operationType, "Backup Infrastructure has been successfully deleted.", 100, nil); updateErr != nil {
 				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion successful: %+v", updateErr)
 				return updateErr
 			}
 			return c.removeFinalizer(op)
 		}
 
-		if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStatePending, gardenv1beta1.ShootLastOperationTypeDelete, fmt.Sprintf("Deletion of backup infrastructure is scheduled for %s", backupInfrastructure.DeletionTimestamp.Time.Add(gracePeriod)), 1, nil); updateErr != nil {
+		if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStatePending, operationType, fmt.Sprintf("Deletion of backup infrastructure is scheduled for %s", backupInfrastructure.DeletionTimestamp.Time.Add(gracePeriod)), 1, nil); updateErr != nil {
 			backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after suspending deletion: %+v", updateErr)
 			return updateErr
 		}
