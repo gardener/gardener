@@ -281,6 +281,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},
+			"objectCount": b.Shoot.GetNodeCount(),
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-prometheus":                b.CheckSums["prometheus"],
 				"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
