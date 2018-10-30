@@ -1,5 +1,5 @@
 #############      builder       #############
-FROM golang:1.10.3 AS builder
+FROM golang:1.11.1 AS builder
 
 WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
