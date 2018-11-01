@@ -6,6 +6,7 @@ metadata:
   namespace: kube-system
   labels:
     garden.sapcloud.io/role: system-component
+    app: vpn-shoot
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
 spec:
@@ -28,6 +29,9 @@ spec:
         garden.sapcloud.io/role: system-component
         app: vpn-shoot
     spec:
+      # not used
+      automountServiceAccountToken: false
+      serviceAccountName: vpn-shoot
       priorityClassName: system-cluster-critical
       tolerations:
       - effect: NoExecute

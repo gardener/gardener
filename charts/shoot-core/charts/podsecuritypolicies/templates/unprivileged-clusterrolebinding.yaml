@@ -1,0 +1,17 @@
+apiVersion: {{ include "rbacversion" .}}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:psp:unprivileged
+  annotations:
+    garden.sapcloud.io/description: |
+      Allow all authenticated users to use the unprivileged PSP.
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:unprivileged
+subjects:
+- kind: Group
+  apiGroup: rbac.authorization.k8s.io
+  name: system:authenticated

@@ -1,0 +1,27 @@
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.calico
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  privileged: true
+  volumes:
+  - hostPath
+  - secret
+  hostNetwork: true
+  allowedHostPaths:
+  - pathPrefix: /lib/modules
+  - pathPrefix: /var/run/calico
+  - pathPrefix: /var/lib/calico
+  - pathPrefix: /opt/cni/bin
+  - pathPrefix: /etc/cni/net.d
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  readOnlyRootFilesystem: false

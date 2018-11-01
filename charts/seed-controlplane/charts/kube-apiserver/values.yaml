@@ -39,6 +39,7 @@ admissionPlugins:
 - name: Priority
 - name: NamespaceLifecycle
 - name: LimitRanger
+- name: PodSecurityPolicy
 - name: ServiceAccount
 - name: NodeRestriction
 - name: DefaultStorageClass

@@ -64,6 +64,9 @@ spec:
     spec:
       priorityClassName: system-cluster-critical
       serviceAccountName: tiller
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       containers:
       - env:
         - name: TILLER_NAMESPACE

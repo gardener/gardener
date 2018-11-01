@@ -25,6 +25,9 @@ spec:
         checksum/config: {{ include (print $.Template.BasePath "/api-config.yaml") . | sha256sum }}
     spec:
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       initContainers:
       - name: init-monocular
         image: {{ index .Values.images "busybox" }}

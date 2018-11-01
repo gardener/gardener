@@ -35,6 +35,9 @@ spec:
       - key: CriticalAddonsOnly
         operator: Exists
       hostNetwork: true
+      serviceAccountName: kube-proxy
+      # not used - kubeconfig is mounted.
+      automountServiceAccountToken: false
       containers:
       - name: kube-proxy
         image: {{ index .Values.images "hyperkube" }}

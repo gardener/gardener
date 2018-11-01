@@ -8,6 +8,16 @@ metadata:
 
 ---
 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-typha
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+
+---
+
 # This manifest installs the calico/node container, as well
 # as the Calico CNI plugins and network config on
 # each master and worker node in a Kubernetes cluster.
@@ -287,7 +297,10 @@ spec:
       # as a host-networked pod.
       hostNetwork: true
       priorityClassName: system-cluster-critical
-      serviceAccountName: calico-node
+      serviceAccountName: calico-typha
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       containers:
       - image: {{ index .Values.images "calico-typha" }}
         name: calico-typha

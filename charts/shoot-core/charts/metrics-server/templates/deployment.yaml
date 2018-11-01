@@ -28,6 +28,9 @@ spec:
 {{- end }}
     spec:
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       serviceAccountName: metrics-server
       containers:
       - name: metrics-server
@@ -36,6 +39,9 @@ spec:
         command:
         - /metrics-server
         - --profiling=false
+        # nobody user only can write in home folder
+        - --cert-dir=/home/certdir
+        - --secure-port=8443
         # See https://github.com/kubernetes-incubator/metrics-server/issues/25 and https://github.com/kubernetes-incubator/metrics-server/issues/130
         # The kube-apiserver and the kubelet use different CAs, however, the metrics-server assumes the CAs are the same.
         # We should remove this flag once it is possible to specify the CA of the kubelet.

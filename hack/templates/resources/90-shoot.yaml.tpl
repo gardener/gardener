@@ -206,6 +206,7 @@ spec:
     % endif
   kubernetes:
     version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% cloudControllerManager=value("spec.kubernetes.cloudControllerManager", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
+    allowPrivilegedContainers: ${value("spec.kubernetes.allowPrivilegedContainers", "true")} # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
     % if kubeAPIServer != {}:
     kubeAPIServer: ${yaml.dump(kubeAPIServer, width=10000)}
     % else:

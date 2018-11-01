@@ -1,0 +1,20 @@
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.vpn-shoot
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  privileged: true
+  volumes:
+  - secret
+  allowedCapabilities:
+  - NET_ADMIN
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny

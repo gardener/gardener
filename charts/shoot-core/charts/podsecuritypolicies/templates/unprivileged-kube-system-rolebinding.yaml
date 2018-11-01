@@ -1,0 +1,16 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: garden.sapcloud.io:psp:unprivileged
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:unprivileged
+subjects:
+- kind: Group
+  # All service accounts in the kube-system namespace are allowed to use this.
+  name: system:serviceaccounts:kube-system
+  apiGroup: rbac.authorization.k8s.io

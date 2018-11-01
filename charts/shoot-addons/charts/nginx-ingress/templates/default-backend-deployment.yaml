@@ -36,6 +36,9 @@ spec:
         release: {{ .Release.Name }}
     spec:
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       containers:
         - name: {{ template "nginx-ingress.name" . }}-{{ .Values.defaultBackend.name }}
           image: {{ index .Values.images "ingress-default-backend" }}

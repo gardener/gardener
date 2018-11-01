@@ -1,0 +1,17 @@
+
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:psp:kube-system:kube-proxy
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups:
+  - policy
+  - extensions
+  resourceNames:
+  - gardener.kube-system.kube-proxy
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use

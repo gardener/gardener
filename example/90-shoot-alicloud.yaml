@@ -26,6 +26,7 @@ spec:
       zones: ['cn-beijing-f']
   kubernetes:
     version: 1.12.1
+    allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   featureGates:
   #     SomeKubernetesFeature: true

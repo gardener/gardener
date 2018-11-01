@@ -28,3 +28,5 @@ monitoring:
 metrics-server:
   images:
     metrics-server: image-repository:image-tag
+podsecuritypolicies:
+  allowPrivilegedContainers: false

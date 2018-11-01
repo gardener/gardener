@@ -1,0 +1,15 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: garden.sapcloud.io:psp:{{ template "kube2iam.fullname" . }}
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:privileged
+subjects:
+- kind: ServiceAccount
+  name: '{{ template "kube2iam.fullname" . }}'
+  namespace: kube-system

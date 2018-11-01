@@ -52,6 +52,9 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				},
 			},
 		}
+		podsecuritypolicies = map[string]interface{}{
+			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
+		}
 		kubeProxyConfig = map[string]interface{}{
 			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
 			"podAnnotations": map[string]interface{}{
@@ -117,12 +120,13 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
-		"global":         global,
-		"coredns":        coreDNS,
-		"kube-proxy":     kubeProxy,
-		"vpn-shoot":      vpnShoot,
-		"calico":         calico,
-		"metrics-server": metricsServer,
+		"global":              global,
+		"podsecuritypolicies": podsecuritypolicies,
+		"coredns":             coreDNS,
+		"kube-proxy":          kubeProxy,
+		"vpn-shoot":           vpnShoot,
+		"calico":              calico,
+		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter": nodeExporter,
 		},
