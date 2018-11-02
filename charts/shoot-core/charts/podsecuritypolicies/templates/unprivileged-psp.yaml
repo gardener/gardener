@@ -1,0 +1,43 @@
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.unprivileged
+  annotations:
+    # seccomp.security.alpha.kubernetes.io/defaultProfileName:  'docker/default'
+    # seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'runtime/default,docker/default'
+    # 'runtime/default' is already the default, but must be filled in on the
+    # pod to pass admission.
+    # apparmor.security.beta.kubernetes.io/defaultProfileName:  'runtime/default'
+    # apparmor.security.beta.kubernetes.io/allowedProfileNames: 'runtime/default'
+    garden.sapcloud.io/description: |
+      gardener.unprivileged grants the mininimum amount of privileges necessary to run non-privileged Pods.
+      This policy cannot be tuned down, but can be used as a template.
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  privileged: false
+  allowPrivilegeEscalation: false
+  volumes:
+  - configMap
+  - emptyDir
+  - projected
+  - secret
+  - downwardAPI
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  runAsUser:
+    rule: MustRunAsNonRoot
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: MustRunAs
+    ranges:
+    - min: 1
+      max: 65534
+  fsGroup:
+    rule: MustRunAs
+    ranges:
+    - min: 1
+      max: 65534
+  readOnlyRootFilesystem: false

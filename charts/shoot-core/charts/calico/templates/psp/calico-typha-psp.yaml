@@ -1,0 +1,29 @@
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.calico-typha
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  volumes:
+  - secret
+  hostNetwork: true
+  hostPorts:
+  - min: 5473
+    max: 5473
+  - min: 9098
+    max: 9098
+  runAsUser:
+    rule: MustRunAsNonRoot
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: MustRunAs
+    ranges:
+    - min: 1
+      max: 65534
+  fsGroup:
+    rule: MustRunAs
+    ranges:
+    - min: 1
+      max: 65534

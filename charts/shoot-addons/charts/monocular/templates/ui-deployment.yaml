@@ -26,6 +26,8 @@ spec:
         checksum/vhost: {{ include (print $.Template.BasePath "/ui-vhost.yaml") . | sha256sum }}
     spec:
       priorityClassName: system-cluster-critical
+      serviceAccountName: {{ template "monocular.fullname" . }}-ui
+      automountServiceAccountToken: false
       containers:
       - name: {{ .Chart.Name }}
         image: {{ index .Values.images "monocular-ui" }}

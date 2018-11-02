@@ -1,0 +1,15 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: garden.sapcloud.io:psp:vpn-shoot
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:kube-system:vpn-shoot
+subjects:
+- kind: ServiceAccount
+  name: vpn-shoot
+  namespace: kube-system

@@ -4050,9 +4050,9 @@ var _ = Describe("validation", func() {
 					{
 						Worker: workerAutoScalingInvalid,
 					},
-								{
-									Worker: worker,
-								},
+					{
+						Worker: worker,
+					},
 				}
 
 				errorList := ValidateShoot(shoot)

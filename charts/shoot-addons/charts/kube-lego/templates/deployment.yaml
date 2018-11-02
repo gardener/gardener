@@ -41,6 +41,8 @@ spec:
         - name: {{ template "kube-lego.name" . }}
           image: {{ index .Values.images "kube-lego" }}
           imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          securityContext:
+            runAsUser: 1000
           env:
             - name: LEGO_NAMESPACE
               valueFrom:

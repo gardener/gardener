@@ -25,6 +25,9 @@ spec:
       # we won't be using the checksum of the configmap since coredns provides the "reload" plugins that does the reload if config changes.
     spec:
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
       serviceAccountName: coredns
       tolerations:
       - key: "CriticalAddonsOnly"

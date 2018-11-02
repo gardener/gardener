@@ -26,6 +26,7 @@ var (
 		{Name: "Priority"},
 		{Name: "NamespaceLifecycle"},
 		{Name: "LimitRanger"},
+		{Name: "PodSecurityPolicy"},
 		{Name: "ServiceAccount"},
 		{Name: "NodeRestriction"},
 		{Name: "DefaultStorageClass"},

@@ -77,3 +77,11 @@ admissionregistration.k8s.io/v1beta1
 {{- define "initializeradmissionregistrationversion" -}}
 admissionregistration.k8s.io/v1alpha1
 {{- end -}}
+
+{{- define "podsecuritypolicyversion" -}}
+{{- if semverCompare ">= 1.10" .Capabilities.KubeVersion.GitVersion -}}
+policy/v1beta1
+{{- else -}}
+extensions/v1beta1
+{{- end -}}
+{{- end -}}

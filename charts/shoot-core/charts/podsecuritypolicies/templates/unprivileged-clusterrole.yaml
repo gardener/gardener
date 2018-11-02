@@ -1,0 +1,16 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:psp:unprivileged
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups:
+  - policy
+  - extensions
+  resourceNames:
+  - gardener.unprivileged
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use

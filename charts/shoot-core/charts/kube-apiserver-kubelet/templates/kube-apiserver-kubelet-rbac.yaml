@@ -35,6 +35,7 @@ subjects:
   name: system:kube-apiserver:kubelet
 
 ---
+
 apiVersion: {{include "rbacversion" .}}
 kind: ClusterRoleBinding
 metadata:

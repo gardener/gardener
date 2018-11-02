@@ -1,0 +1,23 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:psp:privileged
+  annotations:
+    garden.sapcloud.io/description: |
+      Allow all authenticated users to use the privileged PSP.
+      The subject field is configured via .spec.kubernetes.allowPrivilegedContainers flag on the Shoot resource.
+      Do not manually change it as it'll be reconciled back to the original state.
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:privileged
+{{- if .Values.allowPrivilegedContainers }}
+subjects:
+- kind: Group
+  apiGroup: rbac.authorization.k8s.io
+  name: system:authenticated
+{{- else }}
+subjects: []
+{{- end -}}

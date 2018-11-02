@@ -1,4 +1,4 @@
-apiVersion: {{include "rbacversion" .}}
+apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: prometheus-{{.Release.Namespace}}

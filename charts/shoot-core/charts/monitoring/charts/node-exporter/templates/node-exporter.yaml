@@ -1,4 +1,13 @@
 apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-exporter
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: node-exporter
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: node-exporter
@@ -47,6 +56,12 @@ spec:
       hostNetwork: true
       hostPID: true
       priorityClassName: system-cluster-critical
+      serviceAccountName: node-exporter
+      # not used - safe to not mount it at all.
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
       containers:
       - name: node-exporter
         image: {{ index .Values.images "node-exporter" }}
@@ -89,6 +104,7 @@ spec:
         - name: sys
           readOnly: true
           mountPath: /host/sys
+        # TODO(mvladev): Remove this once 0.17.X version of node exporter is released
         - name: rootfs
           readOnly: true
           mountPath: /rootfs
@@ -104,6 +120,7 @@ spec:
       - name: sys
         hostPath:
           path: /sys
+      # TODO(mvladev): Remove this once 0.17.X version of node exporter is released
       - name: rootfs
         hostPath:
           path: /
