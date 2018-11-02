@@ -36,12 +36,18 @@ spec:
         command:
         - ./machine-controller-manager
         - --control-kubeconfig=inClusterConfig
-        - --machine-health-timeout=10
-        - --machine-drain-timeout=5
-        - --machine-set-scale-timeout=40
         - --target-kubeconfig=/var/lib/machine-controller-manager/kubeconfig
         - --namespace={{ .Release.Namespace }}
         - --port={{ .Values.metricsPort }}
+        - --machine-creation-timeout=20m
+        - --machine-drain-timeout=5m
+        - --machine-health-timeout=10m
+        - --machine-safety-apiserver-statuscheck-timeout=30s
+        - --machine-safety-apiserver-statuscheck-period=1m
+        - --machine-safety-orphan-vms-period=30m
+        - --machine-safety-overshooting-period=1m
+        - --safety-up=2
+        - --safety-down=1
         - --v=2
         livenessProbe:
           failureThreshold: 3
