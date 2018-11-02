@@ -15,6 +15,8 @@
 package shoot
 
 import (
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -280,25 +282,26 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 		now    = metav1.Now()
 	)
 
-	if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardenv1beta1.ShootLastOperationTypeDelete) {
-		o.Shoot.Info.Status.RetryCycleStartTime = &now
-	}
-	if len(status.TechnicalID) == 0 {
-		o.Shoot.Info.Status.TechnicalID = o.Shoot.SeedNamespace
-	}
+	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardenv1beta1.ShootLastOperationTypeDelete) {
+				shoot.Status.RetryCycleStartTime = &now
+			}
+			if len(status.TechnicalID) == 0 {
+				shoot.Status.TechnicalID = o.Shoot.SeedNamespace
+			}
 
-	o.Shoot.Info.Status.Gardener = *o.GardenerInfo
-	o.Shoot.Info.Status.Conditions = nil
-	o.Shoot.Info.Status.ObservedGeneration = o.Shoot.Info.Generation
-	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
-		Type:           gardenv1beta1.ShootLastOperationTypeDelete,
-		State:          gardenv1beta1.ShootLastOperationStateProcessing,
-		Progress:       1,
-		Description:    "Deletion of Shoot cluster in progress.",
-		LastUpdateTime: metav1.Now(),
-	}
-
-	newShoot, err := c.updater.UpdateShootStatus(o.Shoot.Info)
+			shoot.Status.Gardener = *o.GardenerInfo
+			shoot.Status.ObservedGeneration = o.Shoot.Info.Generation
+			shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
+				Type:           gardenv1beta1.ShootLastOperationTypeDelete,
+				State:          gardenv1beta1.ShootLastOperationStateProcessing,
+				Progress:       1,
+				Description:    "Deletion of Shoot cluster in progress.",
+				LastUpdateTime: now,
+			}
+			return shoot, nil
+		})
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}
@@ -306,17 +309,19 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 }
 
 func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) error {
-	o.Shoot.Info.Status.RetryCycleStartTime = nil
-	o.Shoot.Info.Status.LastError = nil
-	o.Shoot.Info.Status.LastOperation = &gardenv1beta1.LastOperation{
-		Type:           gardenv1beta1.ShootLastOperationTypeDelete,
-		State:          gardenv1beta1.ShootLastOperationStateSucceeded,
-		Progress:       100,
-		Description:    "Shoot cluster has been successfully deleted.",
-		LastUpdateTime: metav1.Now(),
-	}
-
-	newShoot, err := c.updater.UpdateShootStatus(o.Shoot.Info)
+	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			shoot.Status.RetryCycleStartTime = nil
+			shoot.Status.LastError = nil
+			shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
+				Type:           gardenv1beta1.ShootLastOperationTypeDelete,
+				State:          gardenv1beta1.ShootLastOperationStateSucceeded,
+				Progress:       100,
+				Description:    "Shoot cluster has been successfully deleted.",
+				LastUpdateTime: metav1.Now(),
+			}
+			return shoot, nil
+		})
 	if err != nil {
 		return err
 	}
@@ -356,28 +361,29 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 		description = lastError.Description
 	)
 
-	if !utils.TimeElapsed(o.Shoot.Info.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
-		description += " Operation will be retried."
-		state = gardenv1beta1.ShootLastOperationStateError
-	} else {
-		o.Shoot.Info.Status.RetryCycleStartTime = nil
-	}
+	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
+				description += " Operation will be retried."
+				state = gardenv1beta1.ShootLastOperationStateError
+			} else {
+				shoot.Status.RetryCycleStartTime = nil
+			}
 
-	o.Shoot.Info.Status.Gardener = *o.GardenerInfo
-	o.Shoot.Info.Status.LastError = lastError
-	o.Shoot.Info.Status.LastOperation.Type = gardenv1beta1.ShootLastOperationTypeDelete
-	o.Shoot.Info.Status.LastOperation.State = state
-	o.Shoot.Info.Status.LastOperation.Description = description
-	o.Shoot.Info.Status.LastOperation.LastUpdateTime = metav1.Now()
-
+			shoot.Status.Gardener = *o.GardenerInfo
+			shoot.Status.LastError = lastError
+			shoot.Status.LastOperation.Type = gardenv1beta1.ShootLastOperationTypeDelete
+			shoot.Status.LastOperation.State = state
+			shoot.Status.LastOperation.Description = description
+			shoot.Status.LastOperation.LastUpdateTime = metav1.Now()
+			return shoot, nil
+		})
 	o.Logger.Error(description)
-
-	newShoot, err := c.updater.UpdateShootStatus(o.Shoot.Info)
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}
 
-	newShootAfterLabel, err := c.updater.UpdateShootLabels(o.Shoot.Info, computeLabelsWithShootHealthiness(false))
+	newShootAfterLabel, err := kubernetes.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, shootHealthyLabelTransform(false))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}

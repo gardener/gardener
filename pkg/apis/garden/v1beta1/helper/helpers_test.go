@@ -21,7 +21,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	"github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	"time"
 )
 
 var (
@@ -30,6 +35,158 @@ var (
 )
 
 var _ = Describe("helper", func() {
+	DescribeTable("#IsShootHibernated",
+		func(shoot *gardenv1beta1.Shoot, hibernated bool) {
+			Expect(IsShootHibernated(shoot)).To(Equal(hibernated))
+		},
+		Entry("no hibernation section", &gardenv1beta1.Shoot{}, false),
+		Entry("hibernation.enabled = false", &gardenv1beta1.Shoot{
+			Spec: gardenv1beta1.ShootSpec{
+				Hibernation: &gardenv1beta1.Hibernation{Enabled: false},
+			},
+		}, false),
+		Entry("hibernation.enabled = true", &gardenv1beta1.Shoot{
+			Spec: gardenv1beta1.ShootSpec{
+				Hibernation: &gardenv1beta1.Hibernation{Enabled: true},
+			},
+		}, true),
+	)
+
+	DescribeTable("#GetShootCloudProviderWOrkers",
+		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected []gardenv1beta1.Worker) {
+			Expect(GetShootCloudProviderWorkers(cloudProvider, shoot)).To(Equal(expected))
+		},
+		Entry("AWS",
+			gardenv1beta1.CloudProviderAWS,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						AWS: &gardenv1beta1.AWSCloud{
+							Workers: []gardenv1beta1.AWSWorker{{Worker: gardenv1beta1.Worker{Name: "aws"}}},
+						},
+					},
+				},
+			},
+			[]gardenv1beta1.Worker{{Name: "aws"}}),
+		Entry("Azure",
+			gardenv1beta1.CloudProviderAzure,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						Azure: &gardenv1beta1.AzureCloud{
+							Workers: []gardenv1beta1.AzureWorker{{Worker: gardenv1beta1.Worker{Name: "azure"}}},
+						},
+					},
+				},
+			},
+			[]gardenv1beta1.Worker{{Name: "azure"}}),
+		Entry("GCP",
+			gardenv1beta1.CloudProviderGCP,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						GCP: &gardenv1beta1.GCPCloud{
+							Workers: []gardenv1beta1.GCPWorker{{Worker: gardenv1beta1.Worker{Name: "gcp"}}},
+						},
+					},
+				},
+			},
+			[]gardenv1beta1.Worker{{Name: "gcp"}}),
+		Entry("OpenStack",
+			gardenv1beta1.CloudProviderOpenStack,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						OpenStack: &gardenv1beta1.OpenStackCloud{
+							Workers: []gardenv1beta1.OpenStackWorker{{Worker: gardenv1beta1.Worker{Name: "openStack"}}},
+						},
+					},
+				},
+			},
+			[]gardenv1beta1.Worker{{Name: "openStack"}}),
+		Entry("Local",
+			gardenv1beta1.CloudProviderLocal,
+			&gardenv1beta1.Shoot{},
+			[]gardenv1beta1.Worker{{Name: "local", AutoScalerMin: 1, AutoScalerMax: 1}}))
+
+	DescribeTable("#ShootWantsClusterAutoscaler",
+		func(shoot *gardenv1beta1.Shoot, wantsAutoscaler bool) {
+			actualWantsAutoscaler, err := ShootWantsClusterAutoscaler(shoot)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualWantsAutoscaler).To(Equal(wantsAutoscaler))
+		},
+		Entry("no workers",
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						OpenStack: &gardenv1beta1.OpenStackCloud{},
+					},
+				},
+			},
+			false),
+		Entry("one worker no difference in auto scaler max and min",
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						OpenStack: &gardenv1beta1.OpenStackCloud{
+							Workers: []gardenv1beta1.OpenStackWorker{{Worker: gardenv1beta1.Worker{Name: "foo"}}},
+						},
+					},
+				},
+			},
+			false),
+		Entry("one worker with difference in auto scaler max and min",
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						OpenStack: &gardenv1beta1.OpenStackCloud{
+							Workers: []gardenv1beta1.OpenStackWorker{{Worker: gardenv1beta1.Worker{Name: "foo", AutoScalerMin: 1, AutoScalerMax: 2}}},
+						},
+					},
+				},
+			},
+			true))
+
+	DescribeTable("#UpdatedCondition",
+		func(condition *gardenv1beta1.Condition, status corev1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
+			updated := UpdatedCondition(condition, status, reason, message)
+
+			Expect(updated).To(matcher)
+		},
+		Entry("no update",
+			&gardenv1beta1.Condition{
+				Status:  corev1.ConditionTrue,
+				Reason:  "reason",
+				Message: "message",
+			},
+			corev1.ConditionTrue,
+			"reason",
+			"message",
+			Equal(&gardenv1beta1.Condition{
+				Status:  corev1.ConditionTrue,
+				Reason:  "reason",
+				Message: "message",
+			}),
+		),
+		Entry("update",
+			&gardenv1beta1.Condition{
+				Status:  corev1.ConditionTrue,
+				Reason:  "reason",
+				Message: "message",
+			},
+			corev1.ConditionTrue,
+			"OtherReason",
+			"message",
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status":             Equal(corev1.ConditionTrue),
+				"Reason":             Equal("OtherReason"),
+				"Message":            Equal("message"),
+				"LastTransitionTime": Not(Equal(metav1.Time{Time: time.Unix(0, 0)})),
+			})),
+		),
+	)
+
 	Describe("#GetCondition", func() {
 		It("should return the found condition", func() {
 			var (

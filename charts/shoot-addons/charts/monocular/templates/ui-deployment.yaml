@@ -4,6 +4,7 @@ metadata:
   name: {{ template "monocular.fullname" . }}-ui
   namespace: kube-system
   labels:
+    garden.sapcloud.io/role: optional-addon
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
@@ -16,6 +17,7 @@ spec:
   template:
     metadata:
       labels:
+        garden.sapcloud.io/role: optional-addon
         origin: gardener
         app: {{ template "monocular.fullname" . }}-ui
       annotations:

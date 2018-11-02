@@ -5,6 +5,7 @@ metadata:
   name: metrics-server
   namespace: kube-system
   labels:
+    garden.sapcloud.io/role: system-component
     k8s-app: metrics-server
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
@@ -16,6 +17,7 @@ spec:
     metadata:
       name: metrics-server
       labels:
+        garden.sapcloud.io/role: system-component
         k8s-app: metrics-server
         origin: gardener
       annotations:

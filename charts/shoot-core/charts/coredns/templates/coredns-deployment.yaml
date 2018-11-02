@@ -4,6 +4,7 @@ metadata:
   name: coredns
   namespace: kube-system
   labels:
+    garden.sapcloud.io/role: system-component
     k8s-app: kube-dns
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
@@ -19,6 +20,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        garden.sapcloud.io/role: system-component
         k8s-app: kube-dns
       # we won't be using the checksum of the configmap since coredns provides the "reload" plugins that does the reload if config changes.
     spec:

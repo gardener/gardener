@@ -4,6 +4,7 @@ metadata:
   name: {{ template "kubernetes-dashboard.fullname" . }}
   namespace: kube-system
   labels:
+    garden.sapcloud.io/role: optional-addon
     app: {{ template "kubernetes-dashboard.name" . }}
     heritage: "{{ .Release.Service }}"
     release: "{{ .Release.Name }}"
@@ -31,6 +32,7 @@ spec:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
       labels:
+        garden.sapcloud.io/role: optional-addon
         origin: gardener
         app: {{ template "kubernetes-dashboard.name" . }}
         heritage: "{{ .Release.Service }}"

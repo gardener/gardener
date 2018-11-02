@@ -5,6 +5,7 @@ metadata:
   name: machine-controller-manager
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: controlplane
     app: kubernetes
     role: machine-controller-manager
 spec:
@@ -22,6 +23,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: machine-controller-manager
     spec:

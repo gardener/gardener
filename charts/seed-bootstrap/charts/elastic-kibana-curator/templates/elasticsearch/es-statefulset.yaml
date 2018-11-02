@@ -5,6 +5,7 @@ metadata:
   name: elasticsearch-logging
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: logging
     app: elasticsearch-logging
     role: logging
 spec:
@@ -17,6 +18,7 @@ spec:
   template:
     metadata:
       labels:
+        garden.sapcloud.io/role: logging
         app: elasticsearch-logging
         role: logging
     spec:

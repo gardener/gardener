@@ -14,9 +14,14 @@
 
 package common
 
+import (
+	"fmt"
+	"k8s.io/apimachinery/pkg/util/sets"
+)
+
 const (
-	// AlertManagerDeploymentName is the name of the AlertManager deployment.
-	AlertManagerDeploymentName = "alertmanager"
+	// AlertManagerStatefulSetName is the name of the alertmanager stateful set.
+	AlertManagerStatefulSetName = "alertmanager"
 
 	// BackupSecretName defines the name of the secret containing the credentials which are required to
 	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
@@ -86,6 +91,21 @@ const (
 
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.
 	GardenRoleSeed = "seed"
+
+	// GardenRoleControlPlane is the value of the GardenRole key indicating type 'controlplane'.
+	GardenRoleControlPlane = "controlplane"
+
+	// GardenRoleSystemComponent is the value of the GardenRole key indicating type 'system-component'.
+	GardenRoleSystemComponent = "system-component"
+
+	// GardenRoleMonitoring is the value of the GardenRole key indicating type 'monitoring'.
+	GardenRoleMonitoring = "monitoring"
+
+	// GardenRoleOptionalAddon is the value of the GardenRole key indicating type 'optional-addon'.
+	GardenRoleOptionalAddon = "optional-addon"
+
+	// GardenRoleLogging is the value of the GardenRole key indicating type 'logging'.
+	GardenRoleLogging = "logging"
 
 	// GardenRoleDefaultDomain is the value of the GardenRole key indicating type 'default-domain'.
 	GardenRoleDefaultDomain = "default-domain"
@@ -159,6 +179,48 @@ const (
 	// KubeAddonManagerDeploymentName is the name of the kube-addon-manager deployment.
 	KubeAddonManagerDeploymentName = "kube-addon-manager"
 
+	// CalicoTyphaDeploymentName is the name of the calico-typha deployment.
+	CalicoTyphaDeploymentName = "calico-typha"
+
+	// CoreDNSDeploymentName is the name of the coredns deployment.
+	CoreDNSDeploymentName = "coredns"
+
+	// VPNShootDeploymentName is the name of the vpn-shoot deployment.
+	VPNShootDeploymentName = "vpn-shoot"
+
+	// MetricsServerDeploymentName is the name of the metrics-server deployment.
+	MetricsServerDeploymentName = "metrics-server"
+
+	// CalicoNodeDaemonSetName is the name of the calico-node daemon set.
+	CalicoNodeDaemonSetName = "calico-node"
+
+	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
+	KubeProxyDaemonSetName = "kube-proxy"
+
+	// GrafanaDeploymentName is the name of the grafana deployment.
+	GrafanaDeploymentName = "grafana"
+
+	// KubeStateMetricsShootDeploymentName is the name of the kube-state-metrics deployment.
+	KubeStateMetricsShootDeploymentName = "kube-state-metrics"
+
+	// KubeStateMetricsSeedDeploymentName is the name of the kube-state-metrics-shoot deployment.
+	KubeStateMetricsSeedDeploymentName = "kube-state-metrics-seed"
+
+	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
+	NodeExporterDaemonSetName = "node-exporter"
+
+	// ElasticSearchStatefulSetName is the name of the elasticsearch-logging stateful set.
+	ElasticSearchStatefulSetName = "elasticsearch-logging"
+
+	// KibanaDeploymentName is the name of the kibana-logging deployment.
+	KibanaDeploymentName = "kibana-logging"
+
+	// FluentBitDaemonSetName is the name of the fluent-bit daemon set.
+	FluentBitDaemonSetName = "fluent-bit"
+
+	// FluentdEsStatefulSetName is the name of the fluentd-es stateful set.
+	FluentdEsStatefulSetName = "fluentd-es"
+
 	// ProjectPrefix is the prefix of namespaces representing projects.
 	ProjectPrefix = "garden-"
 
@@ -188,8 +250,8 @@ const (
 	// ProjectMemberClusterRole is the name of the cluster role defining the permissions for project members.
 	ProjectMemberClusterRole = "garden.sapcloud.io:system:project-member"
 
-	// PrometheusDeploymentName is the name of the Prometheus deployment.
-	PrometheusDeploymentName = "prometheus"
+	// PrometheusStatefulSetName is the name of the Prometheus stateful set.
+	PrometheusStatefulSetName = "prometheus"
 
 	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
 	TerraformerConfigSuffix = ".tf-config"
@@ -380,6 +442,79 @@ const (
 
 	// AlpineImageName is the name of alpine image
 	AlpineImageName = "alpine"
+)
+
+var (
+	// ETCDMainStatefulSetName is the name of the etcd-main stateful set.
+	ETCDMainStatefulSetName = fmt.Sprintf("etcd-%s", EtcdRoleMain)
+	// ETCDEventsStatefulSetName is the name of the etcd-events stateful set.
+	ETCDEventsStatefulSetName = fmt.Sprintf("etcd-%s", EtcdRoleEvents)
+
+	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
+	// running in the seed.
+	RequiredControlPlaneDeployments = sets.NewString(
+		CloudControllerManagerDeploymentName,
+		KubeAddonManagerDeploymentName,
+		KubeAPIServerDeploymentName,
+		KubeControllerManagerDeploymentName,
+		KubeSchedulerDeploymentName,
+		MachineControllerManagerDeploymentName,
+	)
+
+	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
+	// sets running in the seed.
+	RequiredControlPlaneStatefulSets = sets.NewString(
+		ETCDMainStatefulSetName,
+		ETCDEventsStatefulSetName,
+	)
+
+	// RequiredSystemComponentDeployments is a set of the required system components.
+	RequiredSystemComponentDeployments = sets.NewString(
+		CalicoTyphaDeploymentName,
+		CoreDNSDeploymentName,
+		VPNShootDeploymentName,
+		MetricsServerDeploymentName,
+	)
+
+	// RequiredSystemComponentDaemonSets is a set of the required shoot control plane daemon sets.
+	RequiredSystemComponentDaemonSets = sets.NewString(
+		CalicoNodeDaemonSetName,
+		KubeProxyDaemonSetName,
+	)
+
+	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
+	RequiredMonitoringSeedDeployments = sets.NewString(
+		GrafanaDeploymentName,
+		KubeStateMetricsSeedDeploymentName,
+		KubeStateMetricsShootDeploymentName,
+	)
+
+	// RequiredMonitoringSeedStatefulSets is a set of the required seed monitoring stateful sets.
+	RequiredMonitoringSeedStatefulSets = sets.NewString(
+		AlertManagerStatefulSetName,
+		PrometheusStatefulSetName,
+	)
+
+	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
+	RequiredMonitoringShootDaemonSets = sets.NewString(
+		NodeExporterDaemonSetName,
+	)
+
+	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
+	RequiredLoggingStatefulSets = sets.NewString(
+		ElasticSearchStatefulSetName,
+		FluentdEsStatefulSetName,
+	)
+
+	// RequiredLoggingDeployments is a set of the required logging deployments.
+	RequiredLoggingDeployments = sets.NewString(
+		KibanaDeploymentName,
+	)
+
+	// RequiredLoggingDaemonSetNames is a set of the required logging daemon sets.
+	RequiredLoggingDaemonSetNames = sets.NewString(
+		FluentBitDaemonSetName,
+	)
 )
 
 // CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to

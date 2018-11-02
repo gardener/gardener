@@ -23,6 +23,7 @@ metadata:
   name: kube-state-metrics
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: monitoring
     component: kube-state-metrics
     type: shoot
 spec:
@@ -40,6 +41,7 @@ spec:
   template:
     metadata:
       labels:
+        garden.sapcloud.io/role: monitoring
         component: kube-state-metrics
         type: shoot
     spec:

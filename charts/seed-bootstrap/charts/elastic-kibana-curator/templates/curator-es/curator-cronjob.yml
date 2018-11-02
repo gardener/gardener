@@ -4,6 +4,7 @@ metadata:
   name: hourly-curator
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: logging
     app: curator
     role: logging
 spec:
@@ -15,6 +16,11 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            garden.sapcloud.io/role: logging
+            app: curator
+            role: logging
         spec:
           containers:
           - image: {{ index .Values.images "curator-es" }}
@@ -43,6 +49,7 @@ metadata:
   name: daily-curator
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: logging
     app: curator
     role: logging
 spec:
@@ -54,6 +61,11 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            garden.sapcloud.io/role: logging
+            app: curator
+            role: logging
         spec:
           containers:
           - image: {{ index .Values.images "curator-es" }}

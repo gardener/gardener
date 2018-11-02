@@ -16,6 +16,8 @@ package shoot
 
 import (
 	"fmt"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"k8s.io/client-go/util/retry"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -133,8 +135,8 @@ type MaintenanceControlInterface interface {
 // implements the documented semantics for maintaining Shoots. updater is the UpdaterInterface used
 // to update the spec of Shoots. You should use an instance returned from NewDefaultMaintenanceControl() for any
 // scenario other than testing.
-func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, recorder record.EventRecorder, updater UpdaterInterface) MaintenanceControlInterface {
-	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, recorder, updater}
+func NewDefaultMaintenanceControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, recorder record.EventRecorder) MaintenanceControlInterface {
+	return &defaultMaintenanceControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, recorder}
 }
 
 type defaultMaintenanceControl struct {
@@ -144,7 +146,6 @@ type defaultMaintenanceControl struct {
 	imageVector        imagevector.ImageVector
 	identity           *gardenv1beta1.Gardener
 	recorder           record.EventRecorder
-	updater            UpdaterInterface
 }
 
 func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key string) error {
@@ -176,24 +177,27 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		handleError(fmt.Sprintf("Failure while determining the machine image in the CloudProfile: %s", err.Error()))
 		return nil
 	}
+
+	var updateMachineImage func(s *gardenv1beta1.Cloud)
 	if machineImageFound {
 		switch operation.Shoot.CloudProvider {
 		case gardenv1beta1.CloudProviderAWS:
 			image := machineImage.(*gardenv1beta1.AWSMachineImage)
-			shoot.Spec.Cloud.AWS.MachineImage = image
+			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = image }
 		case gardenv1beta1.CloudProviderAzure:
 			image := machineImage.(*gardenv1beta1.AzureMachineImage)
-			shoot.Spec.Cloud.Azure.MachineImage = image
+			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.Azure.MachineImage = image }
 		case gardenv1beta1.CloudProviderGCP:
 			image := machineImage.(*gardenv1beta1.GCPMachineImage)
-			shoot.Spec.Cloud.GCP.MachineImage = image
+			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.GCP.MachineImage = image }
 		case gardenv1beta1.CloudProviderOpenStack:
 			image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
-			shoot.Spec.Cloud.OpenStack.MachineImage = image
+			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = image }
 		}
 	}
 
 	// Check if the CloudProfile contains a newer Kubernetes patch version.
+	var updateKubernetesVersion func(s *gardenv1beta1.Kubernetes)
 	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
 		newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesVersion(*operation.Shoot.CloudProfile, operation.Shoot.Info.Spec.Kubernetes.Version)
 		if err != nil {
@@ -201,15 +205,26 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 			return nil
 		}
 		if newerPatchVersionFound {
-			shoot.Spec.Kubernetes.Version = latestPatchVersion
+			updateKubernetesVersion = func(s *gardenv1beta1.Kubernetes) { s.Version = latestPatchVersion }
 		}
 	}
 
-	// Remove operation annotation.
-	delete(shoot.Annotations, common.ShootOperation)
-
 	// Update the Shoot resource object.
-	if _, err := c.updater.UpdateShoot(shoot); err != nil {
+	_, err = kutil.TryUpdateShoot(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+		if !apiequality.Semantic.DeepEqual(shootObj.Spec.Maintenance.AutoUpdate, s.Spec.Maintenance.AutoUpdate) {
+			return nil, fmt.Errorf("auto update section of Shoot %s/%s changed mid-air", s.Namespace, s.Name)
+		}
+
+		delete(shoot.Annotations, common.ShootOperation)
+		if updateMachineImage != nil {
+			updateMachineImage(&s.Spec.Cloud)
+		}
+		if updateKubernetesVersion != nil {
+			updateKubernetesVersion(&s.Spec.Kubernetes)
+		}
+		return s, nil
+	})
+	if err != nil {
 		handleError(fmt.Sprintf("Could not update the Shoot specification: %s", err.Error()))
 		return nil
 	}

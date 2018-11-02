@@ -164,7 +164,7 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 		if namespaceObj, err := c.namespaceLister.Get(*namespace); err == nil {
 			// If namespace is marked for deletion we have to do nothing and wait for deletion.
 			if namespaceObj.DeletionTimestamp != nil {
-				conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionProcessing, fmt.Sprintf("Waiting for namespace '%s' to be deleted", namespaceObj.Name))
+				conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionProcessing, fmt.Sprintf("Waiting for namespace '%s' to be deleted", namespaceObj.Name))
 				_, err = c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 				return err
 			}
@@ -173,15 +173,15 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 			// that particular namespace anymore).
 			if !namespaceEmpty {
 				projectLogger.Infof("Project deletion is not possible (there still exist objects which prevent deleting namespace '%s')", namespaceObj.Name)
-				conditionProjectNamespaceEmpty = helper.ModifyCondition(conditionProjectNamespaceEmpty, corev1.ConditionFalse, "ShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
-				conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionImpossible, "Namespace is not empty")
+				conditionProjectNamespaceEmpty = helper.UpdatedCondition(conditionProjectNamespaceEmpty, corev1.ConditionFalse, "ShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
+				conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionImpossible, "Namespace is not empty")
 				_, err = c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 				return err
 			}
 
 			// Namespace is empty and allowed to be deleted.
-			conditionProjectNamespaceEmpty = helper.ModifyCondition(conditionProjectNamespaceEmpty, corev1.ConditionTrue, "NoShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
-			conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionAllowed, "Namespace is empty and allowed to be deleted")
+			conditionProjectNamespaceEmpty = helper.UpdatedCondition(conditionProjectNamespaceEmpty, corev1.ConditionTrue, "NoShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
+			conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionAllowed, "Namespace is empty and allowed to be deleted")
 			project, err = c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 			if err != nil {
 				projectLogger.Error(err.Error())
@@ -190,12 +190,12 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 
 			projectLogger.Infof("Project deletion is now possible (no blocking objects exist anymore). Deleting namespace '%s'", namespaceObj.Name)
 			if err := c.k8sGardenClient.DeleteNamespace(namespaceObj.Name); err != nil {
-				conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionFailed, fmt.Sprintf("Error while deleting namespace %s: %+v", namespaceObj.Name, err))
+				conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionFailed, fmt.Sprintf("Error while deleting namespace %s: %+v", namespaceObj.Name, err))
 				c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 				return err
 			}
 
-			conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionProcessing, fmt.Sprintf("Waiting for namespace '%s' to be deleted", namespaceObj.Name))
+			conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceDeletionProcessing, fmt.Sprintf("Waiting for namespace '%s' to be deleted", namespaceObj.Name))
 			_, err = c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 			return err
 		}
@@ -218,12 +218,12 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 	// Update namespace and check ProjectNamespaceReady condition.
 	if err := c.updateNamespace(project); err != nil {
 		message := fmt.Sprintf("Error while updating namespace for project %q: %+v", project.Name, err)
-		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceCreationFailed, message)
+		conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceCreationFailed, message)
 		projectLogger.Error(message)
 		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 		return err
 	}
-	conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionTrue, gardenv1beta1.ProjectNamespaceReconciled, "Namespace has been reconciled.")
+	conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionTrue, gardenv1beta1.ProjectNamespaceReconciled, "Namespace has been reconciled.")
 
 	// Create RBAC rules to allow project owner to read, update, and delete the project.
 	owners := []rbacv1.Subject{project.Spec.Owner}
@@ -245,7 +245,7 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 	}
 	if err := common.ApplyChart(c.k8sGardenClient, chartRenderer, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), "project-rbac", *namespace, values, nil); err != nil {
 		message := fmt.Sprintf("Error while creating RBAC rules for namespace %q: %+v", *namespace, err)
-		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
+		conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
 		projectLogger.Error(message)
 		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 		return err
@@ -253,7 +253,7 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 
 	if err := c.ensureMemberRoleBinding(project, owners); err != nil {
 		message := fmt.Sprintf("Error while creating member rolebinding for namespace %q: %+v", *namespace, err)
-		conditionProjectNamespaceReady = helper.ModifyCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
+		conditionProjectNamespaceReady = helper.UpdatedCondition(conditionProjectNamespaceReady, corev1.ConditionFalse, gardenv1beta1.ProjectNamespaceReconcileFailed, message)
 		projectLogger.Error(message)
 		c.updateProjectStatus(project, *conditionProjectNamespaceReady, *conditionProjectNamespaceEmpty, *conditionProjectShootsWithErrors)
 		return err
@@ -261,16 +261,16 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) error {
 
 	// Check ProjectNamespaceEmpty condition.
 	if namespaceEmpty {
-		conditionProjectNamespaceEmpty = helper.ModifyCondition(conditionProjectNamespaceEmpty, corev1.ConditionTrue, "NoShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
+		conditionProjectNamespaceEmpty = helper.UpdatedCondition(conditionProjectNamespaceEmpty, corev1.ConditionTrue, "NoShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
 	} else {
-		conditionProjectNamespaceEmpty = helper.ModifyCondition(conditionProjectNamespaceEmpty, corev1.ConditionFalse, "ShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
+		conditionProjectNamespaceEmpty = helper.UpdatedCondition(conditionProjectNamespaceEmpty, corev1.ConditionFalse, "ShootsOrBackupInfrastructuresExist", fmt.Sprintf("Number of BackupInfrastructures = %d, Number of Shoots = %d", numberOfBackupInfrastructure, numberOfShoots))
 	}
 
 	// Check ProjectShootsWithErrors condition.
-	conditionProjectShootsWithErrors = helper.ModifyCondition(conditionProjectShootsWithErrors, corev1.ConditionFalse, "NoShootsWithErrorsFound", "No operation failed for Shoots.")
+	conditionProjectShootsWithErrors = helper.UpdatedCondition(conditionProjectShootsWithErrors, corev1.ConditionFalse, "NoShootsWithErrorsFound", "No operation failed for Shoots.")
 	for _, shoot := range shootList {
 		if shoot.Status.LastError != nil {
-			conditionProjectShootsWithErrors = helper.ModifyCondition(conditionProjectShootsWithErrors, corev1.ConditionTrue, "ShootsWithErrorsFound", "Shoot with .status.lastError found")
+			conditionProjectShootsWithErrors = helper.UpdatedCondition(conditionProjectShootsWithErrors, corev1.ConditionTrue, "ShootsWithErrorsFound", "Shoot with .status.lastError found")
 			break
 		}
 	}

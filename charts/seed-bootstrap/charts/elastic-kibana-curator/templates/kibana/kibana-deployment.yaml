@@ -4,6 +4,7 @@ metadata:
   name: kibana-logging
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: logging
     app: kibana-logging
     role: logging
 spec:
@@ -17,6 +18,7 @@ spec:
       annotations:
         checksum/kibana-index-registration-config: {{ include (print $.Template.BasePath "/kibana/kibana-index-registration-config.yaml") . | sha256sum }}
       labels:
+        garden.sapcloud.io/role: logging
         app: kibana-logging
         role: logging
     spec:

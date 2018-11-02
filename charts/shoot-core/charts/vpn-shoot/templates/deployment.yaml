@@ -5,6 +5,7 @@ metadata:
   name: vpn-shoot
   namespace: kube-system
   labels:
+    garden.sapcloud.io/role: system-component
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
 spec:
@@ -24,6 +25,7 @@ spec:
 {{- end }}
       labels:
         origin: gardener
+        garden.sapcloud.io/role: system-component
         app: vpn-shoot
     spec:
       priorityClassName: system-cluster-critical

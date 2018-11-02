@@ -53,7 +53,6 @@ type Controller struct {
 
 	config             *componentconfig.ControllerManagerConfiguration
 	control            ControlInterface
-	updater            UpdaterInterface
 	careControl        CareControlInterface
 	maintenanceControl MaintenanceControlInterface
 	quotaControl       QuotaControlInterface
@@ -96,7 +95,6 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 
 		shootInformer = gardenv1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
-		shootUpdater  = NewRealUpdater(k8sGardenClient, shootLister)
 
 		seedInformer = gardenv1beta1Informer.Seeds()
 		seedLister   = seedInformer.Lister()
@@ -113,10 +111,9 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 		k8sGardenInformers: k8sGardenInformers,
 
 		config:             config,
-		control:            NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder, shootUpdater),
-		updater:            shootUpdater,
-		careControl:        NewDefaultCareControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, shootUpdater),
-		maintenanceControl: NewDefaultMaintenanceControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, recorder, shootUpdater),
+		control:            NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder),
+		careControl:        NewDefaultCareControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config),
+		maintenanceControl: NewDefaultMaintenanceControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, recorder),
 		quotaControl:       NewDefaultQuotaControl(k8sGardenClient, gardenv1beta1Informer),
 		recorder:           recorder,
 		secrets:            secrets,
@@ -151,8 +148,7 @@ func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers ga
 	})
 
 	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.shootCareAdd,
-		DeleteFunc: shootController.shootCareDelete,
+		AddFunc: shootController.shootCareAdd,
 	})
 
 	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{

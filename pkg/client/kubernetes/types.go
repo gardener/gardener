@@ -105,6 +105,9 @@ type Client interface {
 	ListStatefulSets(string, metav1.ListOptions) (*appsv1.StatefulSetList, error)
 	DeleteStatefulSet(string, string) error
 
+	// DaemonSets
+	ListDaemonSets(string, metav1.ListOptions) (*appsv1.DaemonSetList, error)
+
 	// Jobs
 	GetJob(string, string) (*batchv1.Job, error)
 	DeleteJob(string, string) error

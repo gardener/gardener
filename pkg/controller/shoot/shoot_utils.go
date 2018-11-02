@@ -22,36 +22,25 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// operationOngoing returns true if the .status.phase field has a value which indicates that an operation
-// is still running (like creating, updating, ...), and false otherwise.
-func operationOngoing(shoot *gardenv1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-	if lastOperation == nil {
-		return false
-	}
-	return lastOperation.State == gardenv1beta1.ShootLastOperationStateProcessing
-}
-
 func formatError(message string, err error) *gardenv1beta1.LastError {
 	return &gardenv1beta1.LastError{
 		Description: fmt.Sprintf("%s (%s)", message, err.Error()),
 	}
 }
 
-func computeLabelsWithShootHealthiness(healthy bool) func(map[string]string) map[string]string {
-	return func(existingLabels map[string]string) map[string]string {
-		labels := existingLabels
-		if labels == nil {
-			labels = map[string]string{}
+func shootHealthyLabelTransform(healthy bool) func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+	return func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+		if shoot.Labels == nil {
+			shoot.Labels = make(map[string]string)
 		}
 
 		if !healthy {
-			labels[common.ShootUnhealthy] = "true"
+			shoot.Labels[common.ShootUnhealthy] = "true"
 		} else {
-			delete(labels, common.ShootUnhealthy)
+			delete(shoot.Labels, common.ShootUnhealthy)
 		}
 
-		return labels
+		return shoot, nil
 	}
 }
 
