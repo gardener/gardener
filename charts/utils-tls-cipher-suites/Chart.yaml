@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Util chart for cipher-suites
+name: utils-tls-cipher-suites
+version: 0.1.0

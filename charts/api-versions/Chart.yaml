@@ -1,4 +1,0 @@
-apiVersion: v1
-description: An umbrella chart for resource versions.
-name: api-versions
-version: 0.1.0

@@ -15,7 +15,9 @@
 package initializer
 
 import (
+	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+
 	"k8s.io/apiserver/pkg/admission"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	kubeinformers "k8s.io/client-go/informers"
@@ -28,13 +30,19 @@ type WantsInternalGardenInformerFactory interface {
 	admission.InitializationValidator
 }
 
+// WantsInternalGardenClientset defines a function which sets Garden Clientset for admission plugins that need it.
+type WantsInternalGardenClientset interface {
+	SetInternalGardenClientset(internalversion.Interface)
+	admission.InitializationValidator
+}
+
 // WantsKubeInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsKubeInformerFactory interface {
 	SetKubeInformerFactory(kubeinformers.SharedInformerFactory)
 	admission.InitializationValidator
 }
 
-// WantsKubeClientset defines a function which sets Clientset for admission plugins that need it.
+// WantsKubeClientset defines a function which sets Kubernetes Clientset for admission plugins that need it.
 type WantsKubeClientset interface {
 	SetKubeClientset(kubernetes.Interface)
 	admission.InitializationValidator
@@ -48,9 +56,12 @@ type WantsAuthorizer interface {
 
 type pluginInitializer struct {
 	gardenInformers gardeninformers.SharedInformerFactory
-	kubeInformers   kubeinformers.SharedInformerFactory
-	kubeClient      kubernetes.Interface
-	authorizer      authorizer.Authorizer
+	gardenClient    internalversion.Interface
+
+	kubeInformers kubeinformers.SharedInformerFactory
+	kubeClient    kubernetes.Interface
+
+	authorizer authorizer.Authorizer
 }
 
 var _ admission.PluginInitializer = pluginInitializer{}

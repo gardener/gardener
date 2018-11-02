@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/version"
 	deletionconfirmation "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
-	projectnamespace "github.com/gardener/gardener/plugin/pkg/project/namespace"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
@@ -118,7 +117,6 @@ func (o *Options) complete() error {
 	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
 	shootseedmanager.Register(o.Recommended.Admission.Plugins)
-	projectnamespace.Register(o.Recommended.Admission.Plugins)
 	shootdnshostedzone.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
 
@@ -129,7 +127,6 @@ func (o *Options) complete() error {
 		shootquotavalidator.PluginName,
 		shootseedmanager.PluginName,
 		shootvalidator.PluginName,
-		projectnamespace.PluginName,
 	}
 
 	recommendedPluginOrder := sets.NewString(o.Recommended.Admission.RecommendedPluginOrder...)
@@ -166,7 +163,7 @@ func (o *Options) config() (*apiserver.Config, error) {
 		}
 		gardenInformerFactory := gardeninformers.NewSharedInformerFactory(gardenClient, gardenerAPIServerConfig.LoopbackClientConfig.Timeout)
 		o.GardenInformerFactory = gardenInformerFactory
-		return []admission.PluginInitializer{admissioninitializer.New(gardenInformerFactory, kubeInformerFactory, kubeClient, gardenerAPIServerConfig.Authorization.Authorizer)}, nil
+		return []admission.PluginInitializer{admissioninitializer.New(gardenInformerFactory, gardenClient, kubeInformerFactory, kubeClient, gardenerAPIServerConfig.Authorization.Authorizer)}, nil
 	}
 
 	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))

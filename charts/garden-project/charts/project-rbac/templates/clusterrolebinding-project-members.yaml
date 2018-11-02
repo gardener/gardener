@@ -1,0 +1,22 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:system:project-member:{{ .Values.project.name }}
+  ownerReferences:
+  - apiVersion: garden.sapcloud.io/v1beta1
+    kind: Project
+    blockOwnerDeletion: false
+    controller: true
+    name: {{ .Values.project.name | quote }}
+    uid: {{ .Values.project.uid | quote }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:system:project-member:{{ .Values.project.name }}
+{{- if .Values.project.members }}
+subjects:
+{{ toYaml .Values.project.members }}
+{{- else }}
+subjects: []
+{{- end }}

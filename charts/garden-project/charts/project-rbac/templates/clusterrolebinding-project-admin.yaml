@@ -8,11 +8,11 @@ metadata:
     kind: Project
     blockOwnerDeletion: false
     controller: true
-    name: {{ .Values.project.name }}
-    uid: {{ .Values.project.uid }}
+    name: {{ .Values.project.name | quote }}
+    uid: {{ .Values.project.uid | quote }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: garden.sapcloud.io:system:project:{{ .Values.project.name }}
 subjects:
-{{ toYaml .Values.project.owners }}
+{{ .Values.project.owner | list | toYaml }}

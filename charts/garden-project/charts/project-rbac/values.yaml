@@ -1,10 +1,11 @@
 project:
   name: my-project-1
   uid: 8d963b58-a509-11e8-98d0-529269fb1459
-  owners:
-  - apiGroup: rbac.authorization.k8s.io
+  owner:
+    apiGroup: rbac.authorization.k8s.io
     kind: User
     name: john.doe@example.com
+  members:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
-    name: docker-for-desktop
+    name: alice.doe@example.com

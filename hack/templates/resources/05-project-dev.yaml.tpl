@@ -30,7 +30,7 @@ metadata:
   % if labels != {}:
   labels: ${yaml.dump(labels, width=10000)}
   % endif
-spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", ""); namespace = value("spec.namespace", "") %>
+spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", ""); namespace = value("spec.namespace", ""); members = value("spec.members", []) %>
   % if owner != {}:
   owner: ${yaml.dump(owner, width=10000)}
   % else:
@@ -38,6 +38,14 @@ spec:<% owner = value("spec.owner", {}); description = value("spec.description",
     apiGroup: rbac.authorization.k8s.io
     kind: User
     name: john.doe@example.com
+  % endif
+  % if members != []:
+  members: ${yaml.dump(members, width=10000)}
+  % else:
+  members:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: alice.doe@example.com
   % endif
   % if description != "":
   description: ${description}

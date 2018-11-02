@@ -15,6 +15,8 @@
 package botanist
 
 import (
+	"strings"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/hashicorp/go-multierror"
@@ -23,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"strings"
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
@@ -84,6 +85,7 @@ func (b *Botanist) PerformGarbageCollectionShoot() error {
 
 func (b *Botanist) deleteStalePods(client kubernetes.Client, podList *corev1.PodList) error {
 	var result error
+
 	for _, pod := range podList.Items {
 		if strings.Contains(pod.Status.Reason, "Evicted") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
@@ -100,5 +102,6 @@ func (b *Botanist) deleteStalePods(client kubernetes.Client, podList *corev1.Pod
 			}
 		}
 	}
-	return nil
+
+	return result
 }

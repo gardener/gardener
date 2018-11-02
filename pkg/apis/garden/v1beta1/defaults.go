@@ -179,7 +179,7 @@ func SetDefaults_Seed(obj *Seed) {
 
 // SetDefaults_Project sets default values for Project objects.
 func SetDefaults_Project(obj *Project) {
-	if len(obj.Spec.Owner.APIGroup) == 0 {
+	if obj.Spec.Owner != nil && len(obj.Spec.Owner.APIGroup) == 0 {
 		switch obj.Spec.Owner.Kind {
 		case rbacv1.ServiceAccountKind:
 			obj.Spec.Owner.APIGroup = ""

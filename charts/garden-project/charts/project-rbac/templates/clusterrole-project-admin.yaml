@@ -8,15 +8,15 @@ metadata:
     kind: Project
     blockOwnerDeletion: false
     controller: true
-    name: {{ .Values.project.name }}
-    uid: {{ .Values.project.uid }}
+    name: {{ .Values.project.name | quote }}
+    uid: {{ .Values.project.uid | quote }}
 rules:
 - apiGroups:
   - garden.sapcloud.io
   resources:
   - projects
   resourceNames:
-  - {{ .Values.project.name }}
+  - {{ .Values.project.name | quote }}
   verbs:
   - get
   - patch

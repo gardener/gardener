@@ -232,6 +232,9 @@ const (
 	// by the Gardener Dashboard.
 	ProjectNamespace = "project.garden.sapcloud.io/namespace"
 
+	// NamespaceProject is they key of a label on namespace whose value holds the project uid.
+	NamespaceProject = "namespace.garden.sapcloud.io/project"
+
 	// ProjectOwner is they key of a label on namespaces whose value holds the project owner. Usually, the label is set
 	// by the Gardener Dashboard.
 	ProjectOwner = "project.garden.sapcloud.io/owner"
@@ -243,9 +246,6 @@ const (
 	// ProjectPurpose is they key of a label on namespaces whose value holds the project purpose. Usually, the label is set
 	// by the Gardener Dashboard.
 	ProjectPurpose = "project.garden.sapcloud.io/purpose"
-
-	// ProjectMemberRoleBinding is the name of the role binding in a project that defines which users are members of the project.
-	ProjectMemberRoleBinding = "garden-project-members"
 
 	// ProjectMemberClusterRole is the name of the cluster role defining the permissions for project members.
 	ProjectMemberClusterRole = "garden.sapcloud.io:system:project-member"

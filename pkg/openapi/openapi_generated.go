@@ -4374,6 +4374,12 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 			SchemaProps: spec.SchemaProps{
 				Description: "ProjectSpec is the specification of a Project.",
 				Properties: map[string]spec.Schema{
+					"createdBy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CreatedBy is a subject representing a user name, an email address, or any other identifier of a user who created the project.",
+							Ref:         ref("k8s.io/api/rbac/v1.Subject"),
+						},
+					},
 					"description": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Description is a human-readable description of what the project is used for.",
@@ -4394,6 +4400,19 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"members": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Members is a list of subjects representing a user name, an email address, or any other identifier of a user that should be part of this project.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/rbac/v1.Subject"),
+									},
+								},
+							},
+						},
+					},
 					"namespace": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace.",
@@ -4402,7 +4421,6 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 						},
 					},
 				},
-				Required: []string{"owner"},
 			},
 		},
 		Dependencies: []string{
@@ -4416,24 +4434,24 @@ func schema_pkg_apis_garden_v1beta1_ProjectStatus(ref common.ReferenceCallback) 
 			SchemaProps: spec.SchemaProps{
 				Description: "ProjectStatus holds the most recently observed status of the project.",
 				Properties: map[string]spec.Schema{
-					"conditions": {
+					"observedGeneration": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Conditions represents the latest available observations of a Projects's current state.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition"),
-									},
-								},
-							},
+							Description: "ObservedGeneration is the most recent generation observed for this project.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Phase is the current phase of the project.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
 			},
 		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition"},
+		Dependencies: []string{},
 	}
 }
 

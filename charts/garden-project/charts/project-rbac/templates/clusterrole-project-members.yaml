@@ -1,0 +1,24 @@
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:project-member:{{ .Values.project.name }}
+  ownerReferences:
+  - apiVersion: garden.sapcloud.io/v1beta1
+    kind: Project
+    blockOwnerDeletion: false
+    controller: true
+    name: {{ .Values.project.name | quote }}
+    uid: {{ .Values.project.uid | quote }}
+rules:
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - projects
+  resourceNames:
+  - {{ .Values.project.name | quote }}
+  verbs:
+  - get
+  - patch
+  - update
+  - delete

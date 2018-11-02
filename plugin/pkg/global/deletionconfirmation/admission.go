@@ -22,9 +22,12 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
+	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 )
@@ -47,6 +50,7 @@ func NewFactory(config io.Reader) (admission.Interface, error) {
 // DeletionConfirmation contains an admission handler and listers.
 type DeletionConfirmation struct {
 	*admission.Handler
+	gardenClient  internalversion.Interface
 	shootLister   gardenlisters.ShootLister
 	projectLister gardenlisters.ProjectLister
 	readyFunc     admission.ReadyFunc
@@ -54,6 +58,7 @@ type DeletionConfirmation struct {
 
 var (
 	_ = admissioninitializer.WantsInternalGardenInformerFactory(&DeletionConfirmation{})
+	_ = admissioninitializer.WantsInternalGardenClientset(&DeletionConfirmation{})
 
 	readyFuncs = []admission.ReadyFunc{}
 )
@@ -82,6 +87,11 @@ func (d *DeletionConfirmation) SetInternalGardenInformerFactory(f gardeninformer
 	readyFuncs = append(readyFuncs, shootInformer.Informer().HasSynced, projectInformer.Informer().HasSynced)
 }
 
+// SetInternalGardenClientset gets the clientset from the Kubernetes client.
+func (d *DeletionConfirmation) SetInternalGardenClientset(c internalversion.Interface) {
+	d.gardenClient = c
+}
+
 // ValidateInitialization checks whether the plugin was correctly initialized.
 func (d *DeletionConfirmation) ValidateInitialization() error {
 	if d.shootLister == nil {
@@ -95,11 +105,32 @@ func (d *DeletionConfirmation) ValidateInitialization() error {
 
 // Admit makes admissions decisions based on deletion confirmation annotation.
 func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
-	// Ignore all kinds other than Shoot.
+	var (
+		obj         metav1.Object
+		cacheLookup func() (metav1.Object, error)
+		liveLookup  func() (metav1.Object, error)
+	)
+
+	// Ignore all kinds other than Shoot or Project.
 	// TODO: in future the Kinds should be configurable
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	switch a.GetKind().GroupKind() {
-	case garden.Kind("Shoot"), garden.Kind("Project"):
+	case garden.Kind("Shoot"):
+		cacheLookup = func() (metav1.Object, error) {
+			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
+		}
+		liveLookup = func() (metav1.Object, error) {
+			return d.gardenClient.Garden().Shoots(a.GetNamespace()).Get(a.GetName(), metav1.GetOptions{})
+		}
+
+	case garden.Kind("Project"):
+		cacheLookup = func() (metav1.Object, error) {
+			return d.projectLister.Get(a.GetName())
+		}
+		liveLookup = func() (metav1.Object, error) {
+			return d.gardenClient.Garden().Projects().Get(a.GetName(), metav1.GetOptions{})
+		}
+
 	default:
 		return nil
 	}
@@ -119,24 +150,26 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
 	}
 
-	var obj metav1.Object
-
-	switch a.GetKind().GroupKind() {
-	case garden.Kind("Shoot"):
-		shoot, err := d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
-		if err != nil {
-			return err
-		}
-		obj = shoot
-	case garden.Kind("Project"):
-		project, err := d.projectLister.Get(a.GetName())
-		if err != nil {
-			return err
-		}
-		obj = project
+	// Read the object from the cache
+	obj, err := cacheLookup()
+	if err == nil && checkIfDeletionAllowed(a, obj) == nil {
+		return nil
+	} else if err != nil && !apierrors.IsNotFound(err) {
+		return err
 	}
 
-	annotations := obj.GetAnnotations()
+	// If the first try does not succeed we do a live lookup to really ensure that the deletion cannot be processed
+	// (similar to what we do in the ResourceReferenceManager when ensuring the existence of a secret).
+	// This is to allow clients to send annotate+delete requests subsequently very fast.
+	obj, err = liveLookup()
+	if err != nil {
+		return err
+	}
+	return checkIfDeletionAllowed(a, obj)
+}
+
+func checkIfDeletionAllowed(a admission.Attributes, meta metav1.Object) error {
+	annotations := meta.GetAnnotations()
 	if annotations == nil {
 		return admission.NewForbidden(a, annotationRequiredError())
 	}

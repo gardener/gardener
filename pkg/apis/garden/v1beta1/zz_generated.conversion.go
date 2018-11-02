@@ -9,6 +9,7 @@ import (
 
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -3818,9 +3819,11 @@ func Convert_garden_ProjectList_To_v1beta1_ProjectList(in *garden.ProjectList, o
 }
 
 func autoConvert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *garden.ProjectSpec, s conversion.Scope) error {
+	out.CreatedBy = (*rbacv1.Subject)(unsafe.Pointer(in.CreatedBy))
 	out.Description = (*string)(unsafe.Pointer(in.Description))
-	out.Owner = in.Owner
+	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
+	out.Members = *(*[]rbacv1.Subject)(unsafe.Pointer(&in.Members))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
@@ -3831,9 +3834,11 @@ func Convert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out *gar
 }
 
 func autoConvert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpec, out *ProjectSpec, s conversion.Scope) error {
+	out.CreatedBy = (*rbacv1.Subject)(unsafe.Pointer(in.CreatedBy))
 	out.Description = (*string)(unsafe.Pointer(in.Description))
-	out.Owner = in.Owner
+	out.Owner = (*rbacv1.Subject)(unsafe.Pointer(in.Owner))
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
+	out.Members = *(*[]rbacv1.Subject)(unsafe.Pointer(&in.Members))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
 	return nil
 }
@@ -3844,7 +3849,8 @@ func Convert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpec, o
 }
 
 func autoConvert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, out *garden.ProjectStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
+	out.ObservedGeneration = in.ObservedGeneration
+	out.Phase = garden.ProjectPhase(in.Phase)
 	return nil
 }
 
@@ -3854,7 +3860,8 @@ func Convert_v1beta1_ProjectStatus_To_garden_ProjectStatus(in *ProjectStatus, ou
 }
 
 func autoConvert_garden_ProjectStatus_To_v1beta1_ProjectStatus(in *garden.ProjectStatus, out *ProjectStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
+	out.ObservedGeneration = in.ObservedGeneration
+	out.Phase = ProjectPhase(in.Phase)
 	return nil
 }
 
