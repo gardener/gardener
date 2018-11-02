@@ -49,6 +49,11 @@ func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *
 	return respectSyncPeriodOverwrite != nil && ignore && *respectSyncPeriodOverwrite
 }
 
+func shootIsFailed(shoot *gardenv1beta1.Shoot) bool {
+	lastOperation := shoot.Status.LastOperation
+	return lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration
+}
+
 func seedIsShoot(seed *gardenv1beta1.Seed) bool {
 	hasOwnerReference, _ := seedHasShootOwnerReference(seed.ObjectMeta)
 	return hasOwnerReference

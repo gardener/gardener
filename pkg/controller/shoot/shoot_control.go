@@ -18,8 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/client-go/util/retry"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
@@ -32,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
 	"github.com/gardener/gardener/pkg/version"
 
@@ -41,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 )
 
 func (c *Controller) shootAdd(obj interface{}) {
@@ -160,32 +160,27 @@ func (c *Controller) reconcileShootKey(key string) error {
 		mayReconcile, reason = c.scheduler.TestAndActivate(shootElement, shoot.Generation != shoot.Status.ObservedGeneration, shootIsSeed(shoot))
 	}
 
-	// Check whether the shoot has been marked as "never reconcile".
-	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) {
+	switch {
+	case mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite):
+		// Check whether the shoot has been marked as "never reconcile".
 		shootLogger.Info("Skipping reconciliation because Shoot is marked as 'to-be-ignored'.")
 
-		// Mark shoot as "has been reconciled" to allow others to get scheduled.
-		if mayReconcile {
-			c.scheduler.Done(shootElement.GetID())
-		}
-	} else {
-		if !mayReconcile {
-			// Write into shoot status that we have to wait before reconciling this shoot.
-			message := fmt.Sprintf("May not yet reconcile shoot %q: %s", shoot.Name, reason)
+	case !mayReconcile:
+		// If the shoot may not be reconciled (due to above decision) then we mark it as pending in case it was not failed
+		message := fmt.Sprintf("May not yet reconcile shoot %q: %s", shoot.Name, reason)
+		if !shootIsFailed(shoot) {
 			shootLogger.Debugf(message)
 			c.recorder.Eventf(shoot, corev1.EventTypeNormal, "OperationPending", message)
 			c.updateShootStatusPending(shoot, message)
-			c.getShootQueue(shoot).AddAfter(key, scheduleNextSyncAfterReason(reason))
-			return nil
 		}
 
+	default:
+		// Otherwise (i.e., shoot is not ignored and may be reconciled) we start the reconcile operation).
 		needsRequeue, reconcileErr = c.control.ReconcileShoot(shoot, key)
-		if reconcileErr == nil {
-			c.scheduler.Done(shootElement.GetID())
-		}
 	}
+	c.scheduler.Done(shootElement.GetID())
 
-	if wantsResync, durationToNextSync := scheduleNextSync(shoot.ObjectMeta, reconcileErr != nil, c.config.Controllers.Shoot); wantsResync && needsRequeue {
+	if durationToNextSync := scheduleNextSync(c.config.Controllers.Shoot, reconcileErr != nil, shoot.Annotations, reason); durationToNextSync > 0 && needsRequeue {
 		c.getShootQueue(shoot).AddAfter(key, durationToNextSync)
 		shootLogger.Infof("Scheduled next queuing time for Shoot '%s' to %s", key, durationToNextSync)
 	}
@@ -208,23 +203,28 @@ func (c *Controller) updateShootStatusPending(shoot *gardenv1beta1.Shoot, messag
 	return err
 }
 
-func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccurred bool, config componentconfig.ShootControllerConfiguration) (bool, time.Duration) {
+func scheduleNextSync(config componentconfig.ShootControllerConfiguration, errorOccurred bool, annotations map[string]string, reason *reconcilescheduler.Reason) time.Duration {
+	switch {
+	case reason == nil, reason.Code() == reconcilescheduler.CodeOther, reason.Code() == reconcilescheduler.CodeActivated:
+	case reason.Code() == reconcilescheduler.CodeParentUnknown:
+		return time.Second
+	default:
+		return 10 * time.Second
+	}
+
 	if errorOccurred {
-		return true, (*config.RetrySyncPeriod).Duration
+		return (*config.RetrySyncPeriod).Duration
 	}
 
 	var (
 		syncPeriod                 = config.SyncPeriod
 		respectSyncPeriodOverwrite = *config.RespectSyncPeriodOverwrite
-
-		currentTimeNano  = time.Now().UnixNano()
-		creationTimeNano = objectMeta.CreationTimestamp.UnixNano()
 	)
 
-	if syncPeriodOverwrite, ok := objectMeta.Annotations[common.ShootSyncPeriod]; ok && respectSyncPeriodOverwrite {
+	if syncPeriodOverwrite, ok := annotations[common.ShootSyncPeriod]; ok && respectSyncPeriodOverwrite {
 		if syncPeriodDuration, err := time.ParseDuration(syncPeriodOverwrite); err == nil {
 			if syncPeriodDuration.Nanoseconds() == 0 {
-				return false, 0
+				return 0
 			}
 			if syncPeriodDuration >= time.Minute {
 				syncPeriod = metav1.Duration{Duration: syncPeriodDuration}
@@ -232,19 +232,7 @@ func scheduleNextSync(objectMeta metav1.ObjectMeta, errorOccurred bool, config c
 		}
 	}
 
-	var (
-		syncPeriodNano = syncPeriod.Nanoseconds()
-		nextSyncNano   = currentTimeNano - (currentTimeNano-creationTimeNano)%syncPeriodNano + syncPeriodNano
-	)
-
-	return true, time.Duration(nextSyncNano - currentTimeNano)
-}
-
-func scheduleNextSyncAfterReason(reason *reconcilescheduler.Reason) time.Duration {
-	if reason.Code() == reconcilescheduler.CodeParentUnknown {
-		return time.Second
-	}
-	return 10 * time.Second
+	return syncPeriod.Duration
 }
 
 // ControlInterface implements the control logic for updating Shoots. It is implemented as an interface to allow
@@ -290,8 +278,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	var (
 		shoot         = shootObj.DeepCopy()
 		shootLogger   = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
-		lastOperation = shoot.Status.LastOperation
-		operationType = controllerutils.ComputeOperationType(shoot.ObjectMeta, lastOperation)
+		operationType = controllerutils.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation)
 	)
 
 	logger.Logger.Infof("[SHOOT RECONCILE] %s", key)
@@ -306,7 +293,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 
 	// We check whether the Shoot's last operation status field indicates that the last operation failed (i.e. the operation
 	// will not be retried unless the shoot generation changes).
-	if lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration {
+	if shootIsFailed(shoot) {
 		if shoot.Status.Gardener.Version == version.Version {
 			shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
 			return false, nil

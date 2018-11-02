@@ -112,7 +112,7 @@ func (s *state) TestAndActivate(element Element, modified, inhibitChildren bool)
 			currentID  = parentID
 		)
 
-		// IDentify the first parent of the entry to later check whether we are in a cycle or not,
+		// Identify the first parent of the entry to later check whether we are in a cycle or not,
 		// and whether the parent needs to be scheduled first.
 		for p := s.entries[currentID]; p != nil && !checkedIDs.Has(currentID.String()); {
 			checkedIDs.Insert(currentID.String())
