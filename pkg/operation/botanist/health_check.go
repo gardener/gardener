@@ -16,6 +16,8 @@ package botanist
 
 import (
 	"fmt"
+	"sync"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	machine "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
@@ -24,6 +26,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/kubernetes"
-	"sync"
 )
 
 func mustGardenRoleLabelSelector(gardenRoles ...string) labels.Selector {
@@ -670,6 +672,10 @@ var (
 
 // HealthChecks conducts the health checks on all the given conditions.
 func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlane, nodes, systemComponents *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
+	if b.Shoot.IsHibernated {
+		return shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
+	}
+
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
@@ -704,19 +710,16 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	go func() {
 		defer wg.Done()
 		newSystemComponents, err := b.checkSystemComponents(systemComponents, shootDeploymentLister, shootDaemonSetLister)
-		fmt.Println(newSystemComponents)
 		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
 	}()
 	go func() {
 		defer wg.Done()
 		newNodes, err := b.checkClusterNodes(nodes, shootNodeLister, seedMachineDeploymentLister)
-		fmt.Println(newNodes)
 		nodes = newConditionOrError(nodes, newNodes, err)
 	}()
 	go func() {
 		defer wg.Done()
 		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
-		fmt.Println(newControlPlane)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 	}()
 	wg.Wait()
