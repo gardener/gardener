@@ -98,12 +98,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-          requests:
-            cpu: 50m
-            memory: 1200Mi
-          limits:
-            cpu: 500m
-            memory: 2400Mi
+{{- include "resource.quantity" .Values | indent 10 }}
         volumeMounts:
         - mountPath: /srv/kubernetes/prometheus-kubelet
           name: prometheus-kubelet

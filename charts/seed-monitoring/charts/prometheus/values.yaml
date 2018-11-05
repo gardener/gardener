@@ -152,3 +152,32 @@ rules:
   optional:
     cluster-autoscaler:
       enabled: true
+
+# object can be any object you want to scale Prometheus on:
+# - number of Pods
+# - number of Nodes
+# - total Foos
+objectCount: 4
+resources:
+  requests:
+  - name: cpu
+    base: 200
+    perObject: 6
+    weight: 5
+    unit: m
+  - name: memory
+    base: 300
+    perObject: 35
+    weight: 5
+    unit: Mi
+  limits:
+  - name: cpu
+    base: 350
+    perObject: 12
+    weight: 5
+    unit: m
+  - name: memory
+    base: 700
+    perObject: 60
+    weight: 5
+    unit: Mi
