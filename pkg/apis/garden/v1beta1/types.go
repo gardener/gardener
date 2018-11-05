@@ -1425,7 +1425,28 @@ type KubeSchedulerConfig struct {
 // KubeProxyConfig contains configuration settings for the kube-proxy.
 type KubeProxyConfig struct {
 	KubernetesConfig `json:",inline"`
+	// Mode specifies which proxy mode to use.
+	// defaults to IPTables.
+	// +optional
+	Mode *ProxyMode `json:"mode,omitempty"`
 }
+
+// ProxyMode available in Linux platform: 'userspace' (older, going to be EOL), 'iptables'
+// (newer, faster), 'ipvs'(newest, better in performance and scalability).
+//
+// As of now only 'iptables' and 'ipvs' is supported by Gardener.
+//
+// In Linux platform, if the iptables proxy is selected, regardless of how, but the system's kernel or iptables versions are
+// insufficient, this always falls back to the userspace proxy. IPVS mode will be enabled when proxy mode is set to 'ipvs',
+// and the fall back path is firstly iptables and then userspace.
+type ProxyMode string
+
+const (
+	// ProxyModeIPTables uses iptables as proxy implementation.
+	ProxyModeIPTables ProxyMode = "IPTables"
+	// ProxyModeIPVS uses ipvs as proxy implementation.
+	ProxyModeIPVS ProxyMode = "IPVS"
+)
 
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {

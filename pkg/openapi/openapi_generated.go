@@ -3631,6 +3631,12 @@ func schema_pkg_apis_garden_v1beta1_KubeProxyConfig(ref common.ReferenceCallback
 							},
 						},
 					},
+					"mode": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
 			},
 		},

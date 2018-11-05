@@ -1703,6 +1703,11 @@ func (in *KubeLego) DeepCopy() *KubeLego {
 func (in *KubeProxyConfig) DeepCopyInto(out *KubeProxyConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
+	if in.Mode != nil {
+		in, out := &in.Mode, &out.Mode
+		*out = new(ProxyMode)
+		**out = **in
+	}
 	return
 }
 

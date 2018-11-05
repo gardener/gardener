@@ -280,6 +280,7 @@ spec:
   # kubeProxy:
   #   featureGates:
   #     SomeKubernetesFeature: true
+  #   mode: IPVS
   % endif
     % if kubelet != {}:
     kubelet: ${yaml.dump(kubelet, width=10000)}

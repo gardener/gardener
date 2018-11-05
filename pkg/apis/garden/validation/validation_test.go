@@ -4908,6 +4908,62 @@ var _ = Describe("validation", func() {
 			})
 		})
 
+		Context("KubeProxy validation", func() {
+			BeforeEach(func() {
+				shoot.Spec.Kubernetes.KubeProxy = &garden.KubeProxyConfig{}
+			})
+
+			It("should succeed when using IPTables mode", func() {
+				m := garden.ProxyModeIPTables
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+
+			})
+
+			It("should succeed when using IPVS mode", func() {
+				m := garden.ProxyModeIPVS
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+
+			})
+
+			It("should fail when using nil proxy mode", func() {
+				shoot.Spec.Kubernetes.KubeProxy.Mode = nil
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.kubernetes.kubeProxy.mode"),
+				}))))
+			})
+
+			It("should fail when using empty proxy mode", func() {
+				m := garden.ProxyMode("")
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.kubernetes.kubeProxy.mode"),
+				}))))
+			})
+
+			It("should fail when using unknown proxy mode", func() {
+				m := garden.ProxyMode("fooMode")
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.kubernetes.kubeProxy.mode"),
+				}))))
+			})
+		})
+
 		Context("AuditConfig validation", func() {
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name = ""

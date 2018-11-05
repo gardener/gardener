@@ -13,7 +13,10 @@ data:
     kind: KubeProxyConfiguration
     clientConnection:
       kubeconfig: /var/lib/kube-proxy/kubeconfig
+{{- if not .Values.enableIPVS }}
     clusterCIDR: {{ .Values.global.podNetwork }}
+{{- end }}
+    mode: {{ include "kube-proxy.mode" . }}
     conntrack:
       maxPerCore: 524288
     {{- if .Values.featureGates }}

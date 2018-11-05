@@ -238,6 +238,13 @@ func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) s
 	return *(s.ExternalClusterDomain)
 }
 
+// IPVSEnabled returns true if IPVS is enabled for the shoot.
+func (s *Shoot) IPVSEnabled() bool {
+	return s.Info.Spec.Kubernetes.KubeProxy != nil &&
+		s.Info.Spec.Kubernetes.KubeProxy.Mode != nil &&
+		*s.Info.Spec.Kubernetes.KubeProxy.Mode == gardenv1beta1.ProxyModeIPVS
+}
+
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {

@@ -6,4 +6,7 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository
+  alpine: image-repository
 podAnnotations: {}
+
+enableIPVS: false

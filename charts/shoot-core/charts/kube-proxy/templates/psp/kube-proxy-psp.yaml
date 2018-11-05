@@ -14,6 +14,7 @@ spec:
   allowedHostPaths:
   - pathPrefix: /usr/share/ca-certificates
   - pathPrefix: /var/run/dbus/system_bus_socket
+  - pathPrefix: /lib/modules
   runAsUser:
     rule: 'RunAsAny'
   seLinux:

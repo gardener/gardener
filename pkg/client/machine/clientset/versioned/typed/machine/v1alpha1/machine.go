@@ -39,6 +39,7 @@ type MachinesGetter interface {
 type MachineInterface interface {
 	Create(*v1alpha1.Machine) (*v1alpha1.Machine, error)
 	Update(*v1alpha1.Machine) (*v1alpha1.Machine, error)
+	UpdateStatus(*v1alpha1.Machine) (*v1alpha1.Machine, error)
 	Delete(name string, options *v1.DeleteOptions) error
 	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
 	Get(name string, options v1.GetOptions) (*v1alpha1.Machine, error)
@@ -126,6 +127,22 @@ func (c *machines) Update(machine *v1alpha1.Machine) (result *v1alpha1.Machine, 
 		Namespace(c.ns).
 		Resource("machines").
 		Name(machine.Name).
+		Body(machine).
+		Do().
+		Into(result)
+	return
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+
+func (c *machines) UpdateStatus(machine *v1alpha1.Machine) (result *v1alpha1.Machine, err error) {
+	result = &v1alpha1.Machine{}
+	err = c.client.Put().
+		Namespace(c.ns).
+		Resource("machines").
+		Name(machine.Name).
+		SubResource("status").
 		Body(machine).
 		Do().
 		Into(result)
