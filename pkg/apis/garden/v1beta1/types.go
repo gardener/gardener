@@ -1231,6 +1231,24 @@ type KubeAPIServerConfig struct {
 	// configuration.
 	// +optional
 	AdmissionPlugins []AdmissionPlugin `json:"admissionPlugins,omitempty"`
+	// AuditConfig contains configuration settings for the audit of the kube-apiserver.
+	// +optional
+	AuditConfig *AuditConfig `json:"auditConfig,omitempty"`
+}
+
+// AuditConfig contains settings for audit of the api server
+type AuditConfig struct {
+	// AuditPolicy contains configuration settings for audit policy of the kube-apiserver.
+	// +optional
+	AuditPolicy *AuditPolicy `json:"auditPolicy,omitempty"`
+}
+
+// AuditPolicy contains audit policy for kube-apiserver
+type AuditPolicy struct {
+	// ConfigMapRef is a reference to a ConfigMap object in the same namespace,
+	// which contains the audit policy for the kube-apiserver.
+	// +optional
+	ConfigMapRef *corev1.LocalObjectReference `json:"configMapRef,omitempty"`
 }
 
 // OIDCConfig contains configuration settings for the OIDC provider.

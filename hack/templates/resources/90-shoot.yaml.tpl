@@ -238,6 +238,10 @@ spec:
   #         clusterDefaultNodeSelector: <node-selectors-labels>
   #         namespace1: <node-selectors-labels>
   #         namespace2: <node-selectors-labels>
+  #   auditConfig:
+  #     auditPolicy:
+  #       configMapRef:
+  #         name: auditpolicy
   % endif
     % if cloudControllerManager != {}:
     cloudControllerManager: ${yaml.dump(cloudControllerManager, width=10000)}

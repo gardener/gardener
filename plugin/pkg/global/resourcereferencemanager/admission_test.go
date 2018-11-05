@@ -66,6 +66,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			bindingName      = "binding-1"
 			quotaName        = "quota-1"
 			secretName       = "secret-1"
+			configMapName    = "config-map-1"
 			shootName        = "shoot-1"
 			projectName      = "project-1"
 			allowedUser      = "allowed-user"
@@ -77,6 +78,14 @@ var _ = Describe("resourcereferencemanager", func() {
 			secret = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       secretName,
+					Namespace:  namespace,
+					Finalizers: finalizers,
+				},
+			}
+
+			configMap = corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       configMapName,
 					Namespace:  namespace,
 					Finalizers: finalizers,
 				},
@@ -145,6 +154,17 @@ var _ = Describe("resourcereferencemanager", func() {
 						Seed:    &seedName,
 						SecretBindingRef: corev1.LocalObjectReference{
 							Name: bindingName,
+						},
+					},
+					Kubernetes: garden.Kubernetes{
+						KubeAPIServer: &garden.KubeAPIServerConfig{
+							AuditConfig: &garden.AuditConfig{
+								AuditPolicy: &garden.AuditPolicy{
+									ConfigMapRef: &corev1.LocalObjectReference{
+										Name: configMapName,
+									},
+								},
+							},
 						},
 					},
 				},
@@ -377,6 +397,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
@@ -392,6 +413,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
@@ -403,6 +425,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced cloud profile does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
@@ -414,6 +437,7 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced seed does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
+				kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
@@ -425,6 +449,19 @@ var _ = Describe("resourcereferencemanager", func() {
 			It("should reject because the referenced secret binding does not exist", func() {
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				kubeInformerFactory.Core().V1().ConfigMaps().Informer().GetStore().Add(&configMap)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should reject because the referenced config map does not exist", func() {
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().SecretBindings().Informer().GetStore().Add(&secretBinding)
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 

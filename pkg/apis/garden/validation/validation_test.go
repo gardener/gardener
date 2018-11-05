@@ -2317,6 +2317,13 @@ var _ = Describe("validation", func() {
   namespace2: <node-selectors-labels>`),
 								},
 							},
+							AuditConfig: &garden.AuditConfig{
+								AuditPolicy: &garden.AuditPolicy{
+									ConfigMapRef: &corev1.LocalObjectReference{
+										Name: "audit-policy-config",
+									},
+								},
+							},
 						},
 						KubeControllerManager: &garden.KubeControllerManagerConfig{
 							HorizontalPodAutoscalerConfig: &garden.HorizontalPodAutoscalerConfig{
@@ -4485,6 +4492,27 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 				Expect(len(errorList)).To(Equal(0))
 			})
+		})
+
+		Context("AuditConfig validation", func() {
+			It("should forbid empty name", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name = ""
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).ToNot(BeEmpty())
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.auditConfig.auditPolicy.configMapRef.name"),
+				}))))
+			})
+
+			It("should allow nil AuditConfig", func() {
+				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig = nil
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(BeEmpty())
+			})
+
 		})
 
 		It("should require a kubernetes version", func() {

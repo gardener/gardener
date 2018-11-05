@@ -26,9 +26,32 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	audit_internal "k8s.io/apiserver/pkg/apis/audit"
+	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
+	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
+	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
+	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
 )
 
-var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
+const (
+	auditPolicyConfigMapDataKey = "policy"
+)
+
+var (
+	chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
+	runtimeScheme         = runtime.NewScheme()
+	codecs                = serializer.NewCodecFactory(runtimeScheme)
+	decoder               = codecs.UniversalDecoder()
+)
+
+func init() {
+	_ = auditv1alpha1.AddToScheme(runtimeScheme)
+	_ = auditv1beta1.AddToScheme(runtimeScheme)
+	_ = auditv1.AddToScheme(runtimeScheme)
+	_ = audit_internal.AddToScheme(runtimeScheme)
+}
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
 func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
@@ -287,6 +310,18 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 				admissionPlugins = append(admissionPlugins, plugin)
 			}
 		}
+
+		if apiServerConfig.AuditConfig != nil &&
+			apiServerConfig.AuditConfig.AuditPolicy != nil &&
+			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
+			auditPolicy, err := b.getAuditPolicy(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
+			if err != nil {
+				return err
+			}
+			defaultValues["auditConfig"] = map[string]interface{}{
+				"auditPolicy": auditPolicy,
+			}
+		}
 	}
 	defaultValues["admissionPlugins"] = admissionPlugins
 
@@ -300,6 +335,33 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
+}
+
+func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) {
+	auditPolicyCm, err := b.K8sGardenClient.GetConfigMap(namespace, name)
+	if err != nil {
+		return "", err
+	}
+	auditPolicy, ok := auditPolicyCm.Data[auditPolicyConfigMapDataKey]
+	if !ok {
+		return "", fmt.Errorf("Missing '.data.policy' in audit policy configmap %v/%v", namespace, name)
+	}
+	if len(auditPolicy) == 0 {
+		return "", fmt.Errorf("Empty audit policy. Provide non-empty audit policy")
+	}
+	auditPolicyObj, schemaVersion, err := decoder.Decode([]byte(auditPolicy), nil, nil)
+	if err != nil {
+		return "", err
+	}
+	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
+	if !ok {
+		return "", fmt.Errorf("Failure to cast to audit Policy type: %v", schemaVersion)
+	}
+	errList := auditvalidation.ValidatePolicy(auditPolicyInternal)
+	if len(errList) != 0 {
+		return "", fmt.Errorf("Provided invalid audit policy err=%v", errList)
+	}
+	return auditPolicy, nil
 }
 
 // DeployKubeControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the

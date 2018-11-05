@@ -867,7 +867,7 @@ func ValidateSecretBindingUpdate(newBinding, oldBinding *garden.SecretBinding) f
 	return allErrs
 }
 
-func validateLocalObjectReference(ref corev1.LocalObjectReference, fldPath *field.Path) field.ErrorList {
+func validateLocalObjectReference(ref *corev1.LocalObjectReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
 	if len(ref.Name) == 0 {
@@ -1558,6 +1558,13 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 
 			if len(plugin.Name) == 0 {
 				allErrs = append(allErrs, field.Required(idxPath.Child("name"), "must provide a name"))
+			}
+		}
+
+		if auditConfig := kubeAPIServer.AuditConfig; auditConfig != nil {
+			auditPath := fldPath.Child("kubeAPIServer", "auditConfig")
+			if auditPolicy := auditConfig.AuditPolicy; auditPolicy != nil && auditConfig.AuditPolicy.ConfigMapRef != nil {
+				allErrs = append(allErrs, validateLocalObjectReference(auditPolicy.ConfigMapRef, auditPath.Child("auditPolicy", "configMapRef"))...)
 			}
 		}
 	}

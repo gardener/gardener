@@ -54,6 +54,8 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVPC":                   schema_pkg_apis_garden_v1beta1_AlicloudVPC(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudVolumeType":            schema_pkg_apis_garden_v1beta1_AlicloudVolumeType(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker":                schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig":                   schema_pkg_apis_garden_v1beta1_AuditConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditPolicy":                   schema_pkg_apis_garden_v1beta1_AuditPolicy(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud":                    schema_pkg_apis_garden_v1beta1_AzureCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureConstraints":              schema_pkg_apis_garden_v1beta1_AzureConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureDomainCount":              schema_pkg_apis_garden_v1beta1_AzureDomainCount(ref),
@@ -1384,6 +1386,46 @@ func schema_pkg_apis_garden_v1beta1_AlicloudWorker(ref common.ReferenceCallback)
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AuditConfig(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuditConfig contains settings for audit of the api server",
+				Properties: map[string]spec.Schema{
+					"auditPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuditPolicy contains configuration settings for audit policy of the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditPolicy"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditPolicy"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_AuditPolicy(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "AuditPolicy contains audit policy for kube-apiserver",
+				Properties: map[string]spec.Schema{
+					"configMapRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ConfigMapRef is a reference to a ConfigMap object in the same namespace, which contains the audit policy for the kube-apiserver.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -3026,11 +3068,17 @@ func schema_pkg_apis_garden_v1beta1_KubeAPIServerConfig(ref common.ReferenceCall
 							},
 						},
 					},
+					"auditConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuditConfig contains configuration settings for the audit of the kube-apiserver.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig"),
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AuditConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OIDCConfig"},
 	}
 }
 
