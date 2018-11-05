@@ -1,6 +1,8 @@
 global:
   kubernetesVersion: 1.12.1
   podNetwork: 100.96.0.0/11
+cluster-autoscaler:
+  enabled: false
 kube-proxy:
   kubeconfig: dummy-add-the-data-of-a-kubernetes-secret
   featureGates: {}

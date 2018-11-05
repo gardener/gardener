@@ -31,11 +31,6 @@ func (b *LocalBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error)
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateClusterAutoscalerConfig - Not needed on Local.
-func (b *LocalBotanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
 func (b *LocalBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{

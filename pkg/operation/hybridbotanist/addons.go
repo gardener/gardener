@@ -52,6 +52,9 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				},
 			},
 		}
+		clusterAutoscaler = map[string]interface{}{
+			"enabled": b.Shoot.WantsClusterAutoscaler,
+		}
 		podsecuritypolicies = map[string]interface{}{
 			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
 		}
@@ -121,6 +124,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":              global,
+		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
 		"coredns":             coreDNS,
 		"kube-proxy":          kubeProxy,
@@ -137,10 +141,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
-	clusterAutoscalerConfig, err := b.Botanist.GenerateClusterAutoscalerConfig()
-	if err != nil {
-		return nil, err
-	}
 	helmTillerConfig, err := b.Botanist.GenerateHelmTillerConfig()
 	if err != nil {
 		return nil, err
@@ -232,7 +232,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"cluster-autoscaler":   clusterAutoscalerConfig,
 		"helm-tiller":          helmTiller,
 		"kube-lego":            kubeLego,
 		"kube2iam":             kube2IAM,

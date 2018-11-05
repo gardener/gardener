@@ -1,5 +1,3 @@
-cluster-autoscaler:
-  enabled: false
 helm-tiller:
   enabled: false
   images:

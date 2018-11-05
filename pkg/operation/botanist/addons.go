@@ -46,12 +46,6 @@ func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, 
 	return common.GenerateAddonConfig(nil, b.Shoot.KubernetesDashboardEnabled()), nil
 }
 
-// GenerateClusterAutoscalerConfig generates the values which are required to render the chart of
-// the cluster-autoscaler properly.
-func (b *Botanist) GenerateClusterAutoscalerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.ClusterAutoscalerEnabled()), nil
-}
-
 // GenerateKubeLegoConfig generates the values which are required to render the chart of
 // kube-lego properly.
 func (b *Botanist) GenerateKubeLegoConfig() (map[string]interface{}, error) {
