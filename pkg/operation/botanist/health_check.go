@@ -464,7 +464,7 @@ func (b *Botanist) checkControlPlane(
 	if exitCondition, err := CheckMonitoringControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
-	if !features.ControllerFeatureGate.Enabled(features.Logging) {
+	if features.ControllerFeatureGate.Enabled(features.Logging) {
 		if exitCondition, err := CheckLoggingControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister); err != nil || exitCondition != nil {
 			return exitCondition, nil
 		}
