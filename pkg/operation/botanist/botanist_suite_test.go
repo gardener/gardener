@@ -197,13 +197,6 @@ var _ = Describe("health check", func() {
 				},
 			},
 		}
-		awsShoot = &gardenv1beta1.Shoot{
-			Spec: gardenv1beta1.ShootSpec{
-				Cloud: gardenv1beta1.Cloud{
-					AWS: &gardenv1beta1.AWSCloud{},
-				},
-			},
-		}
 
 		seedNamespace  = "shoot--foo--bar"
 		shootNamespace = metav1.NamespaceSystem
@@ -306,23 +299,25 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardenv1beta1.Shoot, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardenv1beta1.Shoot, cloudProvider gardenv1beta1.CloudProvider, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 			)
 
-			exitCondition, err := botanist.CheckControlPlane(shoot, seedNamespace, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := botanist.CheckControlPlane(shoot, seedNamespace, cloudProvider, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			gcpShoot,
+			gardenv1beta1.CloudProviderGCP,
 			requiredControlPlaneDeployments,
 			requiredControlPlaneStatefulSets,
 			BeNil()),
 		Entry("all healthy (AWS)",
-			awsShoot,
+			gcpShoot,
+			gardenv1beta1.CloudProviderAWS,
 			[]*appsv1.Deployment{
 				cloudControllerManagerDeployment,
 				kubeAddonManagerDeployment,
@@ -336,6 +331,7 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("all healthy (with autoscaler)",
 			gcpShootWithAutoscaler,
+			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
 				cloudControllerManagerDeployment,
 				kubeAddonManagerDeployment,
@@ -349,6 +345,7 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("missing required deployment",
 			gcpShoot,
+			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
 				kubeAddonManagerDeployment,
 				kubeAPIServerDeployment,
@@ -360,6 +357,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(corev1.ConditionFalse)),
 		Entry("required deployment unhealthy",
 			gcpShoot,
+			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
 				cloudControllerManagerDeployment,
 				newDeployment(kubeAddonManagerDeployment.Namespace, kubeAddonManagerDeployment.Name, roleOf(kubeAddonManagerDeployment), false),
@@ -372,6 +370,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(corev1.ConditionFalse)),
 		Entry("missing required stateful set",
 			gcpShoot,
+			gardenv1beta1.CloudProviderGCP,
 			requiredControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				etcdEventsStatefulSet,
@@ -379,6 +378,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(corev1.ConditionFalse)),
 		Entry("required stateful set unhealthy",
 			gcpShoot,
+			gardenv1beta1.CloudProviderGCP,
 			requiredControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(etcdMainStatefulSet.Namespace, etcdMainStatefulSet.Name, roleOf(etcdMainStatefulSet), false),

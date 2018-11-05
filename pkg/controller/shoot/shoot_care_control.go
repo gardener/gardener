@@ -16,9 +16,10 @@ package shoot
 
 import (
 	"fmt"
+	"sync"
+
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"k8s.io/client-go/util/retry"
-	"sync"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -112,7 +113,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
-		return nil
+		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	// Initialize conditions based on the current status.
@@ -131,8 +132,8 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 		conditionSystemComponentsHealthy = helper.UpdatedConditionUnknownErrorMessage(conditionSystemComponentsHealthy, message)
 		operation.Logger.Error(message)
 
-		_, err := c.updateShootConditions(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
-		return err
+		c.updateShootConditions(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
+		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	initializeShootClients := shootClientInitializer(botanist)
@@ -152,18 +153,12 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	shoot, err = c.updateShootConditions(shoot, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 	if err != nil {
 		botanist.Logger.Errorf("Could not update Shoot conditions: %+v", err)
-		return err
+		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
 	// Mark Shoot as healthy/unhealthy
-	var (
-		lastOperation = shoot.Status.LastOperation
-		lastError     = shoot.Status.LastError
-		healthy       = lastOperation == nil || (lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && lastError == nil && conditionControlPlaneHealthy.Status == corev1.ConditionTrue && conditionEveryNodeReady.Status == corev1.ConditionTrue && conditionSystemComponentsHealthy.Status == corev1.ConditionTrue)
-	)
-
-	kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta, shootHealthyLabelTransform(healthy))
-	return nil
+	kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta, shootHealthyLabelTransform(shootIsHealthy(shoot, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)))
+	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 
 func (c *defaultCareControl) updateShootConditions(shoot *gardenv1beta1.Shoot, conditions ...gardenv1beta1.Condition) (*gardenv1beta1.Shoot, error) {

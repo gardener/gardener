@@ -20,6 +20,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func formatError(message string, err error) *gardenv1beta1.LastError {
@@ -52,6 +53,24 @@ func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *
 func shootIsFailed(shoot *gardenv1beta1.Shoot) bool {
 	lastOperation := shoot.Status.LastOperation
 	return lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration
+}
+
+func shootIsHealthy(shoot *gardenv1beta1.Shoot, conditions ...*gardenv1beta1.Condition) bool {
+	var (
+		lastOperation = shoot.Status.LastOperation
+		lastError     = shoot.Status.LastError
+
+		allConditionsTrue = func() bool {
+			for _, condition := range conditions {
+				if condition.Status != corev1.ConditionTrue {
+					return false
+				}
+			}
+			return true
+		}
+	)
+
+	return lastOperation == nil || (lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && lastError == nil && allConditionsTrue())
 }
 
 func seedIsShoot(seed *gardenv1beta1.Seed) bool {

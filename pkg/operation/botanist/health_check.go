@@ -186,19 +186,14 @@ func shootHibernatedCondition(condition *gardenv1beta1.Condition) *gardenv1beta1
 // As this will anyways change with the Gardener extensibility, for now, this will check for the only
 // cloud provider where it differs (AWS). Once cloud provider specific code moves out, this will also have to
 // be refactored / re-aligned.
-func computeRequiredControlPlaneDeployments(shoot *gardenv1beta1.Shoot) (sets.String, error) {
-	cloudProvider, err := helper.GetShootCloudProvider(shoot)
-	if err != nil {
-		return nil, err
-	}
-
+func computeRequiredControlPlaneDeployments(shoot *gardenv1beta1.Shoot, seedCloudProvider gardenv1beta1.CloudProvider) (sets.String, error) {
 	shootWantsClusterAutoscaler, err := helper.ShootWantsClusterAutoscaler(shoot)
 	if err != nil {
 		return nil, err
 	}
 
 	requiredControlPlaneDeployments := sets.NewString(common.RequiredControlPlaneDeployments.UnsortedList()...)
-	if cloudProvider == gardenv1beta1.CloudProviderAWS {
+	if seedCloudProvider == gardenv1beta1.CloudProviderAWS {
 		requiredControlPlaneDeployments.Insert(common.AWSLBReadvertiserDeploymentName)
 	}
 
@@ -213,12 +208,13 @@ func computeRequiredControlPlaneDeployments(shoot *gardenv1beta1.Shoot) (sets.St
 func CheckControlPlane(
 	shoot *gardenv1beta1.Shoot,
 	namespace string,
+	seedCloudProvider gardenv1beta1.CloudProvider,
 	condition *gardenv1beta1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
 ) (*gardenv1beta1.Condition, error) {
 
-	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot)
+	requiredControlPlaneDeployments, err := computeRequiredControlPlaneDeployments(shoot, seedCloudProvider)
 	if err != nil {
 		return nil, err
 	}
@@ -458,7 +454,7 @@ func (b *Botanist) checkControlPlane(
 	seedDaemonSetLister kutil.DaemonSetLister,
 ) (*gardenv1beta1.Condition, error) {
 
-	if exitCondition, err := CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+	if exitCondition, err := CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, b.Seed.CloudProvider, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if exitCondition, err := CheckMonitoringControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
@@ -709,8 +705,8 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		newSystemComponents, err := b.checkSystemComponents(systemComponents, shootDeploymentLister, shootDaemonSetLister)
-		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
+		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
+		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 	}()
 	go func() {
 		defer wg.Done()
@@ -719,10 +715,10 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	}()
 	go func() {
 		defer wg.Done()
-		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
-		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
+		newSystemComponents, err := b.checkSystemComponents(systemComponents, shootDeploymentLister, shootDaemonSetLister)
+		systemComponents = newConditionOrError(systemComponents, newSystemComponents, err)
 	}()
 	wg.Wait()
 
-	return controlPlane, systemComponents, nodes
+	return controlPlane, nodes, systemComponents
 }

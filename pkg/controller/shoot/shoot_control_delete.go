@@ -15,11 +15,7 @@
 package shoot
 
 import (
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/client-go/util/retry"
 	"time"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -30,10 +26,14 @@ import (
 	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 )
 
 // deleteShoot deletes a Shoot cluster entirely.
@@ -377,11 +377,12 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 			shoot.Status.LastOperation.Description = description
 			shoot.Status.LastOperation.LastUpdateTime = metav1.Now()
 			return shoot, nil
-		})
-	o.Logger.Error(description)
+		},
+	)
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}
+	o.Logger.Error(description)
 
 	newShootAfterLabel, err := kubernetes.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, shootHealthyLabelTransform(false))
 	if err == nil {
