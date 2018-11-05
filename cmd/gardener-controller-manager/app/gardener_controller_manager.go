@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/client-go/informers"
 
@@ -275,6 +276,13 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		return nil, err
 	}
 	k8sGardenClient.SetGarden(gardenClientset)
+
+	// Create a GardenCoreV1alpha1Client and the respective API group scheme for the core Garden API group.
+	gardenCoreClientset, err := coreclientset.NewForConfig(gardenerClientConfig)
+	if err != nil {
+		return nil, err
+	}
+	k8sGardenClient.SetGardenCore(gardenCoreClientset)
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (

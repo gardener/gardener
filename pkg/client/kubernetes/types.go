@@ -190,6 +190,8 @@ type Interface interface {
 
 	// Deprecated: Use `Client()` and utils instead.
 	SetGarden(gardenclientset.Interface)
+	// Deprecated: Use `Client()` and utils instead.
+	SetGardenCore(gardencoreclientset.Interface)
 
 	// Cleanup
 	// Deprecated: Use `RESTMapper()` and utils instead.
