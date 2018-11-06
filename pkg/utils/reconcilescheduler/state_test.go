@@ -170,6 +170,14 @@ var _ = Describe("reconcilescheduler", func() {
 					d(shootA),
 					t(shootA, reconcileAllowed),
 				)),
+
+				Entry("initial shoot modification", []operationTest{
+					t(shootA, reconcileNotAllowed, specModified),
+					t(seedA, reconcileAllowed),
+					t(shootA, reconcileNotAllowed, specModified),
+					d(seedA),
+					t(shootA, reconcileAllowed, specModified),
+				}),
 			)
 		})
 	})

@@ -106,7 +106,7 @@ func (s *state) TestAndActivate(element Element, modified, inhibitChildren bool)
 
 	// We want to ensure that parents are schedule first. Hence, when the object has not been
 	// modified then we check whether the parent has already been reconciled.
-	if !modified {
+	if !s.considerModification(entry, modified) {
 		var (
 			checkedIDs = sets.NewString(elementID.String())
 			currentID  = parentID
@@ -225,6 +225,13 @@ func (s *state) UnmarkStatic(id ID) {
 func (s *state) parentKnown(parent ID) bool {
 	_, isStatic := s.staticParents[parent]
 	return s.entries[parent] != nil || isStatic
+}
+
+// considerModification checks whether the modification should be considered for the scheduling.
+// It is always considered if the parent has already been reconciled. Otherwise, the modification
+// is of no relevance for the scheduling because the parents have precedence at start-up time.
+func (s *state) considerModification(entry *entry, modified bool) bool {
+	return modified && s.parentKnown(entry.parent) && alreadyScheduled(s.entries[entry.parent])
 }
 
 // getEntry returns the entry that has been stored for the given element in the state map.
