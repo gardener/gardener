@@ -23,6 +23,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -72,6 +73,9 @@ func (b *HybridBotanist) ReconcileMachines() error {
 		// with Gardeners modifications on the machine deployment's replicas fields.
 		if b.Shoot.IsHibernated || rollingUpdate {
 			if err := b.Botanist.DeleteClusterAutoscaler(); err != nil {
+				return err
+			}
+			if err := b.Botanist.WaitUntilClusterAutoscalerDeleted(); err != nil {
 				return err
 			}
 		}
@@ -297,14 +301,8 @@ func (b *HybridBotanist) markMachineForcefulDeletion(machine machinev1alpha1.Mac
 // waitUntilMachineDeploymentsAvailable waits for a maximum of 30 minutes until all the desired <machineDeployments>
 // were marked as healthy/available by the machine-controller-manager. It polls the status every 5 seconds.
 func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeployments operation.MachineDeployments) error {
-	var (
-		numReady              int32
-		numDesired            int32
-		numberOfAwakeMachines int32
-	)
-
 	return wait.Poll(5*time.Second, 30*time.Minute, func() (bool, error) {
-		numReady, numDesired, numberOfAwakeMachines = 0, 0, 0
+		var numHealthyDeployments, numUpdated, numDesired, numberOfAwakeMachines int32
 
 		// Get the list of all existing machine deployments
 		existingMachineDeployments, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
@@ -331,16 +329,19 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 			// replicas as desired (specified in the .spec.replicas).
 			for _, machineDeployment := range wantedMachineDeployments {
 				if machineDeployment.Name == existingMachineDeployment.Name {
+					if health.CheckMachineDeployment(&existingMachineDeployment) == nil {
+						numHealthyDeployments++
+					}
 					numDesired += existingMachineDeployment.Spec.Replicas
-					numReady += existingMachineDeployment.Status.ReadyReplicas
+					numUpdated += existingMachineDeployment.Status.UpdatedReplicas
 				}
 			}
 		}
 
 		switch {
 		case !b.Shoot.IsHibernated:
-			b.Logger.Infof("Waiting until all machines are healthy/ready (%d/%d OK)...", numReady, numDesired)
-			if numReady >= numDesired {
+			b.Logger.Infof("Waiting until as many as desired machines are ready (%d/%d machine objects up-to-date, %d/%d machinedeployments available)...", numUpdated, numDesired, numHealthyDeployments, len(wantedMachineDeployments))
+			if numUpdated >= numDesired && int(numHealthyDeployments) == len(wantedMachineDeployments) {
 				return true, nil
 			}
 		default:

@@ -215,6 +215,21 @@ func (b *Botanist) WaitUntilKubeAddonManagerDeleted() error {
 	})
 }
 
+// WaitUntilClusterAutoscalerDeleted waits until the cluster-autoscaler deployment within the Seed cluster has
+// been deleted.
+func (b *Botanist) WaitUntilClusterAutoscalerDeleted() error {
+	return wait.PollImmediate(5*time.Second, 600*time.Second, func() (bool, error) {
+		if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.ClusterAutoscalerDeploymentName); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		}
+		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", common.ClusterAutoscalerDeploymentName)
+		return false, nil
+	})
+}
+
 // WaitForControllersToBeActive checks whether the kube-controller-manager and the cloud-controller-manager have
 // recently written to the Endpoint object holding the leader information. If yes, they are active.
 func (b *Botanist) WaitForControllersToBeActive() error {

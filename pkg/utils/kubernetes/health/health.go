@@ -16,7 +16,9 @@ package health
 
 import (
 	"fmt"
-	gardenv1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -43,7 +45,7 @@ func getDeploymentCondition(conditions []appsv1.DeploymentCondition, conditionTy
 	return nil
 }
 
-func getMachineDeploymentCondition(conditions []gardenv1alpha1.MachineDeploymentCondition, conditionType gardenv1alpha1.MachineDeploymentConditionType) *gardenv1alpha1.MachineDeploymentCondition {
+func getMachineDeploymentCondition(conditions []machinev1alpha1.MachineDeploymentCondition, conditionType machinev1alpha1.MachineDeploymentConditionType) *machinev1alpha1.MachineDeploymentCondition {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
 			return &condition
@@ -217,24 +219,24 @@ func CheckNode(node *corev1.Node) error {
 }
 
 var (
-	trueMachineDeploymentConditionTypes = []gardenv1alpha1.MachineDeploymentConditionType{
-		gardenv1alpha1.MachineDeploymentAvailable,
+	trueMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
+		machinev1alpha1.MachineDeploymentAvailable,
 	}
 
-	trueOptionalMachineDeploymentConditionTypes = []gardenv1alpha1.MachineDeploymentConditionType{
-		gardenv1alpha1.MachineDeploymentProgressing,
+	trueOptionalMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
+		machinev1alpha1.MachineDeploymentProgressing,
 	}
 
-	falseMachineDeploymentConditionTypes = []gardenv1alpha1.MachineDeploymentConditionType{
-		gardenv1alpha1.MachineDeploymentReplicaFailure,
-		gardenv1alpha1.MachineDeploymentFrozen,
+	falseMachineDeploymentConditionTypes = []machinev1alpha1.MachineDeploymentConditionType{
+		machinev1alpha1.MachineDeploymentReplicaFailure,
+		machinev1alpha1.MachineDeploymentFrozen,
 	}
 )
 
 // CheckMachineDeployment checks whether the given MachineDeployment is healthy.
 // A MachineDeployment is considered healthy if its controller observed its current revision and if
 // its desired number of replicas is equal to its updated replicas.
-func CheckMachineDeployment(deployment *gardenv1alpha1.MachineDeployment) error {
+func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error {
 	if deployment.Status.ObservedGeneration < deployment.Generation {
 		return fmt.Errorf("observed generation outdated (%d/%d)", deployment.Status.ObservedGeneration, deployment.Generation)
 	}
