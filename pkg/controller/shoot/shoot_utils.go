@@ -75,7 +75,12 @@ func shootIsHealthy(shoot *gardenv1beta1.Shoot, conditions ...*gardenv1beta1.Con
 		return true
 	}
 
-	// At least one condition indicates that something is wrong.
+	// If shoot is created or deleted then the last error indicates the healthiness.
+	if lastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate || lastOperation.Type == gardenv1beta1.ShootLastOperationTypeDelete {
+		return lastError == nil
+	}
+
+	// If the shoot is normally reconciled then at least one false condition indicates that something is wrong.
 	if !allConditionsTrue() {
 		return false
 	}
