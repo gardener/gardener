@@ -293,8 +293,9 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 			shootMaintenanceQueueLength = c.shootMaintenanceQueue.Len()
 			shootQuotaQueueLength       = c.shootQuotaQueue.Len()
 			shootSeedQueueLength        = c.shootSeedQueue.Len()
+			seedQueueLength             = c.seedQueue.Len()
 			configMapQueueLength        = c.configMapQueue.Len()
-			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength + shootSeedQueueLength + configMapQueueLength
+			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength + shootSeedQueueLength + seedQueueLength + configMapQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")
@@ -323,10 +324,8 @@ func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
 }
 
 func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterface {
-	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok {
-		if shootIsSeed(shoot) {
-			return c.shootSeedQueue
-		}
+	if shoot, ok := obj.(*gardenv1beta1.Shoot); ok && shootIsSeed(shoot) {
+		return c.shootSeedQueue
 	}
 	return c.shootQueue
 }
