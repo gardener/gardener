@@ -70,7 +70,23 @@ func shootIsHealthy(shoot *gardenv1beta1.Shoot, conditions ...*gardenv1beta1.Con
 		}
 	)
 
-	return lastOperation == nil || (lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded && lastError == nil && allConditionsTrue())
+	// Shoot has been created and not yet reconciled.
+	if lastOperation == nil {
+		return true
+	}
+
+	// At least one condition indicates that something is wrong.
+	if !allConditionsTrue() {
+		return false
+	}
+
+	// If an operation is currently processing then the last error state is reported.
+	if lastOperation.State == gardenv1beta1.ShootLastOperationStateProcessing {
+		return lastError == nil
+	}
+
+	// If the last operation has succeeded then the shoot is healthy.
+	return lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded
 }
 
 func seedIsShoot(seed *gardenv1beta1.Seed) bool {
