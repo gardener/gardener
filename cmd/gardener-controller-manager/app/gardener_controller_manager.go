@@ -149,7 +149,6 @@ func (o *Options) applyDefaults(in *componentconfig.ControllerManagerConfigurati
 }
 
 func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
-
 	if len(o.ConfigFile) > 0 {
 		c, err := o.loadConfigFromFile(o.ConfigFile)
 		if err != nil {
@@ -238,34 +237,33 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	if err := flag.Lookup("v").Value.Set(fmt.Sprintf("%d", config.KubernetesLogLevel)); err != nil {
 		return nil, err
 	}
+
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
 	var (
 		kubeconfig         = config.ClientConnection.KubeConfigFile
 		gardenerKubeConfig = config.GardenerClientConnection.KubeConfigFile
+
+		gardenerClient = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+			&clientcmd.ClientConfigLoadingRules{ExplicitPath: gardenerKubeConfig},
+			&clientcmd.ConfigOverrides{},
+		)
 	)
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig)
+	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, &config.ClientConnection)
 	if err != nil {
 		return nil, err
 	}
-
-	gardenerClient := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: gardenerKubeConfig},
-		&clientcmd.ConfigOverrides{},
-	)
-
-	gardenerClientConfig, err := gardenerClient.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(kubeconfig)
+	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(kubeconfig, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
+	gardenerClientConfig, err := kubernetes.CreateRestConfig(gardenerClient, &config.ClientConnection)
+	if err != nil {
+		return nil, err
+	}
 	gardenClientset, err := gardenclientset.NewForConfig(gardenerClientConfig)
 	if err != nil {
 		return nil, err

@@ -62,7 +62,7 @@ type ClientConnectionConfiguration struct {
 	// QPS controls the number of queries per second allowed for this connection.
 	QPS float32
 	// Burst allows extra queries to accumulate when a client is exceeding its rate.
-	Burst int32
+	Burst int
 }
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
