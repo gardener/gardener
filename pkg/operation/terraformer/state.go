@@ -53,6 +53,10 @@ func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 		return nil, err
 	}
 
+	if len(stateConfigMap) == 0 {
+		return nil, &variablesNotFoundError{wantedVariables.List()}
+	}
+
 	if err := json.Unmarshal(stateConfigMap, &state); err != nil {
 		return nil, err
 	}
