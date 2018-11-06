@@ -29,7 +29,7 @@ func requiredConditionMissing(conditionType string) error {
 func checkConditionState(conditionType string, expected, actual, reason, message string) error {
 	if expected != actual {
 		return fmt.Errorf("condition %q has invalid status %s (expected %s) due to %s: %s",
-			conditionType, expected, actual, reason, message)
+			conditionType, actual, expected, reason, message)
 	}
 	return nil
 }
