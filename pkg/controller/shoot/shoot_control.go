@@ -180,9 +180,11 @@ func (c *Controller) reconcileShootKey(key string) error {
 	}
 	c.scheduler.Done(shootElement.GetID())
 
-	if durationToNextSync := scheduleNextSync(c.config.Controllers.Shoot, reconcileErr != nil, shoot.Annotations, reason); durationToNextSync > 0 && needsRequeue {
+	if durationToNextSync := scheduleNextSync(c.config.Controllers.Shoot, reconcileErr != nil, shoot.ObjectMeta, reason); durationToNextSync > 0 && needsRequeue {
 		c.getShootQueue(shoot).AddAfter(key, durationToNextSync)
-		shootLogger.Infof("Scheduled next queuing time for Shoot '%s' to %s", key, durationToNextSync)
+		message := fmt.Sprintf("Scheduled next queuing time for Shoot '%s' in %s (%s)", key, durationToNextSync, time.Now().UTC().Add(durationToNextSync))
+		shootLogger.Infof(message)
+		c.recorder.Eventf(shoot, corev1.EventTypeNormal, "ScheduledNextSync", message)
 	}
 
 	return nil
@@ -203,7 +205,7 @@ func (c *Controller) updateShootStatusPending(shoot *gardenv1beta1.Shoot, messag
 	return err
 }
 
-func scheduleNextSync(config componentconfig.ShootControllerConfiguration, errorOccurred bool, annotations map[string]string, reason *reconcilescheduler.Reason) time.Duration {
+func scheduleNextSync(config componentconfig.ShootControllerConfiguration, errorOccurred bool, objectMeta metav1.ObjectMeta, reason *reconcilescheduler.Reason) time.Duration {
 	switch {
 	case reason == nil, reason.Code() == reconcilescheduler.CodeOther, reason.Code() == reconcilescheduler.CodeActivated:
 	case reason.Code() == reconcilescheduler.CodeParentUnknown:
@@ -219,9 +221,12 @@ func scheduleNextSync(config componentconfig.ShootControllerConfiguration, error
 	var (
 		syncPeriod                 = config.SyncPeriod
 		respectSyncPeriodOverwrite = *config.RespectSyncPeriodOverwrite
+
+		currentTimeNano  = time.Now().UnixNano()
+		creationTimeNano = objectMeta.CreationTimestamp.UnixNano()
 	)
 
-	if syncPeriodOverwrite, ok := annotations[common.ShootSyncPeriod]; ok && respectSyncPeriodOverwrite {
+	if syncPeriodOverwrite, ok := objectMeta.Annotations[common.ShootSyncPeriod]; ok && respectSyncPeriodOverwrite {
 		if syncPeriodDuration, err := time.ParseDuration(syncPeriodOverwrite); err == nil {
 			if syncPeriodDuration.Nanoseconds() == 0 {
 				return 0
@@ -232,7 +237,12 @@ func scheduleNextSync(config componentconfig.ShootControllerConfiguration, error
 		}
 	}
 
-	return syncPeriod.Duration
+	var (
+		syncPeriodNano = syncPeriod.Nanoseconds()
+		nextSyncNano   = currentTimeNano - (currentTimeNano-creationTimeNano)%syncPeriodNano + syncPeriodNano
+	)
+
+	return time.Duration(nextSyncNano - currentTimeNano)
 }
 
 // ControlInterface implements the control logic for updating Shoots. It is implemented as an interface to allow
