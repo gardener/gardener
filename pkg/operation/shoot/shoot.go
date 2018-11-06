@@ -226,15 +226,10 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {
 	// Use the stored technical ID in the Shoot's status field if it's there.
-	if len(shoot.Status.TechnicalID) > 0 {
-		return shoot.Status.TechnicalID
-	}
-
-	// Otherwise, existing clusters definitely have set the last operation on the Shoot status.
 	// For backwards compatibility we keep the pattern as it was before we had to change it
 	// (double hyphens).
-	if shoot.Status.LastOperation != nil {
-		return fmt.Sprintf("shoot-%s-%s", projectName, shoot.Name)
+	if len(shoot.Status.TechnicalID) > 0 {
+		return shoot.Status.TechnicalID
 	}
 
 	// New clusters shall be created with the new technical id (double hyphens).
