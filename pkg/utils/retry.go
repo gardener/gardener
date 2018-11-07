@@ -15,12 +15,10 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"time"
 )
-
-// NeverStop is a channel that is always open. Can be used for never stopping a Retry computation.
-var NeverStop = make(chan struct{})
 
 // ConditionFunc is a function that reports whether it completed successfully or
 // whether it had an error. Via the additional <severe> flag, it shows whether the
@@ -99,37 +97,20 @@ func (t *timedOutWithError) Error() string {
 	return fmt.Sprintf("timed out after %s, last error: %v", t.waitTime, t.lastError)
 }
 
-func newStopCh(timeout time.Duration, done <-chan struct{}) <-chan struct{} {
-	stopCh := make(chan struct{})
-	t := time.NewTimer(timeout)
-
-	go func() {
-		defer t.Stop()
-		defer close(stopCh)
-
-		select {
-		case <-t.C:
-		case <-done:
-			return
-		}
-	}()
-	return stopCh
-}
-
 // Retry retries <f> until it either succeeds, fails severely or times out.
 // Between each runs, it sleeps for <interval>.
 func Retry(interval time.Duration, timeout time.Duration, f ConditionFunc) error {
-	done := make(chan struct{})
-	defer close(done)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 
-	return RetryUntil(interval, newStopCh(timeout, done), f)
+	return RetryUntil(ctx, interval, f)
 }
 
 // RetryUntil retries <f> until it either succeeds, fails severely or the given channel <stopCh>
 // is closed. Between each tries, it sleeps for <interval>. The function f is guaranteed to
 // be executed at least once. During each execution, f can't be prematurely killed, thus an operation
 // may run considerably longer than anticipated after closing the <stopCh>.
-func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc) error {
+func RetryUntil(ctx context.Context, interval time.Duration, f ConditionFunc) error {
 	var (
 		lastError error
 		startTime = time.Now()
@@ -146,19 +127,16 @@ func RetryUntil(interval time.Duration, stopCh <-chan struct{}, f ConditionFunc)
 			return nil
 		}
 
-		select {
-		case <-stopCh:
+		if ctx.Err() != nil {
 			waitTime := time.Since(startTime)
 			return newTimedOut(waitTime, lastError)
-		default:
 		}
 
 		time.Sleep(interval)
-		select {
-		case <-stopCh:
+
+		if ctx.Err() != nil {
 			waitTime := time.Since(startTime)
 			return newTimedOut(waitTime, lastError)
-		default:
 		}
 	}
 }

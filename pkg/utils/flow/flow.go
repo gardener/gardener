@@ -17,6 +17,7 @@
 package flow
 
 import (
+	"context"
 	"fmt"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
@@ -35,6 +36,16 @@ type ProgressReporter func(*Stats)
 
 type nodes map[TaskID]*node
 
+func (ns nodes) rootIDs() TaskIDs {
+	roots := NewTaskIDs()
+	for taskID, node := range ns {
+		if node.required == 0 {
+			roots.Insert(taskID)
+		}
+	}
+	return roots
+}
+
 func (ns nodes) getOrCreate(id TaskID) *node {
 	n, ok := ns[id]
 	if !ok {
@@ -48,7 +59,6 @@ func (ns nodes) getOrCreate(id TaskID) *node {
 type Flow struct {
 	name  string
 	nodes nodes
-	roots TaskIDs
 }
 
 // Name retrieves the name of a flow.
@@ -87,12 +97,17 @@ func (n *node) addTargets(taskIDs ...TaskID) {
 type Opts struct {
 	Logger           logrus.FieldLogger
 	ProgressReporter func(stats *Stats)
+	Context          context.Context
 }
 
 // Run starts an execution of a Flow.
 // It blocks until the Flow has finished and returns the error, if any.
 func (f *Flow) Run(opts Opts) error {
-	return newExecution(f, opts.Logger, opts.ProgressReporter).run()
+	ctx := opts.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return newExecution(f, opts.Logger, opts.ProgressReporter).run(ctx)
 }
 
 type nodeResult struct {
@@ -169,8 +184,8 @@ func newExecution(flow *Flow, logger logrus.FieldLogger, reporter ProgressReport
 type execution struct {
 	flow *Flow
 
-	stats *Stats
-	error error
+	stats      *Stats
+	taskErrors []error
 
 	log              logrus.FieldLogger
 	progressReporter ProgressReporter
@@ -183,7 +198,7 @@ func (e *execution) Log() logrus.FieldLogger {
 	return e.log
 }
 
-func (e *execution) runNode(id TaskID) {
+func (e *execution) runNode(ctx context.Context, id TaskID) {
 	e.stats.Pending.Delete(id)
 	e.stats.Running.Insert(id)
 	go func() {
@@ -191,7 +206,7 @@ func (e *execution) runNode(id TaskID) {
 
 		start := time.Now().UTC()
 		log.Debugf("Started at %s", start)
-		err := e.flow.nodes[id].fn()
+		err := e.flow.nodes[id].fn(ctx)
 		end := time.Now().UTC()
 		log.Debugf("Finished at %s and took %s", end, end.Sub(start))
 
@@ -211,17 +226,17 @@ func (e *execution) updateSuccess(id TaskID) {
 	e.stats.Succeeded.Insert(id)
 }
 
-func (e *execution) updateFailure(id TaskID, err error) {
+func (e *execution) updateFailure(id TaskID) {
 	e.stats.Running.Delete(id)
 	e.stats.Failed.Insert(id)
 }
 
-func (e *execution) processTriggers(id TaskID) {
+func (e *execution) processTriggers(ctx context.Context, id TaskID) {
 	node := e.flow.nodes[id]
 	for target := range node.targetIDs {
 		e.triggerCounts[target]++
 		if e.triggerCounts[target] == e.flow.nodes[target].required {
-			e.runNode(target)
+			e.runNode(ctx, target)
 		}
 	}
 }
@@ -232,35 +247,98 @@ func (e *execution) reportProgress() {
 	}
 }
 
-func (e *execution) run() error {
+func (e *execution) run(ctx context.Context) error {
 	defer close(e.done)
 	e.log.Infof("Starting flow")
-
 	e.reportProgress()
-	for name := range e.flow.roots {
-		e.runNode(name)
-		e.reportProgress()
+
+	var (
+		cancelErr error
+		roots     = e.flow.nodes.rootIDs()
+	)
+	for name := range roots {
+		if cancelErr = ctx.Err(); cancelErr == nil {
+			e.runNode(ctx, name)
+			e.reportProgress()
+		}
 	}
 
 	for e.stats.Running.Len() > 0 {
 		result := <-e.done
 		if result.Error != nil {
-			e.error = multierror.Append(e.error, result.Error)
-			e.updateFailure(result.TaskID, result.Error)
+			e.taskErrors = append(e.taskErrors, result.Error)
+			e.updateFailure(result.TaskID)
 		} else {
 			e.updateSuccess(result.TaskID)
-			e.processTriggers(result.TaskID)
+			if cancelErr = ctx.Err(); cancelErr == nil {
+				e.processTriggers(ctx, result.TaskID)
+			}
 		}
 		e.reportProgress()
 	}
 
 	e.log.Infof("Finished flow")
-	return errors.Wrapf(e.error, "flow %q failed", e.flow.name)
+	return e.result(cancelErr)
+}
+
+func (e *execution) result(cancelErr error) error {
+	if cancelErr != nil {
+		return &flowCanceled{
+			name:       e.flow.name,
+			taskErrors: e.taskErrors,
+			cause:      cancelErr,
+		}
+	}
+
+	if len(e.taskErrors) > 0 {
+		return &flowFailed{
+			name:       e.flow.name,
+			taskErrors: e.taskErrors,
+		}
+	}
+	return nil
+}
+
+type flowCanceled struct {
+	name       string
+	taskErrors []error
+	cause      error
+}
+
+type flowFailed struct {
+	name       string
+	taskErrors []error
+}
+
+func (f *flowCanceled) Error() string {
+	if len(f.taskErrors) == 0 {
+		return fmt.Sprintf("flow %q was canceled: %v", f.name, f.cause)
+	}
+	return fmt.Sprintf("flow %q was canceled: %v. Encountered task errors: %v",
+		f.name, f.cause, f.taskErrors)
+}
+
+func (f *flowCanceled) Cause() error {
+	return f.cause
+}
+
+func (f *flowFailed) Error() string {
+	return fmt.Sprintf("flow %q encountered task errors: %v", f.name, f.taskErrors)
+}
+
+func (f *flowFailed) Cause() error {
+	return &multierror.Error{Errors: f.taskErrors}
 }
 
 // Errors reports all wrapped Task errors of the given Flow error.
 func Errors(err error) *multierror.Error {
-	return multierror.Append(nil, errors.Cause(err))
+	switch e := err.(type) {
+	case *flowCanceled:
+		return &multierror.Error{Errors: e.taskErrors}
+	case *flowFailed:
+		return &multierror.Error{Errors: e.taskErrors}
+	}
+	return nil
 }
 
 // Causes reports the causes of all Task errors of the given Flow error.
@@ -273,4 +351,10 @@ func Causes(err error) *multierror.Error {
 		causes = append(causes, errors.Cause(err))
 	}
 	return &multierror.Error{Errors: causes}
+}
+
+// WasCanceled determines whether the given flow error was caused by cancellation.
+func WasCanceled(err error) bool {
+	_, ok := err.(*flowCanceled)
+	return ok
 }

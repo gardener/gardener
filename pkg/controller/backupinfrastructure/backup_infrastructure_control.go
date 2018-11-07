@@ -235,12 +235,12 @@ func (c *defaultControl) reconcileBackupInfrastructure(o *operation.Operation) *
 
 		deployBackupNamespace = g.Add(flow.Task{
 			Name: "Deploying backup namespace",
-			Fn:   flow.TaskFn(botanist.DeployBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.SimpleTaskFn(botanist.DeployBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Deploying backup infrastructure",
-			Fn:           flow.TaskFn(seedCloudBotanist.DeployBackupInfrastructure),
+			Fn:           flow.SimpleTaskFn(seedCloudBotanist.DeployBackupInfrastructure),
 			Dependencies: flow.NewTaskIDs(deployBackupNamespace),
 		})
 
@@ -298,16 +298,16 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 		g                           = flow.NewGraph("Backup infrastructure deletion")
 		destroyBackupInfrastructure = g.Add(flow.Task{
 			Name: "Destroying backup infrastructure",
-			Fn:   flow.TaskFn(seedCloudBotanist.DestroyBackupInfrastructure).DoIf(cleanupBackupInfrastructureResources),
+			Fn:   flow.SimpleTaskFn(seedCloudBotanist.DestroyBackupInfrastructure).DoIf(cleanupBackupInfrastructureResources),
 		})
 		deleteBackupNamespace = g.Add(flow.Task{
 			Name:         "Deleting backup namespace",
-			Fn:           flow.TaskFn(botanist.DeleteBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(destroyBackupInfrastructure),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until backup namespace is deleted",
-			Fn:           botanist.WaitUntilBackupNamespaceDeleted,
+			Fn:           flow.SimpleTaskFn(botanist.WaitUntilBackupNamespaceDeleted),
 			Dependencies: flow.NewTaskIDs(deleteBackupNamespace),
 		})
 		f = g.Compile()

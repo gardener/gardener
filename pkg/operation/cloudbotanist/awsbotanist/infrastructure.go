@@ -73,12 +73,12 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 
 		destroyKubernetesLoadBalancersAndSecurityGroups = g.Add(flow.Task{
 			Name: "Destroying Kubernetes load balancers and security groups",
-			Fn:   flow.TaskFn(b.destroyKubernetesLoadBalancersAndSecurityGroups).RetryUntilTimeout(10*time.Second, 5*time.Minute).DoIf(configExists),
+			Fn:   flow.SimpleTaskFn(b.destroyKubernetesLoadBalancersAndSecurityGroups).RetryUntilTimeout(10*time.Second, 5*time.Minute).DoIf(configExists),
 		})
 
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Shoot infrastructure",
-			Fn:           flow.TaskFn(tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).Destroy),
+			Fn:           flow.SimpleTaskFn(tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).Destroy),
 			Dependencies: flow.NewTaskIDs(destroyKubernetesLoadBalancersAndSecurityGroups),
 		})
 

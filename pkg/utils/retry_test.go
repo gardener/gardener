@@ -20,6 +20,7 @@ import (
 	"errors"
 	"time"
 
+	"context"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	errwrap "github.com/pkg/errors"
@@ -30,13 +31,19 @@ var (
 )
 
 var _ = Describe("utils", func() {
+	var (
+		canceledCtx, cancel = context.WithCancel(context.Background())
+		zeroDuration        = time.Duration(0)
+	)
+	cancel()
+
 	Context("#RetryUntil", func() {
 		closedChan := make(chan struct{})
 		close(closedChan)
 
 		It("should abort immediately on a severe error and return it", func() {
 			ct := 0
-			err := RetryUntil(0*time.Second, NeverStop, func() (ok, severe bool, err error) {
+			err := RetryUntil(context.Background(), zeroDuration, func() (ok, severe bool, err error) {
 				if ct > 0 {
 					Fail("Function called multiple times although should have already failed")
 				}
@@ -48,25 +55,27 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should not error if the function exits cleanly", func() {
-			err := RetryUntil(0*time.Second, NeverStop, func() (ok, severe bool, err error) {
+			err := RetryUntil(context.Background(), 0*time.Second, func() (ok, severe bool, err error) {
 				return true, false, nil
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should not timeout early and use the value of the delayed function", func() {
-			err := RetryUntil(0*time.Second, closedChan, func() (ok, severe bool, err error) {
+			err := RetryUntil(canceledCtx, zeroDuration, func() (ok, severe bool, err error) {
 				return true, false, nil
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should exit with a timeout after the interval sleep due to a closed channel", func() {
-			c := make(chan struct{})
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
 			ct := 0
-			err := RetryUntil(0*time.Second, c, func() (ok, severe bool, err error) {
+			err := RetryUntil(ctx, zeroDuration, func() (ok, severe bool, err error) {
 				ct++
-				close(c)
+				cancel()
 				return false, false, nil
 			})
 
@@ -75,7 +84,7 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should fail due to a timeout containing the last error", func() {
-			err := RetryUntil(0*time.Second, closedChan, func() (ok, severe bool, err error) {
+			err := RetryUntil(canceledCtx, zeroDuration, func() (ok, severe bool, err error) {
 				return false, false, testErr
 			})
 
@@ -86,7 +95,7 @@ var _ = Describe("utils", func() {
 		})
 
 		It("should fail due to a timeout containing no last error", func() {
-			err := RetryUntil(0*time.Second, closedChan, func() (ok, severe bool, err error) {
+			err := RetryUntil(canceledCtx, zeroDuration, func() (ok, severe bool, err error) {
 				return false, false, nil
 			})
 
