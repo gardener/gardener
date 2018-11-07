@@ -640,7 +640,6 @@ func newConditionOrError(oldCondition, newCondition *gardenv1beta1.Condition, er
 }
 
 var (
-	controlPlaneListOptions               = metav1.ListOptions{LabelSelector: controlPlaneSelector.String()}
 	controlPlaneMonitoringLoggingSelector = mustGardenRoleLabelSelector(
 		common.GardenRoleControlPlane,
 		common.GardenRoleMonitoring,
@@ -672,17 +671,17 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 		return shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
 
+	var (
+		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
+		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
+		seedDaemonSetLister   = makeDaemonSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDaemonSetListOptions)
+	)
+
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
 		nodes = helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
-
-		var (
-			seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, controlPlaneListOptions)
-			seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, controlPlaneListOptions)
-			seedDaemonSetLister   = makeDaemonSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, controlPlaneListOptions)
-		)
 
 		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
@@ -692,9 +691,6 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	var (
 		wg sync.WaitGroup
 
-		seedDeploymentLister        = makeDeploymentLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
-		seedStatefulSetLister       = makeStatefulSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
-		seedDaemonSetLister         = makeDaemonSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDaemonSetListOptions)
 		seedMachineDeploymentLister = makeMachineDeploymentLister(b.K8sSeedClient.MachineClientset(), b.Shoot.SeedNamespace, seedMachineDeploymentListOptions)
 
 		shootDeploymentLister = makeDeploymentLister(b.K8sShootClient.Clientset(), metav1.NamespaceSystem, shootDeploymentListOptions)
