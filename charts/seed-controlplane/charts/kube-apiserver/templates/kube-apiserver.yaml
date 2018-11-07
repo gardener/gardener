@@ -104,7 +104,7 @@ spec:
             - name: Authorization
               value: Basic {{ .Values.probeCredentials }}
           successThreshold: 1
-          failureThreshold: 2
+          failureThreshold: 3
           initialDelaySeconds: 15
           periodSeconds: 30
           timeoutSeconds: 15
@@ -117,7 +117,7 @@ spec:
             - name: Authorization
               value: Basic {{ .Values.probeCredentials }}
           successThreshold: 1
-          failureThreshold: 2
+          failureThreshold: 3
           initialDelaySeconds: 10
           periodSeconds: 30
           timeoutSeconds: 15
