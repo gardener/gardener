@@ -91,6 +91,8 @@ if name == 'autoscaler':
     names = ['cluster-autoscaler']
 elif name == 'vpn':
     names = ['vpn-seed', 'vpn-shoot']
+elif name == 'logging':
+    names = ['fluentd-es', 'elasticsearch-oss', 'curator-es']
 else:
     names = [name]
 
