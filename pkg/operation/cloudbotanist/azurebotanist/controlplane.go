@@ -135,15 +135,21 @@ func (b *AzureBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interfa
 	return values, nil
 }
 
-// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
-// Deployment manifest of the kube-apiserver properly.
-func (b *AzureBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+// GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver
+// is exposed to the public.
+func (b *AzureBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"advertiseAddress": b.APIServerAddressIP,
 		"additionalParameters": []string{
 			fmt.Sprintf("--external-hostname=%s", b.APIServerAddressIP),
 		},
 	}, nil
+}
+
+// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
+// Deployment manifest of the kube-apiserver properly.
+func (b *AzureBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to

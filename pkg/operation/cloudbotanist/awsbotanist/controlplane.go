@@ -87,9 +87,9 @@ func (b *AWSBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interface
 	}, nil
 }
 
-// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
-// Deployment manifest of the kube-apiserver properly.
-func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+// GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver
+// is exposed to the public.
+func (b *AWSBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
 	// For older versions of Gardener the old readvertiser would be deployed which is incompatible with the way we
 	// configure the kube-apiserver now, therefore, we need to check if the version is < 0.4.0.
 	mustDeleteOldReadvertiser := false
@@ -118,6 +118,12 @@ func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 	return map[string]interface{}{
 		"endpointReconcilerType": "none",
 	}, nil
+}
+
+// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
+// Deployment manifest of the kube-apiserver properly.
+func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
