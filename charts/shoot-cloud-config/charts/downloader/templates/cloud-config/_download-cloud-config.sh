@@ -36,7 +36,7 @@ fi
 IMAGES="$(kubectl --namespace=kube-system get secret "$SECRET_NAME" -o jsonpath='{.data.images}')";
 if [[ "$IMAGES" != "" ]]; then
   echo "Preloading docker images"
-  echo "$IMAGES" | base64 -d | docker run -i {{ index .Values.images "ruby" }} ruby -e 'require "json"; puts JSON::load(STDIN.read).values.compact' | xargs docker pull
+  echo "$IMAGES" | base64 -d | docker run -i {{ index .Values.images "ruby" }} ruby -e 'require "json"; puts JSON::load(STDIN.read).values.compact' | xargs -I {} sh -c '[ ! -z $(docker images -q {}) ] || docker pull {}'
 fi
 
 base64 -d <<< $CLOUD_CONFIG > "$PATH_CLOUDCONFIG"
