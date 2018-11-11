@@ -37,12 +37,18 @@ func (b *LocalBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interfa
 	}, nil
 }
 
-// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
-// Deployment manifest of the kube-apiserver properly.
-func (b *LocalBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+// GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver
+// is exposed to the public.
+func (b *LocalBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
 		"securePort": 31443,
 	}, nil
+}
+
+// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
+// Deployment manifest of the kube-apiserver properly.
+func (b *LocalBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
