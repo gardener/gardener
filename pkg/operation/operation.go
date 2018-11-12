@@ -16,8 +16,6 @@ package operation
 
 import (
 	"crypto/x509"
-	"encoding/base64"
-	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -32,9 +30,11 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
@@ -169,6 +169,11 @@ func (o *Operation) InitializeShootClients() error {
 	return nil
 }
 
+//ComputePrometheusIngressFQDN computes full qualified domain name for prometheus ingress sub-resource and returns it.
+func (o *Operation) ComputePrometheusIngressFQDN() string {
+	return o.Seed.GetIngressFQDN("p", o.Shoot.Info.Name, o.Garden.Project.Name)
+}
+
 // InitializeMonitoringClient will read the Prometheus ingress auth and tls
 // secrets from the Seed cluster, which are containing the cert to secure
 // the conntection and the credentials authenticate against the Shoot Prometheus.
@@ -184,25 +189,20 @@ func (o *Operation) InitializeMonitoringClient() error {
 	if err != nil {
 		return err
 	}
-	if tlsSecret == nil {
-		return errors.New("Failed to read the 'prometheus-tls' secret")
-	}
+
 	ca := x509.NewCertPool()
-	ca.AppendCertsFromPEM(tlsSecret.Data["ca.crt"])
+	ca.AppendCertsFromPEM(tlsSecret.Data[secrets.DataKeyCertificateCA])
 
 	// Read the basic auth credentials.
 	credentials, err := o.K8sSeedClient.GetSecret(o.Shoot.SeedNamespace, "monitoring-ingress-credentials")
 	if err != nil {
 		return err
 	}
-	if credentials == nil {
-		return errors.New("Failed to read the 'monitoring-ingress-credentials' secret")
-	}
 
 	config := prometheusapi.Config{
-		Address: fmt.Sprintf("https://%s", o.Seed.GetIngressFQDN("p", o.Shoot.Info.Name, o.Garden.Project.Name)),
+		Address: fmt.Sprintf("https://%s", o.ComputePrometheusIngressFQDN()),
 		RoundTripper: &prometheusRoundTripper{
-			authHeader: fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", credentials.Data["username"], credentials.Data["password"])))),
+			authHeader: fmt.Sprintf("Basic %s", utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", credentials.Data["username"], credentials.Data["password"])))),
 			ca:         ca,
 		},
 	}

@@ -117,12 +117,11 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	// Initialize conditions based on the current status.
 	var (
-		newConditions                    = helper.NewConditions(shoot.Status.Conditions, gardenv1beta1.ShootAPIServerAvailable, gardenv1beta1.ShootControlPlaneHealthy, gardenv1beta1.ShootEveryNodeReady, gardenv1beta1.ShootSystemComponentsHealthy, gardenv1beta1.ShootAlertsInactive)
+		newConditions                    = helper.NewConditions(shoot.Status.Conditions, gardenv1beta1.ShootAPIServerAvailable, gardenv1beta1.ShootControlPlaneHealthy, gardenv1beta1.ShootEveryNodeReady, gardenv1beta1.ShootSystemComponentsHealthy)
 		conditionAPIServerAvailable      = newConditions[0]
 		conditionControlPlaneHealthy     = newConditions[1]
 		conditionEveryNodeReady          = newConditions[2]
 		conditionSystemComponentsHealthy = newConditions[3]
-		conditionAlertsInactive          = newConditions[4]
 	)
 
 	botanist, err := botanistpkg.New(operation)
@@ -132,10 +131,9 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 		conditionControlPlaneHealthy = helper.UpdatedConditionUnknownErrorMessage(conditionControlPlaneHealthy, message)
 		conditionEveryNodeReady = helper.UpdatedConditionUnknownErrorMessage(conditionEveryNodeReady, message)
 		conditionSystemComponentsHealthy = helper.UpdatedConditionUnknownErrorMessage(conditionSystemComponentsHealthy, message)
-		conditionAlertsInactive = helper.UpdatedConditionUnknownErrorMessage(conditionAlertsInactive, message)
 		operation.Logger.Error(message)
 
-		c.updateShootConditions(shoot, *conditionAPIServerAvailable, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy, *conditionAlertsInactive)
+		c.updateShootConditions(shoot, *conditionAPIServerAvailable, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 		return nil // We do not want to run in the exponential backoff for the condition checks.
 	}
 
@@ -153,11 +151,8 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 		conditionSystemComponentsHealthy,
 	)
 
-	// Trigger monitoring health check
-	conditionAlertsInactive = botanist.MonitoringHealthChecks(conditionAlertsInactive)
-
 	// Update Shoot status
-	shoot, err = c.updateShootConditions(shoot, *conditionAPIServerAvailable, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy, *conditionAlertsInactive)
+	shoot, err = c.updateShootConditions(shoot, *conditionAPIServerAvailable, *conditionControlPlaneHealthy, *conditionEveryNodeReady, *conditionSystemComponentsHealthy)
 	if err != nil {
 		botanist.Logger.Errorf("Could not update Shoot conditions: %+v", err)
 		return nil // We do not want to run in the exponential backoff for the condition checks.

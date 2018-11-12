@@ -290,8 +290,8 @@ func (b *Botanist) checkAPIServerAvailability(condition *gardenv1beta1.Condition
 	response, err := b.K8sShootClient.Curl("/healthz")
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", time.Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
 	if err != nil {
-		message := fmt.Sprintf("Request to Shoot API server failed. %s (%s)", responseDurationText, err.Error())
-		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "RequestFailed", message)
+		message := fmt.Sprintf("Request to Shoot API server /healthz endpoint failed. %s (%s)", responseDurationText, err.Error())
+		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "HealthzRequestFailed", message)
 	}
 
 	// Determine the status code of the response.
@@ -306,12 +306,12 @@ func (b *Botanist) checkAPIServerAvailability(condition *gardenv1beta1.Condition
 		} else {
 			body = string(bodyRaw)
 		}
-		message := fmt.Sprintf("Shoot API server health check returned a non ok status code %d. %s (%s)", statusCode, responseDurationText, body)
-		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "ResponseCodeError", message)
+		message := fmt.Sprintf("Shoot API server /healthz endpoint endpoint check returned a non ok status code %d. %s (%s)", statusCode, responseDurationText, body)
+		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "HealthzRequestError", message)
 	}
 
-	message := fmt.Sprintf("Shoot API server responded with success status code. %s", responseDurationText)
-	return helper.UpdatedCondition(condition, corev1.ConditionTrue, "ResponseCodeOK", message)
+	message := fmt.Sprintf("Shoot API server /healthz endpoint responded with success status code. %s", responseDurationText)
+	return helper.UpdatedCondition(condition, corev1.ConditionTrue, "HealthzRequestSucceeded", message)
 }
 
 const (
@@ -829,12 +829,10 @@ func (b *Botanist) MonitoringHealthChecks(inactiveAlerts *gardenv1beta1.Conditio
 	if b.Shoot.IsHibernated {
 		return shootHibernatedCondition(inactiveAlerts)
 	}
-
 	if err := b.InitializeMonitoringClient(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot monitoring API client for health check: %+v", err)
 		b.Logger.Error(message)
 		return helper.UpdatedConditionUnknownErrorMessage(inactiveAlerts, message)
 	}
-
 	return b.checkAlerts(inactiveAlerts)
 }

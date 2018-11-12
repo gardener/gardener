@@ -1552,6 +1552,8 @@ const (
 	ShootEveryNodeReady ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
 	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+	// ShootAPIServerAvailable is a constant for a condition type indicating the api server is available.
+	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
 
 	// ConditionCheckError is a constant for indicating that a condition could not be checked.
 	ConditionCheckError = "ConditionCheckError"

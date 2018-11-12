@@ -250,7 +250,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		basicAuth        = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name)
-		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.Project.Name)
+		prometheusHost   = b.ComputePrometheusIngressFQDN()
 	)
 
 	var (

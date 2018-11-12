@@ -76,7 +76,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	var (
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name)
-		prometheusHost   = b.Seed.GetIngressFQDN("p", b.Shoot.Info.Name, b.Garden.Project.Name)
+		prometheusHost   = b.ComputePrometheusIngressFQDN()
 
 		apiServerIPAddresses = []net.IP{
 			net.ParseIP("127.0.0.1"),
