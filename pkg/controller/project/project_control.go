@@ -108,6 +108,9 @@ type defaultControl struct {
 }
 
 func newProjectLogger(project *gardenv1beta1.Project) logrus.FieldLogger {
+	if project == nil {
+		return logger.Logger
+	}
 	return logger.NewFieldLogger(logger.Logger, "project", project.Name)
 }
 
