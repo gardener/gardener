@@ -123,7 +123,7 @@ images:
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
-  tag: "0.6.0"
+  tag: "0.7.0"
 - name: helm-tiller
   sourceRepository: github.com/kubernetes/helm
   repository: gcr.io/kubernetes-helm/tiller
