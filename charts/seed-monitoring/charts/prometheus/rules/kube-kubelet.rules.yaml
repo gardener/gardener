@@ -82,3 +82,30 @@ groups:
       description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
         descriptors.'
       summary: '{{ $labels.job }} has too many open file descriptors'
+  - alert: KubePersistentVolumeUsageCritical
+    expr: |
+      100 * kubelet_volume_stats_available_bytes /
+      kubelet_volume_stats_capacity_bytes < 3
+    for: 1m
+    labels:
+      service: kube-kubelet
+      severity: critical
+      type: seed
+    annotations:
+      description: The PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is only {{ printf "%0.2f" $value }}% free.
+      summary: PersistentVolume almost full.
+  - alert: KubePersistentVolumeFullInFourDays
+    expr: |
+      100 * (kubelet_volume_stats_available_bytes /
+      kubelet_volume_stats_capacity_bytes) < 15
+      and predict_linear(kubelet_volume_stats_available_bytes[6h], 4 * 24 * 3600) < 0
+    for: 5m
+    labels:
+      service: kube-kubelet
+      severity: critical
+      type: seed
+    annotations:
+      description: Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to
+        fill up within four days.
+        Currently {{ printf "%0.2f" $value }}% is available.
+      summary: PersistentVolume will be full in four days.

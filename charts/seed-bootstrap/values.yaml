@@ -14,6 +14,9 @@ allowedMetrics:
   - container_memory_working_set_bytes
   - container_network_receive_bytes_total
   - container_network_transmit_bytes_total
+  kubelet:
+  - kubelet_volume_stats_available_bytes
+  - kubelet_volume_stats_capacity_bytes
 
   # object can be any object you want to scale Prometheus on:
   # - number of Pods
