@@ -1,0 +1,137 @@
+# Cluster role granting full permissions to all resources in the gardener API group.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:admin
+  labels:
+    garden.sapcloud.io/role: admin
+rules:
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+
+# Aggregated cluster role specifying garden administrators.
+# IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users
+#            to this ClusterRole on your own (users bound to this role have full access to
+#            the Garden system).
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:administrators
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels:
+      garden.sapcloud.io/role: admin
+  - matchLabels:
+      garden.sapcloud.io/role: project-member
+rules: []
+
+# Cluster role with cluster role binding allowing all authenticated users to read the cloudprofiles
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:cloudprofiles
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - cloudprofiles
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: garden.sapcloud.io:system:cloudprofiles
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:system:cloudprofiles
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:authenticated
+
+# Cluster role for allowing creation of projects.
+# IMPORTANT: You need to define a corresponding ClusterRoleBinding binding specific users/
+#            groups/serviceaccounts to this ClusterRole on your own.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:project-creation
+  labels:
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - projects
+  verbs:
+  - create
+
+# Cluster role setting the permissions for a project member. It gets bound by a RoleBinding
+# in a respective project namespace.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:project-member
+  labels:
+    garden.sapcloud.io/role: project-member
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  - configmaps
+  - serviceaccounts
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - shoots
+  - secretbindings
+  - quotas
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
