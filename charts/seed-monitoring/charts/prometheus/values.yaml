@@ -65,11 +65,22 @@ allowedMetrics:
   kubeETCD3:
   - etcd_disk_backend_commit_duration_seconds_bucket
   - etcd_disk_wal_fsync_duration_seconds_bucket
+  - etcd_mvcc_db_total_size_in_bytes
+  - etcd_network_client_grpc_received_bytes_total
+  - etcd_network_client_grpc_sent_bytes_total
+  - etcd_network_peer_received_bytes_total
+  - etcd_network_peer_sent_bytes_total
   - etcd_server_has_leader
   - etcd_server_leader_changes_seen_total
+  - etcd_server_proposals_applied_total
+  - etcd_server_proposals_committed_total
   - etcd_server_proposals_failed_total
+  - etcd_server_proposals_pending
+  - grpc_server_handled_total
+  - grpc_server_started_total
   - process_max_fds
   - process_open_fds
+  - process_resident_memory_bytes
   kubeScheduler:
   - scheduler_binding_latency_microseconds_bucket
   - scheduler_e2e_scheduling_latency_microseconds_bucket
@@ -166,7 +177,7 @@ resources:
     weight: 5
     unit: m
   - name: memory
-    base: 300
+    base: 360
     perObject: 35
     weight: 5
     unit: Mi
@@ -177,7 +188,7 @@ resources:
     weight: 5
     unit: m
   - name: memory
-    base: 700
+    base: 760
     perObject: 60
     weight: 5
     unit: Mi
