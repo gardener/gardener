@@ -24,86 +24,6 @@
       "type": "row"
     },
     {
-      "cacheTimeout": null,
-      "colorBackground": false,
-      "colorValue": false,
-      "colors": [
-        "#299c46",
-        "rgba(237, 129, 40, 0.89)",
-        "#d44a3a"
-      ],
-      "datasource": null,
-      "format": "none",
-      "gauge": {
-        "maxValue": 100,
-        "minValue": 0,
-        "show": false,
-        "thresholdLabels": false,
-        "thresholdMarkers": true
-      },
-      "gridPos": {
-        "h": 5,
-        "w": 3,
-        "x": 0,
-        "y": 1
-      },
-      "id": 47,
-      "interval": null,
-      "links": [],
-      "mappingType": 1,
-      "mappingTypes": [
-        {
-          "name": "value to text",
-          "value": 1
-        },
-        {
-          "name": "range to text",
-          "value": 2
-        }
-      ],
-      "maxDataPoints": 100,
-      "nullPointMode": "connected",
-      "nullText": null,
-      "postfix": "",
-      "postfixFontSize": "50%",
-      "prefix": "",
-      "prefixFontSize": "50%",
-      "rangeMaps": [
-        {
-          "from": "null",
-          "text": "N/A",
-          "to": "null"
-        }
-      ],
-      "sparkline": {
-        "fillColor": "rgba(31, 118, 189, 0.18)",
-        "full": false,
-        "lineColor": "rgb(31, 120, 193)",
-        "show": false
-      },
-      "tableColumn": "",
-      "targets": [
-        {
-          "expr": "count(kube_node_info)",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "refId": "A"
-        }
-      ],
-      "thresholds": "0,1",
-      "title": "Number of nodes",
-      "type": "singlestat",
-      "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "Nodes not available",
-          "value": "null"
-        }
-      ],
-      "valueName": "current"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -112,8 +32,8 @@
       "fill": 1,
       "gridPos": {
         "h": 5,
-        "w": 7,
-        "x": 3,
+        "w": 8,
+        "x": 0,
         "y": 1
       },
       "id": 49,
@@ -203,8 +123,8 @@
       "fill": 1,
       "gridPos": {
         "h": 5,
-        "w": 7,
-        "x": 10,
+        "w": 8,
+        "x": 8,
         "y": 1
       },
       "id": 51,
@@ -294,8 +214,8 @@
       "fill": 1,
       "gridPos": {
         "h": 5,
-        "w": 7,
-        "x": 17,
+        "w": 8,
+        "x": 16,
         "y": 1
       },
       "id": 50,
@@ -437,7 +357,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (container_network_receive_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m]))",
+          "expr": "sum (rate (container_network_receive_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}]))",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -447,7 +367,7 @@
           "step": 10
         },
         {
-          "expr": "- sum (rate (container_network_transmit_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m]))",
+          "expr": "- sum (rate (container_network_transmit_bytes_total{kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}]))",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -559,7 +479,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum(rate(container_cpu_usage_seconds_total{image!=\"\",name=~\"^k8s_.*\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (pod_name)",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{image!=\"\",name=~\"^k8s_.*\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (pod_name)",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -572,7 +492,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Pods CPU usage (1m avg)",
+      "title": "Pods CPU usage ( ${rate} avg)",
       "tooltip": {
         "msResolution": true,
         "shared": true,
@@ -612,7 +532,7 @@
       }
     },
     {
-      "collapsed": true,
+      "collapsed": false,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -620,108 +540,108 @@
         "y": 20
       },
       "id": 36,
-      "panels": [
-        {
-          "aliasColors": {},
-          "bars": false,
-          "dashLength": 10,
-          "dashes": false,
-          "datasource": "prometheus",
-          "decimals": 3,
-          "editable": true,
-          "error": false,
-          "fill": 0,
-          "grid": {},
-          "gridPos": {
-            "h": 7,
-            "w": 24,
-            "x": 0,
-            "y": 15
-          },
-          "height": "",
-          "id": 23,
-          "legend": {
-            "alignAsTable": true,
-            "avg": true,
-            "current": true,
-            "max": false,
-            "min": false,
-            "rightSide": true,
-            "show": true,
-            "sort": "current",
-            "sortDesc": true,
-            "total": false,
-            "values": true
-          },
-          "lines": true,
-          "linewidth": 2,
-          "links": [],
-          "nullPointMode": "connected",
-          "percentage": false,
-          "pointradius": 5,
-          "points": false,
-          "renderer": "flot",
-          "seriesOverrides": [],
-          "spaceLength": 10,
-          "stack": false,
-          "steppedLine": true,
-          "targets": [
-            {
-              "expr": "sum (rate (container_cpu_usage_seconds_total{systemd_service_name!=\"\",kubernetes_io_hostname=~\"^$Node$\"}[1m])) by (systemd_service_name)",
-              "hide": false,
-              "interval": "10s",
-              "intervalFactor": 1,
-              "legendFormat": "{{ systemd_service_name }}",
-              "metric": "container_cpu",
-              "refId": "A",
-              "step": 10
-            }
-          ],
-          "thresholds": [],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "System services CPU usage (1m avg)",
-          "tooltip": {
-            "msResolution": true,
-            "shared": true,
-            "sort": 2,
-            "value_type": "cumulative"
-          },
-          "type": "graph",
-          "xaxis": {
-            "buckets": null,
-            "mode": "time",
-            "name": null,
-            "show": true,
-            "values": []
-          },
-          "yaxes": [
-            {
-              "format": "none",
-              "label": "cores",
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": true
-            },
-            {
-              "format": "short",
-              "label": null,
-              "logBase": 1,
-              "max": null,
-              "min": null,
-              "show": false
-            }
-          ],
-          "yaxis": {
-            "align": false,
-            "alignLevel": null
-          }
-        }
-      ],
+      "panels": [],
       "repeat": null,
       "title": "System services CPU usage",
       "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "prometheus",
+      "decimals": 3,
+      "editable": true,
+      "error": false,
+      "fill": 0,
+      "grid": {},
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 21
+      },
+      "height": "",
+      "id": 23,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "sort": "current",
+        "sortDesc": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 2,
+      "links": [],
+      "nullPointMode": "connected",
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": true,
+      "targets": [
+        {
+          "expr": "sum (rate (container_cpu_usage_seconds_total{systemd_service_name!=\"\",kubernetes_io_hostname=~\"^$Node$\"}[${rate}])) by (systemd_service_name)",
+          "format": "time_series",
+          "hide": false,
+          "interval": "10s",
+          "intervalFactor": 1,
+          "legendFormat": "{{ systemd_service_name }}",
+          "metric": "container_cpu",
+          "refId": "A",
+          "step": 10
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "System services CPU usage (${rate} avg)",
+      "tooltip": {
+        "msResolution": true,
+        "shared": true,
+        "sort": 2,
+        "value_type": "cumulative"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "none",
+          "label": "cores",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": false
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "collapsed": false,
@@ -729,7 +649,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 28
       },
       "id": 37,
       "panels": [],
@@ -752,7 +672,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 22
+        "y": 29
       },
       "height": "",
       "id": 24,
@@ -786,7 +706,7 @@
       "steppedLine": true,
       "targets": [
         {
-          "expr": "sum (rate (container_cpu_usage_seconds_total{image!=\"\",name=~\"^k8s_.*\",container_name!=\"POD\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (container_name, pod_name)",
+          "expr": "sum (rate (container_cpu_usage_seconds_total{image!=\"\",name=~\"^k8s_.*\",container_name!=\"POD\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (container_name, pod_name)",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -797,7 +717,7 @@
           "step": 10
         },
         {
-          "expr": "sum (rate (container_cpu_usage_seconds_total{image!=\"\",name!~\"^k8s_.*\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (kubernetes_io_hostname, name, image)",
+          "expr": "sum (rate (container_cpu_usage_seconds_total{image!=\"\",name!~\"^k8s_.*\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (kubernetes_io_hostname, name, image)",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -808,7 +728,7 @@
           "step": 10
         },
         {
-          "expr": "sum (rate (container_cpu_usage_seconds_total{rkt_container_name!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (kubernetes_io_hostname, rkt_container_name)",
+          "expr": "sum (rate (container_cpu_usage_seconds_total{rkt_container_name!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (kubernetes_io_hostname, rkt_container_name)",
           "format": "time_series",
           "interval": "10s",
           "intervalFactor": 1,
@@ -821,7 +741,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Containers CPU usage (1m avg)",
+      "title": "Containers CPU usage (${rate} avg)",
       "tooltip": {
         "msResolution": true,
         "shared": true,
@@ -865,7 +785,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 29
+        "y": 36
       },
       "id": 38,
       "panels": [
@@ -914,7 +834,7 @@
           "steppedLine": true,
           "targets": [
             {
-              "expr": "sum (rate (container_cpu_usage_seconds_total{id!=\"/\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (id)",
+              "expr": "sum (rate (container_cpu_usage_seconds_total{id!=\"/\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (id)",
               "format": "time_series",
               "hide": false,
               "interval": "10s",
@@ -928,7 +848,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "All processes CPU usage (1m avg)",
+          "title": "All processes CPU usage (${rate} avg)",
           "tooltip": {
             "msResolution": true,
             "shared": true,
@@ -977,7 +897,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 37
       },
       "id": 39,
       "panels": [],
@@ -1000,7 +920,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 38
       },
       "id": 25,
       "legend": {
@@ -1088,7 +1008,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 38
+        "y": 45
       },
       "id": 40,
       "panels": [
@@ -1201,7 +1121,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 39
+        "y": 46
       },
       "id": 41,
       "panels": [],
@@ -1224,7 +1144,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 40
+        "y": 47
       },
       "id": 27,
       "isNew": true,
@@ -1323,7 +1243,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 47
+        "y": 54
       },
       "id": 42,
       "panels": [
@@ -1436,7 +1356,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 48
+        "y": 55
       },
       "id": 43,
       "panels": [
@@ -1486,7 +1406,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (pod_name)",
+              "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (pod_name)",
               "format": "time_series",
               "interval": "10s",
               "intervalFactor": 1,
@@ -1496,7 +1416,7 @@
               "step": 10
             },
             {
-              "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (pod_name)",
+              "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (pod_name)",
               "format": "time_series",
               "interval": "10s",
               "intervalFactor": 1,
@@ -1509,7 +1429,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "Pods network I/O (1m avg)",
+          "title": "Pods network I/O (${rate} avg)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -1558,7 +1478,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 49
+        "y": 56
       },
       "id": 44,
       "panels": [],
@@ -1581,7 +1501,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 57
       },
       "id": 30,
       "isNew": true,
@@ -1613,7 +1533,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (container_name, pod_name)",
+          "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (container_name, pod_name)",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -1624,7 +1544,7 @@
           "step": 10
         },
         {
-          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (container_name, pod_name)",
+          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (container_name, pod_name)",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -1635,7 +1555,7 @@
           "step": 10
         },
         {
-          "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (kubernetes_io_hostname, name, image)",
+          "expr": "sum (rate (container_network_receive_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (kubernetes_io_hostname, name, image)",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -1646,7 +1566,7 @@
           "step": 10
         },
         {
-          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (kubernetes_io_hostname, name, image)",
+          "expr": "- sum (rate (container_network_transmit_bytes_total{image!=\"\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (kubernetes_io_hostname, name, image)",
           "format": "time_series",
           "hide": false,
           "interval": "10s",
@@ -1660,7 +1580,7 @@
       "thresholds": [],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Containers network I/O (1m avg)",
+      "title": "Containers network I/O (${rate} avg)",
       "tooltip": {
         "msResolution": false,
         "shared": true,
@@ -1704,7 +1624,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 57
+        "y": 64
       },
       "id": 45,
       "panels": [
@@ -1755,7 +1675,7 @@
           "steppedLine": false,
           "targets": [
             {
-              "expr": "sum (rate (container_network_receive_bytes_total{id!=\"/\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (id)",
+              "expr": "sum (rate (container_network_receive_bytes_total{id!=\"/\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (id)",
               "format": "time_series",
               "interval": "10s",
               "intervalFactor": 1,
@@ -1765,7 +1685,7 @@
               "step": 10
             },
             {
-              "expr": "- sum (rate (container_network_transmit_bytes_total{id!=\"/\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[1m])) by (id)",
+              "expr": "- sum (rate (container_network_transmit_bytes_total{id!=\"/\",kubernetes_io_hostname=~\"^$Node$\",type=\"shoot\"}[${rate}])) by (id)",
               "format": "time_series",
               "interval": "10s",
               "intervalFactor": 1,
@@ -1778,7 +1698,7 @@
           "thresholds": [],
           "timeFrom": null,
           "timeShift": null,
-          "title": "All processes network I/O (1m avg)",
+          "title": "All processes network I/O (${rate} avg)",
           "tooltip": {
             "msResolution": false,
             "shared": true,
@@ -1834,13 +1754,9 @@
     "list": [
       {
         "allValue": ".*",
-        "current": {
-          "text": "All",
-          "value": "$__all"
-        },
         "datasource": "prometheus",
         "hide": 0,
-        "includeAll": true,
+        "includeAll": false,
         "label": null,
         "multi": false,
         "name": "Node",
@@ -1848,6 +1764,7 @@
         "query": "label_values(kube_node_info{type=\"shoot\"}, node)",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
@@ -1858,32 +1775,34 @@
       {
         "allValue": null,
         "current": {
-          "text": "5",
-          "value": "5"
+          "tags": [],
+          "text": "5m",
+          "value": "5m"
         },
         "hide": 0,
         "includeAll": false,
-        "label": "Max Results",
+        "label": null,
         "multi": false,
-        "name": "MaxResults",
+        "name": "rate",
         "options": [
           {
+            "selected": false,
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "selected": false,
+            "text": "3m",
+            "value": "3m"
+          },
+          {
             "selected": true,
-            "text": "5",
-            "value": "5"
-          },
-          {
-            "selected": false,
-            "text": "10",
-            "value": "10"
-          },
-          {
-            "selected": false,
-            "text": "15",
-            "value": "15"
+            "text": "5m",
+            "value": "5m"
           }
         ],
-        "query": "5,10,15",
+        "query": "1m,3m,5m",
+        "skipUrlSync": false,
         "type": "custom"
       }
     ]

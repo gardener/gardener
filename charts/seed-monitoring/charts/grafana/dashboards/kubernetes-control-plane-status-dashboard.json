@@ -5,9 +5,88 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
   "links": [],
   "panels": [
+    {
+      "cacheTimeout": null,
+      "colorBackground": false,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
+        "#d44a3a"
+      ],
+      "datasource": null,
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 4,
+        "x": 0,
+        "y": 0
+      },
+      "id": 12,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "expr": "count(kube_node_info)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "refId": "A"
+        }
+      ],
+      "thresholds": "0,1",
+      "title": "Number of nodes",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "Nodes not available",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
     {
       "cacheTimeout": null,
       "colorBackground": false,
@@ -28,9 +107,9 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 0,
+        "h": 5,
+        "w": 5,
+        "x": 4,
         "y": 0
       },
       "hideTimeOverride": false,
@@ -112,9 +191,9 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 6,
+        "h": 5,
+        "w": 5,
+        "x": 9,
         "y": 0
       },
       "hideTimeOverride": false,
@@ -196,9 +275,9 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 12,
+        "h": 5,
+        "w": 5,
+        "x": 14,
         "y": 0
       },
       "hideTimeOverride": false,
@@ -280,9 +359,9 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 18,
+        "h": 5,
+        "w": 5,
+        "x": 19,
         "y": 0
       },
       "hideTimeOverride": false,
@@ -356,7 +435,7 @@
         "h": 6,
         "w": 12,
         "x": 0,
-        "y": 7
+        "y": 5
       },
       "id": 9,
       "legend": {
@@ -385,22 +464,22 @@
           "expr": "sum(container_memory_working_set_bytes{type=\"seed\"})",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A",
-          "legendFormat": "Current"
+          "legendFormat": "Current",
+          "refId": "A"
         },
         {
-          "refId": "B",
           "expr": "sum(kube_pod_container_resource_requests_memory_bytes{type=\"seed\"})",
-          "intervalFactor": 1,
           "format": "time_series",
-          "legendFormat": "Requests"
+          "intervalFactor": 1,
+          "legendFormat": "Requests",
+          "refId": "B"
         },
         {
-          "refId": "C",
           "expr": "sum(kube_pod_container_resource_limits_memory_bytes{type=\"seed\"})",
-          "intervalFactor": 1,
           "format": "time_series",
-          "legendFormat": "Limits"
+          "intervalFactor": 1,
+          "legendFormat": "Limits",
+          "refId": "C"
         }
       ],
       "thresholds": [],
@@ -454,7 +533,7 @@
         "h": 6,
         "w": 12,
         "x": 12,
-        "y": 7
+        "y": 5
       },
       "id": 10,
       "legend": {
@@ -483,22 +562,22 @@
           "expr": "sum(rate(container_cpu_usage_seconds_total{type=\"seed\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A",
-          "legendFormat": "Current"
+          "legendFormat": "Current",
+          "refId": "A"
         },
         {
-          "refId": "C",
           "expr": "sum(kube_pod_container_resource_requests_cpu_cores{type=\"seed\"})",
-          "intervalFactor": 1,
           "format": "time_series",
-          "legendFormat": "Requests"
+          "intervalFactor": 1,
+          "legendFormat": "Requests",
+          "refId": "C"
         },
         {
-          "refId": "B",
           "expr": "sum(kube_pod_container_resource_limits_cpu_cores{type=\"seed\"})",
-          "intervalFactor": 1,
           "format": "time_series",
-          "legendFormat": "Limits"
+          "intervalFactor": 1,
+          "legendFormat": "Limits",
+          "refId": "B"
         }
       ],
       "thresholds": [],
@@ -520,13 +599,13 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "none",
           "label": "CPU/sec",
           "logBase": 2,
           "max": null,
           "min": null,
-          "show": true,
-          "decimals": null
+          "show": true
         },
         {
           "format": "short",
@@ -559,7 +638,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 11
       },
       "id": 7,
       "isNew": false,
@@ -650,7 +729,7 @@
         "h": 7,
         "w": 12,
         "x": 0,
-        "y": 23
+        "y": 18
       },
       "id": 5,
       "isNew": false,
@@ -741,7 +820,7 @@
         "h": 7,
         "w": 12,
         "x": 12,
-        "y": 23
+        "y": 18
       },
       "id": 6,
       "isNew": false,
