@@ -61,6 +61,8 @@ data:
       shootQuota:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shootQuota.concurrentSyncs is required" .Values.controller.config.controllers.shootQuota.concurrentSyncs }}
         syncPeriod: {{ required ".Values.controller.config.controllers.shootQuota.syncPeriod is required" .Values.controller.config.controllers.shootQuota.syncPeriod }}
+      shootHibernation:
+       concurrentSyncs: {{ required ".Values.controller.config.controllers.shootHibernation.concurrentSyncs is required" .Values.controller.config.controllers.shootHibernation.concurrentSyncs }}
       backupInfrastructure:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.backupInfrastructure.concurrentSyncs is required" .Values.controller.config.controllers.backupInfrastructure.concurrentSyncs }}
         syncPeriod: {{ required ".Values.controller.config.controllers.backupInfrastructure.syncPeriod is required" .Values.controller.config.controllers.backupInfrastructure.syncPeriod }}

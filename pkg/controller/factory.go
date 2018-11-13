@@ -131,7 +131,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	// Initialize the Controller metrics collection.
 	gardenmetrics.RegisterControllerMetrics(shootController, seedController, quotaController, cloudProfileController, secretBindingController, backupInfrastructureController)
 
-	go shootController.Run(ctx, f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs)
+	go shootController.Run(ctx, f.config.Controllers.Shoot.ConcurrentSyncs, f.config.Controllers.ShootCare.ConcurrentSyncs, f.config.Controllers.ShootMaintenance.ConcurrentSyncs, f.config.Controllers.ShootQuota.ConcurrentSyncs, f.config.Controllers.ShootHibernation.ConcurrentSyncs)
 	go seedController.Run(ctx, f.config.Controllers.Seed.ConcurrentSyncs)
 	go quotaController.Run(ctx, f.config.Controllers.Quota.ConcurrentSyncs)
 	go projectController.Run(ctx, f.config.Controllers.Project.ConcurrentSyncs)
