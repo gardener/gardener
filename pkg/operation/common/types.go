@@ -310,6 +310,15 @@ const (
 	// possible.
 	ShootOperationMaintain = "maintain"
 
+	// ShootTasks is a constant for an annotation on a Shoot which states that certain tasks should be done.
+	ShootTasks = "shoot.garden.sapcloud.io/tasks"
+
+	// ShootTaskDeployInfrastructure is a name for a Shoot's infrastructure deployment task.
+	ShootTaskDeployInfrastructure = "deployInfrastructure"
+
+	// ShootTaskDeployKube2IAMResource is a name for a Shoot's Kube2IAM Resource deployment task.
+	ShootTaskDeployKube2IAMResource = "deployKube2IAMResource"
+
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be retried.
 	ShootOperationRetry = "retry"
 

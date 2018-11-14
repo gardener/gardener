@@ -125,3 +125,15 @@ func TryUpdateShootConditions(g garden.Interface, backoff wait.Backoff, meta met
 		return equality.Semantic.DeepEqual(cur.Status.Conditions, updated.Status.Conditions)
 	})
 }
+
+// TryUpdateShootAnnotations tries to update the annotations of the shoot matching the given <meta>.
+// It retries with the given <backoff> characteristics as long as it gets Conflict errors.
+// The transformation function is applied to the current state of the Shoot object. If the transformation
+// yields a semantically equal Shoot (regarding conditions), no update is done and the operation returns normally.
+func TryUpdateShootAnnotations(g garden.Interface, backoff wait.Backoff, meta metav1.ObjectMeta, transform func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error)) (*gardenv1beta1.Shoot, error) {
+	return tryUpdateShoot(g, backoff, meta, transform, func(g garden.Interface, shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+		return g.GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
+	}, func(cur, updated *gardenv1beta1.Shoot) bool {
+		return equality.Semantic.DeepEqual(cur.Annotations, updated.Annotations)
+	})
+}
