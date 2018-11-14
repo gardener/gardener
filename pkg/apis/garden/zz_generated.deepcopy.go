@@ -2314,6 +2314,11 @@ func (in *OpenStackProfile) DeepCopyInto(out *OpenStackProfile) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.RequestTimeout != nil {
+		in, out := &in.RequestTimeout, &out.RequestTimeout
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

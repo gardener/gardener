@@ -206,6 +206,13 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		if spec.OpenStack.DHCPDomain != nil && len(*spec.OpenStack.DHCPDomain) == 0 {
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "dhcpDomain"), "must provide a dhcp domain when the key is specified"))
 		}
+
+		if spec.OpenStack.RequestTimeout != nil {
+			_, err := time.ParseDuration(*spec.OpenStack.RequestTimeout)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(fldPath.Child("openstack", "requestTimeout"), *spec.OpenStack.RequestTimeout, fmt.Sprintf("invalid duration: %v", err)))
+			}
+		}
 	}
 
 	if spec.CABundle != nil {

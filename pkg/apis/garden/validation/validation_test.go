@@ -1368,6 +1368,19 @@ var _ = Describe("validation", func() {
 					}))
 				})
 			})
+
+			Context("requestTimeout validation", func() {
+				It("should reject invalid durations", func() {
+					openStackCloudProfile.Spec.OpenStack.RequestTimeout = makeStringPointer("1GiB")
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.requestTimeout", fldPath)),
+					}))))
+				})
+			})
 		})
 
 		Context("tests for Alicloud cloud profiles", func() {

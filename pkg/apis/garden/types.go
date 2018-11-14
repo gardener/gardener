@@ -217,6 +217,9 @@ type OpenStackProfile struct {
 	// Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.
 	// +optional
 	DHCPDomain *string
+	// RequestTimeout specifies the HTTP timeout against the OpenStack API.
+	// +optional
+	RequestTimeout *string
 }
 
 // OpenStackConstraints is an object containing constraints for certain values in the Shoot specification.

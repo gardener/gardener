@@ -49,3 +49,4 @@ spec:
         - europe-1c
     keystoneURL: https://url-to-keystone/v3/
   # dhcpDomain: nova.local # DHCP domain of OpenStack system (only meaningful for Kubernetes 1.10.1, see https://github.com/kubernetes/kubernetes/pull/61890 for details)
+  # requestTimeout: 180s # Kubernetes OpenStack Cloudprovider Request Timeout

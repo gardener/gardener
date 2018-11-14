@@ -75,10 +75,19 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 		return "", err
 	}
 
+	if needsDHCPDomain && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil || b.Shoot.CloudProfile.Spec.OpenStack.RequestTimeout != nil {
+		cloudProviderConfig += fmt.Sprintf(`
+[Metadata]`)
+	}
+
 	if needsDHCPDomain && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil {
 		cloudProviderConfig += fmt.Sprintf(`
-[Metadata]
 dhcp-domain=%q`, *b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain)
+	}
+
+	if b.Shoot.CloudProfile.Spec.OpenStack.RequestTimeout != nil {
+		cloudProviderConfig += fmt.Sprintf(`
+request-timeout=%s`, *b.Shoot.CloudProfile.Spec.OpenStack.RequestTimeout)
 	}
 
 	return cloudProviderConfig, nil
