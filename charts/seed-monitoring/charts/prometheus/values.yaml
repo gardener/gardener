@@ -182,24 +182,24 @@ rules:
 objectCount: 4
 resources:
   requests:
-  - name: cpu
-    base: 200
-    perObject: 6
-    weight: 5
-    unit: m
-  - name: memory
-    base: 360
-    perObject: 35
-    weight: 5
-    unit: Mi
+    cpu:
+      base: 200
+      perObject: 6
+      weight: 5
+      unit: m
+    memory:
+      base: 360
+      perObject: 35
+      weight: 5
+      unit: Mi
   limits:
-  - name: cpu
-    base: 350
-    perObject: 12
-    weight: 5
-    unit: m
-  - name: memory
-    base: 760
-    perObject: 60
-    weight: 5
-    unit: Mi
+    cpu:
+      base: 350
+      perObject: 12
+      weight: 5
+      unit: m
+    memory:
+      base: 760
+      perObject: 60
+      weight: 5
+      unit: Mi

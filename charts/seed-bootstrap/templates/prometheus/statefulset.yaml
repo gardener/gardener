@@ -58,7 +58,7 @@ spec:
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-{{- include "resource.quantity" .Values.prometheus | indent 10 }}
+{{- include "util-templates.resource-quantity" .Values.prometheus | indent 10 }}
         volumeMounts:
         - mountPath: /etc/prometheus/config
           name: config
