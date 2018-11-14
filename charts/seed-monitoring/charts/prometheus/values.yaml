@@ -88,6 +88,13 @@ allowedMetrics:
   - process_max_fds
   - process_open_fds
   kubeStateMetrics:
+  - kube_daemonset_status_current_number_scheduled
+  - kube_daemonset_metadata_generation
+  - kube_daemonset_status_current_number_scheduled
+  - kube_daemonset_status_number_available
+  - kube_daemonset_status_number_unavailable
+  - kube_daemonset_updated_number_scheduled
+  - kube_daemonset_status_desired_number_scheduled
   - kube_deployment_metadata_generation
   - kube_deployment_spec_replicas
   - kube_deployment_status_observed_generation
@@ -117,6 +124,10 @@ allowedMetrics:
   - kube_statefulset_replicas
   - kube_statefulset_status_observed_generation
   - kube_statefulset_status_replicas
+  - kube_statefulset_status_replicas_available
+  - kube_statefulset_status_replicas_ready
+  - kube_statefulset_status_replicas_unavailable
+  - kube_statefulset_status_replicas_updated
   - process_max_fds
   - process_open_fds
   machineControllerManager:

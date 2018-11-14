@@ -83,7 +83,7 @@ spec:
         - /kube-state-metrics
         - --port=8080
         - --namespace={{ .Release.Namespace }}
-        - --collectors=cronjobs,daemonsets,deployments,jobs,limitranges,pods,replicasets,replicationcontrollers,resourcequotas,services,statefulsets
+        - --collectors=deployments,pods,statefulsets
         ports:
         - containerPort: 8080
           protocol: TCP
