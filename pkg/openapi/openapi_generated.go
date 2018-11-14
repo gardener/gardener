@@ -2849,7 +2849,7 @@ func schema_pkg_apis_garden_v1beta1_Hibernation(ref common.ReferenceCallback) co
 					},
 					"schedules": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Schedule determines the hibernation schedule.",
+							Description: "Schedules determine the hibernation schedules.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4276,6 +4276,13 @@ func schema_pkg_apis_garden_v1beta1_OpenStackProfile(ref common.ReferenceCallbac
 					"dhcpDomain": {
 						SchemaProps: spec.SchemaProps{
 							Description: "DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"requestTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "RequestTimeout specifies the HTTP timeout against the OpenStack API.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

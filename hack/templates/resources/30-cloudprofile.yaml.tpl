@@ -500,7 +500,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - europe-1b
         - europe-1c
       % endif
-    keystoneURL: ${value("spec.openstack.keyStoneURL", "https://url-to-keystone/v3/")}<% dnsServers=value("spec.openstack.dnsServers", []) %><% dhcpDomain=value("spec.openstack.dhcpDomain", "") %>
+    keystoneURL: ${value("spec.openstack.keyStoneURL", "https://url-to-keystone/v3/")}<% dnsServers=value("spec.openstack.dnsServers", []) %><% dhcpDomain=value("spec.openstack.dhcpDomain", "") %><% requestTimeout=value("spec.openstack.requestTimeout", "") %>
     % if dnsServers != []:
     dnsServers: ${dnsServers}
     % endif
@@ -508,6 +508,11 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     dhcpDomain: ${dhcpDomain}
     % else:
   # dhcpDomain: nova.local # DHCP domain of OpenStack system (only meaningful for Kubernetes 1.10.1, see https://github.com/kubernetes/kubernetes/pull/61890 for details)
+    % endif
+    % if requestTimeout != "":
+    requestTimeout: ${requestTimeout}
+    % else:
+  # requestTimeout: 180s # Kubernetes OpenStack Cloudprovider Request Timeout
     % endif
   % endif
   % if cloud == "local":
