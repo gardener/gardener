@@ -14,4 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-$(dirname $0)/shoot-operation $1 $2 retry
+NAME="$1"
+NAMESPACE="${2:-$(id -u -n)}"
+OPERATION="${3:-reconcile}"
+
+kubectl --namespace "$NAMESPACE" annotate shoot "$NAME" shoot.garden.sapcloud.io/operation="$OPERATION" --overwrite
