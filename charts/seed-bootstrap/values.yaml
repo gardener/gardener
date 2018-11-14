@@ -66,10 +66,14 @@ global:
 
 elastic-kibana-curator:
   enabled: true
-  elasticsearchReplicas: 1
   kibanaReplicas: 1
   kibanaPort: 5601
-  elasticsearchVolumeSizeGB: 30
+  curator:
+    objectCount: 1
+  elasticsearch:
+    elasticsearchReplicas: 1
+    elasticsearchVolumeSizeGB: 30
+    objectCount: 1
   images:
     elasticsearch-oss: image-repository:image-tag
     curator-es: image-repository:image-tag

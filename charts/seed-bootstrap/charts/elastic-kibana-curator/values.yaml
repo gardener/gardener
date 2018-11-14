@@ -10,10 +10,41 @@ ingress:
   # admin : admin base64 encoded
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 
-elasticsearchReplicas: 1
+
 kibanaReplicas: 1
 
-elasticsearchVolumeSizeGB: 30
+curator:
+  objectCount: 1
+  base_disk_threshold: 1073741824
+
+elasticsearch:
+  elasticsearchReplicas: 1
+  elasticsearchVolumeSizeGB: 30
+  objectCount: 1
+  jvmHeapBase: 1280
+  resources:
+    requests:
+      cpu:
+        base: 200
+        perObject: 1
+        weight: 5
+        unit: m
+      memory:
+        base: 1792
+        perObject: 84
+        weight: 5
+        unit: Mi
+    limits:
+      cpu:
+        base: 1800
+        perObject: 1
+        weight: 5
+        unit: m
+      memory:
+        base: 1900
+        perObject: 89
+        weight: 5
+        unit: Mi
 
 images:
   elasticsearch-oss: image-repository:image-tag
