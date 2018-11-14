@@ -16,9 +16,9 @@
             * [DNS records](#dns-records)
             * [Infrastructure provisioning](#infrastructure-provisioning)
             * [Backup infrastructure provisioning](#backup-infrastructure-provisioning)
-            * [Cloud components](#cloud-components)
             * [Cloud config (user-data) for bootstrapping machines](#cloud-config-user-data-for-bootstrapping-machines)
             * [Worker pools definition](#worker-pools-definition)
+            * [Generic resources](#generic-resources)
         * [Shoot state](#shoot-state)
         * [Shoot health checks/conditions](#shoot-health-checksconditions)
         * [Reconciliation flow](#reconciliation-flow)
@@ -26,8 +26,6 @@
     * [Gardenlet](#gardenlet)
     * [Shoot control plane movement/migration](#shoot-control-plane-movementmigration)
 * [Registration of external controllers at Gardener](#registration-of-external-controllers-at-gardener)
-    * [Operator-based approach](#operator-based-approach)
-    * [Helm Chart-based approach](#helm-chart-based-approach)
 * [Other cloud-specific parts](#other-cloud-specific-parts)
     * [Defaulting and validation admission plugins](#defaulting-and-validation-admission-plugins)
     * [DNS Hosted Zone admission plugin](#dns-hosted-zone-admission-plugin)
@@ -168,8 +166,20 @@ spec:
       - eu-west-1a
     workerPools:
     - name: pool-01
+    # Taints, labels, and annotations are not yet implemented. This requires interaction with the machine-controller-manager, see
+    # https://github.com/gardener/machine-controller-manager/issues/174. It is only mentioned here as future proposal.
+    # taints:
+    # - key: foo
+    #   value: bar
+    #   effect: PreferNoSchedule
+    # labels:
+    # - key: bar
+    #   value: baz
+    # annotations:
+    # - key: foo
+    #   value: hugo
       machineType: m4.large
-      volume:       # optional, not needed in every environment, may only be specified if the referenced CloudProfile contains the volumeTypes field
+      volume: # optional, not needed in every environment, may only be specified if the referenced CloudProfile contains the volumeTypes field
         type: gp2
         size: 20Gi
       providerConfig:
@@ -355,34 +365,6 @@ spec:
   type: aws
   region: eu-west-1
   storageContainerName: asdasjndasd-1293912378a-2213
-  secretRef:
-    name: my-aws-credentials
-status:
-  observedGeneration: ...
-  state: ...
-  lastError: ..
-  lastOperation: ...
-```
-
-##### Cloud components
-
-Some components are cloud-specific and must be deployed by the cloud-specific botanists.
-However, some of them are important for a functional cluster (e.g., the cloud-controller-manager, or a CSI plugin in the future), and Gardener should be able to report errors back to the user.
-Consequently, in order to trigger the botanist to deploy these components Gardener would write a `CloudComponents` CRD to the Seed to trigger the deployment.
-Before it continues with any step after it deployed the control plane it waits for the CRD to indicate readiness.
-
-```yaml
----
-apiVersion: extensions.gardener.cloud/v1alpha1
-kind: CloudComponents
-metadata:
-  name: cloud-components
-  namespace: shoot--core--aws-01
-spec:
-  type: aws
-  region: eu-west-1
-  kubernetes:
-    version: 1.12.1
   secretRef:
     name: my-aws-credentials
 status:
@@ -608,6 +590,34 @@ status:
   lastOperation: ...
 ```
 
+##### Generic resources
+
+Some components are cloud-specific and must be deployed by the cloud-specific botanists.
+Others might need to deploy another pod next to the shoot's control plane or must do anything else.
+Some of these might be important for a functional cluster (e.g., the cloud-controller-manager, or a CSI plugin in the future), and controllers should be able to report errors back to the user.
+Consequently, in order to trigger the controllers to deploy these components Gardener would write a `Generic` CRD to the Seed to trigger the deployment.
+No operation is depending on the status of these resources, however, the entire reconciliation flow is.
+
+```yaml
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: Generic
+metadata:
+  name: cloud-components
+  namespace: shoot--core--aws-01
+spec:
+  type: cloud-components
+  secretRef:
+    name: my-aws-credentials
+  shootSpec:
+    ...
+status:
+  observedGeneration: ...
+  state: ...
+  lastError: ..
+  lastOperation: ...
+```
+
 #### Shoot state
 
 In order to enable moving the control plane of a Shoot between Seed clusters (e.g., if a Seed cluster is not available anymore or entirely broken) Gardener must store some non-reconstructable state, potentially also the state written by the controllers.
@@ -794,22 +804,26 @@ With the exact same logic described above the `BackupInfrastructure` controller 
 
 ## Registration of external controllers at Gardener
 
-We want to have a dynamic registration process, i.e. we don't want to hard-code which controllers shall be deployed inside the Gardener Docker images.
+We want to have a dynamic registration process, i.e. we don't want to hard-code any information about which controllers shall be deployed.
 The ideal solution would be to not even requiring a restart of Gardener when a new controller registers.
 
-### Operator-based approach
-
-Every controller must come with an operator that knows how to handle its lifecycle operations like deployment, update, upgrade, deletion.
-These operators get deployed to the Garden cluster and create a `ControllerRegistration` resource that make the controller together with its dimension (`kind`) and shape (`type`) known to Gardener.
+Every controller is registered by a `ControllerRegistration` resource that introduces every controller together with its supported resources (dimension (`kind`) and shape (`type`) combination) to Gardener:
 
 ```yaml
 apiVersion: gardener.cloud/v1alpha1
 kind: ControllerRegistration
 metadata:
   name: dns-aws-route53
-controllerInfo:
-- kind: DNS
-  type: aws-route53
+spec:
+  resources:
+  - kind: DNS
+    type: aws-route53
+# deployment:
+#   type: helm
+#   providerConfig:
+#     chart.tgz: base64(helm-chart)
+#     values.yaml: |
+#       foo: bar
 ```
 
 Every `.kind`/`.type` combination may only exist once in the system.
@@ -820,7 +834,7 @@ This kind of communication happens via CRDs as well:
 
 ```yaml
 apiVersion: gardener.cloud/v1alpha1
-kind: ControllerRequest
+kind: ControllerInstallation
 metadata:
   name: dns-aws-route53
 spec:
@@ -829,50 +843,29 @@ spec:
   seedRef:
     name: seed-01
 status:
-  lastOperation: ...
-  ready: false
+  conditions:
+  - lastTransitionTime: 2018-08-07T15:09:23Z
+    message: The controller has been successfully deployed to the seed.
+    reason: ControllerDeployed
+    status: "True"
+    type: Available
 ```
 
-The operators watch the `ControllerRequest` resources and act on those which are referencing a `ControllerRegistration` they deployed earlier.
+The default scenario is that every controller is gets deployed by a dedicated operator that knows how to handle its lifecycle operations like deployment, update, upgrade, deletion.
+This operator watches `ControllerInstallation` resources and reacts on those it is responsible for (that it has created earlier).
 Gardener is responsible for writing the `.spec` field, the operator is responsible for providing information in the `.status` indicating whether the controller was successfully deployed and is ready to be used.
-Gardener will wait until all `ControllerRequest` resources indicate readiness before actually starting to reconcile or delete a `Shoot`.
-
-Gardener will be also able to delete controllers from Seeds when they are not needed there anymore by deleting the corresponding `ControllerRequest` object.
+Gardener will be also able to ask for deletion of controllers from Seeds when they are not needed there anymore by deleting the corresponding `ControllerInstallation` object.
 
 :information: The provided easy-to-use framework for the controllers will also contain these needed features to implement corresponding operators.
 
-### Helm Chart-based approach
+For most cases the controller deployment is very simple (just deploying it into the seed with some static configuration).
+In these cases it would produce unnecessary effort to ask for providing another component (the operator) that deploys the controller.
+To simplify this situation Gardener will be able to react on `ControllerInstallation`s specifying `.spec.registration.deployment.type=helm`.
+The controller would be registered with the `ControllerRegistration` resources that would contain a Helm chart with all resources needed to deploy this controller into a seed (plus some static values).
+Gardener would render the Helm chart and deploy the resources into the seed.
+It will not react if `.spec.registration.deployment.type!=helm` which allows to also use any other deployment mechanism. Controllers that are getting deployed by operators would not specify the `.spec.deployment` section in the `ControllerRegistration` at all.
 
-Every controller registers itself at the Gardener by creating a `ControllerRegistration` resource that make the controller together with its dimension (`kind`) and shape (`type`) known to Gardener.
-This registration resource does also contain a Helm chart with corresponding values:
-
-```yaml
-apiVersion: gardener.cloud/v1alpha1
-kind: ControllerRegistration
-metadata:
-  name: dns-aws-route53
-spec:
-  controllerInfo:
-  - kind: DNS
-    type: aws-route53
-  deployment:
-    chart.tgz: base64(helm-chart-blob)
-    values.yaml: base64(corresponding static chart values)
-status:
-  seeds:
-  - name: seed-01
-    ready: false
-```
-
-Every `.kind`/`.type` combination may only exist once in the system.
-
-With knowledge of the Helm Chart and the corresponding values Gardener will be able to deploy the controllers themselves in the needed Seeds.
-Gardener will track in the `.status` of the resource to which Seeds it has already which controller.
-With this approach, cleaning up is not easily/cleanly possible as Gardener would need to parse the Helm chart to understand which resources must be deleted.
-Updating or upgrading is also more difficult in case the existing deployed resources can't be "re-applied" blindly.
-Another problem could be that the `values.yaml` is static and cannot differ between Seed clusters.
-Still, the reason for mentioning this approach despite the rather longer list of downsides is that a major benefit would be to not require dedicated operators per controller.
-One could argue that in most cases static values are fine and updating is as easy as just exchanging the image/tag of the controller.
+:information: Any controller requiring dynamic configuration values (e.g., based on the cloud provider or the region of the seed) must be installed with the operator approach.
 
 ## Other cloud-specific parts
 
