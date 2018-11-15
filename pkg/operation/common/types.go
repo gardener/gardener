@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+
 	"k8s.io/apimachinery/pkg/util/sets"
 )
 
@@ -308,6 +309,9 @@ const (
 
 	// ShootOperationRetry is a constant for an annotation on a Shoot indicating that a failed Shoot reconciliation shall be retried.
 	ShootOperationRetry = "retry"
+
+	// ShootOperationReconcile is a constant for an annotation on a Shoot indicating that a Shoot reconciliation shall be triggered.
+	ShootOperationReconcile = "reconcile"
 
 	// ShootSyncPeriod is a constant for an annotation on a Shoot which may be used to overwrite the global Shoot controller sync period.
 	// The value must be a duration. It can also be used to disable the reconciliation at all by setting it to 0m. Disabling the reconciliation
