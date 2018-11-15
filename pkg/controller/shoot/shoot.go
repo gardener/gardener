@@ -31,10 +31,8 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/metrics"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"

@@ -1,0 +1,53 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: {{ template "cert-broker.name" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    app: {{ template "cert-broker.name" . }}
+    chart: {{ template "cert-broker.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "cert-broker.name" . }}
+      release: {{ .Release.Name }}
+  template:
+    metadata:
+      {{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+      {{- end }}
+      labels:
+        app: {{ template "cert-broker.name" . }}
+        release: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ template "cert-broker.name" . }}
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ index .Values.images "cert-broker" }}
+          volumeMounts:
+          - name: target-cluster
+            mountPath: "/etc/target-cluster"
+            readOnly: true
+          args:
+          - --target-cluster-kube-config=/etc/target-cluster/kubeconfig
+          - --resource-namespace={{ .Release.Namespace }}
+          - --ingress-workers={{ .Values.certbroker.replicaWorkers }}
+          - --secret-workers={{ .Values.certbroker.replicaWorkers }}
+          - --cleanup-workers={{ .Values.certbroker.cleanupWorkers }}
+          - --cluster-issuer={{ .Values.certmanager.clusterissuer }}
+          - --acme-challenge-type={{ .Values.certmanager.acmeChallengeType }}
+          - --update-ingress={{ .Values.certmanager.updateIngress }}
+          - --leader-election={{ .Values.certmanager.leaderElection }}
+          {{- range .Values.certmanager.dns }}
+          - --dns-providers="{{ .domain }}={{ .provider }}"
+          {{- end }}
+          resources:
+{{ toYaml .Values.resources | indent 12 }}
+      volumes:
+      - name: target-cluster
+        secret:
+          secretName: {{ .Values.certbroker.targetClusterSecret }}

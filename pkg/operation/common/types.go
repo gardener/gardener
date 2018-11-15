@@ -129,6 +129,9 @@ const (
 	//GardenRoleBackup is the value of GardenRole key indicating type 'backup'.
 	GardenRoleBackup = "backup"
 
+	// GardenRoleCertificateManagement is the value of GardenRole key indicating type 'certificate-management'.
+	GardenRoleCertificateManagement = "certificate-management"
+
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "garden.sapcloud.io/createdBy"
@@ -446,6 +449,18 @@ const (
 
 	// AlpineImageName is the name of alpine image
 	AlpineImageName = "alpine"
+
+	// CertManagerImageName is the name of cert-manager image
+	CertManagerImageName = "cert-manager"
+
+	// CertManagerResourceName is the name of the Cert-Manager resources.
+	CertManagerResourceName = "cert-manager"
+
+	// CertBrokerImageName is the name of cert-broker image.
+	CertBrokerImageName = "cert-broker"
+
+	// CertBrokerResourceName is the name of the Cert-Broker resources.
+	CertBrokerResourceName = "cert-broker"
 )
 
 var (

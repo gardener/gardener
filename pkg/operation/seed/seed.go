@@ -25,6 +25,8 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
@@ -187,6 +189,7 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		common.ConfigMapReloaderImageName,
 		common.PauseContainerImageName,
 		common.GardenerExternalAdmissionControllerImageName,
+		common.CertManagerImageName,
 	}
 	images := make(map[string]string, len(imageNames))
 	for _, imageName := range imageNames {
@@ -218,6 +221,10 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 	alpineVersion, err := imageVector.FindImage(common.AlpineImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+	if err != nil {
+		return err
+	}
+	certManagerVersion, err := imageVector.FindImage(common.CertManagerImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
 	if err != nil {
 		return err
 	}
@@ -261,6 +268,25 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 
 	nodeCount := len(nodes.Items)
 
+	certManagerEnabled := features.ControllerFeatureGate.Enabled(features.CertificateManagement)
+	var clusterIssuer map[string]interface{}
+
+	if certManagerEnabled {
+		certificateManagement, ok := secrets[common.GardenRoleCertificateManagement]
+		if !ok {
+			return fmt.Errorf("certificate management is enabled but no secret could be found with role: %s", common.GardenRoleCertificateManagement)
+		}
+
+		clusterIssuer, err = createClusterIssuer(k8sSeedClient, certificateManagement)
+		if err != nil {
+			return fmt.Errorf("cannot create Cluster Issuer for certificate management: %v", err)
+		}
+	} else {
+		if err := k8sSeedClient.DeleteDeployment(common.GardenNamespace, common.CertManagerResourceName); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
 	chartRenderer, err := chartrenderer.New(k8sSeedClient)
 	if err != nil {
 		return err
@@ -298,7 +324,106 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 				"fluent-bit": fluentBitVersion.String(),
 			},
 		},
+		"cert-manager": map[string]interface{}{
+			"enabled": certManagerEnabled,
+			"images": map[string]interface{}{
+				"cert-manager": certManagerVersion.String(),
+			},
+			"clusterissuer": clusterIssuer,
+		},
 	})
+}
+
+func createClusterIssuer(k8sSeedclient kubernetes.Client, certificateManagement *corev1.Secret) (map[string]interface{}, error) {
+	certManagementConfig, err := certmanagement.RetrieveCertificateManagementConfig(certificateManagement)
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		clusterIssuerName = certManagementConfig.ClusterIssuerName
+		acmeConfig        = certManagementConfig.ACME
+		route53Config     = certManagementConfig.Providers.Route53
+		clouddnsConfig    = certManagementConfig.Providers.CloudDNS
+	)
+
+	var dnsProviders []certmanagement.DNSProviderConfig
+	for _, route53provider := range route53Config {
+		it := route53provider
+		dnsProviders = append(dnsProviders, &it)
+	}
+	for _, cloudDNSProvider := range clouddnsConfig {
+		it := cloudDNSProvider
+		dnsProviders = append(dnsProviders, &it)
+	}
+
+	var (
+		letsEncryptSecretName = "lets-encrypt"
+		providers             = createDNSProviderValues(dnsProviders)
+		acmePrivateKey        = acmeConfig.ACMEPrivateKey()
+	)
+
+	return map[string]interface{}{
+		"name": string(clusterIssuerName),
+		"acme": map[string]interface{}{
+			"email":  acmeConfig.Email,
+			"server": acmeConfig.Server,
+			"letsEncrypt": map[string]interface{}{
+				"name": letsEncryptSecretName,
+				"key":  acmePrivateKey,
+			},
+			"dns01": map[string]interface{}{
+				"providers": providers,
+			},
+		},
+	}, nil
+}
+
+func createDNSProviderValues(configs []certmanagement.DNSProviderConfig) []interface{} {
+	var providers []interface{}
+	for _, config := range configs {
+		name := config.ProviderName()
+		switch config.DNSProvider() {
+		case certmanagement.Route53:
+			route53config, ok := config.(*certmanagement.Route53Config)
+			if !ok {
+				logger.Logger.Errorf("Failed to cast to Route53Config object for DNSProviderConfig  %+v", config)
+				return nil
+			}
+
+			providers = append(providers, map[string]interface{}{
+				"name":        name,
+				"type":        certmanagement.Route53,
+				"region":      route53config.Region,
+				"accessKeyID": route53config.AccessKeyID,
+				"accessKey":   route53config.AccessKey(),
+			})
+		case certmanagement.CloudDNS:
+			cloudDNSconfig, ok := config.(*certmanagement.CloudDNSConfig)
+			if !ok {
+				logger.Logger.Errorf("Failed to cast to CloudDNSConfig object for DNSProviderConfig  %+v", config)
+				return nil
+			}
+
+			providers = append(providers, map[string]interface{}{
+				"name":      name,
+				"type":      certmanagement.CloudDNS,
+				"project":   cloudDNSconfig.Project,
+				"accessKey": cloudDNSconfig.AccessKey(),
+			})
+		default:
+		}
+	}
+	return providers
+}
+
+func deployCertificateManagementConfig(k8sSeedClient kubernetes.Client, secrets []*corev1.Secret) error {
+	for _, secret := range secrets {
+		if _, err := k8sSeedClient.CreateSecret(secret.Namespace, secret.Name, secret.Type, secret.Data, true); err != nil {
+			return fmt.Errorf("secret %s could not be copied to Seed cluster: %v", secret.Name, err)
+		}
+	}
+	return nil
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes

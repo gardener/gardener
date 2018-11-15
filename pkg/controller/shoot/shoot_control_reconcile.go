@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -201,16 +200,20 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploy shoot logging stack in Seed",
+			Name:         "Deploying shoot logging stack in Seed",
 			Fn:           flow.SimpleTaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(loggingEnabled),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploy cluster autoscaler",
+			Name:         "Deploying cluster autoscaler",
 			Fn:           flow.SimpleTaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(reconcileMachines, deployKubeAddonManager, deploySeedMonitoring),
 		})
-
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Cert-Broker",
+			Fn:           flow.SimpleTaskFn(botanist.DeployCertBroker).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
+		})
 		f = g.Compile()
 	)
 

@@ -175,3 +175,13 @@ images:
   sourceRepository: github.com/elastic/kibana-docker
   repository: docker.elastic.co/kibana/kibana-oss
   tag: "6.2.4"
+
+# Certificate Management
+- name: cert-manager
+  sourceRepository: github.com/jetstack/cert-manager
+  repository: quay.io/jetstack/cert-manager-controller
+  tag: "v0.4.1"
+- name: cert-broker
+  sourceRepository: github.com/gardener/cert-broker
+  repository: eu.gcr.io/gardener-project/gardener/cert-broker
+  tag: "0.1.0"

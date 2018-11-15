@@ -49,3 +49,4 @@ server:
       serverKeyPath: dev/tls/gardener-controller-manager.key
 featureGates:
   Logging: true
+  CertificateManagement: true

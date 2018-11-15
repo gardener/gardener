@@ -19,6 +19,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -133,6 +134,9 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter": nodeExporter,
+		},
+		"cert-broker": map[string]interface{}{
+			"enabled": features.ControllerFeatureGate.Enabled(features.CertificateManagement),
 		},
 	})
 }

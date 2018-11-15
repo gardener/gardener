@@ -128,9 +128,11 @@ type Client interface {
 	// Nodes
 	ListNodes(metav1.ListOptions) (*corev1.NodeList, error)
 
-	// RoleBindings
+	// RBAC
 	ListRoleBindings(string, metav1.ListOptions) (*rbacv1.RoleBindingList, error)
 	CreateOrPatchRoleBinding(metav1.ObjectMeta, func(*rbacv1.RoleBinding) *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error)
+	DeleteClusterRole(name string) error
+	DeleteRoleBinding(namespace, name string) error
 
 	// CustomResourceDefinitions
 	ListCRDs(metav1.ListOptions) (*apiextensionsv1beta1.CustomResourceDefinitionList, error)
@@ -148,4 +150,7 @@ type Client interface {
 	Curl(string) (*rest.Result, error)
 	QueryVersion() (string, error)
 	Version() string
+
+	// ServiceAccounts
+	DeleteServiceAccount(namespace, name string) error
 }
