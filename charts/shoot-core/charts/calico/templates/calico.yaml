@@ -184,10 +184,10 @@ spec:
             privileged: true
           resources:
             requests:
-              cpu: 250m
+              cpu: 100m
               memory: 100Mi
             limits:
-              cpu: 500m
+              cpu: 300m
               memory: 700Mi
           livenessProbe:
             httpGet:
