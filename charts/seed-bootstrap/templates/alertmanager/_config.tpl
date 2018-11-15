@@ -6,7 +6,7 @@ templates:
 # The root route on which each incoming alert enters.
 route:
   # The labels by which incoming alerts are grouped together.
-  group_by: ['type']
+  group_by: ['type', 'cluster']
 
   # When a new group of alerts is created by an incoming alert, wait at
   # least 'group_wait' to send the initial notification.
@@ -38,27 +38,27 @@ inhibit_rules:
     severity: critical
   target_match:
     severity: warning
-  equal: ['alertname', 'service']
+  equal: ['alertname', 'service', 'cluster']
 # Stop all alerts for type=shoot if no there are VPN problems.
 - source_match:
     service: vpn
   target_match_re:
     type: shoot
     severity: ^(critical|warning)$
-  equal: ['type']
+  equal: ['type', 'cluster']
 # Stop warning and critical alerts, when there is a blocker -
 # no workers, no etcd main etc.
 - source_match:
     severity: blocker
   target_match_re:
     severity: ^(critical|warning)$
-  equal: ['type']
+  equal: ['type', 'cluster']
 
 receivers:
 - name: dev-null
 - name: email-kubernetes-ops
-{{- if .Values.emailConfigs }}
+{{- if $.emailConfigs }}
   email_configs:
-{{ toYaml .Values.emailConfigs | indent 2 }}
+{{ toYaml $.emailConfigs | indent 2 }}
 {{- end }}
 {{- end -}}

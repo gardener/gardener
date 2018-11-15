@@ -170,7 +170,7 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	body := fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": %s}]`, "{\"role\":\"kube-system\"}")
+	body := fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": %s}]`, `{"role":"kube-system"}`)
 	if _, err := k8sSeedClient.PatchNamespace("kube-system", []byte(body)); err != nil {
 		return err
 	}
@@ -184,47 +184,20 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	imageNames := []string{
-		common.PrometheusImageName,
-		common.ConfigMapReloaderImageName,
-		common.PauseContainerImageName,
-		common.GardenerExternalAdmissionControllerImageName,
+	images, err := imageVector.FindImages([]string{
+		common.AlertManagerImageName,
+		common.AlpineImageName,
 		common.CertManagerImageName,
-	}
-	images := make(map[string]string, len(imageNames))
-	for _, imageName := range imageNames {
-		image, err := imageVector.FindImage(imageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-		if err != nil {
-			return err
-		}
-		images[imageName] = image.String()
-	}
-
-	elasticsearchVersion, err := imageVector.FindImage(common.ElasticsearchImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-	if err != nil {
-		return err
-	}
-	fluentdEsVersion, err := imageVector.FindImage(common.FluentdEsImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-	if err != nil {
-		return err
-	}
-	fluentBitVersion, err := imageVector.FindImage(common.FluentBitImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-	if err != nil {
-		return err
-	}
-	curatorEsVersion, err := imageVector.FindImage(common.CuratorImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-	if err != nil {
-		return err
-	}
-	kibanaVersion, err := imageVector.FindImage(common.KibanaImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-	if err != nil {
-		return err
-	}
-	alpineVersion, err := imageVector.FindImage(common.AlpineImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
-	if err != nil {
-		return err
-	}
-	certManagerVersion, err := imageVector.FindImage(common.CertManagerImageName, k8sSeedClient.Version(), k8sSeedClient.Version())
+		common.ConfigMapReloaderImageName,
+		common.CuratorImageName,
+		common.ElasticsearchImageName,
+		common.FluentBitImageName,
+		common.FluentdEsImageName,
+		common.GardenerExternalAdmissionControllerImageName,
+		common.KibanaImageName,
+		common.PauseContainerImageName,
+		common.PrometheusImageName,
+	}, k8sSeedClient.Version(), k8sSeedClient.Version())
 	if err != nil {
 		return err
 	}
@@ -291,10 +264,28 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 	if err != nil {
 		return err
 	}
+	alertManagerConfig := map[string]interface{}{}
+	if alertingSMTPKeys := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPKeys) > 0 {
+		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
+		for _, key := range alertingSMTPKeys {
+			secret := secrets[key]
+			emailConfigs = append(emailConfigs, map[string]interface{}{
+				"to":            string(secret.Data["to"]),
+				"from":          string(secret.Data["from"]),
+				"smarthost":     string(secret.Data["smarthost"]),
+				"auth_username": string(secret.Data["auth_username"]),
+				"auth_identity": string(secret.Data["auth_identity"]),
+				"auth_password": string(secret.Data["auth_password"]),
+			})
+		}
+		alertManagerConfig["emailConfigs"] = emailConfigs
+	}
 
 	return common.ApplyChart(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
-		"cloudProvider":         seed.CloudProvider,
-		"images":                images,
+		"cloudProvider": seed.CloudProvider,
+		"global": map[string]interface{}{
+			"images": images,
+		},
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{
 			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),
@@ -317,27 +308,15 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 				"objectCount":               nodeCount,
 				"elasticsearchVolumeSizeGB": 100,
 			},
-			"images": map[string]interface{}{
-				"elasticsearch-oss": elasticsearchVersion.String(),
-				"curator-es":        curatorEsVersion.String(),
-				"kibana-oss":        kibanaVersion.String(),
-				"alpine":            alpineVersion.String(),
-			},
 		},
 		"fluentd-es": map[string]interface{}{
 			"enabled": loggingEnabled,
-			"images": map[string]interface{}{
-				"fluentd-es": fluentdEsVersion.String(),
-				"fluent-bit": fluentBitVersion.String(),
-			},
 		},
 		"cert-manager": map[string]interface{}{
-			"enabled": certManagerEnabled,
-			"images": map[string]interface{}{
-				"cert-manager": certManagerVersion.String(),
-			},
+			"enabled":       certManagerEnabled,
 			"clusterissuer": clusterIssuer,
 		},
+		"alertmanager": alertManagerConfig,
 	})
 }
 

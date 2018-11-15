@@ -51,15 +51,22 @@ reserveExcessCapacity: true
 replicas:
   reserve-excess-capacity: 0
 
-images:
-  pause-container: image-repository:image-tag
-  prometheus: image-repository:image-tag
-  gardener-external-admission-controller: image-repository:image-tag
-  cert-manager: image-repository:image-tag
-
 prometheusPort: 9090
 
 global:
+  images:
+    alertmanager: image-repository:image-tag
+    alpine: image-repository:image-tag
+    cert-manager: image-repository:image-tag
+    configmap-reloader: image-repository:image-tag
+    curator-es: image-repository:image-tag
+    elasticsearch-oss: image-repository:image-tag
+    fluentd-es: image-repository:image-tag
+    gardener-external-admission-controller: image-repository:image-tag
+    kibana-oss: image-repository:image-tag
+    pause-container: image-repository:image-tag
+    prometheus: image-repository:image-tag
+
   elasticsearchPorts:
     db: 9200
     transport: 9300
@@ -74,16 +81,14 @@ elastic-kibana-curator:
     elasticsearchReplicas: 1
     elasticsearchVolumeSizeGB: 30
     objectCount: 1
-  images:
-    elasticsearch-oss: image-repository:image-tag
-    curator-es: image-repository:image-tag
-    kibana-oss: image-repository:image-tag
-    alpine: image-repository:image-tag
 
 fluentd-es:
   enabled: true
   images:
-    fluentd-es: image-repository:image-tag
+
+
+alertmanager:
+  emailConfigs: []
 
 cert-manager:
   enabled: true

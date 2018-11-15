@@ -39,7 +39,7 @@ spec:
             topologyKey: "kubernetes.io/hostname"
       containers:
       - name: fluentd-es
-        image: {{ index .Values.images "fluentd-es" }}
+        image: {{ index .Values.global.images "fluentd-es" }}
         imagePullPolicy: IfNotPresent
         env:
         - name: FLUENTD_ARGS

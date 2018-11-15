@@ -30,7 +30,7 @@ spec:
       serviceAccountName: {{ template "cert-manager.serviceAccountName" . }}
       containers:
         - name: {{ .Chart.Name }}
-          image: "{{ index .Values.images "cert-manager" }}"
+          image: "{{ index .Values.global.images "cert-manager" }}"
           args:
         {{- if .Values.clusterResourceNamespace }}
           - --cluster-resource-namespace={{ .Values.clusterResourceNamespace }}

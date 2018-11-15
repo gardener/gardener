@@ -26,14 +26,14 @@ spec:
       # If your OS already sets up this number to a higher value, feel free
       # to remove this init container.
       initContainers:
-      - image: {{ index .Values.images "alpine" }}
+      - image: {{ index .Values.global.images "alpine" }}
         command: ["sh", "-c", "if [ $(sysctl -n vm.max_map_count) -lt 262144 ]; then sysctl -w vm.max_map_count=262144; fi"]
         name: elasticsearch-logging-init
         securityContext:
           privileged: true
       containers:
       - name: elasticsearch-logging
-        image: {{ index .Values.images "elasticsearch-oss" }}
+        image: {{ index .Values.global.images "elasticsearch-oss" }}
         imagePullPolicy: IfNotPresent
         env:
         - name: ES_JAVA_OPTS

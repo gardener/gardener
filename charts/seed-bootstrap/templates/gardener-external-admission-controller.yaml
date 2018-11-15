@@ -35,7 +35,7 @@ spec:
       terminationGracePeriodSeconds: 5
       containers:
       - name: gardener-external-admission-controller
-        image: {{ index .Values.images "gardener-external-admission-controller" }}
+        image: {{ index .Values.global.images "gardener-external-admission-controller" }}
         imagePullPolicy: IfNotPresent
         args:
         - -secure-port=2730

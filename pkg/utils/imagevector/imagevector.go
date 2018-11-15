@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	yaml "gopkg.in/yaml.v2"
-	"strings"
 )
 
 // ReadImageVector reads the image.yaml in the chart directory, unmarshals it
@@ -77,6 +77,25 @@ func (v ImageVector) FindImage(name, k8sVersionRuntime, k8sVersionTarget string)
 	}
 
 	return nil, fmt.Errorf("could not find image %q for Kubernetes runtime version %q in the image vector", name, k8sVersionRuntime)
+}
+
+// FindImages returns an image map with the given <names> from the sources in the image vector.
+// The <k8sVersion> specifies the kubernetes version the image will be running on.
+// The <targetK8sVersion> specifies the kubernetes version the image shall target.
+// If multiple entries were found, the provided <k8sVersion> is compared with the constraints
+// stated in the image definition.
+// In case multiple images match the search, the first which was found is returned.
+// In case no image was found, an error is returned.
+func (v ImageVector) FindImages(names []string, k8sVersionRuntime, k8sVersionTarget string) (map[string]interface{}, error) {
+	images := map[string]interface{}{}
+	for _, imageName := range names {
+		image, err := v.FindImage(imageName, k8sVersionRuntime, k8sVersionTarget)
+		if err != nil {
+			return nil, err
+		}
+		images[imageName] = image.String()
+	}
+	return images, nil
 }
 
 // ToImage applies the given <targetK8sVersion> to the source to produce an output image.

@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
       - name: fluent-bit
-        image: {{ index .Values.images "fluent-bit" }}
+        image: {{ index .Values.global.images "fluent-bit" }}
         command:
           - /fluent-bit/bin/fluent-bit
           - -c

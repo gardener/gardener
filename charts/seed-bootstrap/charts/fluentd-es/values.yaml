@@ -2,9 +2,10 @@ global:
   elasticsearchPorts:
     db: 9200
     transport: 9300
-images:
-  fluentd-es: image-repository:image-tag
-  fluent-bit: image-repository:image-tag
+  images:
+    fluentd-es: image-repository:image-tag
+    fluent-bit: image-repository:image-tag
+
 fluentd:
   ports:
     forward: 24224
