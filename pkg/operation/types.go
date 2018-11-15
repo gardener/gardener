@@ -15,6 +15,10 @@
 package operation
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"net/http"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -24,6 +28,8 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	prometheusapi "github.com/prometheus/client_golang/api"
+	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -53,6 +59,7 @@ type Operation struct {
 	SeedNamespaceObject  *corev1.Namespace
 	BackupInfrastructure *gardenv1beta1.BackupInfrastructure
 	MachineDeployments   MachineDeployments
+	MonitoringClient     prometheusclient.API
 }
 
 // MachineDeployment holds insformation about the name, class, replicas of a MachineDeployment
@@ -68,3 +75,14 @@ type MachineDeployment struct {
 
 // MachineDeployments is a list of machine deployments.
 type MachineDeployments []MachineDeployment
+
+type prometheusRoundTripper struct {
+	authHeader string
+	ca         *x509.CertPool
+}
+
+func (r prometheusRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", r.authHeader)
+	prometheusapi.DefaultRoundTripper.(*http.Transport).TLSClientConfig = &tls.Config{RootCAs: r.ca}
+	return prometheusapi.DefaultRoundTripper.RoundTrip(req)
+}

@@ -168,6 +168,9 @@ spec:
         volumeMounts:
         - name: blackbox-exporter-config-prometheus
           mountPath: /vpn
+        - mountPath: /var/run/secrets/blackbox
+          name: prometheus-kubeconfig
+          readOnly: true
       terminationGracePeriodSeconds: 300
       volumes:
       - name: config

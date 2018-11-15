@@ -43,6 +43,7 @@ func newTableConvertor() rest.TableConvertor {
 			{Name: "Domain", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["domain"]},
 			{Name: "Operation", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["operation"]},
 			{Name: "Progress", Type: "integer", Format: "name", Description: swaggerMetadataDescriptions["progress"]},
+			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"]},
 			{Name: "Control", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["control"]},
 			{Name: "Nodes", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["nodes"]},
 			{Name: "System", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["system"]},
@@ -96,6 +97,11 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		} else {
 			cells = append(cells, "<pending>")
 			cells = append(cells, 0)
+		}
+		if cond := helper.GetCondition(shoot.Status.Conditions, garden.ShootAPIServerAvailable); cond != nil {
+			cells = append(cells, cond.Status)
+		} else {
+			cells = append(cells, "<unknown>")
 		}
 		if cond := helper.GetCondition(shoot.Status.Conditions, garden.ShootControlPlaneHealthy); cond != nil {
 			cells = append(cells, cond.Status)

@@ -12,3 +12,15 @@ data:
       tcp_vpn:
         prober: tcp
         timeout: 2s
+      http_apiserver:
+        prober: http
+        timeout: 10s
+        http:
+          headers:
+            Accept: "*/*"
+            Accept-Language: "en-US"
+          tls_config:
+            ca_file: "/var/run/secrets/blackbox/ca.crt"
+            cert_file: "/var/run/secrets/blackbox/prometheus.crt"
+            key_file: "/var/run/secrets/blackbox/prometheus.key"
+          preferred_ip_protocol: "ip4"
