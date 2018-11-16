@@ -19,6 +19,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -54,11 +55,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	}
 
 	var (
-		defaultTimeout  = 30 * time.Second
-		defaultInterval = 5 * time.Second
-		managedDNS      = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
-		isCloud         = o.Shoot.Info.Spec.Cloud.Local == nil
-		loggingEnabled  = features.ControllerFeatureGate.Enabled(features.Logging)
+		defaultTimeout                  = 30 * time.Second
+		defaultInterval                 = 5 * time.Second
+		managedDNS                      = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
+		isCloud                         = o.Shoot.Info.Spec.Cloud.Local == nil
+		loggingEnabled                  = features.ControllerFeatureGate.Enabled(features.Logging)
+		creationPhase                   = operationType == gardenv1beta1.ShootLastOperationTypeCreate
+		requireInfrastructureDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
+		requireKube2IAMDeployment       = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource)
 
 		g               = flow.NewGraph("Shoot cluster reconciliation")
 		deployNamespace = g.Add(flow.Task{
@@ -102,7 +106,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
-			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployInfrastructure),
+			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployInfrastructure).DoIf(requireInfrastructureDeployment),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
 		})
 		deployBackupInfrastructure = g.Add(flow.Task{
@@ -181,7 +185,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube2IAM resources",
-			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployKube2IAMResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployKube2IAMResources).DoIf(requireKube2IAMDeployment).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 		_ = g.Add(flow.Task{
@@ -297,7 +301,18 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 }
 
 func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) error {
-	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	// Remove task list from Shoot annotations since reconciliation was successful.
+	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			controllerutils.RemoveAllTasks(shoot.Annotations)
+			return shoot, nil
+		})
+
+	if err != nil {
+		return err
+	}
+
+	newShoot, err = kutil.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, newShoot.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.Seed = o.Seed.Info.Name
@@ -311,6 +326,7 @@ func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operatio
 			}
 			return shoot, nil
 		})
+
 	if err == nil {
 		o.Shoot.Info = newShoot
 	}
