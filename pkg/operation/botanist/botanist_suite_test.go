@@ -284,17 +284,9 @@ var _ = Describe("health check", func() {
 		}
 
 		elasticSearchStatefulSet = newStatefulSet(seedNamespace, common.ElasticSearchStatefulSetName, common.GardenRoleLogging, true)
-		fluentdEsStatefulSet     = newStatefulSet(seedNamespace, common.FluentdEsStatefulSetName, common.GardenRoleLogging, true)
 
 		requiredLoggingControlPlaneStatefulSets = []*appsv1.StatefulSet{
 			elasticSearchStatefulSet,
-			fluentdEsStatefulSet,
-		}
-
-		fluentBitDaemonSet = newDaemonSet(seedNamespace, common.FluentBitDaemonSetName, common.GardenRoleLogging, true)
-
-		requiredLoggingControlPlaneDaemonSets = []*appsv1.DaemonSet{
-			fluentBitDaemonSet,
 		}
 	)
 
@@ -568,54 +560,37 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
-				daemonSetLister   = constDaemonSetLister(daemonSets)
 			)
 
-			exitCondition, err := botanist.CheckLoggingControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister, daemonSetLister)
+			exitCondition, err := botanist.CheckLoggingControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			requiredLoggingControlPlaneDeployments,
 			requiredLoggingControlPlaneStatefulSets,
-			requiredLoggingControlPlaneDaemonSets,
 			BeNil()),
 		Entry("required deployment missing",
 			nil,
 			requiredLoggingControlPlaneStatefulSets,
-			requiredLoggingControlPlaneDaemonSets,
 			beConditionWithStatus(corev1.ConditionFalse)),
 		Entry("required stateful set missing",
 			requiredLoggingControlPlaneDeployments,
-			[]*appsv1.StatefulSet{elasticSearchStatefulSet},
-			requiredLoggingControlPlaneDaemonSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
-		Entry("required daemon set missing",
-			requiredLoggingControlPlaneDeployments,
-			requiredLoggingControlPlaneStatefulSets,
 			nil,
 			beConditionWithStatus(corev1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{newDeployment(kibanaDeployment.Namespace, kibanaDeployment.Name, roleOf(kibanaDeployment), false)},
 			requiredLoggingControlPlaneStatefulSets,
-			requiredLoggingControlPlaneDaemonSets,
 			beConditionWithStatus(corev1.ConditionFalse)),
 		Entry("stateful set unhealthy",
 			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(elasticSearchStatefulSet.Namespace, elasticSearchStatefulSet.Name, roleOf(elasticSearchStatefulSet), false),
-				fluentdEsStatefulSet,
 			},
-			requiredLoggingControlPlaneDaemonSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
-		Entry("daemon set unhealthy",
-			requiredLoggingControlPlaneDeployments,
-			requiredLoggingControlPlaneStatefulSets,
-			[]*appsv1.DaemonSet{newDaemonSet(fluentBitDaemonSet.Namespace, fluentBitDaemonSet.Name, roleOf(fluentBitDaemonSet), false)},
 			beConditionWithStatus(corev1.ConditionFalse)),
 	)
 })

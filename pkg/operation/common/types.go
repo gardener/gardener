@@ -531,17 +531,11 @@ var (
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
 		ElasticSearchStatefulSetName,
-		FluentdEsStatefulSetName,
 	)
 
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
 		KibanaDeploymentName,
-	)
-
-	// RequiredLoggingDaemonSetNames is a set of the required logging daemon sets.
-	RequiredLoggingDaemonSetNames = sets.NewString(
-		FluentBitDaemonSetName,
 	)
 )
 
