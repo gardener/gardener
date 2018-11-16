@@ -66,7 +66,7 @@ func (b *GCPBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interface
 // is exposed to the public.
 func (b *GCPBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"advertiseAddress": b.APIServerAddressIP,
+		"advertiseAddress": b.APIServerAddress,
 	}, nil
 }
 

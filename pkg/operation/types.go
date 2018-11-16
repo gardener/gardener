@@ -49,7 +49,6 @@ type Operation struct {
 	ChartShootRenderer   chartrenderer.ChartRenderer
 	APIServerIngresses   []corev1.LoadBalancerIngress
 	APIServerAddress     string
-	APIServerAddressIP   string
 	SeedNamespaceObject  *corev1.Namespace
 	BackupInfrastructure *gardenv1beta1.BackupInfrastructure
 	MachineDeployments   MachineDeployments
