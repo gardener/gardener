@@ -49,6 +49,13 @@ spec:
         - --tls-cert-file=/srv/metrics-server/tls/tls.crt
         - --tls-private-key-file=/srv/metrics-server/tls/tls.key
         - --v=2
+        resources:
+          requests:
+            cpu: 20m
+            memory: 100Mi
+          limits:
+            cpu: 80m
+            memory: 400Mi
         volumeMounts:
         - name: metrics-server
           mountPath: /srv/metrics-server/tls

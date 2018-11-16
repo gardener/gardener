@@ -19,10 +19,10 @@ deployment:
       imagePullPolicy: IfNotPresent
       resources:
         limits:
-          cpu: 200m
-          memory: 80Mi
-        requests:
           cpu: 100m
+          memory: 100Mi
+        requests:
+          cpu: 50m
           memory: 15Mi
       ports:
         dns: 8053

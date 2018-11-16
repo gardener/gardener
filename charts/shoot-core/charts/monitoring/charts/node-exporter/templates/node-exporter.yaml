@@ -92,10 +92,10 @@ spec:
           timeoutSeconds: 5
         resources:
           requests:
-            cpu: 10m
+            cpu: 5m
             memory: 10Mi
           limits:
-            cpu: 20m
+            cpu: 15m
             memory: 50Mi
         volumeMounts:
         - name: proc
