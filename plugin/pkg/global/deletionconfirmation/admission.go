@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"sync"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -27,8 +28,11 @@ import (
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
 
+	multierror "github.com/hashicorp/go-multierror"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 )
 
@@ -103,10 +107,11 @@ func (d *DeletionConfirmation) ValidateInitialization() error {
 	return nil
 }
 
-// Admit makes admissions decisions based on deletion confirmation annotation.
-func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
+// Validate makes admissions decisions based on deletion confirmation annotation.
+func (d *DeletionConfirmation) Validate(a admission.Attributes) error {
 	var (
 		obj         metav1.Object
+		listFunc    func() ([]metav1.Object, error)
 		cacheLookup func() (metav1.Object, error)
 		liveLookup  func() (metav1.Object, error)
 		checkFunc   func(metav1.Object) error
@@ -121,6 +126,17 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	switch objectGroupKind {
 	case kindShoot:
+		listFunc = func() ([]metav1.Object, error) {
+			list, err := d.shootLister.Shoots(a.GetNamespace()).List(labels.Everything())
+			if err != nil {
+				return nil, err
+			}
+			result := make([]metav1.Object, 0, len(list))
+			for _, obj := range list {
+				result = append(result, obj)
+			}
+			return result, nil
+		}
 		cacheLookup = func() (metav1.Object, error) {
 			return d.shootLister.Shoots(a.GetNamespace()).Get(a.GetName())
 		}
@@ -135,6 +151,17 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 		}
 
 	case kindProject:
+		listFunc = func() ([]metav1.Object, error) {
+			list, err := d.projectLister.List(labels.Everything())
+			if err != nil {
+				return nil, err
+			}
+			result := make([]metav1.Object, 0, len(list))
+			for _, obj := range list {
+				result = append(result, obj)
+			}
+			return result, nil
+		}
 		cacheLookup = func() (metav1.Object, error) {
 			return d.projectLister.Get(a.GetName())
 		}
@@ -160,6 +187,50 @@ func (d *DeletionConfirmation) Admit(a admission.Attributes) error {
 	}
 	if !d.WaitForReady() {
 		return admission.NewForbidden(a, errors.New("not yet ready to handle request"))
+	}
+
+	// The "delete endpoint" handler of the k8s.io/apiserver library calls the admission controllers
+	// handling DELETECOLLECTION requests with empty resource names:
+	// https://github.com/kubernetes/apiserver/blob/kubernetes-1.12.1/pkg/endpoints/handlers/delete.go#L265-L283
+	// Consequently, a.GetName() equals "". This is for the admission controllers to know that all
+	// resources of this kind shall be deleted. We only allow this request if all objects have been
+	// properly annotated with the deletion confirmation.
+	if a.GetName() == "" {
+		objList, err := listFunc()
+		if err != nil {
+			return err
+		}
+
+		var (
+			wg     sync.WaitGroup
+			result error
+			output = make(chan error)
+		)
+
+		for _, obj := range objList {
+			wg.Add(1)
+
+			go func(obj metav1.Object) {
+				defer wg.Done()
+				output <- d.Validate(admission.NewAttributesRecord(a.GetObject(), a.GetOldObject(), a.GetKind(), a.GetNamespace(), obj.GetName(), a.GetResource(), a.GetSubresource(), a.GetOperation(), a.IsDryRun(), a.GetUserInfo()))
+			}(obj)
+		}
+
+		go func() {
+			wg.Wait()
+			close(output)
+		}()
+
+		for out := range output {
+			if out != nil {
+				result = multierror.Append(result, out)
+			}
+		}
+
+		if result == nil {
+			return nil
+		}
+		return admission.NewForbidden(a, result)
 	}
 
 	// Read the object from the cache

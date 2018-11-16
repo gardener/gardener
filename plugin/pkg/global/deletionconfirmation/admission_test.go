@@ -79,7 +79,7 @@ var _ = Describe("deleteconfirmation", func() {
 		It("should do nothing because the resource is not Shoot or Project", func() {
 			attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Foo").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("foos").WithVersion("version"), "", admission.Delete, false, nil)
 
-			err := admissionHandler.Admit(attrs)
+			err := admissionHandler.Validate(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -93,7 +93,7 @@ var _ = Describe("deleteconfirmation", func() {
 					return true, nil, fmt.Errorf(msg)
 				})
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Validate(attrs)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal(`shoot.garden.sapcloud.io "dummy" not found`))
@@ -103,9 +103,9 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should reject for nil annotation field", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
-					shootStore.Add(&shoot)
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).To(HaveOccurred())
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -117,9 +117,9 @@ var _ = Describe("deleteconfirmation", func() {
 					shoot.Annotations = map[string]string{
 						common.ConfirmationDeletion: "false",
 					}
-					shootStore.Add(&shoot)
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).To(HaveOccurred())
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -131,9 +131,9 @@ var _ = Describe("deleteconfirmation", func() {
 					shoot.Annotations = map[string]string{
 						common.ConfirmationDeletion: "true",
 					}
-					shootStore.Add(&shoot)
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -141,7 +141,7 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should succeed for true annotation value (live lookup)", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
-					shootStore.Add(&shoot)
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 					gardenClient.AddReactor("get", "shoots", func(action testing.Action) (bool, runtime.Object, error) {
 						return true, &garden.Shoot{
 							ObjectMeta: metav1.ObjectMeta{
@@ -154,7 +154,7 @@ var _ = Describe("deleteconfirmation", func() {
 						}, nil
 					})
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -168,12 +168,44 @@ var _ = Describe("deleteconfirmation", func() {
 						common.ConfirmationDeletion: "true",
 						common.ShootIgnore:          "",
 					}
-					shootStore.Add(&shoot)
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).To(HaveOccurred())
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
+				})
+			})
+
+			Context("delete collection", func() {
+				It("should allow because all shoots have the deletion confirmation annotation", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, "", garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
+
+					shoot.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+					shoot2 := shoot.DeepCopy()
+					shoot2.Name = "dummy2"
+
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
+					Expect(shootStore.Add(shoot2)).NotTo(HaveOccurred())
+
+					err := admissionHandler.Validate(attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should deny because at least one shoot does not have the deletion confirmation annotation", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, "", garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
+
+					shoot2 := shoot.DeepCopy()
+					shoot2.Name = "dummy2"
+					shoot.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+
+					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
+					Expect(shootStore.Add(shoot2)).NotTo(HaveOccurred())
+
+					err := admissionHandler.Validate(attrs)
+
+					Expect(err).To(HaveOccurred())
 				})
 			})
 		})
@@ -187,7 +219,7 @@ var _ = Describe("deleteconfirmation", func() {
 					return true, nil, fmt.Errorf(msg)
 				})
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Validate(attrs)
 
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(Equal(msg))
@@ -197,9 +229,9 @@ var _ = Describe("deleteconfirmation", func() {
 				It("should reject for nil annotation field", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
 
-					projectStore.Add(&project)
+					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).To(HaveOccurred())
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -211,9 +243,9 @@ var _ = Describe("deleteconfirmation", func() {
 					project.Annotations = map[string]string{
 						common.ConfirmationDeletion: "false",
 					}
-					projectStore.Add(&project)
+					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).To(HaveOccurred())
 					Expect(apierrors.IsForbidden(err)).To(BeTrue())
@@ -225,9 +257,9 @@ var _ = Describe("deleteconfirmation", func() {
 					project.Annotations = map[string]string{
 						common.ConfirmationDeletion: "true",
 					}
-					projectStore.Add(&project)
+					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -246,9 +278,41 @@ var _ = Describe("deleteconfirmation", func() {
 						}, nil
 					})
 
-					err := admissionHandler.Admit(attrs)
+					err := admissionHandler.Validate(attrs)
 
 					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("delete collection", func() {
+				It("should allow because all projects have the deletion confirmation annotation", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", "", garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
+
+					project.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+					project2 := project.DeepCopy()
+					project2.Name = "dummy2"
+
+					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
+					Expect(projectStore.Add(project2)).NotTo(HaveOccurred())
+
+					err := admissionHandler.Validate(attrs)
+
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("should deny because at least one project does not have the deletion confirmation annotation", func() {
+					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Project").WithVersion("version"), "", "", garden.Resource("projects").WithVersion("version"), "", admission.Delete, false, nil)
+
+					project2 := project.DeepCopy()
+					project2.Name = "dummy2"
+					project.Annotations = map[string]string{common.ConfirmationDeletion: "true"}
+
+					Expect(projectStore.Add(&project)).NotTo(HaveOccurred())
+					Expect(projectStore.Add(project2)).NotTo(HaveOccurred())
+
+					err := admissionHandler.Validate(attrs)
+
+					Expect(err).To(HaveOccurred())
 				})
 			})
 		})
