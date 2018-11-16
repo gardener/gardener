@@ -405,7 +405,6 @@ func CheckLoggingControlPlane(
 	condition *gardenv1beta1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
-	daemonSetLister kutil.DaemonSetLister,
 ) (*gardenv1beta1.Condition, error) {
 
 	deploymentList, err := deploymentLister.Deployments(namespace).List(loggingSelector)
@@ -432,17 +431,6 @@ func CheckLoggingControlPlane(
 		return exitCondition, nil
 	}
 
-	daemonSetList, err := daemonSetLister.DaemonSets(namespace).List(loggingSelector)
-	if err != nil {
-		return nil, err
-	}
-
-	if exitCondition := checkRequiredDaemonSets(condition, common.RequiredLoggingDaemonSetNames, daemonSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
-	if exitCondition := checkDaemonSets(condition, daemonSetList); exitCondition != nil {
-		return exitCondition, nil
-	}
 	return nil, nil
 }
 
@@ -451,7 +439,6 @@ func (b *Botanist) checkControlPlane(
 	condition *gardenv1beta1.Condition,
 	seedDeploymentLister kutil.DeploymentLister,
 	seedStatefulSetLister kutil.StatefulSetLister,
-	seedDaemonSetLister kutil.DaemonSetLister,
 ) (*gardenv1beta1.Condition, error) {
 
 	if exitCondition, err := CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, b.Seed.CloudProvider, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
@@ -461,7 +448,7 @@ func (b *Botanist) checkControlPlane(
 		return exitCondition, err
 	}
 	if features.ControllerFeatureGate.Enabled(features.Logging) {
-		if exitCondition, err := CheckLoggingControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister); err != nil || exitCondition != nil {
+		if exitCondition, err := CheckLoggingControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 			return exitCondition, nil
 		}
 	}
@@ -657,7 +644,6 @@ var (
 
 	seedDeploymentListOptions        = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
 	seedStatefulSetListOptions       = metav1.ListOptions{LabelSelector: controlPlaneMonitoringLoggingSelector.String()}
-	seedDaemonSetListOptions         = metav1.ListOptions{LabelSelector: loggingSelector.String()}
 	seedMachineDeploymentListOptions = metav1.ListOptions{}
 
 	shootDeploymentListOptions = metav1.ListOptions{LabelSelector: systemComponentsOptionalAddonsSelector.String()}
@@ -674,7 +660,6 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	var (
 		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
 		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
-		seedDaemonSetLister   = makeDaemonSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDaemonSetListOptions)
 	)
 
 	if err := initializeShootClients(); err != nil {
@@ -683,7 +668,7 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 		nodes = helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
-		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
+		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 		return controlPlane, nodes, systemComponents
 	}
@@ -701,7 +686,7 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, controlPlan
 	wg.Add(3)
 	go func() {
 		defer wg.Done()
-		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister, seedDaemonSetLister)
+		newControlPlane, err := b.checkControlPlane(controlPlane, seedDeploymentLister, seedStatefulSetLister)
 		controlPlane = newConditionOrError(controlPlane, newControlPlane, err)
 	}()
 	go func() {
