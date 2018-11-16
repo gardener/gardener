@@ -66,13 +66,21 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 	// cloud provider rate limits.
 	switch targetType {
 	case "hostname":
-		if utils.LookupDNSHostCNAME(name) == fmt.Sprintf("%s.", target) {
+		cname, err := utils.LookupDNSHostCNAME(name)
+		if err != nil {
+			b.Logger.Errorf("Something went wrong with DNS lookup for %s, reason: %s", name, err.Error())
+		}
+		if cname == fmt.Sprintf("%s.", target) {
 			b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
 			// Clean up possible existing Terraform job/pod artifacts from previous runs
 			return tf.EnsureCleanedUp()
 		}
 	case "ip":
-		values := utils.LookupDNSHost(name)
+		values, err := utils.LookupDNSHost(name)
+		if err != nil {
+			b.Logger.Errorf("Something went wrong with DNS lookup for %s, reason: %s", name, err.Error())
+		}
+
 		for _, v := range values {
 			if v == target {
 				b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
@@ -81,6 +89,8 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 			}
 		}
 	}
+
+	b.Logger.Infof("Initiating Terraform validation for domain %s", name)
 
 	var config map[string]interface{}
 

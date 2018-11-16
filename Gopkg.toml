@@ -114,6 +114,10 @@ ignored = [
   name = "github.com/onsi/ginkgo"
   version = "~1.4.0"
 
+[[constraint]]
+  name = "github.com/miekg/dns"
+  version = "1.0.15"
+
 [prune]
   unused-packages = true
   go-tests = true

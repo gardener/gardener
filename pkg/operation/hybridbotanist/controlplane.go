@@ -206,12 +206,6 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
-	apiServerAddressIP, err := utils.WaitUntilDNSNameResolvable(b.Operation.APIServerAddress)
-	if err != nil {
-		return err
-	}
-	b.Botanist.APIServerAddressIP = apiServerAddressIP
-
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":       2379,
 		"etcdMainServiceFqdn":   fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),

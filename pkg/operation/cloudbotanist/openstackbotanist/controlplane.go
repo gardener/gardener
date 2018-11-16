@@ -123,9 +123,9 @@ func (b *OpenStackBotanist) GenerateKubeAPIServerServiceConfig() (map[string]int
 // is exposed to the public.
 func (b *OpenStackBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"advertiseAddress": b.APIServerAddressIP,
+		"advertiseAddress": b.APIServerAddress,
 		"additionalParameters": []string{
-			fmt.Sprintf("--external-hostname=%s", b.APIServerAddressIP),
+			fmt.Sprintf("--external-hostname=%s", b.APIServerAddress),
 		},
 	}, nil
 }
