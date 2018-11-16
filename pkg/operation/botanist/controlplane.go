@@ -444,8 +444,10 @@ func (b *Botanist) DeploySeedLogging() error {
 			"basicAuthSecret": basicAuth,
 			"host":            kibanaHost,
 		},
-		"elasticsearchReplicas": b.Shoot.GetReplicas(1),
-		"kibanaReplicas":        b.Shoot.GetReplicas(1),
+		"elasticsearch": map[string]interface{}{
+			"elasticsearchReplicas": b.Shoot.GetReplicas(1),
+		},
+		"kibanaReplicas": b.Shoot.GetReplicas(1),
 	}
 
 	elasticKibanaCurator, err := b.InjectImages(kibanaConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),

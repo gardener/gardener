@@ -14,7 +14,7 @@ spec:
     matchLabels:
       app: elasticsearch-logging
       role: logging
-  replicas: {{ .Values.elasticsearchReplicas }}
+  replicas: {{ .Values.elasticsearch.elasticsearchReplicas }}
   template:
     metadata:
       labels:
@@ -35,14 +35,12 @@ spec:
       - name: elasticsearch-logging
         image: {{ index .Values.images "elasticsearch-oss" }}
         imagePullPolicy: IfNotPresent
+        env:
+        - name: ES_JAVA_OPTS
+          value: "-Xms{{ include "jvm.memory" .Values.elasticsearch }} -Xmx{{ include "jvm.memory" .Values.elasticsearch }}"
         resources:
           # need more cpu upon initialization, therefore burstable class
-          limits:
-            cpu: 600m
-            memory: 1792Mi
-          requests:
-            cpu: 200m
-            memory: 1792Mi
+{{- include "util-templates.resource-quantity" .Values.elasticsearch | indent 10 }}
         ports:
         - containerPort: {{ .Values.global.elasticsearchPorts.db }}
           name: http
@@ -73,4 +71,4 @@ spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: {{ .Values.elasticsearchVolumeSizeGB }}Gi
+          storage: {{ .Values.elasticsearch.elasticsearchVolumeSizeGB }}Gi
