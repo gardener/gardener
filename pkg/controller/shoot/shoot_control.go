@@ -225,7 +225,7 @@ func scheduleNextSync(config componentconfig.ShootControllerConfiguration, error
 		creationTimeNano = objectMeta.CreationTimestamp.UnixNano()
 	)
 
-	if syncPeriodOverwrite, ok := objectMeta.Annotations[common.ShootSyncPeriod]; ok && respectSyncPeriodOverwrite {
+	if syncPeriodOverwrite, ok := objectMeta.Annotations[common.ShootSyncPeriod]; ok && (respectSyncPeriodOverwrite || objectMeta.Namespace == common.GardenNamespace) {
 		if syncPeriodDuration, err := time.ParseDuration(syncPeriodOverwrite); err == nil {
 			if syncPeriodDuration.Nanoseconds() == 0 {
 				return 0
