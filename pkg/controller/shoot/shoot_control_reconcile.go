@@ -158,15 +158,20 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
+		deployCloudControllerManager = g.Add(flow.Task{
 			Name:         "Deploying cloud controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudControllerManager).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, deployKubeAPIServer, deployCloudProviderConfig),
 		})
-		_ = g.Add(flow.Task{
+		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, deployKubeAPIServer, deployCloudProviderConfig, initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Syncing shoot access credentials to project namespace in Garden",
+			Fn:           flow.SimpleTaskFn(botanist.SyncShootCredentialsToGarden).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployCloudControllerManager, deployKubeControllerManager),
 		})
 		deployKubeAddonManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes addon manager",
