@@ -695,10 +695,6 @@ func (b *Botanist) DeploySecrets() error {
 		return err
 	}
 
-	if err := b.syncShootCredentialsToGarden(); err != nil {
-		return err
-	}
-
 	for name, secret := range b.Secrets {
 		b.CheckSums[name] = computeSecretCheckSum(secret.Data)
 	}
@@ -842,7 +838,9 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 	return nil
 }
 
-func (b *Botanist) syncShootCredentialsToGarden() error {
+// SyncShootCredentialsToGarden copies the kubeconfig generated for the user as well as the SSH keypair to
+// the project namespace in the Garden cluster.
+func (b *Botanist) SyncShootCredentialsToGarden() error {
 	for key, value := range map[string]string{"kubeconfig": "kubecfg", "ssh-keypair": "ssh-keypair"} {
 		secretObj := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
