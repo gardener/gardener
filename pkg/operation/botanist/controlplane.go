@@ -365,9 +365,11 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				secret = b.Secrets[key]
 				to     = string(secret.Data["to"])
 			)
-			if operatedBy, ok := b.Shoot.Info.Annotations[common.GardenOperatedBy]; ok && utils.TestEmail(operatedBy) {
-				to = operatedBy
+			to, ok := b.Shoot.Info.Annotations[common.GardenOperatedBy]
+			if !ok || !utils.TestEmail(to) {
+				continue
 			}
+
 			emailConfigs = append(emailConfigs, map[string]interface{}{
 				"to":            to,
 				"from":          string(secret.Data["from"]),
@@ -377,7 +379,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"auth_password": string(secret.Data["auth_password"]),
 			})
 		}
-		values["alertmanager"].(map[string]interface{})["email_configs"] = emailConfigs
+		values["alertmanager"].(map[string]interface{})["emailConfigs"] = emailConfigs
 	}
 
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values)
@@ -439,7 +441,17 @@ func (b *Botanist) DeploySeedLogging() error {
 		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 	)
 
-	var kibanaConfig = map[string]interface{}{
+	images, err := b.InjectImages(map[string]interface{}{}, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
+		common.ElasticsearchImageName,
+		common.CuratorImageName,
+		common.KibanaImageName,
+		common.AlpineImageName,
+	)
+	if err != nil {
+		return err
+	}
+
+	elasticKibanaCurator := map[string]interface{}{
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": basicAuth,
 			"host":            kibanaHost,
@@ -448,16 +460,7 @@ func (b *Botanist) DeploySeedLogging() error {
 			"elasticsearchReplicas": b.Shoot.GetReplicas(1),
 		},
 		"kibanaReplicas": b.Shoot.GetReplicas(1),
-	}
-
-	elasticKibanaCurator, err := b.InjectImages(kibanaConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
-		common.ElasticsearchImageName,
-		common.CuratorImageName,
-		common.KibanaImageName,
-		common.AlpineImageName,
-	)
-	if err != nil {
-		return err
+		"global":         images,
 	}
 
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)

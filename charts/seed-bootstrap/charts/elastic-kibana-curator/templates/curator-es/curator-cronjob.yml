@@ -23,7 +23,7 @@ spec:
             role: logging
         spec:
           containers:
-          - image: {{ index .Values.images "curator-es" }}
+          - image: {{ index .Values.global.images "curator-es" }}
             name: curator
             command: ["/bin/sh","-c"]
             args: ["extra-deleter --disk_threshold={{ include "curator.disk_threshold" .Values.curator }}; curator --config /etc/config/config.yml /etc/config/action_file.yml"]
@@ -68,7 +68,7 @@ spec:
             role: logging
         spec:
           containers:
-          - image: {{ index .Values.images "curator-es" }}
+          - image: {{ index .Values.global.images "curator-es" }}
             name: curator
             args:
             - --config

@@ -127,6 +127,46 @@ var _ = Describe("imagevector", func() {
 				Expect(image).To(Equal(imageSrc5.ToImage(k8s164)))
 			})
 		})
+
+		Describe("#FindImages", func() {
+			var (
+				k8s164 = "1.6.4"
+				k8s180 = "1.8.0"
+
+				imageSrc1 = &ImageSource{
+					Name:       "image1",
+					Repository: "repo1",
+					Tag:        "tag1",
+					Versions:   "",
+				}
+				imageSrc2 = &ImageSource{
+					Name:       "image2",
+					Repository: "repo2",
+					Tag:        "tag2",
+					Versions:   "",
+				}
+			)
+
+			It("should return an error because one or more images was not found", func() {
+				images, err := vector.FindImages([]string{"test"}, k8s164, k8s164)
+
+				Expect(err).To(HaveOccurred())
+				Expect(images).To(BeNil())
+			})
+
+			It("should return an image because it only exists once in the vector", func() {
+				vector = ImageVector{imageSrc1, imageSrc2}
+				expectMap := map[string]interface{}{
+					"image1": imageSrc1.ToImage("").String(),
+					"image2": imageSrc2.ToImage("").String(),
+				}
+
+				images, err := vector.FindImages([]string{imageSrc1.Name, imageSrc2.Name}, k8s164, k8s180)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(images).To(Equal(expectMap))
+			})
+		})
 	})
 
 	Describe("> Image", func() {

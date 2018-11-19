@@ -1,4 +1,9 @@
 global:
+  images:
+    alpine: image-repository:image-tag
+    curator-es: image-repository:image-tag
+    elasticsearch-oss: image-repository:image-tag
+    kibana-oss: image-repository:image-tag
   elasticsearchPorts:
     db: 9200
     transport: 9300
@@ -45,9 +50,3 @@ elasticsearch:
         perObject: 89
         weight: 5
         unit: Mi
-
-images:
-  elasticsearch-oss: image-repository:image-tag
-  curator-es: image-repository:image-tag
-  kibana-oss: image-repository:image-tag
-  alpine: image-repository:image-tag

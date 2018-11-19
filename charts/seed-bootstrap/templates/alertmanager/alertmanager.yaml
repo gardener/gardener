@@ -1,0 +1,136 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager-client
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: alertmanager
+    role: monitoring
+spec:
+  ports:
+  - port: 9093
+    name: metrics
+  type: ClusterIP
+  selector:
+    component: alertmanager
+    role: monitoring
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    component: alertmanager
+    role: monitoring
+spec:
+  ports:
+  - port: 9093
+    name: cluster
+  type: ClusterIP
+  # This is important! Without it the mech won't work.
+  clusterIP: None
+  selector:
+    component: alertmanager
+    role: monitoring
+---
+apiVersion: {{ include "statefulsetversion" . }}
+kind: StatefulSet
+metadata:
+  name: alertmanager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    garden.sapcloud.io/role: monitoring
+    component: alertmanager
+    role: monitoring
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      component: alertmanager
+      role: monitoring
+  serviceName: alertmanager
+  template:
+    metadata:
+      labels:
+        garden.sapcloud.io/role: monitoring
+        component: alertmanager
+        role: monitoring
+    spec:
+      containers:
+      - name: alertmanager
+        image: {{ index .Values.global.images "alertmanager" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - --config.file=/etc/alertmanager/config/alertmanager.yaml
+        - --web.listen-address=:9093
+        - --storage.path=/var/alertmanager/data
+        - --log.level=info
+        ports:
+        - containerPort: 9093
+          name: web
+          protocol: TCP
+        - containerPort: 6783
+          name: cluster
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /api/v1/status
+            port: web
+            scheme: HTTP
+          failureThreshold: 10
+        readinessProbe:
+          httpGet:
+            path: /api/v1/status
+            port: web
+            scheme: HTTP
+          periodSeconds: 5
+          timeoutSeconds: 3
+          initialDelaySeconds: 3
+          failureThreshold: 10
+        resources:
+          requests:
+            cpu: 5m
+            memory: 20Mi
+          limits:
+            cpu: 100m
+            memory: 60Mi
+        volumeMounts:
+        - mountPath: /etc/alertmanager/config
+          name: config
+          readOnly: true
+        - mountPath: /var/alertmanager/data
+          name: alertmanager-db
+          subPath: alertmanager-
+      - name: alertmanager-config-reloader
+        image: {{ index .Values.global.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:9093/-/reload
+        - -volume-dir=/etc/alertmanager/config
+        resources:
+          requests:
+            cpu: 5m
+            memory: 10Mi
+          limits:
+            cpu: 10m
+            memory: 20Mi
+        volumeMounts:
+        - mountPath: /etc/alertmanager/config
+          name: config
+          readOnly: true
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: config
+        secret:
+          secretName: alertmanager-config
+  volumeClaimTemplates:
+  - metadata:
+      name: alertmanager-db
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

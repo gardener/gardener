@@ -80,8 +80,9 @@ createNamespaceResource: false
 
 name: cert-manager
 
-images:
-  cert-manager: image-repository:image-tag
+global:
+  images:
+    cert-manager: image-repository:image-tag
 
 clusterissuer:
   name: issuer
