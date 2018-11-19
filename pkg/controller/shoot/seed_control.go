@@ -48,10 +48,9 @@ func (c *Controller) reconcileSeedKey(key string) error {
 	if err != nil {
 		return err
 	}
+	seedID := newID("", name)
 
 	seed, err := c.seedLister.Get(name)
-	seedID := newID("", seed.Name)
-
 	if apierrors.IsNotFound(err) {
 		logger.Logger.Debugf("[SHOOT SEED RECONCILE] %s - skipping because Seed has been deleted", key)
 		c.scheduler.UnmarkStatic(seedID)
