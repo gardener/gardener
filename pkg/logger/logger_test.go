@@ -91,5 +91,15 @@ var _ = Describe("logger", func() {
 				Expect(fieldLogger.Data).To(HaveKeyWithValue(key, value))
 			})
 		})
+
+		Describe("#AddWriter", func() {
+			It("should return a pointer to a Test Logger object ('info' level)", func() {
+				logger := AddWriter(NewLogger(""), GinkgoWriter)
+				Expect(logger.Out).To(Equal(GinkgoWriter))
+				Expect(logger.Level).To(Equal(logrus.InfoLevel))
+				Expect(Logger).To(Equal(logger))
+			})
+		})
+
 	})
 })

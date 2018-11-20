@@ -19,6 +19,7 @@ import (
 	"context"
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardenscheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
@@ -176,7 +177,7 @@ type Applier struct {
 // ApplierInterface is an interface which describes declarative operations to apply multiple
 // Kubernetes objects.
 type ApplierInterface interface {
-	ApplyManifest(ctx context.Context, data []byte) error
+	ApplyManifest(ctx context.Context, unstructured UnstructuredReader) error
 }
 
 // Interface is used to wrap the interactions with a Kubernetes cluster
@@ -291,7 +292,9 @@ type Interface interface {
 	ListPods(string, metav1.ListOptions) (*corev1.PodList, error)
 	// Deprecated: Use `Client()` and utils instead.
 	GetPodLogs(string, string, *corev1.PodLogOptions) (*bytes.Buffer, error)
+
 	// Deprecated: Use `Client()` and utils instead.
+	ForwardPodPort(string, string, int, int) (chan struct{}, error)
 	CheckForwardPodPort(string, string, int, int) (bool, error)
 	// Deprecated: Use `Client()` and utils instead.
 	DeletePod(string, string) error

@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
@@ -219,7 +220,20 @@ func (client *Client) DoActionWithSigner(request requests.AcsRequest, response r
 	}
 	var httpResponse *http.Response
 	for retryTimes := 0; retryTimes <= client.config.MaxRetryTime; retryTimes++ {
+		debug("> %s %s %s", httpRequest.Method, httpRequest.URL.RequestURI(), httpRequest.Proto)
+		debug("> Host: %s", httpRequest.Host)
+		for key, value := range httpRequest.Header {
+			debug("> %s: %v", key, strings.Join(value, ""))
+		}
+		debug(">")
 		httpResponse, err = hookDo(client.httpClient.Do)(httpRequest)
+		if err == nil {
+			debug("< %s %s", httpResponse.Proto, httpResponse.Status)
+			for key, value := range httpResponse.Header {
+				debug("< %s: %v", key, strings.Join(value, ""))
+			}
+		}
+		debug("<")
 		// receive error
 		if err != nil {
 			if !client.config.AutoRetry {
@@ -260,7 +274,6 @@ func buildHttpRequest(request requests.AcsRequest, singer auth.Signer, regionId 
 	}
 	requestMethod := request.GetMethod()
 	requestUrl := request.BuildUrl()
-	debug("request URL: %s", requestUrl)
 	body := request.GetBodyReader()
 	httpRequest, err = http.NewRequest(requestMethod, requestUrl, body)
 	if err != nil {

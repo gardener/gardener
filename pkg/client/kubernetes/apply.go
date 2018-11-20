@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -147,28 +146,75 @@ func (c *Applier) mergeObjects(newObj *unstructured.Unstructured, oldObj *unstru
 // ApplyManifest is a function which does the same like `kubectl apply -f <file>`. It takes a bunch of manifests <m>,
 // all concatenated in a byte slice, and sends them one after the other to the API server. If a resource
 // already exists at the API server, it will update it. It returns an error as soon as the first error occurs.
-func (c *Applier) ApplyManifest(ctx context.Context, m []byte) error {
-	var (
-		decoder = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(m), 1024)
-		data    map[string]interface{}
-		err     error
-	)
-
-	for err = decoder.Decode(&data); err == nil; err = decoder.Decode(&data) {
-		if data == nil {
+func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader) error {
+	for obj, err := r.Read(); err == nil; obj, err = r.Read() {
+		if obj == nil {
 			continue
 		}
-
-		obj := &unstructured.Unstructured{Object: data}
-		data = nil
-
 		if err := c.applyObject(ctx, obj); err != nil {
 			return err
 		}
 		obj = nil
 	}
-	if err != io.EOF {
-		return err
-	}
 	return nil
+}
+
+// UnstructuredReader an interface that all manifest readers should implement
+type UnstructuredReader interface {
+	Read() (*unstructured.Unstructured, error)
+}
+
+// NewManifestReader initializes a reader for yaml manifests
+func NewManifestReader(manifest []byte) UnstructuredReader {
+	return &manifestReader{
+		decoder: yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 1024),
+	}
+}
+
+// manifestReader is an unstructured reader that contains a JSONDecoder
+type manifestReader struct {
+	decoder *yaml.YAMLOrJSONDecoder
+}
+
+// Read decodes yaml data into an unstructured object
+func (m *manifestReader) Read() (*unstructured.Unstructured, error) {
+	var (
+		data map[string]interface{}
+		err  error
+	)
+
+	// loop for skipping empty yaml objects
+	for err = m.decoder.Decode(&data); err == nil; err = m.decoder.Decode(&data) {
+		if data == nil {
+			continue
+		}
+		return &unstructured.Unstructured{Object: data}, nil
+	}
+	return nil, err
+}
+
+// NewNamespaceSettingReader initializes a reader for yaml manifests with support for setting the namespace
+func NewNamespaceSettingReader(mReader UnstructuredReader, namespace string) UnstructuredReader {
+	return &namespaceSettingReader{
+		reader:    mReader,
+		namespace: namespace,
+	}
+}
+
+// namespaceSettingReader is an unstructured reader that contains a JSONDecoder and a manifest reader (or other reader types)
+type namespaceSettingReader struct {
+	reader    UnstructuredReader
+	namespace string
+}
+
+// Read decodes yaml data into an unstructured object
+func (n *namespaceSettingReader) Read() (*unstructured.Unstructured, error) {
+	readObj, err := n.reader.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	readObj.SetNamespace(n.namespace)
+
+	return readObj, nil
 }

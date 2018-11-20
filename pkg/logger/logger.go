@@ -16,6 +16,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/sirupsen/logrus"
@@ -51,6 +52,12 @@ func NewLogger(logLevel string) *logrus.Logger {
 		},
 	}
 	Logger = logger
+	return logger
+}
+
+// AddWriter returns a logger that uses the tests writer (e.g., GingkoWriter) as output channel
+func AddWriter(logger *logrus.Logger, writer io.Writer) *logrus.Logger {
+	logger.Out = writer
 	return logger
 }
 
