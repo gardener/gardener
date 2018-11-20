@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
@@ -501,11 +502,11 @@ func (b *Botanist) DeployCertBroker() error {
 
 	var dns []interface{}
 	for _, route53Provider := range certificateManagementConfig.Providers.Route53 {
-		route53values := createDNSProviderValues(&route53Provider)
+		route53values := createDNSProviderValuesForDomain(&route53Provider, *b.Shoot.Info.Spec.DNS.Domain)
 		dns = append(dns, route53values...)
 	}
 	for _, cloudDNSProvider := range certificateManagementConfig.Providers.CloudDNS {
-		cloudDNSValues := createDNSProviderValues(&cloudDNSProvider)
+		cloudDNSValues := createDNSProviderValuesForDomain(&cloudDNSProvider, *b.Shoot.Info.Spec.DNS.Domain)
 		dns = append(dns, cloudDNSValues...)
 	}
 
@@ -532,13 +533,15 @@ func (b *Botanist) DeployCertBroker() error {
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cert-broker"), "cert-broker", b.Shoot.SeedNamespace, nil, certBroker)
 }
 
-func createDNSProviderValues(config certmanagement.DNSProviderConfig) []interface{} {
+func createDNSProviderValuesForDomain(config certmanagement.DNSProviderConfig, shootDomain string) []interface{} {
 	var dnsConfig []interface{}
 	for _, domain := range config.DomainNames() {
-		dnsConfig = append(dnsConfig, map[string]interface{}{
-			"domain":   domain,
-			"provider": config.ProviderName(),
-		})
+		if strings.HasSuffix(shootDomain, domain) {
+			dnsConfig = append(dnsConfig, map[string]interface{}{
+				"domain":   shootDomain,
+				"provider": config.ProviderName(),
+			})
+		}
 	}
 	return dnsConfig
 }
