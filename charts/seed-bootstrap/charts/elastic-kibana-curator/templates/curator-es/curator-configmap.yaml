@@ -114,7 +114,12 @@ data:
               refresh_interval: 60s
               translog:
                 durability: async
+                sync_interval: 10s
               number_of_replicas: 0
+              # the below two will cause an use of a lot of file handles
+              # but will increase the indexing speed
+              compound_on_flush: False
+              compound_format: False
           ignore_unavailable: False
           preserve_existing: False
           continue_if_exception: True
