@@ -20,7 +20,8 @@ kibanaReplicas: 1
 
 curator:
   objectCount: 1
-  base_disk_threshold: 1073741824
+  # set curator threshold to 1GB
+  baseDiskThreshold: 1073741824
 
 elasticsearch:
   elasticsearchReplicas: 1
@@ -46,7 +47,7 @@ elasticsearch:
         weight: 5
         unit: m
       memory:
-        base: 1900
+        base: 2100
         perObject: 89
         weight: 5
         unit: Mi

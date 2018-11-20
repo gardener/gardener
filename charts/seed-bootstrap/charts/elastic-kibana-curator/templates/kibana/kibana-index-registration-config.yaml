@@ -10,38 +10,65 @@ data:
   register: |-
     #/bin/sh
 
-    until curl -sS http://127.0.0.1:{{ .Values.kibanaPort }}/ > /dev/null; do
-      echo Waiting for Kibana...;
-      sleep 2;
+    KIBANA_HOST=http://127.0.0.1:{{ .Values.kibanaPort }}
+
+    until curl -sS $KIBANA_HOST/ > /dev/null; do
+      echo "Waiting for Kibana..."
+      sleep 2
     done;
 
-    function register {
+    function create_index_pattern {
       while true
       do
-          RESULT=$(curl -sS -X$1 -H "Content-Type: application/json" -H "kbn-xsrf: anything" \
-            'http://127.0.0.1:{{ .Values.kibanaPort }}/api/saved_objects/index-pattern/logstash-*' \
-            -d'{"attributes":{"title":"logstash-*","timeFieldName":"@timestamp"}}')
+          # store the whole response with the status at the end
+          HTTP_RESPONSE=$(curl --silent \
+            -H "Content-Type: application/json" \
+            -H "kbn-xsrf: true" \
+            --write-out "HTTPSTATUS:%{http_code}" \
+            -X POST $KIBANA_HOST/api/saved_objects/index-pattern/logstash-*?overwrite=true \
+            -d '{"attributes": {"title": "logstash-*", "timeFieldName": "@timestamp"}}')
 
-          echo ${RESULT}
-          echo -e "\n"
+          HTTP_STATUS=$(echo $HTTP_RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+          HTTP_BODY=$(echo $HTTP_RESPONSE | sed -e 's/HTTPSTATUS\:.*//g')
 
-          if echo ${RESULT} | grep -v -q '"error"'
-          then
+          echo -e "Response status code: ${HTTP_STATUS}"
+          echo -e "Response body: ${HTTP_BODY}"
+
+          if [ $HTTP_STATUS -eq 200 ]; then
+              echo "Successfully created index pattern logstash-*."
+
               break
           fi
-          echo Still waiting for Kibana...
+
+          echo "Still waiting for Kibana..."
           sleep 2
       done
     }
 
-    # curl doesn't care about HTTP status codes.
-    echo "Trying to create the index pattern."
-    register POST
+    function set_index_pattern_as_default {
+      # store the whole response with the status at the end
+      HTTP_RESPONSE=$(curl --silent \
+        -H "Content-Type: application/json" \
+        -H "kbn-xsrf: true" \
+        --write-out "HTTPSTATUS:%{http_code}" \
+        -X POST $KIBANA_HOST/api/kibana/settings/defaultIndex \
+        -d '{"value": "logstash-*"}')
 
-    echo Trying to update the index pattern.
-    register PUT
+        HTTP_STATUS=$(echo $HTTP_RESPONSE | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
 
-    echo Registred index.
-    echo Sleeping...
+        if [ $HTTP_STATUS -eq 200 ]; then
+          echo "Successfully set logstash-* as default index pattern."
+        else
+          echo "Setting logstash-* as default index pattern failed with ${HTTP_STATUS}."
+        fi
+    }
+
+    echo "Trying to create the logstash index pattern."
+    create_index_pattern
+
+    echo "Trying to set the newly created index pattern as default."
+    set_index_pattern_as_default
+
+    echo "Sleeping..."
     # Sleep forever
     while sleep 3600; do :; done

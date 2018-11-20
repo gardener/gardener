@@ -322,7 +322,8 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 			},
 			"kibanaReplicas": replicas,
 			"curator": map[string]interface{}{
-				"objectCount": nodeCount,
+				"objectCount":       nodeCount,
+				"baseDiskThreshold": 2 * 1073741824,
 			},
 			"elasticsearch": map[string]interface{}{
 				"elasticsearchReplicas":     replicas,

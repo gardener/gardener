@@ -38,6 +38,24 @@ spec:
         env:
         - name: ES_JAVA_OPTS
           value: "-Xms{{ include "jvm.memory" .Values.elasticsearch }} -Xmx{{ include "jvm.memory" .Values.elasticsearch }}"
+        - name: CLUSTER_NAME
+          value: {{ .Release.Namespace }}-elasticsearch-logging
+        - name: WRITE_QUEUE_SIZE
+          value: "500"
+        - name: INDEX_BUFFER_SIZE
+          value: "512MB"
+        - name: ALLOW_DISK_ALLOCATION
+          value: "true"
+        - name: DISK_WATERMARK_HIGHT
+          value: "200MB"
+        - name: DISK_WATERMARK_LOW
+          value: "500MB"
+        - name: DISK_WATERMARK_FLOOD_STAGE
+          value: "200MB"
+        - name: PROCESSORS
+          valueFrom:
+            resourceFieldRef:
+              resource: limits.cpu
         resources:
           # need more cpu upon initialization, therefore burstable class
 {{- include "util-templates.resource-quantity" .Values.elasticsearch | indent 10 }}
