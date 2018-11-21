@@ -35,7 +35,7 @@
 --image-gc-high-threshold=50 \
 --image-gc-low-threshold=40 \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
---kube-reserved=memory="1Gi" \
+--kube-reserved=cpu="80m",memory="1Gi" \
 --network-plugin=cni \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
 --read-only-port=0 \

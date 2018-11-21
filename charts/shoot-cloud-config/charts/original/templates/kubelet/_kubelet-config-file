@@ -64,6 +64,7 @@ imageGCLowThresholdPercent: 40
 kubeAPIBurst: 25
 kubeAPIQPS: 25
 kubeReserved:
+  cpu: 80m
   memory: 1Gi
 hairpinMode: promiscuous-bridge
 hostNetworkSources:
