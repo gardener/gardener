@@ -1200,11 +1200,14 @@ type Hibernation struct {
 
 // HibernationSchedule determines the hibernation schedule of a Shoot.
 // A Shoot will be regularly hibernated at each start time and will be woken up at each end time.
+// Start or End can be omitted, though at least one of each has to be specified.
 type HibernationSchedule struct {
 	// Start is a Cron spec at which time a Shoot will be hibernated.
-	Start string
+	// +optional
+	Start *string
 	// End is a Cron spec at which time a Shoot will be woken up.
-	End string
+	// +optional
+	End *string
 }
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.
