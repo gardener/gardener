@@ -92,6 +92,24 @@ resource "aws_security_group_rule" "nodes_self" {
   security_group_id = "${aws_security_group.nodes.id}"
 }
 
+resource "aws_security_group_rule" "nodes_tcp_all" {
+  type              = "ingress"
+  from_port         = 30000
+  to_port           = 32767
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = "${aws_security_group.nodes.id}"
+}
+
+resource "aws_security_group_rule" "nodes_udp_all" {
+  type              = "ingress"
+  from_port         = 30000
+  to_port           = 32767
+  protocol          = "udp"
+  cidr_blocks       = ["0.0.0.0/0"]
+  security_group_id = "${aws_security_group.nodes.id}"
+}
+
 resource "aws_security_group_rule" "nodes_ssh_bastion" {
   type                     = "ingress"
   from_port                = 22
