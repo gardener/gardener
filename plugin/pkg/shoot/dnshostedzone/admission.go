@@ -25,7 +25,6 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
-
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -142,8 +141,13 @@ func (d *DNSHostedZone) Admit(a admission.Attributes) error {
 		return nil
 	}
 
+	// Checks on Hosted Zone ID can only be done if the Shoot manifest has a domain.
+	if shoot.Spec.DNS.Domain == nil {
+		return apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")
+	}
+
 	// If the Shoot manifest specifies a Hosted Zone ID then we check whether it is an ID of a default domain.
-	// If not, we must ensure that the cloud provider secret provided by the user contain credentials for the
+	// If not, we must ensure that the cloud provider secret provided by the user contains credentials for the
 	// respective DNS provider.
 	if shoot.Spec.DNS.HostedZoneID != nil {
 		if err := verifyHostedZoneID(shoot, d.secretBindingLister, d.secretLister); err != nil {

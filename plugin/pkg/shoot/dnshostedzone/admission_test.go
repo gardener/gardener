@@ -22,14 +22,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("quotavalidator", func() {
@@ -125,6 +124,16 @@ var _ = Describe("quotavalidator", func() {
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should reject because no domain was configured for the shoot", func() {
+			shoot.Spec.DNS.Domain = nil
+			shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+			err := admissionHandler.Admit(attrs)
+
+			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")))
 		})
 
 		Context("hosted zone id has been specified", func() {
