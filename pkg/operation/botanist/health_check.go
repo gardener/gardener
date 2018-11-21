@@ -765,7 +765,7 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, apiserverAv
 	if err := initializeShootClients(); err != nil {
 		message := fmt.Sprintf("Could not initialize Shoot client for health check: %+v", err)
 		b.Logger.Error(message)
-		apiserverAvailability = helper.UpdatedConditionUnknownErrorMessage(apiserverAvailability, message)
+		apiserverAvailability = helper.UpdatedCondition(apiserverAvailability, corev1.ConditionFalse, "APIServerDown", "Could not reach API server during client initialization.")
 		nodes = helper.UpdatedConditionUnknownErrorMessage(nodes, message)
 		systemComponents = helper.UpdatedConditionUnknownErrorMessage(systemComponents, message)
 
