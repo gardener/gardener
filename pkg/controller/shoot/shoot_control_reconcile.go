@@ -37,8 +37,14 @@ import (
 // It receives a Garden object <garden> which stores the Shoot object and the operation type.
 func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType gardenv1beta1.ShootLastOperationType) *gardenv1beta1.LastError {
 	// We create the botanists (which will do the actual work).
-	botanist, err := botanistpkg.New(o)
-	if err != nil {
+	var botanist *botanistpkg.Botanist
+	if err := utils.Retry(10*time.Second, 10*time.Minute, func() (ok, severe bool, err error) {
+		botanist, err = botanistpkg.New(o)
+		if err != nil {
+			return false, false, err
+		}
+		return true, false, nil
+	}); err != nil {
 		return formatError("Failed to create a Botanist", err)
 	}
 	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
