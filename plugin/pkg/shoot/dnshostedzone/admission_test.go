@@ -15,6 +15,8 @@
 package dnshostedzone_test
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
@@ -43,6 +45,7 @@ var _ = Describe("quotavalidator", func() {
 			referencedSecretName    = "my-dns-secret"
 			secretBindingName       = "my-secret-binding"
 			namespace               = "my-namespace"
+			shootName               = "shoot"
 
 			cloudProviderSecret = corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -71,7 +74,7 @@ var _ = Describe("quotavalidator", func() {
 
 			shootBase = garden.Shoot{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shoot",
+					Name:      shootName,
 					Namespace: namespace,
 				},
 				Spec: garden.ShootSpec{
@@ -119,21 +122,69 @@ var _ = Describe("quotavalidator", func() {
 		})
 
 		It("should do nothing because the shoot specifies the 'unmanaged' dns provider", func() {
+			shootBefore := shoot.DeepCopy()
 			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
 			err := admissionHandler.Admit(attrs)
 
 			Expect(err).NotTo(HaveOccurred())
+			Expect(shoot).To(Equal(*shootBefore))
 		})
 
-		It("should reject because no domain was configured for the shoot", func() {
-			shoot.Spec.DNS.Domain = nil
-			shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
-			attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+		Context("domain has not been set", func() {
+			BeforeEach(func() {
+				shoot.Spec.DNS.Domain = nil
+				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+			})
 
-			err := admissionHandler.Admit(attrs)
+			It("shoud pass because a default domain was generated fot the shoot", func() {
+				projectName := "my-project"
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 
-			Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")))
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&garden.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: projectName,
+					},
+					Spec: garden.ProjectSpec{
+						Namespace: &namespace,
+					},
+				})
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
+				Expect(*shoot.Spec.DNS.HostedZoneID).To(Equal(hostedZoneID))
+			})
+
+			It("should reject because no domain was configured for the shoot and project is missing", func() {
+				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")))
+			})
+
+			It("should reject because no domain was configured for the shoot and default domain secret is missing", func() {
+				projectName := "my-project"
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&garden.Project{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: projectName,
+					},
+					Spec: garden.ProjectSpec{
+						Namespace: &namespace,
+					},
+				})
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(MatchError(apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")))
+			})
 		})
 
 		Context("hosted zone id has been specified", func() {

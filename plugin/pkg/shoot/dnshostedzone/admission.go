@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -54,6 +55,7 @@ type DNSHostedZone struct {
 	*admission.Handler
 	secretLister        kubecorev1listers.SecretLister
 	secretBindingLister gardenlisters.SecretBindingLister
+	projectLister       gardenlisters.ProjectLister
 	readyFunc           admission.ReadyFunc
 }
 
@@ -82,7 +84,12 @@ func (d *DNSHostedZone) SetInternalGardenInformerFactory(f gardeninformers.Share
 	secretBindingInformer := f.Garden().InternalVersion().SecretBindings()
 	d.secretBindingLister = secretBindingInformer.Lister()
 
-	readyFuncs = append(readyFuncs, secretBindingInformer.Informer().HasSynced)
+	projectInformer := f.Garden().InternalVersion().Projects()
+	d.projectLister = projectInformer.Lister()
+
+	readyFuncs = append(
+		readyFuncs, secretBindingInformer.Informer().HasSynced, projectInformer.Informer().HasSynced,
+	)
 }
 
 // SetKubeInformerFactory gets Lister from SharedInformerFactory.
@@ -141,6 +148,11 @@ func (d *DNSHostedZone) Admit(a admission.Attributes) error {
 		return nil
 	}
 
+	// Generate a Shoot domain if none is configured.
+	if shoot.Spec.DNS.Domain == nil {
+		assignDefaultDomain(shoot, d.projectLister, d.secretLister)
+	}
+
 	// Checks on Hosted Zone ID can only be done if the Shoot manifest has a domain.
 	if shoot.Spec.DNS.Domain == nil {
 		return apierrors.NewBadRequest("shoot domain field .spec.dns.domain must be set if provider != unmanaged")
@@ -163,6 +175,40 @@ func (d *DNSHostedZone) Admit(a admission.Attributes) error {
 	shoot.Spec.DNS.HostedZoneID = &hostedZoneID
 
 	return nil
+}
+
+// assignDefaultDomain generates a domain <Shoot_Name>.<Project_Name>.<Default_Domain>
+// and sets it in the Shoot manifest `spec.dns.domain` as well as the hostedZoneID.
+// If for any reason no domain can be generated, no domain is assigned to the Shoot.
+func assignDefaultDomain(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister, secretLister kubecorev1listers.SecretLister) {
+	secrets, err := getDefaultDomainSecrets(secretLister)
+	if err != nil {
+		return
+	}
+
+	project, err := admissionutils.GetProject(shoot, projectLister)
+	if err != nil {
+		return
+	}
+
+	var (
+		defaultDomain string
+		zoneID        string
+	)
+
+	for _, secret := range secrets {
+		if shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProvider]) {
+			defaultDomain = secret.Annotations[common.DNSDomain]
+			zoneID = secret.Annotations[common.DNSHostedZoneID]
+			break
+		}
+	}
+
+	if len(defaultDomain) > 0 && len(zoneID) > 0 && project != nil {
+		generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, defaultDomain)
+		shoot.Spec.DNS.Domain = &generatedDomain
+		shoot.Spec.DNS.HostedZoneID = &zoneID
+	}
 }
 
 // verifyHostedZoneID verifies that the cloud provider secret for the Shoot cluster contains credentials for the

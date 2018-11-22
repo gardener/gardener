@@ -151,19 +151,9 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
 	}
 
-	var project *garden.Project
-	projectList, err := v.projectLister.List(labels.Everything())
+	project, err := admissionutils.GetProject(shoot, v.projectLister)
 	if err != nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
-	}
-	for _, p := range projectList {
-		if p.Spec.Namespace != nil && *p.Spec.Namespace == shoot.Namespace {
-			project = p
-			break
-		}
-	}
-	if project == nil {
-		return apierrors.NewBadRequest("could not find referenced project")
 	}
 
 	switch a.GetOperation() {
