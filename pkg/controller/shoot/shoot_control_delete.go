@@ -47,8 +47,14 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 	}
 
 	// We create botanists (which will do the actual work).
-	botanist, err := botanistpkg.New(o)
-	if err != nil {
+	var botanist *botanistpkg.Botanist
+	if err := utils.Retry(10*time.Second, 10*time.Minute, func() (ok, severe bool, err error) {
+		botanist, err = botanistpkg.New(o)
+		if err != nil {
+			return false, false, err
+		}
+		return true, false, nil
+	}); err != nil {
 		return formatError("Failed to create a Botanist", err)
 	}
 
