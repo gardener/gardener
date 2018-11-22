@@ -17,6 +17,8 @@
 --cni-conf-dir=/etc/cni/net.d/ \
 --cadvisor-port=0 \
 --enable-debugging-handlers=true \
+--event-burst=25 \
+--event-qps=25 \
 --eviction-hard="memory.available<100Mi,nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
 --eviction-soft="memory.available<200Mi,nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
 --eviction-soft-grace-period="memory.available=1m30s,nodefs.available=1m30s,nodefs.inodesFree=1m30s,imagefs.available=1m30s,imagefs.inodesFree=1m30s" \
@@ -28,6 +30,8 @@
 {{- if semverCompare "< 1.11" .kubernetes.version }}
 --feature-gates=PodPriority=true \
 {{- end }}
+--kube-api-burst=25 \
+--kube-api-qps=25 \
 --image-gc-high-threshold=50 \
 --image-gc-low-threshold=40 \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
