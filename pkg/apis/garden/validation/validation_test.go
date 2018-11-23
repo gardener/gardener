@@ -16,8 +16,9 @@ package validation_test
 
 import (
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
@@ -1967,6 +1968,32 @@ var _ = Describe("validation", func() {
 				"Field": Equal("spec.networks.services"),
 			}))
 		})
+
+		It("should forbid Seed with overlapping networks", func() {
+			// Pods CIDR overlaps with Nodes network
+			// Services CIDR overlaps with Nodes and Pods
+			seed.Spec.Networks = garden.SeedNetworks{
+				Nodes:    garden.CIDR("10.0.0.0/8"),   // 10.0.0.0 -> 10.255.255.255
+				Pods:     garden.CIDR("10.0.1.0/24"),  // 10.0.1.0 -> 10.0.1.255
+				Services: garden.CIDR("10.0.1.64/26"), // 10.0.1.64 -> 10.0.1.127
+			}
+
+			errorList := ValidateSeed(seed)
+
+			assertErrorList(errorList, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.pods"),
+				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("10.0.0.0/8")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.services"),
+				"Detail": Equal(`must not be a subset of "spec.networks.nodes" ("10.0.0.0/8")`),
+			}, Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks.services"),
+				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("10.0.1.0/24")`),
+			})
+		})
 	})
 
 	Describe("#ValidateQuota", func() {
@@ -2265,11 +2292,11 @@ var _ = Describe("validation", func() {
 			hostedZoneID = "ABCDEF1234"
 			domain       = "my-cluster.example.com"
 
-			nodeCIDR    = garden.CIDR("10.250.0.0/16")
-			podCIDR     = garden.CIDR("100.96.0.0/11")
-			serviceCIDR = garden.CIDR("100.64.0.0/13")
-			invalidCIDR = garden.CIDR("invalid-cidr")
-
+			nodeCIDR      = garden.CIDR("10.250.0.0/16")
+			podCIDR       = garden.CIDR("100.96.0.0/11")
+			serviceCIDR   = garden.CIDR("100.64.0.0/13")
+			invalidCIDR   = garden.CIDR("invalid-cidr")
+			vpcCIDR       = garden.CIDR("10.0.0.0/8")
 			invalidBackup = &garden.Backup{
 				Schedule: "76 * * * *",
 				Maximum:  0,
@@ -2385,9 +2412,9 @@ var _ = Describe("validation", func() {
 						AWS: &garden.AWSCloud{
 							Networks: garden.AWSNetworks{
 								K8SNetworks: k8sNetworks,
-								Internal:    []garden.CIDR{"10.250.0.0/16"},
-								Public:      []garden.CIDR{"10.250.0.0/16"},
-								Workers:     []garden.CIDR{"10.250.0.0/16"},
+								Internal:    []garden.CIDR{"10.250.1.0/24"},
+								Public:      []garden.CIDR{"10.250.2.0/24"},
+								Workers:     []garden.CIDR{"10.250.3.0/24"},
 								VPC: garden.AWSVPC{
 									CIDR: &nodeCIDR,
 								},
@@ -2463,7 +2490,7 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(1))
+			Expect(errorList).To(HaveLen(1))
 			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("metadata.name"),
@@ -2606,11 +2633,11 @@ var _ = Describe("validation", func() {
 				awsCloud = &garden.AWSCloud{
 					Networks: garden.AWSNetworks{
 						K8SNetworks: k8sNetworks,
-						Internal:    []garden.CIDR{"10.250.0.0/16"},
-						Public:      []garden.CIDR{"10.250.0.0/16"},
-						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						Internal:    []garden.CIDR{"10.250.1.0/24"},
+						Public:      []garden.CIDR{"10.250.2.0/24"},
+						Workers:     []garden.CIDR{"10.250.3.0/24"},
 						VPC: garden.AWSVPC{
-							CIDR: &nodeCIDR,
+							CIDR: &vpcCIDR,
 						},
 					},
 					Workers: []garden.AWSWorker{
@@ -2628,7 +2655,7 @@ var _ = Describe("validation", func() {
 			It("should not return any errors", func() {
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 
 			It("should forbid invalid backup configuration", func() {
@@ -2647,100 +2674,195 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid invalid network configuration", func() {
-				shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"one cidr", "another cidr"}
-				shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"invalid-cidr", "another cidr"}
-				shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
-				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = invalidK8sNetworks
-				shoot.Spec.Cloud.AWS.Networks.VPC = garden.AWSVPC{}
+			Context("CIDR", func() {
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid VPC CIDRs", func() {
+					shoot.Spec.Cloud.AWS.Networks.VPC.CIDR = &invalidCIDR
 
-				Expect(len(errorList)).To(Equal(13))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.internal", fldPath)),
-				}))
-				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.internal[0]", fldPath)),
-				}))
-				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.internal[1]", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public", fldPath)),
-				}))
-				Expect(*errorList[7]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public[0]", fldPath)),
-				}))
-				Expect(*errorList[8]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.public[1]", fldPath)),
-				}))
-				Expect(*errorList[9]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
-				}))
-				Expect(*errorList[10]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
-				}))
-				Expect(*errorList[11]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
-				}))
-				Expect(*errorList[12]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid non-specified k8s networks", func() {
-				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{}
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.vpc.cidr"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid internal CIDR", func() {
+					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{invalidCIDR}
 
-				Expect(len(errorList)).To(Equal(3))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid invalid VPC CIDRs", func() {
-				shoot.Spec.Cloud.AWS.Networks.VPC.CIDR = &invalidCIDR
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.internal[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid public CIDR", func() {
+					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{invalidCIDR}
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.cidr", fldPath)),
-				}))
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.public[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
+
+				It("should forbid invalid workers CIDR", func() {
+					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{invalidCIDR}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.workers[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
+
+				It("should forbid internal CIDR which is not in VPC CIDR", func() {
+					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"1.1.1.1/32"}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.internal[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.aws.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid public CIDR which is not in VPC CIDR", func() {
+					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"1.1.1.1/32"}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.public[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.aws.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid workers CIDR which are not in VPC and Nodes CIDR", func() {
+					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{garden.CIDR("1.1.1.1/32")}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.aws.networks.nodes" ("10.250.0.0/16")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.aws.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Pod CIDR to overlap with VPC CIDR", func() {
+					podCIDR := garden.CIDR("10.0.0.1/32")
+					shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods = &podCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.pods"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Services CIDR to overlap with VPC CIDR", func() {
+					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services = &servicesCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.services"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid VPC CIDRs to overlap with other VPC CIDRs", func() {
+					overlappingCIDR := garden.CIDR("10.250.0.1/32")
+					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Nodes = &overlappingCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.public[0]"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.internal[0]" ("10.250.0.1/32")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.workers[0]"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.internal[0]" ("10.250.0.1/32")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.internal[0]"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.public[0]" ("10.250.0.1/32")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.workers[0]"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.public[0]" ("10.250.0.1/32")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.internal[0]"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.workers[0]" ("10.250.0.1/32")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.public[0]"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.aws.networks.workers[0]" ("10.250.0.1/32")`),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.aws.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.aws.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.aws.networks.services"),
+					})
+				})
+
+				It("should invalid k8s networks", func() {
+					shoot.Spec.Cloud.AWS.Networks.K8SNetworks = invalidK8sNetworks
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.nodes"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.pods"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.aws.networks.services"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
+
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -2969,9 +3091,9 @@ var _ = Describe("validation", func() {
 				azureCloud = &garden.AzureCloud{
 					Networks: garden.AzureNetworks{
 						K8SNetworks: k8sNetworks,
-						Workers:     garden.CIDR("10.250.0.0/16"),
+						Workers:     garden.CIDR("10.250.3.0/24"),
 						VNet: garden.AzureVNet{
-							CIDR: &nodeCIDR,
+							CIDR: &vpcCIDR,
 						},
 					},
 					Workers: []garden.AzureWorker{
@@ -3034,66 +3156,129 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid invalid network configuration", func() {
-				shoot.Spec.Cloud.Azure.Networks.Workers = invalidCIDR
-				shoot.Spec.Cloud.Azure.Networks.K8SNetworks = invalidK8sNetworks
-				shoot.Spec.Cloud.Azure.Networks.VNet = garden.AzureVNet{}
+			Context("CIDR", func() {
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid VNet CIDRs", func() {
+					shoot.Spec.Cloud.Azure.Networks.VNet.CIDR = &invalidCIDR
 
-				Expect(len(errorList)).To(Equal(5))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid non-specified k8s networks", func() {
-				shoot.Spec.Cloud.Azure.Networks.K8SNetworks = garden.K8SNetworks{}
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.vnet.cidr"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid workers CIDR", func() {
+					shoot.Spec.Cloud.Azure.Networks.Workers = invalidCIDR
 
-				Expect(len(errorList)).To(Equal(3))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid invalid VNet CIDRs", func() {
-				shoot.Spec.Cloud.Azure.Networks.VNet.CIDR = &invalidCIDR
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.workers"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid workers which are not in VNet anmd Nodes CIDR", func() {
+					notOverlappingCIDR := garden.CIDR("1.1.1.1/32")
+					// shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes = &notOverlappingCIDR
+					shoot.Spec.Cloud.Azure.Networks.Workers = notOverlappingCIDR
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vnet.cidr", fldPath)),
-				}))
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.workers"),
+						"Detail": Equal(`must be a subset of "spec.cloud.azure.networks.nodes" ("10.250.0.0/16")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.workers"),
+						"Detail": Equal(`must be a subset of "spec.cloud.azure.networks.vnet.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Pod CIDR to overlap with VNet CIDR", func() {
+					podCIDR := garden.CIDR("10.0.0.1/32")
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods = &podCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.pods"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.azure.networks.vnet.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Services CIDR to overlap with VNet CIDR", func() {
+					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services = &servicesCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.services"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.azure.networks.vnet.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.azure.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.azure.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.azure.networks.services"),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.azure.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.azure.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.azure.networks.services"),
+					})
+				})
+
+				It("should invalid k8s networks", func() {
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = invalidK8sNetworks
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.nodes"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.pods"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.azure.networks.services"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -3355,66 +3540,71 @@ var _ = Describe("validation", func() {
 
 			It("should not return any errors", func() {
 				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(BeEmpty())
 			})
 
-			It("should forbid invalid network configuration", func() {
-				shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
-				shoot.Spec.Cloud.GCP.Networks.K8SNetworks = invalidK8sNetworks
-				shoot.Spec.Cloud.GCP.Networks.VPC = &garden.GCPVPC{}
+			Context("CIDR", func() {
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid workers CIDR", func() {
+					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{invalidCIDR}
 
-				Expect(len(errorList)).To(Equal(7))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
-				}))
-				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
-				}))
-				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.name", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid non-specified k8s networks", func() {
-				shoot.Spec.Cloud.GCP.Networks.K8SNetworks = garden.K8SNetworks{}
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.workers[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
+					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
 
-				Expect(len(errorList)).To(Equal(3))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.gcp.networks.nodes" ("10.250.0.0/16")`),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.GCP.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.gcp.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.gcp.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.gcp.networks.services"),
+					})
+				})
+
+				It("should invalid k8s networks", func() {
+					shoot.Spec.Cloud.GCP.Networks.K8SNetworks = invalidK8sNetworks
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.nodes"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.pods"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.services"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -3644,9 +3834,9 @@ var _ = Describe("validation", func() {
 					Networks: garden.AlicloudNetworks{
 						K8SNetworks: k8sNetworks,
 						VPC: garden.AlicloudVPC{
-							CIDR: &nodeCIDR,
+							CIDR: &vpcCIDR,
 						},
-						Workers: []garden.CIDR{"10.250.0.0/17"},
+						Workers: []garden.CIDR{"10.250.3.0/24"},
 					},
 					Workers: []garden.AlicloudWorker{
 						{
@@ -3668,74 +3858,145 @@ var _ = Describe("validation", func() {
 				Expect(len(errorList)).To(Equal(0))
 			})
 
-			It("should forbid invalid network configuration", func() {
-				shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
-				shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = invalidK8sNetworks
-				shoot.Spec.Cloud.Alicloud.Networks.VPC = garden.AlicloudVPC{}
+			Context("CIDR", func() {
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid VPC CIDRs", func() {
+					shoot.Spec.Cloud.Alicloud.Networks.VPC.CIDR = &invalidCIDR
 
-				Expect(len(errorList)).To(Equal(7))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
-				}))
-				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
-				}))
-				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid non-specified k8s networks", func() {
-				shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = garden.K8SNetworks{}
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.vpc.cidr"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid workers CIDR", func() {
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{invalidCIDR}
 
-				Expect(len(errorList)).To(Equal(3))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid invalid VPC CIDRs", func() {
-				shoot.Spec.Cloud.Alicloud.Networks.VPC.CIDR = &invalidCIDR
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.workers[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.vpc.cidr", fldPath)),
-				}))
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.alicloud.networks.nodes" ("10.250.0.0/16")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.alicloud.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Node which are not in VPC CIDR", func() {
+					notOverlappingCIDR := garden.CIDR("1.1.1.1/32")
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Nodes = &notOverlappingCIDR
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{notOverlappingCIDR}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.nodes"),
+						"Detail": Equal(`must be a subset of "spec.cloud.alicloud.networks.vpc.cidr" ("10.0.0.0/8")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.alicloud.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Pod CIDR to overlap with VPC CIDR", func() {
+					podCIDR := garden.CIDR("10.0.0.1/32")
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Pods = &podCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.pods"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.alicloud.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid Services CIDR to overlap with VPC CIDR", func() {
+					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Services = &servicesCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.services"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.alicloud.networks.vpc.cidr" ("10.0.0.0/8")`),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.alicloud.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.alicloud.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.alicloud.networks.services"),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.alicloud.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.alicloud.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.alicloud.networks.services"),
+					})
+				})
+
+				It("should invalid k8s networks", func() {
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = invalidK8sNetworks
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.nodes"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.pods"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.alicloud.networks.services"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -4013,62 +4274,85 @@ var _ = Describe("validation", func() {
 				}))
 			})
 
-			It("should forbid invalid network configuration", func() {
-				shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"invalid-cidr", "another cidr"}
-				shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = invalidK8sNetworks
-				shoot.Spec.Cloud.OpenStack.Networks.Router = &garden.OpenStackRouter{}
+			Context("CIDR", func() {
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid invalid workers CIDR", func() {
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{invalidCIDR}
 
-				Expect(len(errorList)).To(Equal(7))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
-				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers", fldPath)),
-				}))
-				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[0]", fldPath)),
-				}))
-				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.workers[1]", fldPath)),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.router.id", fldPath)),
-				}))
-			})
+					errorList := ValidateShoot(shoot)
 
-			It("should forbid non-specified k8s networks", func() {
-				shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = garden.K8SNetworks{}
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.openstack.networks.workers[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 
-				errorList := ValidateShoot(shoot)
+				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
 
-				Expect(len(errorList)).To(Equal(3))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.nodes", fldPath)),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.pods", fldPath)),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks.services", fldPath)),
-				}))
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.openstack.networks.workers[0]"),
+						"Detail": Equal(`must be a subset of "spec.cloud.openstack.networks.nodes" ("10.250.0.0/16")`),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.openstack.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.openstack.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.openstack.networks.services"),
+					})
+				})
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.openstack.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.openstack.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.openstack.networks.services"),
+					})
+				})
+
+				It("should invalid k8s networks", func() {
+					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = invalidK8sNetworks
+
+					errorList := ValidateShoot(shoot)
+
+					assertErrorList(errorList, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.openstack.networks.nodes"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.openstack.networks.pods"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.openstack.networks.services"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					})
+				})
 			})
 
 			It("should forbid an empty worker list", func() {
@@ -4977,4 +5261,11 @@ func prepareProjectForUpdate(project *garden.Project) *garden.Project {
 	p := project.DeepCopy()
 	p.ResourceVersion = "1"
 	return p
+}
+
+func assertErrorList(ee field.ErrorList, ff ...Fields) {
+	ExpectWithOffset(1, ee).To(HaveLen(len(ff)))
+	for i, f := range ff {
+		ExpectWithOffset(1, *ee[i]).To(MatchFields(IgnoreExtras, f))
+	}
 }
