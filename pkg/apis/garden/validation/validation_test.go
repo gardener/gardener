@@ -2166,23 +2166,24 @@ var _ = Describe("validation", func() {
 			func(schedules []garden.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
 				Expect(ValidateHibernationSchedules(schedules, nil)).To(matcher)
 			},
-			Entry("valid schedules", []garden.HibernationSchedule{{Start: "1 * * * *", End: "2 * * * *"}}, BeEmpty()),
+			Entry("valid schedules", []garden.HibernationSchedule{{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *")}}, BeEmpty()),
 			Entry("nil schedules", nil, BeEmpty()),
 			Entry("duplicate start and end value in same schedule",
-				[]garden.HibernationSchedule{{Start: "* * * * *", End: "* * * * *"}},
+				[]garden.HibernationSchedule{{Start: makeStringPointer("* * * * *"), End: makeStringPointer("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("duplicate start and end value in different schedules",
-				[]garden.HibernationSchedule{{Start: "1 * * * *", End: "2 * * * *"}, {Start: "1 * * * *", End: "3 * * * *"}},
+				[]garden.HibernationSchedule{{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *")}, {Start: makeStringPointer("1 * * * *"), End: makeStringPointer("3 * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeDuplicate),
 				})))),
 			Entry("invalid schedule",
-				[]garden.HibernationSchedule{{Start: "foo", End: "* * * * *"}},
+				[]garden.HibernationSchedule{{Start: makeStringPointer("foo"), End: makeStringPointer("* * * * *")}},
 				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type": Equal(field.ErrorTypeInvalid),
-				})))))
+				})))),
+		)
 	})
 
 	Describe("#ValidateHibernationCronSpec", func() {
@@ -2224,20 +2225,26 @@ var _ = Describe("validation", func() {
 				Expect(errList).To(matcher)
 			},
 
-			Entry("valid schedule", sets.NewString(), &garden.HibernationSchedule{Start: "1 * * * *", End: "2 * * * *"}, BeEmpty()),
-			Entry("invalid start value", sets.NewString(), &garden.HibernationSchedule{Start: "", End: "* * * * *"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("valid schedule", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *")}, BeEmpty()),
+			Entry("invalid start value", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer(""), End: makeStringPointer("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("start").String()),
 			})))),
-			Entry("invalid end value", sets.NewString(), &garden.HibernationSchedule{Start: "* * * * *", End: ""}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("invalid end value", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("* * * * *"), End: makeStringPointer("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("equal start and end value", sets.NewString(), &garden.HibernationSchedule{Start: "* * * * *", End: "* * * * *"}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+			Entry("equal start and end value", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("* * * * *"), End: makeStringPointer("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
 				"Field": Equal(field.NewPath("end").String()),
 			})))),
-			Entry("invalid start and end value", sets.NewString(), &garden.HibernationSchedule{Start: "", End: ""},
+			Entry("nil start", sets.NewString(), &garden.HibernationSchedule{End: makeStringPointer("* * * * *")}, BeEmpty()),
+			Entry("nil end", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("* * * * *")}, BeEmpty()),
+			Entry("start and end nil", sets.NewString(), &garden.HibernationSchedule{},
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(field.ErrorTypeRequired),
+				})))),
+			Entry("invalid start and end value", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer(""), End: makeStringPointer("")},
 				ConsistOf(
 					PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeInvalid),

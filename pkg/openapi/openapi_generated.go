@@ -2873,7 +2873,7 @@ func schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref common.ReferenceCall
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "HibernationSchedule determines the hibernation schedule of a Shoot. A Shoot will be regularly hibernated at each start time and will be woken up at each end time.",
+				Description: "HibernationSchedule determines the hibernation schedule of a Shoot. A Shoot will be regularly hibernated at each start time and will be woken up at each end time. Start or End can be omitted, though at least one of each has to be specified.",
 				Properties: map[string]spec.Schema{
 					"start": {
 						SchemaProps: spec.SchemaProps{
@@ -2890,7 +2890,6 @@ func schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref common.ReferenceCall
 						},
 					},
 				},
-				Required: []string{"start", "end"},
 			},
 		},
 		Dependencies: []string{},

@@ -158,18 +158,24 @@ func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key st
 
 	cr := cron.NewWithLocation(time.UTC)
 	for _, schedule := range schedules {
-		start, err := cron.ParseStandard(schedule.Start)
-		if err != nil {
-			return err
-		}
-		cr.Schedule(start, c.shootHibernationJob(logger, client, shoot, true))
+		if schedule.Start != nil {
+			start, err := cron.ParseStandard(*schedule.Start)
+			if err != nil {
+				return err
+			}
 
-		end, err := cron.ParseStandard(schedule.End)
-		if err != nil {
-			return err
+			cr.Schedule(start, c.shootHibernationJob(logger, client, shoot, true))
 		}
 
-		cr.Schedule(end, c.shootHibernationJob(logger, client, shoot, false))
+		if schedule.End != nil {
+			end, err := cron.ParseStandard(*schedule.End)
+			if err != nil {
+				return err
+			}
+
+			cr.Schedule(end, c.shootHibernationJob(logger, client, shoot, false))
+		}
+
 	}
 	c.shootToHibernationCron[key] = cr
 	cr.Start()

@@ -1778,8 +1778,15 @@ func ValidateHibernationCronSpec(seenSpecs sets.String, spec string, fldPath *fi
 func ValidateHibernationSchedule(seenSpecs sets.String, schedule *garden.HibernationSchedule, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, schedule.Start, fldPath.Child("start"))...)
-	allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, schedule.End, fldPath.Child("end"))...)
+	if schedule.Start == nil && schedule.End == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("start/end"), "either start or end has to be provided"))
+	}
+	if schedule.Start != nil {
+		allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, *schedule.Start, fldPath.Child("start"))...)
+	}
+	if schedule.End != nil {
+		allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, *schedule.End, fldPath.Child("end"))...)
+	}
 
 	return allErrs
 }
