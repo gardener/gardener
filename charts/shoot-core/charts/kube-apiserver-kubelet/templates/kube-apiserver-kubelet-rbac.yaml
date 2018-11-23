@@ -1,3 +1,4 @@
+---
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRole
 metadata:
@@ -18,7 +19,6 @@ rules:
   - '*'
   verbs:
   - '*'
-
 ---
 apiVersion: {{ template "rbacversion" . }}
 kind: ClusterRoleBinding
@@ -33,20 +33,3 @@ roleRef:
 subjects:
 - kind: User
   name: system:kube-apiserver:kubelet
-
----
-
-apiVersion: {{include "rbacversion" .}}
-kind: ClusterRoleBinding
-metadata:
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
-  name: system:node
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: system:node
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: Group
-  name: system:nodes
