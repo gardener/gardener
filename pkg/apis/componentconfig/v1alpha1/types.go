@@ -175,6 +175,17 @@ type ShootCareControllerConfiguration struct {
 	// often the health check of Shoot clusters is performed (only if no operation is
 	// already running on them).
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
+	// ConditionThresholds defines the condition threshold per condition type.
+	// +optional
+	ConditionThresholds []ConditionThreshold `json:"conditionThresholds,omitempty"`
+}
+
+// ConditionThreshold defines the duration how long a flappy condition stays in progressing state.
+type ConditionThreshold struct {
+	// Type is the type of the condition to define the threshold for.
+	Type string `json:"type"`
+	// Duration is the duration how long the condition can stay in the progressing state.
+	Duration metav1.Duration `json:"duration"`
 }
 
 // ShootMaintenanceControllerConfiguration defines the configuration of the

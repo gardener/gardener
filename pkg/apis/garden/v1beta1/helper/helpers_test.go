@@ -25,8 +25,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-	corev1 "k8s.io/api/core/v1"
-	"time"
 )
 
 var (
@@ -148,41 +146,63 @@ var _ = Describe("helper", func() {
 			},
 			true))
 
+	var zeroTime metav1.Time
+
 	DescribeTable("#UpdatedCondition",
-		func(condition *gardenv1beta1.Condition, status corev1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
+		func(condition *gardenv1beta1.Condition, status gardenv1beta1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
 			updated := UpdatedCondition(condition, status, reason, message)
 
 			Expect(updated).To(matcher)
 		},
 		Entry("no update",
 			&gardenv1beta1.Condition{
-				Status:  corev1.ConditionTrue,
+				Status:  gardenv1beta1.ConditionTrue,
 				Reason:  "reason",
 				Message: "message",
 			},
-			corev1.ConditionTrue,
+			gardenv1beta1.ConditionTrue,
 			"reason",
 			"message",
-			Equal(&gardenv1beta1.Condition{
-				Status:  corev1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
-			}),
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status":             Equal(gardenv1beta1.ConditionTrue),
+				"Reason":             Equal("reason"),
+				"Message":            Equal("message"),
+				"LastTransitionTime": Equal(zeroTime),
+				"LastUpdateTime":     Not(Equal(zeroTime)),
+			})),
 		),
-		Entry("update",
+		Entry("update reason",
 			&gardenv1beta1.Condition{
-				Status:  corev1.ConditionTrue,
+				Status:  gardenv1beta1.ConditionTrue,
 				Reason:  "reason",
 				Message: "message",
 			},
-			corev1.ConditionTrue,
+			gardenv1beta1.ConditionTrue,
 			"OtherReason",
 			"message",
 			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(corev1.ConditionTrue),
+				"Status":             Equal(gardenv1beta1.ConditionTrue),
 				"Reason":             Equal("OtherReason"),
 				"Message":            Equal("message"),
-				"LastTransitionTime": Not(Equal(metav1.Time{Time: time.Unix(0, 0)})),
+				"LastTransitionTime": Equal(zeroTime),
+				"LastUpdateTime":     Not(Equal(zeroTime)),
+			})),
+		),
+		Entry("update status",
+			&gardenv1beta1.Condition{
+				Status:  gardenv1beta1.ConditionTrue,
+				Reason:  "reason",
+				Message: "message",
+			},
+			gardenv1beta1.ConditionFalse,
+			"OtherReason",
+			"message",
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status":             Equal(gardenv1beta1.ConditionFalse),
+				"Reason":             Equal("OtherReason"),
+				"Message":            Equal("message"),
+				"LastTransitionTime": Not(Equal(zeroTime)),
+				"LastUpdateTime":     Not(Equal(zeroTime)),
 			})),
 		),
 	)

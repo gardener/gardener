@@ -14,6 +14,15 @@ controllers:
   shootCare:
     concurrentSyncs: 5
     syncPeriod: 30s
+    conditionThresholds:
+    - type: APIServerAvailable
+      duration: 1m
+    - type: ControlPlaneHealthy
+      duration: 1m
+    - type: SystemComponentsHealthy
+      duration: 1m
+    - type: EveryNodeReady
+      duration: 5m
   shootMaintenance:
     concurrentSyncs: 5
   shootHibernation:

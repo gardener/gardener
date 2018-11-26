@@ -340,11 +340,7 @@ func (r *ReferenceManager) ensureSeedReferences(seed *garden.Seed) error {
 		return err
 	}
 
-	if err := r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name); err != nil {
-		return err
-	}
-
-	return nil
+	return r.lookupSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
 }
 
 func (r *ReferenceManager) ensureShootReferences(shoot *garden.Shoot) error {

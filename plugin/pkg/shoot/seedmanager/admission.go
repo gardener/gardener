@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -210,7 +209,7 @@ func generateSeedUsageMap(shootList []*garden.Shoot) map[string]int {
 
 func verifySeedAvailability(seed *garden.Seed) bool {
 	if cond := helper.GetCondition(seed.Status.Conditions, garden.SeedAvailable); cond != nil {
-		return cond.Status == corev1.ConditionTrue
+		return cond.Status == garden.ConditionTrue
 	}
 	return false
 }

@@ -133,6 +133,11 @@ controller:
       shootCare:
         concurrentSyncs: 5
         syncPeriod: 30s
+        conditionThresholds:
+          apiServerAvailable: 1m
+          controlPlaneHealthy: 1m
+          systemComponentsHealthy: 1m
+          everyNodeReady: 5m
       shootMaintenance:
         concurrentSyncs: 5
       shootQuota:

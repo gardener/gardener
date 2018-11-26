@@ -2500,8 +2500,9 @@ func Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.Cl
 
 func autoConvert_v1beta1_Condition_To_garden_Condition(in *Condition, out *garden.Condition, s conversion.Scope) error {
 	out.Type = garden.ConditionType(in.Type)
-	out.Status = v1.ConditionStatus(in.Status)
+	out.Status = garden.ConditionStatus(in.Status)
 	out.LastTransitionTime = in.LastTransitionTime
+	out.LastUpdateTime = in.LastUpdateTime
 	out.Reason = in.Reason
 	out.Message = in.Message
 	return nil
@@ -2514,8 +2515,9 @@ func Convert_v1beta1_Condition_To_garden_Condition(in *Condition, out *garden.Co
 
 func autoConvert_garden_Condition_To_v1beta1_Condition(in *garden.Condition, out *Condition, s conversion.Scope) error {
 	out.Type = ConditionType(in.Type)
-	out.Status = v1.ConditionStatus(in.Status)
+	out.Status = ConditionStatus(in.Status)
 	out.LastTransitionTime = in.LastTransitionTime
+	out.LastUpdateTime = in.LastUpdateTime
 	out.Reason = in.Reason
 	out.Message = in.Message
 	return nil

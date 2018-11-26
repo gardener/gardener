@@ -17,6 +17,7 @@ package shoot
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -89,6 +90,14 @@ type defaultCareControl struct {
 	config             *componentconfig.ControllerManagerConfiguration
 }
 
+func (c *defaultCareControl) conditionThresholdsToProgressingMapping() map[gardenv1beta1.ConditionType]time.Duration {
+	out := make(map[gardenv1beta1.ConditionType]time.Duration)
+	for _, threshold := range c.config.Controllers.ShootCare.ConditionThresholds {
+		out[gardenv1beta1.ConditionType(threshold.Type)] = threshold.Duration.Duration
+	}
+	return out
+}
+
 func shootClientInitializer(b *botanistpkg.Botanist) func() error {
 	var (
 		once sync.Once
@@ -145,6 +154,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	// Trigger health check
 	conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy = botanist.HealthChecks(
 		initializeShootClients,
+		c.conditionThresholdsToProgressingMapping(),
 		conditionAPIServerAvailable,
 		conditionControlPlaneHealthy,
 		conditionEveryNodeReady,

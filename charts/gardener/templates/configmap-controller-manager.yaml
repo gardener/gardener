@@ -56,6 +56,23 @@ data:
       shootCare:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shootCare.concurrentSyncs is required" .Values.controller.config.controllers.shootCare.concurrentSyncs }}
         syncPeriod: {{ required ".Values.controller.config.controllers.shootCare.syncPeriod is required" .Values.controller.config.controllers.shootCare.syncPeriod }}
+        conditionThresholds:
+          {{- if .Values.controller.config.controllers.shootCare.conditionThresholds.apiServerAvailable }}
+          - type: APIServerAvailable
+            duration: {{ .Values.controller.config.controllers.shootCare.conditionThresholds.apiServerAvailable }}
+          {{- end }}
+          {{- if .Values.controller.config.controllers.shootCare.conditionThresholds.controlPlaneHealthy }}
+          - type: ControlPlaneHealthy
+            duration: {{ .Values.controller.config.controllers.shootCare.conditionThresholds.controlPlaneHealthy }}
+          {{- end }}
+          {{- if .Values.controller.config.controllers.shootCare.conditionThresholds.systemComponentsHealthy }}
+          - type: SystemComponentsHealthy
+            duration: {{ .Values.controller.config.controllers.shootCare.conditionThresholds.systemComponentsHealthy }}
+          {{- end }}
+          {{- if .Values.controller.config.controllers.shootCare.conditionThresholds.everyNodeReady }}
+          - type: EveryNodeReady
+            duration: {{ .Values.controller.config.controllers.shootCare.conditionThresholds.everyNodeReady }}
+          {{- end }}
       shootMaintenance:
         concurrentSyncs: {{ required ".Values.controller.config.controllers.shootMaintenance.concurrentSyncs is required" .Values.controller.config.controllers.shootMaintenance.concurrentSyncs }}
       shootQuota:

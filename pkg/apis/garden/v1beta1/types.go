@@ -1588,14 +1588,31 @@ const (
 	DefaultDomain = "cluster.local"
 )
 
+// ConditionStatus is the status of a condition.
+type ConditionStatus string
+
+// These are valid condition statuses. "ConditionTrue" means a resource is in the condition.
+// "ConditionFalse" means a resource is not in the condition. "ConditionUnknown" means kubernetes
+// can't decide if a resource is in the condition or not. "ConditionProgressing" means the condition was
+// seen true, failed but stayed within a predefined failure threshold. In the future, we could add other
+// intermediate conditions, e.g. ConditionDegraded.
+const (
+	ConditionTrue        ConditionStatus = "True"
+	ConditionFalse       ConditionStatus = "False"
+	ConditionUnknown     ConditionStatus = "Unknown"
+	ConditionProgressing ConditionStatus = "Progressing"
+)
+
 // Condition holds the information about the state of a resource.
 type Condition struct {
 	// Type of the Shoot condition.
 	Type ConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
+	Status ConditionStatus `json:"status"`
 	// Last time the condition transitioned from one status to another.
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
+	// Last time the condition was updated.
+	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
 	// The reason for the condition's last transition.
 	Reason string `json:"reason"`
 	// A human readable message indicating details about the transition.
