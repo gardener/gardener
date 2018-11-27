@@ -18,7 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -63,7 +62,7 @@ var _ = Describe("seedmanager", func() {
 					Conditions: []garden.Condition{
 						{
 							Type:   garden.SeedAvailable,
-							Status: corev1.ConditionTrue,
+							Status: garden.ConditionTrue,
 						},
 					},
 				},
@@ -243,7 +242,7 @@ var _ = Describe("seedmanager", func() {
 				seed.Status.Conditions = []garden.Condition{
 					{
 						Type:   garden.SeedAvailable,
-						Status: corev1.ConditionFalse,
+						Status: garden.ConditionFalse,
 					},
 				}
 

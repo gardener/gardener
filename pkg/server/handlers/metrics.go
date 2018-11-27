@@ -20,9 +20,8 @@ import (
 	"strconv"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	sets "k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/sets"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -133,7 +132,7 @@ func (m metrics) initShootMetrics() {
 
 			for _, condition := range shoot.Status.Conditions {
 				var conditionStatus float64
-				if condition.Status == corev1.ConditionTrue {
+				if condition.Status == gardenv1beta1.ConditionTrue {
 					conditionStatus = 1
 				}
 				metricShootStateConditions.With(prometheus.Labels{

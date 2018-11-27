@@ -20,7 +20,6 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
-	corev1 "k8s.io/api/core/v1"
 )
 
 func formatError(message string, err error) *gardenv1beta1.LastError {
@@ -62,7 +61,7 @@ func shootIsHealthy(shoot *gardenv1beta1.Shoot, conditions ...*gardenv1beta1.Con
 
 		allConditionsTrue = func() bool {
 			for _, condition := range conditions {
-				if condition.Status != corev1.ConditionTrue {
+				if condition.Status != gardenv1beta1.ConditionTrue {
 					return false
 				}
 			}

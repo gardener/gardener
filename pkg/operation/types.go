@@ -61,7 +61,7 @@ type Operation struct {
 	MonitoringClient     prometheusclient.API
 }
 
-// MachineDeployment holds insformation about the name, class, replicas of a MachineDeployment
+// MachineDeployment holds information about the name, class, replicas of a MachineDeployment
 // managed by the machine-controller-manager.
 type MachineDeployment struct {
 	Name           string

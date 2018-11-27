@@ -25,11 +25,13 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
+
+// Now determines the current metav1.Time.
+var Now = metav1.Now
 
 // DetermineCloudProviderInProfile takes a CloudProfile specification and returns the cloud provider this profile is used for.
 // If it is not able to determine it, an error will be returned.
@@ -182,25 +184,26 @@ func InitCondition(conditionType gardenv1beta1.ConditionType, reason, message st
 	}
 	return &gardenv1beta1.Condition{
 		Type:               conditionType,
-		Status:             corev1.ConditionUnknown,
+		Status:             gardenv1beta1.ConditionUnknown,
 		Reason:             reason,
 		Message:            message,
-		LastTransitionTime: metav1.Now(),
+		LastTransitionTime: Now(),
 	}
 }
 
 // UpdatedCondition updates the properties of one specific condition.
-func UpdatedCondition(condition *gardenv1beta1.Condition, status corev1.ConditionStatus, reason, message string) *gardenv1beta1.Condition {
+func UpdatedCondition(condition *gardenv1beta1.Condition, status gardenv1beta1.ConditionStatus, reason, message string) *gardenv1beta1.Condition {
 	newCondition := &gardenv1beta1.Condition{
 		Type:               condition.Type,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: condition.LastTransitionTime,
+		LastUpdateTime:     Now(),
 	}
 
-	if !apiequality.Semantic.DeepEqual(condition, newCondition) {
-		newCondition.LastTransitionTime = metav1.Now()
+	if condition.Status != status {
+		newCondition.LastTransitionTime = Now()
 	}
 	return newCondition
 }
@@ -210,7 +213,7 @@ func UpdatedConditionUnknownError(condition *gardenv1beta1.Condition, err error)
 }
 
 func UpdatedConditionUnknownErrorMessage(condition *gardenv1beta1.Condition, message string) *gardenv1beta1.Condition {
-	return UpdatedCondition(condition, corev1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+	return UpdatedCondition(condition, gardenv1beta1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
 }
 
 // NewConditions initializes the provided conditions based on an existing list. If a condition type does not exist

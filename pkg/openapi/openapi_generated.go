@@ -2324,6 +2324,12 @@ func schema_pkg_apis_garden_v1beta1_Condition(ref common.ReferenceCallback) comm
 							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
+					"lastUpdateTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last time the condition was updated.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"reason": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The reason for the condition's last transition.",
@@ -2339,7 +2345,7 @@ func schema_pkg_apis_garden_v1beta1_Condition(ref common.ReferenceCallback) comm
 						},
 					},
 				},
-				Required: []string{"type", "status", "lastTransitionTime", "reason", "message"},
+				Required: []string{"type", "status", "lastTransitionTime", "lastUpdateTime", "reason", "message"},
 			},
 		},
 		Dependencies: []string{

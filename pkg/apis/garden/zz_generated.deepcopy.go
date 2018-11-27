@@ -1142,6 +1142,7 @@ func (in *ClusterAutoscaler) DeepCopy() *ClusterAutoscaler {
 func (in *Condition) DeepCopyInto(out *Condition) {
 	*out = *in
 	in.LastTransitionTime.DeepCopyInto(&out.LastTransitionTime)
+	in.LastUpdateTime.DeepCopyInto(&out.LastUpdateTime)
 	return
 }
 

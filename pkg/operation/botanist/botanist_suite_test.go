@@ -16,6 +16,7 @@ package botanist_test
 
 import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -28,6 +29,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	"testing"
 )
@@ -36,6 +38,11 @@ func TestBotanist(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Botanist Suite")
 }
+
+var (
+	zeroTime     time.Time
+	zeroMetaTime metav1.Time
+)
 
 func roleOf(obj metav1.Object) string {
 	return obj.GetLabels()[common.GardenRole]
@@ -164,7 +171,7 @@ func newMachineDeployment(namespace, name string, replicas int32, healthy bool) 
 	return machineDeployment
 }
 
-func beConditionWithStatus(status corev1.ConditionStatus) types.GomegaMatcher {
+func beConditionWithStatus(status gardenv1beta1.ConditionStatus) types.GomegaMatcher {
 	return PointTo(MatchFields(IgnoreExtras, Fields{
 		"Status": Equal(status),
 	}))
@@ -295,9 +302,10 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
+				checker           = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckControlPlane(shoot, seedNamespace, cloudProvider, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, cloudProvider, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -346,7 +354,7 @@ var _ = Describe("health check", func() {
 				machineControllerManagerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required deployment unhealthy",
 			gcpShoot,
 			gardenv1beta1.CloudProviderGCP,
@@ -359,7 +367,7 @@ var _ = Describe("health check", func() {
 				machineControllerManagerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("missing required stateful set",
 			gcpShoot,
 			gardenv1beta1.CloudProviderGCP,
@@ -367,7 +375,7 @@ var _ = Describe("health check", func() {
 			[]*appsv1.StatefulSet{
 				etcdEventsStatefulSet,
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required stateful set unhealthy",
 			gcpShoot,
 			gardenv1beta1.CloudProviderGCP,
@@ -376,16 +384,17 @@ var _ = Describe("health check", func() {
 				newStatefulSet(etcdMainStatefulSet.Namespace, etcdMainStatefulSet.Name, roleOf(etcdMainStatefulSet), false),
 				etcdEventsStatefulSet,
 			},
-			beConditionWithStatus(corev1.ConditionFalse)))
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)))
 
 	DescribeTable("#CheckSystemComponents",
 		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				daemonSetLister  = constDaemonSetLister(daemonSets)
+				checker          = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
+			exitCondition, err := checker.CheckSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -400,13 +409,13 @@ var _ = Describe("health check", func() {
 				vpnShootDeployment,
 			},
 			requiredSystemComponentDaemonSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("missing required daemon set",
 			requiredSystemComponentDeployments,
 			[]*appsv1.DaemonSet{
 				calicoNodeDaemonSet,
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required deployment not healthy",
 			[]*appsv1.Deployment{
 				newDeployment(calicoTyphaDeployment.Namespace, calicoTyphaDeployment.Name, roleOf(calicoTyphaDeployment), false),
@@ -415,14 +424,14 @@ var _ = Describe("health check", func() {
 				metricsServerDeployment,
 			},
 			requiredSystemComponentDaemonSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required daemon set not healthy",
 			requiredSystemComponentDeployments,
 			[]*appsv1.DaemonSet{
 				newDaemonSet(kubeProxyDaemonSet.Namespace, kubeProxyDaemonSet.Name, roleOf(kubeProxyDaemonSet), false),
 				calicoNodeDaemonSet,
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 	)
 
 	DescribeTable("#CheckClusterNodes",
@@ -430,9 +439,10 @@ var _ = Describe("health check", func() {
 			var (
 				nodeLister              = constNodeLister(nodes)
 				machineDeploymentLister = constMachineDeploymentLister(machineDeployments)
+				checker                 = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckClusterNodes(seedNamespace, condition, nodeLister, machineDeploymentLister)
+			exitCondition, err := checker.CheckClusterNodes(seedNamespace, condition, nodeLister, machineDeploymentLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -451,7 +461,7 @@ var _ = Describe("health check", func() {
 			[]*machinev1alpha1.MachineDeployment{
 				newMachineDeployment(seedNamespace, "machinedeployment", 1, true),
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("machine deployment not healthy",
 			[]*corev1.Node{
 				newNode("node1", true),
@@ -459,22 +469,23 @@ var _ = Describe("health check", func() {
 			[]*machinev1alpha1.MachineDeployment{
 				newMachineDeployment(seedNamespace, "machinedeployment", 1, false),
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("not enough nodes",
 			[]*corev1.Node{},
 			[]*machinev1alpha1.MachineDeployment{
 				newMachineDeployment(seedNamespace, "machinedeployment", 1, true),
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 	)
 
 	DescribeTable("#CheckMonitoringSystemComponents",
 		func(daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
 			var (
 				daemonSetLister = constDaemonSetLister(daemonSets)
+				checker         = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckMonitoringSystemComponents(shootNamespace, condition, daemonSetLister)
+			exitCondition, err := checker.CheckMonitoringSystemComponents(shootNamespace, condition, daemonSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -483,10 +494,10 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("required daemon set missing",
 			[]*appsv1.DaemonSet{},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("daemon set unhealthy",
 			[]*appsv1.DaemonSet{newDaemonSet(nodeExporterDaemonSet.Namespace, nodeExporterDaemonSet.Name, roleOf(nodeExporterDaemonSet), false)},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
@@ -494,9 +505,10 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
+				checker           = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckMonitoringControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -510,13 +522,13 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required stateful set set missing",
 			requiredMonitoringControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				prometheusStatefulSet,
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{
 				newDeployment(grafanaDeployment.Namespace, grafanaDeployment.Name, roleOf(grafanaDeployment), false),
@@ -524,14 +536,14 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("stateful set unhealthy",
 			requiredMonitoringControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 				prometheusStatefulSet,
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 	)
 
 	DescribeTable("#CheckOptionalAddonsSystemComponents",
@@ -539,9 +551,10 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister = constDeploymentLister(deployments)
 				daemonSetLister  = constDaemonSetLister(daemonSets)
+				checker          = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckOptionalAddonsSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
+			exitCondition, err := checker.CheckOptionalAddonsSystemComponents(shootNamespace, condition, deploymentLister, daemonSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -552,11 +565,11 @@ var _ = Describe("health check", func() {
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{newDeployment(shootNamespace, "addon", common.GardenRoleOptionalAddon, false)},
 			nil,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			nil,
 			[]*appsv1.DaemonSet{newDaemonSet(shootNamespace, "addon", common.GardenRoleOptionalAddon, false)},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 	)
 
 	DescribeTable("#CheckLoggingControlPlane",
@@ -564,9 +577,10 @@ var _ = Describe("health check", func() {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
+				checker           = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := botanist.CheckLoggingControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckLoggingControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -577,20 +591,98 @@ var _ = Describe("health check", func() {
 		Entry("required deployment missing",
 			nil,
 			requiredLoggingControlPlaneStatefulSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required stateful set missing",
 			requiredLoggingControlPlaneDeployments,
 			nil,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{newDeployment(kibanaDeployment.Namespace, kibanaDeployment.Name, roleOf(kibanaDeployment), false)},
 			requiredLoggingControlPlaneStatefulSets,
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("stateful set unhealthy",
 			requiredLoggingControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(elasticSearchStatefulSet.Namespace, elasticSearchStatefulSet.Name, roleOf(elasticSearchStatefulSet), false),
 			},
-			beConditionWithStatus(corev1.ConditionFalse)),
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
+	)
+
+	DescribeTable("#FailedCondition",
+		func(thresholds map[gardenv1beta1.ConditionType]time.Duration, transitionTime metav1.Time, now time.Time, condition *gardenv1beta1.Condition, expected types.GomegaMatcher) {
+			checker := botanist.NewHealthChecker(thresholds)
+			tmp1, tmp2 := botanist.Now, helper.Now
+			defer func() {
+				botanist.Now, helper.Now = tmp1, tmp2
+			}()
+			botanist.Now, helper.Now = func() time.Time {
+				return now
+			}, func() metav1.Time {
+				return transitionTime
+			}
+
+			Expect(checker.FailedCondition(condition, "", "")).To(expected)
+		},
+		Entry("true condition with threshold",
+			map[gardenv1beta1.ConditionType]time.Duration{
+				gardenv1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			zeroMetaTime,
+			zeroTime,
+			&gardenv1beta1.Condition{
+				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Status: gardenv1beta1.ConditionTrue,
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardenv1beta1.ConditionProgressing),
+			}))),
+		Entry("true condition without threshold",
+			map[gardenv1beta1.ConditionType]time.Duration{},
+			zeroMetaTime,
+			zeroTime,
+			&gardenv1beta1.Condition{
+				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Status: gardenv1beta1.ConditionTrue,
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardenv1beta1.ConditionFalse),
+			}))),
+		Entry("progressing condition within threshold",
+			map[gardenv1beta1.ConditionType]time.Duration{
+				gardenv1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			zeroMetaTime,
+			zeroTime,
+			&gardenv1beta1.Condition{
+				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Status: gardenv1beta1.ConditionProgressing,
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardenv1beta1.ConditionProgressing),
+			}))),
+		Entry("progressing condition outside threshold",
+			map[gardenv1beta1.ConditionType]time.Duration{
+				gardenv1beta1.ShootControlPlaneHealthy: time.Minute,
+			},
+			zeroMetaTime,
+			zeroTime.Add(time.Minute+time.Second),
+			&gardenv1beta1.Condition{
+				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Status: gardenv1beta1.ConditionProgressing,
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardenv1beta1.ConditionFalse),
+			}))),
+		Entry("failed condition",
+			map[gardenv1beta1.ConditionType]time.Duration{},
+			zeroMetaTime,
+			zeroTime,
+			&gardenv1beta1.Condition{
+				Type:   gardenv1beta1.ShootControlPlaneHealthy,
+				Status: gardenv1beta1.ConditionFalse,
+			},
+			PointTo(MatchFields(IgnoreExtras, Fields{
+				"Status": Equal(gardenv1beta1.ConditionFalse),
+			}))),
 	)
 })
