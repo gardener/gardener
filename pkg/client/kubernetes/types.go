@@ -107,10 +107,12 @@ type Client interface {
 
 	// DaemonSets
 	ListDaemonSets(string, metav1.ListOptions) (*appsv1.DaemonSetList, error)
+	DeleteDaemonSet(string, string) error
 
 	// Jobs
 	GetJob(string, string) (*batchv1.Job, error)
 	DeleteJob(string, string) error
+	DeleteCronJob(string, string) error
 
 	// ReplicaSets
 	ListReplicaSets(string, metav1.ListOptions) (*appsv1.ReplicaSetList, error)
@@ -131,6 +133,9 @@ type Client interface {
 	// RoleBindings
 	ListRoleBindings(string, metav1.ListOptions) (*rbacv1.RoleBindingList, error)
 	CreateOrPatchRoleBinding(metav1.ObjectMeta, func(*rbacv1.RoleBinding) *rbacv1.RoleBinding) (*rbacv1.RoleBinding, error)
+	DeleteClusterRole(name string) error
+	DeleteClusterRoleBinding(name string) error
+	DeleteRoleBinding(namespace, name string) error
 
 	// CustomResourceDefinitions
 	ListCRDs(metav1.ListOptions) (*apiextensionsv1beta1.CustomResourceDefinitionList, error)
@@ -140,6 +145,15 @@ type Client interface {
 	ListAPIServices(metav1.ListOptions) (*apiregistrationv1beta1.APIServiceList, error)
 	DeleteAPIService(name string) error
 	DeleteAPIServiceForcefully(name string) error
+
+	// ServiceAccounts
+	DeleteServiceAccount(namespace, name string) error
+
+	// HorizontalPodAutoscalers
+	DeleteHorizontalPodAutoscaler(namespace, name string) error
+
+	// Ingresses
+	DeleteIngress(namespace, name string) error
 
 	// Arbitrary manifests
 	Apply([]byte) error

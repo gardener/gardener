@@ -222,13 +222,14 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	var (
-		basicAuth  string
-		kibanaHost string
-		replicas   int
-	)
+	// Logging feature gate
 
-	loggingEnabled := features.ControllerFeatureGate.Enabled(features.Logging)
+	var (
+		basicAuth      string
+		kibanaHost     string
+		replicas       int
+		loggingEnabled = features.ControllerFeatureGate.Enabled(features.Logging)
+	)
 
 	if loggingEnabled {
 		existingSecrets, err := k8sSeedClient.ListSecrets(common.GardenNamespace, metav1.ListOptions{})
@@ -252,13 +253,16 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
 		replicas = 1
+	} else {
+		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 	}
 
 	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
-
 	nodeCount := len(nodes.Items)
 
 	chartRenderer, err := chartrenderer.New(k8sSeedClient)

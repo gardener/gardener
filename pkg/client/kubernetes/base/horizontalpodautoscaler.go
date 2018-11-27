@@ -14,17 +14,7 @@
 
 package kubernetesbase
 
-import (
-	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
-// ListDaemonSets returns the list of DaemonSets in the given namespace.
-func (c *Client) ListDaemonSets(namespace string, opts metav1.ListOptions) (*appsv1.DaemonSetList, error) {
-	return c.clientset.AppsV1().DaemonSets(namespace).List(opts)
-}
-
-// DeleteDaemonSet deletes a DaemonSet object.
-func (c *Client) DeleteDaemonSet(namespace, name string) error {
-	return c.Clientset().AppsV1().DaemonSets(namespace).Delete(name, &defaultDeleteOptions)
+// DeleteHorizontalPodAutoscaler deletes an Ingress object.
+func (c *Client) DeleteHorizontalPodAutoscaler(namespace, name string) error {
+	return c.clientset.AutoscalingV2beta1().HorizontalPodAutoscalers(namespace).Delete(name, &defaultDeleteOptions)
 }

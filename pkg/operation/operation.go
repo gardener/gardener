@@ -16,8 +16,6 @@ package operation
 
 import (
 	"fmt"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/client-go/util/retry"
 	"path/filepath"
 	"strings"
 
@@ -33,9 +31,13 @@ import (
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 )
 
 // New creates a new operation object with a Shoot resource object.

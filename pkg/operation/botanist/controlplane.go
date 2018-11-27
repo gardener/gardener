@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -426,6 +428,10 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging() error {
+	if !features.ControllerFeatureGate.Enabled(features.Logging) {
+		return common.DeleteLoggingStack(b.K8sSeedClient, b.Shoot.SeedNamespace)
+	}
+
 	var (
 		credentials = b.Secrets["logging-ingress-credentials"]
 		basicAuth   = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
