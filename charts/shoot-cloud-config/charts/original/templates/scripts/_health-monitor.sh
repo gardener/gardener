@@ -31,6 +31,19 @@
       function restart_kubelet {
         pkill -f "hyperkube kubelet"
       }
+      function patch_internal_ip {
+        echo "Updating Node object $2 with InternalIP $3."
+        curl \
+          -XPATCH \
+          -H "Content-Type: application/strategic-merge-patch+json" \
+          -H "Accept: application/json" \
+          "$1/api/v1/nodes/$2/status" \
+          --data "{\"status\":{\"addresses\":[{\"address\": \"$3\", \"type\":\"InternalIP\"}]}}" \
+          --cacert <(base64 -d <<< $(kubectl config view -o jsonpath={.clusters[0].cluster.certificate-authority-data} --raw)) \
+          --key /var/lib/kubelet/pki/kubelet-client-current.pem \
+          --cert /var/lib/kubelet/pki/kubelet-client-current.pem \
+        > /dev/null 2>&1
+      }
 
       timeframe=600
       toggle_threshold=5
@@ -48,7 +61,8 @@
           continue
         fi
 
-        node_status="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json | jq -r '.items[0].status')"
+        node_object="$(kubectl get nodes -l kubernetes.io/hostname=$(hostname) -o json)"
+        node_status="$(echo $node_object | jq -r '.items[0].status')"
         if [[ -z "$node_status" ]] || [[ "$node_status" == "null" ]]; then
           echo "Node object for this hostname not found in the system, waiting."
           sleep 20
@@ -58,13 +72,30 @@
         fi
 
         # Check whether the kubelet does report an InternalIP node address
-        if node_ip_addresses="$(echo $node_status | jq -r '.addresses[] | select(.type=="InternalIP" or .type=="ExternalIP") | .address')"; then
-          if [[ -z "$node_ip_addresses" ]]; then
-            echo "Kubelet has not reported an InternalIP nor an ExternalIP node address yet. Restarting kubelet!";
-            restart_kubelet
-            sleep 20
-            continue
+        node_ip_internal="$(echo $node_status | jq -r '.addresses[] | select(.type=="InternalIP") | .address')"
+        node_ip_external="$(echo $node_status | jq -r '.addresses[] | select(.type=="ExternalIP") | .address')"
+        if [[ -z "$node_ip_internal" ]] && [[ -z "$node_ip_external" ]]; then
+          echo "Kubelet has not reported an InternalIP nor an ExternalIP node address yet.";
+          if ! [[ -z ${K8S_NODE_IP_INTERNAL_LAST_SEEN+x} ]]; then
+            echo "Check if last seen InternalIP "$K8S_NODE_IP_INTERNAL_LAST_SEEN" can be used";
+            if ip address show | grep $K8S_NODE_IP_INTERNAL_LAST_SEEN > /dev/null; then
+              echo "Last seen InternalIP "$K8S_NODE_IP_INTERNAL_LAST_SEEN" is still up-to-date";
+              server="$(kubectl config view -o jsonpath={.clusters[0].cluster.server})"
+              node_name="$(echo $node_object | jq -r '.items[0].metadata.name')"
+              if patch_internal_ip $server $node_name $K8S_NODE_IP_INTERNAL_LAST_SEEN; then
+                echo "Successfully updated Node object."
+                continue
+              else
+                echo "An error occurred while updating the Node object."
+              fi
+            fi
           fi
+          echo "Updating Node object is not possible. Restarting Kubelet.";
+          restart_kubelet
+          sleep 20
+          continue
+        elif ! [[ -z "$node_ip_internal" ]]; then
+          export K8S_NODE_IP_INTERNAL_LAST_SEEN="$node_ip_internal"
         fi
 
         # Check whether kubelet ready status toggles between true and false and reboot VM if happened too often.
