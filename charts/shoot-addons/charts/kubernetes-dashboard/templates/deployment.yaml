@@ -6,9 +6,9 @@ metadata:
   labels:
     garden.sapcloud.io/role: optional-addon
     app: {{ template "kubernetes-dashboard.name" . }}
-    heritage: "{{ .Release.Service }}"
-    release: "{{ .Release.Name }}"
-    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    chart: {{ template "kubernetes-dashboard.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
     kubernetes.io/cluster-service: "true"
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
@@ -35,45 +35,39 @@ spec:
         garden.sapcloud.io/role: optional-addon
         origin: gardener
         app: {{ template "kubernetes-dashboard.name" . }}
-        heritage: "{{ .Release.Service }}"
-        release: "{{ .Release.Name }}"
-        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: {{ .Release.Name }}
         kubernetes.io/cluster-service: "true"
     spec:
-      tolerations:
-      - key: CriticalAddonsOnly
-        operator: Exists
-      priorityClassName: system-cluster-critical
-      serviceAccountName: {{ if .Values.rbac.create }}{{ template "kubernetes-dashboard.fullname" . }}{{ else }}"{{ .Values.rbac.serviceAccountName }}"{{ end }}
-      nodeSelector:
-{{ toYaml .Values.nodeSelector | indent 10 }}
+      serviceAccountName: {{ template "kubernetes-dashboard.fullname" . }}
       containers:
-      - name: main
+      - name: {{ .Chart.Name }}
         image: {{ index .Values.images "kubernetes-dashboard" }}
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
-        - --auto-generate-certificates
-        - --authentication-mode=basic
-        resources:
-{{ toYaml .Values.resources | indent 10 }}
-        livenessProbe:
-          failureThreshold: 3
-          httpGet:
-            path: /
-            port: 8443
-            scheme: HTTPS
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 30
+          - --auto-generate-certificates
+          - --authentication-mode=basic
+{{- if .Values.extraArgs }}
+{{ toYaml .Values.extraArgs | indent 10 }}
+{{- end }}
         ports:
-        - containerPort: 8443
+        - name: https
+          containerPort: 8443
           protocol: TCP
         volumeMounts:
         - name: kubernetes-dashboard-certs
           mountPath: /certs
-        - name: tmp-volume
-          mountPath: /tmp
+          # Create on-disk volume to store exec logs
+        - mountPath: /tmp
+          name: tmp-volume
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /
+            port: 8443
+          initialDelaySeconds: 30
+          timeoutSeconds: 30
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
       volumes:
       - name: kubernetes-dashboard-certs
         secret:
