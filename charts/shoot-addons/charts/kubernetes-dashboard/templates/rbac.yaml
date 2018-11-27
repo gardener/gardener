@@ -1,20 +1,67 @@
 {{- if .Values.rbac.create }}
 apiVersion: {{ include "rbacversion" . }}
-kind: ClusterRoleBinding
+kind: Role
 metadata:
   labels:
     app: {{ template "kubernetes-dashboard.name" . }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+    chart: {{ template "kubernetes-dashboard.chart" . }}
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
     addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "kubernetes-dashboard.fullname" . }}
+  namespace: kube-system
+rules:
+# Allow Dashboard to create 'kubernetes-dashboard-key-holder' secret.
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+
+# Allow Dashboard to create,get,update 'kubernetes-dashboard-settings' config map.
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - kubernetes-dashboard-settings
+  verbs:
+  - create
+  - get
+  - update
+
+# Allow Dashboard to get, update and delete Dashboard exclusive secrets.
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  resourceNames:
+  - kubernetes-dashboard-key-holder
+  - {{ template "kubernetes-dashboard.fullname" . }}
+  verbs:
+  - get
+  - update
+  - delete
+
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  labels:
+    app: {{ template "kubernetes-dashboard.name" . }}
+    chart: {{ template "kubernetes-dashboard.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    addonmanager.kubernetes.io/mode: Reconcile
+  name: {{ template "kubernetes-dashboard.fullname" . }}
+  namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
+  kind: Role
+  name: {{ template "kubernetes-dashboard.fullname" . }}
 subjects:
   - kind: ServiceAccount
     name: {{ template "kubernetes-dashboard.fullname" . }}
-    namespace: {{ .Release.Namespace }}
+    namespace: kube-system
 {{- end -}}
