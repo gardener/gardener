@@ -421,3 +421,64 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 
 	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }
+
+// DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
+func DeleteLoggingStack(k8sClient kubernetes.Client, namespace string) error {
+	if k8sClient == nil {
+		return fmt.Errorf("require kubernetes client")
+	}
+
+	var (
+		services     = []string{"kibana-logging", "elasticsearch-logging", "fluentd-es"}
+		configmaps   = []string{"kibana-index-registration", "curator-hourly-config", "curator-daily-config", "fluent-bit-config", "fluentd-es-config"}
+		statefulsets = []string{"elasticsearch-logging", "fluentd-es"}
+		cronjobs     = []string{"hourly-curator", "daily-curator"}
+	)
+
+	if err := k8sClient.DeleteDeployment(namespace, "kibana-logging"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteDaemonSet(namespace, "fluent-bit"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	for _, name := range statefulsets {
+		if err := k8sClient.DeleteStatefulSet(namespace, name); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	for _, name := range cronjobs {
+		if err := k8sClient.DeleteCronJob(namespace, name); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	if err := k8sClient.DeleteIngress(namespace, "kibana"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteSecret(namespace, "kibana-basic-auth"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteClusterRoleBinding("fluent-bit-read"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteClusterRole("fluent-bit-read"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteServiceAccount(namespace, "fluent-bit"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteHorizontalPodAutoscaler(namespace, "fluentd-es"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	for _, name := range services {
+		if err := k8sClient.DeleteService(namespace, name); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	for _, name := range configmaps {
+		if err := k8sClient.DeleteConfigMap(namespace, name); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}

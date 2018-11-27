@@ -436,6 +436,10 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
 func (b *Botanist) DeploySeedLogging() error {
+	if !features.ControllerFeatureGate.Enabled(features.Logging) {
+		return common.DeleteLoggingStack(b.K8sSeedClient, b.Shoot.SeedNamespace)
+	}
+
 	var (
 		credentials = b.Secrets["logging-ingress-credentials"]
 		basicAuth   = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
