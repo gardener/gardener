@@ -202,13 +202,14 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	var (
-		basicAuth  string
-		kibanaHost string
-		replicas   int
-	)
+	// Logging feature gate
 
-	loggingEnabled := features.ControllerFeatureGate.Enabled(features.Logging)
+	var (
+		basicAuth      string
+		kibanaHost     string
+		replicas       int
+		loggingEnabled = features.ControllerFeatureGate.Enabled(features.Logging)
+	)
 
 	if loggingEnabled {
 		existingSecrets, err := k8sSeedClient.ListSecrets(common.GardenNamespace, metav1.ListOptions{})
@@ -232,17 +233,17 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
 		replicas = 1
+	} else {
+		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 	}
 
-	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-
-	nodeCount := len(nodes.Items)
-
-	certManagerEnabled := features.ControllerFeatureGate.Enabled(features.CertificateManagement)
-	var clusterIssuer map[string]interface{}
+	// Certificate Management feature gate
+	var (
+		clusterIssuer      map[string]interface{}
+		certManagerEnabled = features.ControllerFeatureGate.Enabled(features.CertificateManagement)
+	)
 
 	if certManagerEnabled {
 		certificateManagement, ok := secrets[common.GardenRoleCertificateManagement]
@@ -260,10 +261,8 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		}
 	}
 
-	chartRenderer, err := chartrenderer.New(k8sSeedClient)
-	if err != nil {
-		return err
-	}
+	// AlertManager configuration
+
 	alertManagerConfig := map[string]interface{}{}
 	if alertingSMTPKeys := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPKeys) > 0 {
 		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
@@ -279,6 +278,17 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 			})
 		}
 		alertManagerConfig["emailConfigs"] = emailConfigs
+	}
+
+	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+	nodeCount := len(nodes.Items)
+
+	chartRenderer, err := chartrenderer.New(k8sSeedClient)
+	if err != nil {
+		return err
 	}
 
 	return common.ApplyChart(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
@@ -385,7 +395,7 @@ func createDNSProviderValues(configs []certmanagement.DNSProviderConfig) []inter
 				"accessKey":   route53config.AccessKey(),
 			})
 		case certmanagement.CloudDNS:
-			cloudDNSconfig, ok := config.(*certmanagement.CloudDNSConfig)
+			cloudDNSConfig, ok := config.(*certmanagement.CloudDNSConfig)
 			if !ok {
 				logger.Logger.Errorf("Failed to cast to CloudDNSConfig object for DNSProviderConfig  %+v", config)
 				return nil
@@ -394,8 +404,8 @@ func createDNSProviderValues(configs []certmanagement.DNSProviderConfig) []inter
 			providers = append(providers, map[string]interface{}{
 				"name":      name,
 				"type":      certmanagement.CloudDNS,
-				"project":   cloudDNSconfig.Project,
-				"accessKey": cloudDNSconfig.AccessKey(),
+				"project":   cloudDNSConfig.Project,
+				"accessKey": cloudDNSConfig.AccessKey(),
 			})
 		default:
 		}

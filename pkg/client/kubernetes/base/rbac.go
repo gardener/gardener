@@ -64,6 +64,11 @@ func (c *Client) DeleteClusterRole(name string) error {
 	return c.Clientset().RbacV1().ClusterRoles().Delete(name, &defaultDeleteOptions)
 }
 
+// DeleteClusterRoleBinding deletes a ClusterRoleBinding object.
+func (c *Client) DeleteClusterRoleBinding(name string) error {
+	return c.Clientset().RbacV1().ClusterRoleBindings().Delete(name, &defaultDeleteOptions)
+}
+
 // DeleteRoleBinding deletes a RoleBindung object.
 func (c *Client) DeleteRoleBinding(namespace, name string) error {
 	return c.Clientset().RbacV1().RoleBindings(namespace).Delete(name, &defaultDeleteOptions)
