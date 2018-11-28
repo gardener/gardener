@@ -35,6 +35,10 @@ configmap:
     plugins:
     - name: errors
     - name: log
+      parameters: .
+      configBlock: |-
+        class denial
+        class error
     - name: health
     - name: kubernetes
       parameters: cluster.local in-addr.arpa ip6.arpa
