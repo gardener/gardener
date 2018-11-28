@@ -27,9 +27,6 @@
 {{- if (include "kubelet.featureGates" .) }}
 {{- include "kubelet.featureGates" . | trimSuffix "," }} \
 {{- end }}
-{{- if semverCompare "< 1.11" .kubernetes.version }}
---feature-gates=PodPriority=true \
-{{- end }}
 --kube-api-burst=25 \
 --kube-api-qps=25 \
 --image-gc-high-threshold=50 \
@@ -67,5 +64,8 @@
 {{ $param }} \
 {{- end }}
 --v=2
+{{- end }}
+{{- if semverCompare "< 1.11" .kubernetes.version }}
+--feature-gates=PodPriority=true \
 {{- end }}
 {{- end -}}
