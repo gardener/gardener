@@ -299,8 +299,13 @@ const (
 	// Garden cluster once successfully created.
 	ShootUseAsSeed = "shoot.garden.sapcloud.io/use-as-seed"
 
+	// ShootStatus is a constant for a label on a Shoot resource indicating that the Shoot's health.
+	// Shoot Care controller and can be used to easily identify Shoot clusters with certain states.
+	ShootStatus = "shoot.garden.sapcloud.io/status"
+
 	// ShootUnhealthy is a constant for a label on a Shoot resource indicating that the Shoot is unhealthy. It is set and unset by the
 	// Shoot Care controller and can be used to easily identify Shoot clusters with issues.
+	// Deprecated: Use ShootStatus instead
 	ShootUnhealthy = "shoot.garden.sapcloud.io/unhealthy"
 
 	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.

@@ -16,11 +16,53 @@ package shoot
 
 import (
 	"fmt"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/kubernetes"
 )
+
+// Status is the status of a shoot used in the common.ShootStatus label.
+type Status string
+
+const (
+	// StatusHealthy indicates that a shoot is considered healthy.
+	StatusHealthy Status = "healthy"
+	// StatusProgressing indicates that a shoot was once healthy, currently experienced an issue
+	// but is still within a predefined grace period.
+	StatusProgressing Status = "progressing"
+	// StatusUnhealthy indicates that a shoot is considered unhealthy.
+	StatusUnhealthy Status = "unhealthy"
+)
+
+var (
+	shootStatusValues = map[Status]int{
+		StatusHealthy:     3,
+		StatusProgressing: 2,
+		StatusUnhealthy:   1,
+	}
+)
+
+func statusToBool(status Status) bool {
+	return status == StatusHealthy
+}
+
+func statusValue(s Status) int {
+	value, ok := shootStatusValues[s]
+	if !ok {
+		panic(fmt.Sprintf("invalid shoot status %q", s))
+	}
+
+	return value
+}
+
+// OrWorse returns the worse Status of the given two states.
+func (s Status) OrWorse(other Status) Status {
+	if statusValue(other) < statusValue(s) {
+		return other
+	}
+	return s
+}
 
 func formatError(message string, err error) *gardenv1beta1.LastError {
 	return &gardenv1beta1.LastError{
@@ -28,18 +70,17 @@ func formatError(message string, err error) *gardenv1beta1.LastError {
 	}
 }
 
-func shootHealthyLabelTransform(healthy bool) func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+// StatusLabelTransform transforms the shoot labels depending on the given Status.
+func StatusLabelTransform(status Status) func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 	return func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-		if shoot.Labels == nil {
-			shoot.Labels = make(map[string]string)
-		}
-
+		// TODO (AC): Deprecate common.ShootUnhealthy once tools adapted
+		healthy := statusToBool(status)
 		if !healthy {
-			shoot.Labels[common.ShootUnhealthy] = "true"
+			kubernetes.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootUnhealthy, "true")
 		} else {
 			delete(shoot.Labels, common.ShootUnhealthy)
 		}
-
+		kubernetes.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(status))
 		return shoot, nil
 	}
 }
@@ -54,43 +95,60 @@ func shootIsFailed(shoot *gardenv1beta1.Shoot) bool {
 	return lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration
 }
 
-func shootIsHealthy(shoot *gardenv1beta1.Shoot, conditions ...*gardenv1beta1.Condition) bool {
-	var (
-		lastOperation = shoot.Status.LastOperation
-		lastError     = shoot.Status.LastError
+// ConditionStatusToStatus converts the given CondtionStatus to a shoot label Status.
+func ConditionStatusToStatus(status gardenv1beta1.ConditionStatus) Status {
+	switch status {
+	case gardenv1beta1.ConditionTrue:
+		return StatusHealthy
+	case gardenv1beta1.ConditionProgressing:
+		return StatusProgressing
+	}
+	return StatusUnhealthy
+}
 
-		allConditionsTrue = func() bool {
-			for _, condition := range conditions {
-				if condition.Status != gardenv1beta1.ConditionTrue {
-					return false
-				}
-			}
-			return true
-		}
-	)
+// ComputeConditionStatus computes a shoot Label Status from the given Conditions.
+// By default, the Status is StatusHealthy. The condition status is converted to
+// a Status by using ConditionStatusToStatus. Always the worst status of the combined
+// states wins.
+func ComputeConditionStatus(conditions ...*gardenv1beta1.Condition) Status {
+	status := StatusHealthy
+	for _, condition := range conditions {
+		status = status.OrWorse(ConditionStatusToStatus(condition.Status))
+	}
+	return status
+}
 
+// BoolToStatus converts the given boolean to a Status.
+// For true values, it returns StatusHealthy.
+// Otherwise, it returns StatusUnhealthy.
+func BoolToStatus(cond bool) Status {
+	if cond {
+		return StatusHealthy
+	}
+	return StatusUnhealthy
+}
+
+// ComputeStatus computes the label Status of a shoot depending on the given lastOperation, lastError and conditions.
+func ComputeStatus(lastOperation *gardenv1beta1.LastOperation, lastError *gardenv1beta1.LastError, conditions ...*gardenv1beta1.Condition) Status {
 	// Shoot has been created and not yet reconciled.
 	if lastOperation == nil {
-		return true
+		return StatusHealthy
 	}
 
 	// If shoot is created or deleted then the last error indicates the healthiness.
 	if lastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate || lastOperation.Type == gardenv1beta1.ShootLastOperationTypeDelete {
-		return lastError == nil
+		return BoolToStatus(lastError == nil)
 	}
 
-	// If the shoot is normally reconciled then at least one false condition indicates that something is wrong.
-	if !allConditionsTrue() {
-		return false
-	}
+	status := ComputeConditionStatus(conditions...)
 
 	// If an operation is currently processing then the last error state is reported.
 	if lastOperation.State == gardenv1beta1.ShootLastOperationStateProcessing {
-		return lastError == nil
+		return status.OrWorse(BoolToStatus(lastError == nil))
 	}
 
 	// If the last operation has succeeded then the shoot is healthy.
-	return lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded
+	return status.OrWorse(BoolToStatus(lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded))
 }
 
 func seedIsShoot(seed *gardenv1beta1.Seed) bool {

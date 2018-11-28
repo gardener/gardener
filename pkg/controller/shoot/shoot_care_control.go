@@ -169,7 +169,14 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	}
 
 	// Mark Shoot as healthy/unhealthy
-	kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta, shootHealthyLabelTransform(shootIsHealthy(shoot, conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)))
+	kutil.TryUpdateShootLabels(
+		c.k8sGardenClient.GardenClientset(),
+		retry.DefaultBackoff, shoot.ObjectMeta,
+		StatusLabelTransform(
+			ComputeStatus(
+				shoot.Status.LastOperation,
+				shoot.Status.LastError,
+				conditionAPIServerAvailable, conditionControlPlaneHealthy, conditionEveryNodeReady, conditionSystemComponentsHealthy)))
 	return nil // We do not want to run in the exponential backoff for the condition checks.
 }
 

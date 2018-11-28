@@ -390,7 +390,7 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 	}
 	o.Logger.Error(description)
 
-	newShootAfterLabel, err := kubernetes.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, shootHealthyLabelTransform(false))
+	newShootAfterLabel, err := kubernetes.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}
