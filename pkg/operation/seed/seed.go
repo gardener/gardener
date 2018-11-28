@@ -170,17 +170,19 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	body := fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": %s}]`, `{"role":"kube-system"}`)
-	if _, err := k8sSeedClient.PatchNamespace("kube-system", []byte(body)); err != nil {
-		return err
-	}
-
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.GardenNamespace,
 		},
 	}
 	if _, err := k8sSeedClient.CreateNamespace(gardenNamespace, false); err != nil && !apierrors.IsAlreadyExists(err) {
+		return err
+	}
+
+	if _, err := k8sSeedClient.PatchNamespace(common.GardenNamespace, []byte(fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": {"role":"%s"}}]`, common.GardenNamespace))); err != nil {
+		return err
+	}
+	if _, err := k8sSeedClient.PatchNamespace(metav1.NamespaceSystem, []byte(fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": {"role":"%s"}}]`, metav1.NamespaceSystem))); err != nil {
 		return err
 	}
 
