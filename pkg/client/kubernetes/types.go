@@ -155,6 +155,9 @@ type Client interface {
 	// Ingresses
 	DeleteIngress(namespace, name string) error
 
+	// NetworkPolicies
+	DeleteNetworkPolicy(namespace, name string) error
+
 	// Arbitrary manifests
 	Apply([]byte) error
 

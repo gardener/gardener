@@ -2,88 +2,59 @@
 apiVersion: {{ include "networkpolicyversion" . }}
 kind: NetworkPolicy
 metadata:
-  name: kube-apiserver-deny-blacklist
-  namespace:  {{ .Release.Namespace }}
+  name: kube-apiserver-default
+  namespace: {{ .Release.Namespace }}
 spec:
-  podSelector:
-    matchLabels:
-      app: kubernetes
-      role: apiserver
-  policyTypes:
-  - Egress
   egress:
+  # Allow cluster internal DNS lookups (kube-dns/coredns).
+  # This rule does not have a podSelector as we cannot know in general how the
+  # DNS pod in the seed cluster is labelled.
+  - ports:
+    - port: 8053
+      protocol: UDP
+    - port: 8053
+      protocol: TCP
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+  # Allow connection to shoot's etcd instances.
+  - ports:
+    - port: {{ required ".etcdServicePort is required" .Values.etcdServicePort }}
+      protocol: TCP
+    to:
+    - podSelector:
+        matchLabels:
+          app: etcd-statefulset
+  # Allow connection to gardener external admission controller.
+  - ports:
+    - port: 2730
+      protocol: TCP
+    to:
+    - namespaceSelector:
+        matchLabels:
+          role: garden
+      podSelector:
+        matchLabels:
+          app: gardener
+          role: external-admission-controller
+  # Allow connection to everywhere else other than the seed networks and the
+  # cloud's metadata service.
   - to:
     - ipBlock:
-        # Allow all except seed networks
         cidr: 0.0.0.0/0
         except:
         - {{ .Values.seedNetworks.pod }}
         - {{ .Values.seedNetworks.node }}
         - {{ .Values.seedNetworks.service }}
         - 169.254.169.254/32
----
-apiVersion: {{ include "networkpolicyversion" . }}
-kind: NetworkPolicy
-metadata:
-  name: kube-apiserver-allow-etcd
-  namespace: {{ .Release.Namespace }}
-spec:
   podSelector:
     matchLabels:
       app: kubernetes
       role: apiserver
   policyTypes:
   - Egress
-  egress:
-  - ports:
-    - port: {{ required ".etcdServicePort is required" .Values.etcdServicePort }}
-      protocol: TCP
-  - to:
-    - podSelector:
-        matchLabels:
-          app: etcd-statefulset
----
-apiVersion: {{ include "networkpolicyversion" . }}
-kind: NetworkPolicy
-metadata:
-  name: kube-apiserver-allow-dns
-  namespace: {{ .Release.Namespace }}
-spec:
-  podSelector:
-    matchLabels:
-      app: kubernetes
-      role: apiserver
-  policyTypes:
-  - Egress
-  egress:
-  - ports:
-    - port: 53
-      protocol: UDP
-    - port: 53
-      protocol: TCP  
-  - to:
-    - namespaceSelector:
-        matchLabels:
-          role: kube-system
----
-apiVersion: {{ include "networkpolicyversion" . }}
-kind: NetworkPolicy
-metadata:
-  name: kube-apiserver-allow-gardener-admission-controller
-  namespace: {{ .Release.Namespace }}
-spec:
-  podSelector:
-    matchLabels:
-      app: kubernetes
-      role: apiserver
-  policyTypes:
-  - Egress
-  egress:
-  - ports:
-    - port: 2730
-      protocol: TCP
-  - to:
-    - podSelector:
-        matchLabels:
-          app: gardener
-          role: external-admission-controller
