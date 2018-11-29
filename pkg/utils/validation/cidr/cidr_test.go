@@ -21,8 +21,10 @@ import (
 	. "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
+	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 )
 
 var _ = Describe("cidr", func() {
@@ -129,13 +131,11 @@ var _ = Describe("cidr", func() {
 			badPath := field.NewPath("bad")
 			other := NewCIDR(badCIDR, badPath)
 
-			el := cdr.ValidateNotSubset(other)
-			Expect(el).To(HaveLen(1))
-			Expect(*el[0]).To(Equal(field.Error{
-				Type:     field.ErrorTypeInvalid,
-				Field:    badPath.String(),
-				BadValue: badCIDR,
-				Detail:   `must not be a subset of "foo" ("10.0.0.0/8")`,
+			Expect(cdr.ValidateNotSubset(other)).To(ConsistOfFields(Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal(badPath.String()),
+				"BadValue": Equal(badCIDR),
+				"Detail":   Equal(`must not be a subset of "foo" ("10.0.0.0/8")`),
 			}))
 		})
 	})
@@ -150,13 +150,11 @@ var _ = Describe("cidr", func() {
 		It("should return a nil FieldPath", func() {
 			cdr := NewCIDR(invalidGardenCIDR, path)
 
-			el := cdr.ValidateParse()
-			Expect(el).To(HaveLen(1))
-			Expect(*el[0]).To(Equal(field.Error{
-				Type:     field.ErrorTypeInvalid,
-				Field:    path.String(),
-				BadValue: invalidGardenCIDR,
-				Detail:   `invalid CIDR address: invalid_cidr`,
+			Expect(cdr.ValidateParse()).To(ConsistOfFields(Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal(path.String()),
+				"BadValue": Equal(invalidGardenCIDR),
+				"Detail":   Equal(`invalid CIDR address: invalid_cidr`),
 			}))
 		})
 	})
@@ -186,13 +184,11 @@ var _ = Describe("cidr", func() {
 			cdr := NewCIDR(validGardenCIDR, path)
 			other := NewCIDR(garden.CIDR("10.0.0.1/32"), field.NewPath("bad"))
 
-			el := other.ValidateSubset(cdr)
-			Expect(el).To(HaveLen(1))
-			Expect(*el[0]).To(Equal(field.Error{
-				Type:     field.ErrorTypeInvalid,
-				Field:    path.String(),
-				BadValue: validGardenCIDR,
-				Detail:   `must be a subset of "bad" ("10.0.0.1/32")`,
+			Expect(other.ValidateSubset(cdr)).To(ConsistOfFields(Fields{
+				"Type":     Equal(field.ErrorTypeInvalid),
+				"Field":    Equal(path.String()),
+				"BadValue": Equal(validGardenCIDR),
+				"Detail":   Equal(`must be a subset of "bad" ("10.0.0.1/32")`),
 			}))
 		})
 
