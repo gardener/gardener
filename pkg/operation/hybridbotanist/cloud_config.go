@@ -81,7 +81,7 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		"workers": workers,
 	}
 
-	config, err = b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	config, err = b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.RubyImageName, common.HyperkubeImageName)
 	if err != nil {
 		return nil, err
 	}
