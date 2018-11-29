@@ -1,4 +1,2 @@
-kubeconfig: kubeconfig for cloud-config-downloader
 secretName: cpu-worker-0
-images:
-  ruby: image-repository:image-tag
+kubeconfig: kubeconfig for cloud-config-script

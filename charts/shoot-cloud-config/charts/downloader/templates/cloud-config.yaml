@@ -9,20 +9,20 @@ coreos:
     enable: true
     content: |
       [Unit]
-      Description=Downloads the original cloud-config from Shoot API Server and execute it
+      Description=Downloads the cloud script from the Shoot API server and executes it
       After=docker.service docker.socket
       Wants=docker.socket
       [Service]
       Restart=always
       RestartSec=30
       EnvironmentFile=/etc/environment
-      ExecStart=/bin/sh /var/lib/cloud-config-downloader/download-cloud-config.sh
+      ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
 write_files:
 - path: /var/lib/cloud-config-downloader/kubeconfig
   permissions: 0644
   encoding: b64
   content: {{ ( required "kubeconfig is required" .Values.kubeconfig ) | b64enc }}
 - path: /var/lib/cloud-config-downloader/download-cloud-config.sh
-  permissions: 0644
+  permissions: 0744
   encoding: b64
   content: {{ include "shoot-cloud-config.cloud-config-downloader" . | b64enc }}
