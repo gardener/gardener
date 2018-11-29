@@ -185,14 +185,13 @@ The commands below will configure your `minikube` with the absolute minimum reso
 
 #### Start `minikube`
 
-First, start `minikube` with at least Kubernetes v1.9.x, e.g. via `minikube --kubernetes-version=v1.9.0`.
-Default cpu and memory settings of minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 4 CPUs and 8192MB memory.
+First, start `minikube` with at least Kubernetes v1.11.x. Default cpu and memory settings of minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 4 CPUs and 8192MB memory.
 
 ```bash
-$ minikube start --cpus=4 --memory=8192 --kubernetes-version=v1.9.0 --extra-config=apiserver.admission-control=MutatingAdmissionWebhook,ValidatingAdmissionWebhook
-Starting local Kubernetes v1.9.0 cluster...
+$ minikube start --cpus=4 --memory=8192 --kubernetes-version=v1.11.0
+Starting local Kubernetes v1.11.0 cluster...
 [...]
-kubectl is now configured to use the cluster.
+Kubectl is now configured to use the cluster.
 ```
 
 #### Prepare the Gardener
