@@ -29,8 +29,8 @@ enableDebuggingHandlers: true
 enableServer: true
 enforceNodeAllocatable:
 - pods
-eventRecordQPS: 25
-eventBurst: 25
+eventRecordQPS: 50
+eventBurst: 50
 evictionHard:
   imagefs.available: 5%
   imagefs.inodesFree: 5%
@@ -61,8 +61,8 @@ fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
 imageGCHighThresholdPercent: 50
 imageGCLowThresholdPercent: 40
-kubeAPIBurst: 25
-kubeAPIQPS: 25
+kubeAPIBurst: 50
+kubeAPIQPS: 50
 kubeReserved:
   cpu: 80m
   memory: 1Gi

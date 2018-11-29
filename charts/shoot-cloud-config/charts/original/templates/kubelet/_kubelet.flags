@@ -27,8 +27,8 @@
 {{- if (include "kubelet.featureGates" .) }}
 {{- include "kubelet.featureGates" . | trimSuffix "," }} \
 {{- end }}
---kube-api-burst=25 \
---kube-api-qps=25 \
+--kube-api-burst=50 \
+--kube-api-qps=50 \
 --image-gc-high-threshold=50 \
 --image-gc-low-threshold=40 \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
