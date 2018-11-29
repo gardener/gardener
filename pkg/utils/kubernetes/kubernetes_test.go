@@ -50,6 +50,22 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
+	DescribeTable("#SetMetaDataLabel",
+		func(labels map[string]string, key, value string, expectedLabels map[string]string) {
+			original := &metav1.ObjectMeta{Labels: labels}
+			modified := original.DeepCopy()
+
+			SetMetaDataLabel(modified, key, value)
+			modifiedWithOriginalLabels := modified.DeepCopy()
+			modifiedWithOriginalLabels.Labels = labels
+			Expect(modifiedWithOriginalLabels).To(Equal(original), "not only labels were modified")
+			Expect(modified.Labels).To(Equal(expectedLabels))
+		},
+		Entry("nil labels", nil, "foo", "bar", map[string]string{"foo": "bar"}),
+		Entry("non-nil non-conflicting labels", map[string]string{"bar": "baz"}, "foo", "bar", map[string]string{"bar": "baz", "foo": "bar"}),
+		Entry("non-nil conflicting labels", map[string]string{"foo": "baz"}, "foo", "bar", map[string]string{"foo": "bar"}),
+	)
+
 	DescribeTable("#IsEmptyPatch",
 		func(patch string, expected bool) {
 			Expect(IsEmptyPatch([]byte(patch))).To(Equal(expected))

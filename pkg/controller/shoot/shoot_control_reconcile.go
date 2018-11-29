@@ -379,7 +379,7 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 		o.Shoot.Info = newShoot
 	}
 
-	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, shootHealthyLabelTransform(false))
+	newShootAfterLabel, err := kutil.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}
