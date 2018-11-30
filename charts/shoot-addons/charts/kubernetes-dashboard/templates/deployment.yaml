@@ -1,4 +1,8 @@
-apiVersion: {{ include "deploymentversion" . }}
+{{/*
+Temporary fix due to https://github.com/gardener/gardener/commit/a2dc6bb0a8980689f90b96a0391e454b9bbd3a5e
+TODO (mvladev): revert this to dynamic version after several gardener releases
+*/}}
+apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   name: {{ template "kubernetes-dashboard.fullname" . }}
@@ -18,10 +22,7 @@ spec:
   selector:
     matchLabels:
       app: {{ template "kubernetes-dashboard.name" . }}
-      heritage: "{{ .Release.Service }}"
       release: "{{ .Release.Name }}"
-      chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
-      kubernetes.io/cluster-service: "true"
   strategy:
     rollingUpdate:
       maxSurge: 0
