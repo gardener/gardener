@@ -96,8 +96,8 @@ var _ = Describe("seedmanager", func() {
 			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 
-			seed = seedBase
-			shoot = shootBase
+			seed = *seedBase.DeepCopy()
+			shoot = *shootBase.DeepCopy()
 		})
 
 		Context("Shoot references a Seed - protection", func() {
@@ -156,6 +156,21 @@ var _ = Describe("seedmanager", func() {
 				err := admissionHandler.Admit(attrs)
 
 				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("should fail because the networks of the shoot overlaps with the seed networks", func() {
+				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{
+					Pods:     &seed.Spec.Networks.Pods,
+					Services: &seed.Spec.Networks.Services,
+					Nodes:    &seed.Spec.Networks.Nodes,
+				}
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 		})
 
