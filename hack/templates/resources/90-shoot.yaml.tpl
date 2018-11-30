@@ -202,7 +202,7 @@ spec:
     local:
       endpoint: ${value("spec.cloud.local.endpoint", "localhost:3777")} # endpoint service pointing to gardener-local-provider
       networks:
-        workers: ${value("spec.cloud.local.networks.workers", ["192.168.99.100/24"])}
+        workers: ${value("spec.cloud.local.networks.workers", ["192.168.99.200/25"])}
     % endif
   kubernetes:
     version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% cloudControllerManager=value("spec.kubernetes.cloudControllerManager", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
