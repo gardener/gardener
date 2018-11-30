@@ -13,6 +13,6 @@ spec:
     namespace: garden
   ingressDomain: <minikube-ip>.nip.io
   networks: # Seed and Shoot networks must be disjunct
-    nodes: 192.168.99.100/24
+    nodes: 192.168.99.100/25
     pods: 172.17.0.0/16
     services: 10.96.0.0/13
