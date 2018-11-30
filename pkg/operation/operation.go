@@ -320,14 +320,9 @@ func (o *Operation) InjectImages(values map[string]interface{}, k8sVersionRuntim
 // creating machines/VMs. It needs the name of the worker group it is used for (<workerName>) and returns
 // the rendered chart.
 func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrenderer.RenderedChart, error) {
-	config := map[string]interface{}{
+	values := map[string]interface{}{
 		"kubeconfig": string(o.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
 		"secretName": o.Shoot.ComputeCloudConfigSecretName(workerName),
-	}
-
-	values, err := o.InjectImages(config, o.ShootVersion(), o.ShootVersion(), common.RubyImageName)
-	if err != nil {
-		return nil, err
 	}
 
 	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, values)

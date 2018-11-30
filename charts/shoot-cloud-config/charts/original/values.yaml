@@ -6,6 +6,7 @@
 #   root certificates
 # images:
 #   hyperkube: image-repository
+#   ruby: image-repository
 # kubernetes:
 #   clusterDNS: 100.64.0.10
 #   domain: cluster.local
