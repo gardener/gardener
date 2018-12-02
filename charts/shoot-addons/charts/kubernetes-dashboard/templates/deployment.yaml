@@ -35,7 +35,9 @@ spec:
         garden.sapcloud.io/role: optional-addon
         origin: gardener
         app: {{ template "kubernetes-dashboard.name" . }}
-        release: {{ .Release.Name }}
+        heritage: "{{ .Release.Service }}"
+        release: "{{ .Release.Name }}"
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         kubernetes.io/cluster-service: "true"
     spec:
       serviceAccountName: {{ template "kubernetes-dashboard.fullname" . }}
