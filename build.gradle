@@ -35,6 +35,6 @@ dependencies {
          build name:'github.com/gardener/machine-controller-manager', commit: 'd0161dd1856eb2ad4e956865d2ecd92c5b21b182'
          build name:'github.com/robfig/cron', commit: '2315d5715e36303a941d907f038da7f7c44c773b'
 
-       // build name:'github.com/hashicorp/go-multierror', commit:'3d5d8f294aa03d8e98859feac328afbdf1ae0703'
+         build name:'github.com/hashicorp/go-multierror', commit:'3d5d8f294aa03d8e98859feac328afbdf1ae0703'
     }    
 }
