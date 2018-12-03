@@ -415,15 +415,6 @@ func createDNSProviderValues(configs []certmanagement.DNSProviderConfig) []inter
 	return providers
 }
 
-func deployCertificateManagementConfig(k8sSeedClient kubernetes.Client, secrets []*corev1.Secret) error {
-	for _, secret := range secrets {
-		if _, err := k8sSeedClient.CreateSecret(secret.Namespace, secret.Name, secret.Type, secret.Data, true); err != nil {
-			return fmt.Errorf("secret %s could not be copied to Seed cluster: %v", secret.Name, err)
-		}
-	}
-	return nil
-}
-
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes
 // (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
 // corresponds to resources of (request/limits) 500m of CPU and 1200Mi of Memory.

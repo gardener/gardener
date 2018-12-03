@@ -25,6 +25,7 @@ spec:
         checksum/secret-internal-domain: {{ include (print $.Template.BasePath "/secret-internal-domain.yaml") . | sha256sum }}
         checksum/secret-alerting-smtp: {{ include (print $.Template.BasePath "/secret-alerting-smtp.yaml") . | sha256sum }}
         checksum/secret-openvpn-diffie-hellman: {{ include (print $.Template.BasePath "/secret-openvpn-diffie-hellman.yaml") . | sha256sum }}
+        checksum/secret-certificatemanagement-config: {{ include (print $.Template.BasePath "/secret-certificate-management-config.yaml") . | sha256sum }}
       labels:
         app: gardener
         role: controller-manager
