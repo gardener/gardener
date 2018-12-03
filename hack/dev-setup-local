@@ -62,3 +62,6 @@ sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP}.nip.
 sed -e "s/domain: <minikube-ip>.nip.io/domain: ${MINIKUBE_IP}.nip.io/g" example/90-shoot-local.yaml | \
   sed -e "s/endpoint: localhost:3777/endpoint: ${IP_ADDRESS}:3777/g" | \
   sed -e "s/name: johndoe-local/name: local/g" >${DEV_DIR}/90-shoot-local.yaml
+
+# Update Vagrant images and prune the outdated ones
+(cd vagrant; vagrant box update; vagrant box prune)

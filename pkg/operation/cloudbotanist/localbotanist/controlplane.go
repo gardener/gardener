@@ -14,6 +14,11 @@
 
 package localbotanist
 
+import (
+	"fmt"
+	"strings"
+)
+
 // GenerateCloudProviderConfig returns a cloud provider config for the Local cloud provider.
 // Not needed on Local.
 func (b *LocalBotanist) GenerateCloudProviderConfig() (string, error) {
@@ -40,8 +45,12 @@ func (b *LocalBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interfa
 // GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver
 // is exposed to the public.
 func (b *LocalBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
+	if !strings.HasSuffix(*b.Shoot.Info.Spec.DNS.Domain, ".nip.io") {
+		return nil, fmt.Errorf("missing `.nip.io` TLD")
+	}
 	return map[string]interface{}{
-		"securePort": 31443,
+		"advertiseAddress": strings.TrimSuffix(*b.Shoot.Info.Spec.DNS.Domain, ".nip.io"),
+		"securePort":       31443,
 	}, nil
 }
 
