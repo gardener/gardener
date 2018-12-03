@@ -247,6 +247,11 @@ https://git.k8s.io/helm.
 Copyright 2017 The Kubernetes Authors.  
 Apache 2 license (https://git.k8s.io/helm/LICENSE)  
 
+controller-runtime
+https://github.com/kubernetes-sigs/controller-runtime
+Copyright 2018 The Kubernetes Authors.
+Apache 2 license (https://github.com/kubernetes-sigs/controller-runtime/blob/master/LICENSE).  
+
 AWS SDK Go.  
 https://github.com/aws/aws-sdk-go.  
 Copyright 2017 Amazon.com, Inc. or its affiliates.  

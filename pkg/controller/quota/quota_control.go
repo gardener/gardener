@@ -89,12 +89,12 @@ type ControlInterface interface {
 // implements the documented semantics for Quotas. updater is the UpdaterInterface used
 // to update the status of Quotas. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretBindingLister gardenlisters.SecretBindingLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretBindingLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient     kubernetes.Client
+	k8sGardenClient     kubernetes.Interface
 	k8sGardenInformers  gardeninformers.SharedInformerFactory
 	recorder            record.EventRecorder
 	secretBindingLister gardenlisters.SecretBindingLister
@@ -132,7 +132,7 @@ func (c *defaultControl) ReconcileQuota(obj *gardenv1beta1.Quota, key string) er
 			quotaFinalizers := sets.NewString(quota.Finalizers...)
 			quotaFinalizers.Delete(gardenv1beta1.GardenerName)
 			quota.Finalizers = quotaFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil && !apierrors.IsNotFound(err) {
+			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Quotas(quota.Namespace).Update(quota); err != nil && !apierrors.IsNotFound(err) {
 				quotaLogger.Error(err.Error())
 				return err
 			}

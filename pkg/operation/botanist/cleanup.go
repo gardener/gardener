@@ -16,10 +16,10 @@ package botanist
 
 import (
 	"fmt"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes/base"
 	"github.com/hashicorp/go-multierror"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,7 +28,7 @@ import (
 
 var (
 	exceptions = map[string]map[string]bool{
-		kubernetesbase.CustomResourceDefinitions: map[string]bool{
+		kubernetes.CustomResourceDefinitions: map[string]bool{
 			"felixconfigurations.crd.projectcalico.org":   true,
 			"bgppeers.crd.projectcalico.org":              true,
 			"bgpconfigurations.crd.projectcalico.org":     true,
@@ -39,20 +39,20 @@ var (
 			"networkpolicies.crd.projectcalico.org":       true,
 			"hostendpoints.crd.projectcalico.org":         true,
 		},
-		kubernetesbase.DaemonSets: {
+		kubernetes.DaemonSets: {
 			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem): true,
 			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):  true,
 		},
-		kubernetesbase.Deployments: {
+		kubernetes.Deployments: {
 			fmt.Sprintf("%s/coredns", metav1.NamespaceSystem):        true,
 			fmt.Sprintf("%s/metrics-server", metav1.NamespaceSystem): true,
 		},
-		kubernetesbase.Namespaces: {
+		kubernetes.Namespaces: {
 			metav1.NamespacePublic:  true,
 			metav1.NamespaceSystem:  true,
 			metav1.NamespaceDefault: true,
 		},
-		kubernetesbase.Services: {
+		kubernetes.Services: {
 			fmt.Sprintf("%s/kubernetes", metav1.NamespaceDefault): true,
 		},
 	}
@@ -95,7 +95,7 @@ func (b *Botanist) CleanKubernetesResources() error {
 func (b *Botanist) CleanCustomResourceDefinitions() error {
 	var (
 		apiGroups       = b.K8sShootClient.GetResourceAPIGroups()
-		resource        = kubernetesbase.CustomResourceDefinitions
+		resource        = kubernetes.CustomResourceDefinitions
 		crdAPIGroupPath = apiGroups[resource]
 	)
 
@@ -115,7 +115,7 @@ func (b *Botanist) ForceDeleteCustomResourceDefinitions() error {
 
 	var result error
 	for _, crd := range crdList.Items {
-		if omit, ok := exceptions[kubernetesbase.CustomResourceDefinitions][crd.Name]; !ok || !omit {
+		if omit, ok := exceptions[kubernetes.CustomResourceDefinitions][crd.Name]; !ok || !omit {
 			if err := b.K8sShootClient.DeleteCRDForcefully(crd.Name); err != nil && !apierrors.IsNotFound(err) {
 				result = multierror.Append(result, err)
 			}

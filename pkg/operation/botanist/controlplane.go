@@ -157,7 +157,7 @@ func (b *Botanist) DeployBackupInfrastructure() error {
 // DeleteBackupInfrastructure deletes the sets deletionTimestamp on the backupInfrastructure resource in the Garden namespace
 // which is responsible for actual deletion of cloud resource for Shoot's backup infrastructure.
 func (b *Botanist) DeleteBackupInfrastructure() error {
-	err := b.K8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Delete(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), nil)
+	err := b.K8sGardenClient.Garden().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Delete(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), nil)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -311,7 +311,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"replicas":           b.Shoot.GetReplicas(1),
 			"apiserverServiceIP": common.ComputeClusterIP(b.Shoot.GetServiceNetwork(), 1),
 			"seed": map[string]interface{}{
-				"apiserver": b.K8sSeedClient.GetConfig().Host,
+				"apiserver": b.K8sSeedClient.RESTConfig().Host,
 				"region":    b.Seed.Info.Spec.Cloud.Region,
 				"profile":   b.Seed.Info.Spec.Cloud.Profile,
 			},
@@ -323,7 +323,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				},
 			},
 			"shoot": map[string]interface{}{
-				"apiserver": b.K8sShootClient.GetConfig().Host,
+				"apiserver": b.K8sShootClient.RESTConfig().Host,
 			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{

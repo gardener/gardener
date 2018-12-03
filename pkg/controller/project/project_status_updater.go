@@ -29,12 +29,12 @@ type UpdaterInterface interface {
 }
 
 // NewRealUpdater returns a UpdaterInterface that updates the Project manifest, using the supplied client and projectLister.
-func NewRealUpdater(k8sGardenClient kubernetes.Client, projectLister gardenlisters.ProjectLister) UpdaterInterface {
+func NewRealUpdater(k8sGardenClient kubernetes.Interface, projectLister gardenlisters.ProjectLister) UpdaterInterface {
 	return &realUpdater{k8sGardenClient, projectLister}
 }
 
 type realUpdater struct {
-	k8sGardenClient kubernetes.Client
+	k8sGardenClient kubernetes.Interface
 	projectLister   gardenlisters.ProjectLister
 }
 
@@ -49,7 +49,7 @@ func (u *realUpdater) UpdateProjectStatus(project *gardenv1beta1.Project) (*gard
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		project.Status = status
-		newProject, updateErr = u.k8sGardenClient.GardenClientset().GardenV1beta1().Projects().UpdateStatus(project)
+		newProject, updateErr = u.k8sGardenClient.Garden().GardenV1beta1().Projects().UpdateStatus(project)
 		if updateErr == nil {
 			return nil
 		}

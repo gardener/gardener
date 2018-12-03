@@ -35,15 +35,15 @@ const notesFileSuffix = "NOTES.txt"
 // The chart render is used to render the Helm charts into a RenderedChart struct from which the
 // resulting manifest can be generated.
 type DefaultChartRenderer struct {
-	client       kubernetes.Client
+	client       kubernetes.Interface
 	renderer     *engine.Engine
 	capabilities *chartutil.Capabilities
 }
 
 // New creates a new DefaultChartRenderer object. It requires a Kubernetes client as input which will be
 // injected in the Tiller environment.
-func New(client kubernetes.Client) (ChartRenderer, error) {
-	sv, err := client.Clientset().Discovery().ServerVersion()
+func New(client kubernetes.Interface) (ChartRenderer, error) {
+	sv, err := client.Kubernetes().Discovery().ServerVersion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubernetes server version %v", err)
 	}

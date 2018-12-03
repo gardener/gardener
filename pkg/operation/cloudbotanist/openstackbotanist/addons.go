@@ -39,7 +39,7 @@ func (b *OpenStackBotanist) GenerateKube2IAMConfig() (map[string]interface{}, er
 func (b *OpenStackBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
 	// Delete legacy storage class (named "default") as we can't update the parameters (this legacy class
 	// did set `.parameters.type=default`).
-	if err := b.K8sShootClient.Clientset().StorageV1().StorageClasses().Delete("default", &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sShootClient.Kubernetes().StorageV1().StorageClasses().Delete("default", &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return nil, err
 	}
 

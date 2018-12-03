@@ -23,8 +23,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
@@ -39,37 +37,24 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 		return err
 	}
 
-	var machineSetList unstructured.Unstructured
-	if err := b.K8sSeedClient.MachineV1alpha1("GET", "machinesets", b.Shoot.SeedNamespace).Do().Into(&machineSetList); err != nil {
+	machineSetList, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineSets(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	if err != nil {
 		return err
 	}
-	return machineSetList.EachListItem(func(o runtime.Object) error {
-		var (
-			obj                                                          = o.(*unstructured.Unstructured)
-			machineSetName                                               = obj.GetName()
-			machineSetDesiredReplicas, machineSetDesiredReplicasFound, _ = unstructured.NestedInt64(obj.UnstructuredContent(), "spec", "replicas")
-			machineSetActualReplicas, machineSetActualReplicasFound, _   = unstructured.NestedInt64(obj.UnstructuredContent(), "status", "replicas")
-		)
 
-		if !machineSetDesiredReplicasFound {
-			machineSetDesiredReplicas = -1
-		}
-		if !machineSetActualReplicasFound {
-			machineSetActualReplicas = -1
-		}
-
-		if machineSetDesiredReplicas == 0 && machineSetActualReplicas == 0 {
-			b.Logger.Debugf("Deleting MachineSet %s as the number of desired and actual replicas is 0.", machineSetName)
-			err := b.K8sSeedClient.MachineV1alpha1("DELETE", "machinesets", b.Shoot.SeedNamespace).Name(machineSetName).Do().Error()
-			if apierrors.IsNotFound(err) {
-				return nil
-			}
+	for _, machineSet := range machineSetList.Items {
+		if machineSet.Spec.Replicas == 0 && machineSet.Status.Replicas == 0 {
+			b.Logger.Debugf("Deleting MachineSet %s as the number of desired and actual replicas is 0.", machineSet.Name)
+			err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineSets(machineSet.Namespace).Delete(machineSet.Name, nil)
 			if err != nil {
+				if apierrors.IsNotFound(err) {
+					continue
+				}
 				return err
 			}
 		}
-		return nil
-	})
+	}
+	return nil
 }
 
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
@@ -83,7 +68,7 @@ func (b *Botanist) PerformGarbageCollectionShoot() error {
 	return b.deleteStalePods(b.K8sShootClient, podList)
 }
 
-func (b *Botanist) deleteStalePods(client kubernetes.Client, podList *corev1.PodList) error {
+func (b *Botanist) deleteStalePods(client kubernetes.Interface, podList *corev1.PodList) error {
 	var result error
 
 	for _, pod := range podList.Items {

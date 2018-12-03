@@ -33,7 +33,7 @@ import (
 
 // Controller controls Quotas.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
 	control  ControlInterface
@@ -52,7 +52,7 @@ type Controller struct {
 // NewQuotaController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <quotaInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewQuotaController(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewQuotaController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 

@@ -31,7 +31,7 @@ import (
 )
 
 // Serve starts a HTTP and a HTTPS server.
-func Serve(ctx context.Context, k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig componentconfig.ServerConfiguration) {
+func Serve(ctx context.Context, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig componentconfig.ServerConfiguration) {
 	var (
 		listenAddressHTTP  = fmt.Sprintf("%s:%d", serverConfig.HTTP.BindAddress, serverConfig.HTTP.Port)
 		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverConfig.HTTPS.BindAddress, serverConfig.HTTPS.Port)

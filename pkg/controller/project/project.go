@@ -45,7 +45,7 @@ import (
 
 // Controller controls Projects.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 	k8sInformers       kubeinformers.SharedInformerFactory
 
@@ -69,7 +69,7 @@ type Controller struct {
 // NewProjectController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <projectInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewProjectController(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewProjectController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 		corev1Informer        = kubeInformerFactory.Core().V1()
@@ -193,7 +193,7 @@ func (c *Controller) migrateRoleBindingToProjectMembers() error {
 
 	for _, roleBinding := range roleBindingList.Items {
 		if projectName, ok := namespaceToProject[roleBinding.Namespace]; ok {
-			if _, err := kutils.TryUpdateProject(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, metav1.ObjectMeta{Name: projectName}, func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
+			if _, err := kutils.TryUpdateProject(c.k8sGardenClient.Garden(), retry.DefaultBackoff, metav1.ObjectMeta{Name: projectName}, func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
 				project.Spec.Members = roleBinding.Subjects
 				return project, nil
 			}); err != nil {
@@ -201,7 +201,7 @@ func (c *Controller) migrateRoleBindingToProjectMembers() error {
 				continue
 			}
 
-			if err := c.k8sGardenClient.Clientset().RbacV1().RoleBindings(roleBinding.Namespace).Delete(roleBinding.Name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			if err := c.k8sGardenClient.Kubernetes().RbacV1().RoleBindings(roleBinding.Namespace).Delete(roleBinding.Name, &metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 				result = multierror.Append(result, err)
 			}
 		}

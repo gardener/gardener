@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 
 	"k8s.io/client-go/informers"
@@ -215,7 +216,7 @@ type Gardener struct {
 	Config              *componentconfig.ControllerManagerConfiguration
 	Identity            *gardenv1beta1.Gardener
 	GardenerNamespace   string
-	K8sGardenClient     kubernetes.Client
+	K8sGardenClient     kubernetes.Interface
 	K8sGardenInformers  gardeninformers.SharedInformerFactory
 	KubeInformerFactory informers.SharedInformerFactory
 	Logger              *logrus.Logger
@@ -250,17 +251,19 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		)
 	)
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, &config.ClientConnection)
+	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, &config.ClientConnection, client.Options{
+		Scheme: kubernetes.GardenScheme,
+	})
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(kubeconfig, nil)
+	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(kubeconfig, nil, client.Options{})
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenerClientConfig, err := kubernetes.CreateRestConfig(gardenerClient, &config.ClientConnection)
+	gardenerClientConfig, err := kubernetes.CreateRESTConfig(gardenerClient, &config.ClientConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -268,15 +271,15 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClient.SetGardenClientset(gardenClientset)
+	k8sGardenClient.SetGarden(gardenClientset)
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (
 		leaderElectionConfig *leaderelection.LeaderElectionConfig
-		recorder             = createRecorder(k8sGardenClient.Clientset())
+		recorder             = createRecorder(k8sGardenClient.Kubernetes())
 	)
 	if config.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = makeLeaderElectionConfig(config.LeaderElection, k8sGardenClientLeaderElection.Clientset(), recorder)
+		leaderElectionConfig, err = makeLeaderElectionConfig(config.LeaderElection, k8sGardenClientLeaderElection.Kubernetes(), recorder)
 		if err != nil {
 			return nil, err
 		}
@@ -294,8 +297,8 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		Logger:              logger,
 		Recorder:            recorder,
 		K8sGardenClient:     k8sGardenClient,
-		K8sGardenInformers:  gardeninformers.NewSharedInformerFactory(k8sGardenClient.GardenClientset(), 0),
-		KubeInformerFactory: kubeinformers.NewSharedInformerFactory(k8sGardenClient.Clientset(), 0),
+		K8sGardenInformers:  gardeninformers.NewSharedInformerFactory(k8sGardenClient.Garden(), 0),
+		KubeInformerFactory: kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
 		LeaderElection:      leaderElectionConfig,
 	}, nil
 }
@@ -352,14 +355,14 @@ func (g *Gardener) startControllers(ctx context.Context) {
 	).Run(ctx)
 }
 
-func createRecorder(kubeClient *k8s.Clientset) record.EventRecorder {
+func createRecorder(kubeClient k8s.Interface) record.EventRecorder {
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(logger.Logger.Debugf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: typedcorev1.New(kubeClient.CoreV1().RESTClient()).Events("")})
 	return eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "gardener-controller-manager"})
 }
 
-func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration, client *k8s.Clientset, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
+func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get hostname: %v", err)

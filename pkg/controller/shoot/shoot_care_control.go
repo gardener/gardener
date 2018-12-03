@@ -77,12 +77,12 @@ type CareControlInterface interface {
 // implements the documented semantics for caring for Shoots. updater is the UpdaterInterface used
 // to update the status of Shoots. You should use an instance returned from NewDefaultCareControl() for any
 // scenario other than testing.
-func NewDefaultCareControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration) CareControlInterface {
+func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration) CareControlInterface {
 	return &defaultCareControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config}
 }
 
 type defaultCareControl struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.Interface
 	secrets            map[string]*corev1.Secret
 	imageVector        imagevector.ImageVector
@@ -170,7 +170,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	// Mark Shoot as healthy/unhealthy
 	kutil.TryUpdateShootLabels(
-		c.k8sGardenClient.GardenClientset(),
+		c.k8sGardenClient.Garden(),
 		retry.DefaultBackoff, shoot.ObjectMeta,
 		StatusLabelTransform(
 			ComputeStatus(
@@ -181,7 +181,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 }
 
 func (c *defaultCareControl) updateShootConditions(shoot *gardenv1beta1.Shoot, conditions ...gardenv1beta1.Condition) (*gardenv1beta1.Shoot, error) {
-	newShoot, err := kutil.TryUpdateShootConditions(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, shoot.ObjectMeta,
+	newShoot, err := kutil.TryUpdateShootConditions(c.k8sGardenClient.Garden(), retry.DefaultBackoff, shoot.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.Conditions = conditions
 			return shoot, nil

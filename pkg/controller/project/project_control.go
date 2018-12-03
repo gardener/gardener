@@ -95,12 +95,12 @@ type ControlInterface interface {
 // implements the documented semantics for Projects. updater is the UpdaterInterface used
 // to update the status of Projects. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, updater UpdaterInterface, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, updater UpdaterInterface, namespaceLister kubecorev1listers.NamespaceLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, updater, namespaceLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 	recorder           record.EventRecorder
 	updater            UpdaterInterface
@@ -132,7 +132,7 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) (bool, err
 }
 
 func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, transform func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error)) (*gardenv1beta1.Project, error) {
-	project, err := kutils.TryUpdateProjectStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, objectMeta, transform)
+	project, err := kutils.TryUpdateProjectStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, objectMeta, transform)
 	if err != nil {
 		newProjectLogger(project).Errorf("Error updating the status of the project: %q", err.Error())
 	}

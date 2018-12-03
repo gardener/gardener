@@ -90,12 +90,12 @@ type ControlInterface interface {
 // implements the documented semantics for SecretBindings. updater is the UpdaterInterface used
 // to update the status of SecretBindings. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, recorder record.EventRecorder, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, recorder, secretLister, shootLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 	recorder           record.EventRecorder
 	secretLister       kubecorev1listers.SecretLister
@@ -149,7 +149,7 @@ func (c *defaultControl) ReconcileSecretBinding(obj *gardenv1beta1.SecretBinding
 			secretBindingFinalizers := sets.NewString(secretBinding.Finalizers...)
 			secretBindingFinalizers.Delete(gardenv1beta1.GardenerName)
 			secretBinding.Finalizers = secretBindingFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil && !apierrors.IsNotFound(err) {
+			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().SecretBindings(secretBinding.Namespace).Update(secretBinding); err != nil && !apierrors.IsNotFound(err) {
 				secretBindingLogger.Error(err.Error())
 				return err
 			}

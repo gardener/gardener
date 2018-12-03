@@ -34,7 +34,7 @@ import (
 
 // Controller controls CloudProfiles.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
 	control ControlInterface
@@ -52,7 +52,7 @@ type Controller struct {
 
 // NewCloudProfileController takes a Kubernetes client <k8sGardenClient> and a <k8sGardenInformers> for the Garden clusters.
 // It creates and return a new Garden controller to control CloudProfiles.
-func NewCloudProfileController(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory) *Controller {
+func NewCloudProfileController(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory) *Controller {
 	var (
 		gardenv1beta1Informer = k8sGardenInformers.Garden().V1beta1()
 		cloudProfileInformer  = gardenv1beta1Informer.CloudProfiles()

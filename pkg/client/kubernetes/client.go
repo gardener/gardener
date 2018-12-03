@@ -17,74 +17,74 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
-	"github.com/gardener/gardener/pkg/client/kubernetes/base"
-	"github.com/gardener/gardener/pkg/client/kubernetes/v110"
-	"github.com/gardener/gardener/pkg/client/kubernetes/v111"
-	"github.com/gardener/gardener/pkg/client/kubernetes/v112"
-	"github.com/gardener/gardener/pkg/client/kubernetes/v19"
-	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils"
 
+	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
 // read from the filesystem at location <kubeconfigPath>.
 // If no filepath is given, the in-cluster configuration will be taken into account.
-func NewClientFromFile(kubeconfigPath string, clientConnection *componentconfig.ClientConnectionConfiguration) (Client, error) {
+func NewClientFromFile(kubeconfigPath string, clientConnection *componentconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
 		&clientcmd.ConfigOverrides{},
 	)
-	config, err := CreateRestConfig(clientConfig, clientConnection)
+	config, err := CreateRESTConfig(clientConfig, clientConnection)
 	if err != nil {
 		return nil, err
 	}
-	return newKubernetesClient(config)
+	return NewForConfig(config, opts)
 }
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
-func NewClientFromBytes(kubeconfig []byte, clientConnection *componentconfig.ClientConnectionConfiguration) (Client, error) {
+func NewClientFromBytes(kubeconfig []byte, clientConnection *componentconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
 	configObj, err := clientcmd.Load(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
 	clientConfig := clientcmd.NewDefaultClientConfig(*configObj, &clientcmd.ConfigOverrides{})
-	config, err := CreateRestConfig(clientConfig, clientConnection)
+	config, err := CreateRESTConfig(clientConfig, clientConnection)
 	if err != nil {
 		return nil, err
 	}
-	return newKubernetesClient(config)
+	return NewForConfig(config, opts)
 }
 
 // NewClientFromSecret creates a new Client struct for a given kubeconfig stored as a
 // Secret in an existing Kubernetes cluster. This cluster will be accessed by the <k8sClient>. It will
 // read the Secret <secretName> in <namespace>. The Secret must contain a field "kubeconfig" which will
 // be used.
-func NewClientFromSecret(k8sClient Client, namespace, secretName string) (Client, error) {
+func NewClientFromSecret(k8sClient Interface, namespace, secretName string, opts client.Options) (Interface, error) {
 	secret, err := k8sClient.GetSecret(namespace, secretName)
 	if err != nil {
 		return nil, err
 	}
-	return NewClientFromSecretObject(secret)
+	return NewClientFromSecretObject(secret, opts)
 }
 
 // NewClientFromSecretObject creates a new Client struct for a given Kubernetes Secret object. The Secret must
 // contain a field "kubeconfig" which will be used.
-func NewClientFromSecretObject(secret *corev1.Secret) (Client, error) {
+func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Interface, error) {
 	if kubeconfig, ok := secret.Data["kubeconfig"]; ok {
-		return NewClientFromBytes(kubeconfig, nil)
+		return NewClientFromBytes(kubeconfig, nil, opts)
 	}
 	return nil, errors.New("The secret does not contain a field with name 'kubeconfig'")
 }
 
-// CreateRestConfig creates a Config object for a rest client. If a clientConnection configuration object is passed
+// CreateRESTConfig creates a Config object for a rest client. If a clientConnection configuration object is passed
 // as well then the specified fields will be taken over as well.
-func CreateRestConfig(clientConfig clientcmd.ClientConfig, clientConnection *componentconfig.ClientConnectionConfiguration) (*rest.Config, error) {
+func CreateRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *componentconfig.ClientConnectionConfiguration) (*rest.Config, error) {
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
@@ -98,53 +98,105 @@ func CreateRestConfig(clientConfig clientcmd.ClientConfig, clientConnection *com
 	return config, nil
 }
 
-// newKubernetesClient takes a REST config and returns a <Client>
-// struct which implements convenience methods for creating, listing, updating or deleting resources.
-func newKubernetesClient(config *rest.Config) (Client, error) {
-	var k8sClient Client
+var supportedKubernetesVersions = []string{
+	"1.9",
+	"1.10",
+	"1.11",
+	"1.12",
+}
 
-	baseClient, err := kubernetesbase.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	gitVersion := baseClient.Version()
-
-	k8s19, err := utils.CompareVersions(gitVersion, "~", "1.9")
-	if err != nil {
-		return nil, err
-	}
-	k8s110, err := utils.CompareVersions(gitVersion, "~", "1.10")
-	if err != nil {
-		return nil, err
-	}
-	k8s111, err := utils.CompareVersions(gitVersion, "~", "1.11")
-	if err != nil {
-		return nil, err
-	}
-	k8s112, err := utils.CompareVersions(gitVersion, "~", "1.12")
-	if err != nil {
-		return nil, err
-	}
-
-	switch {
-	case k8s19:
-		k8sClient = kubernetesv19.NewFrom(baseClient)
-	case k8s110:
-		k8sClient = kubernetesv110.NewFromBase(baseClient)
-	case k8s111:
-		k8sClient = kubernetesv111.NewFromBase(baseClient)
-	case k8s112:
-		k8sClient = kubernetesv112.NewFromBase(baseClient)
-	default:
-		return nil, fmt.Errorf("Kubernetes cluster has version %s which is not supported", gitVersion)
-	}
-
-	if err := k8sClient.DiscoverAPIGroups(); err != nil {
-		if len(k8sClient.GetAPIResourceList()) == 0 {
-			return nil, err
+func checkIfSupportedKubernetesVersion(gitVersion string) error {
+	for _, supportedVersion := range supportedKubernetesVersions {
+		ok, err := utils.CompareVersions(gitVersion, "~", supportedVersion)
+		if err != nil {
+			return err
 		}
-		logger.Logger.Debugf("Got a non-empty API resource list during bootstrapping of a Kubernetes client, but also an error: %s", err.Error())
+
+		if ok {
+			return nil
+		}
+	}
+	return fmt.Errorf("unsupported kubernetes version %q", gitVersion)
+}
+
+// NewForConfig returns a new Kubernetes base client.
+func NewForConfig(config *rest.Config, options client.Options) (*Clientset, error) {
+	c, err := client.New(config, options)
+	if err != nil {
+		return nil, err
 	}
 
-	return k8sClient, nil
+	applier, err := NewApplierForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	kubernetes, err := kubernetesclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	garden, err := gardenclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	machine, err := machineclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	apiRegistration, err := apiserviceclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	apiExtension, err := apiextensionsclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	clientSet := &Clientset{
+		config:     config,
+		restMapper: options.Mapper,
+		restClient: kubernetes.Discovery().RESTClient(),
+
+		applier: applier,
+
+		client: c,
+
+		kubernetes:      kubernetes,
+		garden:          garden,
+		machine:         machine,
+		apiregistration: apiRegistration,
+		apiextension:    apiExtension,
+
+		resourceAPIGroups: map[string][]string{
+			CronJobs:                  {"apis", "batch", "v1beta1"},
+			CustomResourceDefinitions: {"apis", "apiextensions.k8s.io", "v1beta1"},
+			DaemonSets:                {"apis", "apps", "v1"},
+			Deployments:               {"apis", "apps", "v1"},
+			Ingresses:                 {"apis", "extensions", "v1beta1"},
+			Jobs:                      {"apis", "batch", "v1"},
+			Namespaces:                {"api", "v1"},
+			PersistentVolumeClaims:    {"api", "v1"},
+			Pods:                      {"api", "v1"},
+			ReplicaSets:               {"apis", "apps", "v1"},
+			ReplicationControllers:    {"api", "v1"},
+			Services:                  {"api", "v1"},
+			StatefulSets:              {"apis", "apps", "v1"},
+		},
+	}
+
+	serverVersion, err := clientSet.kubernetes.Discovery().ServerVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := checkIfSupportedKubernetesVersion(serverVersion.GitVersion); err != nil {
+		return nil, err
+	}
+	clientSet.version = serverVersion.GitVersion
+
+	return clientSet, nil
 }

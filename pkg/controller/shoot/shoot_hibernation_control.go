@@ -148,7 +148,7 @@ func (c *Controller) shootHibernationJob(logger logrus.FieldLogger, client garde
 func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key string, shoot *gardenv1beta1.Shoot) error {
 	var (
 		schedules = getShootHibernationSchedules(shoot)
-		client    = c.k8sGardenClient.GardenClientset()
+		client    = c.k8sGardenClient.Garden()
 	)
 
 	c.deleteShootCron(logger, key)

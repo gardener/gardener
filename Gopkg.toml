@@ -39,6 +39,11 @@ ignored = [
   version = "kubernetes-1.12.1"
 
 [[override]]
+  name = "sigs.k8s.io/controller-runtime"
+  # Specific revision needed for enabling kubernetes-1.12.1 https://github.com/kubernetes-sigs/controller-runtime/commit/8f98fb7def7f056ba7d6aa15134d82cd2dae50fe
+  revision = "a4051585e748b437e799d597f9adba1d777cb12a"
+
+[[override]]
   name = "k8s.io/code-generator"
   version = "kubernetes-1.12.1"
 
