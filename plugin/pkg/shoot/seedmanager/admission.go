@@ -138,6 +138,10 @@ func (s *SeedManager) Admit(a admission.Attributes) error {
 			return admission.NewForbidden(a, errors.New("forbidden to use a seed marked to be deleted"))
 		}
 
+		if !hasDisjointedNetworks(seed, shoot) {
+			return admission.NewForbidden(a, errors.New("forbidden to deploy a shoot overlapping the network of the seed"))
+		}
+
 		return nil
 	}
 
@@ -170,7 +174,7 @@ func determineSeed(shoot *garden.Shoot, seedLister gardenlisters.SeedLister, sho
 
 	// Determine all candidate seed cluster matching the shoot's cloud and region.
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) && haveDisjointedNetworks(seed, shoot) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) && hasDisjointedNetworks(seed, shoot) {
 			candidates = append(candidates, seed)
 		}
 	}
@@ -214,7 +218,7 @@ func verifySeedAvailability(seed *garden.Seed) bool {
 	return false
 }
 
-func haveDisjointedNetworks(seed *garden.Seed, shoot *garden.Shoot) bool {
+func hasDisjointedNetworks(seed *garden.Seed, shoot *garden.Shoot) bool {
 	// error cannot occur due to our static validation
 	k8sNetworks, _ := helper.GetK8SNetworks(shoot)
 	return len(admissionutils.ValidateNetworkDisjointedness(seed.Spec.Networks, k8sNetworks, field.NewPath(""))) == 0
