@@ -845,7 +845,7 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 	}()
 	wg.Wait()
 
-	return apiserverAvailability, controlPlane, systemComponents, nodes
+	return apiserverAvailability, controlPlane, nodes, systemComponents
 }
 
 // MonitoringHealthChecks performs the monitoring releated health checks.
