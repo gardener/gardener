@@ -117,10 +117,8 @@ spec:
           timeoutSeconds: 15
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-        {{- if .Values.resources }}
         resources:
-{{ toYaml .Values.resources | indent 10 }}
-        {{- end }}
+{{- include "util-templates.resource-quantity" .Values | indent 10 }}
         volumeMounts:
         - name: ca
           mountPath: /srv/kubernetes/ca

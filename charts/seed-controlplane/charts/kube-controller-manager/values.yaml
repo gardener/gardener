@@ -12,13 +12,6 @@ featureGates: {}
   # RotateKubeletServerCertificate: false
 images:
   hyperkube: image-repository
-resources:
-  requests:
-    cpu: 200m
-    memory: 128Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
 horizontalPodAutoscaler:
   downscaleDelay: 15m
   syncPeriod: 30s
@@ -27,3 +20,29 @@ horizontalPodAutoscaler:
   downscaleStabilization: 5m0s
   readinessDelay: 30s
   cpuInitializationPeriod: 5m0s
+
+
+objectCount: 4
+resources:
+  requests:
+    cpu:
+      base: 40
+      perObject: 4
+      weight: 5
+      unit: m
+    memory:
+      base: 128
+      perObject: 28
+      weight: 5
+      unit: Mi
+  limits:
+    cpu:
+      base: 200
+      perObject: 7
+      weight: 5
+      unit: m
+    memory:
+      base: 256
+      perObject: 50
+      weight: 5
+      unit: Mi
