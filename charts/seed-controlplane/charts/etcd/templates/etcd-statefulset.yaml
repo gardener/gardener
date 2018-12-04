@@ -106,7 +106,6 @@ spec:
         - etcdbrctl
         - server
         - --schedule={{ .Values.backup.schedule }}
-        - --max-backups={{ .Values.backup.maxBackups }}
         - --data-dir=/var/etcd/data/new.etcd
         - --storage-provider={{ .Values.backup.storageProvider }}
         - --store-prefix=etcd-{{ .Values.role }}
@@ -118,6 +117,8 @@ spec:
         - --endpoints=https://etcd-{{ .Values.role }}-0:2379
         - --etcd-connection-timeout=300
         - --delta-snapshot-period-seconds=300
+        - --garbage-collection-period-seconds=43200
+        - --snapstore-temp-directory=/var/etcd/data/temp
         image: {{ index .Values.images "etcd-backup-restore" }}
         imagePullPolicy: IfNotPresent
         ports:
