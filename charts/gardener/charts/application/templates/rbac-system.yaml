@@ -1,4 +1,4 @@
-{{- if .Values.apiserver.enabled }}
+{{- if .Values.global.apiserver.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
@@ -23,7 +23,7 @@ roleRef:
   name: system:auth-delegator
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.apiserver.serviceAccountName is required" .Values.apiserver.serviceAccountName }}"
+  name: "{{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}"
   namespace: garden
 ---
 apiVersion: {{ include "rbacversion" . }}
@@ -43,7 +43,7 @@ roleRef:
   name: extension-apiserver-authentication-reader
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.apiserver.serviceAccountName is required" .Values.apiserver.serviceAccountName }}"
+  name: "{{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}"
   namespace: garden
 ---
 apiVersion: {{ include "rbacversion" . }}
@@ -62,11 +62,11 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.apiserver.serviceAccountName is required" .Values.apiserver.serviceAccountName }}"
+  name: "{{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}"
   namespace: garden
 {{- end }}
 
-{{- if .Values.controller.enabled }}
+{{- if .Values.global.controller.enabled }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
@@ -84,6 +84,6 @@ roleRef:
   name: cluster-admin
 subjects:
 - kind: ServiceAccount
-  name: "{{ required ".Values.controller.serviceAccountName is required" .Values.controller.serviceAccountName }}"
+  name: "{{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}"
   namespace: garden
 {{- end }}

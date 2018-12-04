@@ -1,4 +1,4 @@
-{{- if .Values.controller.enabled }}
+{{- if .Values.global.controller.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -19,9 +19,9 @@ spec:
   - name: http
     protocol: TCP
     port: 80
-    targetPort: {{ required ".Values.controller.config.server.http.port is required" .Values.controller.config.server.http.port }}
+    targetPort: {{ required ".Values.global.controller.config.server.http.port is required" .Values.global.controller.config.server.http.port }}
   - name: https
     protocol: TCP
     port: 443
-    targetPort: {{ required ".Values.controller.config.server.https.port is required" .Values.controller.config.server.https.port }}
+    targetPort: {{ required ".Values.global.controller.config.server.https.port is required" .Values.global.controller.config.server.https.port }}
 {{- end }}

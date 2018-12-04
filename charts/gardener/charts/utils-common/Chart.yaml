@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart to deploy common resources for the Gardener runtime and application
+name: utils-common
+version: 0.1.0
