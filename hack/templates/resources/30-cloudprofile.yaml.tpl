@@ -69,10 +69,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.12.1
-        - 1.11.3
-        - 1.10.8
-        - 1.9.11
+        - 1.12.3
+        - 1.11.5
+        - 1.10.11
+      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -174,10 +174,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.12.1
-        - 1.11.3
-        - 1.10.8
-        - 1.9.11
+        - 1.12.3
+        - 1.11.5
+        - 1.10.11
+      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
@@ -275,10 +275,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.12.1
-        - 1.11.3
-        - 1.10.8
-        - 1.9.11
+        - 1.12.3
+        - 1.11.5
+        - 1.10.11
+      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -364,9 +364,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
         versions:
-        - 1.12.1
-        - 1.11.3
-        - 1.10.8
+        - 1.12.3
+        - 1.11.5
+        - 1.10.11
+      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -453,10 +454,10 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.12.1
-        - 1.11.3
-        - 1.10.8
-        - 1.9.11
+        - 1.12.3
+        - 1.11.5
+        - 1.10.11
+      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:
