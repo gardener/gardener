@@ -11,3 +11,9 @@ func SetMetaDataLabel(meta *metav1.ObjectMeta, key, value string) {
 
 	meta.Labels[key] = value
 }
+
+// HasMetaDataAnnotation checks if the passed meta object has the given key, value set in the annotations section.
+func HasMetaDataAnnotation(meta *metav1.ObjectMeta, key, value string) bool {
+	val, ok := meta.Annotations[key]
+	return ok && val == value
+}

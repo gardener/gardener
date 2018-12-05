@@ -33,6 +33,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -40,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 )
 
 func (c *Controller) backupInfrastructureAdd(obj interface{}) {
@@ -123,8 +125,8 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for BackupInfrastructures. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, recorder record.EventRecorder, updater UpdaterInterface) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, recorder, updater}
+func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, recorder record.EventRecorder) ControlInterface {
+	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, recorder}
 }
 
 type defaultControl struct {
@@ -135,7 +137,6 @@ type defaultControl struct {
 	identity           *gardenv1beta1.Gardener
 	config             *componentconfig.ControllerManagerConfiguration
 	recorder           record.EventRecorder
-	updater            UpdaterInterface
 }
 
 func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.BackupInfrastructure, key string) error {
@@ -152,6 +153,17 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	)
 
 	logger.Logger.Infof("[BACKUPINFRASTRUCTURE RECONCILE] %s", key)
+
+	// Skip further logic if the last successful reconciliation happened less than the specified syncPeriod ago
+	// and the object does not have an explicit reconcile instruction in its annotations.
+	syncPeriod := c.config.Controllers.BackupInfrastructure.SyncPeriod.Duration
+	if backupInfrastructure.DeletionTimestamp == nil &&
+		!nextReconcileScheduleReached(obj, syncPeriod) &&
+		!kutil.HasMetaDataAnnotation(&obj.ObjectMeta, common.BackupInfrastructureOperation, common.BackupInfrastructureReconcile) {
+		logger.Logger.Infof("Skip reconciliation for BackupInfrastructure %s. Last successful operation happend less than %q ago and reconcile annotation is not set.", key, syncPeriod)
+		return nil
+	}
+
 	backupInfrastructureJSON, _ := json.Marshal(backupInfrastructure)
 	backupInfrastructureLogger.Debugf(string(backupInfrastructureJSON))
 
@@ -209,6 +221,15 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	}
 	if updateErr := c.updateBackupInfrastructureStatus(op, gardenv1beta1.ShootLastOperationStateSucceeded, operationType, "Backup Infrastructure has been successfully reconciled.", 100, nil); updateErr != nil {
 		backupInfrastructureLogger.Errorf("Could not update the Shoot status after reconciliation success: %+v", updateErr)
+		return updateErr
+	}
+
+	if _, updateErr := kutil.TryUpdateBackupInfrastructureAnnotations(op.K8sGardenClient.GardenClientset(), retry.DefaultRetry, obj.ObjectMeta,
+		func(backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*gardenv1beta1.BackupInfrastructure, error) {
+			delete(backupInfrastructure.Annotations, common.BackupInfrastructureOperation)
+			return backupInfrastructure, nil
+		}); updateErr != nil {
+		backupInfrastructureLogger.Errorf("Could not remove %q annotation: %+v", common.BackupInfrastructureOperation, updateErr)
 		return updateErr
 	}
 
@@ -333,17 +354,21 @@ func (c *defaultControl) updateBackupInfrastructureStatus(o *operation.Operation
 	if state == gardenv1beta1.ShootLastOperationStateError && o.BackupInfrastructure.Status.LastOperation != nil {
 		progress = o.BackupInfrastructure.Status.LastOperation.Progress
 	}
-	o.BackupInfrastructure.Status.LastOperation = &gardenv1beta1.LastOperation{
+	lastOperation := &gardenv1beta1.LastOperation{
 		Type:           operationType,
 		State:          state,
 		Progress:       progress,
 		Description:    operationDescription,
 		LastUpdateTime: metav1.Now(),
 	}
-	o.BackupInfrastructure.Status.LastError = lastError
-	o.BackupInfrastructure.Status.ObservedGeneration = o.BackupInfrastructure.Generation
 
-	newBackupInfrastructure, err := c.updater.UpdateBackupInfrastructureStatus(o.BackupInfrastructure)
+	newBackupInfrastructure, err := kutil.TryUpdateBackupInfrastructureStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.BackupInfrastructure.ObjectMeta,
+		func(backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*gardenv1beta1.BackupInfrastructure, error) {
+			backupInfrastructure.Status.LastOperation = lastOperation
+			backupInfrastructure.Status.LastError = lastError
+			backupInfrastructure.Status.ObservedGeneration = backupInfrastructure.Generation
+			return backupInfrastructure, nil
+		})
 	if err == nil {
 		o.BackupInfrastructure = newBackupInfrastructure
 	}
@@ -383,4 +408,17 @@ func formatError(message string, err error) *gardenv1beta1.LastError {
 	return &gardenv1beta1.LastError{
 		Description: fmt.Sprintf("%s (%s)", message, err.Error()),
 	}
+}
+
+func nextReconcileScheduleReached(obj *gardenv1beta1.BackupInfrastructure, syncPeriod time.Duration) bool {
+	lastOperation := obj.Status.LastOperation
+
+	if lastOperation != nil &&
+		lastOperation.Type == gardenv1beta1.ShootLastOperationTypeReconcile &&
+		lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded {
+
+		earliestNextReconcile := lastOperation.LastUpdateTime.Add(syncPeriod)
+		return time.Now().After(earliestNextReconcile)
+	}
+	return true
 }

@@ -63,14 +63,13 @@ func NewBackupInfrastructureController(k8sGardenClient kubernetes.Client, garden
 		gardenv1beta1Informer        = gardenInformerFactory.Garden().V1beta1()
 		backupInfrastructureInformer = gardenv1beta1Informer.BackupInfrastructures()
 		backupInfrastructureLister   = backupInfrastructureInformer.Lister()
-		backupInfrastructureUpdater  = NewRealUpdater(k8sGardenClient, backupInfrastructureLister)
 	)
 
 	backupInfrastructureController := &Controller{
 		k8sGardenClient:            k8sGardenClient,
 		k8sGardenInformers:         gardenInformerFactory,
 		config:                     config,
-		control:                    NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, recorder, backupInfrastructureUpdater),
+		control:                    NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, recorder),
 		recorder:                   recorder,
 		secrets:                    secrets,
 		imageVector:                imageVector,

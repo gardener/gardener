@@ -17,16 +17,17 @@ package backupinfrastructure
 import (
 	"context"
 
+	"github.com/gardener/gardener/pkg/api"
+	"github.com/gardener/gardener/pkg/apis/garden"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/validation"
+	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/storage/names"
-
-	"github.com/gardener/gardener/pkg/api"
-	"github.com/gardener/gardener/pkg/apis/garden"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/validation"
 )
 
 type backupInfrastructureStrategy struct {
@@ -72,6 +73,10 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 
 	// The deletion timestamp was set.
 	if oldBackupInfrastructure.DeletionTimestamp == nil && newBackupInfrastructure.DeletionTimestamp != nil {
+		return true
+	}
+
+	if kutil.HasMetaDataAnnotation(&newBackupInfrastructure.ObjectMeta, common.BackupInfrastructureOperation, common.BackupInfrastructureReconcile) {
 		return true
 	}
 
