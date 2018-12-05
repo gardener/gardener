@@ -15,17 +15,17 @@
 package kubernetes
 
 import (
-	"github.com/onsi/gomega/types"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"testing"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func TestKubernetes(t *testing.T) {
@@ -64,6 +64,19 @@ var _ = Describe("kubernetes", func() {
 		Entry("nil labels", nil, "foo", "bar", map[string]string{"foo": "bar"}),
 		Entry("non-nil non-conflicting labels", map[string]string{"bar": "baz"}, "foo", "bar", map[string]string{"bar": "baz", "foo": "bar"}),
 		Entry("non-nil conflicting labels", map[string]string{"foo": "baz"}, "foo", "bar", map[string]string{"foo": "bar"}),
+	)
+
+	DescribeTable("#HasMetaDataAnnotation",
+		func(annotations map[string]string, key, value string, result bool) {
+			meta := &metav1.ObjectMeta{
+				Annotations: annotations,
+			}
+			Expect(HasMetaDataAnnotation(meta, key, value)).To(BeIdenticalTo(result))
+		},
+		Entry("no annotations", map[string]string{}, "key", "value", false),
+		Entry("matching annotation", map[string]string{"key": "value"}, "key", "value", true),
+		Entry("no matching key", map[string]string{"key": "value"}, "key1", "value", false),
+		Entry("no matching value", map[string]string{"key": "value"}, "key", "value1", false),
 	)
 
 	DescribeTable("#IsEmptyPatch",
