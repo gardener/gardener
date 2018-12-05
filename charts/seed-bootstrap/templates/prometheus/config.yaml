@@ -38,25 +38,31 @@ data:
         replacement: seed
 
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
-      - source_labels:
-        - container_name
-        - __name__
-        # The system container POD is used for networking
-        regex: ^POD$;^({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})$
-        action: drop
-      # drop terraform pods
-      - source_labels: [ pod_name ]
-        regex: ^.+\.tf-pod.+$
-        action: drop
       # get system services
       - source_labels: [ id ]
         action: replace
         regex: ^/system\.slice/(.+)\.service$
         target_label: systemd_service_name
         replacement: '${1}'
-      - regex: ^id$
-        action: labeldrop
+      - source_labels: [ id ]
+        action: replace
+        regex: ^/system\.slice/(.+)\.service$
+        target_label: container_name
+        replacement: '${1}'
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.cAdvisor | indent 6 }}
+      - source_labels:
+        - container_name
+        - __name__
+        # The system container POD is used for networking
+        regex: POD;({{ without .Values.allowedMetrics.cAdvisor "container_network_receive_bytes_total" "container_network_transmit_bytes_total" | join "|" }})
+        action: drop
+      - source_labels: [ container_name ]
+        regex: ^$
+        action: drop
+      # drop terraform pods
+      - source_labels: [ pod_name ]
+        regex: ^.+\.tf-pod.+$
+        action: drop
 
     - job_name: kubelet
       honor_labels: false
