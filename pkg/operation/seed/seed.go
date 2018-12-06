@@ -30,11 +30,14 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/client-go/util/retry"
 )
 
 const (
@@ -179,10 +182,16 @@ func BootstrapCluster(seed *Seed, k8sGardenClient kubernetes.Client, secrets map
 		return err
 	}
 
-	if _, err := k8sSeedClient.PatchNamespace(common.GardenNamespace, []byte(fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": {"role":"%s"}}]`, common.GardenNamespace))); err != nil {
+	if _, err := kutils.TryUpdateNamespace(k8sSeedClient.Clientset(), retry.DefaultBackoff, gardenNamespace.ObjectMeta, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+		kutils.SetMetaDataLabel(&ns.ObjectMeta, "role", common.GardenNamespace)
+		return ns, nil
+	}); err != nil {
 		return err
 	}
-	if _, err := k8sSeedClient.PatchNamespace(metav1.NamespaceSystem, []byte(fmt.Sprintf(`[{"op": "add", "path": "/metadata/labels", "value": {"role":"%s"}}]`, metav1.NamespaceSystem))); err != nil {
+	if _, err := kutils.TryUpdateNamespace(k8sSeedClient.Clientset(), retry.DefaultBackoff, metav1.ObjectMeta{Name: metav1.NamespaceSystem}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+		kutils.SetMetaDataLabel(&ns.ObjectMeta, "role", metav1.NamespaceSystem)
+		return ns, nil
+	}); err != nil {
 		return err
 	}
 
