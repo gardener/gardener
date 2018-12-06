@@ -394,19 +394,11 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 			"checksum/secret-cloudprovider":                  b.CheckSums[common.CloudProviderSecretName],
 			"checksum/configmap-cloud-provider-config":       b.CheckSums[common.CloudProviderConfigName],
 		},
+		"objectCount": b.Shoot.GetNodeCount(),
 	}
 	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
 	if err != nil {
 		return err
-	}
-
-	if b.ShootedSeed != nil {
-		defaultValues["resources"] = map[string]interface{}{
-			"limits": map[string]interface{}{
-				"cpu":    "750m",
-				"memory": "1.5Gi",
-			},
-		}
 	}
 
 	// If a shoot is hibernated we only want to scale down the KCM if no nodes exist anymore. The node-lifecycle-controller
