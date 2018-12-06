@@ -1,0 +1,94 @@
+{{- if .Values.global.controller.enabled }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: gardener-controller-manager
+  namespace: garden
+  labels:
+    app: gardener
+    role: controller-manager
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ required ".Values.global.controller.replicaCount is required" .Values.global.controller.replicaCount }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: controller-manager
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/configmap-controller-manager.yaml") . | sha256sum }}
+        checksum/secret-gardener-controller-manager-cert: {{ include (print $.Template.BasePath "/secret-controller-manager-cert.yaml") . | sha256sum }}
+        checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/secret-controller-manager-kubeconfig.yaml") . | sha256sum }}
+        checksum/secret-default-domain: {{ include "gardener.secret-default-domain" . | sha256sum }}
+        checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
+        checksum/secret-alerting-smtp: {{ include "gardener.secret-alerting-smtp" . | sha256sum }}
+        checksum/secret-openvpn-diffie-hellman: {{ include "gardener.secret-openvpn-diffie-hellman" . | sha256sum }}
+        checksum/secret-certificate-management: {{ include "gardener.secret-certificate-management" . | sha256sum }}
+      labels:
+        app: gardener
+        role: controller-manager
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+    spec:
+      {{- if not .Values.global.controller.kubeconfig }}
+      serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}
+      {{- end }}
+      containers:
+      - name: gardener-controller-manager
+        image: {{ required ".Values.global.controller.image.repository is required" .Values.global.controller.image.repository }}:{{ required ".Values.global.controller.image.tag is required" .Values.global.controller.image.tag }}
+        imagePullPolicy: {{ .Values.global.controller.image.pullPolicy }}
+        command:
+        - /gardener-controller-manager
+        - --config=/etc/gardener-controller-manager/config/config.yaml
+        {{- if .Values.global.controller.resources }}
+        resources:
+{{ toYaml .Values.global.controller.resources | indent 10 }}
+        {{- end }}
+        {{- if .Values.global.controller.dnsConfig }}
+        dnsConfig:
+{{ toYaml .Values.global.controller.dnsConfig | indent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ required ".Values.global.controller.config.server.http.port is required" .Values.global.controller.config.server.http.port }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - name: gardener-controller-manager-cert
+          mountPath: /etc/gardener-controller-manager/srv
+          readOnly: true
+        {{- if .Values.global.controller.kubeconfig }}
+        - name: gardener-controller-manager-kubeconfig
+          mountPath: /etc/gardener-controller-manager/kubeconfig
+          readOnly: true
+        {{- end }}
+        - name: gardener-controller-manager-config
+          mountPath: /etc/gardener-controller-manager/config
+{{- if .Values.global.controller.additionalVolumeMounts }}
+{{ toYaml .Values.global.controller.additionalVolumeMounts | indent 8 }}
+{{- end }}
+      terminationGracePeriodSeconds: 3600
+      volumes:
+      - name: gardener-controller-manager-cert
+        secret:
+          secretName: gardener-controller-manager-cert
+      {{- if .Values.global.controller.kubeconfig }}
+      - name: gardener-controller-manager-kubeconfig
+        secret:
+          secretName: gardener-controller-manager-kubeconfig
+      {{- end }}
+      - name: gardener-controller-manager-config
+        configMap:
+          name: gardener-controller-manager-configmap
+{{- if .Values.global.controller.additionalVolumes }}
+{{ toYaml .Values.global.controller.additionalVolumes | indent 6 }}
+{{- end }}
+{{- end}}

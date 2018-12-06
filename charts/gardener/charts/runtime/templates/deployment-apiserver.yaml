@@ -1,4 +1,4 @@
-{{- if .Values.apiserver.enabled }}
+{{- if .Values.global.apiserver.enabled }}
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
@@ -11,7 +11,7 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
-  replicas: {{ required ".Values.apiserver.replicaCount is required" .Values.apiserver.replicaCount }}
+  replicas: {{ required ".Values.global.apiserver.replicaCount is required" .Values.global.apiserver.replicaCount }}
   selector:
     matchLabels:
       app: gardener
@@ -20,22 +20,25 @@ spec:
     metadata:
       annotations:
         checksum/configmap-gardener-audit-policy-config: {{ include (print $.Template.BasePath "/configmap-apiserver-audit.yaml") . | sha256sum }}
-        checksum/secret-gardener-apiserver-cert: {{ include (print $.Template.BasePath "/secret-apiserver.yaml") . | sha256sum }}
+        checksum/secret-gardener-apiserver-cert: {{ include (print $.Template.BasePath "/secret-apiserver-cert.yaml") . | sha256sum }}
+        checksum/secret-gardener-apiserver-kubeconfig: {{ include (print $.Template.BasePath "/secret-apiserver-kubeconfig.yaml") . | sha256sum }}
       labels:
         app: gardener
         role: apiserver
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         release: "{{ .Release.Name }}"
         heritage: "{{ .Release.Service }}"
-        {{- if .Values.apiserver.etcd.useSidecar }}
+        {{- if .Values.global.apiserver.etcd.useSidecar }}
         sidecar: etcd
         {{- end }}
     spec:
-      serviceAccountName: {{ required ".Values.apiserver.serviceAccountName is required" .Values.apiserver.serviceAccountName }}
+      {{- if not .Values.global.apiserver.kubeconfig }}
+      serviceAccountName: {{ required ".Values.global.apiserver.serviceAccountName is required" .Values.global.apiserver.serviceAccountName }}
+      {{- end }}
       containers:
       - name: gardener-apiserver
-        image: {{ required ".Values.apiserver.image.repository is required" .Values.apiserver.image.repository }}:{{ required ".Values.apiserver.image.tag is required" .Values.apiserver.image.tag }}
-        imagePullPolicy: {{ .Values.apiserver.image.pullPolicy }}
+        image: {{ required ".Values.global.apiserver.image.repository is required" .Values.global.apiserver.image.repository }}:{{ required ".Values.global.apiserver.image.tag is required" .Values.global.apiserver.image.tag }}
+        imagePullPolicy: {{ .Values.global.apiserver.image.pullPolicy }}
         command:
         - /gardener-apiserver
         - --audit-log-path=/var/lib/audit.log
@@ -43,40 +46,50 @@ spec:
         - --audit-log-maxsize=100
         - --audit-log-maxbackup=5
         - --authorization-always-allow-paths=/healthz
-        {{- if .Values.apiserver.etcd.useSidecar }}
+        {{- if .Values.global.apiserver.etcd.useSidecar }}
         - --etcd-servers=http://localhost:2379
         {{- else }}
-        - --etcd-servers={{ required ".Values.apiserver.etcd.servers is required" .Values.apiserver.etcd.servers }}
-        {{- if .Values.apiserver.etcd.caBundle }}
+        - --etcd-servers={{ required ".Values.global.apiserver.etcd.servers is required" .Values.global.apiserver.etcd.servers }}
+        {{- if .Values.global.apiserver.etcd.caBundle }}
         - --etcd-cafile=/etc/gardener-apiserver/srv/etcd-client-ca.crt
         {{- end }}
-        {{- if .Values.apiserver.etcd.tls }}
+        {{- if .Values.global.apiserver.etcd.tls }}
         - --etcd-certfile=/etc/gardener-apiserver/srv/etcd-client.crt
         {{- end }}
-        {{- if .Values.apiserver.etcd.tls }}
+        {{- if .Values.global.apiserver.etcd.tls }}
         - --etcd-keyfile=/etc/gardener-apiserver/srv/etcd-client.key
         {{- end }}
         {{- end }}
         {{- include "gardener-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
+        {{- if .Values.global.apiserver.kubeconfig }}
+        - --authentication-kubeconfig=/etc/gardener-apiserver/kubeconfig/kubeconfig
+        - --authorization-kubeconfig=/etc/gardener-apiserver/kubeconfig/kubeconfig
+        - --kubeconfig=/etc/gardener-apiserver/kubeconfig/kubeconfig
+        {{- end }}
         - --secure-port=443
         - --tls-cert-file=/etc/gardener-apiserver/srv/gardener-apiserver.crt
         - --tls-private-key-file=/etc/gardener-apiserver/srv/gardener-apiserver.key
         - --v=2
-        {{- if .Values.apiserver.resources }}
+        {{- if .Values.global.apiserver.resources }}
         resources:
-{{ toYaml .Values.apiserver.resources | indent 10 }}
+{{ toYaml .Values.global.apiserver.resources | indent 10 }}
         {{- end }}
-        {{- if .Values.apiserver.dnsConfig }}
+        {{- if .Values.global.apiserver.dnsConfig }}
         dnsConfig:
-{{ toYaml .Values.apiserver.dnsConfig | indent 10 }}
+{{ toYaml .Values.global.apiserver.dnsConfig | indent 10 }}
         {{- end }}
         volumeMounts:
         - name: gardener-apiserver-cert
           mountPath: /etc/gardener-apiserver/srv
           readOnly: true
+        {{- if .Values.global.apiserver.kubeconfig }}
+        - name: gardener-apiserver-kubeconfig
+          mountPath: /etc/gardener-apiserver/kubeconfig
+          readOnly: true
+        {{- end }}
         - name: gardener-audit-policy-config
           mountPath: /etc/gardener-apiserver/audit
-      {{- if .Values.apiserver.etcd.useSidecar }}
+      {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
         image: quay.io/coreos/etcd:v3.1.12
         imagePullPolicy: IfNotPresent
@@ -110,17 +123,22 @@ spec:
           mountPath: /var/etcd/data
       {{- end }}
       volumes:
-      {{- if .Values.apiserver.etcd.useSidecar }}
+      {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
         emptyDir: {}
       {{- end }}
       - name: gardener-apiserver-cert
         secret:
           secretName: gardener-apiserver-cert
+      {{- if .Values.global.apiserver.kubeconfig }}
+      - name: gardener-apiserver-kubeconfig
+        secret:
+          secretName: gardener-apiserver-kubeconfig
+      {{- end }}
       - name: gardener-audit-policy-config
         configMap:
           name: gardener-audit-policy-config
-{{- if .Values.apiserver.etcd.useSidecar }}
+{{- if .Values.global.apiserver.etcd.useSidecar }}
 ---
 apiVersion: v1
 kind: Service

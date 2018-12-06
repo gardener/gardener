@@ -1,4 +1,4 @@
-{{- if .Values.apiserver.enabled }}
+{{- if .Values.global.apiserver.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -11,6 +11,10 @@ metadata:
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"
 spec:
+  type: ClusterIP
+  {{- if .Values.global.deployment.virtualGarden.enabled }}
+  clusterIP: {{ .Values.global.deployment.virtualGarden.clusterIP }}
+  {{- end }}
   selector:
     app: gardener
     role: apiserver

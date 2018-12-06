@@ -1,4 +1,4 @@
-{{- if .Values.controller.enabled }}
+{{- if .Values.global.controller.enabled }}
 apiVersion: {{ include "webhookadmissionregistration" . }}
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -16,9 +16,13 @@ webhooks:
     - namespaces
   failurePolicy: Fail
   clientConfig:
+    {{- if .Values.global.deployment.virtualGarden.enabled }}
+    url: https://gardener-controller-manager.garden/webhooks/validate-namespace-deletion
+    {{- else }}
     service:
       namespace: garden
       name: gardener-controller-manager
       path: /webhooks/validate-namespace-deletion
-    caBundle: {{ required ".Values.controller.config.server.https.tls.caBundle is required" (b64enc .Values.controller.config.server.https.tls.caBundle) }}
+    {{- end }}
+    caBundle: {{ required ".Values.global.controller.config.server.https.tls.caBundle is required" (b64enc .Values.global.controller.config.server.https.tls.caBundle) }}
 {{- end }}
