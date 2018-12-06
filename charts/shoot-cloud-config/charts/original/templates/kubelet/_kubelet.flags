@@ -19,8 +19,8 @@
 --enable-debugging-handlers=true \
 --event-burst=25 \
 --event-qps=25 \
---eviction-hard="memory.available<100Mi,nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
---eviction-soft="memory.available<200Mi,nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
+--eviction-hard="memory.available<{{ .worker.evictionHardMemoryAvailable }},nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
+--eviction-soft="memory.available<{{ .worker.evictionSoftMemoryAvailable }},nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
 --eviction-soft-grace-period="memory.available=1m30s,nodefs.available=1m30s,nodefs.inodesFree=1m30s,imagefs.available=1m30s,imagefs.inodesFree=1m30s" \
 --eviction-max-pod-grace-period="90" \
 --eviction-pressure-transition-period="4m" \

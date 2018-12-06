@@ -103,6 +103,11 @@ func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
 	return helper.GetShootCloudProviderWorkers(s.CloudProvider, s.Info)
 }
 
+// GetMachineTypesFromCloudProfile returns a list of machine types in the cloud profile.
+func (s *Shoot) GetMachineTypesFromCloudProfile() []gardenv1beta1.MachineType {
+	return helper.GetMachineTypesFromCloudProfile(s.CloudProvider, s.CloudProfile)
+}
+
 // GetWorkerNames returns a list of names of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkerNames() []string {
 	workerNames := []string{}
