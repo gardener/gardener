@@ -75,8 +75,8 @@ controller:
       cpu: 100m
       memory: 100Mi
     limits:
-      cpu: 200m
-      memory: 512Mi
+      cpu: 2000m
+      memory: 800Mi
 
   service:
     annotations:
