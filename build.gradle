@@ -31,18 +31,24 @@ dependencies {
          build 'k8s.io/apiextensions-apiserver@kubernetes-1.12.1'
          build 'k8s.io/helm@v2.7.2'
          build 'k8s.io/kube-aggregator@kubernetes-1.12.1'
-         build 'google.golang.org/grpc/reflection@1.16.0'
          
+         build 'google.golang.org/grpc/reflection@1.16.0'
          build 'k8s.io/code-generator@kubernetes-1.12.1'
          build 'github.com/coreos/etcd@3.2.24'
          build 'github.com/aws/aws-sdk-go@1.12.48'
+         
          build 'github.com/miekg/dns@1.0.15'
          build 'github.com/prometheus/client_golang@0.9.0'
+         build 'github.com/satori/go.uuid@v1.1.0'
          
          build name:'k8s.io/apiserver', commit: '41e5031224ea54c8a62c1b6937e1381a99d9344f'
          build name:'k8s.io/kube-openapi', url:"https://github.com/kubernetes/kube-openapi.git", commit: '9dfdf9be683f61f82cda12362c44c784e0778b56'
-         build name:'github.com/gardener/machine-controller-manager', commit: 'd0161dd1856eb2ad4e956865d2ecd92c5b21b182'
          build name:'github.com/robfig/cron', commit: '2315d5715e36303a941d907f038da7f7c44c773b'
          build name:'github.com/hashicorp/go-multierror', commit:'3d5d8f294aa03d8e98859feac328afbdf1ae0703'
+         build name:'k8s.io/apimachinery', url:'https://github.com/kubernetes/apimachinery', tag: 'kubernetes-1.12.1'
+         
+         //Causes build problem due to different client-go version used in zz_generated.conversion.go file (apparently a known problem solved by the makefile)
+         build name:'github.com/gardener/machine-controller-manager', commit: 'd0161dd1856eb2ad4e956865d2ecd92c5b21b182'
+
     }    
 }
