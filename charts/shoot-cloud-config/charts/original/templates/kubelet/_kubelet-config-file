@@ -34,13 +34,13 @@ eventBurst: 50
 evictionHard:
   imagefs.available: 5%
   imagefs.inodesFree: 5%
-  memory.available: 100Mi
+  memory.available: {{ .worker.evictionHard }}
   nodefs.available: 5%
   nodefs.inodesFree: 5%
 evictionSoft:
   imagefs.available: 10%
   imagefs.inodesFree: 10%
-  memory.available: 200Mi
+  memory.available: {{ .worker.evictionSoft }}
   nodefs.available: 10%
   nodefs.inodesFree: 10%
 evictionSoftGracePeriod:
