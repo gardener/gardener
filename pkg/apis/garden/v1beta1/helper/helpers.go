@@ -135,6 +135,32 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 	return workers
 }
 
+// GetMachineTypesFromCloudProfile retrieves list of machine types from cloud profile
+func GetMachineTypesFromCloudProfile(cloudProvider gardenv1beta1.CloudProvider, profile *gardenv1beta1.CloudProfile) []gardenv1beta1.MachineType {
+	var (
+		machineTypes []gardenv1beta1.MachineType
+	)
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return profile.Spec.AWS.Constraints.MachineTypes
+	case gardenv1beta1.CloudProviderAzure:
+		return profile.Spec.Azure.Constraints.MachineTypes
+	case gardenv1beta1.CloudProviderGCP:
+		return profile.Spec.GCP.Constraints.MachineTypes
+	case gardenv1beta1.CloudProviderOpenStack:
+		for _, openStackMachineType := range profile.Spec.OpenStack.Constraints.MachineTypes {
+			machineTypes = append(machineTypes, openStackMachineType.MachineType)
+		}
+	case gardenv1beta1.CloudProviderLocal:
+		machineTypes = append(machineTypes, gardenv1beta1.MachineType{
+			Name: "local",
+		})
+	}
+
+	return machineTypes
+}
+
 // DetermineCloudProviderInShoot takes a Shoot cloud object and returns the cloud provider this profile is used for.
 // If it is not able to determine it, an error will be returned.
 func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.CloudProvider, error) {
