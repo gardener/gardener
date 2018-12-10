@@ -41,9 +41,9 @@ extraEnv: []
 resources:
   limits:
     cpu: 100m
-    memory: 256Mi
+    memory: 768Mi
   requests:
-    cpu: 100m
+    cpu: 50m
     memory: 128Mi
 
 podAnnotations: {}

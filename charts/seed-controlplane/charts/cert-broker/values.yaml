@@ -25,7 +25,7 @@ certmanager:
 resources:
   requests:
     memory: "64Mi"
-    cpu: "50m"
+    cpu: "20m"
   limits:
-    memory: "128Mi"
+    memory: "350Mi"
     cpu: "50m"
