@@ -288,6 +288,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 		prometheusConfig = map[string]interface{}{
+			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"networks": map[string]interface{}{
 				"pods":     b.Shoot.GetPodNetwork(),
 				"services": b.Shoot.GetServiceNetwork(),
