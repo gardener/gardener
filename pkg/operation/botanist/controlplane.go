@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -37,7 +38,8 @@ var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane",
 func (b *Botanist) DeployNamespace() error {
 	namespace, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: b.Shoot.SeedNamespace,
+			Annotations: getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID),
+			Name:        b.Shoot.SeedNamespace,
 			Labels: map[string]string{
 				common.GardenRole: common.GardenRoleShoot,
 			},
@@ -48,6 +50,18 @@ func (b *Botanist) DeployNamespace() error {
 	}
 	b.SeedNamespaceObject = namespace
 	return nil
+}
+
+func getShootAnnotations(annotations map[string]string, uid types.UID) map[string]string {
+	shootAnnotations := map[string]string{
+		common.ShootUID: string(uid),
+	}
+	for key, value := range annotations {
+		if strings.HasPrefix(key, common.AnnotateSeedNamespacePrefix) {
+			shootAnnotations[key] = value
+		}
+	}
+	return shootAnnotations
 }
 
 // DeployBackupNamespace creates a namespace in the Seed cluster from info in shoot object, which is used to deploy all the backup infrastructure

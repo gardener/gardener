@@ -341,6 +341,16 @@ const (
 	// delete)).
 	ShootIgnore = "shoot.garden.sapcloud.io/ignore"
 
+	// ShootUID is an annotation key for the shoot namespace in the seed cluster,
+	// which value will be the value of `shoot.status.uid`
+	ShootUID = "shoot.garden.sapcloud.io/uid"
+
+	// AnnotateSeedNamespacePrefix is such a prefix so that the shoot namespace in the seed cluster
+	// will be annotated with the annotations of the shoot resource starting with it.
+	// For example, if the shoot is annotated with <AnnotateSeedNamespacePrefix>key=value,
+	// then the namespace in the seed will be annotated with <AnnotateSeedNamespacePrefix>key=value, as well.
+	AnnotateSeedNamespacePrefix = "custom.shoot.sapcloud.io/"
+
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
 
