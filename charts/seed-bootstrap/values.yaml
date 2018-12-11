@@ -15,7 +15,7 @@ prometheus:
         weight: 5
         unit: m
       memory:
-        base: 100
+        base: 150
         perObject: 18
         weight: 5
         unit: Mi
@@ -26,7 +26,7 @@ prometheus:
         weight: 5
         unit: m
       memory:
-        base: 150
+        base: 200
         perObject: 36
         weight: 5
         unit: Mi
