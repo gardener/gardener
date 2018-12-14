@@ -1,8 +1,8 @@
 # Deploying the Gardener and a Seed into an AKS cluster
 
 This document demonstrates how to install Gardener into an existing
-AKS cluster. We'll use a single cluster for the sake of simplicity to
-host both Gardener and a seed to the same cluster.
+AKS cluster. We'll use a single cluster to host both Gardener and a Seed to the
+same cluster for the sake of simplicity .
 
 Please note that this document is to provide you an example
 installation and is not to be used in a production environment since
@@ -17,8 +17,7 @@ In this example we'll follow these steps to create a Seed cluster on AKS:
 - [Prerequisites](#prerequisites)
   - [AWS credentials for Route 53 Hosted Zone](#aws-credentials-for-route-53-hosted-zone)
   - [Deploy AKS cluster](#deploy-aks-cluster)
-    - [Install default ClusterRoles](#install-default-clusterroles)
-    - [Install Tiller to AKS](#install-tiller-to-aks)
+    - [Initialize Helm on the Cluster](#initialize-helm-on-the-cluster)
     - [Deploy stable/nginx-ingress chart to AKS](#deploy-stablenginx-ingress-chart-to-aks)
     - [Create wildcard DNS record for the ingress](#create-wildcard-dns-record-for-the-ingress)
   - [Create Azure Service Principle to get Azure credentials](#create-azure-service-principle-to-get-azure-credentials)
@@ -43,19 +42,18 @@ In this example we'll follow these steps to create a Seed cluster on AKS:
 
 Summary of prerequisites:
 - An Azure AKS cluster with:
-  - default ClusterRoles defined (not defined by default since RBAC is not enabled),
-  - Tiller deployed with `cluster-admin` ClusterRole,
-  - stable/nginx-ingress Helm chart deployed,
+  - Helm initialized,
+  - an ingress controller deployed,
   - a wildcard DNS record pointing the ingress,
-  - `az` command line client configured for related subscription,
+  - `az` command line client configured for Azure subscription,
 - An Azure service principle to provide Azure credentials to Gardener,
 - A Route53 Hosted Zone and AWS account credentials with permissions on that Route53 Zone,
   - `aws` command line client configured for this account,
 - `gardenctl` command line client configured for the AKS cluster's kubeconfig
 
-**Note**: We use a Route53 Hosted Zone even if we are deploying on Azure, this is due
-to lack of Azure DNS implementation in Gardener, it only supports
-aws-route53 or google-clouddns for now.
+**Note**: Gardener doesn't have support for Azure DNS yet (see
+[#494](https://github.com/gardener/gardener/issues/494)). So, we use a Route53 Hosted Zone
+even if we are deploying on Azure.
 
 ## AWS credentials for Route 53 Hosted Zone
 
@@ -74,61 +72,35 @@ for later use.
 ## Deploy AKS cluster
 
 Here you can find a summary for creating an AKS cluster, if you already
-have one, skip this. You can **skip the Azure HTTP addons** when
-installing the AKS cluster, we'll install stable/nginx-ingress Helm chart as
-you can see below.
+have one, skip this step.
 
 ```
 az group create --name garden-1 --location eastus
-az aks create --resource-group garden-1 --name garden-1 --node-count 3 --generate-ssh-keys -s Standard_DS4_v2
-az aks get-credentials --resource-group garden-1 --name garden-1
+az aks create --resource-group garden-1 --name garden-1 \
+  --kubernetes-version 1.11.5 \
+  --node-count 2 --node-vm-size Standard_DS4_v2 \
+  --generate-ssh-keys
+az aks get-credentials --resource-group garden-1 --name garden-1 --admin
 ```
 
-### Install default ClusterRoles
+### Initialize Helm on the Cluster
 
-On Azure, RBAC support is planned for GA and not enabled yet, so
-ClusterRole definitions are not in place and this causes Gardener Helm
-chart to fail. Below instead of removing RBAC support from Gardener
-installation we are faking the RBAC support by manually creating ClusterRoles
-on our AKS cluster.
-
-**Note**: We are using v1.9.6 in our AKS cluster, mind the version in
-the url below and please use the rules for the right version.
+Since RBAC is enabled by default we need to deploy helm with an RBAC config.
 
 ```
-# manually create ClusterRoles in AKS, required until RBAC support is added to AKS
-kubectl apply -f https://raw.githubusercontent.com/kubernetes/kubernetes/v1.9.6/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-roles.yaml --validate=false
-```
-
-### Install Tiller to AKS
-
-Helm must run with a ClusterRole (`cluster-admin`) with enough
-permissions even if RBAC is not enabled, this is an enforcement needs
-to be addressed on Helm side not on AKS/Kubernetes. So let's create a
-Tiller ServiceAccount with `cluster-admin` ClusterRole and deploy it:
-([`example/aks/tiller-rbac-config.yaml`](../../example/aks/tiller-rbac-config.yaml)).
-
-```
-# Reference: https://github.com/kubernetes/helm/blob/master/docs/rbac.md
-kubectl apply -f example/aks/tiller-rbac-config.yaml
+kubectl apply -f https://raw.githubusercontent.com/Azure/helm-charts/master/docs/prerequisities/helm-rbac-config.yaml
 helm init --service-account tiller
 ```
 
 ### Deploy stable/nginx-ingress chart to AKS
 
-At the moment all `Ingress` resources created by the Gardener are
-using the nginx annotations. This is the simplest solution at the
-moment, because it works across cloud providers. But in the future
-it's planned to make it more customizable.
-
-[AKS Ingress](https://docs.microsoft.com/en-us/azure/aks/ingress)
-documentation tells about installing Ingress controller with RBAC
-disabled, you can also follow that one but since we already deployed
-the default ClusterRoles above, we are now able to install the chart
-with RBAC enabled.
+At the moment the `Ingress` resources created by the Gardener are
+expecting the nginx-ingress style annotations to work.
 
 ```
-helm upgrade --install --namespace kube-system nginx-ingress stable/nginx-ingress
+helm upgrade --install \
+  --namespace kube-system \
+  nginx-ingress stable/nginx-ingress
 ```
 
 ### Create wildcard DNS record for the ingress
@@ -175,7 +147,7 @@ Retrying role assignment creation: 1/36
 }
 ```
 
-Let's define some env varibles for later use
+Let's define some env variables for later use
 
 ```
 CLIENT_ID=       # place your Azure Service Principal appId
@@ -188,7 +160,7 @@ In this example we'll be using `gardenctl` to interact with
 Gardener. You can install `gardenctl` following instruction in its
 repo: https://github.com/gardener/gardenctl
 
-Here is a simple configuration for gardenctl:
+Here is a sample configuration for gardenctl:
 
 ```
 $ cat ~/.garden/config
@@ -213,14 +185,20 @@ Since Gardener is an extension API Server, it can share the etcd
 backing native Kubernetes cluster's API Server, and hence explicit etcd
 installation is optional. But in our case we have no access to the
 control plane components of the AKS cluster and we have to deploy our
-own etcd ourselves for Gardener.
+own etcd ourselves for Gardener. Lets deploy an etcd using the
+[gardener/etcd-backup-restore](https://github.com/gardener/etcd-backup-restore)
+project, which is also used by the Gardener for Shoot control plane.
 
-The [`example/aks/etcd.yaml`](../../example/aks/etcd.yaml) file used
-here is a modified version of the etcd manifest used in
-[hack/dev-setup](../../hack/dev-setup) script to stay close to dev
-setup. This one deploys an etcd with its data in a `PVC` rather than a
-`hostPath` to provide persistency even when its POD jumps between
-different hosts.
+```
+# pull the etcd-backup-restore
+git clone https://github.com/gardener/etcd-backup-restore.git
+
+# deploy etcd
+helm upgrade --install \
+  --namespace garden \
+  etcd etcd-backup-restore/chart \
+  --set tls=
+```
 
 **Note**: This etcd installation doesn't provide HA. But etcd will be
 auto recovered by the Deployment. This could be sufficient for some
@@ -228,47 +206,61 @@ deployments but may not be suitable for production usage. Also note
 that this etcd is not deployed with TLS enabled and doesn't use
 certificates for authentication.
 
-```
-kubectl apply -f example/aks/etcd.yaml
-```
-
-Check etcd logs and its started suceesfully:
+Check etcd pod's health, it should have `READY:2/2` and `STATUS:Running`:
 
 ```
-kubectl -n garden get deploy,svc etcd
-kubectl -n garden logs deployment/etcd
+$ kubectl -n garden get pods
+NAME              READY   STATUS    RESTARTS   AGE
+etcd-for-test-0   2/2     Running   0          1m
 ```
 
 ## Deploy Gardener Helm Chart
 
-You need to update these Route53 related fields in the
-[`example/aks/gardener-values.yaml`](../../example/aks/gardener-values.yaml)
-since garden-controller-manager is the components that creates DNS
-records in Route53:
-* **controller.internalDomain.hostedZoneID**
-* **controller.internalDomain.domain**: Here pick a subdomain for your
+gardener-controller-manager will need to maintain some DNS records for Seed.
+So, you need to provide Route53 credentials in the values.yaml file:
+* **global.controller.internalDomain.hostedZoneID**
+* **global.controller.internalDomain.domain**: Here pick a subdomain for your
   Gardener to maintain DNS records for your Shoot clusters. This domain has
   to be within your Route53 Hosted Zone. e.g. `garden-1.your.domain.here`
-* **controller.internalDomain.credentials**
-* **controller.internalDomain.secretAccessKey**
+* **global.controller.internalDomain.credentials**
+* **global.controller.internalDomain.secretAccessKey**
 
 ```
-HOSTED_ZONE_DOMAIN=$(aws route53 get-hosted-zone --id /hostedzone/${HOSTED_ZONE_ID:?"HOSTED_ZONE_ID is missing"} --query 'HostedZone.Name' --output text)
-GARDENER_DOMAIN="garden-1.${HOSTED_ZONE_DOMAIN%%.}"
+HOSTED_ZONE_DOMAIN=$(
+  aws route53 get-hosted-zone \
+    --id /hostedzone/${HOSTED_ZONE_ID:?"HOSTED_ZONE_ID is missing"} \
+    --query 'HostedZone.Name' \
+    --output text)
+HOSTED_ZONE_DOMAIN=${HOSTED_ZONE_DOMAIN%%.}
+GARDENER_DOMAIN="garden-1.${HOSTED_ZONE_DOMAIN}"
 ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
 SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
-sed -i \
-  -e "s/hostedZoneID: Z3K\*\*\*/hostedZoneID: $HOSTED_ZONE_ID/" \
-  -e "s/domain: subdomain.matching.domain.in.hoztedzone.id/domain: $GARDENER_DOMAIN/" \
-  -e "s@accessKeyID: access_key_id@accessKeyID: $ACCESS_KEY_ID@" \
-  -e "s@secretAccessKey: secret_access_key@secretAccessKey: $SECRET_ACCESS_KEY@" \
-  example/aks/gardener-values.yaml
+cat <<EOF > gardener-values.yaml
+global:
+  apiserver:
+    etcd:
+      servers: http://etcd-for-test-client:2379
+      useSidecar: false
+  controller:
+    internalDomain:
+      provider: aws-route53
+      hostedZoneID: ${HOSTED_ZONE_ID}
+      domain: ${HOSTED_ZONE_DOMAIN}
+      credentials:
+        # for aws-route53 we need 'accessKeyID' and 'secretAccessKey'
+        accessKeyID: ${ACCESS_KEY_ID}
+        secretAccessKey: ${SECRET_ACCESS_KEY}
+EOF
 ```
 
-After updating these fields in the file, run:
+After creating the `gardener-values.yaml` file, run:
 
 ```
-helm upgrade --install --namespace garden garden charts/gardener -f example/aks/gardener-values.yaml
+helm upgrade --install \
+  --namespace garden \
+  garden charts/gardener \
+  -f charts/gardener/local-values.yaml \
+  -f gardener-values.yaml
 ```
 
 Validate the Gardener is deployed:
@@ -338,11 +330,11 @@ SUBSCRIPTION_ID=$(az account list -o json | jq -r '.[] | select(.isDefault == tr
 TENANT_ID=$(az account show -o tsv --query 'tenantId')
 KUBECONFIG_FOR_SEED_CLUSTER=$(az aks get-credentials --resource-group garden-1 --name garden-1 -f -)
 sed -i \
-  -e "s@base64(subscription-id)@$(echo $SUBSCRIPTION_ID | tr -d '\n' | base64)@" \
-  -e "s@base64(tenant-id)@$(echo "$TENANT_ID" | tr -d '\n' | base64)@" \
-  -e "s@base64(client-id)@$(echo "${CLIENT_ID:?"CLIENT_ID is missing"}" | tr -d '\n' | base64)@" \
+  -e "s@base64(uuid-of-subscription)@$(echo $SUBSCRIPTION_ID | tr -d '\n' | base64)@" \
+  -e "s@base64(uuid-of-tenant)@$(echo "$TENANT_ID" | tr -d '\n' | base64)@" \
+  -e "s@base64(uuid-of-client)@$(echo "${CLIENT_ID:?"CLIENT_ID is missing"}" | tr -d '\n' | base64)@" \
   -e "s@base64(client-secret)@$(echo "${CLIENT_SECRET:?"CLIENT_SECRET is missing"}" | tr -d '\n' | base64)@" \
-  -e "s@base64(kubeconfig-for-seed-cluster)@$(echo "$KUBECONFIG_FOR_SEED_CLUSTER" | base64)@" \
+  -e "s@base64(kubeconfig-for-seed-cluster)@$(echo "$KUBECONFIG_FOR_SEED_CLUSTER" | base64 -w 0)@" \
   example/40-secret-seed-azure.yaml
 ```
 
@@ -387,11 +379,11 @@ to be `Ready: True`. This means gardener-controller-manager is able to
 reach the Seed cluster with the credentials you provide.
 
 ```
-$ kubectl get seed azure
-NAME      DOMAIN                      CLOUDPROFILE   REGION    READY
-azure     seed-1.your.domain.here     azure          azure     True
 $ gardenctl target garden dev
 KUBECONFIG=/Users/user/.kube/config
+$ kubectl get seed azure
+NAME    CLOUDPROFILE   REGION   INGRESS DOMAIN            AVAILABLE   AGE
+azure   azure          eastus   seed-1.your.domain.here   True        1m
 $ gardenctl ls seeds
 seeds:
 - seed: azure
@@ -428,13 +420,19 @@ a single Shoot. (Mind the extra labels defined in
 [example/06-namespace-garden-dev.yaml](../../example/06-namespace-garden-dev.yaml)).
 
 ```
-kubectl apply -f example/06-namespace-garden-dev.yaml
+kubectl apply -f example/05-project-dev.yaml
 ```
 
 You can check the projects via `gardenctl`:
 
 ```
 $ gardenctl target garden dev
+$ kubectl get project dev
+NAME   NAMESPACE    STATUS   OWNER                  CREATOR   AGE
+dev    garden-dev   Ready    john.doe@example.com   client    1m
+$ kubectl get ns garden-dev
+NAME          STATUS   AGE
+garden-dev    Active   1m
 $ gardenctl ls projects
 projects:
 - project: garden-dev
@@ -468,9 +466,9 @@ TENANT_ID=$(az account show -o tsv --query 'tenantId')
 ACCESS_KEY_ID=$(aws configure get aws_access_key_id)
 SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
 sed -i \
-  -e "s@base64(subscription-id)@$(echo $SUBSCRIPTION_ID | tr -d '\n' | base64)@" \
-  -e "s@base64(tenant-id)@$(echo "$TENANT_ID" | tr -d '\n' | base64)@" \
-  -e "s@base64(client-id)@$(echo "${CLIENT_ID:?"CLIENT_ID is missing"}" | tr -d '\n' | base64)@" \
+  -e "s@base64(uuid-of-subscription)@$(echo $SUBSCRIPTION_ID | tr -d '\n' | base64)@" \
+  -e "s@base64(uuid-of-tenant)@$(echo "$TENANT_ID" | tr -d '\n' | base64)@" \
+  -e "s@base64(uuid-of-client)@$(echo "${CLIENT_ID:?"CLIENT_ID is missing"}" | tr -d '\n' | base64)@" \
   -e "s@base64(client-secret)@$(echo "${CLIENT_SECRET:?"CLIENT_SECRET is missing"}" | tr -d '\n' | base64)@" \
   -e "\$a\ \ accessKeyID: $(echo $ACCESS_KEY_ID | tr -d '\n' | base64 )" \
   -e "\$a\ \ secretAccessKey: $(echo $SECRET_ACCESS_KEY | tr -d '\n' | base64 )" \
@@ -530,6 +528,12 @@ kubectl apply -f example/90-shoot-azure.yaml
 
 After creating the Shoot resource, gardener-controller-manager will
 pick it up and start provisioning the Shoot cluster.
+
+```
+$ kubectl get -f example/90-shoot-azure.yaml
+NAME            CLOUDPROFILE   VERSION   SEED    DOMAIN                                      OPERATION    PROGRESS   APISERVER   CONTROL     NODES       SYSTEM      AGE
+johndoe-azure   azure          1.12.3    azure   johndoe-azure.garden-dev.your.domain.here   Processing   15         <unknown>   <unknown>   <unknown>   <unknown>   16s
+```
 
 Follow the logs in your console with gardener-controller-manager,
 starting like below you'll see plenty of `Waiting` and `Executing`,
@@ -639,6 +643,8 @@ AKS cluster handled by Gardener will be something like this:
 ```
 non-namespaced resources
   CloudProfile: azure
+  Project: dev
+  Namespace: garden-dev
   Seed: azure  # cloud.profile:azure, cloud.region:eastus, secretRef.name:seed-azure, secretRef.namespace: garden
 
 Namespace: garden
