@@ -23,8 +23,7 @@ IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
 
-sed -e "s/# namespace:/  namespace:/g" example/05-project-dev.yaml | \
-  kubectl apply -f -
+kubectl apply -f ${EXAMPLE_DIR}/05-project-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/06-namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/30-cloudprofile-local.yaml
 kubectl apply -f ${EXAMPLE_DIR}/70-secret-cloudprovider-local.yaml
