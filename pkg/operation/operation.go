@@ -345,6 +345,30 @@ func (o *Operation) ShootVersion() string {
 	return o.Shoot.Info.Spec.Kubernetes.Version
 }
 
+// GetNodeCountForVerticalScaling computes a count of nodes that is suitable for vertical scaling.
+// TODO: This should be replaced vertical autoscalers.
+// It tries to give an estimate of the nodes in a cluster by returning the maximum of the
+// aggregate number of replicas of machine deployments in the Shoot or the aggregate of the
+// `AutoScalerMin` value of all worker groups of the Shoot.
+func (o *Operation) GetNodeCountForVerticalScaling() (int, error) {
+	deployments, err := o.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(o.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	if err != nil {
+		return 0, err
+	}
+
+	machineDeploymentCount := 0
+	for _, machineDeployment := range deployments.Items {
+		machineDeploymentCount += int(machineDeployment.Spec.Replicas)
+	}
+
+	autoScalerCount := 0
+	for _, worker := range o.Shoot.GetWorkers() {
+		autoScalerCount += worker.AutoScalerMin
+	}
+
+	return utils.MaxInt(machineDeploymentCount, autoScalerCount), nil
+}
+
 // constructInternalDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster
 // which is only used for internal purposes (all kubeconfigs except the one which is received by the
 // user will only talk with the kube-apiserver via this domain). In case the given <internalDomain>

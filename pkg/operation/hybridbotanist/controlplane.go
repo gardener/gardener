@@ -267,7 +267,12 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			defaultValues["replicas"] = *existingAPIServerDeployment.Spec.Replicas
 		}
 
-		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
+		nodeCount, err := b.GetNodeCountForVerticalScaling()
+		if err != nil {
+			return err
+		}
+
+		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(nodeCount)
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    cpuLimit,
@@ -380,6 +385,11 @@ func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) 
 // DeployKubeControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
 // kube-controller-manager deployment.
 func (b *HybridBotanist) DeployKubeControllerManager() error {
+	nodeCount, err := b.GetNodeCountForVerticalScaling()
+	if err != nil {
+		return err
+	}
+
 	defaultValues := map[string]interface{}{
 		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
 		"clusterName":       b.Shoot.SeedNamespace,
@@ -394,7 +404,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 			"checksum/secret-cloudprovider":                  b.CheckSums[common.CloudProviderSecretName],
 			"checksum/configmap-cloud-provider-config":       b.CheckSums[common.CloudProviderConfigName],
 		},
-		"objectCount": b.Shoot.GetNodeCount(),
+		"objectCount": nodeCount,
 	}
 	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
 	if err != nil {

@@ -15,6 +15,7 @@ package utils_test
 
 import (
 	. "github.com/gardener/gardener/pkg/utils"
+	. "github.com/onsi/ginkgo/extensions/table"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -57,4 +58,13 @@ var _ = Describe("utils", func() {
 			}))
 		})
 	})
+
+	DescribeTable("#MaxInt",
+		func(i1, i2, expected int) {
+			Expect(MaxInt(i1, i2)).To(Equal(expected))
+		},
+		Entry("first value greater", 1, 0, 1),
+		Entry("second value greater", 0, 1, 1),
+		Entry("both values equal", 1, 1, 1),
+	)
 })

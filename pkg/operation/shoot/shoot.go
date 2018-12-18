@@ -112,15 +112,6 @@ func (s *Shoot) GetWorkerNames() []string {
 	return workerNames
 }
 
-// GetNodeCount returns the sum of all 'autoScalerMax' fields of all worker groups of the Shoot.
-func (s *Shoot) GetNodeCount() int {
-	nodeCount := 0
-	for _, worker := range s.GetWorkers() {
-		nodeCount += worker.AutoScalerMax
-	}
-	return nodeCount
-}
-
 // GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
 func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 	switch s.CloudProvider {

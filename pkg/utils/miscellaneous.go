@@ -117,3 +117,11 @@ func TestEmail(email string) bool {
 	match, _ := regexp.MatchString(`^[^@]+@(?:[a-zA-Z-0-9]+\.)+[a-zA-Z]{2,}$`, email)
 	return match
 }
+
+// MaxInt returns the maximum value of the two given integers.
+func MaxInt(i1, i2 int) int {
+	if i1 > i2 {
+		return i1
+	}
+	return i2
+}
