@@ -23,9 +23,9 @@ gardener:
             tag_as_latest: true
     steps:
       check:
-        image: 'golang:1.11.1'
+        image: 'golang:1.11.4'
       test:
-        image: 'golang:1.11.1'
+        image: 'golang:1.11.4'
   variants:
     head-update:
       traits:
