@@ -25,7 +25,7 @@ spec:
           - /fluent-bit/etc/fluent-bit.conf
         env:
         - name: FLUENTD_HOST
-          value: fluentd-es.{{ .Release.Namespace }}.svc
+          value: fluentd-es
         - name: FLUENTD_PORT
           value: "{{ .Values.fluentd.ports.forward }}"
         resources:
