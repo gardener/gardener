@@ -67,6 +67,10 @@ spec:
         {{- include "cloud-controller-manager.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --leader-elect=true
+        {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+        - --secure-port=10253
+        - --port=0
+        {{- end}}
         {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
         - --authentication-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --authorization-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig

@@ -86,6 +86,10 @@ spec:
         - --root-ca-file=/srv/kubernetes/ca/ca.crt
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{ .Values.serviceNetwork }}
+        {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+        - --secure-port=10252
+        - --port=0
+        {{- end}}
         {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
         - --horizontal-pod-autoscaler-downscale-stabilization={{ .Values.horizontalPodAutoscaler.downscaleStabilization }}
         - --horizontal-pod-autoscaler-initial-readiness-delay={{ .Values.horizontalPodAutoscaler.readinessDelay }}
