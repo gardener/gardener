@@ -28,6 +28,12 @@ const (
 	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
 	BackupSecretName = "etcd-backup"
 
+	// BackupInfrastructureOperation is a constant for an annotation on a Backupinfrastructure indicating that an operation shall be performed.
+	BackupInfrastructureOperation = "backupinfrastructure.garden.sapcloud.io/operation"
+
+	// BackupInfrastructureReconcile is a constant for an annotation on a Backupinfrastructure indicating that a Backupinfrastructure reconciliation shall be triggered.
+	BackupInfrastructureReconcile = "reconcile"
+
 	// ChartPath is the path to the Helm charts.
 	ChartPath = "charts"
 
