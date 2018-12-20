@@ -34,7 +34,9 @@ import (
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+
 	"github.com/spf13/cobra"
+
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
@@ -166,10 +168,12 @@ func (o *Options) config() (*apiserver.Config, error) {
 		return []admission.PluginInitializer{admissioninitializer.New(gardenInformerFactory, gardenClient, kubeInformerFactory, kubeClient, gardenerAPIServerConfig.Authorization.Authorizer)}, nil
 	}
 
+	gardenerVersion := version.Get()
 	gardenerAPIServerConfig.OpenAPIConfig = genericapiserver.DefaultOpenAPIConfig(openapi.GetOpenAPIDefinitions, openapinamer.NewDefinitionNamer(api.Scheme))
 	gardenerAPIServerConfig.OpenAPIConfig.Info.Title = "Gardener"
-	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = version.Version
+	gardenerAPIServerConfig.OpenAPIConfig.Info.Version = gardenerVersion.GitVersion
 	gardenerAPIServerConfig.SwaggerConfig = genericapiserver.DefaultSwaggerConfig()
+	gardenerAPIServerConfig.Version = &gardenerVersion
 
 	if err := o.Recommended.ApplyTo(gardenerAPIServerConfig, api.Scheme); err != nil {
 		return nil, err

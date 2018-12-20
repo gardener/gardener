@@ -5,7 +5,10 @@ WORKDIR /go/src/github.com/gardener/gardener
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
-  -ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=$(cat VERSION)" \
+  -ldflags "-X github.com/gardener/gardener/pkg/version.gitVersion=$(cat VERSION) \
+            -X github.com/gardener/gardener/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty) \
+            -X github.com/gardener/gardener/pkg/version.gitCommit=$(git rev-parse --verify HEAD) \
+            -X github.com/gardener/gardener/pkg/version.buildDate=$(date --rfc-3339=seconds | sed 's/ /T/')" \
   ./...
 
 #############      apiserver     #############

@@ -139,7 +139,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go secretBindingController.Run(ctx, f.config.Controllers.SecretBinding.ConcurrentSyncs)
 	go backupInfrastructureController.Run(ctx, f.config.Controllers.BackupInfrastructure.ConcurrentSyncs)
 
-	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Version)
+	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 
 	// Shutdown handling
 	<-ctx.Done()
