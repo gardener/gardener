@@ -303,7 +303,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	// We check whether the Shoot's last operation status field indicates that the last operation failed (i.e. the operation
 	// will not be retried unless the shoot generation changes).
 	if shootIsFailed(shoot) {
-		if shoot.Status.Gardener.Version == version.Version {
+		if shoot.Status.Gardener.Version == version.Get().GitVersion {
 			shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
 			return false, nil
 		}

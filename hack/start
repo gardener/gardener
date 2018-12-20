@@ -1,4 +1,4 @@
-#!/bin/bash -eu
+#!/bin/bash -e
 #
 # Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -14,19 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-VERSION="${1:-$($(dirname $0)/get-next-version)}"
-COMMIT="${2:-true}"
+source $(dirname "${0}")/common
 
-echo "Bumping version to $VERSION"
-echo $VERSION > $(dirname $0)/../VERSION
+ld_flags="$(./hack/get-build-ld-flags)"
 
-# commit
-if [[ $COMMIT == true ]]; then
-  git status
-  read -p "Continue (y/n)? " response
-  if [[ "$response" =~ ^(yes|y) ]]; then
-    git add .
-    git commit -m "Bump version to $VERSION"
-  fi
-  git status
-fi
+KUBECONFIG="$HOME/.kube/config" \
+GARDENER_KUBECONFIG="$HOME/.kube/config" \
+go run \
+  -ldflags "$ld_flags" \
+  cmd/gardener-controller-manager/main.go \
+  --config=dev/20-componentconfig-gardener-controller-manager.yaml

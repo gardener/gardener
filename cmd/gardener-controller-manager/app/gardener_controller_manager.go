@@ -424,6 +424,6 @@ func determineGardenerIdentity() (*gardenv1beta1.Gardener, string, error) {
 	return &gardenv1beta1.Gardener{
 		ID:      gardenerID,
 		Name:    gardenerName,
-		Version: version.Version,
+		Version: version.Get().GitVersion,
 	}, gardenerNamespace, nil
 }

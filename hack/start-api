@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -14,34 +14,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
-
 source $(dirname "${0}")/common
+
+apiserver_flags="
+  --authentication-kubeconfig $HOME/.kube/config \
+  --authorization-kubeconfig $HOME/.kube/config \
+  --authorization-always-allow-paths=/healthz \
+  --kubeconfig $HOME/.kube/config \
+  --secure-port=$API_SERVER_SECURE_PORT \
+  --v 2"
+
+ld_flags="$(./hack/get-build-ld-flags)"
 
 case $(k8s_env) in
     $DOCKER_FOR_DESKTOP)
         echo "Found Docker Kubernetes ..."
-        go run cmd/gardener-apiserver/main.go \
-          --authentication-kubeconfig ~/.kube/config \
-          --authorization-kubeconfig ~/.kube/config \
-          --authorization-always-allow-paths=/healthz \
+        go run \
+          -ldflags "$ld_flags" \
+          cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
-          --kubeconfig ~/.kube/config \
           --tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \
           --tls-private-key-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-key-data"}}{{end}}{{end}}' --raw | base64 -d) \
-          --secure-port=$API_SERVER_SECURE_PORT \
-          --v 2
+          $apiserver_flags
         ;;
     $MINIKUBE)
         echo "Found Minikube ..."
-        go run cmd/gardener-apiserver/main.go \
-          --authentication-kubeconfig ~/.kube/config \
-          --authorization-kubeconfig ~/.kube/config \
+        go run \
+          -ldflags "$ld_flags" \
+          cmd/gardener-apiserver/main.go \
           --etcd-servers http://$(minikube ip):32379 \
-          --kubeconfig ~/.kube/config \
           --tls-cert-file ~/.minikube/apiserver.crt \
           --tls-private-key-file ~/.minikube/apiserver.key \
-          --secure-port=$API_SERVER_SECURE_PORT \
-          --v 2
+          $apiserver_flags
         ;;
 esac

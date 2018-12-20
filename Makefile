@@ -15,11 +15,10 @@
 REGISTRY                           := eu.gcr.io/gardener-project/gardener
 APISERVER_IMAGE_REPOSITORY         := $(REGISTRY)/apiserver
 CONROLLER_MANAGER_IMAGE_REPOSITORY := $(REGISTRY)/controller-manager
-VERSION                            := $(shell cat VERSION)
-NEXT_VERSION                       := $(shell hack/get-next-version)
-IMAGE_TAG                          := ${VERSION}
+IMAGE_TAG                          := $(shell cat VERSION)
 WORKDIR                            := $(shell pwd)
 PUSH_LATEST                        := true
+LD_FLAGS                           := $(shell ./hack/get-build-ld-flags)
 
 #########################################
 # Rules for local development scenarios #
@@ -39,10 +38,7 @@ start-api:
 
 .PHONY: start
 start:
-	@KUBECONFIG=~/.kube/config GARDENER_KUBECONFIG=~/.kube/config go run \
-			-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${NEXT_VERSION}" \
-			cmd/gardener-controller-manager/main.go \
-			--config=dev/20-componentconfig-gardener-controller-manager.yaml
+	@./hack/start
 
 .PHONY: start-local
 start-local:
@@ -52,29 +48,29 @@ start-local:
 # Rules related to binary build, Docker image build and release #
 #################################################################
 
-# The machine-controller-manager repository references different version of the k8s.io packages which results in
-# vendoring issues. To circumvent them and to avoid the necessity of copying their content into our repository we
-# delete troubling files here (in fact, we are only requiring the types.go file).
 .PHONY: revendor
 revendor:
 	@dep ensure -update
+	# The machine-controller-manager repository references different version of the k8s.io packages which results in
+	# vendoring issues. To circumvent them and to avoid the necessity of copying their content into our repository we
+	# delete troubling files here (in fact, we are only requiring the types.go file).
 	@rm -f vendor/github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1/zz_generated.conversion.go
 
 .PHONY: build
 build:
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-		-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${VERSION}" \
+		-ldflags "$(LD_FLAGS)" \
 		-o bin/gardener-apiserver \
 		cmd/gardener-apiserver/*.go
 	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
-		-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${VERSION}" \
+		-ldflags "$(LD_FLAGS)" \
 		-o bin/gardener-controller-manager \
 		cmd/gardener-controller-manager/*.go
 
 .PHONY: build-local
 build-local:
 	@GOBIN=${WORKDIR}/bin go install \
-		-ldflags "-w -X github.com/gardener/gardener/pkg/version.Version=${VERSION}" \
+		-ldflags "$(LD_FLAGS)" \
 		./cmd/...
 
 .PHONY: release

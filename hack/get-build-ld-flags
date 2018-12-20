@@ -14,21 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-function increment() {
-  echo $(awk "BEGIN {print $1+1; exit}")
-}
-
-TYPE="${1:-default}"
-
-CURRENT_VERSION="$(cat $(dirname $0)/../VERSION)"
-MAJOR="$(echo $CURRENT_VERSION | sed -E 's/^([0-9]*).*$/\1/')"
-MINOR="$(echo $CURRENT_VERSION | sed -E 's/^.*\.([0-9]*)\..*$/\1/')"
-PATCH="$(echo $CURRENT_VERSION | sed -E 's/^.*\.([0-9]*)$/\1/')"
-
-if [[ $TYPE == "hotfix" || "$(git rev-parse --abbrev-ref HEAD)" == *release* ]]; then
-  echo $MAJOR.$MINOR.$(increment $PATCH)
-else
-  PATCH=0
-  echo $MAJOR.$(increment $MINOR).$PATCH
-fi
-
+echo "-X github.com/gardener/gardener/pkg/version.gitVersion=$(cat VERSION)
+      -X github.com/gardener/gardener/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty)
+      -X github.com/gardener/gardener/pkg/version.gitCommit=$(git rev-parse --verify HEAD)
+      -X github.com/gardener/gardener/pkg/version.buildDate=$(date --rfc-3339=seconds | sed 's/ /T/')"
