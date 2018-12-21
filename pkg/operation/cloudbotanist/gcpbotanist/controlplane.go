@@ -27,6 +27,7 @@ const cloudProviderConfigTemplate = `
 project-id=%q
 network-name=%q
 multizone=true
+local-zone=%q
 token-url=nil
 node-tags=%q
 `
@@ -44,6 +45,7 @@ func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 		cloudProviderConfigTemplate,
 		b.Project,
 		networkName,
+		b.Shoot.Info.Spec.Cloud.GCP.Zones[0],
 		b.Shoot.SeedNamespace,
 	), nil
 }
