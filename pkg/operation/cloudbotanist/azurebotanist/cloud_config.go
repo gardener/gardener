@@ -22,6 +22,5 @@ import (
 func (b *AzureBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
 	return &common.CloudConfigUserDataConfig{
 		ProvisionCloudProviderConfig: true,
-		WorkerNames:                  b.Shoot.GetWorkerNames(),
 	}
 }
