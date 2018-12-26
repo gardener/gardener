@@ -19,7 +19,6 @@ import "github.com/gardener/gardener/pkg/operation/common"
 // GenerateCloudConfigUserDataConfig generates values which are required to render the chart shoot-cloud-config properly.
 func (b *GCPBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
 	return &common.CloudConfigUserDataConfig{
-		WorkerNames:      b.Shoot.GetWorkerNames(),
 		HostnameOverride: true,
 	}
 }
