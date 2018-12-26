@@ -61,6 +61,9 @@ spec:
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
+        {{- if semverCompare ">= 1.9.7" .Values.kubernetesVersion }}
+        - --http2-max-streams-per-connection=1000
+        {{- end }}
         {{- if .Values.endpointReconcilerType }}
         - --endpoint-reconciler-type={{ .Values.endpointReconcilerType }}
         {{- end }}
