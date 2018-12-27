@@ -22,19 +22,50 @@ import (
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
 func (b *AlicloudBotanist) DeployInfrastructure() error {
+	var (
+		err error
+
+		createVPC    = true
+		vpcID        = "${alicloud_vpc.vpc.id}"
+		natGatewayID = "${alicloud_nat_gateway.nat_gateway.id}"
+		snatTableID  = "${alicloud_nat_gateway.nat_gateway.snat_table_ids}"
+		vpcCIDR      string
+	)
+
+	// check if we should use an existing VPC or create a new one
+	if b.Shoot.Info.Spec.Cloud.Alicloud.Networks.VPC.ID != nil {
+		createVPC = false
+		vpcID = *b.Shoot.Info.Spec.Cloud.Alicloud.Networks.VPC.ID
+		if vpcCIDR, err = b.AlicloudClient.GetCIDR(vpcID); err != nil {
+			return err
+		}
+
+		if natGatewayID, snatTableID, err = b.AlicloudClient.GetNatGatewayInfo(vpcID); err != nil {
+			return err
+		}
+	} else {
+		vpcCIDR = string(*b.Shoot.Info.Spec.Cloud.Alicloud.Networks.VPC.CIDR)
+	}
+
 	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
 
 	return tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("alicloud-infra", b.generateTerraformInfraConfig()).
+		DefineConfig("alicloud-infra", b.generateTerraformInfraConfig(createVPC, vpcID, natGatewayID, snatTableID, vpcCIDR)).
 		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AlicloudBotanist) DestroyInfrastructure() error {
-	return nil
+	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	if err != nil {
+		return err
+	}
+
+	return tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
+		Destroy()
 }
 
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
@@ -60,7 +91,7 @@ func (b *AlicloudBotanist) generateTerraformInfraVariablesEnvironment() []map[st
 
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *AlicloudBotanist) generateTerraformInfraConfig() map[string]interface{} {
+func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, natGatewayID, snatTableID, vpcCIDR string) map[string]interface{} {
 	var (
 		sshSecret = b.Secrets["ssh-keypair"]
 		zones     = []map[string]interface{}{}
@@ -79,8 +110,14 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig() map[string]interface{}
 		"alicloud": map[string]interface{}{
 			"region": b.Shoot.Info.Spec.Cloud.Region,
 		},
+		"create": map[string]interface{}{
+			"vpc": createVPC,
+		},
 		"vpc": map[string]interface{}{
-			"cidr": b.Shoot.Info.Spec.Cloud.Alicloud.Networks.VPC.CIDR,
+			"cidr":         vpcCIDR,
+			"id":           vpcID,
+			"natGatewayID": natGatewayID,
+			"snatTableID":  snatTableID,
 		},
 		"clusterName":  b.Shoot.SeedNamespace,
 		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),

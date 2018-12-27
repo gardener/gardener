@@ -32,8 +32,8 @@ func TestRefreshCloudProviderConfig(t *testing.T) {
 	}
 
 	b := &AlicloudBotanist{
-		&operation.Operation{},
-		"alicloud",
+		Operation:         &operation.Operation{},
+		CloudProviderName: "alicloud",
 	}
 	b.Shoot = &s
 	b.Shoot.Secret.Data = map[string][]byte{

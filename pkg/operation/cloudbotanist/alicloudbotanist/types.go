@@ -15,12 +15,14 @@
 package alicloudbotanist
 
 import (
+	"github.com/gardener/gardener/pkg/client/alicloud"
 	"github.com/gardener/gardener/pkg/operation"
 )
 
 // AlicloudBotanist is a struct which has methods that perform Alicloud cloud-specific operations for a Shoot cluster.
 type AlicloudBotanist struct {
 	*operation.Operation
+	AlicloudClient    alicloud.ClientInterface
 	CloudProviderName string
 }
 

@@ -18,20 +18,35 @@ import (
 	"errors"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/client/alicloud"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	corev1 "k8s.io/api/core/v1"
 )
 
 // New takes an operation object <o> and creates a new AlicloudBotanist object.
 func New(o *operation.Operation, purpose string) (*AlicloudBotanist, error) {
 	var (
 		cloudProvider gardenv1beta1.CloudProvider
+		secret        *corev1.Secret
+		region        string
+		err           error
+		client        alicloud.ClientInterface
 	)
 
 	switch purpose {
 	case common.CloudPurposeShoot:
 		cloudProvider = o.Shoot.CloudProvider
+		secret = o.Shoot.Secret
+		region = o.Shoot.Info.Spec.Cloud.Region
+		client, err = alicloud.NewClient(string(secret.Data[AccessKeyID]), string(secret.Data[AccessKeySecret]), region)
+		if err != nil {
+			return nil, err
+		}
+
 	case common.CloudPurposeSeed:
+		cloudProvider = o.Seed.CloudProvider
+		secret = o.Seed.Secret
 		cloudProvider = o.Seed.CloudProvider
 	}
 
@@ -42,6 +57,7 @@ func New(o *operation.Operation, purpose string) (*AlicloudBotanist, error) {
 	return &AlicloudBotanist{
 		Operation:         o,
 		CloudProviderName: "alicloud",
+		AlicloudClient:    client,
 	}, nil
 }
 
