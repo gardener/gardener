@@ -45,7 +45,7 @@ spec:
     spec:
       containers:
       - name: cloud-controller-manager
-        image: {{ index .Values.images "alicloud-ccm" }}
+        image: {{ index .Values.images "alicloud-controller-manager" }}
         imagePullPolicy: IfNotPresent
         command:
         - /cloud-controller-manager

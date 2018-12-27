@@ -21,7 +21,7 @@ function kubectl() {
     -v "$DIR_CLOUDCONFIG"/:"$DIR_CLOUDCONFIG" \
     -v "$DIR_CLOUDCONFIG_DOWNLOADER"/:"$DIR_CLOUDCONFIG_DOWNLOADER" \
     -e "KUBECONFIG=$PATH_KUBECONFIG" \
-    k8s.gcr.io/hyperkube:v1.12.3 \
+    {{ index .images "hyperkube" }} \
     kubectl "$@"
 }
 

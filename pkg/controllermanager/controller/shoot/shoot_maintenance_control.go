@@ -193,6 +193,9 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		case gardenv1beta1.CloudProviderOpenStack:
 			image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
 			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = image }
+		case gardenv1beta1.CloudProviderAlicloud:
+			image := machineImage.(*gardenv1beta1.AlicloudMachineImage)
+			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = image }
 		}
 	}
 

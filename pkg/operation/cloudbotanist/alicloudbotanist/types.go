@@ -31,4 +31,6 @@ const (
 	AccessKeyID = "accessKeyID"
 	// AccessKeySecret is a constant for the key in a cloud provider secret and backup secret that holds the Alicloud access key secret.
 	AccessKeySecret = "accessKeySecret"
+	// UserData
+	UserData = "userData"
 )
