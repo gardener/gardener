@@ -37,7 +37,6 @@ configmap:
     - name: log
       parameters: .
       configBlock: |-
-        class denial
         class error
     - name: health
     - name: kubernetes
