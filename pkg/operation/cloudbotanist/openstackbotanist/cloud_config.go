@@ -22,7 +22,6 @@ import (
 func (b *OpenStackBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
 	return &common.CloudConfigUserDataConfig{
 		ProvisionCloudProviderConfig: true,
-		WorkerNames:                  b.Shoot.GetWorkerNames(),
 		HostnameOverride:             true,
 	}
 }
