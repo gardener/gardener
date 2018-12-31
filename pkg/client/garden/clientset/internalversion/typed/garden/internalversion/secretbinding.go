@@ -3,6 +3,8 @@
 package internalversion
 
 import (
+	"time"
+
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	scheme "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -59,11 +61,16 @@ func (c *secretBindings) Get(name string, options v1.GetOptions) (result *garden
 
 // List takes label and field selectors, and returns the list of SecretBindings that match those selectors.
 func (c *secretBindings) List(opts v1.ListOptions) (result *garden.SecretBindingList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &garden.SecretBindingList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("secretbindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
@@ -71,11 +78,16 @@ func (c *secretBindings) List(opts v1.ListOptions) (result *garden.SecretBinding
 
 // Watch returns a watch.Interface that watches the requested secretBindings.
 func (c *secretBindings) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource("secretbindings").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -117,10 +129,15 @@ func (c *secretBindings) Delete(name string, options *v1.DeleteOptions) error {
 
 // DeleteCollection deletes a collection of objects.
 func (c *secretBindings) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("secretbindings").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

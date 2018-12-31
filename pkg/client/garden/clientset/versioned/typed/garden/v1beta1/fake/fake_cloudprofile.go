@@ -96,7 +96,7 @@ func (c *FakeCloudProfiles) DeleteCollection(options *v1.DeleteOptions, listOpti
 // Patch applies the patch and returns the patched cloudProfile.
 func (c *FakeCloudProfiles) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.CloudProfile, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(cloudprofilesResource, name, data, subresources...), &v1beta1.CloudProfile{})
+		Invokes(testing.NewRootPatchSubresourceAction(cloudprofilesResource, name, pt, data, subresources...), &v1beta1.CloudProfile{})
 	if obj == nil {
 		return nil, err
 	}

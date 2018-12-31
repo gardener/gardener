@@ -235,8 +235,11 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	logger := logger.NewLogger(config.LogLevel)
 	logger.Info("Starting Gardener controller manager...")
 	logger.Infof("Feature Gates: %s", gardenerfeatures.ControllerFeatureGate.String())
-	if err := flag.Lookup("v").Value.Set(fmt.Sprintf("%d", config.KubernetesLogLevel)); err != nil {
-		return nil, err
+
+	if flag := flag.Lookup("v"); flag != nil {
+		if err := flag.Value.Set(fmt.Sprintf("%d", config.KubernetesLogLevel)); err != nil {
+			return nil, err
+		}
 	}
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets

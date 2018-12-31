@@ -3,6 +3,8 @@
 package internalversion
 
 import (
+	"time"
+
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	scheme "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -57,10 +59,15 @@ func (c *seeds) Get(name string, options v1.GetOptions) (result *garden.Seed, er
 
 // List takes label and field selectors, and returns the list of Seeds that match those selectors.
 func (c *seeds) List(opts v1.ListOptions) (result *garden.SeedList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &garden.SeedList{}
 	err = c.client.Get().
 		Resource("seeds").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
@@ -68,10 +75,15 @@ func (c *seeds) List(opts v1.ListOptions) (result *garden.SeedList, err error) {
 
 // Watch returns a watch.Interface that watches the requested seeds.
 func (c *seeds) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Resource("seeds").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -125,9 +137,14 @@ func (c *seeds) Delete(name string, options *v1.DeleteOptions) error {
 
 // DeleteCollection deletes a collection of objects.
 func (c *seeds) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Resource("seeds").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

@@ -93,7 +93,7 @@ type Options struct {
 // NewOptions returns a new Options object.
 func NewOptions(out, errOut io.Writer) *Options {
 	return &Options{
-		Recommended: genericoptions.NewRecommendedOptions(fmt.Sprintf("/registry/%s", garden.GroupName), api.Codecs.LegacyCodec(gardenv1beta1.SchemeGroupVersion)),
+		Recommended: genericoptions.NewRecommendedOptions(fmt.Sprintf("/registry/%s", garden.GroupName), api.Codecs.LegacyCodec(gardenv1beta1.SchemeGroupVersion), genericoptions.NewProcessInfo("gardener-apiserver", "garden")),
 		StdOut:      out,
 		StdErr:      errOut,
 	}

@@ -3,6 +3,8 @@
 package v1beta1
 
 import (
+	"time"
+
 	v1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	scheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,10 +58,15 @@ func (c *cloudProfiles) Get(name string, options v1.GetOptions) (result *v1beta1
 
 // List takes label and field selectors, and returns the list of CloudProfiles that match those selectors.
 func (c *cloudProfiles) List(opts v1.ListOptions) (result *v1beta1.CloudProfileList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &v1beta1.CloudProfileList{}
 	err = c.client.Get().
 		Resource("cloudprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
@@ -67,10 +74,15 @@ func (c *cloudProfiles) List(opts v1.ListOptions) (result *v1beta1.CloudProfileL
 
 // Watch returns a watch.Interface that watches the requested cloudProfiles.
 func (c *cloudProfiles) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Resource("cloudprofiles").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -109,9 +121,14 @@ func (c *cloudProfiles) Delete(name string, options *v1.DeleteOptions) error {
 
 // DeleteCollection deletes a collection of objects.
 func (c *cloudProfiles) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Resource("cloudprofiles").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

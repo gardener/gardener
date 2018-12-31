@@ -11,3 +11,4 @@ API rule violation: names_match,./testdata/listtype,Item,Port
 API rule violation: names_match,./testdata/listtype,Item,Protocol
 API rule violation: names_match,./testdata/listtype,MapList,Field
 API rule violation: names_match,./testdata/listtype,SetList,Field
+API rule violation: omitempty_match_case,./testdata/listtype,Item,C

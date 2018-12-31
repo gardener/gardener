@@ -26,8 +26,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	bootstraptokenapi "k8s.io/client-go/tools/bootstrap/token/api"
-	bootstraptokenutil "k8s.io/client-go/tools/bootstrap/token/util"
+	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
+	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 )
 
 // generateCloudConfigChart renders the kube-addon-manager configuration for the cloud config user data.

@@ -3,6 +3,8 @@
 package internalversion
 
 import (
+	"time"
+
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	scheme "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -60,11 +62,16 @@ func (c *shoots) Get(name string, options v1.GetOptions) (result *garden.Shoot, 
 
 // List takes label and field selectors, and returns the list of Shoots that match those selectors.
 func (c *shoots) List(opts v1.ListOptions) (result *garden.ShootList, err error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	result = &garden.ShootList{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("shoots").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Do().
 		Into(result)
 	return
@@ -72,11 +79,16 @@ func (c *shoots) List(opts v1.ListOptions) (result *garden.ShootList, err error)
 
 // Watch returns a watch.Interface that watches the requested shoots.
 func (c *shoots) Watch(opts v1.ListOptions) (watch.Interface, error) {
+	var timeout time.Duration
+	if opts.TimeoutSeconds != nil {
+		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
+	}
 	opts.Watch = true
 	return c.client.Get().
 		Namespace(c.ns).
 		Resource("shoots").
 		VersionedParams(&opts, scheme.ParameterCodec).
+		Timeout(timeout).
 		Watch()
 }
 
@@ -134,10 +146,15 @@ func (c *shoots) Delete(name string, options *v1.DeleteOptions) error {
 
 // DeleteCollection deletes a collection of objects.
 func (c *shoots) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+	var timeout time.Duration
+	if listOptions.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("shoots").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
+		Timeout(timeout).
 		Body(options).
 		Do().
 		Error()

@@ -17,15 +17,112 @@ limitations under the License.
 package generators
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"sort"
 
 	"k8s.io/kube-openapi/pkg/generators/rules"
 
-	"github.com/golang/glog"
+	"k8s.io/gengo/generator"
 	"k8s.io/gengo/types"
+	"k8s.io/klog"
 )
+
+const apiViolationFileType = "api-violation"
+
+type apiViolationFile struct {
+	// Since our file actually is unrelated to the package structure, use a
+	// path that hasn't been mangled by the framework.
+	unmangledPath string
+}
+
+func (a apiViolationFile) AssembleFile(f *generator.File, path string) error {
+	path = a.unmangledPath
+	klog.V(2).Infof("Assembling file %q", path)
+	if path == "-" {
+		_, err := io.Copy(os.Stdout, &f.Body)
+		return err
+	}
+
+	output, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+	_, err = io.Copy(output, &f.Body)
+	return err
+}
+
+func (a apiViolationFile) VerifyFile(f *generator.File, path string) error {
+	if path == "-" {
+		// Nothing to verify against.
+		return nil
+	}
+	path = a.unmangledPath
+
+	formatted := f.Body.Bytes()
+	existing, err := ioutil.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("unable to read file %q for comparison: %v", path, err)
+	}
+	if bytes.Compare(formatted, existing) == 0 {
+		return nil
+	}
+
+	// Be nice and find the first place where they differ
+	// (Copied from gengo's default file type)
+	i := 0
+	for i < len(formatted) && i < len(existing) && formatted[i] == existing[i] {
+		i++
+	}
+	eDiff, fDiff := existing[i:], formatted[i:]
+	if len(eDiff) > 100 {
+		eDiff = eDiff[:100]
+	}
+	if len(fDiff) > 100 {
+		fDiff = fDiff[:100]
+	}
+	return fmt.Errorf("output for %q differs; first existing/expected diff: \n  %q\n  %q", path, string(eDiff), string(fDiff))
+}
+
+func newAPIViolationGen() *apiViolationGen {
+	return &apiViolationGen{
+		linter: newAPILinter(),
+	}
+}
+
+type apiViolationGen struct {
+	generator.DefaultGen
+
+	linter *apiLinter
+}
+
+func (v *apiViolationGen) FileType() string { return apiViolationFileType }
+func (v *apiViolationGen) Filename() string {
+	return "this file is ignored by the file assembler"
+}
+
+func (v *apiViolationGen) GenerateType(c *generator.Context, t *types.Type, w io.Writer) error {
+	klog.V(5).Infof("validating API rules for type %v", t)
+	if err := v.linter.validate(t); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Finalize prints the API rule violations to report file (if specified from
+// arguments) or stdout (default)
+func (v *apiViolationGen) Finalize(c *generator.Context, w io.Writer) error {
+	// NOTE: we don't return error here because we assume that the report file will
+	// get evaluated afterwards to determine if error should be raised. For example,
+	// you can have make rules that compare the report file with existing known
+	// violations (whitelist) and determine no error if no change is detected.
+	v.linter.report(w)
+	return nil
+}
 
 // apiLinter is the framework hosting multiple API rules and recording API rule
 // violations
@@ -41,6 +138,7 @@ func newAPILinter() *apiLinter {
 	return &apiLinter{
 		rules: []APIRule{
 			&rules.NamesMatch{},
+			&rules.OmitEmptyMatchCase{},
 		},
 	}
 }
@@ -91,7 +189,7 @@ type APIRule interface {
 // validate runs all API rules on type t and records any API rule violation
 func (l *apiLinter) validate(t *types.Type) error {
 	for _, r := range l.rules {
-		glog.V(5).Infof("validating API rule %v for type %v", r.Name(), t)
+		klog.V(5).Infof("validating API rule %v for type %v", r.Name(), t)
 		fields, err := r.Validate(t)
 		if err != nil {
 			return err

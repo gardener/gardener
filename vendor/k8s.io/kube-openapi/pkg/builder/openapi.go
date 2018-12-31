@@ -91,6 +91,7 @@ func newOpenAPI(config *common.Config) openAPI {
 			SwaggerProps: spec.SwaggerProps{
 				Swagger:     OpenAPIVersion,
 				Definitions: spec.Definitions{},
+				Responses:   config.ResponseDefinitions,
 				Paths:       &spec.Paths{Paths: map[string]spec.PathItem{}},
 				Info:        config.Info,
 			},
