@@ -63,22 +63,26 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 
 	for _, worker := range b.Shoot.GetWorkers() {
 		newWorker := map[string]interface{}{
-			"name":       worker.Name,
-			"secretName": b.Shoot.ComputeCloudConfigSecretName(worker.Name),
+			"name":                        worker.Name,
+			"secretName":                  b.Shoot.ComputeCloudConfigSecretName(worker.Name),
+			"evictionHardMemoryAvailable": "100Mi",
+			"evictionSoftMemoryAvailable": "200Mi",
 		}
 		for _, machtype := range machineTypes {
 			if machtype.Name == worker.MachineType {
+				// Found a match, no need for further comparisons
+				// Break the loop after replacing default values
 				if machtype.Memory.Cmp(memoryThreshold) > 0 {
-					newWorker["evictionHard"] = "1Gi"
-					newWorker["evictionSoft"] = "1.5Gi"
+					newWorker["evictionHardMemoryAvailable"] = "1Gi"
+					newWorker["evictionSoftMemoryAvailable"] = "1.5Gi"
 				} else {
-					newWorker["evictionHard"] = "5%"
-					newWorker["evictionSoft"] = "10%"
+					newWorker["evictionHardMemoryAvailable"] = "5%"
+					newWorker["evictionSoftMemoryAvailable"] = "10%"
 				}
-				workers = append(workers, newWorker)
 				break
 			}
 		}
+		workers = append(workers, newWorker)
 	}
 
 	config := map[string]interface{}{
