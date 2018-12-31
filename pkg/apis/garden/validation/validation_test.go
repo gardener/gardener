@@ -90,7 +90,6 @@ var _ = Describe("validation", func() {
 			}
 			invalidKubernetes  = []string{"1.11"}
 			invalidMachineType = garden.MachineType{
-
 				Name:   "",
 				CPU:    resource.MustParse("-1"),
 				GPU:    resource.MustParse("-1"),
@@ -388,6 +387,20 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
+				It("should enforce uniqueness of machine type names", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineTypes = []garden.MachineType{
+						awsCloudProfile.Spec.AWS.Constraints.MachineTypes[0],
+						awsCloudProfile.Spec.AWS.Constraints.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[1].name", fldPath)),
+					}))))
+				})
+
 				It("should forbid machine types with unsupported property values", func() {
 					awsCloudProfile.Spec.AWS.Constraints.MachineTypes = invalidMachineTypes
 
@@ -424,6 +437,20 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
 					}))
+				})
+
+				It("should enforce uniqueness of volume type names", func() {
+					awsCloudProfile.Spec.AWS.Constraints.VolumeTypes = []garden.VolumeType{
+						awsCloudProfile.Spec.AWS.Constraints.VolumeTypes[0],
+						awsCloudProfile.Spec.AWS.Constraints.VolumeTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(awsCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[1].name", fldPath)),
+					}))))
 				})
 
 				It("should forbid volume types with unsupported property values", func() {
@@ -675,6 +702,20 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
+				It("should enforce uniqueness of machine type names", func() {
+					azureCloudProfile.Spec.Azure.Constraints.MachineTypes = []garden.MachineType{
+						azureCloudProfile.Spec.Azure.Constraints.MachineTypes[0],
+						azureCloudProfile.Spec.Azure.Constraints.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[1].name", fldPath)),
+					}))))
+				})
+
 				It("should forbid machine types with unsupported property values", func() {
 					azureCloudProfile.Spec.Azure.Constraints.MachineTypes = invalidMachineTypes
 
@@ -707,6 +748,20 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
 					}))
+				})
+
+				It("should enforce uniqueness of volume type names", func() {
+					azureCloudProfile.Spec.Azure.Constraints.VolumeTypes = []garden.VolumeType{
+						azureCloudProfile.Spec.Azure.Constraints.VolumeTypes[0],
+						azureCloudProfile.Spec.Azure.Constraints.VolumeTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(azureCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[1].name", fldPath)),
+					}))))
 				})
 
 				It("should forbid volume types with unsupported property values", func() {
@@ -960,6 +1015,20 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
+				It("should enforce uniqueness of machine type names", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineTypes = []garden.MachineType{
+						gcpCloudProfile.Spec.GCP.Constraints.MachineTypes[0],
+						gcpCloudProfile.Spec.GCP.Constraints.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[1].name", fldPath)),
+					}))))
+				})
+
 				It("should forbid machine types with unsupported property values", func() {
 					gcpCloudProfile.Spec.GCP.Constraints.MachineTypes = invalidMachineTypes
 
@@ -996,6 +1065,20 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
 					}))
+				})
+
+				It("should enforce uniqueness of volume type names", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.VolumeTypes = []garden.VolumeType{
+						gcpCloudProfile.Spec.GCP.Constraints.VolumeTypes[0],
+						gcpCloudProfile.Spec.GCP.Constraints.VolumeTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(gcpCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[1].name", fldPath)),
+					}))))
 				})
 
 				It("should forbid volume types with unsupported property values", func() {
@@ -1280,6 +1363,20 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
+				It("should enforce uniqueness of machine type names", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = []garden.OpenStackMachineType{
+						openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes[0],
+						openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(openStackCloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[1].name", fldPath)),
+					}))))
+				})
+
 				It("should forbid machine types with unsupported property values", func() {
 					openStackCloudProfile.Spec.OpenStack.Constraints.MachineTypes = invalidOpenStackMachineTypes
 
@@ -1557,6 +1654,20 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
+				It("should enforce uniqueness of machine type names", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.AlicloudMachineType{
+						alicloudProfile.Spec.Alicloud.Constraints.MachineTypes[0],
+						alicloudProfile.Spec.Alicloud.Constraints.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[1].name", fldPath)),
+					}))))
+				})
+
 				It("should forbid machine types with unsupported property values", func() {
 					alicloudProfile.Spec.Alicloud.Constraints.MachineTypes = []garden.AlicloudMachineType{
 						{
@@ -1626,6 +1737,20 @@ var _ = Describe("validation", func() {
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
 					}))
+				})
+
+				It("should enforce uniqueness of volume type names", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes = []garden.AlicloudVolumeType{
+						alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes[0],
+						alicloudProfile.Spec.Alicloud.Constraints.VolumeTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(alicloudProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[1].name", fldPath)),
+					}))))
 				})
 
 				It("should forbid volume types with unsupported property values", func() {

@@ -267,6 +267,8 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
 	}
 
+	names := make(map[string]struct{}, len(machineTypes))
+
 	for i, machineType := range machineTypes {
 		idxPath := fldPath.Index(i)
 		namePath := idxPath.Child("name")
@@ -277,6 +279,13 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 		if len(machineType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 		}
+
+		if _, ok := names[machineType.Name]; ok {
+			allErrs = append(allErrs, field.Duplicate(namePath, machineType.Name))
+			break
+		}
+		names[machineType.Name] = struct{}{}
+
 		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
 		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
@@ -288,24 +297,12 @@ func validateMachineTypeConstraints(machineTypes []garden.MachineType, fldPath *
 func validateAlicloudMachineTypeConstraints(machineTypes []garden.AlicloudMachineType, zones []garden.Zone, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(machineTypes) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine type"))
-	}
-
+	types := []garden.MachineType{}
 	for i, machineType := range machineTypes {
-		idxPath := fldPath.Index(i)
-		namePath := idxPath.Child("name")
-		cpuPath := idxPath.Child("cpu")
-		gpuPath := idxPath.Child("gpu")
-		memoryPath := idxPath.Child("memory")
-		zonesPath := idxPath.Child("zones")
+		types = append(types, machineType.MachineType)
 
-		if len(machineType.Name) == 0 {
-			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
-		}
-		allErrs = append(allErrs, validateResourceQuantityValue("cpu", machineType.CPU, cpuPath)...)
-		allErrs = append(allErrs, validateResourceQuantityValue("gpu", machineType.GPU, gpuPath)...)
-		allErrs = append(allErrs, validateResourceQuantityValue("memory", machineType.Memory, memoryPath)...)
+		idxPath := fldPath.Index(i)
+		zonesPath := idxPath.Child("zones")
 
 	foundInZones:
 		for idx, zoneName := range machineType.Zones {
@@ -316,10 +313,12 @@ func validateAlicloudMachineTypeConstraints(machineTypes []garden.AlicloudMachin
 					}
 				}
 			}
-			//Can't find zoneName in zones
-			allErrs = append(allErrs, field.Invalid(zonesPath.Index(idx), zoneName, fmt.Sprintf("Zone name [%s] is not in defined zones list", zoneName)))
+			// Can't find zoneName in zones
+			allErrs = append(allErrs, field.Invalid(zonesPath.Index(idx), zoneName, fmt.Sprintf("zone name %q is not in defined zones list", zoneName)))
 		}
 	}
+
+	allErrs = append(allErrs, validateMachineTypeConstraints(types, fldPath)...)
 
 	return allErrs
 }
@@ -492,6 +491,8 @@ func validateVolumeTypeConstraints(volumeTypes []garden.VolumeType, fldPath *fie
 		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one volume type"))
 	}
 
+	names := make(map[string]struct{}, len(volumeTypes))
+
 	for i, volumeType := range volumeTypes {
 		idxPath := fldPath.Index(i)
 		namePath := idxPath.Child("name")
@@ -500,6 +501,13 @@ func validateVolumeTypeConstraints(volumeTypes []garden.VolumeType, fldPath *fie
 		if len(volumeType.Name) == 0 {
 			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
 		}
+
+		if _, ok := names[volumeType.Name]; ok {
+			allErrs = append(allErrs, field.Duplicate(namePath, volumeType.Name))
+			break
+		}
+		names[volumeType.Name] = struct{}{}
+
 		if len(volumeType.Class) == 0 {
 			allErrs = append(allErrs, field.Required(classPath, "must provide a class"))
 		}
@@ -511,22 +519,13 @@ func validateVolumeTypeConstraints(volumeTypes []garden.VolumeType, fldPath *fie
 func validateAlicloudVolumeTypeConstraints(volumeTypes []garden.AlicloudVolumeType, zones []garden.Zone, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if len(volumeTypes) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one volume type"))
-	}
-
+	types := []garden.VolumeType{}
 	for i, volumeType := range volumeTypes {
+		types = append(types, volumeType.VolumeType)
+
 		idxPath := fldPath.Index(i)
-		namePath := idxPath.Child("name")
-		classPath := idxPath.Child("class")
 		zonesPath := idxPath.Child("zones")
 
-		if len(volumeType.Name) == 0 {
-			allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
-		}
-		if len(volumeType.Class) == 0 {
-			allErrs = append(allErrs, field.Required(classPath, "must provide a class"))
-		}
 	foundInZones:
 		for idx, zoneName := range volumeType.Zones {
 			for _, zone := range zones {
@@ -536,10 +535,12 @@ func validateAlicloudVolumeTypeConstraints(volumeTypes []garden.AlicloudVolumeTy
 					}
 				}
 			}
-			//Can't find zoneName in zones
+			// Can't find zoneName in zones
 			allErrs = append(allErrs, field.Invalid(zonesPath.Index(idx), zoneName, fmt.Sprintf("Zone name [%s] is not in defined zones list", zoneName)))
 		}
 	}
+
+	allErrs = append(allErrs, validateVolumeTypeConstraints(types, fldPath)...)
 
 	return allErrs
 }
