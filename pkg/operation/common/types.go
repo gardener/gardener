@@ -565,6 +565,5 @@ var (
 type CloudConfigUserDataConfig struct {
 	ProvisionCloudProviderConfig bool
 	KubeletParameters            []string
-	WorkerNames                  []string
 	HostnameOverride             bool
 }
