@@ -148,6 +148,11 @@ func (b *AWSBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 	return nil, nil
 }
 
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *AWSBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
+
 // maps are mutable, so it's safer to create a new instance
 func getAWSCredentialsEnvironment() []map[string]interface{} {
 	return []map[string]interface{}{

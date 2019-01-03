@@ -149,6 +149,11 @@ func (b *AzureBotanist) GenerateCloudControllerManagerConfig() (map[string]inter
 	return nil, nil
 }
 
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *AzureBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
+
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *AzureBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {

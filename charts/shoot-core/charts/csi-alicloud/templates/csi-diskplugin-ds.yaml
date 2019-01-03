@@ -1,0 +1,119 @@
+{{- if .Values.enabled }}
+kind: DaemonSet
+apiVersion: apps/v1beta2
+metadata:
+  name: csi-plugin
+  namespace: kube-system
+  labels:
+    origin: gardener
+    garden.sapcloud.io/role: system-component
+    app: csi-plugin
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      app: csi-plugin
+  template:
+    metadata:
+      annotations:
+        # This, along with the CriticalAddonsOnly toleration below,
+        # marks the pod as a critical add-on, ensuring it gets
+        # priority scheduling and that its resources are reserved
+        # if it ever gets evicted.
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+      labels:
+        app: csi-plugin
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: csi-plugin
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: driver-registrar
+          image: {{ index .Values.images "csi-driver-registrar" }}
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/plugins/csi-diskplugin/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/csi-diskplugin
+        - name: csi-diskplugin
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: {{ index .Values.images "csi-plugin-alicloud" }}
+          args :
+            - "--nodeid=$(NODE_ID)"
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--v=5"
+          env:
+            - name: NODE_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: CSI_ENDPOINT
+              value: unix://var/lib/kubelet/plugins/csi-diskplugin/csi.sock
+            - name: ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: csi-diskplugin
+                  key: accessKeyID
+            - name: ACCESS_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: csi-diskplugin
+                  key: accessKeySecret
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /var/lib/kubelet/plugins/csi-diskplugin
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet/pods
+              mountPropagation: "Bidirectional"
+            - mountPath: /dev
+              name: host-dev
+            - mountPath: /sys
+              name: host-sys
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
+            - mountPath: /run/dbus
+              name: host-run
+              readOnly: true
+      volumes:
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi-diskplugin
+            type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet/pods
+            type: Directory
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi-diskplugin
+            type: DirectoryOrCreate
+        - name: host-dev
+          hostPath:
+            path: /dev
+        - name: host-run
+          hostPath:
+            path: /run/dbus
+        - name: host-sys
+          hostPath:
+            path: /sys
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+{{- end -}}

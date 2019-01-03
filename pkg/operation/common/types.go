@@ -447,6 +447,20 @@ const (
 	// AlicloudControllerManagerImageName is the name of the AlicloudControllerManager image.
 	AlicloudControllerManagerImageName = "alicloud-controller-manager"
 
+	// CSI Images
+
+	// CsiAttacherImageName is the name of csi attacher - https://github.com/kubernetes-csi/external-attacher
+	CsiAttacherImageName = "csi-attacher"
+
+	// CsiDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/driver-registrar
+	CsiDriverRegistrarImageName = "csi-driver-registrar"
+
+	// CsiProvisionerImageName is the name of csi provisioner - https://github.com/kubernetes-csi/external-provisioner
+	CsiProvisionerImageName = "csi-provisioner"
+
+	// CsiPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
+	CsiPluginAlicloudImageName = "csi-plugin-alicloud"
+
 	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
 	AWSLBReadvertiserImageName = "aws-lb-readvertiser"
 

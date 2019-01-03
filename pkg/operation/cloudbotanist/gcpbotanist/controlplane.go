@@ -86,6 +86,11 @@ func (b *GCPBotanist) GenerateCloudControllerManagerConfig() (map[string]interfa
 	}, nil
 }
 
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *GCPBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
+
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *GCPBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {

@@ -46,10 +46,15 @@ var (
 		kubernetes.DaemonSets: {
 			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem): true,
 			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):  true,
+			fmt.Sprintf("%s/csi-plugin", metav1.NamespaceSystem):  true,
 		},
 		kubernetes.Deployments: {
 			fmt.Sprintf("%s/coredns", metav1.NamespaceSystem):        true,
 			fmt.Sprintf("%s/metrics-server", metav1.NamespaceSystem): true,
+			fmt.Sprintf("%s/csi-attacher", metav1.NamespaceSystem):   true,
+		},
+		kubernetesbase.StatefulSets: {
+			fmt.Sprintf("%s/csi-provisioner", metav1.NamespaceSystem): true,
 		},
 		kubernetes.Namespaces: {
 			metav1.NamespacePublic:  true,
@@ -102,7 +107,14 @@ func (b *Botanist) CleanKubernetesResources() error {
 		return err
 	}
 
+	apiGroupPathToBeChecked := make(map[string][]string)
+	//Avoid to change original data, we need a copy
 	for resource, apiGroupPath := range b.K8sShootClient.GetResourceAPIGroups() {
+		apiGroupPathToBeChecked[resource] = apiGroupPath
+	}
+	//For CSI managed PV, the deletion must take some while, need to be checked
+	apiGroupPathToBeChecked[kubernetesbase.PersistentVolumes] = []string{"api", "v1"}
+	for resource, apiGroupPath := range apiGroupPathToBeChecked {
 		wg.Add(1)
 		go func(apiGroupPath []string, resource string) {
 			defer wg.Done()

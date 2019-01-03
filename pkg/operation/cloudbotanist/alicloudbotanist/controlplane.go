@@ -113,6 +113,28 @@ func (b *AlicloudBotanist) GenerateCloudControllerManagerConfig() (map[string]in
 	return newConf, nil
 }
 
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	conf := map[string]interface{}{
+		"credential": map[string]interface{}{
+			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
+			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
+		},
+		"enabled": true,
+	}
+	newConf, err := b.InjectImages(conf, b.SeedVersion(), b.ShootVersion(),
+		common.CsiAttacherImageName,
+		common.CsiDriverRegistrarImageName,
+		common.CsiPluginAlicloudImageName,
+		common.CsiProvisionerImageName,
+	)
+
+	if err != nil {
+		return conf, err
+	}
+	return newConf, nil
+}
+
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *AlicloudBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {

@@ -1,0 +1,54 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-provisioner
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+---
+kind: ClusterRole
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: garden.sapcloud.io:psp:kube-system:csi-provisioner
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups:
+    - policy
+    - extensions
+    resourceNames:
+    - gardener.kube-system.csi-diskplugin
+    resources:
+    - podsecuritypolicies
+    verbs:
+    - use
+
+---
+kind: ClusterRoleBinding
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: garden.sapcloud.io:psp:csi-provisioner
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+subjects:
+  - kind: ServiceAccount
+    name: csi-provisioner
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:kube-system:csi-provisioner
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}

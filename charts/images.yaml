@@ -106,7 +106,7 @@ images:
 # Alicloud Controll Manger
 - name: alicloud-controller-manager
   sourceRepository: github.com/AliyunContainerService/alicloud-controller-manager
-  repository: r1.gardenerregistry.org/gardener/alicloud-controller-manager
+  repository: jerryjxj/alicloud-controller-manager
   tag: "1.9.8"
 
 # Shoot optional addons
@@ -147,6 +147,29 @@ images:
 - name: alpine
   repository: alpine
   tag: "3.8"
+
+# CSI
+- name: csi-attacher
+  sourceRepository: https://github.com/kubernetes-csi/external-attacher
+  repository: quay.io/k8scsi/csi-attacher
+  tag: v0.3.0
+  version: 1.11.x
+- name: csi-driver-registrar
+  sourceRepository: https://github.com/kubernetes-csi/driver-registrar
+  repository: quay.io/k8scsi/driver-registrar
+  tag: v0.3.0
+  version: 1.11.x
+- name: csi-provisioner
+  sourceRepository: https://github.com/kubernetes-csi/external-provisioner
+  repository: quay.io/k8scsi/csi-provisioner
+  tag: v0.3.0
+  version: 1.11.x
+- name: csi-plugin-alicloud
+  sourceRepository: https://github.com/AliyunContainerService/csi-plugin
+  repository: jerryjxj/csi-plugin-alicloud
+  tag: v0.3.0
+  version: 1.11.x
+
 
 # Logging
 - name: fluentd-es

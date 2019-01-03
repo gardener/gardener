@@ -1,0 +1,24 @@
+{{- if .Values.enabled }}
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.provisioner
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  privileged: false
+  volumes:
+  - hostPath
+  hostNetwork: false
+  allowedHostPaths:
+  - pathPrefix: /var/lib/kubelet/plugins/csi-diskplugin
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  readOnlyRootFilesystem: false
+{{- end -}}

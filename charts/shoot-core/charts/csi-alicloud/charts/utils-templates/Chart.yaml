@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Util chart for various templates.
+name: utils-templates
+version: 0.1.0
