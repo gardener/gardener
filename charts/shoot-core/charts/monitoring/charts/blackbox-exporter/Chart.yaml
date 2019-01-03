@@ -1,0 +1,4 @@
+apiVersion: v1
+description: blackbox-exporter for service check test
+name: blackbox-exporter
+version: 0.1.0

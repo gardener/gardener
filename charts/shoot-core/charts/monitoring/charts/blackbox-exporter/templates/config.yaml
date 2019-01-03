@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blackbox-exporter-config
+  namespace: kube-system
+  labels:
+    app: prometheus
+    role: monitoring
+data:
+  blackbox.yaml: |
+    modules:
+      http_apiserver:
+        prober: http
+        timeout: 10s
+        http:
+          headers:
+            Accept: "*/*"
+            Accept-Language: "en-US"
+          preferred_ip_protocol: "ip4"
