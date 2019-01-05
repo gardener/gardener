@@ -15,16 +15,17 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.12.3
-        - 1.11.5
-        - 1.10.11
+        - 1.13.1
+        - 1.12.4
+        - 1.11.6
+        - 1.10.12
       machineImages:
       - name: CoreOS
         regions:
         - name: eu-west-1
-          ami: ami-1ed8d467
+          ami: ami-030d1bab626c90e46
         - name: us-east-1
-          ami: ami-f6ecac89
+          ami: ami-0b1db01d775d666c2
       machineTypes:
       - name: m4.large
         cpu: "2"

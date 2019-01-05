@@ -15,12 +15,13 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.12.3
-        - 1.11.5
-        - 1.10.11
+        - 1.13.1
+        - 1.12.4
+        - 1.11.6
+        - 1.10.12
       machineImages:
       - name: CoreOS
-        image: projects/coreos-cloud/global/images/coreos-stable-1745-7-0-v20180614
+        image: projects/coreos-cloud/global/images/coreos-stable-1911-5-0-v20181219
       machineTypes:
       - name: n1-standard-2
         cpu: "2"
