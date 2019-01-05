@@ -107,7 +107,7 @@ images:
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
   repository: k8s.gcr.io/kubernetes-dashboard-amd64
-  tag: v1.10.0
+  tag: v1.10.1
 - name: kube-lego
   sourceRepository: github.com/jetstack/kube-lego
   repository: jetstack/kube-lego
