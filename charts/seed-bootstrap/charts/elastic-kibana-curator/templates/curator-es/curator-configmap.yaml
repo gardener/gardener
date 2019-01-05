@@ -10,30 +10,9 @@ data:
   action_file.yml: |-
     actions:
       1:
-        action: forcemerge
-        description: >-
-          Perform a forcemerge on selected indices to 'max_num_segments' per shard
-        options:
-          max_num_segments: 1
-          timeout_override: 21600
-          delay: 120
-          continue_if_exception: True
-          ignore_empty_list: True
-        filters:
-        - filtertype: age
-          source: name
-          direction: older
-          timestring: '%Y.%m.%d'
-          unit: days
-          unit_count: 1
-          field:
-          stats_result:
-          epoch:
-          exclude: True
-      2:
         action: index_settings
         description: >-
-          Set shard replicas to 0 and remove the index from read only
+          Remove the selected indices from read only
         options:
           index_settings:
             index:
@@ -49,10 +28,7 @@ data:
           direction: older
           timestring: '%Y.%m.%d'
           unit: days
-          unit_count: 1
-          field:
-          stats_result:
-          epoch:
+          unit_count: 2
           exclude: True
   config.yml: |-
     client:
@@ -100,9 +76,6 @@ data:
           timestring: '%Y.%m.%d'
           unit: months
           unit_count: 1
-          field:
-          stats_result:
-          epoch:
           exclude: False
       2:
         action: index_settings
@@ -114,7 +87,6 @@ data:
               refresh_interval: 60s
               translog:
                 durability: async
-              number_of_replicas: 0
           ignore_unavailable: False
           preserve_existing: False
           continue_if_exception: True
@@ -126,9 +98,23 @@ data:
           timestring: '%Y.%m.%d'
           unit: days
           unit_count: 1
-          field:
-          stats_result:
-          epoch:
+          exclude: True
+      3:
+        action: replicas
+        description: >-
+          Reduce the replica count to 0 for indices younger than two days.
+        options:
+          count: 0
+          wait_for_completion: True
+          continue_if_exception: True
+          ignore_empty_list: True
+        filters:
+        - filtertype: age
+          source: name
+          direction: older
+          timestring: '%Y.%m.%d'
+          unit: days
+          unit_count: 2
           exclude: True
   config.yml: |-
     client:

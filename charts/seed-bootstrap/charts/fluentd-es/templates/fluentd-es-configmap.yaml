@@ -16,18 +16,7 @@ data:
     </source>
 
   output.conf: |-
-    <filter kubernetes.**>
-      @type genhashvalue
-      keys time, tag
-      hash_type md5    # md5/sha1/sha256/sha512/mur128
-      base64_enc true
-      base91_enc false
-      set_key _hash
-      separator _
-      inc_time_as_key true
-      inc_tag_as_key true
-    </filter>
-
+    
     #Decide which is shoot record and which is not
     <match kubernetes.**>
       @id rewrite_tag_filter
@@ -46,27 +35,16 @@ data:
       </rule>
     </match>
 
-    # <filter **>
-    #   @type elasticsearch_genid
-    #   hash_id_key _hash    # storing generated hash id key (default is _hash)
-    # </filter>
-
+    <filter **>
+      @type elasticsearch_genid
+    </filter>
 
     <match shoot**>
       @id elasticsearch_dynamic
       @type elasticsearch_dynamic
       @log_level warn
-      include_tag_key true
       host elasticsearch-logging.${record['kubernetes']['namespace_name']}.svc
-      port 9200
-      logstash_format true
-      #use _hash field for log ID
-      id_key _hash
-      reconnect_on_error true
-      # gives time plugin to read bulk response from server
-      request_timeout 30s
-      # this is only for debug. When flush take more time than this it will produce warning
-      slow_flush_log_threshold 60
+      @include /etc/fluent/config.d/es_plugin.options
       <buffer tag, time>
         @type file
         #Limit the number of queued chunks
@@ -88,19 +66,14 @@ data:
       @id elasticsearch_static
       @type elasticsearch
       @log_level warn
-      include_tag_key true
       host elasticsearch-logging.{{ .Release.Namespace }}.svc
-      port 9200
-      logstash_format true
-      id_key _hash
-      reconnect_on_error true
-      request_timeout 30s
-      # this is only for debug. When flush take more time than this it will produce warning
-      slow_flush_log_threshold 60
+      @include /etc/fluent/config.d/es_plugin.options
+      template_name gardener
+      template_file /etc/fluent/config.d/default.template
       <buffer tag, time>
         @type file
         #Limit the number of queued chunks
-        queued_chunks_limit_size 2048
+        queued_chunks_limit_size 40
         # The number of threads of output plugins, which is used to write chunks in parallel
         flush_thread_count 8
         # he size limitation of this buffer plugin instance
@@ -117,6 +90,27 @@ data:
     <system>
       root_dir /gardener/fluentd-buffers/
     </system>
+
+  es_plugin.options: |-
+    port {{ .Values.global.elasticsearchPorts.db }}
+    logstash_format true
+    # use _hash as request id
+    id_key _hash
+    reconnect_on_error true
+    # gives enough time fluentd to read the response
+    request_timeout 30s
+    # this is only for debug. When flush take more time than this it will produce warning
+    slow_flush_log_threshold 60
+    # Do not wait ES to tell you what version is.
+    verify_es_version_at_startup false
+    # just hardcode that version number
+    default_elasticsearch_version 6
+    # we have time field from the docker runtime
+    # include_timestamp false
+    time_key time
+    # remove tag from the log content
+    include_tag_key false
+    remove_keys _hash, time
 
   buffer.options: |-
     # The max size of each chunks
@@ -144,3 +138,18 @@ data:
     retry_randomize false
     flush_mode interval
     retry_max_times 4
+
+  default.template: |-
+    {
+      "index_patterns" : ["logstash-*"],
+      "settings" : {
+        "index" :{
+          "number_of_shards" : "3",
+          "number_of_replicas" : "0",
+          "refresh_interval": "60s",
+          "translog":{
+            "durability": "async"
+          }
+        }
+      }
+    }
