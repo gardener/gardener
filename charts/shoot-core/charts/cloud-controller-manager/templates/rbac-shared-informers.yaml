@@ -1,4 +1,4 @@
-{{- if semverCompare "< 1.10" .Capabilities.KubeVersion.GitVersion -}}
+{{- if semverCompare "< 1.10-0" .Capabilities.KubeVersion.GitVersion -}}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole

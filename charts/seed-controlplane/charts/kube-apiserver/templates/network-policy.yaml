@@ -38,7 +38,7 @@ spec:
     - namespaceSelector:
         matchLabels:
           role: garden
-      {{- if semverCompare ">= 1.11" .Capabilities.KubeVersion.GitVersion }}
+      {{- if semverCompare ">= 1.11-0" .Capabilities.KubeVersion.GitVersion }}
       {{/* Only with Kubernetes versions >= 1.11 it is possible to specify more than one 'to' type. */}}
       {{/* https://github.com/kubernetes/kubernetes/blob/release-1.10/pkg/apis/networking/validation/validation.go#L78-L80 */}}
       podSelector:
