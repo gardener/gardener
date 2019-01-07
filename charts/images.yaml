@@ -37,7 +37,7 @@ images:
 - name: kube-addon-manager
   sourceRepository: github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager
   repository: k8s.gcr.io/kube-addon-manager
-  tag: v8.7
+  tag: v8.8
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
@@ -51,7 +51,7 @@ images:
 - name: alertmanager
   sourceRepository: github.com/prometheus/alertmanager
   repository: quay.io/prometheus/alertmanager
-  tag: v0.15.2
+  tag: v0.15.3
 - name: prometheus
   sourceRepository: github.com/prometheus/prometheus
   repository: quay.io/prometheus/prometheus
@@ -67,15 +67,15 @@ images:
 - name: node-exporter
   sourceRepository: github.com/prometheus/node_exporter
   repository: quay.io/prometheus/node-exporter
-  tag: v0.16.0
+  tag: v0.17.0
 - name: grafana
   sourceRepository: github.com/grafana/grafana
   repository: grafana/grafana
-  tag: "5.3.0"
+  tag: "5.4.2"
 - name: blackbox-exporter
   sourceRepository: github.com/prometheus/blackbox_exporter
   repository: quay.io/prometheus/blackbox-exporter
-  tag: v0.12.0
+  tag: v0.13.0
 - name: metrics-server
   sourceRepository: github.com/kubernetes-incubator/metrics-server
   repository: k8s.gcr.io/metrics-server-amd64
@@ -85,15 +85,15 @@ images:
 - name: calico-node
   sourceRepository: github.com/projectcalico/calico
   repository: quay.io/calico/node
-  tag: v3.2.3
+  tag: v3.4.0
 - name: calico-cni
   sourceRepository: github.com/projectcalico/cni-plugin
   repository: quay.io/calico/cni
-  tag: v3.2.3
+  tag: v3.4.0
 - name: calico-typha
   sourceRepository: github.com/projectcalico/typha
   repository: quay.io/calico/typha
-  tag: v3.2.3
+  tag: v3.4.0
 - name: vpn-shoot
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
@@ -101,7 +101,7 @@ images:
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
-  tag: "1.2.2"
+  tag: "1.3.0"
 
 # Shoot optional addons
 - name: kubernetes-dashboard
@@ -119,7 +119,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.20.0"
+  tag: "0.21.0"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend

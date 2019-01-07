@@ -78,6 +78,10 @@ admissionregistration.k8s.io/v1beta1
 admissionregistration.k8s.io/v1alpha1
 {{- end -}}
 
+{{- define "poddisruptionbudgetversion" -}}
+policy/v1beta1
+{{- end -}}
+
 {{- define "podsecuritypolicyversion" -}}
 {{- if semverCompare ">= 1.10" .Capabilities.KubeVersion.GitVersion -}}
 policy/v1beta1
