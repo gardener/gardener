@@ -39,7 +39,7 @@ inhibit_rules:
   target_match:
     severity: warning
   equal: ['alertname', 'service']
-# Stop all alerts for type=shoot if no there are VPN problems.
+# Stop all alerts for type=shoot if there are VPN problems.
 - source_match:
     service: vpn
   target_match_re:
@@ -53,6 +53,14 @@ inhibit_rules:
   target_match_re:
     severity: ^(critical|warning)$
   equal: ['type']
+# If Kube API Server is down do not fire alerts for apiserver-connectivity-check.
+- source_match:
+    service: kube-apiserver
+    severity: critical
+    job: kube-apiserver
+  target_match:
+    service: apiserver-connectivity-check
+  equal: ['type', 'cluster']
 
 receivers:
 - name: dev-null

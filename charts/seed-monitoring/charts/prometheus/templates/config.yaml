@@ -470,6 +470,8 @@ data:
       - targets:
         - {{ .Values.shoot.apiserver }}/healthz
       relabel_configs:
+      - target_label: type
+        replacement: seed
       - source_labels: [__address__]
         target_label: __param_target
         action: replace
@@ -480,16 +482,13 @@ data:
         replacement: 127.0.0.1:9115
         action: replace
 
-    # blackbox exporter deployed in shoot
-    - job_name: blackbox-exporter-k8s-service-check-0
+    - job_name: blackbox-exporter-k8s-service-check
       params:
         module:
-        - http_apiserver
-      scrape_timeout: 10s
+        - http_kubernetes_service
+        target:
+        - https://kubernetes.default.svc.cluster.local/healthz
       metrics_path: /probe
-      static_configs:
-      - targets:
-        - {{ .Values.shoot.apiserver }}/healthz
       kubernetes_sd_configs:
       - role: endpoints
         namespaces:
@@ -498,15 +497,15 @@ data:
         tls_config:
 {{ include "prometheus.tls-config.kube-cert-auth" . | indent 10 }}
       relabel_configs:
+      - target_label: type
+        replacement: shoot
       - source_labels:
         - __meta_kubernetes_service_name
         action: keep
-        regex: service-check
-      - source_labels: [__address__]
-        target_label: __param_target
-        action: replace
-      - source_labels: [__param_target]
+        regex: blackbox-exporter
+      - source_labels: [ __param_target ]
         target_label: instance
         action: replace
       metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.service-check | indent 6 }}
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
+

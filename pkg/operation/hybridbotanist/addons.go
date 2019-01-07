@@ -33,10 +33,11 @@ import (
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
-		kubeProxySecret  = b.Secrets["kube-proxy"]
-		vpnShootSecret   = b.Secrets["vpn-shoot"]
-		vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
-		global           = map[string]interface{}{
+		blackboxExporterSecret = b.Secrets["blackbox-exporter"]
+		kubeProxySecret        = b.Secrets["kube-proxy"]
+		vpnShootSecret         = b.Secrets["vpn-shoot"]
+		vpnTLSAuthSecret       = b.Secrets["vpn-seed-tlsauth"]
+		global                 = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.GetPodNetwork(),
 		}
@@ -82,8 +83,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
 			},
 		}
-		nodeExporterConfig = map[string]interface{}{}
-		serviceCheckConfig = map[string]interface{}{}
+		nodeExporterConfig     = map[string]interface{}{}
+		blackboxExporterConfig = map[string]interface{}{}
 	)
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
@@ -119,8 +120,12 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
-	serviceCheck, err := b.Botanist.InjectImages(serviceCheckConfig, b.ShootVersion(), b.ShootVersion(), common.BlackboxExporterImageName)
+	blackboxExporter, err := b.Botanist.InjectImages(blackboxExporterConfig, b.ShootVersion(), b.ShootVersion(), common.BlackboxExporterImageName)
 	if err != nil {
+		return nil, err
+	}
+
+	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "blackbox-exporter", corev1.SecretTypeOpaque, blackboxExporterSecret.Data, true); err != nil {
 		return nil, err
 	}
 
@@ -139,7 +144,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter":     nodeExporter,
-			"blackbox-exporter": serviceCheck,
+			"blackbox-exporter": blackboxExporter,
 		},
 		"cert-broker": map[string]interface{}{
 			"enabled": features.ControllerFeatureGate.Enabled(features.CertificateManagement),

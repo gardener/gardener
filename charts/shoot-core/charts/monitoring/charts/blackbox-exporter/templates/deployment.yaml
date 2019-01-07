@@ -1,11 +1,11 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: service-check
+  name: blackbox-exporter
   namespace: kube-system
   labels:
     garden.sapcloud.io/role: system-component
-    component: service-check
+    component: blackbox-exporter
     addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
 spec:
@@ -13,13 +13,15 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      component: service-check
+      component: blackbox-exporter
   template:
     metadata:
+      annotations:
+        checksum/configmap-blackbox-exporter-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
       labels:
         origin: gardener
         garden.sapcloud.io/role: system-component
-        component: service-check
+        component: blackbox-exporter
     spec:
       containers:
       - name: blackbox-exporter
@@ -27,16 +29,13 @@ spec:
         args:
         - --config.file=/etc/blackbox_exporter/blackbox.yaml
         imagePullPolicy: IfNotPresent
-        # TODO: network rootnamespace
-        securityContext:
-          privileged: true
         resources:
           requests:
-            cpu: 50m
-            memory: 50Mi
+            cpu: 5m
+            memory: 5Mi
           limits:
-            cpu: 75m
-            memory: 75Mi
+            cpu: 10m
+            memory: 35Mi
         ports:
         - containerPort: 9115
           protocol: TCP
@@ -44,24 +43,13 @@ spec:
         volumeMounts:
         - name: blackbox-exporter-config
           mountPath: /etc/blackbox_exporter
+        - name: blackbox-exporter
+          mountPath: /var/run/secrets/blackbox
       volumes:
       - name: blackbox-exporter-config
         configMap:
           name: blackbox-exporter-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: service-check
-  namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
-    component: service-check
-spec:
-  type: ClusterIP
-  ports:
-  - name: probe
-    port: 9115
-    protocol: TCP
-  selector:
-    component: service-check
+      - name: blackbox-exporter
+        secret:
+          secretName: blackbox-exporter
+

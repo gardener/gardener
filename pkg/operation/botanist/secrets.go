@@ -501,6 +501,19 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			UsedForSSH: false,
 		},
 
+		// Secret definition for blackbox-exporter
+		&secrets.CertificateSecretConfig{
+			Name: "blackbox-exporter",
+
+			CommonName:   "blackbox-exporter",
+			Organization: nil,
+			DNSNames:     []string{},
+			IPAddresses:  []net.IP{},
+
+			CertType:  secrets.ClientCert,
+			SigningCA: certificateAuthorities[caCluster],
+		},
+
 		// Secret definition for vpn-shoot (OpenVPN server side)
 		&secrets.CertificateSecretConfig{
 			Name: "vpn-shoot",
