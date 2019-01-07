@@ -22,7 +22,7 @@ images:
 - name: etcd-backup-restore
   sourceRepository: github.com/gardener/etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.4.0"
+  tag: "0.4.1"
 - name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
