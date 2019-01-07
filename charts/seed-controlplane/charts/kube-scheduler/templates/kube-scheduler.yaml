@@ -11,7 +11,7 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: 10251
+    port: {{ include "kube-scheduler.port" . }}
     protocol: TCP
   selector:
     app: kubernetes
@@ -56,13 +56,25 @@ spec:
         - /hyperkube
         - scheduler
         - --config=/var/lib/kube-scheduler-config/config.yaml
+        {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+        - --authentication-kubeconfig=/var/lib/kube-scheduler/kubeconfig
+        - --authorization-kubeconfig=/var/lib/kube-scheduler/kubeconfig
+        - --tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt
+        - --tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key
+        - --secure-port={{ include "kube-scheduler.port" . }}
+        - --port=0
+        {{- end }}
         {{- include "kube-scheduler.featureGates" . | trimSuffix "," | indent 8 }}
         - --v=2
         livenessProbe:
           httpGet:
             path: /healthz
+            {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+            scheme: HTTPS
+            {{- else }}
             scheme: HTTP
-            port: 10251
+            {{- end }}
+            port: {{ include "kube-scheduler.port" . }}
           successThreshold: 1
           failureThreshold: 2
           initialDelaySeconds: 15
@@ -77,6 +89,8 @@ spec:
         volumeMounts:
         - name: kube-scheduler
           mountPath: /var/lib/kube-scheduler
+        - name: kube-scheduler-server
+          mountPath: /var/lib/kube-scheduler-server
         - name: kube-scheduler-config
           mountPath: /var/lib/kube-scheduler-config
       dnsPolicy: ClusterFirst
@@ -87,6 +101,9 @@ spec:
       - name: kube-scheduler
         secret:
           secretName: kube-scheduler
+      - name: kube-scheduler-server
+        secret:
+          secretName: kube-scheduler-server
       - name: kube-scheduler-config
         configMap:
           name: kube-scheduler-config

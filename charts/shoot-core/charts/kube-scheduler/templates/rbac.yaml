@@ -1,8 +1,8 @@
-{{- if semverCompare ">= 1.12" .Values.global.kubernetesVersion }}
+{{- if semverCompare ">= 1.13" .Values.global.kubernetesVersion }}
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: system:controller:kube-controller-manager
+  name: system:controller:kube-scheduler
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
@@ -11,12 +11,12 @@ roleRef:
   name: system:auth-delegator
 subjects:
 - kind: User
-  name: system:kube-controller-manager
+  name: system:kube-scheduler
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
-  name: system:controller:kube-controller-manager:auth-reader
+  name: system:controller:kube-scheduler:auth-reader
   namespace: kube-system
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
@@ -26,5 +26,5 @@ roleRef:
   name: extension-apiserver-authentication-reader
 subjects:
 - kind: User
-  name: system:kube-controller-manager
+  name: system:kube-scheduler
 {{- end }}

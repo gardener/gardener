@@ -480,7 +480,8 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		"replicas":          b.Shoot.GetReplicas(1),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-kube-scheduler": b.CheckSums[common.KubeSchedulerDeploymentName],
+			"checksum/secret-kube-scheduler":        b.CheckSums[common.KubeSchedulerDeploymentName],
+			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
 		},
 	}
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeSchedulerConfig()

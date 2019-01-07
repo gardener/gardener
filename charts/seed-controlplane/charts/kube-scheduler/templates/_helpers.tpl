@@ -14,3 +14,11 @@ kubescheduler.config.k8s.io/v1alpha1
 componentconfig/v1alpha1
 {{- end }}
 {{- end -}}
+
+{{- define "kube-scheduler.port" -}}
+{{- if semverCompare ">= 1.13" .Values.kubernetesVersion -}}
+10259
+{{- else -}}
+10251
+{{- end -}}
+{{- end -}}

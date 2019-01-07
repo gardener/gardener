@@ -89,9 +89,9 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			b.Shoot.InternalClusterDomain,
 		}, dnsNamesForService("kubernetes", "default")...)
 
-		kubeControllerManagerCertDNSNames = dnsNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
-
 		cloudControllerManagerCertDNSNames = dnsNamesForService("cloud-controller-manager", b.Shoot.SeedNamespace)
+		kubeControllerManagerCertDNSNames  = dnsNamesForService("kube-controller-manager", b.Shoot.SeedNamespace)
+		kubeSchedulerCertDNSNames          = dnsNamesForService("kube-scheduler", b.Shoot.SeedNamespace)
 
 		etcdCertDNSNames = []string{
 			fmt.Sprintf("etcd-%s-0", common.EtcdRoleMain),
@@ -263,6 +263,21 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
 				APIServerURL: b.computeAPIServerURL(true, false),
+			},
+		},
+
+		// Secret definition for kube-scheduler server
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: common.KubeSchedulerServerName,
+
+				CommonName:   common.KubeSchedulerDeploymentName,
+				Organization: nil,
+				DNSNames:     kubeSchedulerCertDNSNames,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[caCluster],
 			},
 		},
 

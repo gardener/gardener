@@ -11,7 +11,7 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: 10252
+    port: {{ include "kube-controller-manager.port" . }}
     protocol: TCP
   selector:
     app: kubernetes
@@ -90,9 +90,9 @@ spec:
         - --service-account-private-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --service-cluster-ip-range={{ .Values.serviceNetwork }}
         {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
-        - --secure-port=10252
+        - --secure-port={{ include "kube-controller-manager.port" . }}
         - --port=0
-        {{- end}}
+        {{- end }}
         {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
         - --horizontal-pod-autoscaler-downscale-stabilization={{ .Values.horizontalPodAutoscaler.downscaleStabilization }}
         - --horizontal-pod-autoscaler-initial-readiness-delay={{ .Values.horizontalPodAutoscaler.readinessDelay }}
@@ -113,8 +113,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
+            {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+            scheme: HTTPS
+            {{- else }}
             scheme: HTTP
-            port: 10252
+            {{- end }}
+            port: {{ include "kube-controller-manager.port" . }}
           successThreshold: 1
           failureThreshold: 2
           initialDelaySeconds: 15
