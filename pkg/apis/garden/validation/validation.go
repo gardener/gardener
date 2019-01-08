@@ -1065,9 +1065,22 @@ func validateBackup(backup *garden.Backup, fldPath *field.Path) field.ErrorList 
 	if backup == nil {
 		return allErrs
 	}
-	if _, err := cron.ParseStandard(backup.Schedule); err != nil {
+	if schedule, err := cron.ParseStandard(backup.Schedule); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), backup.Schedule, "schedule must be in standard cron format"))
+	} else {
+		var (
+			nextScheduleTime              = schedule.Next(time.Now())
+			scheduleTimeAfterNextSchedule = schedule.Next(nextScheduleTime)
+			granularity                   = scheduleTimeAfterNextSchedule.Sub(nextScheduleTime)
+		)
+
+		if granularity < garden.MinimumETCDFullBackupTimeInterval {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"),
+				backup.Schedule,
+				fmt.Sprintf("backup schedule frequency can not be so high, minimum frequency is once every %s", garden.MinimumETCDFullBackupTimeInterval)))
+		}
 	}
+
 	if backup.Maximum <= 0 {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), backup.Maximum, "maximum number must be greater than zero"))
 	}

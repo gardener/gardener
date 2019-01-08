@@ -1456,11 +1456,11 @@ const (
 	DefaultPodNetworkCIDR = CIDR("100.96.0.0/11")
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
 	DefaultServiceNetworkCIDR = CIDR("100.64.0.0/13")
-	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (5 minutes).
+	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster.
 	DefaultETCDBackupSchedule = "0 */24 * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
 	DefaultETCDBackupMaximum = 7
-	// MinimumETCDFullBackupTimeInterval is the time interval between consecutive full backups.
+	// MinimumETCDFullBackupTimeInterval is the minimum time interval between consecutive full backups.
 	MinimumETCDFullBackupTimeInterval = 24 * time.Hour
 )
 

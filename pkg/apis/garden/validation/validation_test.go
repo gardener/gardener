@@ -2427,6 +2427,10 @@ var _ = Describe("validation", func() {
 				Schedule: "76 * * * *",
 				Maximum:  0,
 			}
+			invalidFrequentBackup = &garden.Backup{
+				Schedule: "*/5 * * * *",
+				Maximum:  7,
+			}
 			addon = garden.Addon{
 				Enabled: true,
 			}
@@ -2526,7 +2530,7 @@ var _ = Describe("validation", func() {
 						},
 					},
 					Backup: &garden.Backup{
-						Schedule: "*/1 * * * *",
+						Schedule: "0 */24 * * *",
 						Maximum:  2,
 					},
 					Cloud: garden.Cloud{
@@ -2797,6 +2801,17 @@ var _ = Describe("validation", func() {
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.backup.maximum"),
+				}))
+			})
+
+			It("should forbid very frequent backup configuration", func() {
+				shoot.Spec.Backup = invalidFrequentBackup
+
+				errorList := ValidateShoot(shoot)
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.backup.schedule"),
+					"Detail": Equal(fmt.Sprintf("backup schedule frequency can not be so high, minimum frequency is once every %s", garden.MinimumETCDFullBackupTimeInterval)),
 				}))
 			})
 
