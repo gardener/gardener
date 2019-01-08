@@ -60,7 +60,6 @@ rules:
 - apiGroups:
   - extensions
   resources:
-  - replicasets
   - daemonsets
   verbs:
   - watch
@@ -77,6 +76,7 @@ rules:
   - apps
   resources:
   - statefulsets
+  - replicasets
   verbs:
   - watch
   - list
