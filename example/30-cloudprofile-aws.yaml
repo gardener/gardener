@@ -18,7 +18,6 @@ spec:
         - 1.12.3
         - 1.11.5
         - 1.10.11
-      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
       machineImages:
       - name: CoreOS
         regions:

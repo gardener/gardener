@@ -3373,7 +3373,7 @@ func schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref common.ReferenceCa
 				Properties: map[string]spec.Schema{
 					"versions": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.9.1).",
+							Description: "Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.13.1).",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -3859,7 +3859,7 @@ func schema_pkg_apis_garden_v1beta1_OIDCConfig(ref common.ReferenceCallback) com
 					},
 					"signingAlgs": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ATTENTION: Only meaningful for Kubernetes >= 1.10 List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1",
+							Description: "List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{

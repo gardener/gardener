@@ -338,7 +338,7 @@ $ kubectl --namespace shoot--dev--local get secret kubecfg -o jsonpath="{.data.k
 # Depending on your Internet speed, it can take some time, before your node reports a READY status.
 $ kubectl --kubeconfig dev/shoot-kubeconfig get nodes
 NAME                    STATUS    ROLES     AGE       VERSION
-192.168.99.201.nip.io   Ready     node      1m        v1.9.1
+192.168.99.201.nip.io   Ready     node      1m        v1.12.4
 ```
 
 > Note: It is required that your minikube has network connectivity to the nodes created by Vagrant.

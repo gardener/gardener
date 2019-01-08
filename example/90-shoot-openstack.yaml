@@ -44,7 +44,6 @@ spec:
   #     issuerURL: https://identity.example.com
   #     usernameClaim: username-claim
   #     usernamePrefix: username-prefix
-  #-#-# only usable with Kubernetes >= 1.10
   #     signingAlgs: RS256,some-other-algorithm
   #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:

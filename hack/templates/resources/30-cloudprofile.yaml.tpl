@@ -72,7 +72,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.12.3
         - 1.11.5
         - 1.10.11
-      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -177,7 +176,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.12.3
         - 1.11.5
         - 1.10.11
-      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
@@ -278,7 +276,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.12.3
         - 1.11.5
         - 1.10.11
-      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -367,7 +364,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.12.3
         - 1.11.5
         - 1.10.11
-      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -457,7 +453,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.12.3
         - 1.11.5
         - 1.10.11
-      # - 1.9.11 # Usage is not recommended, see CVE-2018-1002105
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:

@@ -43,11 +43,7 @@ apps/v1
 {{- end -}}
 
 {{- define "apiserviceversion" -}}
-{{- if semverCompare ">= 1.10-0" .Capabilities.KubeVersion.GitVersion -}}
 apiregistration.k8s.io/v1
-{{- else -}}
-apiregistration.k8s.io/v1beta1
-{{- end -}}
 {{- end -}}
 
 {{- define "networkpolicyversion" -}}
@@ -83,9 +79,5 @@ policy/v1beta1
 {{- end -}}
 
 {{- define "podsecuritypolicyversion" -}}
-{{- if semverCompare ">= 1.10-0" .Capabilities.KubeVersion.GitVersion -}}
 policy/v1beta1
-{{- else -}}
-extensions/v1beta1
-{{- end -}}
 {{- end -}}

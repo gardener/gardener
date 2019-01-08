@@ -56,7 +56,7 @@ spec:
         - controller-manager
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
-        {{- include "kube-controller-manager.controllers" . | indent 8 }}
+        - --controllers=*,bootstrapsigner,tokencleaner
         # We already have the cloud-controller-manager in place and deploy it next to every Shoot control plane.
         # Though the kube-controller-manager should no longer require the cloud provider credentials or the cloud
         # config after this change, the fact that we do not have a CSI plugin for the volumes in place yet, we still
@@ -65,7 +65,10 @@ spec:
         # hence, once we have it we can also isolate KCM from interaction with the cloud.
         # For the same reasons, the kubelet still needs the information and can be excluded from interacting with the cloud
         # API once we have CSI.
-        {{- include "kube-controller-manager.cloudProviderFlags" . | indent 8 }}
+        {{- if (ne .Values.cloudProvider "") }}
+        - --cloud-provider=external
+        - --external-cloud-volume-plugin={{ .Values.cloudProvider }}
+        {{- end }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
         - --cluster-cidr={{ .Values.podNetwork }}
         - --cluster-name={{ .Values.clusterName }}
@@ -99,9 +102,7 @@ spec:
         - --tls-cert-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.crt
         - --tls-private-key-file=/var/lib/kube-controller-manager-server/kube-controller-manager-server.key
         {{- end }}
-        {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
-        {{- end }}
         - --use-service-account-credentials=true
         - --v=2
         {{- range $index, $param := $.Values.additionalParameters }}

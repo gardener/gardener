@@ -4842,41 +4842,36 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(7))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.caBundle"),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.clientID"),
-				}))
-				Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsClaim"),
-				}))
-				Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.groupsPrefix"),
-				}))
-				Expect(*errorList[4]).To(MatchFields(IgnoreExtras, Fields{
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.issuerURL"),
-				}))
-				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.signingAlgs"),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernameClaim"),
-				}))
-				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
-				}))
+				}))))
 			})
 
 			It("should forbid unsupported OIDC configuration (for K8S >= v1.10)", func() {
 				shoot.Spec.Kubernetes.Version = "1.10.1"
 				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.RequiredClaims = map[string]string{}
-				shoot.Spec.Kubernetes.KubeAPIServer.OIDCConfig.SigningAlgs = []string{}
 
 				errorList := ValidateShoot(shoot)
 

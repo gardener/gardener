@@ -1,4 +1,4 @@
-kubernetesVersion: 1.9.1
+kubernetesVersion: 1.13.1
 replicas: 1
 podAnnotations: {}
 featureGates: {}

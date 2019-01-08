@@ -323,7 +323,7 @@ type DNSProviderConstraint struct {
 
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 type KubernetesConstraints struct {
-	// Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.9.1).
+	// Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.13.1).
 	Versions []string `json:"versions"`
 }
 
@@ -1291,7 +1291,6 @@ type OIDCConfig struct {
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	// +optional
 	RequiredClaims map[string]string `json:"requiredClaims,omitempty"`
-	// ATTENTION: Only meaningful for Kubernetes >= 1.10
 	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1
 	// +optional
 	SigningAlgs []string `json:"signingAlgs,omitempty"`
