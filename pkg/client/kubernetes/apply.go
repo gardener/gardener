@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/discovery"
@@ -154,6 +155,8 @@ func (c *Applier) ApplyManifest(ctx context.Context, m []byte) error {
 		}
 
 		obj := &unstructured.Unstructured{Object: data}
+		data = nil
+
 		if err := c.applyObject(ctx, obj); err != nil {
 			return err
 		}
