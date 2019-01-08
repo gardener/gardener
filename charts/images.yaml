@@ -149,7 +149,7 @@ images:
 - name: ruby
   sourceRepository: github.com/docker-library/ruby
   repository: ruby
-  tag: "2.5.1-alpine"
+  tag: "2.5.3-alpine"
 - name: alpine
   repository: alpine
   tag: "3.8"
