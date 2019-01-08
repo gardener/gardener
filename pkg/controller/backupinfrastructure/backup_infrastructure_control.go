@@ -125,12 +125,12 @@ type ControlInterface interface {
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for BackupInfrastructures. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, recorder record.EventRecorder) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, recorder record.EventRecorder) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, recorder}
 }
 
 type defaultControl struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.Interface
 	secrets            map[string]*corev1.Secret
 	imageVector        imagevector.ImageVector
@@ -224,7 +224,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 		return updateErr
 	}
 
-	if _, updateErr := kutil.TryUpdateBackupInfrastructureAnnotations(op.K8sGardenClient.GardenClientset(), retry.DefaultRetry, obj.ObjectMeta,
+	if _, updateErr := kutil.TryUpdateBackupInfrastructureAnnotations(op.K8sGardenClient.Garden(), retry.DefaultRetry, obj.ObjectMeta,
 		func(backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*gardenv1beta1.BackupInfrastructure, error) {
 			delete(backupInfrastructure.Annotations, common.BackupInfrastructureOperation)
 			return backupInfrastructure, nil
@@ -362,7 +362,7 @@ func (c *defaultControl) updateBackupInfrastructureStatus(o *operation.Operation
 		LastUpdateTime: metav1.Now(),
 	}
 
-	newBackupInfrastructure, err := kutil.TryUpdateBackupInfrastructureStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.BackupInfrastructure.ObjectMeta,
+	newBackupInfrastructure, err := kutil.TryUpdateBackupInfrastructureStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.BackupInfrastructure.ObjectMeta,
 		func(backupInfrastructure *gardenv1beta1.BackupInfrastructure) (*gardenv1beta1.BackupInfrastructure, error) {
 			backupInfrastructure.Status.LastOperation = lastOperation
 			backupInfrastructure.Status.LastError = lastError
@@ -380,7 +380,7 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 	backupInfrastructureFinalizers.Delete(gardenv1beta1.GardenerName)
 	op.BackupInfrastructure.Finalizers = backupInfrastructureFinalizers.UnsortedList()
 
-	newBackupInfrastructure, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().BackupInfrastructures(op.BackupInfrastructure.Namespace).Update(op.BackupInfrastructure)
+	newBackupInfrastructure, err := c.k8sGardenClient.Garden().GardenV1beta1().BackupInfrastructures(op.BackupInfrastructure.Namespace).Update(op.BackupInfrastructure)
 	if err != nil {
 		op.Logger.Errorf("Could not remove finalizer of the BackupInfrastructure: %+v", err.Error())
 		return err

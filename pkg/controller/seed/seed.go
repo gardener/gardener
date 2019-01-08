@@ -37,7 +37,7 @@ import (
 
 // Controller controls Seeds.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
 	k8sInformers kubeinformers.SharedInformerFactory
@@ -60,7 +60,7 @@ type Controller struct {
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSeedController(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, config *componentconfig.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, config *componentconfig.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 		corev1Informer        = kubeInformerFactory.Core().V1()

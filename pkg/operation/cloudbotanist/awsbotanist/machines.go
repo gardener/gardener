@@ -147,7 +147,7 @@ func (b *AWSBotanist) ListMachineClasses() (sets.String, sets.String, error) {
 		secretNames = sets.NewString()
 	)
 
-	existingMachineClasses, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	existingMachineClasses, err := b.K8sSeedClient.Machine().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -166,14 +166,14 @@ func (b *AWSBotanist) ListMachineClasses() (sets.String, sets.String, error) {
 
 // CleanupMachineClasses deletes all machine classes which are not part of the provided list <existingMachineDeployments>.
 func (b *AWSBotanist) CleanupMachineClasses(existingMachineDeployments operation.MachineDeployments) error {
-	existingMachineClasses, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	existingMachineClasses, err := b.K8sSeedClient.Machine().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 
 	for _, existingMachineClass := range existingMachineClasses.Items {
 		if !existingMachineDeployments.ContainsClass(existingMachineClass.Name) {
-			if err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).Delete(existingMachineClass.Name, &metav1.DeleteOptions{}); err != nil {
+			if err := b.K8sSeedClient.Machine().MachineV1alpha1().AWSMachineClasses(b.Shoot.SeedNamespace).Delete(existingMachineClass.Name, &metav1.DeleteOptions{}); err != nil {
 				return err
 			}
 		}

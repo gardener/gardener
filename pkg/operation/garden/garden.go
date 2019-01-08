@@ -154,7 +154,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, running
 
 // VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
 // existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
-func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Client, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
+func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
 	currentDomain := internalDomainSecret.Annotations[common.DNSDomain]
 
 	internalConfigMap, err := k8sGardenClient.GetConfigMap(common.GardenNamespace, common.ControllerManagerInternalConfigMapName)
@@ -179,7 +179,7 @@ func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Client, numberOfShoot
 }
 
 // BootstrapCluster bootstraps the Garden cluster and deploys various required manifests.
-func BootstrapCluster(k8sGardenClient kubernetes.Client, gardenNamespace string, secrets map[string]*corev1.Secret) error {
+func BootstrapCluster(k8sGardenClient kubernetes.Interface, gardenNamespace string, secrets map[string]*corev1.Secret) error {
 	// Check whether the Kubernetes version of the Garden cluster is at least 1.8.
 	minGardenVersion := "1.8"
 	gardenVersionOK, err := utils.CompareVersions(k8sGardenClient.Version(), ">=", minGardenVersion)

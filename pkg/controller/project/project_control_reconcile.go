@@ -42,7 +42,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 	// Ensure that we really get the latest version of the project to prevent working with an outdated version that has
 	// an unset .spec.namespace field (which would result in trying to create another namespace again).
-	project, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Projects().Get(project.Name, metav1.GetOptions{})
+	project, err = c.k8sGardenClient.Garden().GardenV1beta1().Projects().Get(project.Name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -69,7 +69,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 	// Update the name of the created namespace in the projects '.spec.namespace' field.
 	if ns := project.Spec.Namespace; ns == nil {
-		project, err = kutils.TryUpdateProject(c.k8sGardenClient.GardenClientset(), retry.DefaultBackoff, project.ObjectMeta, func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
+		project, err = kutils.TryUpdateProject(c.k8sGardenClient.Garden(), retry.DefaultBackoff, project.ObjectMeta, func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error) {
 			project.Spec.Namespace = &namespace.Name
 			return project, nil
 		})
@@ -148,7 +148,7 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardenv1beta1.Pro
 		}, false)
 	}
 
-	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Clientset(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
+	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
 		if !apiequality.Semantic.DeepDerivative(projectLabels, ns.Labels) {
 			return nil, fmt.Errorf("namespace cannot be used as it needs the project labels %#v", projectLabels)
 		}

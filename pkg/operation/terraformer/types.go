@@ -39,7 +39,7 @@ import (
 //   successfully defined.
 type Terraformer struct {
 	logger        *logrus.Entry
-	k8sClient     kubernetes.Client
+	k8sClient     kubernetes.Interface
 	chartRenderer chartrenderer.ChartRenderer
 
 	purpose   string

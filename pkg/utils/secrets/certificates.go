@@ -217,7 +217,7 @@ func signCertificate(certificateTemplate *x509.Certificate, privateKey *rsa.Priv
 	return utils.EncodeCertificate(certificate), nil
 }
 
-func generateCA(k8sClusterClient kubernetes.Client, config *CertificateSecretConfig, namespace string) (*corev1.Secret, Interface, error) {
+func generateCA(k8sClusterClient kubernetes.Interface, config *CertificateSecretConfig, namespace string) (*corev1.Secret, Interface, error) {
 	certificate, err := config.Generate()
 	if err != nil {
 		return nil, nil, err
@@ -241,7 +241,7 @@ func loadCA(name string, existingSecret *corev1.Secret) (*corev1.Secret, Interfa
 // GenerateCertificateAuthorities get a map of wanted cerificated and check If they exist in the existingSecretsMap based on the keys in the map. If they exist it get only the certificate from the corresponding
 // existing secret and makes a certificate Interface from the existing secret. If there is no existing secret contaning the wanted certificate, we make one certificate and with it we deploy in K8s cluster
 // a secret with that  certificate and then return the newly existing secret. The function returns a map of secrets contaning the wanted CA, a map with the wanted CA certificate and an error.
-func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Client, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
+func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedCertificateAuthorities map[string]*CertificateSecretConfig, namespace string) (map[string]*corev1.Secret, map[string]*Certificate, error) {
 	type caOutput struct {
 		secret      *corev1.Secret
 		certificate Interface
@@ -298,7 +298,7 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Client, existing
 
 // GenerateClusterSecrets try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
 // The function returns a map with all of the successfuly deployed wanted secrets plus those alredy deployed(only from the wantedSecretsList)
-func GenerateClusterSecrets(k8sClusterClient kubernetes.Client, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
+func GenerateClusterSecrets(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
 	type secretOutput struct {
 		secret *corev1.Secret
 		err    error

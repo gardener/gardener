@@ -29,12 +29,12 @@ type UpdaterInterface interface {
 }
 
 // NewRealUpdater returns a UpdaterInterface that updates the Seed manifest, using the supplied client and seedLister.
-func NewRealUpdater(k8sGardenClient kubernetes.Client, seedLister gardenlisters.SeedLister) UpdaterInterface {
+func NewRealUpdater(k8sGardenClient kubernetes.Interface, seedLister gardenlisters.SeedLister) UpdaterInterface {
 	return &realUpdater{k8sGardenClient, seedLister}
 }
 
 type realUpdater struct {
-	k8sGardenClient kubernetes.Client
+	k8sGardenClient kubernetes.Interface
 	seedLister      gardenlisters.SeedLister
 }
 
@@ -49,7 +49,7 @@ func (u *realUpdater) UpdateSeedStatus(seed *gardenv1beta1.Seed) (*gardenv1beta1
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		seed.Status = status
-		newSeed, updateErr = u.k8sGardenClient.GardenClientset().GardenV1beta1().Seeds().UpdateStatus(seed)
+		newSeed, updateErr = u.k8sGardenClient.Garden().GardenV1beta1().Seeds().UpdateStatus(seed)
 		if updateErr == nil {
 			return nil
 		}

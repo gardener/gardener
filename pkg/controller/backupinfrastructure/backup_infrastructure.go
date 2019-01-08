@@ -37,7 +37,7 @@ import (
 
 // Controller controls BackupInfrastructures.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
 	config      *componentconfig.ControllerManagerConfiguration
@@ -58,7 +58,7 @@ type Controller struct {
 // NewBackupInfrastructureController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <backupInfrastructureInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewBackupInfrastructureController(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewBackupInfrastructureController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer        = gardenInformerFactory.Garden().V1beta1()
 		backupInfrastructureInformer = gardenv1beta1Informer.BackupInfrastructures()

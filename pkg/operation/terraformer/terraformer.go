@@ -45,7 +45,7 @@ func NewFromOperation(o *operation.Operation, purpose string) (*Terraformer, err
 // <image> name for the to-be-used Docker image. It returns a Terraformer struct with initialized
 // values for the namespace and the names which will be used for all the stored resources like
 // ConfigMaps/Secrets.
-func New(logger *logrus.Entry, k8sClient kubernetes.Client, purpose, name, namespace string, imageVector imagevector.ImageVector) (*Terraformer, error) {
+func New(logger *logrus.Entry, k8sClient kubernetes.Interface, purpose, name, namespace string, imageVector imagevector.ImageVector) (*Terraformer, error) {
 	var (
 		prefix    = fmt.Sprintf("%s.%s", name, purpose)
 		podSuffix = utils.ComputeSHA256Hex([]byte(time.Now().String()))[:5]

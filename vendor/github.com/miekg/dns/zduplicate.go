@@ -85,6 +85,8 @@ func isDuplicateRdata(r1, r2 RR) bool {
 		return isDuplicateNSEC3(r1.(*NSEC3), r2.(*NSEC3))
 	case TypeNSEC3PARAM:
 		return isDuplicateNSEC3PARAM(r1.(*NSEC3PARAM), r2.(*NSEC3PARAM))
+	case TypeNULL:
+		return isDuplicateNULL(r1.(*NULL), r2.(*NULL))
 	case TypeOPENPGPKEY:
 		return isDuplicateOPENPGPKEY(r1.(*OPENPGPKEY), r2.(*OPENPGPKEY))
 	case TypePTR:
@@ -136,25 +138,15 @@ func isDuplicateRdata(r1, r2 RR) bool {
 // isDuplicate() functions
 
 func isDuplicateA(r1, r2 *A) bool {
-	if len(r1.A) != len(r2.A) {
+	if !r1.A.Equal(r2.A) {
 		return false
-	}
-	for i := 0; i < len(r1.A); i++ {
-		if r1.A[i] != r2.A[i] {
-			return false
-		}
 	}
 	return true
 }
 
 func isDuplicateAAAA(r1, r2 *AAAA) bool {
-	if len(r1.AAAA) != len(r2.AAAA) {
+	if !r1.AAAA.Equal(r2.AAAA) {
 		return false
-	}
-	for i := 0; i < len(r1.AAAA); i++ {
-		if r1.AAAA[i] != r2.AAAA[i] {
-			return false
-		}
 	}
 	return true
 }
@@ -373,13 +365,8 @@ func isDuplicateL32(r1, r2 *L32) bool {
 	if r1.Preference != r2.Preference {
 		return false
 	}
-	if len(r1.Locator32) != len(r2.Locator32) {
+	if !r1.Locator32.Equal(r2.Locator32) {
 		return false
-	}
-	for i := 0; i < len(r1.Locator32); i++ {
-		if r1.Locator32[i] != r2.Locator32[i] {
-			return false
-		}
 	}
 	return true
 }
@@ -611,6 +598,13 @@ func isDuplicateNSEC3PARAM(r1, r2 *NSEC3PARAM) bool {
 		return false
 	}
 	if r1.Salt != r2.Salt {
+		return false
+	}
+	return true
+}
+
+func isDuplicateNULL(r1, r2 *NULL) bool {
+	if r1.Data != r2.Data {
 		return false
 	}
 	return true

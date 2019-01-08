@@ -65,12 +65,12 @@ type QuotaControlInterface interface {
 
 // NewDefaultQuotaControl returns a new instance of the default implementation of QuotaControlInterface
 // which implements the semantics for controlling the quota handling of Shoot resources.
-func NewDefaultQuotaControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.Interface) QuotaControlInterface {
+func NewDefaultQuotaControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface) QuotaControlInterface {
 	return &defaultQuotaControl{k8sGardenClient, k8sGardenInformers}
 }
 
 type defaultQuotaControl struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.Interface
 }
 
@@ -111,7 +111,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		annotations[common.ShootExpirationTimestamp] = shoot.CreationTimestamp.Add(time.Duration(*clusterLifeTime*24) * time.Hour).Format(time.RFC3339)
 		shoot.Annotations = annotations
 
-		shootUpdated, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
+		shootUpdated, err := c.k8sGardenClient.Garden().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot)
 		if err != nil {
 			return err
 		}
@@ -132,12 +132,12 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 		annotations[common.ConfirmationDeletion] = "true"
 		shoot.ObjectMeta.Annotations = annotations
 
-		if _, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot); err != nil {
+		if _, err = c.k8sGardenClient.Garden().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot); err != nil {
 			return err
 		}
 
 		// Now we are allowed to delete the Shoot (to set the deletionTimestamp).
-		if err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{}); err != nil {
+		if err := c.k8sGardenClient.Garden().GardenV1beta1().Shoots(shoot.Namespace).Delete(shoot.Name, &metav1.DeleteOptions{}); err != nil {
 			return err
 		}
 	}

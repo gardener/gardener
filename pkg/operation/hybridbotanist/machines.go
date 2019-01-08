@@ -90,7 +90,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 	}
 
 	// Get the list of all existing machine deployments
-	existingMachineDeployments, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	existingMachineDeployments, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (b *HybridBotanist) DestroyMachines() error {
 	)
 
 	// Mark all existing machines to become forcefully deleted.
-	existingMachines, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	existingMachines, err := b.K8sSeedClient.Machine().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (b *HybridBotanist) DestroyMachines() error {
 	}
 
 	// Get the list of all existing machine deployments.
-	existingMachineDeployments, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+	existingMachineDeployments, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -294,7 +294,7 @@ func (b *HybridBotanist) markMachineForcefulDeletion(machine machinev1alpha1.Mac
 	labels["force-deletion"] = "True"
 	machine.Labels = labels
 
-	_, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).Update(&machine)
+	_, err := b.K8sSeedClient.Machine().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).Update(&machine)
 	return err
 }
 
@@ -305,7 +305,7 @@ func (b *HybridBotanist) waitUntilMachineDeploymentsAvailable(wantedMachineDeplo
 		var numHealthyDeployments, numUpdated, numDesired, numberOfAwakeMachines int32
 
 		// Get the list of all existing machine deployments
-		existingMachineDeployments, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
+		existingMachineDeployments, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(metav1.ListOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -373,7 +373,7 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 
 		// Check whether all machines have been deleted.
 		if countMachines != 0 {
-			existingMachines, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).List(listOptions)
+			existingMachines, err := b.K8sSeedClient.Machine().MachineV1alpha1().Machines(b.Shoot.SeedNamespace).List(listOptions)
 			if err != nil {
 				return false, err
 			}
@@ -383,7 +383,7 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 
 		// Check whether all machine sets have been deleted.
 		if countMachineSets != 0 {
-			existingMachineSets, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineSets(b.Shoot.SeedNamespace).List(listOptions)
+			existingMachineSets, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineSets(b.Shoot.SeedNamespace).List(listOptions)
 			if err != nil {
 				return false, err
 			}
@@ -393,7 +393,7 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 
 		// Check whether all machine deployments have been deleted.
 		if countMachineDeployments != 0 {
-			existingMachineDeployments, err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(listOptions)
+			existingMachineDeployments, err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).List(listOptions)
 			if err != nil {
 				return false, err
 			}
@@ -447,7 +447,7 @@ func (b *HybridBotanist) waitUntilMachineResourcesDeleted(classKind string) erro
 func (b *HybridBotanist) cleanupMachineDeployments(existingMachineDeployments *machinev1alpha1.MachineDeploymentList, wantedMachineDeployments operation.MachineDeployments) error {
 	for _, existingMachineDeployment := range existingMachineDeployments.Items {
 		if !wantedMachineDeployments.ContainsName(existingMachineDeployment.Name) {
-			if err := b.K8sSeedClient.MachineClientset().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).Delete(existingMachineDeployment.Name, &metav1.DeleteOptions{}); err != nil {
+			if err := b.K8sSeedClient.Machine().MachineV1alpha1().MachineDeployments(b.Shoot.SeedNamespace).Delete(existingMachineDeployment.Name, &metav1.DeleteOptions{}); err != nil {
 				return err
 			}
 		}

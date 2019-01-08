@@ -44,7 +44,7 @@ import (
 
 // Controller controls Shoots.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
 	config                 *componentconfig.ControllerManagerConfiguration
@@ -89,7 +89,7 @@ type Controller struct {
 // NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewShootController(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *componentconfig.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = k8sGardenInformers.Garden().V1beta1()
 		corev1Informer        = kubeInformerFactory.Core().V1()
@@ -251,13 +251,13 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		}
 
 		if needsSpecUpdate {
-			newShoot, err = c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).Update(newShoot)
+			newShoot, err = c.k8sGardenClient.Garden().Garden().Shoots(newShoot.Namespace).Update(newShoot)
 			if err != nil {
 				panic(fmt.Sprintf("Failed to update shoot [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
 		if needsStatusUpdate {
-			if _, err := c.k8sGardenClient.GardenClientset().Garden().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
+			if _, err := c.k8sGardenClient.Garden().Garden().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}

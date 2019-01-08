@@ -34,7 +34,7 @@ import (
 
 // Controller controls SecretBindings.
 type Controller struct {
-	k8sGardenClient    kubernetes.Client
+	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
 	k8sInformers kubeinformers.SharedInformerFactory
@@ -55,7 +55,7 @@ type Controller struct {
 // NewSecretBindingController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <secretBindingInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSecretBindingController(k8sGardenClient kubernetes.Client, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
+func NewSecretBindingController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, recorder record.EventRecorder) *Controller {
 	var (
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 		corev1Informer        = kubeInformerFactory.Core().V1()

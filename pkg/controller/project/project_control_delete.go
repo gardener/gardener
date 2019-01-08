@@ -43,7 +43,7 @@ func (c *defaultControl) delete(project *gardenv1beta1.Project, projectLogger lo
 	projectFinalizers := sets.NewString(project.Finalizers...)
 	projectFinalizers.Delete(gardenv1beta1.GardenerName)
 	project.Finalizers = projectFinalizers.UnsortedList()
-	if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Projects().Update(project); err != nil && !apierrors.IsNotFound(err) {
+	if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Projects().Update(project); err != nil && !apierrors.IsNotFound(err) {
 		projectLogger.Error(err.Error())
 		return false, err
 	}

@@ -288,7 +288,7 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 		now    = metav1.Now()
 	)
 
-	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardenv1beta1.ShootLastOperationTypeDelete) {
 				shoot.Status.RetryCycleStartTime = &now
@@ -315,7 +315,7 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 }
 
 func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) error {
-	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastError = nil
@@ -337,7 +337,7 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 	finalizers := sets.NewString(o.Shoot.Info.Finalizers...)
 	finalizers.Delete(gardenv1beta1.GardenerName)
 	o.Shoot.Info.Finalizers = finalizers.List()
-	newShoot, err = c.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).Update(o.Shoot.Info)
+	newShoot, err = c.k8sGardenClient.Garden().GardenV1beta1().Shoots(o.Shoot.Info.Namespace).Update(o.Shoot.Info)
 	if err != nil {
 		return err
 	}
@@ -367,7 +367,7 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 		description = lastError.Description
 	)
 
-	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
+	newShoot, err := kubernetes.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 				description += " Operation will be retried."
@@ -390,7 +390,7 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 	}
 	o.Logger.Error(description)
 
-	newShootAfterLabel, err := kubernetes.TryUpdateShootLabels(c.k8sGardenClient.GardenClientset(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
+	newShootAfterLabel, err := kubernetes.TryUpdateShootLabels(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta, StatusLabelTransform(StatusUnhealthy))
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}

@@ -86,12 +86,12 @@ type ControlInterface interface {
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
 // implements the documented semantics for CloudProfiles.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, seedLister gardenlisters.SeedLister, shootLister gardenlisters.ShootLister) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, seedLister gardenlisters.SeedLister, shootLister gardenlisters.ShootLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, seedLister, shootLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient kubernetes.Client
+	k8sGardenClient kubernetes.Interface
 	seedLister      gardenlisters.SeedLister
 	shootLister     gardenlisters.ShootLister
 }
@@ -133,7 +133,7 @@ func (c *defaultControl) ReconcileCloudProfile(obj *gardenv1beta1.CloudProfile, 
 			finalizers.Delete(gardenv1beta1.GardenerName)
 			cloudProfile.Finalizers = finalizers.UnsortedList()
 
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil && !apierrors.IsNotFound(err) {
+			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().CloudProfiles().Update(cloudProfile); err != nil && !apierrors.IsNotFound(err) {
 				logger.Logger.Error(err)
 				return err
 			}

@@ -312,10 +312,10 @@ func (b *HealthChecker) FailedCondition(condition *gardenv1beta1.Condition, reas
 func (b *Botanist) checkAPIServerAvailability(checker *HealthChecker, condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
 	// Try to reach the Shoot API server and measure the response time.
 	now := Now()
-	response, err := b.K8sShootClient.Curl("/healthz")
+	response := b.K8sShootClient.RESTClient().Get().AbsPath("/healthz").Do()
 	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
-	if err != nil {
-		message := fmt.Sprintf("Request to Shoot API server /healthz endpoint failed. %s (%s)", responseDurationText, err.Error())
+	if response.Error() != nil {
+		message := fmt.Sprintf("Request to Shoot API server /healthz endpoint failed. %s (%s)", responseDurationText, response.Error().Error())
 		return checker.FailedCondition(condition, "HealthzRequestFailed", message)
 	}
 
@@ -796,8 +796,8 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 	}
 
 	var (
-		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
-		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Clientset(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
+		seedDeploymentLister  = makeDeploymentLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedDeploymentListOptions)
+		seedStatefulSetLister = makeStatefulSetLister(b.K8sSeedClient.Kubernetes(), b.Shoot.SeedNamespace, seedStatefulSetListOptions)
 		checker               = NewHealthChecker(thresholdMappings)
 	)
 
@@ -816,11 +816,11 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 	var (
 		wg sync.WaitGroup
 
-		seedMachineDeploymentLister = makeMachineDeploymentLister(b.K8sSeedClient.MachineClientset(), b.Shoot.SeedNamespace, seedMachineDeploymentListOptions)
+		seedMachineDeploymentLister = makeMachineDeploymentLister(b.K8sSeedClient.Machine(), b.Shoot.SeedNamespace, seedMachineDeploymentListOptions)
 
-		shootDeploymentLister = makeDeploymentLister(b.K8sShootClient.Clientset(), metav1.NamespaceSystem, shootDeploymentListOptions)
-		shootDaemonSetLister  = makeDaemonSetLister(b.K8sShootClient.Clientset(), metav1.NamespaceSystem, shootDaemonSetListOptions)
-		shootNodeLister       = makeNodeLister(b.K8sShootClient.Clientset(), shootNodeListOptions)
+		shootDeploymentLister = makeDeploymentLister(b.K8sShootClient.Kubernetes(), metav1.NamespaceSystem, shootDeploymentListOptions)
+		shootDaemonSetLister  = makeDaemonSetLister(b.K8sShootClient.Kubernetes(), metav1.NamespaceSystem, shootDaemonSetListOptions)
+		shootNodeLister       = makeNodeLister(b.K8sShootClient.Kubernetes(), shootNodeListOptions)
 	)
 
 	wg.Add(4)

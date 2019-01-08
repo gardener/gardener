@@ -34,14 +34,14 @@ import (
 )
 
 type metrics struct {
-	k8sGardenClient kubernetes.Client
+	k8sGardenClient kubernetes.Interface
 	interval        time.Duration
 }
 
 // InitMetrics takes an Kubernetes <client> for a Garden cluster and initiate the
 // collection of Gardener and Shoot related metrics. It returns a <http.Handler> to
 // register on a webserver, which provides the collected metrics in the Prometheus format.
-func InitMetrics(client kubernetes.Client, scrapeInterval time.Duration) http.Handler {
+func InitMetrics(client kubernetes.Interface, scrapeInterval time.Duration) http.Handler {
 	m := metrics{
 		k8sGardenClient: client,
 		interval:        scrapeInterval,
@@ -73,7 +73,7 @@ func (m metrics) initShootMetrics() {
 	prometheus.Register(metricShootStateConditions)
 
 	m.collect(func() {
-		shoots, err := m.k8sGardenClient.GardenClientset().GardenV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{})
+		shoots, err := m.k8sGardenClient.Garden().GardenV1beta1().Shoots(metav1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			logger.Logger.Info("Unable to fetch shoots. skip shoot metric set...")
 			return

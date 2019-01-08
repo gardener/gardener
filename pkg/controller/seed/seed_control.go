@@ -109,12 +109,12 @@ type ControlInterface interface {
 // implements the documented semantics for Seeds. updater is the UpdaterInterface used
 // to update the status of Seeds. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Client, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, config *componentconfig.ControllerManagerConfiguration, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, config *componentconfig.ControllerManagerConfiguration, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, config, secretLister, shootLister, backupInfrastructureLister}
 }
 
 type defaultControl struct {
-	k8sGardenClient            kubernetes.Client
+	k8sGardenClient            kubernetes.Interface
 	k8sGardenInformers         gardeninformers.SharedInformerFactory
 	secrets                    map[string]*corev1.Secret
 	imageVector                imagevector.ImageVector
@@ -179,7 +179,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 			seedFinalizers := sets.NewString(seed.Finalizers...)
 			seedFinalizers.Delete(gardenv1beta1.GardenerName)
 			seed.Finalizers = seedFinalizers.UnsortedList()
-			if _, err := c.k8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Update(seed); err != nil && !apierrors.IsNotFound(err) {
+			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Seeds().Update(seed); err != nil && !apierrors.IsNotFound(err) {
 				seedLogger.Error(err.Error())
 				return err
 			}
@@ -240,7 +240,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	if c.config.Controllers.Seed.ReserveExcessCapacity != nil {
 		seedObj.MustReserveExcessCapacity(*c.config.Controllers.Seed.ReserveExcessCapacity)
 	}
-	if err := seedpkg.BootstrapCluster(seedObj, c.k8sGardenClient, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
+	if err := seedpkg.BootstrapCluster(seedObj, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
 		conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
 		c.updateSeedStatus(seed, *conditionSeedAvailable)
 		seedLogger.Error(err.Error())

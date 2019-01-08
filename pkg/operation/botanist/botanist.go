@@ -120,16 +120,16 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool) error {
 			Visible:   visible,
 		},
 	}
-	_, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Create(seed)
+	_, err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Create(seed)
 	if apierrors.IsAlreadyExists(err) {
-		_, err = b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Update(seed)
+		_, err = b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Update(seed)
 	}
 	return err
 }
 
 // UnregisterAsSeed unregisters a Shoot cluster as a Seed in the Garden cluster.
 func (b *Botanist) UnregisterAsSeed() error {
-	seed, err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Get(b.Shoot.Info.Name, metav1.GetOptions{})
+	seed, err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Get(b.Shoot.Info.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -137,7 +137,7 @@ func (b *Botanist) UnregisterAsSeed() error {
 		return err
 	}
 
-	if err := b.K8sGardenClient.GardenClientset().GardenV1beta1().Seeds().Delete(seed.Name, nil); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Delete(seed.Name, nil); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	if err := b.K8sGardenClient.DeleteSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name); err != nil && !apierrors.IsNotFound(err) {
