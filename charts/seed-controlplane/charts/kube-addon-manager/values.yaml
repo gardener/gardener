@@ -10,4 +10,4 @@ images:
 shootAPIServer:
   Capabilities:
     KubeVersion:
-      GitVersion: v1.9
+      GitVersion: v1.13

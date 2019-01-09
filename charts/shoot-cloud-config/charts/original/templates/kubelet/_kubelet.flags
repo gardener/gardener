@@ -1,47 +1,4 @@
 {{- define "kubelet-flags" -}}
-{{- if semverCompare "< 1.10" .kubernetes.version -}}
---allow-privileged=true \
---anonymous-auth=false \
---client-ca-file=/var/lib/kubelet/ca.crt \
---authentication-token-webhook \
---authorization-mode=Webhook \
---bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
---cgroup-root="/" \
---cloud-provider={{ .cloudProvider.name }} \
-{{- if .cloudProvider.config }}
---cloud-config=/var/lib/kubelet/cloudprovider.conf \
-{{- end }}
---cluster-dns="{{ required "kubernetes.clusterDNS is required" .kubernetes.clusterDNS }}" \
---cluster-domain={{ required "kubernetes.domain is required" .kubernetes.domain }} \
---cni-bin-dir=/opt/cni/bin/ \
---cni-conf-dir=/etc/cni/net.d/ \
---cadvisor-port=0 \
---enable-debugging-handlers=true \
---event-burst=25 \
---event-qps=25 \
---eviction-hard="memory.available<{{ .worker.evictionHardMemoryAvailable }},nodefs.available<5%,nodefs.inodesFree<5%,imagefs.available<5%,imagefs.inodesFree<5%" \
---eviction-soft="memory.available<{{ .worker.evictionSoftMemoryAvailable }},nodefs.available<10%,nodefs.inodesFree<10%,imagefs.available<10%,imagefs.inodesFree<10%" \
---eviction-soft-grace-period="memory.available=1m30s,nodefs.available=1m30s,nodefs.inodesFree=1m30s,imagefs.available=1m30s,imagefs.inodesFree=1m30s" \
---eviction-max-pod-grace-period="90" \
---eviction-pressure-transition-period="4m" \
-{{- if (include "kubelet.featureGates" .) }}
-{{- include "kubelet.featureGates" . | trimSuffix "," }} \
-{{- end }}
---kube-api-burst=50 \
---kube-api-qps=50 \
---image-gc-high-threshold=50 \
---image-gc-low-threshold=40 \
---kubeconfig=/var/lib/kubelet/kubeconfig-real \
---kube-reserved=cpu="80m",memory="1Gi" \
---network-plugin=cni \
---node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \
---read-only-port=0 \
---rotate-certificates=true \
-{{- range $index, $param := .kubernetes.kubelet.parameters }}
-{{ $param }} \
-{{- end }}
---v=2
-{{- else -}}
 --allow-privileged=true \
 --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
 --cloud-provider={{ .cloudProvider.name }} \
@@ -64,7 +21,6 @@
 {{ $param }} \
 {{- end }}
 --v=2
-{{- end }}
 {{- if semverCompare "< 1.11" .kubernetes.version }}
 --feature-gates=PodPriority=true \
 {{- end }}

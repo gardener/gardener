@@ -43,6 +43,8 @@ cloudProviderBackoffJitter: 1.0
 cloudProviderRateLimit: true
 cloudProviderRateLimitQPS: 10.0
 cloudProviderRateLimitBucket: 100
+cloudProviderRateLimitQPSWrite: 10.0
+cloudProviderRateLimitBucketWrite: 100
 `
 
 // GenerateCloudProviderConfig returns a cloud provider config for the Azure cloud provider
@@ -80,17 +82,6 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 		string(b.Shoot.Secret.Data[ClientID]),
 		string(b.Shoot.Secret.Data[ClientSecret]),
 	)
-
-	configHasWriteRateLimits, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.10")
-	if err != nil {
-		return "", err
-	}
-
-	if configHasWriteRateLimits {
-		cloudProviderConfig += `
-cloudProviderRateLimitQPSWrite: 10.0
-cloudProviderRateLimitBucketWrite: 100`
-	}
 
 	return cloudProviderConfig, nil
 }

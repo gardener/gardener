@@ -53,9 +53,6 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
-        {{- if semverCompare "< 1.10" .Values.kubernetesVersion }}
-        - alpha
-        {{- end }}
         - cloud-controller-manager
         - --allocate-node-cidrs=true
         - --cloud-provider={{ .Values.cloudProvider }}
@@ -77,9 +74,7 @@ spec:
         - --tls-cert-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.crt
         - --tls-private-key-file=/var/lib/cloud-controller-manager-server/cloud-controller-manager-server.key
         {{- end }}
-        {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
-        {{- end }}
         - --use-service-account-credentials
         - --v=2
         {{- range $index, $param := $.Values.additionalParameters }}

@@ -40,12 +40,8 @@ spec:
         command:
         - /hyperkube
         - apiserver
-        {{- if semverCompare "< 1.10" .Values.kubernetesVersion }}
-        - --admission-control={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
-        {{- else }}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         - --disable-admission-plugins=PersistentVolumeLabel
-        {{- end }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
         {{- if .Values.advertiseAddress }}
         - --advertise-address={{ .Values.advertiseAddress }}
@@ -61,9 +57,7 @@ spec:
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
-        {{- if semverCompare ">= 1.9.7" .Values.kubernetesVersion }}
         - --http2-max-streams-per-connection=1000
-        {{- end }}
         {{- if .Values.endpointReconcilerType }}
         - --endpoint-reconciler-type={{ .Values.endpointReconcilerType }}
         {{- end }}
@@ -91,9 +85,7 @@ spec:
         - --service-account-key-file=/srv/kubernetes/service-account-key/id_rsa
         - --tls-cert-file=/srv/kubernetes/apiserver/kube-apiserver.crt
         - --tls-private-key-file=/srv/kubernetes/apiserver/kube-apiserver.key
-        {{- if semverCompare ">= 1.10" .Values.kubernetesVersion }}
         - --tls-cipher-suites={{ include "kubernetes.tlsCipherSuites" . | replace "\n" "," | trimPrefix "," }}
-        {{- end }}
         - --v=2
 {{- range $index, $param := $.Values.additionalParameters }}
         - {{ $param }}

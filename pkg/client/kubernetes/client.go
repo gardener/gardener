@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"errors"
 	"fmt"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
@@ -99,7 +100,6 @@ func CreateRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *com
 }
 
 var supportedKubernetesVersions = []string{
-	"1.9",
 	"1.10",
 	"1.11",
 	"1.12",

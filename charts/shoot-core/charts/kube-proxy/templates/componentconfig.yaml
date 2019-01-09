@@ -16,11 +16,7 @@ data:
     clusterCIDR: {{ .Values.global.podNetwork }}
     conntrack:
       maxPerCore: 524288
-    {{- if semverCompare "< 1.10-0" .Capabilities.KubeVersion.GitVersion }}
-    {{- include "kube-proxy.featureGates" . | trimSuffix "," | indent 4 }}
-    {{- else }}
     {{- if .Values.featureGates }}
     featureGates:
 {{ toYaml .Values.featureGates | indent 6 }}
-    {{- end }}
     {{- end }}

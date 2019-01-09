@@ -9,10 +9,8 @@
   encoding: b64
   content: {{ .cloudProvider.config | b64enc }}
 {{- end }}
-{{- if semverCompare ">= 1.10" .kubernetes.version }}
 - path: /var/lib/kubelet/config/kubelet
   permissions: 0644
   encoding: b64
   content: {{ include "kubelet-config" . | b64enc }}
-{{- end }}
 {{- end -}}
