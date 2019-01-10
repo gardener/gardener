@@ -16,7 +16,8 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/kibana-index-registration-config: {{ include (print $.Template.BasePath "/kibana/kibana-index-registration-config.yaml") . | sha256sum }}
+        checksum/kibana-objects-registration-config: {{ include (print $.Template.BasePath "/kibana/kibana-objects-registration-config.yaml") . | sha256sum }}
+        checksum/kibana-saved-objects-config: {{ include (print $.Template.BasePath "/kibana/kibana-saved-objects-config.yaml") . | sha256sum }}
       labels:
         garden.sapcloud.io/role: logging
         app: kibana-logging
@@ -41,13 +42,15 @@ spec:
           name: ui
           protocol: TCP
       - image: {{ index .Values.global.images "kibana-oss" }}
-        name: auto-register-index
+        name: auto-create-objects
         command:
         - /bin/sh
-        - /gardener/register
+        - /gardener/register/register
         volumeMounts:
         - name: register
-          mountPath: /gardener
+          mountPath: /gardener/register
+        - name: saved-objects
+          mountPath: /gardener/saved-objects
         resources:
           limits:
             cpu: 10m
@@ -58,4 +61,7 @@ spec:
       volumes:
       - name: register
         configMap:
-          name: kibana-index-registration
+          name: kibana-object-registration
+      - name: saved-objects
+        configMap:
+          name: kibana-saved-objects
