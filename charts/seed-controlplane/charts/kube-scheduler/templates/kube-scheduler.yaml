@@ -59,6 +59,7 @@ spec:
         {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
         - --authentication-kubeconfig=/var/lib/kube-scheduler/kubeconfig
         - --authorization-kubeconfig=/var/lib/kube-scheduler/kubeconfig
+        - --client-ca-file=/var/lib/kube-scheduler-server/ca.crt
         - --tls-cert-file=/var/lib/kube-scheduler-server/kube-scheduler-server.crt
         - --tls-private-key-file=/var/lib/kube-scheduler-server/kube-scheduler-server.key
         - --secure-port={{ include "kube-scheduler.port" . }}
