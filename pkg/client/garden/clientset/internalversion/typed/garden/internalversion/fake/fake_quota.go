@@ -103,7 +103,7 @@ func (c *FakeQuotas) DeleteCollection(options *v1.DeleteOptions, listOptions v1.
 // Patch applies the patch and returns the patched quota.
 func (c *FakeQuotas) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *garden.Quota, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(quotasResource, c.ns, name, data, subresources...), &garden.Quota{})
+		Invokes(testing.NewPatchSubresourceAction(quotasResource, c.ns, name, pt, data, subresources...), &garden.Quota{})
 
 	if obj == nil {
 		return nil, err

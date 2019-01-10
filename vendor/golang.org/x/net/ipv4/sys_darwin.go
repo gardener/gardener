@@ -6,8 +6,6 @@ package ipv4
 
 import (
 	"net"
-	"strconv"
-	"strings"
 	"syscall"
 	"unsafe"
 
@@ -39,23 +37,6 @@ var (
 )
 
 func init() {
-	// Seems like kern.osreldate is veiled on latest OS X. We use
-	// kern.osrelease instead.
-	s, err := syscall.Sysctl("kern.osrelease")
-	if err != nil {
-		return
-	}
-	ss := strings.Split(s, ".")
-	if len(ss) == 0 {
-		return
-	}
-	// The IP_PKTINFO and protocol-independent multicast API were
-	// introduced in OS X 10.7 (Darwin 11). But it looks like
-	// those features require OS X 10.8 (Darwin 12) or above.
-	// See http://support.apple.com/kb/HT1633.
-	if mjver, err := strconv.Atoi(ss[0]); err != nil || mjver < 12 {
-		return
-	}
 	ctlOpts[ctlPacketInfo].name = sysIP_PKTINFO
 	ctlOpts[ctlPacketInfo].length = sizeofInetPktinfo
 	ctlOpts[ctlPacketInfo].marshal = marshalPacketInfo

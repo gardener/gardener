@@ -1,5 +1,5 @@
 /*
-Copyright 2018 (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+Copyright 2019 (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -119,7 +119,7 @@ func (c *FakeMachines) DeleteCollection(options *v1.DeleteOptions, listOptions v
 // Patch applies the patch and returns the patched machine.
 func (c *FakeMachines) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.Machine, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(machinesResource, c.ns, name, data, subresources...), &v1alpha1.Machine{})
+		Invokes(testing.NewPatchSubresourceAction(machinesResource, c.ns, name, pt, data, subresources...), &v1alpha1.Machine{})
 
 	if obj == nil {
 		return nil, err

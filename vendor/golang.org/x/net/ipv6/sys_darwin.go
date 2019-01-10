@@ -6,8 +6,6 @@ package ipv6
 
 import (
 	"net"
-	"strconv"
-	"strings"
 	"syscall"
 	"unsafe"
 
@@ -36,23 +34,6 @@ var (
 )
 
 func init() {
-	// Seems like kern.osreldate is veiled on latest OS X. We use
-	// kern.osrelease instead.
-	s, err := syscall.Sysctl("kern.osrelease")
-	if err != nil {
-		return
-	}
-	ss := strings.Split(s, ".")
-	if len(ss) == 0 {
-		return
-	}
-	// The IP_PKTINFO and protocol-independent multicast API were
-	// introduced in OS X 10.7 (Darwin 11). But it looks like
-	// those features require OS X 10.8 (Darwin 12) or above.
-	// See http://support.apple.com/kb/HT1633.
-	if mjver, err := strconv.Atoi(ss[0]); err != nil || mjver < 12 {
-		return
-	}
 	ctlOpts[ctlTrafficClass] = ctlOpt{sysIPV6_TCLASS, 4, marshalTrafficClass, parseTrafficClass}
 	ctlOpts[ctlHopLimit] = ctlOpt{sysIPV6_HOPLIMIT, 4, marshalHopLimit, parseHopLimit}
 	ctlOpts[ctlPacketInfo] = ctlOpt{sysIPV6_PKTINFO, sizeofInet6Pktinfo, marshalPacketInfo, parsePacketInfo}

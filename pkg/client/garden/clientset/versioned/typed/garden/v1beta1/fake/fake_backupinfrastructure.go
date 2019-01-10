@@ -115,7 +115,7 @@ func (c *FakeBackupInfrastructures) DeleteCollection(options *v1.DeleteOptions, 
 // Patch applies the patch and returns the patched backupInfrastructure.
 func (c *FakeBackupInfrastructures) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.BackupInfrastructure, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(backupinfrastructuresResource, c.ns, name, data, subresources...), &v1beta1.BackupInfrastructure{})
+		Invokes(testing.NewPatchSubresourceAction(backupinfrastructuresResource, c.ns, name, pt, data, subresources...), &v1beta1.BackupInfrastructure{})
 
 	if obj == nil {
 		return nil, err

@@ -12,4 +12,19 @@ roleRef:
 subjects:
 - kind: User
   name: system:kube-controller-manager
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: system:controller:kube-controller-manager:auth-reader
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: User
+  name: system:kube-controller-manager
 {{- end }}

@@ -107,7 +107,7 @@ func (c *FakeSeeds) DeleteCollection(options *v1.DeleteOptions, listOptions v1.L
 // Patch applies the patch and returns the patched seed.
 func (c *FakeSeeds) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *garden.Seed, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(seedsResource, name, data, subresources...), &garden.Seed{})
+		Invokes(testing.NewRootPatchSubresourceAction(seedsResource, name, pt, data, subresources...), &garden.Seed{})
 	if obj == nil {
 		return nil, err
 	}

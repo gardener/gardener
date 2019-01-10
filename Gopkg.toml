@@ -14,46 +14,51 @@ ignored = [
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "k8s.io/apiserver"
-  # Specific revision needed for enabling client CA authentication https://github.com/kubernetes/apiserver/commit/41e5031224ea54c8a62c1b6937e1381a99d9344f
-  revision = "41e5031224ea54c8a62c1b6937e1381a99d9344f"
-  #version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
+
+[[override]]
+  name = "k8s.io/cluster-bootstrap"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "k8s.io/kube-aggregator"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "sigs.k8s.io/controller-runtime"
-  # Specific revision needed for enabling kubernetes-1.12.1 https://github.com/kubernetes-sigs/controller-runtime/commit/8f98fb7def7f056ba7d6aa15134d82cd2dae50fe
-  revision = "a4051585e748b437e799d597f9adba1d777cb12a"
+  version = "0.1.9"
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.12.1"
+  version = "kubernetes-1.13.1"
+
+[[override]]
+  name = "k8s.io/klog"
+  version = "v0.1.0"
 
 [[override]]
   name = "k8s.io/kube-openapi"
-  revision = "9dfdf9be683f61f82cda12362c44c784e0778b56" # kubernetes-1.12.1
+  revision = "0317810137be915b9cf888946c6e115c1bfac693" # kubernetes-1.13.1
 
 [[override]]
   name = "github.com/coreos/etcd"
-  version = "3.2.24"
+  version = "3.3.10"
 
 [[constraint]]
   name = "github.com/gardener/machine-controller-manager"
@@ -90,12 +95,6 @@ ignored = [
 [[constraint]]
   name = "github.com/robfig/cron"
   revision = "2315d5715e36303a941d907f038da7f7c44c773b"
-
-# https://github.com/kubernetes/kubernetes/issues/17162
-# https://github.com/kubernetes-incubator/service-catalog/pull/1204
-[[override]]
-  name = "github.com/golang/glog"
-  revision = "44145f04b68cf362d9c4df2182967c2275eaefed"
 
 # use the same version that is referenced by k8s.io/apiserver
 [[override]]

@@ -11,7 +11,7 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: 10253
+    port: {{ include "cloud-controller-manager.port" . }}
     protocol: TCP
   selector:
     app: kubernetes
@@ -65,9 +65,9 @@ spec:
         - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --leader-elect=true
         {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
-        - --secure-port=10253
+        - --secure-port={{ include "cloud-controller-manager.port" . }}
         - --port=0
-        {{- end}}
+        {{- end }}
         {{- if semverCompare ">= 1.12" .Values.kubernetesVersion }}
         - --authentication-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
         - --authorization-kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
@@ -85,8 +85,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
+            {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+            scheme: HTTPS
+            {{- else }}
             scheme: HTTP
-            port: 10253
+            {{- end }}
+            port: {{ include "cloud-controller-manager.port" . }}
           successThreshold: 1
           failureThreshold: 2
           initialDelaySeconds: 15

@@ -115,7 +115,7 @@ func (c *FakeShoots) DeleteCollection(options *v1.DeleteOptions, listOptions v1.
 // Patch applies the patch and returns the patched shoot.
 func (c *FakeShoots) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *garden.Shoot, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(shootsResource, c.ns, name, data, subresources...), &garden.Shoot{})
+		Invokes(testing.NewPatchSubresourceAction(shootsResource, c.ns, name, pt, data, subresources...), &garden.Shoot{})
 
 	if obj == nil {
 		return nil, err

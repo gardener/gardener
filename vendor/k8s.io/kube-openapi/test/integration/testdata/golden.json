@@ -4,7 +4,21 @@
    "title": "Integration Test",
    "version": "1.0"
   },
-  "paths": {},
+  "paths": {
+   "/test": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func1",
+     "responses": {
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   }
+  },
   "definitions": {
    "dummytype.Bar": {
     "required": [
@@ -90,6 +104,18 @@
      },
      "Protocol": {
       "type": "string"
+     },
+     "a": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "b": {
+      "type": "integer",
+      "format": "int32"
+     },
+     "c": {
+      "type": "integer",
+      "format": "int32"
      }
     }
    },
@@ -121,6 +147,11 @@
       "x-kubernetes-list-type": "set"
      }
     }
+   }
+  },
+  "responses": {
+   "NotFound": {
+    "description": "Entity not found."
    }
   }
  }

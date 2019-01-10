@@ -21,10 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/componentconfig"
-	"github.com/gardener/gardener/pkg/utils"
-
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
+	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -103,6 +103,7 @@ var supportedKubernetesVersions = []string{
 	"1.10",
 	"1.11",
 	"1.12",
+	"1.13",
 }
 
 func checkIfSupportedKubernetesVersion(gitVersion string) error {

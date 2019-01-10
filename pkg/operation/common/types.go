@@ -186,6 +186,9 @@ const (
 	// KubeSchedulerDeploymentName is the name of the kube-scheduler deployment.
 	KubeSchedulerDeploymentName = "kube-scheduler"
 
+	// KubeSchedulerServerName is the name of the kube-scheduler server.
+	KubeSchedulerServerName = "kube-scheduler-server"
+
 	// KubeAddonManagerDeploymentName is the name of the kube-addon-manager deployment.
 	KubeAddonManagerDeploymentName = "kube-addon-manager"
 

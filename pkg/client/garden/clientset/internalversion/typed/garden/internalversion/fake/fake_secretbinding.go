@@ -103,7 +103,7 @@ func (c *FakeSecretBindings) DeleteCollection(options *v1.DeleteOptions, listOpt
 // Patch applies the patch and returns the patched secretBinding.
 func (c *FakeSecretBindings) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *garden.SecretBinding, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(secretbindingsResource, c.ns, name, data, subresources...), &garden.SecretBinding{})
+		Invokes(testing.NewPatchSubresourceAction(secretbindingsResource, c.ns, name, pt, data, subresources...), &garden.SecretBinding{})
 
 	if obj == nil {
 		return nil, err

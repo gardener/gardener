@@ -256,6 +256,13 @@ data:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.kubeControllerManager | indent 6 }}
 
     - job_name: kube-scheduler
+      {{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+      scheme: https
+      tls_config:
+        insecure_skip_verify: true
+        cert_file: /etc/prometheus/seed/prometheus.crt
+        key_file: /etc/prometheus/seed/prometheus.key
+      {{- end }}
       honor_labels: false
       kubernetes_sd_configs:
       - role: endpoints

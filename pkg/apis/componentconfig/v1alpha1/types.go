@@ -15,8 +15,8 @@
 package v1alpha1
 
 import (
-	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -37,8 +37,8 @@ type ControllerManagerConfiguration struct {
 	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel"`
-	// KubernetesLogLevel is the log level used for Kubernetes' glog functions.
-	KubernetesLogLevel glog.Level `json:"kubernetesLogLevel"`
+	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
+	KubernetesLogLevel klog.Level `json:"kubernetesLogLevel"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
