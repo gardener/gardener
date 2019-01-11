@@ -55,9 +55,17 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
+	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
+	BackupInfrastructure BackupInfrastructureControllerConfiguration `json:"backupInfrastructure"`
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration `json:"cloudProfile,omitempty"`
+	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
+	// +optional
+	ControllerRegistration *ControllerRegistrationControllerConfiguration `json:"controllerRegistration,omitempty"`
+	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
+	// +optional
+	ControllerInstallation *ControllerInstallationControllerConfiguration `json:"controllerInstallation,omitempty"`
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
@@ -80,13 +88,27 @@ type ControllerManagerControllerConfiguration struct {
 	ShootQuota ShootQuotaControllerConfiguration `json:"shootQuota"`
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration `json:"shootHibernation"`
-	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
-	BackupInfrastructure BackupInfrastructureControllerConfiguration `json:"backupInfrastructure"`
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ControllerRegistrationControllerConfiguration defines the configuration of the
+// ControllerRegistration controller.
+type ControllerRegistrationControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// ControllerInstallationControllerConfiguration defines the configuration of the
+// ControllerInstallation controller.
+type ControllerInstallationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`

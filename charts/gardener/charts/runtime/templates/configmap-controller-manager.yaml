@@ -31,6 +31,14 @@ data:
       cloudProfile:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.cloudProfile.concurrentSyncs is required" .Values.global.controller.config.controllers.cloudProfile.concurrentSyncs }}
       {{- end }}
+      {{- if .Values.global.controller.config.controllers.controllerRegistration }}
+      controllerRegistration:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.controllerInstallation }}
+      controllerInstallation:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerInstallation.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerInstallation.concurrentSyncs }}
+      {{- end }}
       {{- if .Values.global.controller.config.controllers.secretBinding }}
       secretBinding:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.secretBinding.concurrentSyncs is required" .Values.global.controller.config.controllers.secretBinding.concurrentSyncs }}

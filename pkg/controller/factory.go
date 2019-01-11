@@ -16,8 +16,6 @@ package controller
 
 import (
 	"context"
-	"fmt"
-	"text/tabwriter"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -153,27 +151,14 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go backupInfrastructureController.Run(ctx, f.cfg.Controllers.BackupInfrastructure.ConcurrentSyncs)
-	go controllerRegistrationController.Run(ctx, 6) // XXX
-	go controllerInstallationController.Run(ctx, 6) // XXX
+	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)
+	go controllerInstallationController.Run(ctx, f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 
 	// Shutdown handling
 	<-ctx.Done()
 
-	tw := tabwriter.NewWriter(logger.Logger.Writer(), 1, 1, 1, ' ', tabwriter.TabIndent)
-	fmt.Fprintf(tw, "BackupInfrastructure:\t%d\n", backupInfrastructureController.RunningWorkers())
-	fmt.Fprintf(tw, "CloudProfile:\t%d\n", cloudProfileController.RunningWorkers())
-	fmt.Fprintf(tw, "Project:\t%d\n", projectController.RunningWorkers())
-	fmt.Fprintf(tw, "Quota:\t%d\n", quotaController.RunningWorkers())
-	fmt.Fprintf(tw, "SecretBinding:\t%d\n", secretBindingController.RunningWorkers())
-	fmt.Fprintf(tw, "Seed:\t%d\n", seedController.RunningWorkers())
-	fmt.Fprintf(tw, "Shoot:\t%d\n", shootController.RunningWorkers())
-
 	logger.Logger.Infof("I have received a stop signal and will no longer watch events of the Garden API group.")
-	logger.Logger.Infof("NUMBER OF REMAINING WORKERS:")
-	logger.Logger.Infof("============================")
-	tw.Flush()
-	logger.Logger.Infof("============================")
 	logger.Logger.Infof("Bye Bye!")
 }

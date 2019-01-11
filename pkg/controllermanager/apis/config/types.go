@@ -54,9 +54,17 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
+	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
+	BackupInfrastructure BackupInfrastructureControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
 	// +optional
 	CloudProfile *CloudProfileControllerConfiguration
+	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
+	// +optional
+	ControllerRegistration *ControllerRegistrationControllerConfiguration
+	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
+	// +optional
+	ControllerInstallation *ControllerInstallationControllerConfiguration
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration
@@ -79,13 +87,27 @@ type ControllerManagerControllerConfiguration struct {
 	ShootQuota ShootQuotaControllerConfiguration
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration
-	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
-	BackupInfrastructure BackupInfrastructureControllerConfiguration
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
 // controller.
 type CloudProfileControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+}
+
+// ControllerRegistrationControllerConfiguration defines the configuration of the
+// ControllerRegistration controller.
+type ControllerRegistrationControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+}
+
+// ControllerInstallationControllerConfiguration defines the configuration of the
+// ControllerInstallation controller.
+type ControllerInstallationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int

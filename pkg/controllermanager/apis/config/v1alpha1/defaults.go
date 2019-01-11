@@ -50,6 +50,16 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			ConcurrentSyncs: 5,
 		}
 	}
+	if obj.Controllers.ControllerRegistration == nil {
+		obj.Controllers.ControllerRegistration = &ControllerRegistrationControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
+	if obj.Controllers.ControllerInstallation == nil {
+		obj.Controllers.ControllerInstallation = &ControllerInstallationControllerConfiguration{
+			ConcurrentSyncs: 5,
+		}
+	}
 	if obj.Controllers.SecretBinding == nil {
 		obj.Controllers.SecretBinding = &SecretBindingControllerConfiguration{
 			ConcurrentSyncs: 5,
