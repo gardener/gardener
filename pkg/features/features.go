@@ -36,32 +36,3 @@ const (
 	// alpha: v0.1.0
 	CertificateManagement utilfeature.Feature = "CertificateManagement"
 )
-
-var (
-	// APIServerFeatureGate is a shared global FeatureGate for Gardener APIServer flags.
-	// right now the Generic API server uses this feature gate as default
-	// TODO change it once it moves to ComponentConfig
-	APIServerFeatureGate = utilfeature.DefaultFeatureGate
-
-	// ControllerFeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
-	ControllerFeatureGate = utilfeature.NewFeatureGate()
-
-	apiserverFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
-
-	controllerManagerFeatureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
-		Logging:               {Default: false, PreRelease: utilfeature.Alpha},
-		CertificateManagement: {Default: false, PreRelease: utilfeature.Alpha},
-	}
-)
-
-// RegisterAPIServerFeatureGate registers the feature gates
-// of the Gardener API Server.
-func RegisterAPIServerFeatureGate() {
-	APIServerFeatureGate.Add(apiserverFeatureGates)
-}
-
-// RegisterControllerFeatureGate registers the feature gates
-// of the Gardener Controller Manager.
-func RegisterControllerFeatureGate() {
-	ControllerFeatureGate.Add(controllerManagerFeatureGates)
-}

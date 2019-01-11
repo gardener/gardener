@@ -12,35 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package features
 
 import (
-	"flag"
-	"os"
-	"runtime"
-
-	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
-	"github.com/gardener/gardener/pkg/apiserver/features"
-	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/apiserver/pkg/util/logs"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
-func init() {
-	features.RegisterFeatureGates()
-}
+var (
+	// FeatureGate is a shared global FeatureGate for Gardener APIServer flags.
+	// right now the Generic API server uses this feature gate as default
+	// TODO change it once it moves to ComponentConfig
+	FeatureGate  = utilfeature.DefaultFeatureGate
+	featureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
+)
 
-func main() {
-	logs.InitLogs()
-	defer logs.FlushLogs()
-
-	if len(os.Getenv("GOMAXPROCS")) == 0 {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
-
-	stopCh := genericapiserver.SetupSignalHandler()
-	command := app.NewCommandStartGardenerAPIServer(os.Stdout, os.Stderr, stopCh)
-	command.Flags().AddGoFlagSet(flag.CommandLine)
-	if err := command.Execute(); err != nil {
-		os.Exit(1)
-	}
+// RegisterFeatureGates registers the feature gates of the Gardener API Server.
+func RegisterFeatureGates() {
+	FeatureGate.Add(featureGates)
 }

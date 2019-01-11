@@ -24,11 +24,11 @@ import (
 	"syscall"
 
 	"github.com/gardener/gardener/cmd/gardener-controller-manager/app"
-	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/controllermanager/features"
 )
 
 func init() {
-	features.RegisterControllerFeatureGate()
+	features.RegisterFeatureGates()
 }
 
 func main() {

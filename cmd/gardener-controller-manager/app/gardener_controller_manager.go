@@ -36,7 +36,7 @@ import (
 	"github.com/gardener/gardener/pkg/controller"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
-	gardenerfeatures "github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/server"
@@ -162,7 +162,7 @@ func (o *Options) run(ctx context.Context, cancel context.CancelFunc) error {
 	}
 
 	// Add feature flags
-	if err := gardenerfeatures.ControllerFeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
+	if err := features.FeatureGate.SetFromMap(o.config.FeatureGates); err != nil {
 		return err
 	}
 
@@ -237,7 +237,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	// Initialize logger
 	logger := logger.NewLogger(cfg.LogLevel)
 	logger.Info("Starting Gardener controller manager...")
-	logger.Infof("Feature Gates: %s", gardenerfeatures.ControllerFeatureGate.String())
+	logger.Infof("Feature Gates: %s", features.FeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
 		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {

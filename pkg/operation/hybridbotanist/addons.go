@@ -19,10 +19,12 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -136,7 +138,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"node-exporter": nodeExporter,
 		},
 		"cert-broker": map[string]interface{}{
-			"enabled": features.ControllerFeatureGate.Enabled(features.CertificateManagement),
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement),
 		},
 	})
 }
