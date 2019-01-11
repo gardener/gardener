@@ -29,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
@@ -67,6 +68,10 @@ func NewApplierForConfig(config *rest.Config) (*Applier, error) {
 }
 
 func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstructured) error {
+	if desired.GetNamespace() == "" {
+		desired.SetNamespace(metav1.NamespaceDefault)
+	}
+
 	key, err := client.ObjectKeyFromObject(desired)
 	if err != nil {
 		return err

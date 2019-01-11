@@ -12,17 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package chartrenderer
+package controllerinstallation
 
-// ChartRenderer is an interface for rendering Helm Charts from path, name, namespace and values.
-type ChartRenderer interface {
-	Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error)
-	RenderArchive(archive []byte, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error)
+import (
+	corev1 "k8s.io/api/core/v1"
+)
+
+// HelmDeployment is a providerConfig specific type for ControllerInstallation.
+type HelmDeployment struct {
+	// Chart is a Helm chart tarball.
+	Chart []byte `json:"chart,omitempty"`
+	// Values is a map of values for the given chart.
+	Values map[string]interface{} `json:"values,omitempty"`
 }
 
-// RenderedChart holds a map of rendered templates file with template file name as key and
-// rendered template as value.
-type RenderedChart struct {
-	ChartName string
-	Files     map[string]string
+// DeployedResources is a providerStatus specific type for ControllerInstallation.
+type DeployedResources struct {
+	// Resources is a list of objects that have been created.
+	Resources []corev1.ObjectReference `json:"resources,omitempty"`
 }

@@ -34,3 +34,8 @@ func New(renderFunc func() (*chartrenderer.RenderedChart, error)) chartrenderer.
 func (r *ChartRenderer) Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*chartrenderer.RenderedChart, error) {
 	return r.renderFunc()
 }
+
+// RenderArchive renders provided chart archive.
+func (r *ChartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values map[string]interface{}) (*chartrenderer.RenderedChart, error) {
+	return r.renderFunc()
+}

@@ -59,4 +59,15 @@ type ControllerInstallationStatus struct {
 	// Conditions represents the latest available observations of a ControllerInstallations's current state.
 	// +optional
 	Conditions []Condition `json:"conditions,omitempty"`
+	// ProviderStatus contains type-specific status.
+	// +optional
+	ProviderStatus *ProviderConfig `json:"providerStatus,omitempty"`
 }
+
+const (
+	// ControllerInstallationValid is a condition type for indicating whether the installation request is valid.
+	ControllerInstallationValid ConditionType = "Valid"
+
+	// ControllerInstallationInstalled is a condition type for indicating whether the controller has been installed.
+	ControllerInstallationInstalled ConditionType = "Installed"
+)

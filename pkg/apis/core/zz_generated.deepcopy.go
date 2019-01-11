@@ -152,6 +152,11 @@ func (in *ControllerInstallationStatus) DeepCopyInto(out *ControllerInstallation
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	if in.ProviderStatus != nil {
+		in, out := &in.ProviderStatus, &out.ProviderStatus
+		*out = new(ProviderConfig)
+		(*in).DeepCopyInto(*out)
+	}
 	return
 }
 

@@ -263,6 +263,7 @@ func Convert_core_ControllerInstallationSpec_To_v1alpha1_ControllerInstallationS
 
 func autoConvert_v1alpha1_ControllerInstallationStatus_To_core_ControllerInstallationStatus(in *ControllerInstallationStatus, out *core.ControllerInstallationStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
+	out.ProviderStatus = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderStatus))
 	return nil
 }
 
@@ -273,6 +274,7 @@ func Convert_v1alpha1_ControllerInstallationStatus_To_core_ControllerInstallatio
 
 func autoConvert_core_ControllerInstallationStatus_To_v1alpha1_ControllerInstallationStatus(in *core.ControllerInstallationStatus, out *ControllerInstallationStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
+	out.ProviderStatus = (*ProviderConfig)(unsafe.Pointer(in.ProviderStatus))
 	return nil
 }
 

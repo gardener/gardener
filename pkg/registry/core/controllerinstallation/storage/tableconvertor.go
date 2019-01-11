@@ -40,7 +40,8 @@ func newTableConvertor() rest.TableConvertor {
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
 			{Name: "Registration", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["registration"]},
 			{Name: "Seed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["seed"]},
-			{Name: "Available", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["available"]},
+			{Name: "Valid", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["Valid"]},
+			{Name: "Installed", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["installed"]},
 			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
@@ -75,7 +76,12 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 		cells = append(cells, obj.Name)
 		cells = append(cells, obj.Spec.RegistrationRef.Name)
 		cells = append(cells, obj.Spec.SeedRef.Name)
-		if cond := helper.GetCondition(obj.Status.Conditions, core.ConditionAvailable); cond != nil {
+		if cond := helper.GetCondition(obj.Status.Conditions, core.ControllerInstallationValid); cond != nil {
+			cells = append(cells, cond.Status)
+		} else {
+			cells = append(cells, "<unknown>")
+		}
+		if cond := helper.GetCondition(obj.Status.Conditions, core.ControllerInstallationInstalled); cond != nil {
 			cells = append(cells, cond.Status)
 		} else {
 			cells = append(cells, "<unknown>")

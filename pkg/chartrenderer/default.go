@@ -64,6 +64,16 @@ func (r *DefaultChartRenderer) Render(chartPath, releaseName, namespace string, 
 	return r.renderRelease(chart, releaseName, namespace, values)
 }
 
+// RenderArchive loads the chart from the given location <chartPath> and calls the Render() function
+// to convert it into a ChartRelease object.
+func (r *DefaultChartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
+	chart, err := chartutil.LoadArchive(bytes.NewReader(archive))
+	if err != nil {
+		return nil, fmt.Errorf("can't create load chart from archive: %s", err)
+	}
+	return r.renderRelease(chart, releaseName, namespace, values)
+}
+
 // Manifest returns the manifest of the rendered chart as byte array.
 func (c *RenderedChart) Manifest() []byte {
 	// Aggregate all valid manifests into one big doc.

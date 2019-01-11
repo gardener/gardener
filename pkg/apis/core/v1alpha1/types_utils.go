@@ -58,4 +58,7 @@ type ConditionType string
 const (
 	// ConditionAvailable is a condition type for indicating availability.
 	ConditionAvailable ConditionType = "Available"
+
+	// ConditionCheckError is a constant for indicating that a condition could not be checked.
+	ConditionCheckError = "ConditionCheckError"
 )
