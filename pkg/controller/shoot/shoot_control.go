@@ -20,11 +20,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -204,7 +204,7 @@ func (c *Controller) updateShootStatusPending(shoot *gardenv1beta1.Shoot, messag
 	return err
 }
 
-func scheduleNextSync(config componentconfig.ShootControllerConfiguration, errorOccurred bool, objectMeta metav1.ObjectMeta, reason *reconcilescheduler.Reason) time.Duration {
+func scheduleNextSync(config config.ShootControllerConfiguration, errorOccurred bool, objectMeta metav1.ObjectMeta, reason *reconcilescheduler.Reason) time.Duration {
 	switch {
 	case reason == nil, reason.Code() == reconcilescheduler.CodeOther, reason.Code() == reconcilescheduler.CodeActivated:
 	case reason.Code() == reconcilescheduler.CodeParentUnknown:
@@ -259,7 +259,7 @@ type ControlInterface interface {
 // implements the documented semantics for Shoots. updater is the UpdaterInterface used
 // to update the status of Shoots. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration, gardenerNamespace string, recorder record.EventRecorder) ControlInterface {
+func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *config.ControllerManagerConfiguration, gardenerNamespace string, recorder record.EventRecorder) ControlInterface {
 	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config, gardenerNamespace, recorder}
 }
 
@@ -269,7 +269,7 @@ type defaultControl struct {
 	secrets            map[string]*corev1.Secret
 	imageVector        imagevector.ImageVector
 	identity           *gardenv1beta1.Gardener
-	config             *componentconfig.ControllerManagerConfiguration
+	config             *config.ControllerManagerConfiguration
 	gardenerNamespace  string
 	recorder           record.EventRecorder
 }

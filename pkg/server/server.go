@@ -20,9 +20,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/server/handlers"
 	"github.com/gardener/gardener/pkg/server/handlers/webhooks"
@@ -31,7 +31,7 @@ import (
 )
 
 // Serve starts a HTTP and a HTTPS server.
-func Serve(ctx context.Context, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig componentconfig.ServerConfiguration) {
+func Serve(ctx context.Context, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, serverConfig config.ServerConfiguration) {
 	var (
 		listenAddressHTTP  = fmt.Sprintf("%s:%d", serverConfig.HTTP.BindAddress, serverConfig.HTTP.Port)
 		listenAddressHTTPS = fmt.Sprintf("%s:%d", serverConfig.HTTPS.BindAddress, serverConfig.HTTPS.Port)

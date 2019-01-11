@@ -13,7 +13,7 @@ metadata:
 data:
   config.yaml: |
     ---
-    apiVersion: componentconfig.sapcloud.io/v1alpha1
+    apiVersion: controllermanager.config.gardener.cloud/v1alpha1
     kind: ControllerManagerConfiguration
     clientConnection:
       acceptContentTypes: {{ required ".Values.global.controller.config.clientConnection.acceptContentTypes is required" .Values.global.controller.config.clientConnection.acceptContentTypes }}

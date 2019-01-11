@@ -20,13 +20,13 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	apimachineryconfig "k8s.io/apimachinery/pkg/apis/config"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -36,7 +36,7 @@ import (
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
 // read from the filesystem at location <kubeconfigPath>.
 // If no filepath is given, the in-cluster configuration will be taken into account.
-func NewClientFromFile(kubeconfigPath string, clientConnection *componentconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
+func NewClientFromFile(kubeconfigPath string, clientConnection *apimachineryconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
 	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
 		&clientcmd.ConfigOverrides{},
@@ -49,7 +49,7 @@ func NewClientFromFile(kubeconfigPath string, clientConnection *componentconfig.
 }
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
-func NewClientFromBytes(kubeconfig []byte, clientConnection *componentconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
+func NewClientFromBytes(kubeconfig []byte, clientConnection *apimachineryconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
 	configObj, err := clientcmd.Load(kubeconfig)
 	if err != nil {
 		return nil, err
@@ -85,13 +85,13 @@ func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Inte
 
 // CreateRESTConfig creates a Config object for a rest client. If a clientConnection configuration object is passed
 // as well then the specified fields will be taken over as well.
-func CreateRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *componentconfig.ClientConnectionConfiguration) (*rest.Config, error) {
+func CreateRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *apimachineryconfig.ClientConnectionConfiguration) (*rest.Config, error) {
 	config, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 	if clientConnection != nil {
-		config.Burst = clientConnection.Burst
+		config.Burst = int(clientConnection.Burst)
 		config.QPS = clientConnection.QPS
 		config.AcceptContentTypes = clientConnection.AcceptContentTypes
 		config.ContentType = clientConnection.ContentType

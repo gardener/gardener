@@ -12,21 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package componentconfig
+// +k8s:deepcopy-gen=package
+// +groupName=controllermanager.config.gardener.cloud
 
-import (
-	"os"
-)
-
-// ApplyEnvironmentToConfig checks for several well-defined environment variables and if they are set,
-// it sets the value of the respective keys of <config> to the values in the environment.
-// Currently implemented environment variables:
-// KUBECONFIG can override config.ClientConnection.KubeConfigFile
-func ApplyEnvironmentToConfig(config *ControllerManagerConfiguration) {
-	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
-		config.ClientConnection.KubeConfigFile = kubeconfig
-	}
-	if kubeconfig := os.Getenv("GARDENER_KUBECONFIG"); kubeconfig != "" {
-		config.GardenerClientConnection.KubeConfigFile = kubeconfig
-	}
-}
+package config // import "github.com/gardener/gardener/pkg/controllermanager/apis/config"

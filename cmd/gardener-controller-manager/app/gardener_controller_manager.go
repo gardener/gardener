@@ -27,13 +27,13 @@ import (
 
 	"k8s.io/client-go/informers"
 
-	"github.com/gardener/gardener/pkg/apis/componentconfig"
-	componentconfigv1alpha1 "github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controller"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
+	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	gardenerfeatures "github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -63,7 +63,7 @@ import (
 type Options struct {
 	// ConfigFile is the location of the Gardener controller manager's configuration file.
 	ConfigFile string
-	config     *componentconfig.ControllerManagerConfiguration
+	config     *config.ControllerManagerConfiguration
 	scheme     *runtime.Scheme
 	codecs     serializer.CodecFactory
 }
@@ -76,16 +76,16 @@ func (o *Options) AddFlags(fs *pflag.FlagSet) {
 // NewOptions returns a new Options object.
 func NewOptions() (*Options, error) {
 	o := &Options{
-		config: new(componentconfig.ControllerManagerConfiguration),
+		config: new(config.ControllerManagerConfiguration),
 	}
 
 	o.scheme = runtime.NewScheme()
 	o.codecs = serializer.NewCodecFactory(o.scheme)
 
-	if err := componentconfig.AddToScheme(o.scheme); err != nil {
+	if err := config.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
-	if err := componentconfigv1alpha1.AddToScheme(o.scheme); err != nil {
+	if err := controllermanagerconfigv1alpha1.AddToScheme(o.scheme); err != nil {
 		return nil, err
 	}
 	if err := gardenv1beta1.AddToScheme(scheme.Scheme); err != nil {
@@ -97,7 +97,7 @@ func NewOptions() (*Options, error) {
 
 // loadConfigFromFile loads the contents of file and decodes it as a
 // ControllerManagerConfiguration object.
-func (o *Options) loadConfigFromFile(file string) (*componentconfig.ControllerManagerConfiguration, error) {
+func (o *Options) loadConfigFromFile(file string) (*config.ControllerManagerConfiguration, error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, err
@@ -106,12 +106,12 @@ func (o *Options) loadConfigFromFile(file string) (*componentconfig.ControllerMa
 }
 
 // decodeConfig decodes data as a ControllerManagerConfiguration object.
-func (o *Options) decodeConfig(data []byte) (*componentconfig.ControllerManagerConfiguration, error) {
+func (o *Options) decodeConfig(data []byte) (*config.ControllerManagerConfiguration, error) {
 	configObj, gvk, err := o.codecs.UniversalDecoder().Decode(data, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	config, ok := configObj.(*componentconfig.ControllerManagerConfiguration)
+	config, ok := configObj.(*config.ControllerManagerConfiguration)
 	if !ok {
 		return nil, fmt.Errorf("got unexpected config type: %v", gvk)
 	}
@@ -134,18 +134,18 @@ func (o *Options) validate(args []string) error {
 	return nil
 }
 
-func (o *Options) applyDefaults(in *componentconfig.ControllerManagerConfiguration) (*componentconfig.ControllerManagerConfiguration, error) {
-	external, err := o.scheme.ConvertToVersion(in, componentconfigv1alpha1.SchemeGroupVersion)
+func (o *Options) applyDefaults(in *config.ControllerManagerConfiguration) (*config.ControllerManagerConfiguration, error) {
+	external, err := o.scheme.ConvertToVersion(in, controllermanagerconfigv1alpha1.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
 	o.scheme.Default(external)
 
-	internal, err := o.scheme.ConvertToVersion(external, componentconfig.SchemeGroupVersion)
+	internal, err := o.scheme.ConvertToVersion(external, config.SchemeGroupVersion)
 	if err != nil {
 		return nil, err
 	}
-	out := internal.(*componentconfig.ControllerManagerConfiguration)
+	out := internal.(*config.ControllerManagerConfiguration)
 
 	return out, nil
 }
@@ -214,7 +214,7 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener represents all the parameters required to start the
 // Gardener controller manager.
 type Gardener struct {
-	Config              *componentconfig.ControllerManagerConfiguration
+	Config              *config.ControllerManagerConfiguration
 	Identity            *gardenv1beta1.Gardener
 	GardenerNamespace   string
 	K8sGardenClient     kubernetes.Interface
@@ -226,19 +226,18 @@ type Gardener struct {
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
-func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Gardener, error) {
-	if config == nil {
+func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) {
+	if cfg == nil {
 		return nil, errors.New("config is required")
 	}
-	componentconfig.ApplyEnvironmentToConfig(config)
 
 	// Initialize logger
-	logger := logger.NewLogger(config.LogLevel)
+	logger := logger.NewLogger(cfg.LogLevel)
 	logger.Info("Starting Gardener controller manager...")
 	logger.Infof("Feature Gates: %s", gardenerfeatures.ControllerFeatureGate.String())
 
 	if flag := flag.Lookup("v"); flag != nil {
-		if err := flag.Value.Set(fmt.Sprintf("%d", config.KubernetesLogLevel)); err != nil {
+		if err := flag.Value.Set(fmt.Sprintf("%d", cfg.KubernetesLogLevel)); err != nil {
 			return nil, err
 		}
 	}
@@ -246,16 +245,15 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
 	var (
-		kubeconfig         = config.ClientConnection.KubeConfigFile
-		gardenerKubeConfig = config.GardenerClientConnection.KubeConfigFile
-
-		gardenerClient = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		kubeconfig         = os.Getenv("KUBECONFIG")
+		gardenerKubeConfig = os.Getenv("GARDENER_KUBECONFIG")
+		gardenerClient     = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
 			&clientcmd.ClientConfigLoadingRules{ExplicitPath: gardenerKubeConfig},
 			&clientcmd.ConfigOverrides{},
 		)
 	)
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, &config.ClientConnection, client.Options{
+	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, &cfg.ClientConnection, client.Options{
 		Scheme: kubernetes.GardenScheme,
 	})
 	if err != nil {
@@ -267,7 +265,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenerClientConfig, err := kubernetes.CreateRESTConfig(gardenerClient, &config.ClientConnection)
+	gardenerClientConfig, err := kubernetes.CreateRESTConfig(gardenerClient, &cfg.ClientConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -289,8 +287,8 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 		leaderElectionConfig *leaderelection.LeaderElectionConfig
 		recorder             = createRecorder(k8sGardenClient.Kubernetes())
 	)
-	if config.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = makeLeaderElectionConfig(config.LeaderElection, k8sGardenClientLeaderElection.Kubernetes(), recorder)
+	if cfg.LeaderElection.LeaderElect {
+		leaderElectionConfig, err = makeLeaderElectionConfig(cfg.LeaderElection, k8sGardenClientLeaderElection.Kubernetes(), recorder)
 		if err != nil {
 			return nil, err
 		}
@@ -304,7 +302,7 @@ func NewGardener(config *componentconfig.ControllerManagerConfiguration) (*Garde
 	return &Gardener{
 		Identity:            identity,
 		GardenerNamespace:   gardenerNamespace,
-		Config:              config,
+		Config:              cfg,
 		Logger:              logger,
 		Recorder:            recorder,
 		K8sGardenClient:     k8sGardenClient,
@@ -373,15 +371,15 @@ func createRecorder(kubeClient k8s.Interface) record.EventRecorder {
 	return eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "gardener-controller-manager"})
 }
 
-func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
+func makeLeaderElectionConfig(cfg config.LeaderElectionConfiguration, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get hostname: %v", err)
 	}
 
-	lock, err := resourcelock.New(config.ResourceLock,
-		config.LockObjectNamespace,
-		config.LockObjectName,
+	lock, err := resourcelock.New(cfg.ResourceLock,
+		cfg.LockObjectNamespace,
+		cfg.LockObjectName,
 		client.CoreV1(),
 		resourcelock.ResourceLockConfig{
 			Identity:      hostname,
@@ -394,9 +392,9 @@ func makeLeaderElectionConfig(config componentconfig.LeaderElectionConfiguration
 
 	return &leaderelection.LeaderElectionConfig{
 		Lock:          lock,
-		LeaseDuration: config.LeaseDuration.Duration,
-		RenewDeadline: config.RenewDeadline.Duration,
-		RetryPeriod:   config.RetryPeriod.Duration,
+		LeaseDuration: cfg.LeaseDuration.Duration,
+		RenewDeadline: cfg.RenewDeadline.Duration,
+		RetryPeriod:   cfg.RetryPeriod.Duration,
 	}, nil
 }
 

@@ -19,11 +19,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/apis/componentconfig"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
@@ -77,7 +77,7 @@ type CareControlInterface interface {
 // implements the documented semantics for caring for Shoots. updater is the UpdaterInterface used
 // to update the status of Shoots. You should use an instance returned from NewDefaultCareControl() for any
 // scenario other than testing.
-func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *componentconfig.ControllerManagerConfiguration) CareControlInterface {
+func NewDefaultCareControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, identity *gardenv1beta1.Gardener, config *config.ControllerManagerConfiguration) CareControlInterface {
 	return &defaultCareControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, identity, config}
 }
 
@@ -87,7 +87,7 @@ type defaultCareControl struct {
 	secrets            map[string]*corev1.Secret
 	imageVector        imagevector.ImageVector
 	identity           *gardenv1beta1.Gardener
-	config             *componentconfig.ControllerManagerConfiguration
+	config             *config.ControllerManagerConfiguration
 }
 
 func (c *defaultCareControl) conditionThresholdsToProgressingMapping() map[gardenv1beta1.ConditionType]time.Duration {

@@ -13,7 +13,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 function headers() {
   echo '''/*
 Copyright (c) YEAR SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
@@ -60,18 +59,18 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
 $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   deepcopy,defaulter \
   github.com/gardener/gardener/pkg/client/componentconfig \
-  github.com/gardener/gardener/pkg/apis \
-  github.com/gardener/gardener/pkg/apis \
-  "componentconfig:v1alpha1" \
+  github.com/gardener/gardener/pkg/controllermanager/apis \
+  github.com/gardener/gardener/pkg/controllermanager/apis \
+  "config:v1alpha1" \
   -h <(headers)
 
 $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   conversion \
   github.com/gardener/gardener/pkg/client/componentconfig \
-  github.com/gardener/gardener/pkg/apis \
-  github.com/gardener/gardener/pkg/apis \
-  "componentconfig:v1alpha1" \
-  --extra-peer-dirs=github.com/gardener/gardener/pkg/apis/componentconfig,github.com/gardener/gardener/pkg/apis/componentconfig/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime \
+  github.com/gardener/gardener/pkg/controllermanager/apis \
+  github.com/gardener/gardener/pkg/controllermanager/apis \
+  "config:v1alpha1" \
+  --extra-peer-dirs=github.com/gardener/gardener/pkg/controllermanager/apis/config,github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/apis/config,k8s.io/apimachinery/pkg/apis/config/v1alpha1,k8s.io/apiserver/pkg/apis/config,k8s.io/apiserver/pkg/apis/config/v1alpha1 \
   -h <(headers)
 
 # Machine API clients

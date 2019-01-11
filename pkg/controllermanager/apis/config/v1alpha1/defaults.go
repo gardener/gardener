@@ -17,8 +17,10 @@ package v1alpha1
 import (
 	"time"
 
+	apimachineryconfigv1alpha1 "k8s.io/apimachinery/pkg/apis/config/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	apiserverconfigv1alpha1 "k8s.io/apiserver/pkg/apis/config/v1alpha1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 )
 
@@ -41,43 +43,6 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 	if obj.Server.HTTPS.Port == 0 {
 		obj.Server.HTTPS.Port = 2719
-	}
-
-	if len(obj.ClientConnection.ContentType) == 0 {
-		obj.ClientConnection.ContentType = "application/vnd.kubernetes.protobuf"
-	}
-	if obj.ClientConnection.QPS == 0.0 {
-		obj.ClientConnection.QPS = 50.0
-	}
-	if obj.ClientConnection.Burst == 0 {
-		obj.ClientConnection.Burst = 100
-	}
-
-	if obj.GardenerClientConnection == nil {
-		obj.GardenerClientConnection = &obj.ClientConnection
-	} else {
-		if len(obj.GardenerClientConnection.KubeConfigFile) == 0 {
-			obj.GardenerClientConnection.KubeConfigFile = obj.ClientConnection.KubeConfigFile
-		}
-		if len(obj.GardenerClientConnection.AcceptContentTypes) == 0 {
-			obj.GardenerClientConnection.AcceptContentTypes = "application/json"
-		}
-		if len(obj.GardenerClientConnection.ContentType) == 0 {
-			obj.GardenerClientConnection.ContentType = "application/json"
-		}
-		if obj.GardenerClientConnection.QPS == 0.0 {
-			obj.GardenerClientConnection.QPS = obj.ClientConnection.QPS
-		}
-		if obj.GardenerClientConnection.Burst == 0 {
-			obj.GardenerClientConnection.Burst = obj.ClientConnection.Burst
-		}
-	}
-
-	if len(obj.LeaderElection.LockObjectNamespace) == 0 {
-		obj.LeaderElection.LockObjectNamespace = ControllerManagerDefaultLockObjectNamespace
-	}
-	if len(obj.LeaderElection.LockObjectName) == 0 {
-		obj.LeaderElection.LockObjectName = ControllerManagerDefaultLockObjectName
 	}
 
 	if obj.Controllers.CloudProfile == nil {
@@ -126,19 +91,52 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	}
 }
 
+// SetDefaults_ClientConnection sets defaults for the client connection.
+func SetDefaults_ClientConnection(obj *apimachineryconfigv1alpha1.ClientConnectionConfiguration) {
+	//apimachineryconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
+	// https://github.com/kubernetes/client-go/issues/76#issuecomment-396170694
+	if len(obj.AcceptContentTypes) == 0 {
+		obj.AcceptContentTypes = "application/json"
+	}
+	if len(obj.ContentType) == 0 {
+		obj.ContentType = "application/json"
+	}
+	if obj.QPS == 0.0 {
+		obj.QPS = 50.0
+	}
+	if obj.Burst == 0 {
+		obj.Burst = 100
+	}
+}
+
+// SetDefaults_GardenerClientConnection sets defaults for the client connection.
+func SetDefaults_GardenerClientConnection(obj *apimachineryconfigv1alpha1.ClientConnectionConfiguration) {
+	//apimachineryconfigv1alpha1.RecommendedDefaultClientConnectionConfiguration(obj)
+	// Gardener does not yet support protobuf, however, the recommend default client connection config uses it.
+	if len(obj.AcceptContentTypes) == 0 {
+		obj.AcceptContentTypes = "application/json"
+	}
+	if len(obj.ContentType) == 0 {
+		obj.ContentType = "application/json"
+	}
+	if obj.QPS == 0.0 {
+		obj.QPS = 50.0
+	}
+	if obj.Burst == 0 {
+		obj.Burst = 100
+	}
+}
+
 // SetDefaults_LeaderElectionConfiguration sets defaults for the leader election of the Gardener controller manager.
 func SetDefaults_LeaderElectionConfiguration(obj *LeaderElectionConfiguration) {
-	zero := metav1.Duration{}
-	if obj.LeaseDuration == zero {
-		obj.LeaseDuration = metav1.Duration{Duration: 15 * time.Second}
+	apiserverconfigv1alpha1.RecommendedDefaultLeaderElectionConfiguration(&obj.LeaderElectionConfiguration)
+
+	obj.ResourceLock = resourcelock.ConfigMapsResourceLock
+
+	if len(obj.LockObjectNamespace) == 0 {
+		obj.LockObjectNamespace = ControllerManagerDefaultLockObjectNamespace
 	}
-	if obj.RenewDeadline == zero {
-		obj.RenewDeadline = metav1.Duration{Duration: 10 * time.Second}
-	}
-	if obj.RetryPeriod == zero {
-		obj.RetryPeriod = metav1.Duration{Duration: 2 * time.Second}
-	}
-	if obj.ResourceLock == "" {
-		obj.ResourceLock = resourcelock.ConfigMapsResourceLock
+	if len(obj.LockObjectName) == 0 {
+		obj.LockObjectName = ControllerManagerDefaultLockObjectName
 	}
 }
