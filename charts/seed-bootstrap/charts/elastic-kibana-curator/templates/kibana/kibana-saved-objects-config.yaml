@@ -3,6 +3,9 @@ kind: ConfigMap
 metadata:
   name: kibana-saved-objects
   namespace: {{ .Release.Namespace }}
+  labels:
+    app: kibana
+    role: logging
 data:
   index-pattern.json: |
     {

@@ -73,7 +73,7 @@ data:
          -H "Content-Type: application/json" \
          -H "kbn-xsrf: true" \
          --write-out "HTTPSTATUS:%{http_code}" \
-         -X POST ${KIBANA_HOST}/api/kibana/dashboards/import \
+         -X POST ${KIBANA_HOST}/api/kibana/dashboards/import?force=true \
          -d '@/gardener/saved-objects/dashboard.json')
 
          HTTP_STATUS=$(get_http_status "${HTTP_RESPONSE}")

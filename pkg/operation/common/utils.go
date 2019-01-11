@@ -431,7 +431,7 @@ func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error 
 
 	var (
 		services     = []string{"kibana-logging", "elasticsearch-logging", "fluentd-es"}
-		configmaps   = []string{"kibana-object-registration", "kibana-saved-objects", "curator-hourly-config", "curator-daily-config", "fluent-bit-config", "fluentd-es-config"}
+		configmaps   = []string{"kibana-object-registration", "kibana-saved-objects", "curator-hourly-config", "curator-daily-config", "fluent-bit-config", "fluentd-es-config", "es-configmap"}
 		statefulsets = []string{"elasticsearch-logging", "fluentd-es"}
 		cronjobs     = []string{"hourly-curator", "daily-curator"}
 	)
