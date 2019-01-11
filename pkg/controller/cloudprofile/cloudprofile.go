@@ -21,15 +21,15 @@ import (
 
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
-	"github.com/prometheus/client_golang/prometheus"
-
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllerutils "github.com/gardener/gardener/pkg/controller/utils"
 	"github.com/gardener/gardener/pkg/logger"
-
 	gardenmetrics "github.com/gardener/gardener/pkg/metrics"
+
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // Controller controls CloudProfiles.

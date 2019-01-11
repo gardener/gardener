@@ -28,6 +28,8 @@ import (
 	"k8s.io/client-go/informers"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -214,15 +216,16 @@ These so-called control plane components are hosted in Kubernetes clusters thems
 // Gardener represents all the parameters required to start the
 // Gardener controller manager.
 type Gardener struct {
-	Config              *config.ControllerManagerConfiguration
-	Identity            *gardenv1beta1.Gardener
-	GardenerNamespace   string
-	K8sGardenClient     kubernetes.Interface
-	K8sGardenInformers  gardeninformers.SharedInformerFactory
-	KubeInformerFactory informers.SharedInformerFactory
-	Logger              *logrus.Logger
-	Recorder            record.EventRecorder
-	LeaderElection      *leaderelection.LeaderElectionConfig
+	Config                 *config.ControllerManagerConfiguration
+	Identity               *gardenv1beta1.Gardener
+	GardenerNamespace      string
+	K8sGardenClient        kubernetes.Interface
+	K8sGardenInformers     gardeninformers.SharedInformerFactory
+	K8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	KubeInformerFactory    informers.SharedInformerFactory
+	Logger                 *logrus.Logger
+	Recorder               record.EventRecorder
+	LeaderElection         *leaderelection.LeaderElectionConfig
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
@@ -300,15 +303,16 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	}
 
 	return &Gardener{
-		Identity:            identity,
-		GardenerNamespace:   gardenerNamespace,
-		Config:              cfg,
-		Logger:              logger,
-		Recorder:            recorder,
-		K8sGardenClient:     k8sGardenClient,
-		K8sGardenInformers:  gardeninformers.NewSharedInformerFactory(k8sGardenClient.Garden(), 0),
-		KubeInformerFactory: kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
-		LeaderElection:      leaderElectionConfig,
+		Identity:               identity,
+		GardenerNamespace:      gardenerNamespace,
+		Config:                 cfg,
+		Logger:                 logger,
+		Recorder:               recorder,
+		K8sGardenClient:        k8sGardenClient,
+		K8sGardenInformers:     gardeninformers.NewSharedInformerFactory(k8sGardenClient.Garden(), 0),
+		K8sGardenCoreInformers: gardencoreinformers.NewSharedInformerFactory(k8sGardenClient.GardenCore(), 0),
+		KubeInformerFactory:    kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
+		LeaderElection:         leaderElectionConfig,
 	}, nil
 }
 
@@ -356,6 +360,7 @@ func (g *Gardener) startControllers(ctx context.Context) {
 	controller.NewGardenControllerFactory(
 		g.K8sGardenClient,
 		g.K8sGardenInformers,
+		g.K8sGardenCoreInformers,
 		g.KubeInformerFactory,
 		g.Config,
 		g.Identity,

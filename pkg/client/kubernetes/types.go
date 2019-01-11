@@ -17,11 +17,15 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardenscheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	machinescheme "github.com/gardener/gardener/pkg/client/machine/clientset/versioned/scheme"
+
 	"github.com/sirupsen/logrus"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,6 +43,7 @@ import (
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -146,6 +151,7 @@ type Clientset struct {
 
 	kubernetes      kubernetesclientset.Interface
 	garden          gardenclientset.Interface
+	gardenCore      gardencoreclientset.Interface
 	machine         machineclientset.Interface
 	apiextension    apiextensionsclientset.Interface
 	apiregistration apiserviceclientset.Interface
@@ -156,7 +162,7 @@ type Clientset struct {
 	version           string
 }
 
-// Applier is a default implemenation of the ApplyInterface. It applies objects with
+// Applier is a default implementation of the ApplyInterface. It applies objects with
 // by first checking whether they exist and then either creating / updating them (update happens
 // with a predefined merge logic).
 type Applier struct {
@@ -184,6 +190,7 @@ type Interface interface {
 
 	Kubernetes() kubernetesclientset.Interface
 	Garden() gardenclientset.Interface
+	GardenCore() gardencoreclientset.Interface
 	Machine() machineclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface

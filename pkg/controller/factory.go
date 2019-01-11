@@ -20,10 +20,12 @@ import (
 	"text/tabwriter"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	backupinfrastructurecontroller "github.com/gardener/gardener/pkg/controller/backupinfrastructure"
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controller/cloudprofile"
+	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controller/controllerregistration"
 	projectcontroller "github.com/gardener/gardener/pkg/controller/project"
 	quotacontroller "github.com/gardener/gardener/pkg/controller/quota"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controller/secretbinding"
@@ -36,6 +38,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	"github.com/gardener/gardener/pkg/version"
+
 	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
@@ -44,38 +47,42 @@ import (
 
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
-	cfg                *config.ControllerManagerConfiguration
-	identity           *gardenv1beta1.Gardener
-	gardenNamespace    string
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
-	k8sInformers       kubeinformers.SharedInformerFactory
-	recorder           record.EventRecorder
+	cfg                    *config.ControllerManagerConfiguration
+	identity               *gardenv1beta1.Gardener
+	gardenNamespace        string
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenInformers     gardeninformers.SharedInformerFactory
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
+	k8sInformers           kubeinformers.SharedInformerFactory
+	recorder               record.EventRecorder
 }
 
 // NewGardenControllerFactory creates a new factory for controllers for the Garden API group.
 func NewGardenControllerFactory(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, cfg *config.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, recorder record.EventRecorder) *GardenControllerFactory {
 	return &GardenControllerFactory{
-		cfg:                cfg,
-		identity:           identity,
-		gardenNamespace:    gardenNamespace,
-		k8sGardenClient:    k8sGardenClient,
-		k8sGardenInformers: gardenInformerFactory,
-		k8sInformers:       kubeInformerFactory,
-		recorder:           recorder,
+		cfg:                    cfg,
+		identity:               identity,
+		gardenNamespace:        gardenNamespace,
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenInformers:     gardenInformerFactory,
+		k8sGardenCoreInformers: gardenCoreInformerFactory,
+		k8sInformers:           kubeInformerFactory,
+		recorder:               recorder,
 	}
 }
 
 // Run starts all the controllers for the Garden API group. It also performs bootstrapping tasks.
 func (f *GardenControllerFactory) Run(ctx context.Context) {
 	var (
-		cloudProfileInformer         = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
-		secretBindingInformer        = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
-		quotaInformer                = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
-		projectInformer              = f.k8sGardenInformers.Garden().V1beta1().Projects().Informer()
-		seedInformer                 = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
-		shootInformer                = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
-		backupInfrastructureInformer = f.k8sGardenInformers.Garden().V1beta1().BackupInfrastructures().Informer()
+		cloudProfileInformer           = f.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Informer()
+		secretBindingInformer          = f.k8sGardenInformers.Garden().V1beta1().SecretBindings().Informer()
+		quotaInformer                  = f.k8sGardenInformers.Garden().V1beta1().Quotas().Informer()
+		projectInformer                = f.k8sGardenInformers.Garden().V1beta1().Projects().Informer()
+		seedInformer                   = f.k8sGardenInformers.Garden().V1beta1().Seeds().Informer()
+		shootInformer                  = f.k8sGardenInformers.Garden().V1beta1().Shoots().Informer()
+		backupInfrastructureInformer   = f.k8sGardenInformers.Garden().V1beta1().BackupInfrastructures().Informer()
+		controllerInstallationInformer = f.k8sGardenCoreInformers.Gardener().V1alpha1().ControllerInstallations().Informer()
+		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerRegistrations().Informer()
 
 		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
@@ -85,6 +92,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	f.k8sGardenInformers.Start(ctx.Done())
 	if !cache.WaitForCacheSync(ctx.Done(), cloudProfileInformer.HasSynced, secretBindingInformer.HasSynced, quotaInformer.HasSynced, projectInformer.HasSynced, seedInformer.HasSynced, shootInformer.HasSynced, backupInfrastructureInformer.HasSynced) {
 		panic("Timed out waiting for Garden caches to sync")
+	}
+
+	f.k8sGardenCoreInformers.Start(ctx.Done())
+	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced) {
+		panic("Timed out waiting for Garden core caches to sync")
 	}
 
 	f.k8sInformers.Start(ctx.Done())
@@ -119,13 +131,14 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		shootController                = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController                 = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.cfg, f.recorder)
-		quotaController                = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
-		projectController              = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
-		cloudProfileController         = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
-		secretBindingController        = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
-		backupInfrastructureController = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.cfg, f.recorder)
+		quotaController                  = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
+		projectController                = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
+		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)
+		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
+		backupInfrastructureController   = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 	)
 
 	// Initialize the Controller metrics collection.
@@ -138,6 +151,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go cloudProfileController.Run(ctx, f.cfg.Controllers.CloudProfile.ConcurrentSyncs)
 	go secretBindingController.Run(ctx, f.cfg.Controllers.SecretBinding.ConcurrentSyncs)
 	go backupInfrastructureController.Run(ctx, f.cfg.Controllers.BackupInfrastructure.ConcurrentSyncs)
+	go controllerRegistrationController.Run(ctx, 6) // XXX
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 

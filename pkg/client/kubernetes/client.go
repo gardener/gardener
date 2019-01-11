@@ -20,6 +20,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils"
@@ -121,7 +122,7 @@ func checkIfSupportedKubernetesVersion(gitVersion string) error {
 }
 
 // NewForConfig returns a new Kubernetes base client.
-func NewForConfig(config *rest.Config, options client.Options) (*Clientset, error) {
+func NewForConfig(config *rest.Config, options client.Options) (Interface, error) {
 	c, err := client.New(config, options)
 	if err != nil {
 		return nil, err
@@ -138,6 +139,11 @@ func NewForConfig(config *rest.Config, options client.Options) (*Clientset, erro
 	}
 
 	garden, err := gardenclientset.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	gardenCore, err := gardencoreclientset.NewForConfig(config)
 	if err != nil {
 		return nil, err
 	}
@@ -168,6 +174,7 @@ func NewForConfig(config *rest.Config, options client.Options) (*Clientset, erro
 
 		kubernetes:      kubernetes,
 		garden:          garden,
+		gardenCore:      gardenCore,
 		machine:         machine,
 		apiregistration: apiRegistration,
 		apiextension:    apiExtension,
