@@ -44,6 +44,13 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   core:v1alpha1 \
   -h <(headers)
 
+$(dirname $0)/../vendor/k8s.io/code-generator/generate-groups.sh \
+  "deepcopy,client,informer,lister" \
+  github.com/gardener/gardener/pkg/client/extensions \
+  github.com/gardener/gardener/pkg/apis \
+  extensions:v1alpha1 \
+  -h <(headers)
+
 # garden.sapcloud.io API clients
 
 $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
