@@ -8,7 +8,7 @@ metadata:
     role: logging
 spec:
   ports:
-  - port: {{ .Values.kibanaPort }}
+  - port: {{ .Values.kibana.service.internalPort }}
     protocol: TCP
     targetPort: ui
   selector:

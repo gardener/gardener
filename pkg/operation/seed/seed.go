@@ -17,6 +17,7 @@ package seed
 import (
 	"fmt"
 	"path/filepath"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -323,7 +324,9 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 				"basicAuthSecret": basicAuth,
 				"host":            kibanaHost,
 			},
-			"kibanaReplicas": replicas,
+			"kibana": map[string]interface{}{
+				"replicaCount": replicas,
+			},
 			"curator": map[string]interface{}{
 				"objectCount":       nodeCount,
 				"baseDiskThreshold": 2 * 1073741824,

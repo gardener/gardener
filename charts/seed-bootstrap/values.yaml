@@ -73,8 +73,6 @@ global:
 
 elastic-kibana-curator:
   enabled: true
-  kibanaReplicas: 1
-  kibanaPort: 5601
   curator:
     objectCount: 1
   elasticsearch:
