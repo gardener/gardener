@@ -10,7 +10,7 @@ data:
   register: |-
     #/bin/sh
 
-    KIBANA_HOST=http://127.0.0.1:{{ .Values.kibanaPort }}
+    KIBANA_HOST=http://127.0.0.1:{{ .Values.kibana.service.internalPort }}
 
     until curl -sS ${KIBANA_HOST}/ > /dev/null; do
       echo "Waiting for Kibana..."

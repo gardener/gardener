@@ -19,5 +19,5 @@ spec:
       paths:
       - backend:
           serviceName: kibana-logging
-          servicePort: {{ .Values.kibanaPort }}
+          servicePort: {{ .Values.kibana.service.internalPort }}
         path: /

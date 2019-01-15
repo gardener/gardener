@@ -12,7 +12,7 @@ spec:
     matchLabels:
       app: kibana-logging
       role: logging
-  replicas: {{ .Values.kibanaReplicas }}
+  replicas: {{ .Values.kibana.replicaCount }}
   template:
     metadata:
       annotations:
@@ -38,9 +38,20 @@ spec:
         - name: ELASTICSEARCH_URL
           value: http://elasticsearch-logging:{{ .Values.global.elasticsearchPorts.db }}
         ports:
-        - containerPort: {{ .Values.kibanaPort }}
+        - containerPort: {{ .Values.kibana.service.internalPort }}
           name: ui
           protocol: TCP
+{{- if .Values.kibana.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /api/status
+            port: {{ .Values.kibana.service.internalPort }}
+          initialDelaySeconds: {{ .Values.kibana.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.kibana.readinessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.kibana.readinessProbe.periodSeconds }}
+          successThreshold: {{ .Values.kibana.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.kibana.readinessProbe.failureThreshold }}
+{{- end }}
       - image: {{ index .Values.global.images "kibana-oss" }}
         name: auto-create-objects
         command:
