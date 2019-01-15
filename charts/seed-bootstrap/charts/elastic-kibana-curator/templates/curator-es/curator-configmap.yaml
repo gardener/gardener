@@ -63,20 +63,18 @@ data:
     actions:
       1:
         action: delete_indices
-        description: "Clean up ES by deleting old indices"
+        description: >-
+          Delete indices older than 14 days (based on index name), for logstash- prefixed indices.
         options:
-          timeout_override:
           continue_if_exception: False
-          disable_action: False
           ignore_empty_list: True
         filters:
         - filtertype: age
           source: name
           direction: older
           timestring: '%Y.%m.%d'
-          unit: months
-          unit_count: 1
-          exclude: False
+          unit: days
+          unit_count: 14
       2:
         action: index_settings
         description: >-
