@@ -15,8 +15,12 @@
 package botanist
 
 import (
+	"context"
 	"fmt"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	"sync"
 	"time"
 
@@ -57,6 +61,32 @@ var (
 		},
 	}
 )
+
+func excludeAddonManagerManagedListOptions() metav1.ListOptions {
+	selector := labels.NewSelector()
+	req, err := labels.NewRequirement("addonmanager.kubernetes.io/mode", selection.DoesNotExist, nil)
+	runtime.Must(err)
+	selector.Add(*req)
+	return metav1.ListOptions{
+		LabelSelector: selector.String(),
+	}
+}
+
+// CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
+func (b *Botanist) CleanWebhooks(ctx context.Context) error {
+	var result error
+	admissionRegistration := b.K8sShootClient.Kubernetes().AdmissionregistrationV1beta1()
+
+	if err := admissionRegistration.ValidatingWebhookConfigurations().DeleteCollection(nil, excludeAddonManagerManagedListOptions()); err != nil {
+		result = multierror.Append(result, err)
+	}
+
+	if err := admissionRegistration.MutatingWebhookConfigurations().DeleteCollection(nil, excludeAddonManagerManagedListOptions()); err != nil {
+		result = multierror.Append(result, err)
+	}
+
+	return result
+}
 
 // CleanKubernetesResources deletes all the Kubernetes resources in the Shoot cluster
 // other than those stored in the exceptions map. It will check whether all the Kubernetes resources
