@@ -171,10 +171,16 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAddonManagerDeleted),
 			Dependencies: flow.NewTaskIDs(deleteKubeAddonManager),
 		})
+
+		cleanupWebhooks = g.Add(flow.Task{
+			Name:         "Cleaning up non-gardener webhooks",
+			Fn:           flow.TaskFn(botanist.CleanWebhooks),
+			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControllers, waitUntilKubeAddonManagerDeleted),
+		})
 		waitForControllersToBeActive = g.Add(flow.Task{
 			Name:         "Waiting until both cloud-controller-manager and kube-controller-manager are active",
 			Fn:           flow.SimpleTaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControllers, waitUntilKubeAddonManagerDeleted),
+			Dependencies: flow.NewTaskIDs(cleanupWebhooks),
 		})
 
 		// We need to clean up the cluster resources which may have footprints in the infrastructure (such as
