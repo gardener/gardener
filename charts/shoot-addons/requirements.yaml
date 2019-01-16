@@ -1,8 +1,4 @@
 dependencies:
-- name: helm-tiller
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: helm-tiller.enabled
 - name: kube-lego
   repository: http://localhost:10191
   version: 0.1.0
@@ -15,10 +11,6 @@ dependencies:
   repository: http://localhost:10191
   version: 0.1.0
   condition: kubernetes-dashboard.enabled
-- name: monocular
-  repository: http://localhost:10191
-  version: 0.1.0
-  condition: monocular.enabled
 - name: nginx-ingress
   repository: http://localhost:10191
   version: 0.1.0

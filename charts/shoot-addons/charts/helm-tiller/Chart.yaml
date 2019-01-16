@@ -1,4 +1,0 @@
-apiVersion: v1
-description: A Helm chart for Helm's Tiller server
-name: helm-tiller
-version: 0.1.0

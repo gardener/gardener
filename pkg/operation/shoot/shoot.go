@@ -207,11 +207,6 @@ func (s *Shoot) NginxIngressEnabled() bool {
 	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.NginxIngress != nil && s.Info.Spec.Addons.NginxIngress.Enabled
 }
 
-// MonocularEnabled returns true if the monocular addon is enabled in the Shoot manifest.
-func (s *Shoot) MonocularEnabled() bool {
-	return s.Info.Spec.Addons != nil && s.Info.Spec.Addons.Monocular != nil && s.Info.Spec.Addons.Monocular.Enabled
-}
-
 // ComputeCloudConfigSecretName computes the name for a secret which contains the original cloud config for
 // the worker group with the given <workerName>. It is build by the cloud config secret prefix, the worker
 // name itself and a hash of the minor Kubernetes version of the Shoot cluster.

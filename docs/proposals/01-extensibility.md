@@ -222,8 +222,6 @@ spec:
     kube-lego:
       enabled: true
       email: john.doe@example.com
-    monocular:
-      enabled: false
 ```
 
 :information: The specifications for the other cloud providers Gardener already has an implementation for looks similar.

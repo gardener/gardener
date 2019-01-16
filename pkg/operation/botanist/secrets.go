@@ -610,20 +610,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		},
 	}
 
-	if b.Shoot.MonocularEnabled() && b.Shoot.Info.Spec.DNS.Domain != nil {
-		secretList = append(secretList, &secrets.CertificateSecretConfig{
-			Name: "monocular-tls",
-
-			CommonName:   "monocular",
-			Organization: nil,
-			DNSNames:     []string{b.Shoot.GetIngressFQDN("monocular")},
-			IPAddresses:  nil,
-
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[caCluster],
-		})
-	}
-
 	loggingEnabled := features.ControllerFeatureGate.Enabled(features.Logging)
 	if loggingEnabled {
 		kibanaHost := b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)

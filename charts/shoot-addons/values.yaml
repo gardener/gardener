@@ -1,7 +1,3 @@
-helm-tiller:
-  enabled: false
-  images:
-    helm-tiller: image-repository:image-tag
 kube-lego:
   enabled: false
   images:
@@ -14,12 +10,6 @@ kubernetes-dashboard:
   enabled: false
   images:
     kubernetes-dashboard: image-repository:image-tag
-monocular:
-  enabled: false
-  images:
-    monocular-api: image-repository:image-tag
-    monocular-ui: image-repository:image-tag
-    busybox: image-repository:image-tag
 nginx-ingress:
   enabled: false
   images:

@@ -393,9 +393,6 @@ const (
 	// NodeExporterImageName is the name of the NodeExporter image.
 	NodeExporterImageName = "node-exporter"
 
-	// HelmTillerImageName is the name of the HelmTiller image.
-	HelmTillerImageName = "helm-tiller"
-
 	// KubeLegoImageName is the name of the KubeLego image.
 	KubeLegoImageName = "kube-lego"
 
@@ -404,12 +401,6 @@ const (
 
 	// KubernetesDashboardImageName is the name of the KubernetesDashboard image.
 	KubernetesDashboardImageName = "kubernetes-dashboard"
-
-	// MonocularAPIImageName is the name of the MonocularAPI image.
-	MonocularAPIImageName = "monocular-api"
-
-	// MonocularUIImageName is the name of the MonocularUI image.
-	MonocularUIImageName = "monocular-ui"
 
 	// BusyboxImageName is the name of the Busybox image.
 	BusyboxImageName = "busybox"
