@@ -18,26 +18,23 @@ import (
 	"fmt"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/sets"
-
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/utils"
-
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-
 	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	gomegatypes "github.com/onsi/gomega/types"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 var _ = Describe("validation", func() {
@@ -2411,6 +2408,35 @@ var _ = Describe("validation", func() {
 		)
 	})
 
+	Describe("#ValidateBackup", func() {
+		DescribeTable("validate schedule",
+			func(backup *garden.Backup, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateBackup(backup, nil)
+				Expect(errList).To(matcher)
+			},
+			Entry("invalid cron spec", &garden.Backup{Schedule: "76 * * * *", Maximum: 0},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("schedule").String()),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("maximum").String()),
+					}))),
+			),
+			Entry("backup frequency too high", &garden.Backup{Schedule: "*/59 * * * *", Maximum: 1},
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal(field.NewPath("schedule").String()),
+						"Detail": ContainSubstring("backup frequency must not be higher than"),
+					}))),
+			),
+			Entry("accept backup frequency", &garden.Backup{Schedule: "0 * * * *", Maximum: 1}, BeEmpty()),
+		)
+	})
+
 	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *garden.Shoot
@@ -2418,16 +2444,12 @@ var _ = Describe("validation", func() {
 			hostedZoneID = "ABCDEF1234"
 			domain       = "my-cluster.example.com"
 
-			nodeCIDR      = garden.CIDR("10.250.0.0/16")
-			podCIDR       = garden.CIDR("100.96.0.0/11")
-			serviceCIDR   = garden.CIDR("100.64.0.0/13")
-			invalidCIDR   = garden.CIDR("invalid-cidr")
-			vpcCIDR       = garden.CIDR("10.0.0.0/8")
-			invalidBackup = &garden.Backup{
-				Schedule: "76 * * * *",
-				Maximum:  0,
-			}
-			addon = garden.Addon{
+			nodeCIDR    = garden.CIDR("10.250.0.0/16")
+			podCIDR     = garden.CIDR("100.96.0.0/11")
+			serviceCIDR = garden.CIDR("100.64.0.0/13")
+			invalidCIDR = garden.CIDR("invalid-cidr")
+			vpcCIDR     = garden.CIDR("10.0.0.0/8")
+			addon       = garden.Addon{
 				Enabled: true,
 			}
 			k8sNetworks = garden.K8SNetworks{
@@ -2523,7 +2545,7 @@ var _ = Describe("validation", func() {
 						},
 					},
 					Backup: &garden.Backup{
-						Schedule: "*/1 * * * *",
+						Schedule: "0 * * * *",
 						Maximum:  2,
 					},
 					Cloud: garden.Cloud{
@@ -2779,22 +2801,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(HaveLen(0))
-			})
-
-			It("should forbid invalid backup configuration", func() {
-				shoot.Spec.Backup = invalidBackup
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.schedule"),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.maximum"),
-				}))
 			})
 
 			Context("CIDR", func() {
@@ -3235,22 +3241,6 @@ var _ = Describe("validation", func() {
 				errorList := ValidateShoot(shoot)
 
 				Expect(len(errorList)).To(Equal(0))
-			})
-
-			It("should forbid invalid backup configuration", func() {
-				shoot.Spec.Backup = invalidBackup
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.schedule"),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.backup.maximum"),
-				}))
 			})
 
 			It("should forbid specifying a resource group configuration", func() {
