@@ -27,7 +27,6 @@ The following charts of the [`charts`](charts) directory were seeded based on a 
 * [git.k8s.io/charts/stable/nginx-ingress](https://git.k8s.io/charts/stable/nginx-ingress)
 * [git.k8s.io/charts/stable/prometheus](https://git.k8s.io/charts/stable/prometheus)
 * [git.k8s.io/charts/stable/kubernetes-dashboard](https://git.k8s.io/charts/stable/kubernetes-dashboard)
-* [github.com/kubernetes-helm/monocular](https://github.com/kubernetes-helm/monocular/tree/master/deployment)
 * [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/es-service.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/es-service.yaml)
 * [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/es-statefulset.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/es-statefulset.yaml)
 * [github.com/kubernetes/kubernetes/cluster/addons/fluentd-elasticsearch/fluentd-es-configmap.yaml](https://github.com/kubernetes/kubernetes/blob/master/cluster/addons/fluentd-elasticsearch/fluentd-es-configmap.yaml)

@@ -124,18 +124,6 @@ images:
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
   tag: "0.7.0"
-- name: helm-tiller
-  sourceRepository: github.com/kubernetes/helm
-  repository: gcr.io/kubernetes-helm/tiller
-  tag: v2.9.1
-- name: monocular-api
-  sourceRepository: github.com/kubernetes-helm/monocular
-  repository: bitnami/monocular-api
-  tag: v0.3.1
-- name: monocular-ui
-  sourceRepository: github.com/kubernetes-helm/monocular
-  repository: bitnami/monocular-ui
-  tag: v0.3.1
 
 # Miscellaenous
 - name: terraformer

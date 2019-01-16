@@ -145,10 +145,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 // will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
 // contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
-	helmTillerConfig, err := b.Botanist.GenerateHelmTillerConfig()
-	if err != nil {
-		return nil, err
-	}
 	kubeLegoConfig, err := b.Botanist.GenerateKubeLegoConfig()
 	if err != nil {
 		return nil, err
@@ -158,10 +154,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 	kubernetesDashboardConfig, err := b.Botanist.GenerateKubernetesDashboardConfig()
-	if err != nil {
-		return nil, err
-	}
-	monocularConfig, err := b.Botanist.GenerateMonocularConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -192,10 +184,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		}
 	}
 
-	helmTiller, err := b.Botanist.InjectImages(helmTillerConfig, b.ShootVersion(), b.ShootVersion(), common.HelmTillerImageName)
-	if err != nil {
-		return nil, err
-	}
 	kubeLego, err := b.Botanist.InjectImages(kubeLegoConfig, b.ShootVersion(), b.ShootVersion(), common.KubeLegoImageName)
 	if err != nil {
 		return nil, err
@@ -205,10 +193,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 	kubernetesDashboard, err := b.Botanist.InjectImages(kubernetesDashboardConfig, b.ShootVersion(), b.ShootVersion(), common.KubernetesDashboardImageName)
-	if err != nil {
-		return nil, err
-	}
-	monocular, err := b.Botanist.InjectImages(monocularConfig, b.ShootVersion(), b.ShootVersion(), common.MonocularAPIImageName, common.MonocularUIImageName, common.BusyboxImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -236,11 +220,9 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
-		"helm-tiller":          helmTiller,
 		"kube-lego":            kubeLego,
 		"kube2iam":             kube2IAM,
 		"kubernetes-dashboard": kubernetesDashboard,
-		"monocular":            monocular,
 		"nginx-ingress":        nginxIngress,
 	})
 }

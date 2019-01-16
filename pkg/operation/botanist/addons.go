@@ -16,9 +16,7 @@ package botanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,41 +61,4 @@ func (b *Botanist) GenerateKubeLegoConfig() (map[string]interface{}, error) {
 	}
 
 	return common.GenerateAddonConfig(values, enabled), nil
-}
-
-// GenerateMonocularConfig generates the values which are required to render the chart of
-// monocular properly.
-func (b *Botanist) GenerateMonocularConfig() (map[string]interface{}, error) {
-	var (
-		enabled = b.Shoot.MonocularEnabled()
-		values  map[string]interface{}
-	)
-
-	if enabled {
-		var (
-			name          = "monocular-tls"
-			monocularHost = b.Shoot.GetIngressFQDN("monocular")
-			kubecfgSecret = b.Secrets["kubecfg"]
-			basicAuth     = utils.CreateSHA1Secret(kubecfgSecret.Data["username"], kubecfgSecret.Data["password"])
-		)
-
-		if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, name, corev1.SecretTypeTLS, b.Secrets[name].Data, true); err != nil {
-			return nil, err
-		}
-
-		values = map[string]interface{}{
-			"ingress": map[string]interface{}{
-				"basicAuthSecret": basicAuth,
-				"hosts":           []string{monocularHost},
-			},
-		}
-	}
-
-	return common.GenerateAddonConfig(values, enabled), nil
-}
-
-// GenerateHelmTillerConfig generates the values which are required to render the chart of
-// helm-tiller properly.
-func (b *Botanist) GenerateHelmTillerConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.MonocularEnabled()), nil
 }
