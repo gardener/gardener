@@ -29,13 +29,10 @@ spec:
         garden.sapcloud.io/role: system-component
         app: vpn-shoot
     spec:
-      # not used
       automountServiceAccountToken: false
       serviceAccountName: vpn-shoot
       priorityClassName: system-cluster-critical
       tolerations:
-      - effect: NoExecute
-        operator: Exists
       - key: CriticalAddonsOnly
         operator: Exists
       containers:

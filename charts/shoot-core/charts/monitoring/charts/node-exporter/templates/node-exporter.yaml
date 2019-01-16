@@ -51,7 +51,11 @@ spec:
         component: node-exporter
     spec:
       tolerations:
+      - effect: NoSchedule
+        operator: Exists
       - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoExecute
         operator: Exists
       hostNetwork: true
       hostPID: true

@@ -30,8 +30,8 @@ spec:
         runAsUser: 65534
       serviceAccountName: coredns
       tolerations:
-      - key: "CriticalAddonsOnly"
-        operator: "Exists"
+      - key: CriticalAddonsOnly
+        operator: Exists
       containers:
       - name: coredns
         image: {{ index .Values.images "coredns" }}

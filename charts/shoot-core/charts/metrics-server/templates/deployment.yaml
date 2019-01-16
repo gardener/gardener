@@ -27,6 +27,9 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
     spec:
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
       priorityClassName: system-cluster-critical
       securityContext:
         runAsUser: 65534
