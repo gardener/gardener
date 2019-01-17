@@ -15,7 +15,6 @@ data:
 
     @INCLUDE input-kubernetes.conf
     @INCLUDE input-systemd.conf
-    @INCLUDE input-kernel.conf
     @INCLUDE filter-kubernetes.conf
     @INCLUDE output-fluentd.conf
 
@@ -62,10 +61,202 @@ data:
         K8S-Logging.Parser  On
         tls.verify          Off
 
-  input-kernel.conf: |
-    [INPUT]
-        Name            kmsg
-        Tag             kernel
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-apiserver*kube-apiserver*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-controller-manager*kube-controller-manager*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.cloud-controller-manager*cloud-controller-manager*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-scheduler*cloud-kube-scheduler*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.etcd*etcd*
+        Key_Name            log
+        Parser              etcdeventsParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.etcd*backup-restore*
+        Key_Name            log
+        Parser              geacParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-scheduler*kube-scheduler*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-proxy*kube-proxy*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.cluster-autoscaler*cluster-autoscaler*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.calico-node*calico-node*
+        Key_Name            log
+        Parser              caliconodeParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.alertmanager*alertmanager*
+        Key_Name            log
+        Parser              alermanagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.elasticsearch*elasticsearch*
+        Key_Name            log
+        Parser              elasticsearchParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.addons-nginx-ingress-controller*nginx-ingress-controller*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.metrics-server*metrics-server*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-state-metrics*kube-state-metrics*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.machine-controller-manager*machine-controller-manager*
+        Key_Name            log
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.vpn-shoot*vpn-shoot*
+        Key_Name            log
+        Parser              vpnshootParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.addons-kubernetes-dashboard*kubernetes-dashboard*
+        Key_Name            log
+        Parser              kubernetesdashboardParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.coredns*coredns*
+        Key_Name            log
+        Parser              corednsParser 
+        Parser              kubeapiserverParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.node-exporter*node-exporter*
+        Key_Name            log
+        Parser              nodeexporterParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.*curator*
+        Key_Name            log
+        Parser              curatorParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.gardener-external-admission-controller*gardener-external-admission-controller*
+        Key_Name            log
+        Parser              geacParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.prometheus*prometheus*
+        Key_Name            log
+        Parser              alermanagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.*lb-readvertiser*lb-readvertiser*
+        Key_Name            log
+        Parser              geacParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.daily-curator*curator*
+        Key_Name            log
+        Parser              curatorParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.grafana*grafana*
+        Key_Name            log
+        Parser              grafanaParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name                parser
+        Match               kubernetes.var.log.containers.kube-addon-manager*kube-addon-manager*
+        Key_Name            log
+        Parser              addonmanagerSeverityParser
+        Parser.             addonmanagerParser
+        Reserve_Data        True
+
+    [FILTER]
+        Name    lua
+        Match   *
+        script  modify_severity.lua
+        call    cb_modify
 
   output-fluentd.conf: |
     [OUTPUT]
@@ -92,3 +283,128 @@ data:
         Regex       ^\<(?<pri>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
         Time_Key    time
         Time_Format %b %d %H:%M:%S
+
+    [PARSER]
+        Name        kubeapiserverParser
+        Format      regex
+        Regex       ^(?<severity>\w)(?<time>\d{4} [^\s]*)\s+(?<pid>\d+)\s+(?<source>[^ \]]+)\] (?<log>.*)$
+        Time_Key    time
+        Time_Format %m%d %H:%M:%S.%L
+
+    [PARSER]
+        Name        etcdeventsParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+(?<severity>\w+)\s+\|\s+(?<source>[^ :]*):\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%d %H:%M:%S.%L
+
+
+    [PARSER]
+        Name        caliconodeParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+\[(?<severity>\w*)\]\[(?<pid>\d+)\]\s+(?<source>[^:]*):\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%d %H:%M:%S.%L
+
+    [PARSER]
+        Name        alermanagerParser
+        Format      regex
+        Regex       ^level=(?<severity>\w+)\s+ts=(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+caller=(?<source>[^\s]*+)\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        elasticsearchParser
+        Format      regex
+        Regex       ^\[(?<time>.*?)\]\[(?<severity>[^\s]*)\s+\]\[(?<source>.*?)\].*?\]\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        vpnshootParser
+        Format      regex
+        Regex       ^(?<time>[^0-9]*\d{1,2}\s+[^\s]+\s+\d{4})\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %a %b%t%d %H:%M:%S %Y
+
+    [PARSER]
+        Name        kubernetesdashboardParser
+        Format      regex
+        Regex       ^(?<time>\d{4}\/\d{2}\/\d{2}\s+[^\s]*)\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y/%m/%d %H:%M:%S
+
+    [PARSER]
+        Name        corednsParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}[Tt].*[zZ])\s+\[(?<severity>\w*[^\]])\]\s+(?<log>.*)
+        Time_Key    time
+        Time_Format  %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        nodeexporterParser
+        Format      regex
+        Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"\s+source="(?<source>.*)"
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        curatorParser
+        Format      regex
+        Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^\s]+)\s+(?<severity>\w+)\s+(?<log>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%d %H:%M:%S.%L
+
+    [PARSER]
+        Name        geacParser
+        Format      regex
+        Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+    [PARSER]
+        Name        grafanaParser
+        Format      regex
+        Regex       ^t=(?<time>\d{4}-\d{2}-\d{2}T[^ ]*)\s+lvl=(?<severity>\w+)\smsg="(?<log>.*)"\s+logger=(?<source>.*)
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S%z
+
+    [PARSER]
+        Name        addonmanagerSeverityParser
+        Format      regex
+        Regex       ^(?<severity>.[^:]*):\s==\s(?<log>.*)
+
+    [PARSER]
+        Name        addonmanagerParser
+        Format      regex
+        Regex       ^(?<log>.*)
+
+  modify_severity.lua: |-
+    function cb_modify(tag, timestamp, record)
+
+        local modified = false
+
+        for key, val in pairs(record) do
+          if key == "severity" then 
+            if val:upper() == "I" or val:upper() == "INFO" then
+                record[key] = "INF"
+                modified = true
+            elseif val:upper() == "W" or val:upper() == "WARN" or val:upper() == "WARNING" then
+                record[key] = "WARN"
+                modified = true
+            elseif val:upper() == "E" or val:upper() == "ERR" or val:upper() == "ERROR" then
+                record[key] = "ERR"
+                modified = true
+            elseif val:upper() == "D" or val:upper() == "DBG" or val:upper() == "DEBUG" then
+                record[key] = "DBG"
+                modified = true
+            end
+          end
+        end
+   
+        if modified then
+            return 1, timestamp, record
+        end
+
+        return 0, 0, 0
+    end
