@@ -26,19 +26,6 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 
 // SetDefaults_Shoot sets default values for Shoot objects.
 func SetDefaults_Shoot(obj *Shoot) {
-	if obj.Spec.Backup == nil {
-		obj.Spec.Backup = &Backup{
-			Schedule: DefaultETCDBackupSchedule,
-			Maximum:  DefaultETCDBackupMaximum,
-		}
-	}
-	if len(obj.Spec.Backup.Schedule) == 0 {
-		obj.Spec.Backup.Schedule = DefaultETCDBackupSchedule
-	}
-	if obj.Spec.Backup.Maximum <= 0 {
-		obj.Spec.Backup.Maximum = DefaultETCDBackupMaximum
-	}
-
 	var (
 		cloud              = obj.Spec.Cloud
 		defaultPodCIDR     = DefaultPodNetworkCIDR

@@ -16,9 +16,8 @@ package config
 
 import (
 	// TODO: Should be k8s.io/component-base/config in the future.
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// TODO: Should be k8s.io/component-base/config in the future.
 	apimachineryconfig "k8s.io/apimachinery/pkg/apis/config"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1" // TODO: Should be k8s.io/component-base/config in the future.
 	apiserverconfig "k8s.io/apiserver/pkg/apis/config"
 	"k8s.io/klog"
 )
@@ -45,6 +44,8 @@ type ControllerManagerConfiguration struct {
 	KubernetesLogLevel klog.Level
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
+	// ShootBackup contains configuration settings for the etcd backups.
+	ShootBackup *ShootBackup
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/features/gardener_features.go".
@@ -276,6 +277,12 @@ type TLSServer struct {
 	ServerCertPath string
 	// ServerKeyPath is the path to the private key file.
 	ServerKeyPath string
+}
+
+// ShootBackup holds information about backup settings.
+type ShootBackup struct {
+	// Schedule defines the cron schedule according to which a backup is taken from etcd.
+	Schedule string
 }
 
 const (

@@ -118,7 +118,7 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 	)
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 
-	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
+	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector, nil)
 	if err != nil {
 		shootLogger.Errorf("could not initialize a new operation: %s", err.Error())
 		return nil // We do not want to run in the exponential backoff for the condition checks.

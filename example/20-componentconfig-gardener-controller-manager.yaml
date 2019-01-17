@@ -56,6 +56,8 @@ server:
     tls:
       serverCertPath: dev/tls/gardener-controller-manager.crt
       serverKeyPath: dev/tls/gardener-controller-manager.key
+shootBackup:
+  schedule: "0 */24 * * *"
 featureGates:
   Logging: true
   # If enabled you require a proper configuration, please see example/10-secret-certificate-management-config.yaml

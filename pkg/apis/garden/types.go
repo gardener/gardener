@@ -679,7 +679,7 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons
-	// Backup contains configuration settings for the etcd backups.
+	// DEPRECATED: This field will be removed in a future version.
 	// +optional
 	Backup *Backup
 	// Cloud contains information about the cloud environment and their specific settings.
@@ -1126,11 +1126,11 @@ type Kube2IAMRole struct {
 	Policy string
 }
 
-// Backup holds information about the backup schedule and maximum.
+// Backup - DEPRECATED: This struct will be removed in a future version.
 type Backup struct {
-	// Schedule defines the cron schedule according to which a backup is taken from etcd.
+	// DEPRECATED: This field will be removed in a future version.
 	Schedule string
-	// Maximum indicates how many backups should be kept at maximum.
+	// DEPRECATED: This field will be removed in a future version.
 	Maximum int
 }
 
