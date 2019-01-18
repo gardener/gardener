@@ -33,11 +33,10 @@ import (
 // specially labelled Kubernetes manifests which will be created and periodically reconciled.
 func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
-		blackboxExporterSecret = b.Secrets["blackbox-exporter"]
-		kubeProxySecret        = b.Secrets["kube-proxy"]
-		vpnShootSecret         = b.Secrets["vpn-shoot"]
-		vpnTLSAuthSecret       = b.Secrets["vpn-seed-tlsauth"]
-		global                 = map[string]interface{}{
+		kubeProxySecret  = b.Secrets["kube-proxy"]
+		vpnShootSecret   = b.Secrets["vpn-shoot"]
+		vpnTLSAuthSecret = b.Secrets["vpn-seed-tlsauth"]
+		global           = map[string]interface{}{
 			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podNetwork":        b.Shoot.GetPodNetwork(),
 		}
@@ -124,11 +123,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
-
-	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "blackbox-exporter", corev1.SecretTypeOpaque, blackboxExporterSecret.Data, true); err != nil {
-		return nil, err
-	}
-
 	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "vpn-shoot", corev1.SecretTypeOpaque, vpnShootSecret.Data, true); err != nil {
 		return nil, err
 	}

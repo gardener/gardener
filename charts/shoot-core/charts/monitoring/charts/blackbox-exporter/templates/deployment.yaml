@@ -43,13 +43,8 @@ spec:
         volumeMounts:
         - name: blackbox-exporter-config
           mountPath: /etc/blackbox_exporter
-        - name: blackbox-exporter
-          mountPath: /var/run/secrets/blackbox
       volumes:
       - name: blackbox-exporter-config
         configMap:
           name: blackbox-exporter-config
-      - name: blackbox-exporter
-        secret:
-          secretName: blackbox-exporter
 
