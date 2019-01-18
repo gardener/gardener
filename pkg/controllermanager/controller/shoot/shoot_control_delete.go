@@ -174,7 +174,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 
 		cleanupWebhooks = g.Add(flow.Task{
 			Name:         "Cleaning up non-gardener webhooks",
-			Fn:           flow.TaskFn(botanist.CleanWebhooks),
+			Fn:           flow.TaskFn(botanist.CleanWebhooks).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControllers, waitUntilKubeAddonManagerDeleted),
 		})
 		waitForControllersToBeActive = g.Add(flow.Task{
