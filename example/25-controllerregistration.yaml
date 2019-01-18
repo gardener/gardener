@@ -1,0 +1,18 @@
+# ControllerRegistration object allows to register external controllers.
+# See https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md.
+---
+apiVersion: core.gardener.cloud/v1alpha1
+kind: ControllerRegistration
+metadata:
+  name: os-coreos
+spec:
+  resources:
+  - kind: OperatingSystemConfig
+    type: coreos
+  deployment:
+    type: helm
+    providerConfig:
+      chart: |
+        H4sIFAAAAAAA/yk...
+      values:
+        foo: bar

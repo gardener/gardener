@@ -15,7 +15,9 @@
 package initializer
 
 import (
-	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
+	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 
 	"k8s.io/apiserver/pkg/admission"
@@ -25,8 +27,11 @@ import (
 )
 
 // New constructs new instance of PluginInitializer
-func New(gardenInformers gardeninformers.SharedInformerFactory, gardenClient internalversion.Interface, kubeInformers kubeinformers.SharedInformerFactory, kubeClient kubernetes.Interface, authz authorizer.Authorizer) admission.PluginInitializer {
+func New(coreInformers coreinformers.SharedInformerFactory, coreClient coreclientset.Interface, gardenInformers gardeninformers.SharedInformerFactory, gardenClient gardenclientset.Interface, kubeInformers kubeinformers.SharedInformerFactory, kubeClient kubernetes.Interface, authz authorizer.Authorizer) admission.PluginInitializer {
 	return pluginInitializer{
+		coreInformers: coreInformers,
+		coreClient:    coreClient,
+
 		gardenInformers: gardenInformers,
 		gardenClient:    gardenClient,
 
@@ -40,6 +45,13 @@ func New(gardenInformers gardeninformers.SharedInformerFactory, gardenClient int
 // Initialize checks the initialization interfaces implemented by each plugin
 // and provide the appropriate initialization data
 func (i pluginInitializer) Initialize(plugin admission.Interface) {
+	if wants, ok := plugin.(WantsInternalCoreInformerFactory); ok {
+		wants.SetInternalCoreInformerFactory(i.coreInformers)
+	}
+	if wants, ok := plugin.(WantsInternalCoreClientset); ok {
+		wants.SetInternalCoreClientset(i.coreClient)
+	}
+
 	if wants, ok := plugin.(WantsInternalGardenInformerFactory); ok {
 		wants.SetInternalGardenInformerFactory(i.gardenInformers)
 	}

@@ -9,6 +9,7 @@ metadata:
 rules:
 - apiGroups:
   - garden.sapcloud.io
+  - core.gardener.cloud
   resources:
   - '*'
   verbs:

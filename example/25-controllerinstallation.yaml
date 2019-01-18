@@ -1,0 +1,16 @@
+# ControllerInstallation object requests a specific controller to get deployed to a seed cluster.
+# See https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md.
+---
+apiVersion: core.gardener.cloud/v1alpha1
+kind: ControllerInstallation
+metadata:
+  name: os-coreos
+spec:
+  registrationRef:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: ControllerRegistration
+    name: os-coreos
+  seedRef:
+    apiVersion: core.gardener.cloud/v1alpha1
+    kind: Seed
+    name: aws

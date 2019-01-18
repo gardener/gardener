@@ -15,7 +15,9 @@
 package initializer
 
 import (
-	"github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
+	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/internalversion"
+	coreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
+	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 
 	"k8s.io/apiserver/pkg/admission"
@@ -23,6 +25,18 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 )
+
+// WantsInternalCoreInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
+type WantsInternalCoreInformerFactory interface {
+	SetInternalCoreInformerFactory(coreinformers.SharedInformerFactory)
+	admission.InitializationValidator
+}
+
+// WantsInternalCoreClientset defines a function which sets Core Clientset for admission plugins that need it.
+type WantsInternalCoreClientset interface {
+	SetInternalCoreClientset(coreclientset.Interface)
+	admission.InitializationValidator
+}
 
 // WantsInternalGardenInformerFactory defines a function which sets InformerFactory for admission plugins that need it.
 type WantsInternalGardenInformerFactory interface {
@@ -32,7 +46,7 @@ type WantsInternalGardenInformerFactory interface {
 
 // WantsInternalGardenClientset defines a function which sets Garden Clientset for admission plugins that need it.
 type WantsInternalGardenClientset interface {
-	SetInternalGardenClientset(internalversion.Interface)
+	SetInternalGardenClientset(gardenclientset.Interface)
 	admission.InitializationValidator
 }
 
@@ -55,8 +69,11 @@ type WantsAuthorizer interface {
 }
 
 type pluginInitializer struct {
+	coreInformers coreinformers.SharedInformerFactory
+	coreClient    coreclientset.Interface
+
 	gardenInformers gardeninformers.SharedInformerFactory
-	gardenClient    internalversion.Interface
+	gardenClient    gardenclientset.Interface
 
 	kubeInformers kubeinformers.SharedInformerFactory
 	kubeClient    kubernetes.Interface

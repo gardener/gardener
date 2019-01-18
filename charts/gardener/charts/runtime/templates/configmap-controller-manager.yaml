@@ -13,7 +13,7 @@ metadata:
 data:
   config.yaml: |
     ---
-    apiVersion: componentconfig.sapcloud.io/v1alpha1
+    apiVersion: controllermanager.config.gardener.cloud/v1alpha1
     kind: ControllerManagerConfiguration
     clientConnection:
       acceptContentTypes: {{ required ".Values.global.controller.config.clientConnection.acceptContentTypes is required" .Values.global.controller.config.clientConnection.acceptContentTypes }}
@@ -30,6 +30,14 @@ data:
       {{- if .Values.global.controller.config.controllers.cloudProfile }}
       cloudProfile:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.cloudProfile.concurrentSyncs is required" .Values.global.controller.config.controllers.cloudProfile.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.controllerRegistration }}
+      controllerRegistration:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerRegistration.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.controller.config.controllers.controllerInstallation }}
+      controllerInstallation:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.controllerInstallation.concurrentSyncs is required" .Values.global.controller.config.controllers.controllerInstallation.concurrentSyncs }}
       {{- end }}
       {{- if .Values.global.controller.config.controllers.secretBinding }}
       secretBinding:

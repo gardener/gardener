@@ -1,5 +1,5 @@
 ---
-apiVersion: componentconfig.sapcloud.io/v1alpha1
+apiVersion: controllermanager.config.gardener.cloud/v1alpha1
 kind: ControllerManagerConfiguration
 clientConnection:
   acceptContentTypes: application/json

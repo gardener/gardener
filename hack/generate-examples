@@ -25,7 +25,7 @@ for cloud in aws azure gcp alicloud openstack local; do
 done
 
 # render cloud-independent templates
-for template in 05-project-dev 60-quota 95-configmap-custom-audit-policy; do
+for template in 05-project-dev 25-controllerregistration 25-controllerinstallation 60-quota 95-configmap-custom-audit-policy; do
   echo "* Template '$template' rendered."
   mako-render "$PATH_TEMPLATES/$template.yaml.tpl" > "$PATH_EXAMPLES/$template.yaml"
 done

@@ -43,7 +43,7 @@ func New(projectLister gardenlisters.ProjectLister, namespace string) (*Garden, 
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
-func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, runningInCluster bool) (map[string]*corev1.Secret, error) {
+func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[string]*corev1.Secret, error) {
 	var (
 		secretsMap                                  = make(map[string]*corev1.Secret)
 		numberOfInternalDomainSecrets               = 0
@@ -96,7 +96,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory, running
 		// Retrieving alerting SMTP secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role alerting-smtp.
 		// Only when using the in-cluster config as we do not want to configure alerts in development modus.
-		if labels[common.GardenRole] == common.GardenRoleAlertingSMTP && runningInCluster {
+		if labels[common.GardenRole] == common.GardenRoleAlertingSMTP {
 			alertingSMTP := secret
 			secretsMap[fmt.Sprintf("%s-%s", common.GardenRoleAlertingSMTP, name)] = alertingSMTP
 			logger.Logger.Infof("Found alerting SMTP secret %s.", name)

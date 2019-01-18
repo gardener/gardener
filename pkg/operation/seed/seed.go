@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
@@ -223,7 +224,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		basicAuth      string
 		kibanaHost     string
 		replicas       int
-		loggingEnabled = features.ControllerFeatureGate.Enabled(features.Logging)
+		loggingEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 	)
 
 	if loggingEnabled {
@@ -257,7 +258,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	// Certificate Management feature gate
 	var (
 		clusterIssuer      map[string]interface{}
-		certManagerEnabled = features.ControllerFeatureGate.Enabled(features.CertificateManagement)
+		certManagerEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement)
 	)
 
 	if certManagerEnabled {

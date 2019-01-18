@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -79,6 +80,11 @@ func (c *Clientset) Garden() gardenclientset.Interface {
 	return c.garden
 }
 
+// GardenCore will return the gardenCore attribute of the Client object.
+func (c *Clientset) GardenCore() gardencoreclientset.Interface {
+	return c.gardenCore
+}
+
 // Machine will return the machine attribute of the Client object.
 func (c *Clientset) Machine() machineclientset.Interface {
 	return c.machine
@@ -102,6 +108,11 @@ func (c *Clientset) RESTClient() rest.Interface {
 // SetGarden will set the garden attribute of the Client object.
 func (c *Clientset) SetGarden(client gardenclientset.Interface) {
 	c.garden = client
+}
+
+// SetGardenCore will set the gardenCore attribute of the Client object.
+func (c *Clientset) SetGardenCore(client gardencoreclientset.Interface) {
+	c.gardenCore = client
 }
 
 // Version returns the GitVersion of the Kubernetes client stored on the object.

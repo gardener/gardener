@@ -15,9 +15,10 @@
 package apiserver
 
 import (
-	genericapiserver "k8s.io/apiserver/pkg/server"
-
+	corerest "github.com/gardener/gardener/pkg/registry/core/rest"
 	gardenrest "github.com/gardener/gardener/pkg/registry/garden/rest"
+
+	genericapiserver "k8s.io/apiserver/pkg/server"
 )
 
 type ExtraConfig struct {
@@ -59,13 +60,21 @@ func (c completedConfig) New() (*GardenerServer, error) {
 	if err != nil {
 		return nil, err
 	}
-	s := &GardenerServer{
-		GenericAPIServer: genericServer,
-	}
 
-	gardenStorageProvider := gardenrest.StorageProvider{}
-	apiGroupInfo := gardenStorageProvider.NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
-	if err := s.GenericAPIServer.InstallAPIGroup(&apiGroupInfo); err != nil {
+	var (
+		s = &GardenerServer{GenericAPIServer: genericServer}
+
+		coreStorageProvider = corerest.StorageProvider{}
+		coreAPIGroupInfo    = coreStorageProvider.NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+
+		gardenStorageProvider = gardenrest.StorageProvider{}
+		gardenAPIGroupInfo    = gardenStorageProvider.NewRESTStorage(c.GenericConfig.RESTOptionsGetter)
+	)
+
+	if err := s.GenericAPIServer.InstallAPIGroup(&coreAPIGroupInfo); err != nil {
+		return nil, err
+	}
+	if err := s.GenericAPIServer.InstallAPIGroup(&gardenAPIGroupInfo); err != nil {
 		return nil, err
 	}
 

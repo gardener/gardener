@@ -17,6 +17,7 @@ package chartrenderer
 // ChartRenderer is an interface for rendering Helm Charts from path, name, namespace and values.
 type ChartRenderer interface {
 	Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error)
+	RenderArchive(archive []byte, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error)
 }
 
 // RenderedChart holds a map of rendered templates file with template file name as key and
