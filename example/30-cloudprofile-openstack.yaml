@@ -17,8 +17,8 @@ spec:
       - name: MY-FLOATING-POOL
       kubernetes:
         versions:
-        - 1.13.1
-        - 1.12.4
+        - 1.13.2
+        - 1.12.5
         - 1.11.6
         - 1.10.12
       loadBalancerProviders:

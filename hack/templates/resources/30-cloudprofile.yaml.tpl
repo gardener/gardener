@@ -69,8 +69,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.13.1
-        - 1.12.4
+        - 1.13.2
+        - 1.12.5
         - 1.11.6
         - 1.10.12
         % endif
@@ -174,8 +174,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.13.1
-        - 1.12.4
+        - 1.13.2
+        - 1.12.5
         - 1.11.6
         - 1.10.12
         % endif
@@ -275,8 +275,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.13.1
-        - 1.12.4
+        - 1.13.2
+        - 1.12.5
         - 1.11.6
         - 1.10.12
         % endif
@@ -364,8 +364,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
         versions:
-        - 1.13.1
-        - 1.12.4
+        - 1.13.2
+        - 1.12.5
         - 1.11.6
         - 1.10.12
         % endif
@@ -454,8 +454,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
-        - 1.13.1
-        - 1.12.4
+        - 1.13.2
+        - 1.12.5
         - 1.11.6
         - 1.10.12
         % endif
