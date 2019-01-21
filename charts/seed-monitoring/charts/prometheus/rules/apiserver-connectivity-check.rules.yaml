@@ -1,0 +1,13 @@
+groups:
+- name: apiserver-connectivity-check.rules
+  rules:
+  - alert: ApiServerUnreachableViaKubernetesService
+    expr: probe_success{job="blackbox-exporter-k8s-service-check"} != 1
+    for: 3m
+    labels:
+      service: apiserver-connectivity-check
+      severity: critical
+      type: shoot
+    annotations:
+      summary: Api server unreachable via the kubernetes service.
+      description: The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.

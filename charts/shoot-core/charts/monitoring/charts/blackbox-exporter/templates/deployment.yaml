@@ -1,0 +1,50 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  namespace: kube-system
+  labels:
+    garden.sapcloud.io/role: system-component
+    component: blackbox-exporter
+    addonmanager.kubernetes.io/mode: Reconcile
+    origin: gardener
+spec:
+  revisionHistoryLimit: 0
+  replicas: 1
+  selector:
+    matchLabels:
+      component: blackbox-exporter
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-blackbox-exporter-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+      labels:
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+        component: blackbox-exporter
+    spec:
+      containers:
+      - name: blackbox-exporter
+        image: {{ index .Values.images "blackbox-exporter" }}
+        args:
+        - --config.file=/etc/blackbox_exporter/blackbox.yaml
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 5m
+            memory: 5Mi
+          limits:
+            cpu: 10m
+            memory: 35Mi
+        ports:
+        - containerPort: 9115
+          protocol: TCP
+          name: probe
+        volumeMounts:
+        - name: blackbox-exporter-config
+          mountPath: /etc/blackbox_exporter
+      volumes:
+      - name: blackbox-exporter-config
+        configMap:
+          name: blackbox-exporter-config
+

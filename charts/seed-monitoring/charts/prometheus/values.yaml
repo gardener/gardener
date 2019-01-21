@@ -166,6 +166,11 @@ allowedMetrics:
   - prometheus_tsdb_reloads_failures_total
   - prometheus_tsdb_reloads_total
   - prometheus_tsdb_wal_corruptions_total
+  blackboxExporter:
+  - probe_duration_seconds
+  - probe_http_duration_seconds
+  - probe_success
+  - probe_http_status_code
 
 seed:
   apiserver: https://api.foo.bar

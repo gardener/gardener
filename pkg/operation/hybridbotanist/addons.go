@@ -84,7 +84,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 				"checksum/secret-vpn-shoot": b.CheckSums["vpn-shoot"],
 			},
 		}
-		nodeExporterConfig = map[string]interface{}{}
+		nodeExporterConfig     = map[string]interface{}{}
+		blackboxExporterConfig = map[string]interface{}{}
 	)
 
 	proxyConfig := b.Shoot.Info.Spec.Kubernetes.KubeProxy
@@ -120,7 +121,10 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
-
+	blackboxExporter, err := b.Botanist.InjectImages(blackboxExporterConfig, b.ShootVersion(), b.ShootVersion(), common.BlackboxExporterImageName)
+	if err != nil {
+		return nil, err
+	}
 	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "vpn-shoot", corev1.SecretTypeOpaque, vpnShootSecret.Data, true); err != nil {
 		return nil, err
 	}
@@ -135,7 +139,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"calico":              calico,
 		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
-			"node-exporter": nodeExporter,
+			"node-exporter":     nodeExporter,
+			"blackbox-exporter": blackboxExporter,
 		},
 		"cert-broker": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement),

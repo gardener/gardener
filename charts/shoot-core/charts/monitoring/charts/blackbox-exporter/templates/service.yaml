@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: blackbox-exporter
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    component: blackbox-exporter
+spec:
+  type: ClusterIP
+  ports:
+  - name: probe
+    port: 9115
+    protocol: TCP
+  selector:
+    component: blackbox-exporter
