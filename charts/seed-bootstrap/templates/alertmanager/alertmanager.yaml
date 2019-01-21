@@ -64,9 +64,16 @@ spec:
         imagePullPolicy: IfNotPresent
         args:
         - --config.file=/etc/alertmanager/config/alertmanager.yaml
+        - --cluster.listen-address=$(POD_IP):6783
+        - --cluster.advertise-address=$(POD_IP):6783
         - --web.listen-address=:9093
         - --storage.path=/var/alertmanager/data
         - --log.level=info
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         ports:
         - containerPort: 9093
           name: web
