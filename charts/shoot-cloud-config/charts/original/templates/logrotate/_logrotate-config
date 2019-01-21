@@ -1,0 +1,6 @@
+{{- define "logrotate-config" -}}
+- path: /etc/logrotate.d/docker.conf
+  permissions: 0644
+  content: |
+{{ include "docker-config" . | indent 4 }}
+{{- end -}}

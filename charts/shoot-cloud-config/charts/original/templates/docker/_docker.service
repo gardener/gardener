@@ -1,9 +1,0 @@
-{{- define "docker" -}}
-{{/* enable docker log rotation */ -}}
-- name: docker.service
-  drop-ins:
-  - name: 10-docker-opts.conf
-    content: |
-      [Service]
-      Environment="DOCKER_OPTS=--log-opt max-size=60m --log-opt max-file=3"
-{{- end}}
