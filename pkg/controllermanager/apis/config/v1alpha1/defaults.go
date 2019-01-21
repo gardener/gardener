@@ -99,6 +99,16 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		var defaultBackupInfrastructureDeletionGracePeriodDays = DefaultBackupInfrastructureDeletionGracePeriodDays
 		obj.Controllers.BackupInfrastructure.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
 	}
+
+	if obj.ShootBackup == nil {
+		obj.ShootBackup = &ShootBackup{
+			Schedule: DefaultETCDBackupSchedule,
+		}
+	} else {
+		if len(obj.ShootBackup.Schedule) == 0 {
+			obj.ShootBackup.Schedule = DefaultETCDBackupSchedule
+		}
+	}
 }
 
 // SetDefaults_ClientConnection sets defaults for the client connection.

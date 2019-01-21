@@ -18,11 +18,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const cloudProviderConfigTemplate = `
@@ -196,8 +195,7 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	backupConfigData := map[string]interface{}{
-		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
-		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"schedule":         b.Operation.ShootBackup.Schedule,
 		"storageProvider":  "S3",
 		"storageContainer": stateVariables[bucketName],
 		"backupSecret":     common.BackupSecretName,

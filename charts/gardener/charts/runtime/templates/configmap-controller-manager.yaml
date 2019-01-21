@@ -115,6 +115,10 @@ data:
         tls:
           serverCertPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.crt
           serverKeyPath: /etc/gardener-controller-manager/srv/gardener-controller-manager.key
+    {{- if .Values.global.controller.config.shootBackup }}
+    shootBackup:
+      schedule: {{ required ".Values.global.controller.config.shootBackup.schedule is required" .Values.global.controller.config.shootBackup.schedule }}
+    {{- end }}
     {{- if .Values.global.controller.config.featureGates }}
     featureGates:
 {{ toYaml .Values.global.controller.config.featureGates | indent 6 }}

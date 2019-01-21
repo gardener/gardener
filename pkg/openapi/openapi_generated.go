@@ -2255,18 +2255,18 @@ func schema_pkg_apis_garden_v1beta1_Backup(ref common.ReferenceCallback) common.
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "Backup holds information about the backup schedule and maximum.",
+				Description: "Backup - DEPRECATED: This struct will be removed in a future version.",
 				Properties: map[string]spec.Schema{
 					"schedule": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Schedule defines the cron schedule according to which a backup is taken from etcd.",
+							Description: "DEPRECATED: This field will be removed in a future version.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 					"maximum": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Maximum indicates how many backups should be kept at maximum.",
+							Description: "DEPRECATED: This field will be removed in a future version.",
 							Type:        []string{"integer"},
 							Format:      "int32",
 						},
@@ -5555,7 +5555,7 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 					},
 					"backup": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Backup contains configuration settings for the etcd backups.",
+							Description: "DEPRECATED: This field will be removed in a future version.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup"),
 						},
 					},

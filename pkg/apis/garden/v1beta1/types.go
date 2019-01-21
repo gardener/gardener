@@ -660,7 +660,7 @@ type ShootSpec struct {
 	// Addons contains information about enabled/disabled addons and their configuration.
 	// +optional
 	Addons *Addons `json:"addons,omitempty"`
-	// Backup contains configuration settings for the etcd backups.
+	// DEPRECATED: This field will be removed in a future version.
 	// +optional
 	Backup *Backup `json:"backup,omitempty"`
 	// Cloud contains information about the cloud environment and their specific settings.
@@ -1118,11 +1118,11 @@ type Kube2IAMRole struct {
 	Policy string `json:"policy"`
 }
 
-// Backup holds information about the backup schedule and maximum.
+// Backup - DEPRECATED: This struct will be removed in a future version.
 type Backup struct {
-	// Schedule defines the cron schedule according to which a backup is taken from etcd.
+	// DEPRECATED: This field will be removed in a future version.
 	Schedule string `json:"schedule"`
-	// Maximum indicates how many backups should be kept at maximum.
+	// DEPRECATED: This field will be removed in a future version.
 	Maximum int `json:"maximum"`
 }
 
@@ -1455,12 +1455,6 @@ const (
 	DefaultPodNetworkCIDR = CIDR("100.96.0.0/11")
 	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
 	DefaultServiceNetworkCIDR = CIDR("100.64.0.0/13")
-	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (5 minutes).
-	DefaultETCDBackupSchedule = "0 */24 * * *"
-	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
-	DefaultETCDBackupMaximum = 7
-	// MinimumETCDFullBackupTimeInterval is the time interval between consecutive full backups.
-	MinimumETCDFullBackupTimeInterval = 24 * time.Hour
 )
 
 ////////////////////////

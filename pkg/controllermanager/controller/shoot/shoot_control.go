@@ -294,7 +294,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	shootJSON, _ := json.Marshal(shoot)
 	shootLogger.Debugf(string(shootJSON))
 
-	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector)
+	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector, c.config.ShootBackup)
 	if err != nil {
 		shootLogger.Errorf("Could not initialize a new operation: %s", err.Error())
 		return true, err

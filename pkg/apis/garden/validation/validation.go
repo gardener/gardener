@@ -973,8 +973,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	}
 
 	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
-	allErrs = append(allErrs, validateBackup(spec.Backup, fldPath.Child("backup"))...)
-	allErrs = append(allErrs, validateCloud(spec.Cloud, spec.Hibernation, fldPath.Child("cloud"))...)
+	allErrs = append(allErrs, validateCloud(spec.Cloud, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
@@ -1056,23 +1055,7 @@ func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList 
 	return allErrs
 }
 
-func validateBackup(backup *garden.Backup, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if backup == nil {
-		return allErrs
-	}
-	if _, err := cron.ParseStandard(backup.Schedule); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("schedule"), backup.Schedule, "schedule must be in standard cron format"))
-	}
-	if backup.Maximum <= 0 {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("maximum"), backup.Maximum, "maximum number must be greater than zero"))
-	}
-
-	return allErrs
-}
-
-func validateCloud(cloud garden.Cloud, hibernation *garden.Hibernation, fldPath *field.Path) field.ErrorList {
+func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 	workerNames := make(map[string]bool)
 

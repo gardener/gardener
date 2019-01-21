@@ -178,6 +178,8 @@ global:
               -----BEGIN RSA PRIVATE KEY-----
               ...
               -----END RSA PRIVATE KEY-----
+      shootBackup:
+        schedule: "0 */24 * * *"
       featureGates: {}
 
   # Deployment related configuration

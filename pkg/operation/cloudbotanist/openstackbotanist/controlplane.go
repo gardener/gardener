@@ -179,8 +179,7 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 	}
 
 	backupConfigData := map[string]interface{}{
-		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
-		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"schedule":         b.Operation.ShootBackup.Schedule,
 		"storageProvider":  "Swift",
 		"storageContainer": stateVariables[containerName],
 		"env": []map[string]interface{}{

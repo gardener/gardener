@@ -16,8 +16,7 @@ package v1alpha1
 
 import (
 	// TODO: Should be k8s.io/component-base/config/v1alpha1 in the future.
-	apimachineryconfigv1alpha1 "k8s.io/apimachinery/pkg/apis/config/v1alpha1"
-	// TODO: Should be k8s.io/component-base/config/v1alpha1 in the future.
+	apimachineryconfigv1alpha1 "k8s.io/apimachinery/pkg/apis/config/v1alpha1" // TODO: Should be k8s.io/component-base/config/v1alpha1 in the future.
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiserverconfigv1alpha1 "k8s.io/apiserver/pkg/apis/config/v1alpha1"
 	"k8s.io/klog"
@@ -45,6 +44,9 @@ type ControllerManagerConfiguration struct {
 	KubernetesLogLevel klog.Level `json:"kubernetesLogLevel"`
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration `json:"server"`
+	// ShootBackup contains configuration settings for the etcd backups.
+	// +optional
+	ShootBackup *ShootBackup `json:"shootBackup,omitempty"`
 	// FeatureGates is a map of feature names to bools that enable or disable alpha/experimental
 	// features. This field modifies piecemeal the built-in default values from
 	// "github.com/gardener/gardener/pkg/features/gardener_features.go".
@@ -153,7 +155,7 @@ type SeedControllerConfiguration struct {
 	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
-// ShootControllerConfiguration defines the configuration of the CloudProfile
+// ShootControllerConfiguration defines the configuration of the Shoot
 // controller.
 type ShootControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
@@ -279,6 +281,12 @@ type TLSServer struct {
 	ServerKeyPath string `json:"serverKeyPath"`
 }
 
+// ShootBackup holds information about backup settings.
+type ShootBackup struct {
+	// Schedule defines the cron schedule according to which a backup is taken from etcd.
+	Schedule string `json:"schedule"`
+}
+
 const (
 	// ControllerManagerDefaultLockObjectNamespace is the default lock namespace for leader election.
 	ControllerManagerDefaultLockObjectNamespace = "garden"
@@ -289,4 +297,7 @@ const (
 	// DefaultBackupInfrastructureDeletionGracePeriodDays is a constant for the default number of days the Backup Infrastructure should be kept after shoot is deleted.
 	// By default we set this to 0 so that then BackupInfrastructureController will trigger deletion immediately.
 	DefaultBackupInfrastructureDeletionGracePeriodDays = 0
+
+	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (daily).
+	DefaultETCDBackupSchedule = "0 */24 * * *"
 )

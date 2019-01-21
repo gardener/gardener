@@ -132,8 +132,7 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	backupConfigData := map[string]interface{}{
-		"schedule":         b.Shoot.Info.Spec.Backup.Schedule,
-		"maxBackups":       b.Shoot.Info.Spec.Backup.Maximum,
+		"schedule":         b.Operation.ShootBackup.Schedule,
 		"storageProvider":  "GCS",
 		"storageContainer": stateVariables[bucketName],
 		"env": []map[string]interface{}{

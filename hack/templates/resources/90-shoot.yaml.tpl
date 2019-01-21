@@ -306,6 +306,10 @@ spec:
     autoUpdate:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
   % if cloud != "local":
+  # Backup configuration for Shoot clusters is deprecated and no longer supported.
+  # The responsibility for these settings has been shifted to Garden administrators.
+  # This field will be removed in the future and is only kept for API compatibility reasons. It is not
+  # evaluated or respected at all. Please do not use this field anymore.
   backup:
     schedule: ${value("backup.schedule", "\"0 */24 * * *\"")}
     maximum: ${value("backup.maximum", "7")}
@@ -353,7 +357,7 @@ spec:
     # Heapster addon is deprecated and no longer supported. Gardener deploys the Kubernetes metrics-server
     # into the kube-system namespace of shoots (cannot be turned off) for fetching metrics and enabling
     # horizontal pod auto-scaling.
-    # This field will be removed in the future in is only kept for API compatibility reasons. It is not
+    # This field will be removed in the future and is only kept for API compatibility reasons. It is not
     # evaluated or respected at all. Please do not use this field anymore.
     heapster:
       enabled: false
@@ -369,7 +373,7 @@ spec:
       enabled: ${value("spec.addons.kube-lego.enabled", "true")}
       email: ${value("spec.addons.kube-lego.email", "john.doe@example.com")}
     # Monocular addon is deprecated and no longer supported.
-    # This field will be removed in the future in is only kept for API compatibility reasons. It is not
+    # This field will be removed in the future and is only kept for API compatibility reasons. It is not
     # evaluated or respected at all. You should deploy Monocular on your own instead of enabling it here.
     # Please do not use this field anymore.
     monocular:
