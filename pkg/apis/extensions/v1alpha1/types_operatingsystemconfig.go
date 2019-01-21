@@ -147,7 +147,7 @@ type OperatingSystemConfigStatus struct {
 	// "/usr/bin/reload-cloud-config -from-file=<path>". The <path> is optionally provided by Gardener
 	// in the .spec.reloadConfigFilePath field.
 	// +optional
-	Command string `json:"command,omitempty"`
+	Command *string `json:"command,omitempty"`
 	// Units is a list of systemd unit names that are part of the generated Cloud Config and shall be
 	// restarted when a new version has been downloaded.
 	// +optional

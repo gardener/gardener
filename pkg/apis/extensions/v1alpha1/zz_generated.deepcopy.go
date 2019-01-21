@@ -323,6 +323,11 @@ func (in *OperatingSystemConfigStatus) DeepCopyInto(out *OperatingSystemConfigSt
 		*out = new(CloudConfig)
 		**out = **in
 	}
+	if in.Command != nil {
+		in, out := &in.Command, &out.Command
+		*out = new(string)
+		**out = **in
+	}
 	if in.Units != nil {
 		in, out := &in.Units, &out.Units
 		*out = make([]string, len(*in))
