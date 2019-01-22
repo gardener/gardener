@@ -77,6 +77,7 @@ spec:
         - --collector.filesystem.ignored-fs-types=^(tmpfs|cgroup|nsfs|fuse\.lxcfs|rpc_pipefs)$
         - --collector.filesystem.ignored-mount-points=^/(rootfs/|host/)?(sys|proc|dev|host|etc|var/lib/docker)($|/)
         - --web.listen-address=:9100
+        - --log.level=error
         ports:
         - containerPort: 9100
           protocol: TCP
