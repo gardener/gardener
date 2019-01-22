@@ -52,6 +52,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 	store := &genericregistry.Store{
 		NewFunc:                  func() runtime.Object { return &garden.Shoot{} },
 		NewListFunc:              func() runtime.Object { return &garden.ShootList{} },
+		PredicateFunc:            shoot.MatchShoot,
 		DefaultQualifiedResource: garden.Resource("shoots"),
 		EnableGarbageCollection:  true,
 
@@ -61,7 +62,7 @@ func NewREST(optsGetter generic.RESTOptionsGetter) (*REST, *StatusREST) {
 
 		TableConvertor: newTableConvertor(),
 	}
-	options := &generic.StoreOptions{RESTOptions: optsGetter}
+	options := &generic.StoreOptions{RESTOptions: optsGetter, AttrFunc: shoot.GetAttrs, TriggerFunc: shoot.SeedTriggerFunc}
 	if err := store.CompleteWithOptions(options); err != nil {
 		panic(err)
 	}
