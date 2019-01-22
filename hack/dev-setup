@@ -47,7 +47,7 @@ mkdir -p ${DEV_DIR}
 cp ${EXAMPLE_DIR}/20-componentconfig-gardener-controller-manager.yaml ${DEV_DIR}/
 
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden.yaml
-kubectl apply -f ${EXAMPLE_DIR}/06-namespace-garden-dev.yaml
+kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
 
 cat <<EOF | kubectl apply -f -
 apiVersion: apps/v1

@@ -60,5 +60,9 @@ spec:<% owner = value("spec.owner", {}); description = value("spec.description",
   % if namespace != "":
   namespace: ${namespace}
   % else:
-# namespace: "garden-dev" # Optional, will be initialized if unset.
+  # The `spec.namespace` field is optional and will be initialized if unset - the resulting
+  # namespace will be generated and look like "garden-dev-<random-chars>", e.g. "garden-dev-5z43z".
+  # If the namespace is set then the namespace must be labelled with `garden.sapcloud.io/role: project`
+  # and `project.garden.sapcloud.io/name: <project-name>` (<project-name>=dev in this case).
+  namespace: garden-dev
   % endif
