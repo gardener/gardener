@@ -146,7 +146,7 @@ images:
 - name: fluentd-es
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/fluentd-es
-  tag: "0.16.0"
+  tag: "0.17.0"
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
@@ -154,11 +154,11 @@ images:
 - name: elasticsearch-oss
   sourceRepository: github.com/elastic/elasticsearch-docker
   repository: docker.elastic.co/elasticsearch/elasticsearch-oss
-  tag: "6.5.4"
+  tag: "0.17.0"
 - name: curator-es
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/curator-es
-  tag: "0.16.0"
+  tag: "0.17.0"
 - name: kibana-oss
   sourceRepository: github.com/elastic/kibana-docker
   repository: docker.elastic.co/kibana/kibana-oss
