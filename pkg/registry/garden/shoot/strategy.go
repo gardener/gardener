@@ -152,7 +152,7 @@ func ToSelectableFields(shoot *garden.Shoot) fields.Set {
 	// field here or the number of object-meta related fields changes, this should
 	// be adjusted.
 	shootSpecificFieldsSet := make(fields.Set, 3)
-	shootSpecificFieldsSet[garden.ShootSeedName] = getShootName(shoot)
+	shootSpecificFieldsSet[garden.ShootSeedName] = getSeedName(shoot)
 	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &shoot.ObjectMeta, true)
 }
 
@@ -169,7 +169,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 func SeedTriggerFunc(obj runtime.Object) []storage.MatchValue {
 	shoot := obj.(*garden.Shoot)
 
-	result := storage.MatchValue{IndexName: garden.ShootSeedName, Value: getShootName(shoot)}
+	result := storage.MatchValue{IndexName: garden.ShootSeedName, Value: getSeedName(shoot)}
 	return []storage.MatchValue{result}
 }
 
@@ -183,7 +183,7 @@ func MatchShoot(label labels.Selector, field fields.Selector) storage.SelectionP
 	}
 }
 
-func getShootName(shoot *garden.Shoot) string {
+func getSeedName(shoot *garden.Shoot) string {
 	if shoot.Spec.Cloud.Seed == nil {
 		return ""
 	}
