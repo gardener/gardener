@@ -417,7 +417,7 @@ In this step we create a namespace in Gardener cluster to keep Shoot
 resource definitions. A `project` in Gardener terminology is simply a
 namespace that holds group of Shoots, during this example we'll deploy
 a single Shoot. (Mind the extra labels defined in
-[example/06-namespace-garden-dev.yaml](../../example/06-namespace-garden-dev.yaml)).
+[example/00-namespace-garden-dev.yaml](../../example/00-namespace-garden-dev.yaml)).
 
 ```
 kubectl apply -f example/05-project-dev.yaml
