@@ -218,7 +218,7 @@ data:
         Name                parser
         Match               kubernetes.*lb-readvertiser*lb-readvertiser*
         Key_Name            log
-        Parser              geacParser
+        Parser              lbReadvertiserParser
         Reserve_Data        True
 
     [FILTER]
@@ -239,8 +239,7 @@ data:
         Name                parser
         Match               kubernetes.kube-addon-manager*kube-addon-manager*
         Key_Name            log
-        Parser              addonmanagerSeverityParser
-        Parser.             addonmanagerParser
+        Parser              addonmanagerParser
         Reserve_Data        True
 
     [FILTER]
@@ -253,10 +252,10 @@ data:
         tls.verify          Off
 
     [FILTER]
-        Name    lua
-        Match   *
-        script  modify_severity.lua
-        call    cb_modify
+        Name                lua
+        Match               *
+        script              modify_severity.lua
+        call                cb_modify
 
   output-fluentd.conf: |
     [OUTPUT]
@@ -363,6 +362,13 @@ data:
         Time_Format %Y-%m-%dT%H:%M:%S.%L
 
     [PARSER]
+        Name        lbReadvertiserParser
+        Format      regex
+        Regex       ^time="(?<time>\d{4}-\d{2}-\d{2}T[^"]*)"\s+level=(?<severity>\w+)\smsg="(?<log>.*)"
+        Time_Key    time
+        Time_Format %Y-%m-%dT%H:%M:%S%Z
+
+    [PARSER]
         Name        grafanaParser
         Format      regex
         Regex       ^t=(?<time>\d{4}-\d{2}-\d{2}T[^ ]*)\s+lvl=(?<severity>\w+)\smsg="(?<log>.*)"\s+logger=(?<source>.*)
@@ -370,14 +376,9 @@ data:
         Time_Format %Y-%m-%dT%H:%M:%S%z
 
     [PARSER]
-        Name        addonmanagerSeverityParser
-        Format      regex
-        Regex       ^(?<severity>.[^:]*):\s==\s(?<log>.*)
-
-    [PARSER]
         Name        addonmanagerParser
         Format      regex
-        Regex       ^(?<log>.*)
+        Regex       ^(?<severity>.[^:]*):\s(?<log>.*)
 
   modify_severity.lua: |-
     function cb_modify(tag, timestamp, record)
