@@ -35,9 +35,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/retry"
@@ -277,7 +277,9 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 
 	// AlertManager configuration
 
-	alertManagerConfig := map[string]interface{}{}
+	alertManagerConfig := map[string]interface{}{
+		"storage": seed.GetValidVolumeSize("1Gi"),
+	}
 	if alertingSMTPKeys := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPKeys) > 0 {
 		emailConfigs := make([]map[string]interface{}, 0, len(alertingSMTPKeys))
 		for _, key := range alertingSMTPKeys {
@@ -316,6 +318,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		},
 		"prometheus": map[string]interface{}{
 			"objectCount": nodeCount,
+			"storage":     seed.GetValidVolumeSize("10Gi"),
 		},
 		"elastic-kibana-curator": map[string]interface{}{
 			"enabled": loggingEnabled,
@@ -486,4 +489,24 @@ func (s *Seed) CheckMinimumK8SVersion() error {
 // MustReserveExcessCapacity configures whether we have to reserve excess capacity in the Seed cluster.
 func (s *Seed) MustReserveExcessCapacity(must bool) {
 	s.reserveExcessCapacity = must
+}
+
+// GetValidVolumeSize is to get a valid volume size.
+// If the given size is smaller than the minimum volume size permitted by cloud provider on which seed cluster is running, it will return the minimum size.
+func (s *Seed) GetValidVolumeSize(size string) string {
+	if s.Info.Annotations == nil {
+		return size
+	}
+
+	smv, ok := s.Info.Annotations[common.AnnotatePersistentVolumeMinimumSize]
+	if ok {
+		if qmv, err := resource.ParseQuantity(smv); err == nil {
+			qs, err := resource.ParseQuantity(size)
+			if err == nil && qs.Cmp(qmv) < 0 {
+				return smv
+			}
+		}
+	}
+
+	return size
 }

@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-plugin
+  name: csi-disk-plugin-alicloud
   namespace: kube-system
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
@@ -10,7 +10,7 @@ metadata:
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
-  name: garden.sapcloud.io:psp:kube-system:csi-plugin
+  name: garden.sapcloud.io:psp:kube-system:csi-disk-plugin-alicloud
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 rules:
@@ -30,7 +30,7 @@ rules:
     - policy
     - extensions
     resourceNames:
-    - gardener.kube-system.csi-plugin
+    - gardener.kube-system.csi-disk-plugin-alicloud
     resources:
     - podsecuritypolicies
     verbs:
@@ -40,15 +40,15 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
-  name: garden.sapcloud.io:psp:csi-plugin
+  name: garden.sapcloud.io:psp:csi-disk-plugin-alicloud
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 subjects:
   - kind: ServiceAccount
-    name: csi-plugin
+    name: csi-disk-plugin-alicloud
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: garden.sapcloud.io:psp:kube-system:csi-plugin
+  name: garden.sapcloud.io:psp:kube-system:csi-disk-plugin-alicloud
   apiGroup: rbac.authorization.k8s.io
 {{- end -}}

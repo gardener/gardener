@@ -324,7 +324,7 @@ func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrende
 		"cloudProvider": o.Shoot.CloudProvider,
 	}
 
-	values, err := o.InjectImages(config, o.SeedVersion(), o.ShootVersion(), common.HyperkubeImageName)
+	values, err := o.InjectImages(config, o.SeedVersion(), common.KubectlVersion, common.HyperkubeImageName)
 	if err != nil {
 		return nil, err
 	}

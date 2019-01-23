@@ -1,9 +1,12 @@
 {{- define "kubelet-flags" -}}
 --allow-privileged=true \
 --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
-{{- if eq .cloudProvider.name "alicloud" }}
---cloud-provider=external \
+{{- if.kubernetes.kubelet.providerIDProvided }}
 --provider-id=${PROVIDER_ID} \
+{{- end }}
+{{- if .kubernetes.kubelet.enableCSI }}
+--cloud-provider=external \
+--enable-controller-attach-detach=true \
 {{- else }}
 --cloud-provider={{ .cloudProvider.name }} \
 {{- if .cloudProvider.config }}

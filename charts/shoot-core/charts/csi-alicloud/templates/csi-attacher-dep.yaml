@@ -1,6 +1,6 @@
 {{- if .Values.enabled }}
 kind: Deployment
-apiVersion: apps/v1
+apiVersion: {{ include "deploymentversion" . }}
 metadata:
   name: csi-attacher
   namespace: kube-system
@@ -29,6 +29,9 @@ spec:
     spec:
       priorityClassName: system-cluster-critical
       serviceAccount: csi-attacher
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
       containers:
         - name: csi-attacher
           image: {{ index .Values.images "csi-attacher" }}

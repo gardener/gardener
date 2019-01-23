@@ -1,4 +1,3 @@
-{{- if .Values.defaultCCM -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -129,4 +128,3 @@ spec:
       - name: cloudprovider
         secret:
           secretName: cloudprovider
-{{- end }}

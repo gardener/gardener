@@ -127,11 +127,11 @@ func (b *AWSBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the cloud-controller-manager properly.
-func (b *AWSBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
+func (b *AWSBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error) {
 	return map[string]interface{}{
 		"configureRoutes": false,
 		"environment":     getAWSCredentialsEnvironment(),
-	}, nil
+	}, common.CloudControllerManagerDeploymentName, nil
 }
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to

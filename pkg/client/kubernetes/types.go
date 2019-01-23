@@ -86,6 +86,9 @@ const (
 
 	// StatefulSets is a constant for a Kubernetes resource with the same name.
 	StatefulSets = "statefulsets"
+
+	// PersistentVolumes is a constant for a Kubernetes resource with the same name.
+	PersistentVolumes = "persistentvolumes"
 )
 
 var (

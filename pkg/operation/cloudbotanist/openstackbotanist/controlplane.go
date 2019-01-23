@@ -138,8 +138,8 @@ func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the cloud-controller-manager properly.
-func (b *OpenStackBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
-	return nil, nil
+func (b *OpenStackBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error) {
+	return nil, common.CloudControllerManagerDeploymentName, nil
 }
 
 // GenerateCSIConfig generates the configuration for CSI charts

@@ -1,18 +1,18 @@
 {{- if .Values.enabled }}
 kind: DaemonSet
-apiVersion: apps/v1beta2
+apiVersion: {{ include "daemonsetversion" . }}
 metadata:
-  name: csi-plugin
+  name: csi-disk-plugin-alicloud
   namespace: kube-system
   labels:
     origin: gardener
     garden.sapcloud.io/role: system-component
-    app: csi-plugin
+    app: csi-disk-plugin-alicloud
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
   selector:
     matchLabels:
-      app: csi-plugin
+      app: csi-disk-plugin-alicloud
   template:
     metadata:
       annotations:
@@ -21,15 +21,19 @@ spec:
         # priority scheduling and that its resources are reserved
         # if it ever gets evicted.
         scheduler.alpha.kubernetes.io/critical-pod: ''
+        checksum/secret-csi-diskplugin-alicloud: {{ include (print $.Template.BasePath "/credential-secret.yaml") . | sha256sum }}
       labels:
-        app: csi-plugin
+        app: csi-disk-plugin-alicloud
         origin: gardener
         garden.sapcloud.io/role: system-component
     spec:
       priorityClassName: system-cluster-critical
-      serviceAccount: csi-plugin
+      serviceAccount: csi-disk-plugin-alicloud
       hostNetwork: true
       hostPID: true
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
       containers:
         - name: driver-registrar
           image: {{ index .Values.images "csi-driver-registrar" }}
@@ -67,12 +71,12 @@ spec:
             - name: ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: csi-diskplugin
+                  name: csi-diskplugin-alicloud
                   key: accessKeyID
             - name: ACCESS_KEY_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: csi-diskplugin
+                  name: csi-diskplugin-alicloud
                   key: accessKeySecret
           imagePullPolicy: Always
           volumeMounts:
@@ -91,6 +95,9 @@ spec:
             - mountPath: /run/dbus
               name: host-run
               readOnly: true
+            - mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
+              name: pv-mount-dir
+              mountPropagation: "Bidirectional"
       volumes:
         - name: plugin-dir
           hostPath:
@@ -100,6 +107,10 @@ spec:
           hostPath:
             path: /var/lib/kubelet/pods
             type: Directory
+        - name: pv-mount-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
+            type: DirectoryOrCreate
         - name: socket-dir
           hostPath:
             path: /var/lib/kubelet/plugins/csi-diskplugin

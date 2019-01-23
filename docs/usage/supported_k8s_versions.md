@@ -8,3 +8,4 @@ Momentarily, the Gardener supports the following Kubernetes versions:
 | Azure          | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
 | GCP            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
 | OpenStack      | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
+| Alicloud       | unsupported     | 1.11.0+         | unsupported     | unsupported     |

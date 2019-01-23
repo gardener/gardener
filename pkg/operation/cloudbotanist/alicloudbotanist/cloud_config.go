@@ -20,5 +20,8 @@ import (
 
 // GenerateCloudConfigUserDataConfig generates values which are required to render the chart shoot-cloud-config properly.
 func (b *AlicloudBotanist) GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig {
-	return &common.CloudConfigUserDataConfig{}
+	return &common.CloudConfigUserDataConfig{
+		EnableCSI:          true,
+		ProviderIDProvided: true,
+	}
 }

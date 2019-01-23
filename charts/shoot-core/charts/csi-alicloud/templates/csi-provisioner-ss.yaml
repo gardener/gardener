@@ -1,6 +1,6 @@
 {{- if .Values.enabled }}
 kind: StatefulSet
-apiVersion: apps/v1beta1
+apiVersion: {{ include "statefulsetversion" . }}
 metadata:
   name: csi-provisioner
   namespace: kube-system
@@ -30,6 +30,9 @@ spec:
     spec:
       priorityClassName: system-cluster-critical
       serviceAccount: csi-provisioner
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
       containers:
         - name: csi-provisioner
           image: {{ index .Values.images "csi-provisioner" }}

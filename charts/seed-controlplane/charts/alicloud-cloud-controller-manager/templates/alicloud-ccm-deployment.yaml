@@ -1,4 +1,3 @@
-{{- if eq .Values.cloudProvider "alicloud" -}}
 apiVersion: v1
 kind: Service
 metadata:
@@ -24,6 +23,7 @@ metadata:
   name: cloud-controller-manager
   namespace: {{ .Release.Namespace }}
   labels:
+    garden.sapcloud.io/role: controlplane
     app: kubernetes
     role: cloud-controller-manager
 spec:
@@ -40,6 +40,7 @@ spec:
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
       labels:
+        garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: cloud-controller-manager
     spec:
@@ -104,4 +105,3 @@ spec:
       - name: cloudprovider
         secret:
           secretName: cloudprovider
-{{- end }}

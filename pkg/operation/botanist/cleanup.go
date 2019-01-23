@@ -17,12 +17,13 @@ package botanist
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/runtime"
-	"sync"
-	"time"
 
 	"github.com/hashicorp/go-multierror"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,16 +45,16 @@ var (
 			"hostendpoints.crd.projectcalico.org":         true,
 		},
 		kubernetes.DaemonSets: {
-			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem): true,
-			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):  true,
-			fmt.Sprintf("%s/csi-plugin", metav1.NamespaceSystem):  true,
+			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem):              true,
+			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):               true,
+			fmt.Sprintf("%s/csi-disk-plugin-alicloud", metav1.NamespaceSystem): true,
 		},
 		kubernetes.Deployments: {
 			fmt.Sprintf("%s/coredns", metav1.NamespaceSystem):        true,
 			fmt.Sprintf("%s/metrics-server", metav1.NamespaceSystem): true,
 			fmt.Sprintf("%s/csi-attacher", metav1.NamespaceSystem):   true,
 		},
-		kubernetesbase.StatefulSets: {
+		kubernetes.StatefulSets: {
 			fmt.Sprintf("%s/csi-provisioner", metav1.NamespaceSystem): true,
 		},
 		kubernetes.Namespaces: {
@@ -107,13 +108,16 @@ func (b *Botanist) CleanKubernetesResources() error {
 		return err
 	}
 
+	// The following code need to be be refactored if bug for csi is fixed
+	// Because of the issue of https://github.com/kubernetes-csi/external-provisioner/issues/195, we can't simply add PV to K8sShootClient.ResourceAPIGroups
+	// for checking clean up.
 	apiGroupPathToBeChecked := make(map[string][]string)
 	//Avoid to change original data, we need a copy
 	for resource, apiGroupPath := range b.K8sShootClient.GetResourceAPIGroups() {
 		apiGroupPathToBeChecked[resource] = apiGroupPath
 	}
 	//For CSI managed PV, the deletion must take some while, need to be checked
-	apiGroupPathToBeChecked[kubernetesbase.PersistentVolumes] = []string{"api", "v1"}
+	apiGroupPathToBeChecked[kubernetes.PersistentVolumes] = []string{"api", "v1"}
 	for resource, apiGroupPath := range apiGroupPathToBeChecked {
 		wg.Add(1)
 		go func(apiGroupPath []string, resource string) {

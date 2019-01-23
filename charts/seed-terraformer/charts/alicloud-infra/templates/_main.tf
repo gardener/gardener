@@ -7,8 +7,8 @@ provider "alicloud" {
 
 // Import an existing public key to build a alicloud key pair
 resource "alicloud_key_pair" "publickey" {
-    key_name = "{{ required "clusterName is required" .Values.clusterName }}-ssh-publickey"
-    public_key = "{{ required "sshPublicKey is required" .Values.sshPublicKey }}"
+  key_name = "{{ required "clusterName is required" .Values.clusterName }}-ssh-publickey"
+  public_key = "{{ required "sshPublicKey is required" .Values.sshPublicKey }}"
 }
 
 {{ if .Values.create.vpc -}}
@@ -36,7 +36,7 @@ resource "alicloud_vswitch" "vsw_z{{ $index }}" {
 
 // Create a new EIP.
 resource "alicloud_eip" "eip_natgw_z{{ $index }}" {
-  name              = "{{ required "clusterName is required" $.Values.clusterName }}-eip-natgw-z{{ $index }}"
+  name                 = "{{ required "clusterName is required" $.Values.clusterName }}-eip-natgw-z{{ $index }}"
   bandwidth            = "20"
   internet_charge_type = "PayByBandwidth"
 }

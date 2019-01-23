@@ -4,6 +4,8 @@ apiVersion: garden.sapcloud.io/v1beta1
 kind: Seed
 metadata:
   name: alicloud
+  annotations: {persistentvolume.garden.sapcloud.io/minimumSize: 20Gi}
+
 spec:
   cloud:
     profile: alicloud

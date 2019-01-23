@@ -17,6 +17,8 @@ package localbotanist
 import (
 	"fmt"
 	"strings"
+
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // GenerateCloudProviderConfig returns a cloud provider config for the Local cloud provider.
@@ -62,8 +64,8 @@ func (b *LocalBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, e
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the cloud-controller-manager properly.
-func (b *LocalBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
-	return nil, nil
+func (b *LocalBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error) {
+	return nil, common.CloudControllerManagerDeploymentName, nil
 }
 
 // GenerateCSIConfig generates the configuration for CSI charts

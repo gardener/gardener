@@ -15,6 +15,7 @@
 package hybridbotanist
 
 import (
+	"fmt"
 	"path/filepath"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -140,12 +141,17 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
+	ccmConfig := map[string]interface{}{}
+	if cfg := b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig(); cfg != nil {
+		ccmConfig["enableCSI"] = cfg.EnableCSI
+	}
+
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":              global,
 		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
 		"coredns":             coreDNS,
-		"csi-" + b.ShootCloudBotanist.GetCloudProviderName(): csiPlugin,
+		fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName()): csiPlugin,
 		"kube-proxy":     kubeProxy,
 		"vpn-shoot":      vpnShoot,
 		"calico":         calico,
@@ -154,6 +160,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		},
+		"cloud-controller-manager": ccmConfig,
 		"cert-broker": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement),
 		},

@@ -21,6 +21,7 @@ horizontalPodAutoscaler:
   readinessDelay: 30s
   cpuInitializationPeriod: 5m0s
 
+enableCSI: false
 
 objectCount: 4
 resources:

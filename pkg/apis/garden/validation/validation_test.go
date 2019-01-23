@@ -18,6 +18,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/operation/common"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/utils"
@@ -33,7 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -2007,6 +2008,9 @@ var _ = Describe("validation", func() {
 			seed = &garden.Seed{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "seed-1",
+					Annotations: map[string]string{
+						common.AnnotatePersistentVolumeMinimumSize: "10Gi",
+					},
 				},
 				Spec: garden.SeedSpec{
 					Cloud: garden.SeedCloud{
@@ -2043,6 +2047,14 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
 			}))
+		})
+
+		It("should forbid invalid annotations", func(){
+			seed.ObjectMeta.Annotations = map[string]string{
+				common.AnnotatePersistentVolumeMinimumSize: "10Gix",
+			}
+			errorList := ValidateSeed(seed)
+			Expect(len(errorList)).To(Equal(1))
 		})
 
 		It("should forbid Seed specification with empty or invalid keys", func() {

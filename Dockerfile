@@ -27,6 +27,10 @@ FROM alpine:3.8 AS controller-manager
 
 RUN apk add --update bash curl openvpn
 
+# https://github.com/golang/go/issues/20969, needed by Alicloud SDK
+ENV ZONEINFO=/zone-info/zoneinfo.zip
+COPY /assets/zoneinfo.zip /zone-info/zoneinfo.zip
+
 COPY --from=builder /go/bin/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts
 

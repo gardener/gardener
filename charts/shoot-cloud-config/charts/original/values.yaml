@@ -16,6 +16,8 @@
 #     bootstrapToken: hugo
 #     hostnameOverride: false
 #     parameters: []
+#     enableCSI: false
+#     providerIDProvided: false
 #     featureGates: {}
 #       #  CustomResourceValidation: true
 #       #  RotateKubeletServerCertificate: false

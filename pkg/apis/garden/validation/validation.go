@@ -26,6 +26,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 	"github.com/robfig/cron"
@@ -716,6 +717,7 @@ func ValidateSeed(seed *garden.Seed) field.ErrorList {
 
 	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&seed.ObjectMeta, false, ValidateName, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateSeedSpec(&seed.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, ValidateSeedAnnotation(seed.ObjectMeta.Annotations, field.NewPath("metadata", "annotations"))...)
 
 	return allErrs
 }
@@ -728,6 +730,20 @@ func ValidateSeedUpdate(newSeed, oldSeed *garden.Seed) field.ErrorList {
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSeed.Spec.Networks, newSeed.Spec.Networks, field.NewPath("spec", "networks"))...)
 	allErrs = append(allErrs, ValidateSeed(newSeed)...)
 
+	return allErrs
+}
+
+//ValidateSeedAnnotation validates the annotations of seed
+func ValidateSeedAnnotation(annotations map[string]string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if annotations != nil {
+		if v, ok := annotations[common.AnnotatePersistentVolumeMinimumSize]; ok {
+			volumeSizeRegex, _ := regexp.Compile(`^(\d)+Gi$`)
+			if !volumeSizeRegex.MatchString(v) {
+				allErrs = append(allErrs, field.Invalid(fldPath.Key(common.AnnotatePersistentVolumeMinimumSize), v, fmt.Sprintf("volume size must match the regex %s", volumeSizeRegex)))
+			}
+		}
+	}
 	return allErrs
 }
 

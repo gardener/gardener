@@ -1,5 +1,5 @@
 secretName: cpu-worker-0
 kubeconfig: kubeconfig for cloud-config-script
 images:
-  hyperkube: k8s.gcr.io/hyperkube:1.9.3
+  hyperkube: image-repository:image-tag
 cloudProvider: aws

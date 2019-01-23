@@ -9,6 +9,8 @@ kube-proxy:
   podAnnotations: {}
   images:
     hyperkube: image-repository
+cloud-controller-manager:
+  enableCSI: false
 vpn-shoot:
   serviceNetwork: 10.0.0.0/24
   podNetwork: 192.168.0.0/16

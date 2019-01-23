@@ -1,6 +1,6 @@
-{{- if eq .Values.cloudProvider "alicloud" }}
-{{ include  "shoot-cloud-config.cloud-init-alicloud" . }}
-{{- else }}
+{{- if eq .Values.cloudProvider "alicloud" -}}
+{{- include  "shoot-cloud-config.cloud-init-alicloud" . -}}
+{{- else -}}
 #cloud-config
 
 coreos:
@@ -11,15 +11,7 @@ coreos:
     command: start
     enable: true
     content: |
-      [Unit]
-      Description=Downloads the cloud script from the Shoot API server and executes it
-      After=docker.service docker.socket
-      Wants=docker.socket
-      [Service]
-      Restart=always
-      RestartSec=30
-      EnvironmentFile=/etc/environment
-      ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
+{{ include  "shoot-cloud-config.cloud-config-downloader-svc" . |indent 6}}
 write_files:
 - path: /var/lib/cloud-config-downloader/kubeconfig
   permissions: 0644
