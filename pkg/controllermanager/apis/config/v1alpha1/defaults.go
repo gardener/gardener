@@ -109,6 +109,10 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 			obj.ShootBackup.Schedule = DefaultETCDBackupSchedule
 		}
 	}
+
+	if obj.GardenerClientConnection == nil {
+		obj.GardenerClientConnection = &obj.ClientConnection
+	}
 }
 
 // SetDefaults_ClientConnection sets defaults for the client connection.

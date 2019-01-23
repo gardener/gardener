@@ -245,27 +245,29 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 
 	// Prepare a Kubernetes client object for the Garden cluster which contains all the Clientsets
 	// that can be used to access the Kubernetes API.
-	var (
-		kubeconfig         = os.Getenv("KUBECONFIG")
-		gardenerKubeConfig = os.Getenv("GARDENER_KUBECONFIG")
-		gardenerClient     = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			&clientcmd.ClientConfigLoadingRules{ExplicitPath: gardenerKubeConfig},
-			&clientcmd.ConfigOverrides{},
-		)
-	)
+	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
+		cfg.ClientConnection.Kubeconfig = kubeconfig
+	}
+	if kubeconfig := os.Getenv("GARDENER_KUBECONFIG"); kubeconfig != "" {
+		cfg.GardenerClientConnection.Kubeconfig = kubeconfig
+	}
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, &cfg.ClientConnection, client.Options{
+	k8sGardenClient, err := kubernetes.NewClientFromFile(cfg.ClientConnection.Kubeconfig, &cfg.ClientConnection, client.Options{
 		Scheme: kubernetes.GardenScheme,
 	})
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(kubeconfig, nil, client.Options{})
+	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(cfg.ClientConnection.Kubeconfig, nil, client.Options{})
 	if err != nil {
 		return nil, err
 	}
 
 	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
+	gardenerClient := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: cfg.GardenerClientConnection.Kubeconfig},
+		&clientcmd.ConfigOverrides{},
+	)
 	gardenerClientConfig, err := kubernetes.CreateRESTConfig(gardenerClient, &cfg.ClientConnection)
 	if err != nil {
 		return nil, err
