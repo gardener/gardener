@@ -51,7 +51,7 @@ data:
         queued_chunks_limit_size 4096
         # The number of threads of output plugins, which is used to write chunks in parallel
         flush_thread_count 32
-        # he size limitation of this buffer plugin instance
+        # the size limitation of this buffer plugin instance
         total_limit_size 6GB
         @include /etc/fluent/config.d/buffer.options
         path /gardener/fluentd-buffers/kubernetes.shoot.buffer
@@ -141,13 +141,13 @@ data:
 
   default.template: |-
     {
-      "index_patterns" : ["logstash-*"],
-      "settings" : {
-        "index" :{
-          "number_of_shards" : "3",
-          "number_of_replicas" : "0",
+      "index_patterns": ["logstash-*"],
+      "settings": {
+        "index": {
+          "number_of_shards": "3",
+          "number_of_replicas": "0",
           "refresh_interval": "60s",
-          "translog":{
+          "translog": {
             "durability": "async"
           }
         }

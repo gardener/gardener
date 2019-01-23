@@ -74,7 +74,7 @@ spec:
         volumeMounts:
         - mountPath: /etc/fluent/config.d
           name: config-volume
-        - mountPath: /gardener/flentd-buffers
+        - mountPath: /gardener/fluentd-buffers
           name: fluentd
       volumes:
       - configMap:
