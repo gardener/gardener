@@ -131,8 +131,6 @@ func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1alpha1
 		logger                 = logger.NewFieldLogger(logger.Logger, "controllerinstallation", controllerInstallation.Name)
 	)
 
-	logger.Infof("[CONTROLLERINSTALLATION RECONCILE] %s", controllerInstallation.Name)
-
 	if isResponsible, err := c.isResponsible(controllerInstallation); !isResponsible || err != nil {
 		return err
 	}

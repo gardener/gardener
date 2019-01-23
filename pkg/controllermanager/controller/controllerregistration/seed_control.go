@@ -116,8 +116,6 @@ func (c *defaultSeedControl) Reconcile(obj *gardenv1beta1.Seed) error {
 		result error
 	)
 
-	logger.Infof("[CONTROLLERREGISTRATION SEED RECONCILE] %s", seed.Name)
-
 	controllerRegistrationList, err := c.controllerRegistrationLister.List(labels.Everything())
 	if err != nil {
 		return err

@@ -120,8 +120,6 @@ func (c *defaultControllerRegistrationControl) Reconcile(obj *gardencorev1alpha1
 		logger                 = logger.NewFieldLogger(logger.Logger, "controllerregistration", controllerRegistration.Name)
 	)
 
-	logger.Infof("[CONTROLLERREGISTRATION RECONCILE] %s", controllerRegistration.Name)
-
 	if controllerRegistration.DeletionTimestamp != nil {
 		return c.delete(controllerRegistration, logger)
 	}
