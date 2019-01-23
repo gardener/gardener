@@ -16,18 +16,22 @@ package shoot
 
 import (
 	"context"
-
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/validation/field"
-	"k8s.io/apiserver/pkg/storage/names"
+	"fmt"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/sets"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/registry/generic"
+	"k8s.io/apiserver/pkg/storage"
+	"k8s.io/apiserver/pkg/storage/names"
 )
 
 type shootStrategy struct {
@@ -138,4 +142,50 @@ func (shootStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtim
 
 func (shootStatusStrategy) ValidateUpdate(ctx context.Context, obj, old runtime.Object) field.ErrorList {
 	return validation.ValidateShootStatusUpdate(obj.(*garden.Shoot).Status, old.(*garden.Shoot).Status)
+}
+
+// ToSelectableFields returns a field set that represents the object
+// TODO: fields are not labels, and the validation rules for them do not apply.
+func ToSelectableFields(shoot *garden.Shoot) fields.Set {
+	// The purpose of allocation with a given number of elements is to reduce
+	// amount of allocations needed to create the fields.Set. If you add any
+	// field here or the number of object-meta related fields changes, this should
+	// be adjusted.
+	shootSpecificFieldsSet := make(fields.Set, 3)
+	shootSpecificFieldsSet[garden.ShootSeedName] = getSeedName(shoot)
+	return generic.AddObjectMetaFieldsSet(shootSpecificFieldsSet, &shoot.ObjectMeta, true)
+}
+
+// GetAttrs returns labels and fields of a given object for filtering purposes.
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+	shoot, ok := obj.(*garden.Shoot)
+	if !ok {
+		return nil, nil, false, fmt.Errorf("not a shoot")
+	}
+	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), shoot.Initializers != nil, nil
+}
+
+// SeedTriggerFunc matches correct seed when watching.
+func SeedTriggerFunc(obj runtime.Object) []storage.MatchValue {
+	shoot := obj.(*garden.Shoot)
+
+	result := storage.MatchValue{IndexName: garden.ShootSeedName, Value: getSeedName(shoot)}
+	return []storage.MatchValue{result}
+}
+
+// MatchShoot returns a generic matcher for a given label and field selector.
+func MatchShoot(label labels.Selector, field fields.Selector) storage.SelectionPredicate {
+	return storage.SelectionPredicate{
+		Label:       label,
+		Field:       field,
+		GetAttrs:    GetAttrs,
+		IndexFields: []string{garden.ShootSeedName},
+	}
+}
+
+func getSeedName(shoot *garden.Shoot) string {
+	if shoot.Spec.Cloud.Seed == nil {
+		return ""
+	}
+	return *shoot.Spec.Cloud.Seed
 }

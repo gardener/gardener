@@ -15,9 +15,16 @@
 package v1beta1
 
 import (
+	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"k8s.io/apimachinery/pkg/conversion"
+	runtime "k8s.io/apimachinery/pkg/runtime"
 )
+
+func init() {
+	localSchemeBuilder.Register(addConversionFuncs)
+}
 
 func Convert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker, s conversion.Scope) error {
 	autoConvert_v1beta1_Worker_To_garden_Worker(in, out, s)
@@ -39,4 +46,21 @@ func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s c
 	out.MaxSurge = &in.MaxSurge
 	out.MaxUnavailable = &in.MaxUnavailable
 	return nil
+}
+
+func addConversionFuncs(scheme *runtime.Scheme) error {
+
+	// Add field conversion funcs.
+	return scheme.AddFieldLabelConversionFunc(SchemeGroupVersion.WithKind("Shoot"),
+		func(label, value string) (string, string, error) {
+			switch label {
+			case "metadata.name",
+				"metadata.namespace",
+				garden.ShootSeedName:
+				return label, value, nil
+			default:
+				return "", "", fmt.Errorf("field label not supported: %s", label)
+			}
+		},
+	)
 }
