@@ -481,8 +481,13 @@ func (b *Botanist) DeploySeedLogging() error {
 		"elasticsearch": map[string]interface{}{
 			"elasticsearchReplicas": b.Shoot.GetReplicas(1),
 		},
-		"kibanaReplicas": b.Shoot.GetReplicas(1),
-		"global":         images,
+		"kibana": map[string]interface{}{
+			"replicaCount": b.Shoot.GetReplicas(1),
+		},
+		"curator": map[string]interface{}{
+			"suspend": b.Shoot.IsHibernated,
+		},
+		"global": images,
 	}
 
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)

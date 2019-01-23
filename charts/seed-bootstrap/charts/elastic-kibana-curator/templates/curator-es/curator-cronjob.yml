@@ -13,6 +13,7 @@ spec:
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 120
+  suspend:  {{ .Values.curator.suspend }}
   jobTemplate:
     spec:
       template:
@@ -58,6 +59,7 @@ spec:
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 120
+  suspend:  {{ .Values.curator.suspend }}
   jobTemplate:
     spec:
       template:
