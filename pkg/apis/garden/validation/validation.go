@@ -980,7 +980,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 		return allErrs
 	}
 
-	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
+	allErrs = append(allErrs, validateAddons(spec, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateCloud(spec.Cloud, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
@@ -993,6 +993,55 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 		}
 		if spec.DNS.SecretName != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "secretName"), spec.DNS.SecretName, fmt.Sprintf("`.spec.dns.secretName` must not be set when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateNginxIngress validates the Nginx Ingress Addon.
+func ValidateNginxIngress(ingress *garden.NginxIngress, dns garden.DNS, fldPath *field.Path) field.ErrorList {
+	const ingressDomainRestriction = 1
+
+	var (
+		allErrs = field.ErrorList{}
+		dnsPath = fldPath.Child("dns")
+	)
+
+	if len(ingress.IngressDNS.StandardRecords) > ingressDomainRestriction {
+		allErrs = append(allErrs, field.Forbidden(dnsPath.Child("standardRecords"), "must not contain more than one element"))
+		return allErrs
+	}
+
+	if len(ingress.IngressDNS.AdditionalRecords) > ingressDomainRestriction {
+		allErrs = append(allErrs, field.Forbidden(dnsPath.Child("additionalRecords"), "must not contain more than one element"))
+		return allErrs
+	}
+
+	for i, ingressDomain := range ingress.IngressDNS.StandardRecords {
+		path := dnsPath.Child("standardRecords").Index(i)
+
+		dnsErrs := validateDNS1123Subdomain(ingressDomain, path)
+		if len(dnsErrs) > 0 {
+			allErrs = append(allErrs, dnsErrs...)
+			continue
+		}
+
+		if dns.Domain != nil && len(*dns.Domain) != 0 {
+			shootSubDomain := "." + *dns.Domain
+			if !strings.HasSuffix(ingressDomain, shootSubDomain) || ingressDomain == *dns.Domain {
+				allErrs = append(allErrs, field.Forbidden(path, "must be a subdomain of "+*dns.Domain))
+			}
+		}
+	}
+
+	for i, ingressDomain := range ingress.IngressDNS.AdditionalRecords {
+		path := dnsPath.Child("additionalRecords").Index(i)
+
+		dnsErrs := validateDNS1123Subdomain(ingressDomain, path)
+		if len(dnsErrs) > 0 {
+			allErrs = append(allErrs, dnsErrs...)
+			continue
 		}
 	}
 
@@ -1026,8 +1075,11 @@ func validateNameConsecutiveHyphens(name string, fldPath *field.Path) field.Erro
 	return allErrs
 }
 
-func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
+func validateAddons(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorList {
+	var (
+		allErrs = field.ErrorList{}
+		addons  = spec.Addons
+	)
 
 	if addons == nil {
 		return allErrs
@@ -1058,6 +1110,11 @@ func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList 
 		if !utils.TestEmail(addons.KubeLego.Mail) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("kube-lego", "mail"), addons.KubeLego.Mail, "must provide a valid email address when kube-lego is enabled"))
 		}
+	}
+
+	// Validate also disabled NginxIngress because it holds a state getting relevant when re-activating.
+	if addons.NginxIngress != nil && addons.NginxIngress.Enabled {
+		allErrs = append(allErrs, ValidateNginxIngress(addons.NginxIngress, spec.DNS, fldPath.Child("addons.nginx-ingress"))...)
 	}
 
 	return allErrs
@@ -1477,6 +1534,31 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, validateAddonsUpdate(newSpec.Addons, oldSpec.Addons, fldPath.Child("addons"))...)
+
+	return allErrs
+}
+
+func validateAddonsUpdate(new, old *garden.Addons, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if old == nil || new == nil {
+		return allErrs
+	}
+	allErrs = append(allErrs, validateNginxIngressUpdate(old.NginxIngress, new.NginxIngress, fldPath.Child("nginx-ingress"))...)
+
+	return allErrs
+}
+
+func validateNginxIngressUpdate(old, new *garden.NginxIngress, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if old == nil || new == nil {
+		return allErrs
+	}
+	if old.Enabled && new.Enabled {
+		if len(old.IngressDNS.StandardRecords) > len(new.IngressDNS.StandardRecords) {
+			allErrs = append(allErrs, field.Forbidden(fldPath.Child("dns").Child("standardRecords"), "removal of ingress records is not supported"))
+		}
+	}
 
 	return allErrs
 }

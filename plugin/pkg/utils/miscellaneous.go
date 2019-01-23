@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -34,4 +34,11 @@ func GetProject(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister) 
 		}
 	}
 	return nil, fmt.Errorf("no project for shoot namespace %q", shoot.Namespace)
+}
+
+// NginxAddonEnabled checks if the Nginx Ingress addon is enabled in the Shoot spec.
+func NginxAddonEnabled(shoot *garden.Shoot) bool {
+	return shoot.Spec.Addons != nil &&
+		shoot.Spec.Addons.NginxIngress != nil &&
+		shoot.Spec.Addons.NginxIngress.Addon.Enabled
 }

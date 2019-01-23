@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dnshostedzone_test
+package ingressaddondns_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -23,5 +23,5 @@ import (
 
 func TestDNSHostedZone(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission ShootDNSHostedZone Suite")
+	RunSpecs(t, "Admission IngressAddonDNS Suite")
 }

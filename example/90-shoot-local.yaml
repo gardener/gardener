@@ -90,6 +90,9 @@ spec:
   addons:
     nginx-ingress:
       enabled: true
+      dns:
+        standardRecords:
+        - ingress.<minikube-ip>.nip.io
       loadBalancerSourceRanges: []
     kubernetes-dashboard:
       enabled: true

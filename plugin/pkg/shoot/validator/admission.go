@@ -23,8 +23,8 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
-	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
-	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -49,10 +49,10 @@ func Register(plugins *admission.Plugins) {
 // ValidateShoot contains listers and and admission handler.
 type ValidateShoot struct {
 	*admission.Handler
-	cloudProfileLister listers.CloudProfileLister
-	seedLister         listers.SeedLister
-	shootLister        listers.ShootLister
-	projectLister      listers.ProjectLister
+	cloudProfileLister gardenlisters.CloudProfileLister
+	seedLister         gardenlisters.SeedLister
+	shootLister        gardenlisters.ShootLister
+	projectLister      gardenlisters.ProjectLister
 	readyFunc          admission.ReadyFunc
 }
 
@@ -76,7 +76,7 @@ func (v *ValidateShoot) AssignReadyFunc(f admission.ReadyFunc) {
 }
 
 // SetInternalGardenInformerFactory gets Lister from SharedInformerFactory.
-func (v *ValidateShoot) SetInternalGardenInformerFactory(f informers.SharedInformerFactory) {
+func (v *ValidateShoot) SetInternalGardenInformerFactory(f gardeninformers.SharedInformerFactory) {
 	seedInformer := f.Garden().InternalVersion().Seeds()
 	v.seedLister = seedInformer.Lister()
 
@@ -580,14 +580,14 @@ func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider
 	return false, validValues
 }
 
-func validateDNSConfiguration(shootLister listers.ShootLister, name string, dns garden.DNS) (field.ErrorList, error) {
+func validateDNSConfiguration(shootLister gardenlisters.ShootLister, name string, dns garden.DNS) (field.ErrorList, error) {
 	var (
-		allErrs = field.ErrorList{}
-		dnsPath = field.NewPath("spec", "dns", "domain")
+		allErrs    = field.ErrorList{}
+		domainPath = field.NewPath("spec", "dns", "domain")
 	)
 
 	if dns.Domain == nil {
-		allErrs = append(allErrs, field.Required(dnsPath, "domain field is required"))
+		allErrs = append(allErrs, field.Required(domainPath, "domain field is required"))
 		return allErrs, nil
 	}
 
@@ -600,8 +600,8 @@ func validateDNSConfiguration(shootLister listers.ShootLister, name string, dns 
 		if shoot.Name == name {
 			continue
 		}
-		if domain := shoot.Spec.DNS.Domain; domain != nil && *domain == *dns.Domain {
-			allErrs = append(allErrs, field.Duplicate(dnsPath, *dns.Domain))
+		if domain := shoot.Spec.DNS.Domain; domain != nil && admissionutils.HasDomainIntersection(*domain, *dns.Domain) {
+			allErrs = append(allErrs, field.Forbidden(domainPath, fmt.Sprintf("domain %s is already taken", *dns.Domain)))
 			break
 		}
 	}

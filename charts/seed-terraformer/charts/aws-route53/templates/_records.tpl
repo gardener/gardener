@@ -1,5 +1,5 @@
 {{- define "aws-route53.records" -}}
-{{- range $j, $record := .record.values }}
+{{- range $j, $record := .values }}
 "{{ $record }}",
 {{- end -}}
 {{- end -}}

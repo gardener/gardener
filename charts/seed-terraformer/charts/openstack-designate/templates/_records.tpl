@@ -1,6 +1,6 @@
 {{- define "openstack-designate.records" -}}
-{{- range $j, $record := .record.values }}
-{{- if eq $.record.type "ip"}}
+{{- range $j, $record := .values }}
+{{- if eq $.type "ip"}}
 "{{ $record }}",
 {{- else }}
 "{{ $record | trimSuffix "."}}.",

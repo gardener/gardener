@@ -48,6 +48,30 @@ func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s c
 	return nil
 }
 
+func Convert_v1beta1_NginxIngress_To_garden_NginxIngress(in *NginxIngress, out *garden.NginxIngress, s conversion.Scope) error {
+	autoConvert_v1beta1_NginxIngress_To_garden_NginxIngress(in, out, s)
+	if in.IngressDNS == nil {
+		out.IngressDNS = garden.IngressDNS{}
+	} else {
+		out.IngressDNS = garden.IngressDNS{
+			StandardRecords:   in.IngressDNS.StandardRecords,
+			AdditionalRecords: in.IngressDNS.AdditionalRecords,
+		}
+	}
+	return nil
+}
+
+func Convert_garden_NginxIngress_To_v1beta1_NginxIngress(in *garden.NginxIngress, out *NginxIngress, s conversion.Scope) error {
+	autoConvert_garden_NginxIngress_To_v1beta1_NginxIngress(in, out, s)
+	if len(in.IngressDNS.StandardRecords) != 0 || len(in.IngressDNS.AdditionalRecords) != 0 {
+		out.IngressDNS = &IngressDNS{
+			StandardRecords:   in.IngressDNS.StandardRecords,
+			AdditionalRecords: in.IngressDNS.AdditionalRecords,
+		}
+	}
+	return nil
+}
+
 func addConversionFuncs(scheme *runtime.Scheme) error {
 
 	// Add field conversion funcs.

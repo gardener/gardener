@@ -96,12 +96,6 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 	return shootObj, nil
 }
 
-// GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
-// end result is '<subDomain>.<ingressPrefix>.<clusterDomain>'.
-func (s *Shoot) GetIngressFQDN(subDomain string) string {
-	return fmt.Sprintf("%s.%s.%s", subDomain, common.IngressPrefix, *(s.Info.Spec.DNS.Domain))
-}
-
 // GetWorkers returns a list of worker objects of the worker groups in the Shoot manifest.
 func (s *Shoot) GetWorkers() []gardenv1beta1.Worker {
 	return helper.GetShootCloudProviderWorkers(s.CloudProvider, s.Info)

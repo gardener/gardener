@@ -15,6 +15,8 @@
 package validator_test
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -97,8 +99,9 @@ var _ = Describe("validator", func() {
 						},
 					},
 					DNS: garden.DNS{
-						Provider: garden.DNSUnmanaged,
-						Domain:   makeStrPointer("shoot.example.com"),
+						Provider:     garden.DNSUnmanaged,
+						HostedZoneID: makeStrPointer("hostedZoneId"),
+						Domain:       makeStrPointer("shoot.example.com"),
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.6.4",
@@ -408,6 +411,54 @@ var _ = Describe("validator", func() {
 			It("should reject because the specified domain is already used by another shoot", func() {
 				anotherShoot := shoot.DeepCopy()
 				anotherShoot.Name = "another-shoot"
+				anotherShoot.Spec.DNS = garden.DNS{
+					Provider: shoot.Spec.DNS.Provider,
+					Domain:   makeStrPointer(*shoot.Spec.DNS.Domain),
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is a subset of a domain already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+				supersetDomain := strings.SplitN(*anotherShoot.Spec.DNS.Domain, ".", 2)[1]
+				anotherShoot.Spec.DNS = garden.DNS{
+					Provider: shoot.Spec.DNS.Provider,
+					Domain:   makeStrPointer(supersetDomain),
+				}
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("should reject because the specified domain is a superset of a domain already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+				subsetDomain := fmt.Sprintf("%s.%s", "subdomain", *shoot.Spec.DNS.Domain)
+				anotherShoot.Spec.DNS = garden.DNS{
+					Provider: shoot.Spec.DNS.Provider,
+					Domain:   makeStrPointer(subsetDomain),
+				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

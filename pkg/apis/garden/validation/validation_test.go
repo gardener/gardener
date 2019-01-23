@@ -2332,12 +2332,83 @@ var _ = Describe("validation", func() {
 		)
 	})
 
+	Describe("#ValidateNginxIngress", func() {
+		var (
+			domain = "shoot.example.com"
+			dns    = &garden.DNS{
+				Domain: &domain,
+			}
+		)
+
+		DescribeTable("validate ingress",
+			func(nginx *garden.NginxIngress, dns *garden.DNS, matcher gomegatypes.GomegaMatcher) {
+				errList := ValidateNginxIngress(nginx, *dns, nil)
+				Expect(errList).To(matcher)
+			},
+
+			Entry("valid subdomain", &garden.NginxIngress{Addon: garden.Addon{Enabled: true}, IngressDNS: garden.IngressDNS{StandardRecords: []string{"ingress.shoot.example.com"}}}, dns, BeEmpty()),
+			Entry("more than allowed ingress domains", &garden.NginxIngress{
+				Addon: garden.Addon{Enabled: true},
+				IngressDNS: garden.IngressDNS{
+					StandardRecords: []string{"ingress.shoot.example.com", "ing.shoot.example.com", "i.shoot.example.com"},
+				},
+			},
+				dns,
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(field.NewPath("dns.standardRecords").String()),
+				})))),
+			Entry("is identical to Shoot domain", &garden.NginxIngress{
+				Addon: garden.Addon{Enabled: true},
+				IngressDNS: garden.IngressDNS{
+					StandardRecords: []string{domain},
+				},
+			},
+				dns,
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(field.NewPath("dns.standardRecords").Index(0).String()),
+				})))),
+			Entry("not a subdomain", &garden.NginxIngress{
+				Addon: garden.Addon{Enabled: true},
+				IngressDNS: garden.IngressDNS{
+					StandardRecords: []string{"ingressshoot.example.com"},
+				},
+			},
+				dns,
+				ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal(field.NewPath("dns.standardRecords").Index(0).String()),
+				})))),
+			Entry("not a valid subdomain", &garden.NginxIngress{
+				Addon: garden.Addon{Enabled: true},
+				IngressDNS: garden.IngressDNS{
+					StandardRecords:   []string{"foo/bar"},
+					AdditionalRecords: []string{"*.foo.bar"},
+				},
+			},
+				dns,
+				ConsistOf(
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("dns.standardRecords").Index(0).String()),
+					})),
+					PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(field.NewPath("dns.additionalRecords").Index(0).String()),
+					})),
+				),
+			),
+		)
+	})
+
 	Describe("#ValidateShoot, #ValidateShootUpdate", func() {
 		var (
 			shoot *garden.Shoot
 
-			hostedZoneID = "ABCDEF1234"
-			domain       = "my-cluster.example.com"
+			hostedZoneID  = "ABCDEF1234"
+			domain        = "my-cluster.example.com"
+			ingressDomain = "ingress." + domain
 
 			nodeCIDR    = garden.CIDR("10.250.0.0/16")
 			podCIDR     = garden.CIDR("100.96.0.0/11")
@@ -2433,6 +2504,9 @@ var _ = Describe("validation", func() {
 						},
 						NginxIngress: &garden.NginxIngress{
 							Addon: addon,
+							IngressDNS: garden.IngressDNS{
+								StandardRecords: []string{ingressDomain},
+							},
 						},
 						KubeLego: &garden.KubeLego{
 							Addon: addon,
@@ -4625,6 +4699,7 @@ var _ = Describe("validation", func() {
 			It("should forbid specifying invalid domain", func() {
 				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
 				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
+				shoot.Spec.Addons.NginxIngress = nil
 
 				errorList := ValidateShoot(shoot)
 				Expect(len(errorList)).To(Equal(1))
@@ -4675,6 +4750,7 @@ var _ = Describe("validation", func() {
 			It("should forbid updating the dns domain", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.Domain = makeStringPointer("another-domain.com")
+				newShoot.Spec.Addons.NginxIngress = nil
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 

@@ -1,6 +1,11 @@
-record:
-  name: example.com
+records:
+- name: example.com
   hostRecord: my-dns-record
+  value: 1.2.3.4
+  type: ip
+  ttl: "120"
+- name: example.com
+  hostRecord: my-second-dns-record
   value: 1.2.3.4
   type: ip
   ttl: "120"

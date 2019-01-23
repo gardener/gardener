@@ -111,6 +111,9 @@ spec:
   addons:
     nginx-ingress:
       enabled: true
+      dns:
+        standardRecords:
+        - ingress.johndoe-aws.garden-dev.example.com
       loadBalancerSourceRanges: []
     kubernetes-dashboard:
       enabled: true

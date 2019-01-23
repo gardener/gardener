@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -265,6 +267,26 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 			continue
 		}
 		utilruntime.Must(errors.Wrapf(c.migrateMachineImageNames(newShoot), "Failed to migrate machine image for shoot %q", shoot.Name))
+
+		// Migration to introduced IngressDNS struct in Nginx-Ingress addon.
+		// TODO: Remove this in future release.
+		shootAddons := shoot.Spec.Addons
+		if shoot.DeletionTimestamp == nil && shootAddons != nil && shootAddons.NginxIngress != nil {
+			if shootAddons.NginxIngress.IngressDNS == nil || len(shootAddons.NginxIngress.IngressDNS.StandardRecords) == 0 {
+				_, err := kutil.TryUpdateShoot(c.k8sGardenClient.Garden(), retry.DefaultBackoff, shoot.ObjectMeta,
+					func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+						ingressDomain := utils.GenerateIngressDomain(*shoot.Spec.DNS.Domain)
+						if shootAddons.NginxIngress.IngressDNS == nil {
+							shoot.Spec.Addons.NginxIngress.IngressDNS = &gardenv1beta1.IngressDNS{}
+						}
+						shoot.Spec.Addons.NginxIngress.IngressDNS.StandardRecords = []string{ingressDomain}
+						return shoot, nil
+					})
+				if err != nil {
+					panic(fmt.Sprintf("Failed to migrate Nginx-Ingress DNS for shoot: %q - %q", newShoot.Name, err.Error()))
+				}
+			}
+		}
 	}
 
 	logger.Logger.Info("Shoot controller initialized.")

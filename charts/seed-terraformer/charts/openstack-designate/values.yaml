@@ -1,6 +1,11 @@
-record:
-  hostedZoneID: ABCD1234
+records:
+- hostedZoneID: ABCD1234
   name: my-dns-record.example.com
+  type: "ip"
+  values:
+  - google.com
+- hostedZoneID: ABCD1234
+  name: my-second-dns-record.example.com
   type: "ip"
   values:
   - google.com

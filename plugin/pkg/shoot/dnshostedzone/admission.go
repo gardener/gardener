@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
@@ -31,8 +30,6 @@ import (
 	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/admission"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
@@ -181,7 +178,7 @@ func (d *DNSHostedZone) Admit(a admission.Attributes) error {
 // and sets it in the Shoot manifest `spec.dns.domain` as well as the hostedZoneID.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
 func assignDefaultDomain(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister, secretLister kubecorev1listers.SecretLister) {
-	secrets, err := getDefaultDomainSecrets(secretLister)
+	secrets, err := admissionutils.GetDefaultDomainSecrets(secretLister)
 	if err != nil {
 		return
 	}
@@ -214,19 +211,16 @@ func assignDefaultDomain(shoot *garden.Shoot, projectLister gardenlisters.Projec
 // verifyHostedZoneID verifies that the cloud provider secret for the Shoot cluster contains credentials for the
 // respective DNS provider.
 func verifyHostedZoneID(shoot *garden.Shoot, secretBindingLister gardenlisters.SecretBindingLister, secretLister kubecorev1listers.SecretLister) error {
-	secrets, err := getDefaultDomainSecrets(secretLister)
+	secret, err := admissionutils.GetDefaultDomainSecret(secretLister, &shoot.Spec.DNS)
 	if err != nil {
 		return err
 	}
-
-	// If the dns domain matches a default domain then the specified hosted zone id must also match.
-	for _, secret := range secrets {
-		if strings.HasSuffix(*(shoot.Spec.DNS.Domain), secret.Annotations[common.DNSDomain]) && shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProvider]) {
-			if *shoot.Spec.DNS.HostedZoneID == secret.Annotations[common.DNSHostedZoneID] {
-				return nil
-			}
-			return errors.New("specified dns domain matches a default domain but the specified hosted zone id is incorrect")
+	if secret != nil {
+		// If the dns domain matches a default domain then the specified hosted zone id must also match.
+		if *shoot.Spec.DNS.HostedZoneID == secret.Annotations[common.DNSHostedZoneID] {
+			return nil
 		}
+		return errors.New("specified dns domain matches a default domain but the specified hosted zone id is incorrect")
 	}
 
 	// If the hosted zone id does not match a default domain then either the cloud provider secret must contain valid
@@ -278,46 +272,14 @@ func verifyHostedZoneID(shoot *garden.Shoot, secretBindingLister gardenlisters.S
 // determineHostedZoneID reads the default domain secrets and compare their annotations with the specified Shoot
 // domain. If both fit, it will return the Hosted Zone of the respective default domain.
 func determineHostedZoneID(shoot *garden.Shoot, secretLister kubecorev1listers.SecretLister) (string, error) {
-	secrets, err := getDefaultDomainSecrets(secretLister)
+	secret, err := admissionutils.GetDefaultDomainSecret(secretLister, &shoot.Spec.DNS)
 	if err != nil {
 		return "", err
 	}
-
-	if len(secrets) == 0 {
-		return "", apierrors.NewInternalError(errors.New("failed to determine a DNS hosted zone: no default domain secrets found"))
+	if secret != nil {
+		return secret.Annotations[common.DNSHostedZoneID], nil
 	}
-
-	for _, secret := range secrets {
-		if strings.HasSuffix(*(shoot.Spec.DNS.Domain), secret.Annotations[common.DNSDomain]) && shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProvider]) {
-			return secret.Annotations[common.DNSHostedZoneID], nil
-		}
-	}
-
 	return "", apierrors.NewInternalError(errors.New("failed to determine a hosted zone id for the given domain (no default domain secret matches)"))
-}
-
-// getDefaultDomainSecrets filters the secrets in the Garden namespace for default domain secrets.
-func getDefaultDomainSecrets(secretLister kubecorev1listers.SecretLister) ([]corev1.Secret, error) {
-	defaultDomainSecrets := []corev1.Secret{}
-
-	selector, err := labels.Parse(fmt.Sprintf("%s=%s", common.GardenRole, common.GardenRoleDefaultDomain))
-	if err != nil {
-		return nil, err
-	}
-	secrets, err := secretLister.Secrets(common.GardenNamespace).List(selector)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, secret := range secrets {
-		metadata := secret.ObjectMeta
-		if !metav1.HasAnnotation(metadata, common.DNSHostedZoneID) || !metav1.HasAnnotation(metadata, common.DNSProvider) || !metav1.HasAnnotation(metadata, common.DNSDomain) {
-			continue
-		}
-		defaultDomainSecrets = append(defaultDomainSecrets, *secret)
-	}
-
-	return defaultDomainSecrets, nil
 }
 
 // getCloudProviderSecret reads the cloud provider secret specified by the binding referenced in the Shoot manifest.

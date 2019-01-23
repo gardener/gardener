@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
 package botanist
 
 import (
-	"github.com/gardener/gardener/pkg/operation/common"
+	"fmt"
 
+	"github.com/gardener/gardener/pkg/operation/common"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,12 +31,36 @@ func (b *Botanist) EnsureIngressDNSRecord() error {
 	if err != nil {
 		return err
 	}
-	return b.DeployDNSRecord("ingress", b.Shoot.GetIngressFQDN("*"), loadBalancerIngress, false)
+
+	var domains []string
+	for _, domain := range b.Shoot.Info.Spec.Addons.NginxIngress.IngressDNS.StandardRecords {
+		domains = append(domains, fmt.Sprintf("%s.%s", "*", domain))
+	}
+	if len(domains) > 0 {
+		if err := b.DeployDNSRecord("ingress", domains, loadBalancerIngress, false); err != nil {
+			return err
+		}
+	}
+
+	domains = nil
+	for _, domain := range b.Shoot.Info.Spec.Addons.NginxIngress.IngressDNS.AdditionalRecords {
+		domains = append(domains, fmt.Sprintf("%s.%s", "*", domain))
+	}
+	if len(domains) > 0 {
+		if err := b.DeployDNSRecord("ingress-additional", domains, loadBalancerIngress, true); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // DestroyIngressDNSRecord destroys the nginx-ingress resources created by Terraform.
 func (b *Botanist) DestroyIngressDNSRecord() error {
-	return b.DestroyDNSRecord("ingress", false)
+	if err := b.DestroyDNSRecord("ingress", false); err != nil {
+		return err
+	}
+	return b.DestroyDNSRecord("ingress-additional", true)
 }
 
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of

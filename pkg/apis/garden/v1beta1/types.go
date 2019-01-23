@@ -1091,9 +1091,23 @@ type ClusterAutoscaler struct {
 // NginxIngress describes configuration values for the nginx-ingress addon.
 type NginxIngress struct {
 	Addon `json:",inline"`
+	// +optional
+	IngressDNS *IngressDNS `json:"dns,omitempty"`
 	// LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress
 	// +optional
 	LoadBalancerSourceRanges []string `json:"loadBalancerSourceRanges,omitempty"`
+}
+
+// IngressDNS describes DNS settings for the Ingress.
+type IngressDNS struct {
+	// StandardRecords are the domains whose wildcard sub domains point to an ingress load balancer.
+	// These domains are supposed to be set by the Shoot owner.
+	// +optional
+	StandardRecords []string `json:"standardRecords,omitempty"`
+	// AdditionalRecords are the domains whose wildcard sub domains point to an ingress load balancer.
+	// These domains are supposed to be set by Gardener.
+	// +optional
+	AdditionalRecords []string `json:"additionalRecords,omitempty"`
 }
 
 // Monocular describes configuration values for the monocular addon.

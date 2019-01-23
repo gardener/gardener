@@ -289,8 +289,8 @@ spec:
   #     SomeKubernetesFeature: true
   % endif
   dns:
-    provider: ${value("spec.dns.provider", "aws-route53") if cloud != "local" else "unmanaged"}
-    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<minikube-ip>.nip.io"}<% hibernation = value("spec.hibernation", {}) %>
+    provider: ${value("spec.dns.provider", "aws-route53") if cloud != "local" else "unmanaged"}<% domain = value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<minikube-ip>.nip.io" %>
+    domain: ${domain}<% hibernation = value("spec.hibernation", {}) %>
   % if hibernation != {}:
   hibernation: ${yaml.dump(hibernation, width=10000)}
   % else:
@@ -318,6 +318,9 @@ spec:
   addons:
     nginx-ingress:
       enabled: ${value("spec.addons.nginx-ingress.enabled", "true")}
+      dns:
+        standardRecords:
+        - ${"ingress." + domain}
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
     kubernetes-dashboard:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}

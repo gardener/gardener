@@ -1,5 +1,5 @@
 {{- define "gcp-clouddns.records" -}}
-{{- range $j, $record := .record.values }}
-"{{ $record }}{{ if ne (required "record.type is required" $.record.type) "ip" }}.{{ end }}",
+{{- range $j, $record := .values }}
+"{{ $record }}{{ if ne (required "type is required" $.type) "ip" }}.{{ end }}",
 {{- end -}}
 {{- end -}}

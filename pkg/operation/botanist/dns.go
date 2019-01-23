@@ -30,7 +30,7 @@ import (
 
 // DeployInternalDomainDNSRecord deploys the DNS record for the internal cluster domain.
 func (b *Botanist) DeployInternalDomainDNSRecord() error {
-	return b.DeployDNSRecord(common.TerraformerPurposeInternalDNS, b.Shoot.InternalClusterDomain, b.APIServerAddress, true)
+	return b.DeployDNSRecord(common.TerraformerPurposeInternalDNS, []string{b.Shoot.InternalClusterDomain}, b.APIServerAddress, true)
 }
 
 // DestroyInternalDomainDNSRecord destroys the DNS record for the internal cluster domain.
@@ -40,7 +40,7 @@ func (b *Botanist) DestroyInternalDomainDNSRecord() error {
 
 // DeployExternalDomainDNSRecord deploys the DNS record for the external cluster domain.
 func (b *Botanist) DeployExternalDomainDNSRecord() error {
-	return b.DeployDNSRecord(common.TerraformerPurposeExternalDNS, *(b.Shoot.ExternalClusterDomain), b.Shoot.InternalClusterDomain, false)
+	return b.DeployDNSRecord(common.TerraformerPurposeExternalDNS, []string{*(b.Shoot.ExternalClusterDomain)}, b.Shoot.InternalClusterDomain, false)
 }
 
 // DestroyExternalDomainDNSRecord destroys the DNS record for the external cluster domain.
@@ -48,42 +48,60 @@ func (b *Botanist) DestroyExternalDomainDNSRecord() error {
 	return b.DestroyDNSRecord(common.TerraformerPurposeExternalDNS, false)
 }
 
-// DeployDNSRecord kicks off a Terraform job of name <alias> which deploys the DNS record for <name> which
+// DeployDNSRecord kicks off a Terraform job of name <alias> which deploys the DNS records for <names> which
 // will point to <target>.
-func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purposeInternalDomain bool) error {
+func (b *Botanist) DeployDNSRecord(terraformerPurpose string, names []string, target string, purposeInternalDomain bool) error {
 	var (
 		chartName         string
 		tfvarsEnvironment map[string]string
 		targetType, _     = common.IdentifyAddressType(target)
+		dnsOutdated       bool
 	)
 
 	// If the DNS record is already registered properly then we skip the reconciliation to avoid running into
 	// cloud provider rate limits.
 	switch targetType {
 	case "hostname":
-		cname, err := utils.LookupDNSHostCNAME(name)
-		if err != nil {
-			b.Logger.Errorf("Something went wrong with DNS lookup for %s, reason: %s", name, err.Error())
-		}
-		if cname == fmt.Sprintf("%s.", target) {
-			b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
-			return nil
+		for _, name := range names {
+			cname, err := utils.LookupDNSHostCNAME(name)
+			if err != nil {
+				b.Logger.Errorf("Something went wrong with DNS lookup for %s, reason: %s", name, err.Error())
+			}
+			if cname != fmt.Sprintf("%s.", target) {
+				dnsOutdated = true
+				break
+			}
 		}
 	case "ip":
-		values, err := utils.LookupDNSHost(name)
-		if err != nil {
-			b.Logger.Errorf("Something went wrong with DNS lookup for %s, reason: %s", name, err.Error())
-		}
+		for _, name := range names {
+			values, err := utils.LookupDNSHost(name)
+			if err != nil {
+				b.Logger.Errorf("Something went wrong with DNS lookup for %s, reason: %s", name, err.Error())
+			}
 
-		for _, v := range values {
-			if v == target {
-				b.Logger.Infof("Skipping DNS record registration because '%s' already points to '%s'", name, target)
-				return nil
+			if len(values) == 0 {
+				dnsOutdated = true
+				break
+			}
+
+			for _, v := range values {
+				if v != target {
+					dnsOutdated = true
+					break
+				}
+			}
+
+			if dnsOutdated {
+				break
 			}
 		}
 	}
 
-	b.Logger.Infof("Initiating Terraform validation for domain %s", name)
+	if !dnsOutdated {
+		b.Logger.Infof("Skipping DNS record registration because '%v' are already up-to-date", names)
+		return nil
+	}
+
 	tf, err := b.NewShootTerraformer(terraformerPurpose)
 	if err != nil {
 		return err
@@ -102,7 +120,7 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 			return err
 		}
 		chartName = "aws-route53"
-		config = b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})
+		config = b.GenerateTerraformDNSConfig(names, hostedZoneID, targetType, []string{target})
 	case gardenv1beta1.DNSGoogleCloudDNS:
 		hostedZoneID, err := b.getHostedZoneID(purposeInternalDomain)
 		if err != nil {
@@ -113,14 +131,14 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 			return err
 		}
 		chartName = "gcp-clouddns"
-		config = b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})
+		config = b.GenerateTerraformDNSConfig(names, hostedZoneID, targetType, []string{target})
 	case gardenv1beta1.DNSAlicloud:
 		tfvarsEnvironment, err = b.GenerateTerraformAlicloudDNSVariablesEnvironment(purposeInternalDomain)
 		if err != nil {
 			return err
 		}
 		chartName = "alicloud-dns"
-		config, err = b.generateTerraformAlicloudDNSConfig(name, targetType, target, purposeInternalDomain)
+		config, err = b.generateTerraformAlicloudDNSConfig(names, targetType, target, purposeInternalDomain)
 		if err != nil {
 			return err
 		}
@@ -134,7 +152,7 @@ func (b *Botanist) DeployDNSRecord(terraformerPurpose, name, target string, purp
 			return err
 		}
 		chartName = "openstack-designate"
-		config = b.GenerateTerraformDNSConfig(name, hostedZoneID, targetType, []string{target})
+		config = b.GenerateTerraformDNSConfig(names, hostedZoneID, targetType, []string{target})
 	default:
 		return nil
 	}
@@ -258,16 +276,22 @@ func (b *Botanist) GenerateTerraformDesignateDNSVariablesEnvironment(purposeInte
 	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
 }
 
-// GenerateTerraformDNSConfig creates the Terraform variables and the Terraform config (for the DNS record)
+// GenerateTerraformDNSConfig creates the Terraform variables and the Terraform config (for the DNS records)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID, targetType string, values []string) map[string]interface{} {
-	return map[string]interface{}{
-		"record": map[string]interface{}{
+func (b *Botanist) GenerateTerraformDNSConfig(names []string, hostedZoneID, targetType string, values []string) map[string]interface{} {
+	var records []map[string]interface{}
+
+	for _, name := range names {
+		records = append(records, map[string]interface{}{
 			"hostedZoneID": hostedZoneID,
 			"name":         name,
 			"type":         targetType,
 			"values":       values,
-		},
+		})
+	}
+
+	return map[string]interface{}{
+		"records": records,
 	}
 }
 
@@ -275,24 +299,30 @@ func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID, targetType str
 // @input Param domain should be split as name and host_record.
 // name is registered in Alicloud. It is always like xxx.xxx. If there is an exception, this function should be rewritten !!!
 // host_record is the host name in A or CNAME record
-func (b *Botanist) generateTerraformAlicloudDNSConfig(domain, targetType string, value string, purposeInternalDomain bool) (map[string]interface{}, error) {
-	splits := strings.Split(domain, ".")
-	// Shoot validation promises the shoot.spec.dns.domain has at least one ".", and domain has more than one "."
-	l := len(splits)
-	if l < 2 {
-		return nil, fmt.Errorf("Domain %s is not valid", domain)
-	}
-	name := fmt.Sprintf("%s.%s", splits[l-2], splits[l-1])
+func (b *Botanist) generateTerraformAlicloudDNSConfig(domains []string, targetType string, value string, purposeInternalDomain bool) (map[string]interface{}, error) {
+	var records []map[string]interface{}
 
-	hostRecord := strings.TrimSuffix(domain, fmt.Sprintf(".%s", name))
+	for _, domain := range domains {
+		splits := strings.Split(domain, ".")
+		// Shoot validation promises the shoot.spec.dns.domain has at least one ".", and domain has more than one "."
+		l := len(splits)
+		if l < 2 {
+			return nil, fmt.Errorf("Domain %s is not valid", domain)
+		}
+		name := fmt.Sprintf("%s.%s", splits[l-2], splits[l-1])
 
-	return map[string]interface{}{
-		"record": map[string]interface{}{
+		hostRecord := strings.TrimSuffix(domain, fmt.Sprintf(".%s", name))
+
+		records = append(records, map[string]interface{}{
 			"name":       name,
 			"hostRecord": hostRecord,
 			"type":       targetType,
 			"value":      value,
-		},
+		})
+	}
+
+	return map[string]interface{}{
+		"records": records,
 	}, nil
 }
 

@@ -30,6 +30,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -535,14 +536,23 @@ func (b *Botanist) DeployCertBroker() error {
 		return fmt.Errorf("certificate management configuration could not be created %v", err)
 	}
 
+	shootDomains := sets.NewString(*b.Shoot.Info.Spec.DNS.Domain)
+	if b.Shoot.NginxIngressEnabled() {
+		shootDomains.Insert(b.Shoot.Info.Spec.Addons.NginxIngress.IngressDNS.AdditionalRecords...)
+	}
+
 	var dns []interface{}
 	for _, route53Provider := range certificateManagementConfig.Providers.Route53 {
-		route53values := createDNSProviderValuesForDomain(&route53Provider, *b.Shoot.Info.Spec.DNS.Domain)
-		dns = append(dns, route53values...)
+		for domain := range shootDomains {
+			route53values := createDNSProviderValuesForDomain(&route53Provider, domain)
+			dns = append(dns, route53values...)
+		}
 	}
 	for _, cloudDNSProvider := range certificateManagementConfig.Providers.CloudDNS {
-		cloudDNSValues := createDNSProviderValuesForDomain(&cloudDNSProvider, *b.Shoot.Info.Spec.DNS.Domain)
-		dns = append(dns, cloudDNSValues...)
+		for domain := range shootDomains {
+			cloudDNSValues := createDNSProviderValuesForDomain(&cloudDNSProvider, domain)
+			dns = append(dns, cloudDNSValues...)
+		}
 	}
 
 	certBrokerConfig := map[string]interface{}{

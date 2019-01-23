@@ -21,9 +21,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/miekg/dns"
-
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/miekg/dns"
 )
 
 // LookupDNSHost performs a DNS lookup for the given <domain>. In case of success, it will return the list
@@ -119,4 +118,11 @@ func lookUPDNSRecord(domain string, qtype uint16) ([]string, error) {
 	}
 
 	return recordsToReturn, nil
+}
+
+// GenerateIngressDomain builds up a wild card ingress domain consisting of
+// ingress.<domain>
+func GenerateIngressDomain(domain string) string {
+	ingressPrefix := "ingress"
+	return fmt.Sprintf("%s.%s", ingressPrefix, domain)
 }

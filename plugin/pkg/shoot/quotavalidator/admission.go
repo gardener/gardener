@@ -26,7 +26,8 @@ import (
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"k8s.io/api/core/v1"
+	admissionutils "github.com/gardener/gardener/plugin/pkg/utils"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
@@ -419,7 +420,7 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (v1.ResourceList,
 		}
 	}
 
-	if shoot.Spec.Addons != nil && shoot.Spec.Addons.NginxIngress != nil && shoot.Spec.Addons.NginxIngress.Addon.Enabled {
+	if admissionutils.NginxAddonEnabled(&shoot) {
 		countLB++
 	}
 	resources[garden.QuotaMetricLoadbalancer] = *resource.NewQuantity(countLB, resource.DecimalSI)

@@ -105,6 +105,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation":                   schema_pkg_apis_garden_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HibernationSchedule":           schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig": schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.IngressDNS":                    schema_pkg_apis_garden_v1beta1_IngressDNS(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks":                   schema_pkg_apis_garden_v1beta1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM":                      schema_pkg_apis_garden_v1beta1_Kube2IAM(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole":                  schema_pkg_apis_garden_v1beta1_Kube2IAMRole(ref),
@@ -3378,6 +3379,47 @@ func schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref common.Ref
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_IngressDNS(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "IngressDNS describes DNS settings for the Ingress.",
+				Properties: map[string]spec.Schema{
+					"standardRecords": {
+						SchemaProps: spec.SchemaProps{
+							Description: "StandardRecords are the domains whose wildcard sub domains point to an ingress load balancer. These domains are supposed to be set by the Shoot owner.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+					"additionalRecords": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AdditionalRecords are the domains whose wildcard sub domains point to an ingress load balancer. These domains are supposed to be set by Gardener.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_K8SNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -4199,6 +4241,11 @@ func schema_pkg_apis_garden_v1beta1_NginxIngress(ref common.ReferenceCallback) c
 							Format:      "",
 						},
 					},
+					"dns": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.IngressDNS"),
+						},
+					},
 					"loadBalancerSourceRanges": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LoadBalancerSourceRanges is list of whitelist IP sources for NginxIngress",
@@ -4217,7 +4264,8 @@ func schema_pkg_apis_garden_v1beta1_NginxIngress(ref common.ReferenceCallback) c
 				Required: []string{"enabled"},
 			},
 		},
-		Dependencies: []string{},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.IngressDNS"},
 	}
 }
 
