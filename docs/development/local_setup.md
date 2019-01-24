@@ -1,12 +1,12 @@
 # Preparing the setup
 
-Conceptionally, the Gardener is designated to run in containers within a Pod inside an Kubernetes cluster. It extends the API via the user-aggregated API server concepts. However, if you want to develop it, you may want to work locally with the Gardener without building a Docker image and deploying it to a cluster each and every time. That means that the Gardener runs outside a Kubernetes cluster which requires providing a [Kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/authenticate-across-clusters-kubeconfig/) in your local filesystem and point the Gardener to it when starting it (see below).
+Conceptionally, Gardener is designated to run inside as a Pod inside an Kubernetes cluster. It extends the Kubernetes API via the user-aggregated API server concepts. However, if you want to develop it, you may want to work locally with the Gardener without building a Docker image and deploying it to a cluster each and every time. That means that the Gardener runs outside a Kubernetes cluster which requires providing a [Kubeconfig](https://kubernetes.io/docs/tasks/access-application-cluster/authenticate-across-clusters-kubeconfig/) in your local filesystem and point the Gardener to it when starting it (see below).
 
 Further details could be found in
 
-1. [principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/)
+1. [Principles of Kubernetes](https://kubernetes.io/docs/concepts/), and its [components](https://kubernetes.io/docs/concepts/overview/components/)
 1. [Kubernetes Development Guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
-1. [architecture of the Garden](https://github.com/gardener/documentation/wiki/Architecture)
+1. [Architecture of the Garden](https://github.com/gardener/documentation/wiki/Architecture)
 
 This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kubernetes cluster running on a single node.
 
@@ -206,6 +206,7 @@ service "gardener-apiserver" created
 endpoints "gardener-apiserver" created
 apiservice "v1beta1.garden.sapcloud.io" created
 ```
+
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
 You need to have control over a domain (or subdomain) for which these records will be created.
 Please provide an *internal domain secret* (see [this](../../example/10-secret-internal-domain.yaml) for an example) which contains credentials with the proper privileges. Further information can be found [here](../deployment/configuration.md).
