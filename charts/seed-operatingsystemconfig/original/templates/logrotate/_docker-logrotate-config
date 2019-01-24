@@ -1,0 +1,9 @@
+{{- define "docker-logrotate-config" -}}
+- path: /etc/systemd/docker.conf
+  permissions: 0644
+  content:
+    inline:
+      encoding: ""
+      data: |
+{{ include "docker-config" . | indent 8 }}
+{{- end -}}

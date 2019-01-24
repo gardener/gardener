@@ -1,0 +1,32 @@
+osc:
+  type: coreos
+  purpose: bootstrap
+  reloadConfigFilePath: /var/lib/...
+  secretName: cpu-worker-0
+
+cloudProvider:
+  name: aws
+#  config: |
+#    Kubernetes cloud provider config
+#caBundle: |
+#  root certificates
+images:
+  hyperkube: image-repository
+  pause-container: image-repository
+kubernetes:
+  clusterDNS: 100.64.0.10
+  domain: cluster.local
+  kubelet:
+    caCert: abcd
+    hostnameOverride: false
+    parameters: []
+    enableCSI: false
+    providerIDProvided: false
+    featureGates: {}
+#     CustomResourceValidation: true
+#     RotateKubeletServerCertificate: false
+  version: 1.11.2
+worker:
+  name: cpu-worker
+  evictionSoftMemoryAvailable: 200Mi
+  evictionHardMemoryAvailable: 100Mi

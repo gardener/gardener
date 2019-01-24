@@ -1,0 +1,5 @@
+type: coreos
+purpose: bootstrap
+secretName: cpu-worker-0
+images:
+  hyperkube: image-repository

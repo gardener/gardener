@@ -1,0 +1,25 @@
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: OperatingSystemConfig
+metadata:
+  name: {{ required ".osc.secretName is required" .Values.osc.secretName }}-original
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: {{ required ".osc.type is required" .Values.osc.type }}
+  purpose: {{ required ".osc.purpose is required" .Values.osc.purpose }}
+  reloadConfigFilePath: {{ required ".osc.reloadConfigFilePath is required" .Values.osc.reloadConfigFilePath }}
+  units:
+{{ include "docker-logrotate" . | indent 2 }}
+{{ include "docker-logrotate-timer" . | indent 2 }}
+{{ include "docker-monitor" . | indent 2 }}
+{{ include "kubelet" . | indent 2 }}
+{{ include "kubelet-monitor" . | indent 2 }}
+{{ include "update-ca-certs" . | indent 2 }}
+{{ include "systemd-sysctl" . | indent 2 }}
+  files:
+{{ include "docker-logrotate-config" . | indent 2 }}
+{{ include "journald-config" . | indent 2 }}
+{{ include "kubelet-binary" . | indent 2 }}
+{{ include "root-certs" . | indent 2 }}
+{{ include "kernel-config" . | indent 2 }}
+{{ include "health-monitor" . | indent 2 }}
