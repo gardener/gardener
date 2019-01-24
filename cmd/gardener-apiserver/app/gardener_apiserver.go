@@ -31,8 +31,9 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
-	deletionconfirmation "github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
-	resourcereferencemanager "github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
+	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
+	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
+	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
@@ -125,6 +126,7 @@ func (o *Options) complete() error {
 	shootseedmanager.Register(o.Recommended.Admission.Plugins)
 	shootdnshostedzone.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
+	controllerregistrationresources.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
@@ -133,6 +135,7 @@ func (o *Options) complete() error {
 		shootquotavalidator.PluginName,
 		shootseedmanager.PluginName,
 		shootvalidator.PluginName,
+		controllerregistrationresources.PluginName,
 	}
 
 	recommendedPluginOrder := sets.NewString(o.Recommended.Admission.RecommendedPluginOrder...)

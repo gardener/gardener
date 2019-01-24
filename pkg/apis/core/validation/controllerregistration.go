@@ -16,6 +16,7 @@ package validation
 
 import (
 	"fmt"
+
 	"github.com/gardener/gardener/pkg/apis/core"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
@@ -55,10 +56,6 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		}
 
 		resources[resource.Kind] = resource.Type
-	}
-
-	if len(resources) == 0 {
-		allErrs = append(allErrs, field.Required(resourcesPath, "at least one resource is required"))
 	}
 
 	return allErrs
