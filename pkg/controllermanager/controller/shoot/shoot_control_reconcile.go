@@ -177,10 +177,15 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.SyncShootCredentialsToGarden).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployCloudControllerManager, deployKubeControllerManager),
 		})
+		computeShootOSConfig = g.Add(flow.Task{
+			Name:         "Computing operating system specific configuration for shoot workers",
+			Fn:           flow.SimpleTaskFn(hybridBotanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployInfrastructure),
+		})
 		deployKubeAddonManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes addon manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployInfrastructure),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployInfrastructure, computeShootOSConfig),
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine controller manager",
@@ -190,7 +195,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		reconcileMachines = g.Add(flow.Task{
 			Name:         "Reconciling Shoot workers",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.ReconcileMachines).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployMachineControllerManager, deployInfrastructure, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(computeShootOSConfig, deployMachineControllerManager, deployInfrastructure, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube2IAM resources",

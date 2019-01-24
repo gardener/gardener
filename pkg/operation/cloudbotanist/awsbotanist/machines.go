@@ -16,6 +16,7 @@ package awsbotanist
 
 import (
 	"fmt"
+
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -77,11 +78,6 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, operati
 
 	for zoneIndex := range zones {
 		for _, worker := range workers {
-			cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
-			if err != nil {
-				return nil, nil, err
-			}
-
 			machineClassSpec := map[string]interface{}{
 				"ami":                b.Shoot.Info.Spec.Cloud.AWS.MachineImage.AMI,
 				"region":             b.Shoot.Info.Spec.Cloud.Region,
@@ -99,7 +95,7 @@ func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, operati
 					"kubernetes.io/role/node":                                      "1",
 				},
 				"secret": map[string]interface{}{
-					"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
+					"cloudConfig": b.Shoot.CloudConfigMap[worker.Name].Downloader.Content,
 				},
 				"blockDevices": []map[string]interface{}{
 					{

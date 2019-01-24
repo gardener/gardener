@@ -1496,7 +1496,7 @@ var _ = Describe("validation", func() {
 								Kubernetes:   kubernetesVersionConstraint,
 								MachineImages: []garden.AlicloudMachineImage{
 									{
-										Name: "CoreOS",
+										Name: garden.MachineImageCoreOSAlicloud,
 										ID:   "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
 									},
 								},

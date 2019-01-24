@@ -70,11 +70,6 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, opera
 	}
 
 	for _, worker := range workers {
-		cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
-		if err != nil {
-			return nil, nil, err
-		}
-
 		machineClassSpec := map[string]interface{}{
 			"region":            b.Shoot.Info.Spec.Cloud.Region,
 			"resourceGroup":     stateVariables[resourceGroupName],
@@ -87,7 +82,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, opera
 				"kubernetes.io-role-node":                                      "1",
 			},
 			"secret": map[string]interface{}{
-				"cloudConfig": cloudConfig.FileContent("cloud-config.yaml"),
+				"cloudConfig": b.Shoot.CloudConfigMap[worker.Name].Downloader.Content,
 			},
 			"machineType": worker.MachineType,
 			"image": map[string]interface{}{

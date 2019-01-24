@@ -20,7 +20,7 @@ spec:
         - 1.11.7
         - 1.10.12
       machineImages:
-      - name: CoreOS
+      - name: coreos
         regions:
         - name: eu-west-1
           ami: ami-030d1bab626c90e46

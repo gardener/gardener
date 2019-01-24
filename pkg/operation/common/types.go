@@ -42,6 +42,10 @@ const (
 	// is being downloaded from the cloud-config-downloader process)
 	CloudConfigPrefix = "cloud-config"
 
+	// CloudConfigFilePath is the path on the shoot worker nodes to which the operating system specific configuration
+	// will be downloaded.
+	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
+
 	// CloudProviderSecretName is the name of the secret containing the cloud provider credentials.
 	CloudProviderSecretName = "cloudprovider"
 
@@ -444,9 +448,6 @@ const (
 
 	// ETCDBackupRestoreImageName is the name of the ETCDBackupRestore image.
 	ETCDBackupRestoreImageName = "etcd-backup-restore"
-
-	// RubyImageName is the name of the Ruby image.
-	RubyImageName = "ruby"
 
 	// AlicloudControllerManagerImageName is the name of the AlicloudControllerManager image.
 	AlicloudControllerManagerImageName = "alicloud-controller-manager"

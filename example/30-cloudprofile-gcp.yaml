@@ -20,7 +20,7 @@ spec:
         - 1.11.7
         - 1.10.12
       machineImages:
-      - name: CoreOS
+      - name: coreos
         image: projects/coreos-cloud/global/images/coreos-stable-1911-5-0-v20181219
       machineTypes:
       - name: n1-standard-2

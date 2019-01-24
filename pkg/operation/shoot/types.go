@@ -33,4 +33,20 @@ type Shoot struct {
 
 	WantsClusterAutoscaler bool
 	IsHibernated           bool
+
+	CloudConfigMap map[string]CloudConfig
+}
+
+// CloudConfig contains a downloader script as well as the original cloud config.
+type CloudConfig struct {
+	Downloader CloudConfigData
+	Original   CloudConfigData
+}
+
+// CloudConfigData contains the actual content, a command to load it and all units that
+// shall be considered for restart on change.
+type CloudConfigData struct {
+	Content string
+	Command *string
+	Units   []string
 }

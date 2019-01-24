@@ -15,38 +15,140 @@
 package hybridbotanist
 
 import (
+	"context"
+	"fmt"
+	"path/filepath"
+	"sync"
 	"time"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// generateCloudConfigChart renders the kube-addon-manager configuration for the cloud config user data.
-// It will be stored as a Secret and mounted into the Pod. The configuration contains
-// specially labelled Kubernetes manifests which will be created and periodically reconciled.
-func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChart, error) {
+var operatingSystemConfigChartPath = filepath.Join(common.ChartPath, "seed-operatingsystemconfig")
+
+// first hard, second soft
+func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machineType string) (string, string) {
+	memoryThreshold, _ := resource.ParseQuantity("8Gi")
+
+	for _, machtype := range machineTypes {
+		if machtype.Name == machineType {
+			if machtype.Memory.Cmp(memoryThreshold) > 0 {
+				return "1Gi", "1.5Gi"
+			}
+			return "5%", "10%"
+		}
+	}
+	return "100Mi", "200Mi"
+}
+
+// ComputeShootOperatingSystemConfig generates the shoot operating system configuration. Both, the downloader
+// and original configuration will be generated and stored in the shoot specific cloud config map for later usage.
+func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	var (
+		machineTypes     = b.Shoot.GetMachineTypesFromCloudProfile()
+		machineImageName = b.Shoot.GetMachineImageName()
+	)
+
+	downloaderConfig, err := b.generateDownloaderConfig(machineImageName)
+	if err != nil {
+		return err
+	}
+	originalConfig, err := b.generateOriginalConfig()
+	if err != nil {
+		return err
+	}
+
+	type oscOutput struct {
+		workerName  string
+		cloudConfig *shoot.CloudConfig
+		err         error
+	}
+
+	var (
+		results   = make(chan *oscOutput)
+		wg        sync.WaitGroup
+		errorList = []error{}
+	)
+
+	for _, worker := range b.Shoot.GetWorkers() {
+		wg.Add(1)
+
+		go func(worker gardenv1beta1.Worker) {
+			defer wg.Done()
+			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImageName, downloaderConfig, originalConfig, worker)
+			results <- &oscOutput{worker.Name, cloudConfig, err}
+		}(worker)
+	}
+
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	for out := range results {
+		if out.err != nil {
+			errorList = append(errorList, out.err)
+			continue
+		}
+		b.Shoot.CloudConfigMap[out.workerName] = *out.cloudConfig
+	}
+
+	if len(errorList) > 0 {
+		return fmt.Errorf("errors occurred during operating system config generation: %+v", errorList)
+	}
+	return nil
+}
+
+func (b *HybridBotanist) generateDownloaderConfig(machineImageName gardenv1beta1.MachineImageName) (map[string]interface{}, error) {
+	downloaderConfig := map[string]interface{}{
+		"type":    machineImageName,
+		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+	}
+
+	return b.InjectImages(downloaderConfig, b.ShootVersion(), common.KubectlVersion, common.HyperkubeImageName)
+}
+
+func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error) {
+	var (
+		userDataConfig = b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig()
+		serviceNetwork = b.Shoot.GetServiceNetwork()
+
 		cloudProvider = map[string]interface{}{
 			"name": b.ShootCloudBotanist.GetCloudProviderName(),
 		}
-		serviceNetwork = b.Shoot.GetServiceNetwork()
-		userDataConfig = b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig()
-	)
 
-	bootstrapTokenSecret, err := b.computeBootstrapToken()
-	if err != nil {
-		return nil, err
-	}
-	bootstrapTokenSecretData := bootstrapTokenSecret.Data
+		originalConfig = map[string]interface{}{
+			"cloudProvider": cloudProvider,
+			"kubernetes": map[string]interface{}{
+				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
+				// TODO: resolve conformance test issue before changing:
+				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
+				"domain": gardenv1beta1.DefaultDomain,
+				"kubelet": map[string]interface{}{
+					"caCert":             string(b.Secrets["ca-kubelet"].Data[secrets.DataKeyCertificateCA]),
+					"parameters":         userDataConfig.KubeletParameters,
+					"hostnameOverride":   userDataConfig.HostnameOverride,
+					"enableCSI":          userDataConfig.EnableCSI,
+					"providerIDProvided": userDataConfig.ProviderIDProvided,
+				},
+				"version": b.Shoot.Info.Spec.Kubernetes.Version,
+			},
+		}
+	)
 
 	if userDataConfig.ProvisionCloudProviderConfig {
 		cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
@@ -56,70 +158,121 @@ func (b *HybridBotanist) generateCloudConfigChart() (*chartrenderer.RenderedChar
 		cloudProvider["config"] = cloudProviderConfig
 	}
 
-	machineTypes := b.Shoot.GetMachineTypesFromCloudProfile()
-	memoryThreshold, _ := resource.ParseQuantity("8Gi")
-
-	workers := []map[string]interface{}{}
-
-	for _, worker := range b.Shoot.GetWorkers() {
-		newWorker := map[string]interface{}{
-			"name":                        worker.Name,
-			"secretName":                  b.Shoot.ComputeCloudConfigSecretName(worker.Name),
-			"evictionHardMemoryAvailable": "100Mi",
-			"evictionSoftMemoryAvailable": "200Mi",
-		}
-		for _, machtype := range machineTypes {
-			if machtype.Name == worker.MachineType {
-				// Found a match, no need for further comparisons
-				// Break the loop after replacing default values
-				if machtype.Memory.Cmp(memoryThreshold) > 0 {
-					newWorker["evictionHardMemoryAvailable"] = "1Gi"
-					newWorker["evictionSoftMemoryAvailable"] = "1.5Gi"
-				} else {
-					newWorker["evictionHardMemoryAvailable"] = "5%"
-					newWorker["evictionSoftMemoryAvailable"] = "10%"
-				}
-				break
-			}
-		}
-		workers = append(workers, newWorker)
+	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
+	if kubeletConfig != nil {
+		originalConfig["kubernetes"].(map[string]interface{})["kubelet"].(map[string]interface{})["featureGates"] = kubeletConfig.FeatureGates
 	}
 
-	config := map[string]interface{}{
-		"cloudProvider": cloudProvider,
-		"kubernetes": map[string]interface{}{
-			"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
-			// TODO: resolve conformance test issue before changing:
-			// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
-			"domain": gardenv1beta1.DefaultDomain,
-			"kubelet": map[string]interface{}{
-				"caCert":             string(b.Secrets["ca-kubelet"].Data[secrets.DataKeyCertificateCA]),
-				"bootstrapToken":     bootstraptokenutil.TokenFromIDAndSecret(string(bootstrapTokenSecretData[bootstraptokenapi.BootstrapTokenIDKey]), string(bootstrapTokenSecretData[bootstraptokenapi.BootstrapTokenSecretKey])),
-				"parameters":         userDataConfig.KubeletParameters,
-				"hostnameOverride":   userDataConfig.HostnameOverride,
-				"enableCSI":          userDataConfig.EnableCSI,
-				"providerIDProvided": userDataConfig.ProviderIDProvided,
-			},
-			"version": b.Shoot.Info.Spec.Kubernetes.Version,
-		},
-		"workers": workers,
+	if caBundle := b.Shoot.CloudProfile.Spec.CABundle; caBundle != nil {
+		originalConfig["caBundle"] = *caBundle
 	}
 
-	config, err = b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.RubyImageName, common.HyperkubeImageName, common.PauseContainerImageName)
+	return b.InjectImages(originalConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName, common.PauseContainerImageName)
+}
+
+func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName gardenv1beta1.MachineImageName, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+	var (
+		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
+		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
+	)
+
+	downloaderConfig["secretName"] = secretName
+	originalConfig["osc"] = map[string]interface{}{
+		"type":                 machineImageName,
+		"purpose":              extensionsv1alpha1.OperatingSystemConfigPurposeReconcile,
+		"reloadConfigFilePath": common.CloudConfigFilePath,
+		"secretName":           secretName,
+	}
+	originalConfig["worker"] = map[string]interface{}{
+		"name":                        worker.Name,
+		"evictionHardMemoryAvailable": evictionHardMemoryAvailable,
+		"evictionSoftMemoryAvailable": evictionSoftMemoryAvailable,
+	}
+
+	downloader, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "downloader"), fmt.Sprintf("%s-downloader", secretName), downloaderConfig)
+	if err != nil {
+		return nil, err
+	}
+	original, err := b.applyAndWaitForShootOperatingSystemConfig(filepath.Join(operatingSystemConfigChartPath, "original"), fmt.Sprintf("%s-original", secretName), originalConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
-	if kubeletConfig != nil {
-		config["kubernetes"].(map[string]interface{})["kubelet"].(map[string]interface{})["featureGates"] = kubeletConfig.FeatureGates
+	return &shoot.CloudConfig{Downloader: *downloader, Original: *original}, nil
+}
+
+func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
+	var result *shoot.CloudConfigData
+
+	if err := common.ApplyChart(b.K8sSeedClient, b.ChartSeedRenderer, chartPath, name, b.Shoot.SeedNamespace, values, nil); err != nil {
+		return nil, err
 	}
 
-	if b.Shoot.CloudProfile.Spec.CABundle != nil {
-		config["caBundle"] = *(b.Shoot.CloudProfile.Spec.CABundle)
+	return result, wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+		var osc extensionsv1alpha1.OperatingSystemConfig
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, &osc); err != nil {
+			return false, err
+		}
+
+		if osc.Status.ObservedGeneration == osc.Generation && osc.Status.LastOperation.State == extensionsv1alpha1.LastOperationStateSucceeded && osc.Status.CloudConfig != nil {
+			var secret corev1.Secret
+			if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: osc.Status.CloudConfig.SecretRef.Name, Namespace: osc.Status.CloudConfig.SecretRef.Namespace}, &secret); err != nil {
+				return false, err
+			}
+			result = &shoot.CloudConfigData{
+				Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
+				Command: osc.Status.Command,
+				Units:   osc.Status.Units,
+			}
+			return true, nil
+		}
+		return false, nil
+	})
+}
+
+// generateCloudConfigExecutionChart renders the kube-addon-manager configuration for the cloud config user data.
+// It will be stored as a Secret and mounted into the Pod. The configuration contains
+// specially labelled Kubernetes manifests which will be created and periodically reconciled.
+func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedChart, error) {
+	bootstrapTokenSecret, err := b.computeBootstrapToken()
+	if err != nil {
+		return nil, err
 	}
 
-	return b.ComputeOriginalCloudConfig(config)
+	var (
+		shootWorkers = b.Shoot.GetWorkers()
+		workers      = make([]map[string]interface{}, 0, len(shootWorkers))
+	)
+
+	for _, worker := range shootWorkers {
+		cloudConfigData := b.Shoot.CloudConfigMap[worker.Name]
+
+		w := map[string]interface{}{
+			"name":        worker.Name,
+			"secretName":  b.Shoot.ComputeCloudConfigSecretName(worker.Name),
+			"cloudConfig": cloudConfigData.Original.Content,
+			"units":       cloudConfigData.Original.Units,
+		}
+
+		if cmd := cloudConfigData.Original.Command; cmd != nil {
+			w["command"] = *cmd
+		}
+
+		workers = append(workers, w)
+	}
+
+	config := map[string]interface{}{
+		"bootstrapToken": bootstraptokenutil.TokenFromIDAndSecret(string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenIDKey]), string(bootstrapTokenSecret.Data[bootstraptokenapi.BootstrapTokenSecretKey])),
+		"configFilePath": common.CloudConfigFilePath,
+		"workers":        workers,
+	}
+
+	config, err = b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	if err != nil {
+		return nil, err
+	}
+
+	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
 }
 
 func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err error) {

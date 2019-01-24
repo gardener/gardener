@@ -18,12 +18,14 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -60,6 +62,8 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 		IsHibernated:           helper.IsShootHibernated(shoot),
 		WantsClusterAutoscaler: false,
 	}
+
+	shootObj.CloudConfigMap = make(map[string]CloudConfig, len(shootObj.GetWorkerNames()))
 
 	// Determine the external Shoot cluster domain, i.e. the domain which will be put into the Kubeconfig handed out
 	// to the user.

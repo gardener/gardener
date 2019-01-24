@@ -470,13 +470,7 @@ func (s *Seed) GetIngressFQDN(subDomain, shootName, projectName string) string {
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 func (s *Seed) CheckMinimumK8SVersion() error {
-	var minSeedVersion string
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAzure:
-		minSeedVersion = "1.8.6" // https://github.com/kubernetes/kubernetes/issues/56898
-	default:
-		minSeedVersion = "1.8" // CRD garbage collection
-	}
+	minSeedVersion := "1.11" // CRD status subresources
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret, client.Options{
 		Scheme: kubernetes.SeedScheme,

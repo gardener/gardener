@@ -38,9 +38,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -180,7 +182,7 @@ func (o *Operation) ComputePrometheusIngressFQDN() string {
 
 // InitializeMonitoringClient will read the Prometheus ingress auth and tls
 // secrets from the Seed cluster, which are containing the cert to secure
-// the conntection and the credentials authenticate against the Shoot Prometheus.
+// the connection and the credentials authenticate against the Shoot Prometheus.
 // With those certs and credentials, a Prometheus client API will be created
 // and attached to the existing Operation object.
 func (o *Operation) InitializeMonitoringClient() error {
@@ -315,31 +317,6 @@ func (o *Operation) InjectImages(values map[string]interface{}, k8sVersionRuntim
 
 	copy["images"] = i
 	return copy, nil
-}
-
-// ComputeDownloaderCloudConfig computes the downloader cloud config which is injected as user data while
-// creating machines/VMs. It needs the name of the worker group it is used for (<workerName>) and returns
-// the rendered chart.
-func (o *Operation) ComputeDownloaderCloudConfig(workerName string) (*chartrenderer.RenderedChart, error) {
-	config := map[string]interface{}{
-		"kubeconfig":    string(o.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
-		"secretName":    o.Shoot.ComputeCloudConfigSecretName(workerName),
-		"cloudProvider": o.Shoot.CloudProvider,
-	}
-
-	values, err := o.InjectImages(config, o.SeedVersion(), common.KubectlVersion, common.HyperkubeImageName)
-	if err != nil {
-		return nil, err
-	}
-
-	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, values)
-}
-
-// ComputeOriginalCloudConfig computes the original cloud config which is downloaded by the cloud config
-// downloader process running on machines/VMs. It will regularly check for new versions and restart all
-// units once it finds a newer state.
-func (o *Operation) ComputeOriginalCloudConfig(config map[string]interface{}) (*chartrenderer.RenderedChart, error) {
-	return o.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "original"), "shoot-cloud-config-original", metav1.NamespaceSystem, config)
 }
 
 // SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
