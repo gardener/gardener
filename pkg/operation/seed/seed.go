@@ -223,7 +223,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	var (
 		basicAuth      string
 		kibanaHost     string
-		replicas       int
 		loggingEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 	)
 
@@ -248,7 +247,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		basicAuth = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
 
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
-		replicas = 1
 	} else {
 		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -325,15 +323,11 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 				"basicAuthSecret": basicAuth,
 				"host":            kibanaHost,
 			},
-			"kibana": map[string]interface{}{
-				"replicaCount": replicas,
-			},
 			"curator": map[string]interface{}{
 				"objectCount":       nodeCount,
 				"baseDiskThreshold": 2 * 1073741824,
 			},
 			"elasticsearch": map[string]interface{}{
-				"elasticsearchReplicas":     replicas,
 				"objectCount":               nodeCount,
 				"elasticsearchVolumeSizeGB": 100,
 			},
