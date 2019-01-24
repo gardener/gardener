@@ -18,6 +18,8 @@ import (
 	"context"
 
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
+	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
+	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardenscheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
@@ -117,14 +119,15 @@ func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
 		gardenscheme.AddToScheme,
+		gardencorescheme.AddToScheme,
 	)
 
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
-		gardenscheme.AddToScheme,
 		machinescheme.AddToScheme,
+		gardenextensionsscheme.AddToScheme,
 	)
 
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))

@@ -15,6 +15,8 @@
 package helper
 
 import (
+	"strings"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
@@ -100,4 +102,27 @@ func GetCondition(conditions []gardencorev1alpha1.Condition, conditionType garde
 // ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.
 func ConditionsNeedUpdate(existingConditions, newConditions []gardencorev1alpha1.Condition) bool {
 	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
+}
+
+// IsResourceSupported returns true if a given combination of kind/type is part of a controller resources list.
+func IsResourceSupported(resources []gardencorev1alpha1.ControllerResource, resourceKind, resourceType string) bool {
+	for _, resource := range resources {
+		if resource.Kind == resourceKind && strings.ToLower(resource.Type) == strings.ToLower(resourceType) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// IsControllerInstallationSuccessful returns true if a ControllerInstallation has been marked as "successfully"
+// installed.
+func IsControllerInstallationSuccessful(controllerInstallation gardencorev1alpha1.ControllerInstallation) bool {
+	for _, condition := range controllerInstallation.Status.Conditions {
+		if condition.Type == gardencorev1alpha1.ControllerInstallationInstalled && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+
+	return false
 }

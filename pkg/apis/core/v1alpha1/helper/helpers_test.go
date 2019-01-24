@@ -142,4 +142,76 @@ var _ = Describe("helper", func() {
 			Expect(cond).To(BeNil())
 		})
 	})
+
+	DescribeTable("#IsResourceSupported",
+		func(resources []gardencorev1alpha1.ControllerResource, resourceKind, resourceType string, expectation bool) {
+			Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1alpha1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
+			},
+			"foo",
+			"bar",
+			true,
+		),
+		Entry("expect true",
+			[]gardencorev1alpha1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
+			},
+			"foo",
+			"BAR",
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1alpha1.ControllerResource{
+				{
+					Kind: "foo",
+					Type: "bar",
+				},
+			},
+			"foo",
+			"baz",
+			false,
+		),
+	)
+
+	DescribeTable("#IsControllerInstallationSuccessful",
+		func(conditions []gardencorev1alpha1.Condition, expectation bool) {
+			controllerInstallation := gardencorev1alpha1.ControllerInstallation{
+				Status: gardencorev1alpha1.ControllerInstallationStatus{
+					Conditions: conditions,
+				},
+			}
+			Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
+		},
+		Entry("expect true",
+			[]gardencorev1alpha1.Condition{
+				{
+					Type:   gardencorev1alpha1.ControllerInstallationInstalled,
+					Status: corev1.ConditionTrue,
+				},
+			},
+			true,
+		),
+		Entry("expect false",
+			[]gardencorev1alpha1.Condition{
+				{
+					Type:   gardencorev1alpha1.ControllerInstallationInstalled,
+					Status: corev1.ConditionFalse,
+				},
+			},
+			false,
+		),
+		Entry("expect false",
+			[]gardencorev1alpha1.Condition{},
+			false,
+		),
+	)
 })

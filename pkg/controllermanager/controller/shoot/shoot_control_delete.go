@@ -58,6 +58,10 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 		return formatError("Failed to create a Botanist", err)
 	}
 
+	if err := botanist.RequiredExtensionsExist(o.Shoot.Info); err != nil {
+		return formatError("Failed to check whether all required extensions exist", err)
+	}
+
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 	// all resources have already been deleted. We can delete the Shoot resource as a consequence.
 	namespace, err := botanist.K8sSeedClient.GetNamespace(o.Shoot.SeedNamespace)

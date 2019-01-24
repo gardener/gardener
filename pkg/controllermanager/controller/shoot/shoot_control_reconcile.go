@@ -59,6 +59,10 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		return formatError("Failed to create a HybridBotanist", err)
 	}
 
+	if err := botanist.RequiredExtensionsExist(o.Shoot.Info); err != nil {
+		return formatError("Failed to check whether all required extensions exist", err)
+	}
+
 	var (
 		defaultTimeout                  = 30 * time.Second
 		defaultInterval                 = 5 * time.Second

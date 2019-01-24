@@ -15,11 +15,15 @@
 package botanist
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
+	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -27,6 +31,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
@@ -144,5 +150,41 @@ func (b *Botanist) UnregisterAsSeed() error {
 	if err := b.K8sGardenClient.DeleteSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
+	return nil
+}
+
+// RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
+func (b *Botanist) RequiredExtensionsExist(shoot *gardenv1beta1.Shoot) error {
+	controllerInstallationList := &corev1alpha1.ControllerInstallationList{}
+	if err := b.K8sGardenClient.Client().List(context.TODO(), nil, controllerInstallationList); err != nil {
+		return err
+	}
+
+	requiredExtensions := map[string]string{
+		// At the moment we do only support `OperatingSystemConfig` resources, so we check for that:
+		extensionsv1alpha1.OperatingSystemConfigResource: string(b.Shoot.GetMachineImageName()),
+	}
+
+	for _, controllerInstallation := range controllerInstallationList.Items {
+		if controllerInstallation.Spec.SeedRef.Name != b.Seed.Info.Name {
+			continue
+		}
+
+		controllerRegistration := &corev1alpha1.ControllerRegistration{}
+		if err := b.K8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+			return err
+		}
+
+		for extensionKind, extensionType := range requiredExtensions {
+			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
+				delete(requiredExtensions, extensionKind)
+			}
+		}
+	}
+
+	if len(requiredExtensions) > 0 {
+		return fmt.Errorf("extension controllers missing or unready: %+v", requiredExtensions)
+	}
+
 	return nil
 }
