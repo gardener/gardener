@@ -9,6 +9,8 @@ kube-proxy:
   podAnnotations: {}
   images:
     hyperkube: image-repository
+cloud-controller-manager:
+  enableCSI: false
 vpn-shoot:
   serviceNetwork: 10.0.0.0/24
   podNetwork: 192.168.0.0/16
@@ -34,3 +36,14 @@ podsecuritypolicies:
   allowPrivilegedContainers: false
 cert-broker:
   enabled: true
+csi-alicloud:
+  images:
+    csi-attacher: image-repository:image-tag
+    csi-driver-registrar: image-repository:image-tag
+    csi-provisioner: image-repository:image-tag
+    csi-plugin-alicloud: image-repository:image-tag
+  
+  credential:
+    accessKeyID: keyID
+    accessKeySecret: secret
+  enabled: false

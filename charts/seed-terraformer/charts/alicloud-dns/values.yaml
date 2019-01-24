@@ -3,6 +3,7 @@ record:
   hostRecord: my-dns-record
   value: 1.2.3.4
   type: ip
+  ttl: "120"
 
 names:
   configuration: shoot.tf-config

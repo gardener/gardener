@@ -285,20 +285,15 @@ func (b *Botanist) GenerateTerraformDNSConfig(name, hostedZoneID, targetType str
 // name is registered in Alicloud. It is always like xxx.xxx. If there is an exception, this function should be rewritten !!!
 // host_record is the host name in A or CNAME record
 func (b *Botanist) generateTerraformAlicloudDNSConfig(domain, targetType string, value string, purposeInternalDomain bool) (map[string]interface{}, error) {
-	secret, err := b.getDomainCredentials(purposeInternalDomain)
-	if err != nil {
-		return nil, err
+	splits := strings.Split(domain, ".")
+	// Shoot validation promises the shoot.spec.dns.domain has at least one ".", and domain has more than one "."
+	l := len(splits)
+	if l < 2 {
+		return nil, fmt.Errorf("Domain %s is not valid", domain)
 	}
-	name, ok := secret.Annotations[common.DNSDomain]
-	// if the secret is not default domain secret or internal domain secret
-	if !ok {
-		// domain should be generated from shoot.spec.dns.domain
-		splits := strings.Split(domain, ".")
-		// Shoot validation promises the shoot.spec.dns.domain has at least one ".", and domain has more than one "."
-		l := len(splits)
-		name = fmt.Sprintf("%s.%s", splits[l-2], splits[l-1])
-	}
-	hostRecord := strings.TrimSuffix(domain, "."+name)
+	name := fmt.Sprintf("%s.%s", splits[l-2], splits[l-1])
+
+	hostRecord := strings.TrimSuffix(domain, fmt.Sprintf(".%s", name))
 
 	return map[string]interface{}{
 		"record": map[string]interface{}{

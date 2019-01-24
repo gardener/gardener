@@ -80,10 +80,15 @@ func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, err
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the cloud-controller-manager properly.
-func (b *GCPBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, error) {
+func (b *GCPBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error) {
 	return map[string]interface{}{
 		"environment": getGCPCredentialsEnvironment(),
-	}, nil
+	}, common.CloudControllerManagerDeploymentName, nil
+}
+
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *GCPBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	return nil, nil
 }
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to

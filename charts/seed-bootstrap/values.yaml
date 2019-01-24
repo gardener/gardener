@@ -7,6 +7,7 @@ prometheus:
   # - number of Nodes
   # - total Foos
   objectCount: 4
+  storage: 10Gi
   resources:
     requests:
       cpu:
@@ -87,6 +88,7 @@ fluentd-es:
 
 alertmanager:
   emailConfigs: []
+  storage: 1Gi
 
 cert-manager:
   enabled: true

@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: cloud-controller-manager
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+  - name: metrics
+    port: 10253
+    protocol: TCP
+  selector:
+    app: kubernetes
+    role: cloud-controller-manager
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: cloud-controller-manager
+  namespace: {{ .Release.Namespace }}
+  labels:
+    garden.sapcloud.io/role: controlplane
+    app: kubernetes
+    role: cloud-controller-manager
+spec:
+  revisionHistoryLimit: 0
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: cloud-controller-manager
+  template:
+    metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        garden.sapcloud.io/role: controlplane
+        app: kubernetes
+        role: cloud-controller-manager
+    spec:
+      containers:
+      - name: cloud-controller-manager
+        image: {{ index .Values.images "alicloud-controller-manager" }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /cloud-controller-manager
+        - --kubeconfig=/var/lib/cloud-controller-manager/kubeconfig
+        - --address=0.0.0.0
+        - --allow-untagged-cloud=true
+        - --allocate-node-cidrs=true
+        - --cloud-provider={{ .Values.cloudProvider }}
+        - --leader-elect=true
+        - --cluster-cidr={{ .Values.podNetwork }}
+        - --use-service-account-credentials=false
+        - --v=2
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        - --cluster-name={{ .Values.clusterName }}
+        - --configure-cloud-routes={{ .Values.configureRoutes }}
+        ports:
+        - containerPort: 10253
+          name: metrics
+          protocol: TCP
+        env:
+{{ toYaml .Values.environment | indent 10 }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            scheme: HTTP
+            port: 10253
+          successThreshold: 1
+          failureThreshold: 2
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 15
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        {{- if .Values.resources }}
+        resources:
+{{ toYaml .Values.resources | indent 10 }}
+        {{- end }}
+        volumeMounts:
+        - name: cloud-controller-manager
+          mountPath: /var/lib/cloud-controller-manager
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+        - name: cloudprovider
+          mountPath: /srv/cloudprovider
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: cloud-controller-manager
+        secret:
+          secretName: cloud-controller-manager
+      - name: cloud-provider-config
+        configMap:
+          name: cloud-provider-config
+      - name: cloudprovider
+        secret:
+          secretName: cloudprovider

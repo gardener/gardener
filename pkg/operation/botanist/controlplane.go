@@ -281,6 +281,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				"host":            alertManagerHost,
 			},
 			"replicas": b.Shoot.GetReplicas(1),
+			"storage":  b.Seed.GetValidVolumeSize("1Gi"),
 		}
 		grafanaConfig = map[string]interface{}{
 			"ingress": map[string]interface{}{
@@ -335,7 +336,6 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
-
 	alertManager, err := b.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
 	if err != nil {
 		return err

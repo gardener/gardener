@@ -119,6 +119,7 @@ func (b *HybridBotanist) DeployETCD() error {
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},
+		"storage": b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
 	// Some cloud botanists do not yet support backup and won't return backup config data.
@@ -446,7 +447,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 			"checksum/configmap-cloud-provider-config":        b.CheckSums[common.CloudProviderConfigName],
 		},
 	}
-	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()
+	cloudSpecificValues, chartName, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()
 	if err != nil {
 		return err
 	}
@@ -470,7 +471,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CloudControllerManagerDeploymentName), common.CloudControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, chartName), common.CloudControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
 }
 
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the

@@ -137,6 +137,8 @@ func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 		return &s.Info.Spec.Cloud.GCP.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderOpenStack:
 		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
+	case gardenv1beta1.CloudProviderAlicloud:
+		return &s.Info.Spec.Cloud.Alicloud.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderLocal:
 		return &s.Info.Spec.Cloud.Local.Networks.K8SNetworks
 	}
@@ -176,6 +178,8 @@ func (s *Shoot) GetMachineImageName() gardenv1beta1.MachineImageName {
 		return s.Info.Spec.Cloud.Azure.MachineImage.Name
 	case gardenv1beta1.CloudProviderGCP:
 		return s.Info.Spec.Cloud.GCP.MachineImage.Name
+	case gardenv1beta1.CloudProviderAlicloud:
+		return s.Info.Spec.Cloud.Alicloud.MachineImage.Name
 	case gardenv1beta1.CloudProviderOpenStack:
 		return s.Info.Spec.Cloud.OpenStack.MachineImage.Name
 	}

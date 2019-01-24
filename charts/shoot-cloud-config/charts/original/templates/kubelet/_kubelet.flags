@@ -1,9 +1,17 @@
 {{- define "kubelet-flags" -}}
 --allow-privileged=true \
 --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
+{{- if.kubernetes.kubelet.providerIDProvided }}
+--provider-id=${PROVIDER_ID} \
+{{- end }}
+{{- if .kubernetes.kubelet.enableCSI }}
+--cloud-provider=external \
+--enable-controller-attach-detach=true \
+{{- else }}
 --cloud-provider={{ .cloudProvider.name }} \
 {{- if .cloudProvider.config }}
 --cloud-config=/var/lib/kubelet/cloudprovider.conf \
+{{- end }}
 {{- end }}
 --config=/var/lib/kubelet/config/kubelet \
 --cni-bin-dir=/opt/cni/bin/ \
@@ -11,6 +19,7 @@
 {{- if semverCompare "< 1.12" .kubernetes.version }}
 --cadvisor-port=0 \
 {{- end }}
+--pod-infra-container-image={{ index .images "pause-container" }} \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --network-plugin=cni \
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "workers.name is required" .worker.name }}" \

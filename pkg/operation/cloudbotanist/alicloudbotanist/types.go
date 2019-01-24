@@ -15,12 +15,14 @@
 package alicloudbotanist
 
 import (
+	"github.com/gardener/gardener/pkg/client/alicloud"
 	"github.com/gardener/gardener/pkg/operation"
 )
 
 // AlicloudBotanist is a struct which has methods that perform Alicloud cloud-specific operations for a Shoot cluster.
 type AlicloudBotanist struct {
 	*operation.Operation
+	AlicloudClient    alicloud.ClientInterface
 	CloudProviderName string
 }
 
@@ -29,4 +31,6 @@ const (
 	AccessKeyID = "accessKeyID"
 	// AccessKeySecret is a constant for the key in a cloud provider secret and backup secret that holds the Alicloud access key secret.
 	AccessKeySecret = "accessKeySecret"
+	// UserData is a constant for the key in a cloud provider secret that holds the user data
+	UserData = "userData"
 )

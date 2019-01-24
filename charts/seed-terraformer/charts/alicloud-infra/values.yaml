@@ -1,0 +1,31 @@
+alicloud:
+  region: cn-beijing
+
+create:
+  vpc: true
+
+clusterName: test-namespace
+
+sshPublicKey: sshkey-12345
+
+vpc:
+  id: ${alicloud_vpc.vpc.id}
+  cidr: 10.10.10.10/6
+  natGatewayID: ${alicloud_nat_gateway.nat_gateway.id}
+  snatTableID: ${alicloud_nat_gateway.nat_gateway.snat_table_ids} 
+
+
+zones:
+- name: cn-beijing-a
+  cidr:
+    worker: 10.250.0.0/19
+- name: cn-beijing-b
+  cidr:
+    worker: 10.250.32.0/19
+
+names:
+  configuration: shoot.tf-config
+  variables: shoot.tf-vars
+  state: shoot.tf-state
+
+initializeEmptyState: true

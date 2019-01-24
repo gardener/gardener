@@ -21,6 +21,8 @@
         return default
     return root
 
+  annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {})
+
   region=""
   if cloud == "aws":
     region="eu-west-1"
@@ -30,6 +32,7 @@
     region="europe-west1"
   elif cloud == "alicloud":
     region="cn-beijing"
+    annotations["persistentvolume.garden.sapcloud.io/minimumSize"] = "20Gi"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "local":
@@ -39,9 +42,9 @@
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Seed
 metadata:
-  name: ${value("metadata.name", cloud)}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
+  name: ${value("metadata.name", cloud)}
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=10000)}
+  annotations: ${yaml.dump(annotations, width=1000)}
   % endif
   % if labels != {}:
   labels: ${yaml.dump(labels, width=10000)}

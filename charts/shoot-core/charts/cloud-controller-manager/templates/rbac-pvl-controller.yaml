@@ -1,3 +1,4 @@
+{{- if not .Values.enableCSI}}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
@@ -40,3 +41,4 @@ subjects:
 - kind: ServiceAccount
   name: pvl-controller
   namespace: kube-system
+{{ end }}

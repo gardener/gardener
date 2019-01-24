@@ -114,6 +114,8 @@ func GetK8SNetworks(shoot *garden.Shoot) (garden.K8SNetworks, error) {
 		return shoot.Spec.Cloud.GCP.Networks.K8SNetworks, nil
 	case garden.CloudProviderOpenStack:
 		return shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, nil
+	case garden.CloudProviderAlicloud:
+		return shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, nil
 	case garden.CloudProviderLocal:
 		return shoot.Spec.Cloud.Local.Networks.K8SNetworks, nil
 	}

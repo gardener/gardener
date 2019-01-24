@@ -15,6 +15,7 @@
 package hybridbotanist
 
 import (
+	"fmt"
 	"path/filepath"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -101,22 +102,27 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
+
 	coreDNS, err := b.Botanist.InjectImages(coreDNSConfig, b.ShootVersion(), b.ShootVersion(), common.CoreDNSImageName)
 	if err != nil {
 		return nil, err
 	}
+
 	kubeProxy, err := b.Botanist.InjectImages(kubeProxyConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return nil, err
 	}
+
 	metricsServer, err := b.Botanist.InjectImages(metricsServerConfig, b.ShootVersion(), b.ShootVersion(), common.MetricsServerImageName)
 	if err != nil {
 		return nil, err
 	}
+
 	vpnShoot, err := b.Botanist.InjectImages(vpnShootConfig, b.ShootVersion(), b.ShootVersion(), common.VPNShootImageName)
 	if err != nil {
 		return nil, err
 	}
+
 	nodeExporter, err := b.Botanist.InjectImages(nodeExporterConfig, b.ShootVersion(), b.ShootVersion(), common.NodeExporterImageName)
 	if err != nil {
 		return nil, err
@@ -125,8 +131,19 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
+
+	csiPlugin, err := b.ShootCloudBotanist.GenerateCSIConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "vpn-shoot", corev1.SecretTypeOpaque, vpnShootSecret.Data, true); err != nil {
 		return nil, err
+	}
+
+	ccmConfig := map[string]interface{}{}
+	if cfg := b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig(); cfg != nil {
+		ccmConfig["enableCSI"] = cfg.EnableCSI
 	}
 
 	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
@@ -134,14 +151,16 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
 		"coredns":             coreDNS,
-		"kube-proxy":          kubeProxy,
-		"vpn-shoot":           vpnShoot,
-		"calico":              calico,
-		"metrics-server":      metricsServer,
+		fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName()): csiPlugin,
+		"kube-proxy":     kubeProxy,
+		"vpn-shoot":      vpnShoot,
+		"calico":         calico,
+		"metrics-server": metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		},
+		"cloud-controller-manager": ccmConfig,
 		"cert-broker": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement),
 		},

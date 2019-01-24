@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Alicloud chart for main k8s infrastructure
+name: alicloud-infra
+version: 0.1.0

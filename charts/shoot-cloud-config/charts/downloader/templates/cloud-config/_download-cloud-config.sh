@@ -10,7 +10,7 @@ function kubectl() {
     --net host \
     -v "$PATH_KUBECONFIG":"$PATH_KUBECONFIG" \
     -e "KUBECONFIG=$PATH_KUBECONFIG" \
-    k8s.gcr.io/hyperkube:v1.12.3 \
+    {{ index .Values.images "hyperkube" }} \
     kubectl "$@"
 }
 

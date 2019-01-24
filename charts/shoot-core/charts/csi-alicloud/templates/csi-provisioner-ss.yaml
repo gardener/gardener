@@ -1,0 +1,54 @@
+{{- if .Values.enabled }}
+kind: StatefulSet
+apiVersion: {{ include "statefulsetversion" . }}
+metadata:
+  name: csi-provisioner
+  namespace: kube-system
+  labels:
+    app: csi-provisioner
+    origin: gardener
+    garden.sapcloud.io/role: system-component
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  serviceName: csi-provisione
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-provisioner
+  template:
+    metadata:
+      annotations:
+        # This, along with the CriticalAddonsOnly toleration below,
+        # marks the pod as a critical add-on, ensuring it gets
+        # priority scheduling and that its resources are reserved
+        # if it ever gets evicted.
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+      labels:
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+        app: csi-provisioner
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: csi-provisioner
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+        - name: csi-provisioner
+          image: {{ index .Values.images "csi-provisioner" }}
+          args:
+            - "--provisioner=csi-diskplugin"
+            - "--csi-address=$(ADDRESS)"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/plugins/csi-diskplugin/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/csi-diskplugin 
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi-diskplugin
+            type: DirectoryOrCreate
+{{- end -}}

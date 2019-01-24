@@ -1,0 +1,94 @@
+# This YAML file contains all RBAC objects that are necessary to run external
+# CSI attacher.
+#
+# In production, each CSI driver deployment has to be customized:
+# - to avoid conflicts, use non-default namespace and different names
+#   for non-namespaced entities like the ClusterRole
+# - decide whether the deployment replicates the external CSI
+#   attacher, in which case leadership election must be enabled;
+#   this influences the RBAC setup, see below
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-attacher
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+---
+# Attacher must be able to work with PVs, nodes and VolumeAttachments
+kind: ClusterRole
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: garden.sapcloud.io:psp:kube-system:csi-attacher
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["csi.storage.k8s.io"]
+    resources: ["csinodeinfos"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
+  - apiGroups: ["policy", "extensions"]
+    resourceNames: ["gardener.kube-system.attacher"]
+    resources: ["podsecuritypolicies"]
+    verbs: ["use"]
+
+---
+kind: ClusterRoleBinding
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: garden.sapcloud.io:psp:csi-attacher
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+subjects:
+  - kind: ServiceAccount
+    name: csi-attacher
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:kube-system:csi-attacher
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Attacher must be able to work with config map in current namespace
+# if (and only if) leadership election is enabled
+kind: Role
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  namespace: kube-system
+  name: csi-attacher
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "watch", "list", "delete", "update", "create"]
+
+---
+kind: RoleBinding
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: csi-attacher
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+subjects:
+  - kind: ServiceAccount
+    name: csi-attacher
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: csi-attacher
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}

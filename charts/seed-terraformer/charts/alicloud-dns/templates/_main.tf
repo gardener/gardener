@@ -11,7 +11,7 @@ resource "alicloud_dns_record" "record" {
   name = "{{ required "record.name is required" .Values.record.name }}"
   host_record = "{{ required "record.hostRecord is required" .Values.record.hostRecord }}"
   type = "{{ if eq (required "record.type is required" .Values.record.type) "ip" }}A{{ else }}CNAME{{ end }}"
-  ttl = "120"
+  ttl = "{{ required "record.ttl is required" .Values.record.ttl }}"
   value = "{{ required "record.value is required" .Values.record.value }}"
 }
 

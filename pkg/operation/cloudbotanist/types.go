@@ -39,10 +39,11 @@ type CloudBotanist interface {
 	GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error)
 	GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error)
 	GenerateKubeAPIServerConfig() (map[string]interface{}, error)
-	GenerateCloudControllerManagerConfig() (map[string]interface{}, error)
+	GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error)
 	GenerateKubeControllerManagerConfig() (map[string]interface{}, error)
 	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
 	DeployCloudSpecificControlPlane() error
+	GenerateCSIConfig() (map[string]interface{}, error)
 
 	// Machines
 	GetMachineClassInfo() (string, string, string)

@@ -360,6 +360,9 @@ const (
 	// then the namespace in the seed will be annotated with <AnnotateSeedNamespacePrefix>key=value, as well.
 	AnnotateSeedNamespacePrefix = "custom.shoot.sapcloud.io/"
 
+	//AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
+	AnnotatePersistentVolumeMinimumSize = "persistentvolume.garden.sapcloud.io/minimumSize"
+
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
 
@@ -444,6 +447,23 @@ const (
 	// RubyImageName is the name of the Ruby image.
 	RubyImageName = "ruby"
 
+	// AlicloudControllerManagerImageName is the name of the AlicloudControllerManager image.
+	AlicloudControllerManagerImageName = "alicloud-controller-manager"
+
+	// CSI Images
+
+	// CSIAttacherImageName is the name of csi attacher - https://github.com/kubernetes-csi/external-attacher
+	CSIAttacherImageName = "csi-attacher"
+
+	// CSIDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/driver-registrar
+	CSIDriverRegistrarImageName = "csi-driver-registrar"
+
+	// CSIProvisionerImageName is the name of csi provisioner - https://github.com/kubernetes-csi/external-provisioner
+	CSIProvisionerImageName = "csi-provisioner"
+
+	// CSIPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
+	CSIPluginAlicloudImageName = "csi-plugin-alicloud"
+
 	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
 	AWSLBReadvertiserImageName = "aws-lb-readvertiser"
 
@@ -485,6 +505,10 @@ const (
 
 	// CertBrokerResourceName is the name of the Cert-Broker resources.
 	CertBrokerResourceName = "cert-broker"
+
+	// KubectlVersion specifies the version of kubectl that is used by the scripts bootstrapping shoot worker nodes,
+	// e.g. the cloud-config-downloader script.
+	KubectlVersion = "1.12.3"
 )
 
 var (
@@ -560,4 +584,6 @@ type CloudConfigUserDataConfig struct {
 	ProvisionCloudProviderConfig bool
 	KubeletParameters            []string
 	HostnameOverride             bool
+	EnableCSI                    bool
+	ProviderIDProvided           bool
 }

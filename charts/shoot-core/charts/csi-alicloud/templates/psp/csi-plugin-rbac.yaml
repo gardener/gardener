@@ -1,0 +1,54 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-disk-plugin-alicloud
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+---
+kind: ClusterRole
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: garden.sapcloud.io:psp:kube-system:csi-disk-plugin-alicloud
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "update"]
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["persistentvolumes"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["volumeattachments"]
+    verbs: ["get", "list", "watch", "update"]
+  - apiGroups:
+    - policy
+    - extensions
+    resourceNames:
+    - gardener.kube-system.csi-disk-plugin-alicloud
+    resources:
+    - podsecuritypolicies
+    verbs:
+    - use
+
+---
+kind: ClusterRoleBinding
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: garden.sapcloud.io:psp:csi-disk-plugin-alicloud
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+subjects:
+  - kind: ServiceAccount
+    name: csi-disk-plugin-alicloud
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:kube-system:csi-disk-plugin-alicloud
+  apiGroup: rbac.authorization.k8s.io
+{{- end -}}

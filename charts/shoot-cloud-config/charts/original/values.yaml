@@ -7,6 +7,7 @@
 # images:
 #   hyperkube: image-repository
 #   ruby: image-repository
+#   pause-container: image-repository
 # kubernetes:
 #   clusterDNS: 100.64.0.10
 #   domain: cluster.local
@@ -15,6 +16,8 @@
 #     bootstrapToken: hugo
 #     hostnameOverride: false
 #     parameters: []
+#     enableCSI: false
+#     providerIDProvided: false
 #     featureGates: {}
 #       #  CustomResourceValidation: true
 #       #  RotateKubeletServerCertificate: false

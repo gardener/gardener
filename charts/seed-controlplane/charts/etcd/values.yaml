@@ -5,6 +5,8 @@ images:
   etcd: image-repository:image-tag
   etcd-backup-restore: image-repository:image-tag
 
+storage: 10Gi
+
 backup:
   schedule: "0 */24 * * *" # cron standard schedule
   storageProvider: ""  # Abs,Gcs,S3,Swift empty means no backup,

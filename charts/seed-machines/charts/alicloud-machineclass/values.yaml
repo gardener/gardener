@@ -1,0 +1,24 @@
+# machineClasses:
+# - name: class-1
+#   imageID: coreos_1745_7_0_64_30G_alibase_20180705.vhd
+#   instanceType: ecs.n1.medium 
+#   region: cn-hangzhou
+#   zoneID: cn-hangzhou-e 
+#   securityGroupID: sg-1234567890 
+#   vSwitchID: vsw-1234567890 
+#   systemDisk:
+#     category: cloud_efficiency # cloud, cloud_efficiency, cloud_ssd, ephemeral_ssd
+#     size: 30 # 20-500
+#   instanceChargeType: PostPaid # Prepaid or PostPaid (default)
+#   internetChargeType: PayByTraffic # PayByBandwidth or PayByTraffic (default)
+#   internetMaxBandwidthIn: 5 # 1-200
+#   internetMaxBandwidthOut: 0 # 0-100
+#   spotStrategy: NoSpot # NoSpot, SpotWithPriceLimit, SpotAsPriceGo
+#   tags:
+#     kubernetes.io/cluster/****: "1" # This is mandatory as the safety controller uses this tag to identify VMs created by this controller. Replace **** string with your desired cluster name.
+#     kubernetes.io/role/****: "1" # This is mandatory as the safety controller uses this tag to identify VMs created by this controller. Replace **** string with your desired role name.
+#   keyPairName: test-keypair # keypair used to access Alicloud ECS machine
+#   secret:
+#     accessKeyID: ABCD
+#     accessKeySecret: ABCD
+#     userData: abc

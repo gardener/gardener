@@ -1,0 +1,42 @@
+{{- range $index, $machineClass := .Values.machineClasses }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    garden.sapcloud.io/purpose: machineclass
+type: Opaque
+data:
+  userData: {{ $machineClass.secret.userData | b64enc }}
+  alicloudAccessKeyID: {{ $machineClass.secret.accessKeyID }}
+  alicloudAccessKeySecret: {{ $machineClass.secret.accessKeySecret }}
+  
+---
+apiVersion: machine.sapcloud.io/v1alpha1
+kind: AlicloudMachineClass
+metadata:
+  name: {{ $machineClass.name }}
+  namespace: {{ $.Release.Namespace }}
+spec:
+  imageID: {{ $machineClass.imageID }}
+  instanceType: {{ $machineClass.instanceType }}
+  region: {{ $machineClass.region }}
+  zoneID: {{ $machineClass.zoneID }}
+  securityGroupID: {{ $machineClass.securityGroupID }}
+  vSwitchID: {{ $machineClass.vSwitchID }}
+  systemDisk: 
+    category: {{ $machineClass.systemDisk.category }}
+    size: {{ $machineClass.systemDisk.size }}
+  instanceChargeType: {{ $machineClass.instanceChargeType }}
+  internetChargeType: {{ $machineClass.internetChargeType }}
+  internetMaxBandwidthIn: {{ $machineClass.internetMaxBandwidthIn }}
+  spotStrategy: {{ $machineClass.spotStrategy }}
+  keyPairName: {{ $machineClass.keyPairName }} 
+  tags:
+{{ toYaml $machineClass.tags | indent 4 }}
+  secretRef:
+    name: {{ $machineClass.name }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}
