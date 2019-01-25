@@ -12,6 +12,14 @@ metadata:
     uid: {{ .Values.project.uid | quote }}
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - namespaces
+  resourceNames:
+  - {{ .Release.Namespace | quote }}
+  verbs:
+  - get
+- apiGroups:
   - garden.sapcloud.io
   resources:
   - projects
