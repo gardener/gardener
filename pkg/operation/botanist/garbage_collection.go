@@ -60,7 +60,12 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
 func (b *Botanist) PerformGarbageCollectionShoot() error {
-	podList, err := b.K8sShootClient.ListPods(metav1.NamespaceSystem, metav1.ListOptions{})
+	namespace := metav1.NamespaceSystem
+	if b.Shoot.Info.DeletionTimestamp != nil {
+		namespace = metav1.NamespaceAll
+	}
+
+	podList, err := b.K8sShootClient.ListPods(namespace, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

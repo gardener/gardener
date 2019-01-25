@@ -407,7 +407,7 @@ func ReadLeaderElectionRecord(k8sClient kubernetes.Interface, lock, namespace, n
 }
 
 // GardenerDeletionGracePeriod is the default grace period for Gardener's force deletion methods.
-var GardenerDeletionGracePeriod = 1 * time.Minute
+var GardenerDeletionGracePeriod = 5 * time.Minute
 
 // ShouldObjectBeRemoved determines whether the given object should be gone now.
 // This is calculated by first checking the deletion timestamp of an object: If the deletion timestamp
