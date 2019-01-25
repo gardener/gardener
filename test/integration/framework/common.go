@@ -19,18 +19,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/utils"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	kubeinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 var (
@@ -48,44 +42,6 @@ const (
 	// IntegrationTestPrefix is the default prefix that will be used for test shoots if none other is specified
 	IntegrationTestPrefix = "itest-"
 )
-
-func newGardenerTest(kubeconfig string) (*GardenerTest, error) {
-	var (
-		errorResult    error
-		gardenerClient = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
-			&clientcmd.ConfigOverrides{},
-		)
-	)
-
-	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, nil, client.Options{
-		Scheme: kubernetes.GardenScheme,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a GardenV1beta1Client and the respective API group testScheme for the Garden API group.
-	gardenerClientConfig, err := kubernetes.CreateRESTConfig(gardenerClient, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	gardenerClientSet, err := gardenclientset.NewForConfig(gardenerClientConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	k8sGardenClient.SetGarden(gardenerClientSet)
-
-	gardenerTest := GardenerTest{
-		K8sGardenClient:     k8sGardenClient,
-		K8sGardenInformers:  gardeninformers.NewSharedInformerFactory(k8sGardenClient.Garden(), 0),
-		KubeInformerFactory: kubeinformers.NewSharedInformerFactory(k8sGardenClient.Kubernetes(), 0),
-	}
-
-	return &gardenerTest, errorResult
-}
 
 // CreateShootTestArtifacts creates the necessary artifacts for a shoot tests including a random integration test name and
 // a shoot object which is read from the resources directory

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/sirupsen/logrus"
@@ -28,7 +30,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/tools/cache"
 )
 
 // NewShootGardenerTest creates a new shootGardenerTest object, given an already created shoot (created after parsing a shoot YAML)
@@ -37,68 +38,15 @@ func NewShootGardenerTest(kubeconfig string, shoot *v1beta1.Shoot, logger *logru
 		return nil, fmt.Errorf("please specify the kubeconfig path correctly")
 	}
 
-	gardenerTest, err := newGardenerTest(kubeconfig)
+	k8sGardenClient, err := kubernetes.NewClientFromFile(kubeconfig, nil, client.Options{
+		Scheme: kubernetes.GardenScheme,
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	// create shoot Informers and Listers
-	shootInformer := gardenerTest.K8sGardenInformers.Garden().V1beta1().Shoots()
-	shootLister := shootInformer.Lister()
-
-	seedInformer := gardenerTest.K8sGardenInformers.Garden().V1beta1().Seeds()
-	seedLister := seedInformer.Lister()
-
-	projectInformer := gardenerTest.K8sGardenInformers.Garden().V1beta1().Projects()
-	projectLister := projectInformer.Lister()
-
-	cloudprofileInformer := gardenerTest.K8sGardenInformers.Garden().V1beta1().CloudProfiles()
-	cloudprofileLister := cloudprofileInformer.Lister()
-
-	secretBindingInformer := gardenerTest.K8sGardenInformers.Garden().V1beta1().SecretBindings()
-	secretBindingLister := secretBindingInformer.Lister()
-
-	secretsInformer := gardenerTest.KubeInformerFactory.Core().V1().Secrets()
-	secretsLister := secretsInformer.Lister()
-
-	// Start generating the GardenTestOperation
-	ctx := context.Background()
-	gardenerTest.K8sGardenInformers.Start(ctx.Done())
-
-	if !cache.WaitForCacheSync(ctx.Done(),
-		shootInformer.Informer().HasSynced,
-		seedInformer.Informer().HasSynced,
-		projectInformer.Informer().HasSynced,
-		cloudprofileInformer.Informer().HasSynced,
-		secretBindingInformer.Informer().HasSynced) {
-		panic("Timed out waiting for Garden caches to sync")
-	}
-
-	gardenerTest.KubeInformerFactory.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), secretsInformer.Informer().HasSynced) {
-		panic("Timed out waiting for Kube caches to sync")
-	}
-
 	return &ShootGardenerTest{
-		GardenerTest: *gardenerTest,
-
-		SecretsInformer: secretsInformer,
-		SecretsLister:   secretsLister,
-
-		SecretBindingInformer: secretBindingInformer,
-		SecretBindingLister:   secretBindingLister,
-
-		CloudProfileInformer: cloudprofileInformer,
-		CloudProfileLister:   cloudprofileLister,
-
-		ProjectInfomer: projectInformer,
-		ProjectLister:  projectLister,
-
-		ShootInformer: shootInformer,
-		ShootLister:   shootLister,
-
-		SeedInformer: seedInformer,
-		SeedLister:   seedLister,
+		GardenClient: k8sGardenClient,
 
 		Shoot:  shoot,
 		Logger: logger,
@@ -108,7 +56,7 @@ func NewShootGardenerTest(kubeconfig string, shoot *v1beta1.Shoot, logger *logru
 // GetShoot gets the test shoot
 func (s *ShootGardenerTest) GetShoot(ctx context.Context) (*v1beta1.Shoot, error) {
 	shoot := &v1beta1.Shoot{}
-	err := s.K8sGardenClient.Client().Get(ctx, client.ObjectKey{
+	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
 		Namespace: s.Shoot.Namespace,
 		Name:      s.Shoot.Name,
 	}, shoot)
@@ -127,7 +75,7 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, er
 	}
 
 	shoot := s.Shoot
-	err = s.K8sGardenClient.Client().Create(ctx, shoot)
+	err = s.GardenClient.Client().Create(ctx, shoot)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +111,7 @@ func (s *ShootGardenerTest) DeleteShoot(ctx context.Context) error {
 		return err
 	}
 
-	err = s.K8sGardenClient.Client().Delete(ctx, s.Shoot)
+	err = s.GardenClient.Client().Delete(ctx, s.Shoot)
 	if err != nil {
 		return err
 	}
@@ -214,7 +162,7 @@ func (s *ShootGardenerTest) AnnotateShoot(ctx context.Context, annotations map[s
 func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 	return wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
 		shoot := &v1beta1.Shoot{}
-		err := s.K8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
+		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			return false, err
 		}
@@ -230,7 +178,7 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 func (s *ShootGardenerTest) WaitForShootToBeDeleted(ctx context.Context) error {
 	return wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
 		shoot := &v1beta1.Shoot{}
-		err := s.K8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
+		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return true, nil

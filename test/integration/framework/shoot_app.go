@@ -25,6 +25,9 @@ import (
 	"strings"
 	"time"
 
+	shootop "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/sirupsen/logrus"
+
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"k8s.io/apimachinery/pkg/labels"
@@ -42,15 +45,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/garden"
-	"github.com/gardener/gardener/pkg/operation/seed"
-	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -58,119 +56,68 @@ const (
 	dashboardUserName   = "admin"
 )
 
-// NewGardenTestOperationFromObject  initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
-func NewGardenTestOperationFromObject(shootGardenerTest *ShootGardenerTest, shootObject *v1beta1.Shoot, tillerOptions *TillerOptions) (*GardenerTestOperation, error) {
-	// Safety checks
-	if shootGardenerTest == nil {
-		return nil, ErrEmptyShootGardenerTest
+// NewGardenTestOperation initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
+func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *v1beta1.Shoot) (*GardenerTestOperation, error) {
+	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot); err != nil {
+		return nil, err
 	}
 
-	// Start generating the GardenTestOperation
-	ctx := context.Background()
-	shootGardenerTest.K8sGardenInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(),
-		shootGardenerTest.ShootInformer.Informer().HasSynced,
-		shootGardenerTest.SeedInformer.Informer().HasSynced,
-		shootGardenerTest.ProjectInfomer.Informer().HasSynced,
-		shootGardenerTest.CloudProfileInformer.Informer().HasSynced,
-		shootGardenerTest.SecretBindingInformer.Informer().HasSynced) {
-		panic("Timed out waiting for Garden caches to sync")
-	}
-
-	gardenv1beta1Informers := shootGardenerTest.K8sGardenInformers.Garden().V1beta1()
-
-	seedName := shootObject.Spec.Cloud.Seed
-	seedCluster, err := shootGardenerTest.SeedInformer.Lister().Get(*seedName)
+	seed := &v1beta1.Seed{}
+	err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.Cloud.Seed}, seed)
 	if err != nil {
 		return nil, err
 	}
 
-	seedObj, err := seed.New(shootGardenerTest.K8sGardenClient, gardenv1beta1Informers, seedCluster)
+	ns := &corev1.Namespace{}
+	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Namespace}, ns); err != nil {
+		return nil, err
+	}
+
+	if ns.Labels == nil {
+		return nil, fmt.Errorf("namespace %q does not have any labels", ns.Name)
+	}
+	projectName, ok := ns.Labels[common.ProjectName]
+	if !ok {
+		return nil, fmt.Errorf("namespace %q did not contain a project label", ns.Name)
+	}
+
+	project := &v1beta1.Project{}
+	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: projectName}, project); err != nil {
+		return nil, err
+	}
+
+	seedSecretRef := seed.Spec.SecretRef
+	seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{})
 	if err != nil {
 		return nil, err
 	}
 
-	gardenObj, err := garden.New(shootGardenerTest.ProjectLister, shootObject.Namespace)
+	k8sShootClient, err := kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, client.Options{})
 	if err != nil {
 		return nil, err
 	}
 
-	shootObj, err := shootpkg.New(shootGardenerTest.K8sGardenClient, gardenv1beta1Informers, shootObject, gardenObj.Project.Name, "")
-	operation := &GardenerTestOperation{
-		ShootGardenerTest: shootGardenerTest,
-		Seed:              seedObj,
-		Shoot:             shootObj,
-	}
+	return &GardenerTestOperation{
+		Logger: logger,
 
-	err = operation.initializeSeedClient()
-	if err != nil {
-		return nil, err
-	}
+		GardenClient: k8sGardenClient,
+		SeedClient:   seedClient,
+		ShootClient:  k8sShootClient,
 
-	err = operation.initializeShootClient()
-	if err != nil {
-		return nil, err
-	}
-	return operation, nil
+		Seed:    seed,
+		Shoot:   shoot,
+		Project: project,
+	}, nil
 }
 
-// NewGardenTestOperationFromName initializes a new test operation for existing shoots that can be used to issue commands against seeds and shoots
-func NewGardenTestOperationFromName(shootGardenerTest *ShootGardenerTest, namespace, shootName string, tillerOptions *TillerOptions) (*GardenerTestOperation, error) {
-	// Safety checks
-	if shootGardenerTest == nil {
-		return nil, ErrEmptyShootGardenerTest
-	}
-	if len(namespace) == 0 || len(shootName) == 0 {
-		return nil, ErrEmptyShootNamespaceNames
-	}
-
-	gardenObj, err := garden.New(shootGardenerTest.ProjectLister, namespace)
-	if err != nil {
-		return nil, err
-	}
-
-	shoot, err := shootGardenerTest.ShootLister.Shoots(namespace).Get(shootName)
-	if err != nil {
-		return nil, err
-	}
-
-	seedCluster, err := shootGardenerTest.SeedInformer.Lister().Get(*shoot.Spec.Cloud.Seed)
-	if err != nil {
-		return nil, err
-	}
-
-	gardenv1beta1Informers := shootGardenerTest.K8sGardenInformers.Garden().V1beta1()
-	seedObj, err := seed.New(shootGardenerTest.K8sGardenClient, gardenv1beta1Informers, seedCluster)
-	if err != nil {
-		return nil, err
-	}
-
-	// set shootGardenerTest.Shoot for operations such as create and delete shoots
-	shootGardenerTest.Shoot = shoot
-
-	shootObj, err := shootpkg.New(shootGardenerTest.K8sGardenClient, gardenv1beta1Informers, shoot, gardenObj.Project.Name, "")
-
-	operation := &GardenerTestOperation{
-		ShootGardenerTest: shootGardenerTest,
-		Seed:              seedObj,
-		Shoot:             shootObj,
-	}
-
-	err = operation.initializeSeedClient()
-	if err != nil {
-		return nil, err
-	}
-
-	err = operation.initializeShootClient()
-	if err != nil {
-		return nil, err
-	}
-	return operation, nil
+// ShootSeedNamespace gets the shoot namespace in the seed
+func (o *GardenerTestOperation) ShootSeedNamespace() string {
+	return shootop.ComputeTechnicalID(o.Project.Name, o.Shoot)
 }
 
 // DownloadKubeconfig downloads the shoot Kubeconfig
 func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, downloadPath string) error {
-	_, err := getObjectFromSecret(ctx, o.K8sSeedClient, o.Shoot.SeedNamespace, v1beta1.GardenerName, kubeconfig)
+	_, err := getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), v1beta1.GardenerName, kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -193,7 +140,7 @@ func (o *GardenerTestOperation) DashboardAvailable(ctx context.Context) error {
 		Timeout:   time.Duration(5 * time.Second),
 	}
 
-	url := fmt.Sprintf("https://api.%s/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy", *o.Shoot.Info.Spec.DNS.Domain)
+	url := fmt.Sprintf("https://api.%s/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy", *o.Shoot.Spec.DNS.Domain)
 	httpRequest, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return err
@@ -240,7 +187,7 @@ func (o *GardenerTestOperation) WaitUntilDeploymentIsRunning(ctx context.Context
 		}
 
 		if err := health.CheckDeployment(deployment); err != nil {
-			o.ShootGardenerTest.Logger.Infof("Waiting for %s to be ready!!", deploymentName)
+			o.Logger.Infof("Waiting for %s to be ready!!", deploymentName)
 			return false, nil
 		}
 
@@ -258,10 +205,10 @@ func (o *GardenerTestOperation) WaitUntilStatefulSetIsRunning(ctx context.Contex
 		}
 
 		if err := health.CheckStatefulSet(statefulSet); err != nil {
-			o.ShootGardenerTest.Logger.Infof("Waiting for %s to be ready!!", statefulSetName)
+			o.Logger.Infof("Waiting for %s to be ready!!", statefulSetName)
 			return false, nil
 		}
-		o.ShootGardenerTest.Logger.Infof("%s is now ready!!", statefulSetName)
+		o.Logger.Infof("%s is now ready!!", statefulSetName)
 		return true, nil
 
 	}, ctx.Done())
@@ -278,7 +225,7 @@ func (o *GardenerTestOperation) WaitUntilDeploymentsWithLabelsIsReady(ctx contex
 		deployments, err = getDeploymentListByLabels(ctx, deploymentLabels, namespace, client)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				o.ShootGardenerTest.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels.String())
+				o.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels.String())
 				return false, nil
 			}
 			return false, err
@@ -287,7 +234,7 @@ func (o *GardenerTestOperation) WaitUntilDeploymentsWithLabelsIsReady(ctx contex
 		for _, deployment := range deployments.Items {
 			err = health.CheckDeployment(&deployment)
 			if err != nil {
-				o.ShootGardenerTest.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels)
+				o.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels)
 				return false, nil
 			}
 		}
@@ -303,24 +250,24 @@ func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Con
 			if err != nil {
 				return false, err
 			}
+
+			if response.StatusCode != http.StatusOK {
+				o.Logger.Infof("Guestbook app url: %q is not available yet", guestbookAppURL)
+				return false, nil
+			}
+
 			responseBytes, err := ioutil.ReadAll(response.Body)
 			if err != nil {
 				return false, err
 			}
 
 			bodyString := string(responseBytes)
-
-			if response.StatusCode != http.StatusOK {
-				o.ShootGardenerTest.Logger.Infof("Guestbook app url: %q is not available yet", guestbookAppURL)
-				return false, nil
-			}
-
 			if strings.Contains(bodyString, "404") || strings.Contains(bodyString, "503") {
-				o.ShootGardenerTest.Logger.Infof("Guestbook app is not ready yet")
+				o.Logger.Infof("Guestbook app is not ready yet")
 				return false, nil
 			}
 		}
-		o.ShootGardenerTest.Logger.Infof("Rejoice, the guestbook app urls are available now!")
+		o.Logger.Infof("Rejoice, the guestbook app urls are available now!")
 		return true, nil
 	}, ctx.Done())
 }
@@ -363,10 +310,10 @@ func (o *GardenerTestOperation) DownloadAndDeployHelmChart(ctx context.Context, 
 		if err != nil {
 			return err
 		}
-		o.ShootGardenerTest.Logger.Infof("Chart downloaded to %s", chartPath)
+		o.Logger.Infof("Chart downloaded to %s", chartPath)
 	}
 
-	renderer, err := chartrenderer.New(o.K8sShootClient)
+	renderer, err := chartrenderer.New(o.ShootClient)
 	if err != nil {
 		return err
 	}
@@ -374,8 +321,8 @@ func (o *GardenerTestOperation) DownloadAndDeployHelmChart(ctx context.Context, 
 	chartName := strings.Split(chartNameToDownload, "/")[1]
 	chartPathToRender := filepath.Join(chartRepo, chartName)
 
-	o.ShootGardenerTest.Logger.Infof("Applying Chart %s", chartPathToRender)
-	return common.ApplyChartInNamespace(ctx, o.K8sShootClient, renderer, chartPathToRender, chartName, namespace, nil, nil)
+	o.Logger.Infof("Applying Chart %s", chartPathToRender)
+	return common.ApplyChartInNamespace(ctx, o.ShootClient, renderer, chartPathToRender, chartName, namespace, nil, nil)
 
 }
 
@@ -404,14 +351,14 @@ func (o *GardenerTestOperation) PodExecByLabel(ctx context.Context, podLabels la
 		return err
 	}
 
-	_, err = kubernetes.NewPodExecutor(o.K8sSeedClient.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
+	_, err = kubernetes.NewPodExecutor(o.SeedClient.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
 	return err
 }
 
 // GetFirstNodeInternalIP gets the internal IP of the first node
 func (o *GardenerTestOperation) GetFirstNodeInternalIP(ctx context.Context) (string, error) {
 	nodes := &corev1.NodeList{}
-	err := o.K8sShootClient.Client().List(ctx, &client.ListOptions{}, nodes)
+	err := o.ShootClient.Client().List(ctx, &client.ListOptions{}, nodes)
 	if err != nil {
 		return "", err
 	}
@@ -433,7 +380,7 @@ func (o *GardenerTestOperation) GetDashboardPodIP(ctx context.Context) (string, 
 		"app": "kubernetes-dashboard",
 	}))
 
-	dashboardPod, err := o.getFirstRunningPodWithLabels(ctx, dashboardLabels, metav1.NamespaceSystem, o.K8sShootClient)
+	dashboardPod, err := o.getFirstRunningPodWithLabels(ctx, dashboardLabels, metav1.NamespaceSystem, o.ShootClient)
 	if err != nil {
 		return "", err
 	}

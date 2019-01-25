@@ -39,43 +39,6 @@ const (
 	password   = "password"
 )
 
-// InitializeTestSeedClients will use the Garden Kubernetes client to read the Seed Secret in the Garden
-// cluster which contains a Kubeconfig that can be used to authenticate against the Seed cluster. With it,
-// a Kubernetes client for the Seed cluster will be initialized and attached to
-// the already existing GardenTestOperation object.
-func (o *GardenerTestOperation) initializeSeedClient() error {
-	if o.K8sSeedClient != nil {
-		return nil
-	}
-
-	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(o.Seed.Secret, client.Options{})
-	if err != nil {
-		return err
-	}
-
-	o.K8sSeedClient = k8sSeedClient
-
-	return nil
-}
-
-// initializeShootClient will use the Seed Kubernetes client to read the gardener Secret in the Seed
-// cluster which contains a Kubeconfig that can be used to authenticate against the Shoot cluster. With it,
-// a Kubernetes client for the Shoot cluster will be initialized and attached to
-// the already existing Operation object.
-func (o *GardenerTestOperation) initializeShootClient() error {
-	if o.K8sShootClient != nil {
-		return nil
-	}
-
-	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, v1beta1.GardenerName, client.Options{})
-	if err != nil {
-		return err
-	}
-
-	o.K8sShootClient = k8sShootClient
-	return nil
-}
-
 // getFirstRunningPodWithLabels fetches the first running pod with the desired set of labels <labelsMap>
 func (o *GardenerTestOperation) getFirstRunningPodWithLabels(ctx context.Context, labelsMap labels.Selector, namespace string, client kubernetes.Interface) (*corev1.Pod, error) {
 	var (
@@ -101,7 +64,7 @@ func (o *GardenerTestOperation) getFirstRunningPodWithLabels(ctx context.Context
 
 // getAdminPassword gets the admin password for authenticating against the api
 func (o *GardenerTestOperation) getAdminPassword(ctx context.Context) (string, error) {
-	return getObjectFromSecret(ctx, o.K8sSeedClient, o.Shoot.SeedNamespace, kubecfg, password)
+	return getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), kubecfg, password)
 }
 
 func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *v1beta1.Shoot) error {
@@ -110,7 +73,7 @@ func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *
 		return fmt.Errorf("failed to patch bytes")
 	}
 
-	_, err = s.K8sGardenClient.Garden().GardenV1beta1().Shoots(s.Shoot.Namespace).Patch(s.Shoot.Name, types.StrategicMergePatchType, patchBytes)
+	_, err = s.GardenClient.Garden().GardenV1beta1().Shoots(s.Shoot.Namespace).Patch(s.Shoot.Name, types.StrategicMergePatchType, patchBytes)
 	return err
 }
 

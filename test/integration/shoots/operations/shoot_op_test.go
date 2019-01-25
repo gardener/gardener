@@ -55,10 +55,6 @@ func validateFlags() {
 	if !FileExists(*kubeconfig) {
 		Fail("kubeconfig path does not exist")
 	}
-
-	if !FileExists(*kubeconfig) {
-		Fail("kubeconfig path does not exists")
-	}
 }
 
 var _ = Describe("Shoot creation/deletion testing", func() {

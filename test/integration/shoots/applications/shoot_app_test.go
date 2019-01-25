@@ -101,7 +101,6 @@ var _ = Describe("Shoot application testing", func() {
 	var (
 		shootGardenerTest   *ShootGardenerTest
 		shootTestOperations *GardenerTestOperation
-		tillerOptions       *TillerOptions
 		shootAppTestLogger  *logrus.Logger
 		apiserverLabels     labels.Selector
 		guestBooktpl        *template.Template
@@ -112,12 +111,6 @@ var _ = Describe("Shoot application testing", func() {
 		// validate flags
 		validateFlags()
 		shootAppTestLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
-
-		tillerOptions = &TillerOptions{
-			DeploymentName:    "tiller-deploy",
-			Namespace:         metav1.NamespaceSystem,
-			EnableHostNetwork: false,
-		}
 
 		// check if a shoot spec is provided, if yes create a shoot object from it and use it for testing
 		if StringSet(*shootTestYamlPath) {
@@ -132,7 +125,7 @@ var _ = Describe("Shoot application testing", func() {
 			targetTestShoot, err = shootGardenerTest.CreateShoot(ctx)
 			Expect(err).NotTo(HaveOccurred())
 
-			shootTestOperations, err = NewGardenTestOperationFromObject(shootGardenerTest, targetTestShoot, tillerOptions)
+			shootTestOperations, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, targetTestShoot)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -141,7 +134,8 @@ var _ = Describe("Shoot application testing", func() {
 			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, nil, shootAppTestLogger)
 			Expect(err).NotTo(HaveOccurred())
 
-			shootTestOperations, err = NewGardenTestOperationFromName(shootGardenerTest, *shootNamespace, *shootName, tillerOptions)
+			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
+			shootTestOperations, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		}
 
@@ -156,7 +150,7 @@ var _ = Describe("Shoot application testing", func() {
 		// Clean up shoot
 		By("Cleaning up guestbook app resources")
 		deleteResource := func(ctx context.Context, resource runtime.Object) error {
-			err := shootTestOperations.K8sShootClient.Client().Delete(ctx, resource)
+			err := shootTestOperations.ShootClient.Client().Delete(ctx, resource)
 			if apierrors.IsNotFound(err) {
 				return nil
 			}
@@ -245,7 +239,7 @@ var _ = Describe("Shoot application testing", func() {
 
 		if *cleanup {
 			By("Cleaning up test shoot")
-			err := shootTestOperations.ShootGardenerTest.DeleteShoot(ctx)
+			err := shootGardenerTest.DeleteShoot(ctx)
 			Expect(err).NotTo(HaveOccurred())
 		}
 	}, FinalizationTimeout)
@@ -257,7 +251,7 @@ var _ = Describe("Shoot application testing", func() {
 		By(fmt.Sprintf("Shoot Kubeconfig downloaded successfully to %s", *downloadPath))
 	}, DownloadKubeconfigTimeout)
 
-	FCIt("should deploy guestbook app successfully", func(ctx context.Context) {
+	CIt("should deploy guestbook app successfully", func(ctx context.Context) {
 		ctx = context.WithValue(ctx, "name", "guestbook app")
 
 		helm := Helm(ResourcesDir)
@@ -267,7 +261,7 @@ var _ = Describe("Shoot application testing", func() {
 		err = shootTestOperations.DownloadAndDeployHelmChart(ctx, helm, helmDeployNamespace, "stable/redis")
 		Expect(err).NotTo(HaveOccurred())
 
-		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-master", helmDeployNamespace, shootTestOperations.K8sShootClient)
+		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-master", helmDeployNamespace, shootTestOperations.ShootClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		redisSlaveLabelSelector := labels.SelectorFromSet(labels.Set(map[string]string{
@@ -275,7 +269,7 @@ var _ = Describe("Shoot application testing", func() {
 			"role": "slave",
 		}))
 
-		err = shootTestOperations.WaitUntilDeploymentsWithLabelsIsReady(ctx, redisSlaveLabelSelector, helmDeployNamespace, shootTestOperations.K8sShootClient)
+		err = shootTestOperations.WaitUntilDeploymentsWithLabelsIsReady(ctx, redisSlaveLabelSelector, helmDeployNamespace, shootTestOperations.ShootClient)
 		Expect(err).NotTo(HaveOccurred())
 
 		guestBookParams := struct {
@@ -283,7 +277,7 @@ var _ = Describe("Shoot application testing", func() {
 			ShootDNSHost        string
 		}{
 			helmDeployNamespace,
-			fmt.Sprintf("guestbook.ingress.%s", *shootTestOperations.Shoot.Info.Spec.DNS.Domain),
+			fmt.Sprintf("guestbook.ingress.%s", *shootTestOperations.Shoot.Spec.DNS.Domain),
 		}
 
 		// Parse the guestbook app template
@@ -294,12 +288,12 @@ var _ = Describe("Shoot application testing", func() {
 		// Apply the guestbook app resources to shoot
 
 		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-		err = shootTestOperations.K8sShootClient.Applier().ApplyManifest(context.TODO(), manifestReader)
+		err = shootTestOperations.ShootClient.Applier().ApplyManifest(ctx, manifestReader)
 		Expect(err).NotTo(HaveOccurred())
 
 		// define guestbook app urls
-		guestBookAppURL := fmt.Sprintf("http://guestbook.ingress.%s", *shootTestOperations.Shoot.Info.Spec.DNS.Domain)
-		pushString := fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Info.Name)
+		guestBookAppURL := fmt.Sprintf("http://guestbook.ingress.%s", *shootTestOperations.Shoot.Spec.DNS.Domain)
+		pushString := fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Name)
 		pushUrl := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
 		pullUrl := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
 
@@ -321,7 +315,7 @@ var _ = Describe("Shoot application testing", func() {
 
 		// test if foobar-<shoot-name> was pulled successfully
 		bodyString := string(responseBytes)
-		Expect(bodyString).To(ContainSubstring(fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Info.Name)))
+		Expect(bodyString).To(ContainSubstring(fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Name)))
 
 		By("Guestbook app was deployed successfully!")
 
@@ -332,13 +326,13 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 	}, DashboardAvailableTimeout)
 
-	Context("Network Policy Testing", func() {
+	FContext("Network Policy Testing", func() {
 		var (
 			NetworkPolicyTimeout = 1 * time.Minute
 
 			ExecNCOnAPIServer = func(ctx context.Context, host, port string) error {
 				return shootTestOperations.PodExecByLabel(ctx, apiserverLabels, APIServer,
-					fmt.Sprintf("nc -z -w5 %s %s", host, port), shootTestOperations.Shoot.SeedNamespace, shootTestOperations.K8sSeedClient)
+					fmt.Sprintf("apt-get update && apt-get -y install netcat && nc -z -w5 %s %s", host, port), shootTestOperations.ShootSeedNamespace(), shootTestOperations.SeedClient)
 			}
 
 			ItShouldAllowTrafficTo = func(name, host, port string) {
@@ -353,13 +347,6 @@ var _ = Describe("Shoot application testing", func() {
 				}, NetworkPolicyTimeout)
 			}
 		)
-		CBeforeEach(func(ctx context.Context) {
-			// first we need to install the testing tools
-			By("Install the networking tools on the api-server pod")
-			err := shootTestOperations.PodExecByLabel(ctx, apiserverLabels, APIServer,
-				"apt-get update && apt-get -y install curl netcat", shootTestOperations.Shoot.SeedNamespace, shootTestOperations.K8sSeedClient)
-			Expect(err).NotTo(HaveOccurred())
-		}, 5*time.Minute)
 
 		ItShouldAllowTrafficTo("seed apiserver/external connection", "kubernetes.default", "443")
 		ItShouldAllowTrafficTo("seed gardener-external-admission-controller", "gardener-external-admission-controller.garden", "443")
