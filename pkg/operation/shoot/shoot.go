@@ -226,6 +226,11 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 	return wokenUp
 }
 
+// UsesCSI returns whether the given shoot uses CSI volume plugins.
+func (s *Shoot) UsesCSI() bool {
+	return s.CloudProvider == gardenv1beta1.CloudProviderAlicloud
+}
+
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {

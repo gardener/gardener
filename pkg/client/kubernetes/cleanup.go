@@ -34,8 +34,13 @@ func (c *Clientset) ListResources(absPath ...string) (unstructured.Unstructured,
 }
 
 // CleanupResources will delete all resources except for those stored in the <exceptions> map.
-func (c *Clientset) CleanupResources(exceptions map[string]map[string]bool) error {
-	for resource, apiGroupPath := range c.resourceAPIGroups {
+func (c *Clientset) CleanupResources(exceptions map[string]map[string]bool, overwriteResources map[string][]string) error {
+	resources := c.resourceAPIGroups
+	if overwriteResources != nil {
+		resources = overwriteResources
+	}
+
+	for resource, apiGroupPath := range resources {
 		if resource == CustomResourceDefinitions {
 			continue
 		}

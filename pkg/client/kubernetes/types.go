@@ -72,6 +72,9 @@ const (
 	// PersistentVolumeClaims is a constant for a Kubernetes resource with the same name.
 	PersistentVolumeClaims = "persistentvolumeclaims"
 
+	// PersistentVolumes is a constant for a Kubernetes resource with the same name.
+	PersistentVolumes = "persistentvolumes"
+
 	// Pods is a constant for a Kubernetes resource with the same name.
 	Pods = "pods"
 
@@ -86,9 +89,6 @@ const (
 
 	// StatefulSets is a constant for a Kubernetes resource with the same name.
 	StatefulSets = "statefulsets"
-
-	// PersistentVolumes is a constant for a Kubernetes resource with the same name.
-	PersistentVolumes = "persistentvolumes"
 )
 
 var (
@@ -188,7 +188,6 @@ type Interface interface {
 	RESTClient() rest.Interface
 
 	Client() client.Client
-
 	Applier() ApplierInterface
 
 	Kubernetes() kubernetesclientset.Interface
@@ -207,7 +206,7 @@ type Interface interface {
 	// Deprecated: Use `RESTMapper()` and utils instead.
 	GetResourceAPIGroups() map[string][]string
 	// Deprecated: Use `Client()` and utils instead.
-	CleanupResources(map[string]map[string]bool) error
+	CleanupResources(map[string]map[string]bool, map[string][]string) error
 	// Deprecated: Use `Client()` and utils instead.
 	CleanupAPIGroupResources(map[string]map[string]bool, string, []string) error
 	// Deprecated: Use `Client()` and utils instead.

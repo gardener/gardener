@@ -188,6 +188,7 @@ func NewForConfig(config *rest.Config, options client.Options) (Interface, error
 			Jobs:                      {"apis", "batch", "v1"},
 			Namespaces:                {"api", "v1"},
 			PersistentVolumeClaims:    {"api", "v1"},
+			PersistentVolumes:         {"api", "v1"},
 			Pods:                      {"api", "v1"},
 			ReplicaSets:               {"apis", "apps", "v1"},
 			ReplicationControllers:    {"api", "v1"},

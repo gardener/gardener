@@ -104,21 +104,27 @@ func (b *Botanist) CleanKubernetesResources() error {
 		errors []error
 	)
 
-	if err := b.K8sShootClient.CleanupResources(exceptions); err != nil {
+	// TODO: The following code need to be be refactored if the following bug for CSI is fixed:
+	// Because of the issue of https://github.com/kubernetes-csi/external-provisioner/issues/195 we can't allow
+	// direct deletion of PVs because otherwise the CSI plugin does not get notified and won't delete the PV.
+	// However, we want to wait until all PVs have been deleted. Attention: This won't delete PVs with a
+	// reclaimPolicy != Delete. Those PVs must be deleted manually!
+	var (
+		originalResourceAPIGroups = b.K8sShootClient.GetResourceAPIGroups()
+		modifiedResourceAPIGroups = make(map[string][]string, len(originalResourceAPIGroups))
+	)
+	for resource, apiGroupPath := range originalResourceAPIGroups {
+		modifiedResourceAPIGroups[resource] = apiGroupPath
+	}
+	if b.Shoot.UsesCSI() {
+		delete(modifiedResourceAPIGroups, kubernetes.PersistentVolumes)
+	}
+
+	if err := b.K8sShootClient.CleanupResources(exceptions, modifiedResourceAPIGroups); err != nil {
 		return err
 	}
 
-	// The following code need to be be refactored if bug for csi is fixed
-	// Because of the issue of https://github.com/kubernetes-csi/external-provisioner/issues/195, we can't simply add PV to K8sShootClient.ResourceAPIGroups
-	// for checking clean up.
-	apiGroupPathToBeChecked := make(map[string][]string)
-	//Avoid to change original data, we need a copy
-	for resource, apiGroupPath := range b.K8sShootClient.GetResourceAPIGroups() {
-		apiGroupPathToBeChecked[resource] = apiGroupPath
-	}
-	//For CSI managed PV, the deletion must take some while, need to be checked
-	apiGroupPathToBeChecked[kubernetes.PersistentVolumes] = []string{"api", "v1"}
-	for resource, apiGroupPath := range apiGroupPathToBeChecked {
+	for resource, apiGroupPath := range originalResourceAPIGroups {
 		wg.Add(1)
 		go func(apiGroupPath []string, resource string) {
 			defer wg.Done()
