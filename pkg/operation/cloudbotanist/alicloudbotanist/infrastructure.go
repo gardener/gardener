@@ -71,12 +71,25 @@ func (b *AlicloudBotanist) DestroyInfrastructure() error {
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 func (b *AlicloudBotanist) DeployBackupInfrastructure() error {
-	return nil
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	if err != nil {
+		return err
+	}
+	return tf.
+		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
+		DefineConfig("alicloud-backup", b.generateTerraformBackupConfig()).
+		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
-	return nil
+	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	if err != nil {
+		return err
+	}
+	return tf.
+		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
+		Destroy()
 }
 
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
@@ -122,5 +135,24 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, n
 		"clusterName":  b.Shoot.SeedNamespace,
 		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
 		"zones":        zones,
+	}
+}
+
+func (b *AlicloudBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
+	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
+		"ACCESS_KEY_ID":     AccessKeyID,
+		"ACCESS_KEY_SECRET": AccessKeySecret,
+	})
+}
+
+func (b *AlicloudBotanist) generateTerraformBackupConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"alicloud": map[string]interface{}{
+			"region": b.Seed.Info.Spec.Cloud.Region,
+		},
+		"bucket": map[string]interface{}{
+			"name": b.Operation.BackupInfrastructure.Name,
+		},
+		"clusterName": b.Operation.BackupInfrastructure.Name,
 	}
 }
