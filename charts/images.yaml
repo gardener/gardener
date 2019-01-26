@@ -164,6 +164,9 @@ images:
   repository: quay.io/k8scsi/csi-provisioner
   tag: v0.3.0
   version: 1.11.x
+
+# Cloud Provider Specific CSI Plugins
+# csi-alicloud
 - name: csi-plugin-alicloud
   sourceRepository: https://github.com/AliyunContainerService/csi-plugin
   repository: jerryjxj/csi-plugin-alicloud

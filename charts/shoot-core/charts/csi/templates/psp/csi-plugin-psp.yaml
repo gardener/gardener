@@ -2,7 +2,7 @@
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
-  name: gardener.kube-system.csi-disk-plugin-alicloud
+  name: gardener.kube-system.csi-disk-plugin
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 spec:

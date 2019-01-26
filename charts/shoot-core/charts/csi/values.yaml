@@ -1,0 +1,6 @@
+images:
+  csi-attacher: image-repository:image-tag
+  csi-driver-registrar: image-repository:image-tag
+  csi-provisioner: image-repository:image-tag
+ 
+enabled: false
