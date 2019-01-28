@@ -117,7 +117,7 @@ spec:
               value: "kubernetes"
             # Enable felix info logging.
             - name: FELIX_LOGSEVERITYSCREEN
-              value: "info"
+              value: "error"
             # Cluster type to identify the deployment type
             - name: CLUSTER_TYPE
               value: "k8s,bgp"
@@ -322,7 +322,7 @@ spec:
         env:
           # Enable "info" logging by default.  Can be set to "debug" to increase verbosity.
           - name: TYPHA_LOGSEVERITYSCREEN
-            value: "info"
+            value: "error"
           # Disable logging to file and syslog since those don't make sense in Kubernetes.
           - name: TYPHA_LOGFILEPATH
             value: "none"
