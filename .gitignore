@@ -19,6 +19,10 @@ config.ign.merged
 config.img
 config.vmdk
 
+/test/integration/resources/charts/*
+/test/integration/resources/repository/cache
+/test/integration/resources/shoots
+
 # Virtual go & fuse
 .virtualgo
 .fuse_hidden*

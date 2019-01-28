@@ -52,7 +52,22 @@ func ApplyChart(k8sClient kubernetes.Interface, renderer chartrenderer.ChartRend
 	if err != nil {
 		return err
 	}
-	return k8sClient.Applier().ApplyManifest(context.Background(), release.Manifest())
+	manifestReader := kubernetes.NewManifestReader(release.Manifest())
+
+	return k8sClient.Applier().ApplyManifest(context.Background(), manifestReader)
+}
+
+// ApplyChartInNamespace is the same as ApplyChart except that it forces the namespace for chart objects when applying the chart, this is because sometimes native chart
+// objects do not come with a Release.Namespace option and leave the namespace field empty.
+func ApplyChartInNamespace(ctx context.Context, k8sClient kubernetes.Interface, renderer chartrenderer.ChartRenderer, chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
+	release, err := renderer.Render(chartPath, name, namespace, utils.MergeMaps(defaultValues, additionalValues))
+	if err != nil {
+		return err
+	}
+
+	manifestReader := kubernetes.NewManifestReader(release.Manifest())
+	nameSpaceSettingsReader := kubernetes.NewNamespaceSettingReader(manifestReader, namespace)
+	return k8sClient.Applier().ApplyManifest(ctx, nameSpaceSettingsReader)
 }
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
