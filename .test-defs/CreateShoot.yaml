@@ -1,0 +1,18 @@
+kind: TestDefinition
+metadata:
+  name: create-shoot
+spec:
+  owner: tim.schrodi@sap.com
+  recipientsOnFailure: DL_5C5BE3E2970B9F404D0E2F50@sap.com # OutputQualification DL
+  description: Tests the creation of a shoot.
+
+  activeDeadlineSeconds: 3600
+  labels: []
+
+  command: [bash, -c]
+  args:
+  - >-
+    /tm/setup github.com/gardener gardener &&
+    go run $GOPATH/src/github.com/gardener/gardener/.test-defs/cmd/create-shoot
+
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0
