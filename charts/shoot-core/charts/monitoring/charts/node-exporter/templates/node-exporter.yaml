@@ -113,11 +113,6 @@ spec:
         - name: rootfs
           readOnly: true
           mountPath: /rootfs
-      tolerations:
-      - effect: NoSchedule
-        key: node-role.kubernetes.io/master
-      - key: CriticalAddonsOnly
-        operator: Exists
       volumes:
       - name: proc
         hostPath:
