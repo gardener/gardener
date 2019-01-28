@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Alicloud charts for backup infrastructure
+name: alicloud-backup
+version: 0.1.0

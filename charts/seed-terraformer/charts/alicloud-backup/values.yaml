@@ -1,0 +1,14 @@
+alicloud:
+  region: not-existing-region
+
+bucket:
+  name: invalid.bucket$name#
+
+clusterName: test-namespace
+
+names:
+  configuration: shoot.tf-config
+  variables: shoot.tf-vars
+  state: shoot.tf-state
+
+initializeEmptyState: true
