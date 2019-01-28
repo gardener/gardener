@@ -15,10 +15,12 @@
 package botanist
 
 import (
+	"context"
 	"strings"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -60,6 +62,11 @@ func (b *Botanist) PerformGarbageCollectionSeed() error {
 // PerformGarbageCollectionShoot performs garbage collection in the kube-system namespace in the Shoot
 // cluster, i.e., it deletes evicted pods (mitigation for https://github.com/kubernetes/kubernetes/issues/55051).
 func (b *Botanist) PerformGarbageCollectionShoot() error {
+	// Workaround for https://github.com/kubernetes/kubernetes/pull/72507.
+	if err := b.removeStaleOutOfDiskNodeCondition(); err != nil {
+		return err
+	}
+
 	namespace := metav1.NamespaceSystem
 	if b.Shoot.Info.DeletionTimestamp != nil {
 		namespace = metav1.NamespaceAll
@@ -90,6 +97,46 @@ func (b *Botanist) deleteStalePods(client kubernetes.Interface, podList *corev1.
 			if err := client.DeletePodForcefully(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
 				result = multierror.Append(result, err)
 			}
+		}
+	}
+
+	return result
+}
+
+func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
+	// TODO: This code can be limited to 1.13.0-1.13.3 (assuming 1.13.3 has contains the Kubernetes fix) as soon as
+  // a new release containing the fix has been cut (fix: https://github.com/kubernetes/kubernetes/pull/73394).
+	k8sVersionAtLeast113, err := utils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, ">=", "1.13")
+	if err != nil {
+		return err
+	}
+	if !k8sVersionAtLeast113 {
+		return nil
+	}
+
+	var nodeList *corev1.NodeList
+	if err := b.K8sShootClient.Client().List(context.TODO(), nil, nodeList); err != nil {
+		return err
+	}
+
+	var result error
+	for _, node := range nodeList.Items {
+		var conditions []corev1.NodeCondition
+
+		for _, condition := range node.Status.Conditions {
+			if condition.Type != corev1.NodeOutOfDisk {
+				conditions = append(conditions, condition)
+			}
+		}
+
+		if len(conditions) == len(node.Status.Conditions) {
+			continue
+		}
+
+		node.Status.Conditions = conditions
+
+		if err := b.K8sShootClient.Client().Status().Update(context.TODO(), &node); err != nil {
+			result = multierror.Append(result, err)
 		}
 	}
 
