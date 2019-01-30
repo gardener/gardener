@@ -16,8 +16,7 @@ data:
     </source>
 
   output.conf: |-
-    
-    #Decide which is shoot record and which is not
+    # Decide which is shoot record and which is not
     <match kubernetes.**>
       @id rewrite_tag_filter
       @type rewrite_tag_filter
@@ -40,14 +39,14 @@ data:
     </filter>
 
     <match shoot**>
-      @id elasticsearch_dynamic
-      @type elasticsearch_dynamic
+      @id elasticsearch_dynamic_fault_tolerant
+      @type elasticsearch_dynamic_fault_tolerant
       @log_level warn
       host elasticsearch-logging.${record['kubernetes']['namespace_name']}.svc
       @include /etc/fluent/config.d/es_plugin.options
       <buffer tag, time>
         @type file
-        #Limit the number of queued chunks
+        # Limit the number of queued chunks
         queued_chunks_limit_size 4096
         # The number of threads of output plugins, which is used to write chunks in parallel
         flush_thread_count 32
@@ -72,11 +71,11 @@ data:
       template_file /etc/fluent/config.d/default.template
       <buffer tag, time>
         @type file
-        #Limit the number of queued chunks
+        # Limit the number of queued chunks
         queued_chunks_limit_size 40
         # The number of threads of output plugins, which is used to write chunks in parallel
         flush_thread_count 8
-        # he size limitation of this buffer plugin instance
+        # the size limitation of this buffer plugin instance
         total_limit_size 2GB
         @include /etc/fluent/config.d/buffer.options
         path /gardener/fluentd-buffers/kubernetes.{{ .Release.Namespace }}.buffer
@@ -113,31 +112,22 @@ data:
     remove_keys _hash, time
 
   buffer.options: |-
-    # The max size of each chunks
-    chunk_limit_size 50MB
-    #chunks per 5m
-    timekey 300
-    # delay for flush
-    timekey_wait 0
-    # The percentage of chunk size threshold for flushing
-    chunk_full_threshold 0.9
-    # no compression
-    compress text
-    # flush/write all buffer chunks at shutdown
-    flush_at_shutdown true
-    # flush/write chunks per specified time
-    flush_interval 60s
-    # The sleep interval seconds of threads to wait next flush trial (when no chunks are waiting)
-    flush_thread_interval 30.0
-    # How output plugin behaves when its buffer queue is full
-    overflow_action drop_oldest_chunk
-    # output plugin will retry periodically with fixed intervals (configured via retry_wait)
-    retry_type periodic
-    # Seconds to wait before next retry to flush
-    retry_wait 75
-    retry_randomize false
+    chunk_limit_size 50MB                                # the max size of each chunks
+    chunk_full_threshold 0.9                             # the percentage of chunk size threshold for flushing
+    timekey 300                                          # chunks per 5m
+
     flush_mode interval
-    retry_max_times 4
+    flush_interval 60s                                   # flush/write chunks per specified time
+    timekey_wait 0                                       # delay for flush
+    flush_at_shutdown true                               # flush/write all buffer chunks at shutdown
+    flush_thread_interval 30.0                           # the sleep interval seconds of threads to wait next flush trial (when no chunks are waiting)
+
+    overflow_action drop_oldest_chunk                    # how output plugin behaves when its buffer queue is full
+
+    retry_type periodic                                  # output plugin will retry periodically with fixed intervals (configured via retry_wait)
+    retry_wait 75                                        # seconds to wait before next retry to flush
+    retry_randomize false
+    retry_max_times 4                                    # all chunks in the queue are discarded when when the number of reties exceeds retry_max_times
 
   default.template: |-
     {
