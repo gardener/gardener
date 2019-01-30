@@ -118,6 +118,10 @@ func (r *Resources) Validate(a admission.Attributes) error {
 
 	existingResources := map[string]string{}
 	for _, obj := range controllerRegistrationList.Items {
+		if obj.Name == controllerRegistration.Name {
+			continue
+		}
+
 		for _, resource := range obj.Spec.Resources {
 			existingResources[resource.Kind] = resource.Type
 		}

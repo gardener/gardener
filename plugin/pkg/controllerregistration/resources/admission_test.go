@@ -81,6 +81,20 @@ var _ = Describe("resources", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should not deny the object because it is updated", func() {
+			attrs = admission.NewAttributesRecord(&controllerRegistration, &controllerRegistration, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Update, false, nil)
+
+			coreClient.AddReactor("list", "controllerregistrations", func(action testing.Action) (bool, runtime.Object, error) {
+				return true, &core.ControllerRegistrationList{
+					Items: []core.ControllerRegistration{controllerRegistration},
+				}, nil
+			})
+
+			err := admissionHandler.Validate(attrs)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("should deny the object because another resource in the system uses the kind/type combination", func() {
 			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, false, nil)
 
