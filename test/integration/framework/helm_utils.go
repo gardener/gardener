@@ -84,6 +84,7 @@ func ensureCacheIndex(ctx context.Context, helmSettings HelmAccess, stableRepoUR
 			if err != nil {
 				return err
 			}
+			return nil
 		}
 		return err
 	}
@@ -106,6 +107,5 @@ func downloadCacheIndex(ctx context.Context, cacheFile, stableRepositoryURL stri
 	if err := r.DownloadIndexFile(""); err != nil {
 		return nil, fmt.Errorf("looks like %q is not a valid chart repository or cannot be reached: %s", stableRepositoryURL, err.Error())
 	}
-
 	return &c, nil
 }

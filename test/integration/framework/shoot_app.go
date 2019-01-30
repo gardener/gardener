@@ -25,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	shootop "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/sirupsen/logrus"
 
@@ -34,7 +35,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -116,15 +116,14 @@ func (o *GardenerTestOperation) ShootSeedNamespace() string {
 }
 
 // DownloadKubeconfig downloads the shoot Kubeconfig
-func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, downloadPath string) error {
-	_, err := getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), v1beta1.GardenerName, kubeconfig)
+func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namespace, name, downloadPath string) error {
+	kubeconfig, err := getObjectFromSecret(ctx, client, namespace, name, kubeconfig)
 	if err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(downloadPath, []byte(kubeconfig), 0)
+	err = ioutil.WriteFile(downloadPath, []byte(kubeconfig), 0755)
 	if err != nil {
 		return err
-
 	}
 	return nil
 }
@@ -272,16 +271,15 @@ func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Con
 	}, ctx.Done())
 }
 
-// DownloadAndDeployHelmChart downloads a helm chart from helm stable repo url available in resources/repositories
-// and deploys it on the test shoot
-func (o *GardenerTestOperation) DownloadAndDeployHelmChart(ctx context.Context, helm Helm, namespace, chartNameToDownload string) error {
-	chartRepo := filepath.Join(ResourcesDir, "charts")
-	exists, err := Exists(chartRepo)
+// DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories
+func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload string) error {
+	exists, err := Exists(chartRepoDestination)
 	if err != nil {
 		return err
 	}
+
 	if !exists {
-		if err := os.MkdirAll(chartRepo, 0755); err != nil {
+		if err := os.MkdirAll(chartRepoDestination, 0755); err != nil {
 			return err
 		}
 	}
@@ -298,13 +296,13 @@ func (o *GardenerTestOperation) DownloadAndDeployHelmChart(ctx context.Context, 
 	stableRepo := rf.Repositories[0]
 	var chartPath string
 
-	chartDownloaded, err := Exists(filepath.Join(chartRepo, strings.Split(chartNameToDownload, "/")[1]))
+	chartDownloaded, err := Exists(filepath.Join(chartRepoDestination, strings.Split(chartNameToDownload, "/")[1]))
 	if err != nil {
 		return err
 	}
 
 	if !chartDownloaded {
-		chartPath, err = downloadChart(ctx, chartNameToDownload, chartRepo, stableRepo.URL, HelmAccess{
+		chartPath, err = downloadChart(ctx, chartNameToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
 			HelmPath: helm,
 		})
 		if err != nil {
@@ -312,22 +310,23 @@ func (o *GardenerTestOperation) DownloadAndDeployHelmChart(ctx context.Context, 
 		}
 		o.Logger.Infof("Chart downloaded to %s", chartPath)
 	}
+	return nil
+}
 
+// DeployChart deploys it on the test shoot
+func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, chartRepoDestination, chartNameToDeploy string) error {
 	renderer, err := chartrenderer.New(o.ShootClient)
 	if err != nil {
 		return err
 	}
 
-	chartName := strings.Split(chartNameToDownload, "/")[1]
-	chartPathToRender := filepath.Join(chartRepo, chartName)
-
-	o.Logger.Infof("Applying Chart %s", chartPathToRender)
-	return common.ApplyChartInNamespace(ctx, o.ShootClient, renderer, chartPathToRender, chartName, namespace, nil, nil)
+	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
+	return common.ApplyChartInNamespace(ctx, o.ShootClient, renderer, chartPathToRender, chartNameToDeploy, namespace, nil, nil)
 
 }
 
 // EnsureDirectories creates the repository directory which holds the repositories.yaml config file
-func (o *GardenerTestOperation) EnsureDirectories(helm Helm) error {
+func EnsureDirectories(helm Helm) error {
 	configDirectories := []string{
 		helm.String(),
 		helm.Repository(),

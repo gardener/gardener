@@ -62,7 +62,7 @@ type ShootGardenerTest struct {
 	Logger *logrus.Logger
 }
 
-// GardenerTestOperation holds all requried instances for doing a test operation
+// GardenerTestOperation holds all required instances for doing a test operation
 type GardenerTestOperation struct {
 	Logger       logrus.FieldLogger
 	GardenClient kubernetes.Interface
