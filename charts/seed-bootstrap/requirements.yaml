@@ -11,6 +11,6 @@ dependencies:
   condition: fluentd-es.enabled
 - name: cert-manager
   repository: http://localhost:10191
-  version: 0.4.1
+  version: 0.6.0
   # needed for the CertificateManagement feature gate
   condition: cert-manager.enabled

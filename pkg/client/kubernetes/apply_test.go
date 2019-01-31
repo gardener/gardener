@@ -192,7 +192,7 @@ spec:
 				}
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)).To(BeNil())
 
 				var actualCM corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "c"}, &actualCM)
@@ -201,13 +201,43 @@ spec:
 			})
 			It("should apply multiple objects", func() {
 				manifestReader := kubernetes.NewManifestReader(rawMultipleObjects)
-				Expect(applier.ApplyManifest(context.TODO(), manifestReader)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)).To(BeNil())
 
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm"}, &corev1.ConfigMap{})
 				Expect(err).NotTo(HaveOccurred())
 
 				err = c.Get(context.TODO(), client.ObjectKey{Name: "test-pod"}, &corev1.Pod{})
 				Expect(err).NotTo(HaveOccurred())
+			})
+			It("should retain secret information for service account", func() {
+				oldServiceAccount := corev1.ServiceAccount{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ServiceAccount",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-serviceaccount",
+						Namespace: "test-ns",
+					},
+					Secrets: []corev1.ObjectReference{
+						corev1.ObjectReference{
+							Name: "test-secret",
+						},
+					},
+				}
+				newServiceAccount := oldServiceAccount
+				newServiceAccount.Secrets = []corev1.ObjectReference{}
+				manifest := mkManifest(&newServiceAccount)
+				manifestReader := kubernetes.NewManifestReader(manifest)
+
+				c.Create(context.TODO(), &oldServiceAccount)
+				Expect(applier.ApplyManifest(context.TODO(), manifestReader, kubernetes.DefaultApplierOptions)).To(BeNil())
+
+				resultingService := &corev1.ServiceAccount{}
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-serviceaccount", Namespace: "test-ns"}, resultingService)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(len(resultingService.Secrets)).To(Equal(1))
+				Expect(resultingService.Secrets[0].Name).To(Equal("test-secret"))
 			})
 
 			It("should create objects with namespace", func() {
@@ -218,7 +248,7 @@ spec:
 				manifest := mkManifest(&cm)
 				manifestReader := kubernetes.NewManifestReader(manifest)
 				namespaceSettingReader := kubernetes.NewNamespaceSettingReader(manifestReader, "b")
-				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader)).To(BeNil())
+				Expect(applier.ApplyManifest(context.TODO(), namespaceSettingReader, kubernetes.DefaultApplierOptions)).To(BeNil())
 
 				var actualCMWithNamespace corev1.ConfigMap
 				err := c.Get(context.TODO(), client.ObjectKey{Name: "test"}, &actualCMWithNamespace)

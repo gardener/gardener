@@ -18,8 +18,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -39,8 +37,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -307,7 +307,16 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		return err
 	}
 
-	return common.ApplyChart(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
+	var (
+		applierOptions     = kubernetes.DefaultApplierOptions
+		clusterIssuerMerge = func(new, old *unstructured.Unstructured) {
+			// Apply status from old ClusterIssuer to retain the issuer's readiness state.
+			new.Object["status"] = old.Object["status"]
+		}
+	)
+	applierOptions.MergeFuncs["ClusterIssuer"] = clusterIssuerMerge
+
+	return common.ApplyChartWithOptions(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"global": map[string]interface{}{
 			"images": images,
@@ -343,7 +352,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			"clusterissuer": clusterIssuer,
 		},
 		"alertmanager": alertManagerConfig,
-	})
+	}, applierOptions)
 }
 
 func createClusterIssuer(k8sSeedclient kubernetes.Interface, certificateManagement *corev1.Secret) (map[string]interface{}, error) {
