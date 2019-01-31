@@ -18,8 +18,13 @@ curator:
   objectCount: 1
   # set curator threshold to 1GB
   baseDiskThreshold: 1073741824
-  suspend: false
-
+  hourly:
+    schedule: "0 * * * *"
+    suspend: false
+  daily:
+    schedule: "5 0,6,12,18 * * *"
+    suspend: false
+    
 elasticsearch:
   elasticsearchReplicas: 1
   elasticsearchVolumeSizeGB: 30

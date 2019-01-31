@@ -473,6 +473,8 @@ func (b *Botanist) DeploySeedLogging() error {
 		return err
 	}
 
+	ct := b.Shoot.Info.CreationTimestamp.Time
+
 	elasticKibanaCurator := map[string]interface{}{
 		"ingress": map[string]interface{}{
 			"basicAuthSecret": basicAuth,
@@ -485,7 +487,14 @@ func (b *Botanist) DeploySeedLogging() error {
 			"replicaCount": b.Shoot.GetReplicas(1),
 		},
 		"curator": map[string]interface{}{
-			"suspend": b.Shoot.IsHibernated,
+			"hourly": map[string]interface{}{
+				"schedule": fmt.Sprintf("%d * * * *", ct.Minute()),
+				"suspend":  b.Shoot.IsHibernated,
+			},
+			"daily": map[string]interface{}{
+				"schedule": fmt.Sprintf("%d 0,6,12,18 * * *", ct.Minute()%54+5),
+				"suspend":  b.Shoot.IsHibernated,
+			},
 		},
 		"global": images,
 	}

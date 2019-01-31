@@ -8,12 +8,12 @@ metadata:
     app: curator
     role: logging
 spec:
-  schedule: "0 * * * *"
+  schedule: {{ .Values.curator.hourly.schedule }}
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 120
-  suspend:  {{ .Values.curator.suspend }}
+  suspend:  {{ .Values.curator.hourly.suspend }}
   jobTemplate:
     spec:
       template:
@@ -54,12 +54,12 @@ metadata:
     app: curator
     role: logging
 spec:
-  schedule: "5 0,6,12,18 * * *"
+  schedule: {{ .Values.curator.daily.schedule }}
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 3
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 120
-  suspend:  {{ .Values.curator.suspend }}
+  suspend:  {{ .Values.curator.daily.suspend }}
   jobTemplate:
     spec:
       template:
