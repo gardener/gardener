@@ -1176,3 +1176,56 @@ type AlicloudSystemDisk struct {
 	Category string
 	Size     int
 }
+
+/********************** PacketMachineClass APIs ***************/
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// PacketMachineClass TODO
+type PacketMachineClass struct {
+	// +optional
+	metav1.ObjectMeta
+
+	// +optional
+	metav1.TypeMeta
+
+	// +optional
+	Spec PacketMachineClassSpec
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// PacketMachineClassList is a collection of PacketMachineClasses.
+type PacketMachineClassList struct {
+	// +optional
+	metav1.TypeMeta
+
+	// +optional
+	metav1.ListMeta
+
+	// +optional
+	Items []PacketMachineClass
+}
+
+// PacketMachineClassSpec is the specification of a cluster.
+type PacketMachineClassSpec struct {
+	Facility     []string // required
+	MachineType  string   // required
+	OS           string   // required
+	ProjectID    string   // required
+	BillingCycle string
+	Tags         map[string]string
+	SSHKeys      []PacketSSHKeySpec
+	UserData     string
+
+	SecretRef *corev1.SecretReference
+
+	// TODO add more here
+}
+
+// PacketSSHKeySpec represents a single ssh key
+type PacketSSHKeySpec struct {
+	ID          string
+	Fingerprint string
+}
