@@ -88,7 +88,7 @@ func (signer *EcsRamRoleSigner) GetExtraParam() map[string]string {
 }
 
 func (signer *EcsRamRoleSigner) Sign(stringToSign, secretSuffix string) string {
-	secret := signer.sessionCredential.AccessKeyId + secretSuffix
+	secret := signer.sessionCredential.AccessKeySecret + secretSuffix
 	return ShaHmac1(stringToSign, secret)
 }
 
