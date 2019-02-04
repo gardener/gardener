@@ -376,8 +376,8 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	}
 
 	alertingSMTPKeys := b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)
+	emailConfigs := []map[string]interface{}{}
 	if len(alertingSMTPKeys) > 0 {
-		emailConfigs := []map[string]interface{}{}
 		for _, key := range alertingSMTPKeys {
 			var (
 				secret = b.Secrets[key]
@@ -400,7 +400,18 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		values["alertmanager"].(map[string]interface{})["emailConfigs"] = emailConfigs
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values)
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values); err != nil {
+		return err
+	}
+
+	// If no mail receivers for the Shoot alerts provided than there is no need
+	// to run the Alertmanager and it can be removed from the control plane.
+	if len(emailConfigs) == 0 {
+		if err := common.DeleteAlertmanager(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
