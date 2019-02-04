@@ -16,7 +16,6 @@ package openstackbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -31,19 +30,19 @@ func (b *OpenStackBotanist) DeployInfrastructure() error {
 		routerID = b.Shoot.Info.Spec.Cloud.OpenStack.Networks.Router.ID
 		createRouter = false
 	}
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("openstack-infra", b.generateTerraformInfraConfig(createRouter, routerID)).
+		InitializeWith(b.ChartInitializer("openstack-infra", b.generateTerraformInfraConfig(createRouter, routerID))).
 		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *OpenStackBotanist) DestroyInfrastructure() error {
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
@@ -55,7 +54,7 @@ func (b *OpenStackBotanist) DestroyInfrastructure() error {
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *OpenStackBotanist) generateTerraformInfraVariablesEnvironment() []map[string]interface{} {
+func (b *OpenStackBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"USER_NAME": UserName,
 		"PASSWORD":  Password,
@@ -91,19 +90,19 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *OpenStackBotanist) DeployBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
-		DefineConfig("openstack-backup", b.generateTerraformBackupConfig()).
+		InitializeWith(b.ChartInitializer("openstack-backup", b.generateTerraformBackupConfig())).
 		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *OpenStackBotanist) DestroyBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
@@ -115,7 +114,7 @@ func (b *OpenStackBotanist) DestroyBackupInfrastructure() error {
 // generateTerraformBackupVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *OpenStackBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
+func (b *OpenStackBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"USER_NAME": UserName,
 		"PASSWORD":  Password,

@@ -20,7 +20,6 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 // DeployKube2IAMResources creates the respective IAM roles which have been specified in the Shoot manifest
@@ -35,21 +34,21 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 		return err
 	}
 
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeKube2IAM)
 	if err != nil {
 		return err
 	}
 
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("aws-kube2iam", values).
+		InitializeWith(b.ChartInitializer("aws-kube2iam", values)).
 		Apply()
 }
 
 // DestroyKube2IAMResources destroy the kube2iam resources created by Terraform. This comprises IAM roles and
 // policies.
 func (b *AWSBotanist) DestroyKube2IAMResources() error {
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeKube2IAM)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeKube2IAM)
 	if err != nil {
 		return err
 	}
@@ -62,7 +61,7 @@ func (b *AWSBotanist) DestroyKube2IAMResources() error {
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1beta1.Kube2IAMRole) (map[string]interface{}, error) {
 	nodesRoleARN := "nodes_role_arn"
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return nil, err
 	}

@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"net/http"
 	"sort"
 	"strings"
@@ -94,6 +95,19 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 	return &stdout, nil
 }
 
+// GetPodLogs retrieves the pod logs of the pod of the given name with the given options.
+func GetPodLogs(podInterface corev1client.PodInterface, name string, options *corev1.PodLogOptions) ([]byte, error) {
+	request := podInterface.GetLogs(name, options)
+
+	stream, err := request.Stream()
+	if err != nil {
+		return nil, err
+	}
+	defer func() { utilruntime.HandleError(stream.Close()) }()
+
+	return ioutil.ReadAll(stream)
+}
+
 // GetPod will return the Pod object for the given <name> in the given <namespace>.
 func (c *Clientset) GetPod(namespace, name string) (*corev1.Pod, error) {
 	return c.kubernetes.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
@@ -109,25 +123,6 @@ func (c *Clientset) ListPods(namespace string, listOptions metav1.ListOptions) (
 		return pods.Items[i].ObjectMeta.CreationTimestamp.Before(&pods.Items[j].ObjectMeta.CreationTimestamp)
 	})
 	return pods, nil
-}
-
-// GetPodLogs will get the logs of all containers within the Pod for the given <name> in the given <namespace>
-// for the given <podLogOptions>.
-func (c *Clientset) GetPodLogs(namespace, name string, podLogOptions *corev1.PodLogOptions) (*bytes.Buffer, error) {
-	request := c.kubernetes.CoreV1().Pods(namespace).GetLogs(name, podLogOptions)
-
-	stream, err := request.Stream()
-	if err != nil {
-		return nil, err
-	}
-
-	defer stream.Close()
-	buffer := bytes.NewBuffer(nil)
-	_, err = io.Copy(buffer, stream)
-	if err != nil {
-		return nil, err
-	}
-	return buffer, nil
 }
 
 // ForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to

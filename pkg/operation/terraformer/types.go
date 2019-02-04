@@ -15,11 +15,9 @@
 package terraformer
 
 import (
-	"path/filepath"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/gardener/gardener/pkg/chartrenderer"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/sirupsen/logrus"
 )
 
@@ -38,9 +36,9 @@ import (
 // * configurationDefined indicates whether the required configuration ConfigMaps/Secrets have been
 //   successfully defined.
 type Terraformer struct {
-	logger        *logrus.Entry
-	k8sClient     kubernetes.Interface
-	chartRenderer chartrenderer.ChartRenderer
+	logger       logrus.FieldLogger
+	client       client.Client
+	coreV1Client corev1client.CoreV1Interface
 
 	purpose   string
 	namespace string
@@ -51,10 +49,8 @@ type Terraformer struct {
 	stateName            string
 	podName              string
 	jobName              string
-	variablesEnvironment []map[string]interface{}
+	variablesEnvironment map[string]string
 	configurationDefined bool
 }
-
-var chartPath = filepath.Join(common.ChartPath, "seed-terraformer", "charts")
 
 const numberOfConfigResources = 3

@@ -105,7 +105,7 @@ func (b *Botanist) deleteStalePods(client kubernetes.Interface, podList *corev1.
 
 func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 	// TODO: This code can be limited to 1.13.0-1.13.3 (assuming 1.13.3 has contains the Kubernetes fix) as soon as
-  // a new release containing the fix has been cut (fix: https://github.com/kubernetes/kubernetes/pull/73394).
+	// a new release containing the fix has been cut (fix: https://github.com/kubernetes/kubernetes/pull/73394).
 	k8sVersionAtLeast113, err := utils.CompareVersions(b.Shoot.Info.Spec.Kubernetes.Version, ">=", "1.13")
 	if err != nil {
 		return err

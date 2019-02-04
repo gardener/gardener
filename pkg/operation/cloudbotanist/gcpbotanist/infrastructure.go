@@ -16,7 +16,6 @@ package gcpbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -31,19 +30,19 @@ func (b *GCPBotanist) DeployInfrastructure() error {
 		vpcName = b.VPCName
 		createVPC = false
 	}
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("gcp-infra", b.generateTerraformInfraConfig(createVPC, vpcName)).
+		InitializeWith(b.ChartInitializer("gcp-infra", b.generateTerraformInfraConfig(createVPC, vpcName))).
 		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *GCPBotanist) DestroyInfrastructure() error {
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
@@ -55,12 +54,9 @@ func (b *GCPBotanist) DestroyInfrastructure() error {
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *GCPBotanist) generateTerraformInfraVariablesEnvironment() []map[string]interface{} {
-	return []map[string]interface{}{
-		{
-			"name":  "TF_VAR_SERVICEACCOUNT",
-			"value": b.MinifiedServiceAccount,
-		},
+func (b *GCPBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
+	return map[string]string{
+		"TF_VAR_SERVICEACCOUNT": b.MinifiedServiceAccount,
 	}
 }
 
@@ -89,19 +85,19 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 func (b *GCPBotanist) DeployBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
-		DefineConfig("gcp-backup", b.generateTerraformBackupConfig()).
+		InitializeWith(b.ChartInitializer("gcp-backup", b.generateTerraformBackupConfig())).
 		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *GCPBotanist) DestroyBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
@@ -113,12 +109,9 @@ func (b *GCPBotanist) DestroyBackupInfrastructure() error {
 // generateTerraformBackupVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *GCPBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
-	return []map[string]interface{}{
-		{
-			"name":  "TF_VAR_SERVICEACCOUNT",
-			"value": b.MinifiedServiceAccount,
-		},
+func (b *GCPBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
+	return map[string]string{
+		"TF_VAR_SERVICEACCOUNT": b.MinifiedServiceAccount,
 	}
 }
 

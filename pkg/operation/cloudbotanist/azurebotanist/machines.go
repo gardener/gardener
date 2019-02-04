@@ -19,7 +19,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -61,7 +60,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, opera
 		machineClasses     = []map[string]interface{}{}
 	)
 
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return nil, nil, err
 	}

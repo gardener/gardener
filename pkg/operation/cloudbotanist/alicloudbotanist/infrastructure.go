@@ -15,8 +15,6 @@
 package alicloudbotanist
 
 import (
-	"github.com/gardener/gardener/pkg/operation/terraformer"
-
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -47,19 +45,19 @@ func (b *AlicloudBotanist) DeployInfrastructure() error {
 		vpcCIDR = string(*b.Shoot.Info.Spec.Cloud.Alicloud.Networks.VPC.CIDR)
 	}
 
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
 
 	return tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("alicloud-infra", b.generateTerraformInfraConfig(createVPC, vpcID, natGatewayID, snatTableID, vpcCIDR)).
+		InitializeWith(b.ChartInitializer("alicloud-infra", b.generateTerraformInfraConfig(createVPC, vpcID, natGatewayID, snatTableID, vpcCIDR))).
 		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AlicloudBotanist) DestroyInfrastructure() error {
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
@@ -71,19 +69,19 @@ func (b *AlicloudBotanist) DestroyInfrastructure() error {
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 func (b *AlicloudBotanist) DeployBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
-		DefineConfig("alicloud-backup", b.generateTerraformBackupConfig()).
+		InitializeWith(b.ChartInitializer("alicloud-backup", b.generateTerraformBackupConfig())).
 		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
@@ -95,7 +93,7 @@ func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *AlicloudBotanist) generateTerraformInfraVariablesEnvironment() []map[string]interface{} {
+func (b *AlicloudBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"ACCESS_KEY_SECRET": AccessKeySecret,
@@ -138,7 +136,7 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, n
 	}
 }
 
-func (b *AlicloudBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
+func (b *AlicloudBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"ACCESS_KEY_SECRET": AccessKeySecret,

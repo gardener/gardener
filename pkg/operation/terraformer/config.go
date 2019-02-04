@@ -15,57 +15,141 @@
 package terraformer
 
 import (
+	"context"
 	"errors"
-	"path/filepath"
-	"time"
 
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+const (
+	// MainKey is the key of the main.tf file inside the configuration ConfigMap.
+	MainKey = "main.tf"
+	// VariablesKey is the key of the variables.tf file inside the configuration ConfigMap.
+	VariablesKey = "variables.tf"
+	// TFVarsKey is the key of the terraform.tfvars file inside the variables Secret.
+	TFVarsKey = "terraform.tfvars"
+	// StateKey is the key of the terraform.tfstate file inside the state ConfigMap.
+	StateKey = "terraform.tfstate"
 )
 
 // SetVariablesEnvironment sets the provided <tfvarsEnvironment> on the Terraformer object.
-func (t *Terraformer) SetVariablesEnvironment(tfvarsEnvironment []map[string]interface{}) *Terraformer {
+func (t *Terraformer) SetVariablesEnvironment(tfvarsEnvironment map[string]string) *Terraformer {
 	t.variablesEnvironment = tfvarsEnvironment
 	return t
 }
 
-// SetImage sets the provided <image> on the Terraformer object.
-func (t *Terraformer) SetImage(image string) *Terraformer {
-	t.image = image
+// InitializerConfig is the configuration about the location and naming of the resources the
+// Terraformer expects.
+type InitializerConfig struct {
+	// Namespace is the namespace where all the resources required for the Terraformer shall be
+	// deployed.
+	Namespace string
+	// ConfigurationName is the desired name of the configuration ConfigMap.
+	ConfigurationName string
+	// VariablesName is the desired name of the variables Secret.
+	VariablesName string
+	// StateName is the desired name of the state ConfigMap.
+	StateName string
+	// InitializeState specifies whether an empty state should be initialized or not.
+	InitializeState bool
+}
+
+// Initializer is a function that is called from the Terraformer to initialize its configuration.
+type Initializer func(config *InitializerConfig) error
+
+func (t *Terraformer) initializerConfig() *InitializerConfig {
+	return &InitializerConfig{
+		Namespace:         t.namespace,
+		ConfigurationName: t.configName,
+		VariablesName:     t.variablesName,
+		StateName:         t.stateName,
+		InitializeState:   t.isStateEmpty(),
+	}
+}
+
+// InitializeWith initializes the Terraformer with the given Initializer. It is expected from the
+// Initializer to correctly create all the resources as specified in the given InitializerConfig.
+// A default implementation can be found in DefaultInitializer.
+func (t *Terraformer) InitializeWith(initializer Initializer) *Terraformer {
+	if err := initializer(t.initializerConfig()); err != nil {
+		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
+		return t
+	}
+	t.configurationDefined = true
 	return t
 }
 
-// DefineConfig creates a ConfigMap for the tf state (if it does not exist, otherwise it won't update it),
-// as well as a ConfigMap for the tf configuration (if it does not exist, otherwise it will update it).
-// The tfvars are stored in a Secret as the contain confidential information like credentials.
-func (t *Terraformer) DefineConfig(chartName string, values map[string]interface{}) *Terraformer {
-	values["names"] = map[string]interface{}{
-		"configuration": t.configName,
-		"variables":     t.variablesName,
-		"state":         t.stateName,
-	}
-	values["initializeEmptyState"] = t.IsStateEmpty()
-
-	if err := utils.Retry(5*time.Second, 30*time.Second, func() (bool, bool, error) {
-		if err := common.ApplyChart(t.k8sClient, t.chartRenderer, filepath.Join(chartPath, chartName), chartName, t.namespace, nil, values); err != nil {
-			t.logger.Errorf("could not create Terraform ConfigMaps/Secrets: %s", err.Error())
-			return false, false, nil
+func createOrUpdateConfigMap(ctx context.Context, c client.Client, namespace, name string, values map[string]string) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+	return configMap, kutil.CreateOrUpdate(ctx, c, configMap, func() error {
+		if configMap.Data == nil {
+			configMap.Data = make(map[string]string)
 		}
-		return true, false, nil
-	}); err != nil {
-		t.logger.Errorf("Could not create the Terraform ConfigMaps/Secrets: %s", err.Error())
-	} else {
-		t.configurationDefined = true
-	}
+		for key, value := range values {
+			configMap.Data[key] = value
+		}
+		return nil
+	})
+}
 
-	return t
+// CreateOrUpdateConfigurationConfigMap creates or updates the Terraform configuration ConfigMap
+// with the given main and variables content.
+func CreateOrUpdateConfigurationConfigMap(ctx context.Context, c client.Client, namespace, name, main, variables string) (*corev1.ConfigMap, error) {
+	return createOrUpdateConfigMap(ctx, c, namespace, name, map[string]string{
+		MainKey:      main,
+		VariablesKey: variables,
+	})
+}
+
+// CreateOrUpdateStateConfigMap creates or updates the Terraformer state ConfigMap with the given state.
+func CreateOrUpdateStateConfigMap(ctx context.Context, c client.Client, namespace, name, state string) (*corev1.ConfigMap, error) {
+	return createOrUpdateConfigMap(ctx, c, namespace, name, map[string]string{
+		StateKey: state,
+	})
+}
+
+// CreateOrUpdateTFVarsSecret creates or updates the Terraformer variables Secret with the given tfvars.
+func CreateOrUpdateTFVarsSecret(ctx context.Context, c client.Client, namespace, name string, tfvars []byte) (*corev1.Secret, error) {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: name}}
+	return secret, kutil.CreateOrUpdate(ctx, c, secret, func() error {
+		if secret.Data == nil {
+			secret.Data = make(map[string][]byte)
+		}
+		secret.Data[TFVarsKey] = tfvars
+		return nil
+	})
+}
+
+// DefaultInitializer is an Initializer that initializes the configuration, variables and state resources
+// based on the given main, variables and tfvars content and on the given InitializerConfig.
+func DefaultInitializer(c client.Client, main, variables string, tfvars []byte) Initializer {
+	return func(config *InitializerConfig) error {
+		ctx := context.TODO()
+		if _, err := CreateOrUpdateConfigurationConfigMap(ctx, c, config.Namespace, config.ConfigurationName, main, variables); err != nil {
+			return err
+		}
+
+		if _, err := CreateOrUpdateTFVarsSecret(ctx, c, config.Namespace, config.VariablesName, tfvars); err != nil {
+			return err
+		}
+
+		if config.InitializeState {
+			if _, err := CreateOrUpdateStateConfigMap(ctx, c, config.Namespace, config.StateName, ""); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 }
 
 // prepare checks whether all required ConfigMaps and Secrets exist. It returns the number of
 // existing ConfigMaps/Secrets, or the error in case something unexpected happens.
-func (t *Terraformer) prepare() (int, error) {
-	numberOfExistingResources, err := t.verifyConfigExists()
+func (t *Terraformer) prepare(ctx context.Context) (int, error) {
+	numberOfExistingResources, err := t.verifyConfigExists(ctx)
 	if err != nil {
 		return -1, err
 	}
@@ -75,29 +159,29 @@ func (t *Terraformer) prepare() (int, error) {
 	}
 
 	// Clean up possible existing job/pod artifacts from previous runs
-	if err := t.EnsureCleanedUp(); err != nil {
+	if err := t.ensureCleanedUp(); err != nil {
 		return -1, err
 	}
 
 	return numberOfExistingResources, nil
 }
 
-func (t *Terraformer) verifyConfigExists() (int, error) {
+func (t *Terraformer) verifyConfigExists(ctx context.Context) (int, error) {
 	numberOfExistingResources := 0
 
-	if _, err := t.k8sClient.GetConfigMap(t.namespace, t.stateName); err == nil {
+	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), &corev1.ConfigMap{}); err == nil {
 		numberOfExistingResources++
 	} else if err != nil && !apierrors.IsNotFound(err) {
 		return -1, err
 	}
 
-	if _, err := t.k8sClient.GetSecret(t.namespace, t.variablesName); err == nil {
+	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.variablesName), &corev1.Secret{}); err == nil {
 		numberOfExistingResources++
 	} else if err != nil && !apierrors.IsNotFound(err) {
 		return -1, err
 	}
 
-	if _, err := t.k8sClient.GetConfigMap(t.namespace, t.configName); err == nil {
+	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.configName), &corev1.ConfigMap{}); err == nil {
 		numberOfExistingResources++
 	} else if err != nil && !apierrors.IsNotFound(err) {
 		return -1, err
@@ -108,39 +192,40 @@ func (t *Terraformer) verifyConfigExists() (int, error) {
 
 // ConfigExists returns true if all three Terraform configuration secrets/configmaps exist, and false otherwise.
 func (t *Terraformer) ConfigExists() (bool, error) {
-	numberOfExistingResources, err := t.verifyConfigExists()
+	numberOfExistingResources, err := t.verifyConfigExists(context.TODO())
 	return numberOfExistingResources == numberOfConfigResources, err
 }
 
 // cleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
 // the Secret which stores the Terraform variables.
-func (t *Terraformer) cleanupConfiguration() error {
+func (t *Terraformer) cleanupConfiguration(ctx context.Context) error {
 	t.logger.Debugf("Deleting Terraform variables Secret '%s'", t.variablesName)
-	if err := t.k8sClient.DeleteSecret(t.namespace, t.variablesName); err != nil && !apierrors.IsNotFound(err) {
+	if err := t.client.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	t.logger.Debugf("Deleting Terraform configuration ConfigMap '%s'", t.configName)
-	if err := t.k8sClient.DeleteConfigMap(t.namespace, t.configName); err != nil && !apierrors.IsNotFound(err) {
+	if err := t.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.configName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	t.logger.Debugf("Deleting Terraform state ConfigMap '%s'", t.stateName)
-	if err := t.k8sClient.DeleteConfigMap(t.namespace, t.stateName); err != nil && !apierrors.IsNotFound(err) {
+	if err := t.client.Delete(ctx, &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.stateName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 
 	return nil
 }
 
-// EnsureCleanedUp deletes the job, pods, and waits until everything has been cleaned up.
-func (t *Terraformer) EnsureCleanedUp() error {
-	jobPodList, err := t.ListJobPods()
+// ensureCleanedUp deletes the job, pods, and waits until everything has been cleaned up.
+func (t *Terraformer) ensureCleanedUp() error {
+	ctx := context.TODO()
+	jobPodList, err := t.listJobPods(ctx)
 	if err != nil {
 		return err
 	}
-	if err := t.CleanupJob(jobPodList); err != nil {
+	if err := t.cleanupJob(ctx, jobPodList); err != nil {
 		return err
 	}
-	return t.WaitForCleanEnvironment()
+	return t.waitForCleanEnvironment(ctx)
 }

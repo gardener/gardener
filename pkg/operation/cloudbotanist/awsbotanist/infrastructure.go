@@ -46,19 +46,19 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 		vpcCIDR = string(*b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR)
 	}
 
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("aws-infra", b.generateTerraformInfraConfig(createVPC, vpcID, internetGatewayID, vpcCIDR)).
+		InitializeWith(b.ChartInitializer("aws-infra", b.generateTerraformInfraConfig(createVPC, vpcID, internetGatewayID, vpcCIDR))).
 		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AWSBotanist) DestroyInfrastructure() error {
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() []map[string]interface{} {
+func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"SECRET_ACCESS_KEY": SecretAccessKey,
@@ -142,7 +142,7 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 }
 
 func (b *AWSBotanist) destroyKubernetesLoadBalancersAndSecurityGroups() error {
-	t, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	t, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
@@ -193,19 +193,19 @@ func (b *AWSBotanist) destroyKubernetesLoadBalancersAndSecurityGroups() error {
 // DeployBackupInfrastructure kicks off a Terraform job which deploys the infrastructure resources for backup.
 // It sets up the User and the Bucket to store the backups. Allocate permission to the User to access the bucket.
 func (b *AWSBotanist) DeployBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
-		DefineConfig("aws-backup", b.generateTerraformBackupConfig()).
+		InitializeWith(b.ChartInitializer("aws-backup", b.generateTerraformBackupConfig())).
 		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for etcd backup.
 func (b *AWSBotanist) DestroyBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func (b *AWSBotanist) DestroyBackupInfrastructure() error {
 // generateTerraformBackupVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *AWSBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
+func (b *AWSBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"SECRET_ACCESS_KEY": SecretAccessKey,

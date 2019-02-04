@@ -15,6 +15,8 @@
 package terraformer
 
 import (
+	"context"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"time"
 
 	batchv1 "k8s.io/api/batch/v1"
@@ -23,11 +25,14 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-// WaitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
+// waitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
 // of the Terraformer.
-func (t *Terraformer) WaitForCleanEnvironment() error {
-	return wait.PollImmediate(5*time.Second, 120*time.Second, func() (bool, error) {
-		_, err := t.k8sClient.GetJob(t.namespace, t.jobName)
+func (t *Terraformer) waitForCleanEnvironment(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
+
+	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+		err := t.client.Get(ctx, kutil.Key(t.namespace, t.jobName), &batchv1.Job{})
 		if !apierrors.IsNotFound(err) {
 			if err != nil {
 				return false, err
@@ -36,7 +41,7 @@ func (t *Terraformer) WaitForCleanEnvironment() error {
 			return false, nil
 		}
 
-		jobPodList, err := t.ListJobPods()
+		jobPodList, err := t.listJobPods(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -46,20 +51,23 @@ func (t *Terraformer) WaitForCleanEnvironment() error {
 		}
 
 		return true, nil
-	})
+	}, ctx.Done())
 }
 
 // waitForPod waits for the Terraform validation Pod to be completed (either successful or failed).
 // It checks the Pod status field to identify the state.
-func (t *Terraformer) waitForPod() int32 {
+func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 	// 'terraform plan' returns exit code 2 if the plan succeeded and there is a diff
 	// If we can't read the terminated state of the container we simply force that the Terraform
 	// job gets created.
 	var exitCode int32 = 2
+	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	defer cancel()
 
-	if err := wait.Poll(5*time.Second, 120*time.Second, func() (bool, error) {
+	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
 		t.logger.Infof("Waiting for Terraform validation Pod '%s' to be completed...", t.podName)
-		pod, err := t.k8sClient.GetPod(t.namespace, t.podName)
+		pod := &corev1.Pod{}
+		err := t.client.Get(ctx, kutil.Key(t.namespace, t.podName), pod)
 		if apierrors.IsNotFound(err) {
 			t.logger.Warn("Terraform validation Pod disappeared unexpectedly, somebody must have manually deleted it!")
 			return true, nil
@@ -82,7 +90,7 @@ func (t *Terraformer) waitForPod() int32 {
 		}
 
 		return false, nil
-	}); err != nil {
+	}, ctx.Done()); err != nil {
 		exitCode = 1
 	}
 
@@ -91,11 +99,15 @@ func (t *Terraformer) waitForPod() int32 {
 
 // waitForJob waits for the Terraform Job to be completed (either successful or failed). It checks the
 // Job status field to identify the state.
-func (t *Terraformer) waitForJob() bool {
+func (t *Terraformer) waitForJob(ctx context.Context) bool {
+	ctx, cancel := context.WithTimeout(ctx, time.Hour)
+	defer cancel()
+
 	var succeeded = false
-	if err := wait.Poll(5*time.Second, time.Hour, func() (bool, error) {
+	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
 		t.logger.Infof("Waiting for Terraform Job '%s' to be completed...", t.jobName)
-		job, err := t.k8sClient.GetJob(t.namespace, t.jobName)
+		job := &batchv1.Job{}
+		err := t.client.Get(ctx, kutil.Key(t.namespace, t.jobName), job)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.logger.Warnf("Terraform Job %s disappeared unexpectedly, somebody must have manually deleted it!", t.jobName)
@@ -115,7 +127,7 @@ func (t *Terraformer) waitForJob() bool {
 			}
 		}
 		return false, nil
-	}); err != nil {
+	}, ctx.Done()); err != nil {
 		t.logger.Errorf("Error while waiting for Terraform job: '%s'", err.Error())
 	}
 	return succeeded
