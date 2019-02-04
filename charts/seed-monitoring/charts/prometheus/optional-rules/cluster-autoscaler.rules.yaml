@@ -10,6 +10,5 @@ groups:
       severity: critical
       type: seed
     annotations:
-      description: There is no running cluster autoscaler. Shoot's Nodes wont
-        be scaled dynamically, based on the load.
+      description: There is no running cluster autoscaler. Shoot's Nodes wont be scaled dynamically, based on the load.
       summary: Cluster autoscaler is down

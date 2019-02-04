@@ -69,7 +69,7 @@ spec:
         - --config.file=/etc/prometheus/config/prometheus.yaml
         - --storage.tsdb.path=/var/prometheus/data
         - --storage.tsdb.no-lockfile
-        - --storage.tsdb.retention=180h
+        - --storage.tsdb.retention.time=180h
         - --web.route-prefix=/
         - --web.enable-lifecycle
         - --web.listen-address=0.0.0.0:{{ .Values.port }}

@@ -13,10 +13,7 @@ groups:
       summary: Alertmanager is down
       description: There is no running Alertmanagers. Alerts wont be send to operators.
   - alert: AlertmanagerConfigInconsistent
-    expr: |
-      count_values("config_hash", alertmanager_config_hash)
-      /
-      kube_statefulset_replicas{namespace="kube-system",statefulset="alertmanager"} != 1
+    expr: count_values("config_hash", alertmanager_config_hash) / kube_statefulset_replicas{namespace="kube-system",statefulset="alertmanager"} != 1
     for: 5m
     labels:
       service: alertmanager

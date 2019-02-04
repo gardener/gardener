@@ -31,7 +31,7 @@ spec:
         - --storage.tsdb.path=/var/prometheus/data
         - --storage.tsdb.no-lockfile
         # Increase this once the memory issues have been resolved
-        - --storage.tsdb.retention=2h
+        - --storage.tsdb.retention.time=2h
         - --web.listen-address=0.0.0.0:{{ .Values.prometheus.port }}
         - --web.enable-lifecycle
         # Since v2.0.0-beta.3 prometheus runs as nobody user (fsGroup 65534/runAsUser 0)
