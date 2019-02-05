@@ -28,7 +28,7 @@ spec:
     hardwareProfile:
       vmSize: {{ $machineClass.machineType }}
     osProfile:
-      adminUserName: core
+      adminUsername: core
       linuxConfiguration:
         disablePasswordAuthentication: true
         ssh:
