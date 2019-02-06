@@ -21,6 +21,8 @@ import (
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
+	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -43,43 +45,48 @@ import (
 
 // Controller controls Shoots.
 type Controller struct {
-	k8sGardenClient    kubernetes.Interface
-	k8sGardenInformers gardeninformers.SharedInformerFactory
+	k8sGardenClient        kubernetes.Interface
+	k8sGardenInformers     gardeninformers.SharedInformerFactory
+	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
-	config                 *config.ControllerManagerConfiguration
-	control                ControlInterface
-	careControl            CareControlInterface
-	maintenanceControl     MaintenanceControlInterface
-	quotaControl           QuotaControlInterface
-	recorder               record.EventRecorder
-	secrets                map[string]*corev1.Secret
-	imageVector            imagevector.ImageVector
-	scheduler              reconcilescheduler.Interface
-	shootToHibernationCron map[string]*cron.Cron
+	config                        *config.ControllerManagerConfiguration
+	control                       ControlInterface
+	careControl                   CareControlInterface
+	maintenanceControl            MaintenanceControlInterface
+	quotaControl                  QuotaControlInterface
+	controllerInstallationControl ControllerInstallationControlInterface
+	recorder                      record.EventRecorder
+	secrets                       map[string]*corev1.Secret
+	imageVector                   imagevector.ImageVector
+	scheduler                     reconcilescheduler.Interface
+	shootToHibernationCron        map[string]*cron.Cron
 
-	seedLister      gardenlisters.SeedLister
-	shootLister     gardenlisters.ShootLister
-	projectLister   gardenlisters.ProjectLister
-	namespaceLister kubecorev1listers.NamespaceLister
-	configMapLister kubecorev1listers.ConfigMapLister
+	seedLister                   gardenlisters.SeedLister
+	shootLister                  gardenlisters.ShootLister
+	projectLister                gardenlisters.ProjectLister
+	namespaceLister              kubecorev1listers.NamespaceLister
+	configMapLister              kubecorev1listers.ConfigMapLister
+	controllerInstallationLister gardencorelisters.ControllerInstallationLister
 
-	seedQueue             workqueue.RateLimitingInterface
-	shootQueue            workqueue.RateLimitingInterface
-	shootCareQueue        workqueue.RateLimitingInterface
-	shootMaintenanceQueue workqueue.RateLimitingInterface
-	shootQuotaQueue       workqueue.RateLimitingInterface
-	shootSeedQueue        workqueue.RateLimitingInterface
-	configMapQueue        workqueue.RateLimitingInterface
-	shootHibernationQueue workqueue.RateLimitingInterface
+	seedQueue                   workqueue.RateLimitingInterface
+	shootQueue                  workqueue.RateLimitingInterface
+	shootCareQueue              workqueue.RateLimitingInterface
+	shootMaintenanceQueue       workqueue.RateLimitingInterface
+	shootQuotaQueue             workqueue.RateLimitingInterface
+	shootSeedQueue              workqueue.RateLimitingInterface
+	configMapQueue              workqueue.RateLimitingInterface
+	shootHibernationQueue       workqueue.RateLimitingInterface
+	controllerInstallationQueue workqueue.RateLimitingInterface
 
-	shootSynced         cache.InformerSynced
-	seedSynced          cache.InformerSynced
-	cloudProfileSynced  cache.InformerSynced
-	secretBindingSynced cache.InformerSynced
-	quotaSynced         cache.InformerSynced
-	projectSynced       cache.InformerSynced
-	namespaceSynced     cache.InformerSynced
-	configMapSynced     cache.InformerSynced
+	shootSynced                  cache.InformerSynced
+	seedSynced                   cache.InformerSynced
+	cloudProfileSynced           cache.InformerSynced
+	secretBindingSynced          cache.InformerSynced
+	quotaSynced                  cache.InformerSynced
+	projectSynced                cache.InformerSynced
+	namespaceSynced              cache.InformerSynced
+	configMapSynced              cache.InformerSynced
+	controllerInstallationSynced cache.InformerSynced
 
 	numberOfRunningWorkers int
 	workerCh               chan int
@@ -88,18 +95,19 @@ type Controller struct {
 // NewShootController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <shootInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
+func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, identity *gardenv1beta1.Gardener, gardenNamespace string, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder) *Controller {
 	var (
-		gardenv1beta1Informer = k8sGardenInformers.Garden().V1beta1()
-		corev1Informer        = kubeInformerFactory.Core().V1()
+		gardenV1beta1Informer      = k8sGardenInformers.Garden().V1beta1()
+		gardenCoreV1alpha1Informer = k8sGardenCoreInformers.Core().V1alpha1()
+		corev1Informer             = kubeInformerFactory.Core().V1()
 
-		shootInformer = gardenv1beta1Informer.Shoots()
+		shootInformer = gardenV1beta1Informer.Shoots()
 		shootLister   = shootInformer.Lister()
 
-		seedInformer = gardenv1beta1Informer.Seeds()
+		seedInformer = gardenV1beta1Informer.Seeds()
 		seedLister   = seedInformer.Lister()
 
-		projectInformer = gardenv1beta1Informer.Projects()
+		projectInformer = gardenV1beta1Informer.Projects()
 		projectLister   = projectInformer.Lister()
 
 		namespaceInformer = corev1Informer.Namespaces()
@@ -107,37 +115,44 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 
 		configMapInformer = corev1Informer.ConfigMaps()
 		configMapLister   = configMapInformer.Lister()
+
+		controllerInstallationInformer = gardenCoreV1alpha1Informer.ControllerInstallations()
+		controllerInstallationLister   = controllerInstallationInformer.Lister()
 	)
 
 	shootController := &Controller{
-		k8sGardenClient:    k8sGardenClient,
-		k8sGardenInformers: k8sGardenInformers,
+		k8sGardenClient:        k8sGardenClient,
+		k8sGardenInformers:     k8sGardenInformers,
+		k8sGardenCoreInformers: k8sGardenCoreInformers,
 
-		config:                 config,
-		control:                NewDefaultControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder),
-		careControl:            NewDefaultCareControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, config),
-		maintenanceControl:     NewDefaultMaintenanceControl(k8sGardenClient, gardenv1beta1Informer, secrets, imageVector, identity, recorder),
-		quotaControl:           NewDefaultQuotaControl(k8sGardenClient, gardenv1beta1Informer),
-		recorder:               recorder,
-		secrets:                secrets,
-		imageVector:            imageVector,
-		scheduler:              reconcilescheduler.New(nil),
-		shootToHibernationCron: make(map[string]*cron.Cron),
+		config:                        config,
+		control:                       NewDefaultControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder),
+		careControl:                   NewDefaultCareControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, config),
+		maintenanceControl:            NewDefaultMaintenanceControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, recorder),
+		quotaControl:                  NewDefaultQuotaControl(k8sGardenClient, gardenV1beta1Informer),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenV1beta1Informer, gardenCoreV1alpha1Informer, recorder),
+		recorder:                      recorder,
+		secrets:                       secrets,
+		imageVector:                   imageVector,
+		scheduler:                     reconcilescheduler.New(nil),
+		shootToHibernationCron:        make(map[string]*cron.Cron),
 
-		seedLister:      seedLister,
-		shootLister:     shootLister,
-		projectLister:   projectLister,
-		namespaceLister: namespaceLister,
-		configMapLister: configMapLister,
+		seedLister:                   seedLister,
+		shootLister:                  shootLister,
+		projectLister:                projectLister,
+		namespaceLister:              namespaceLister,
+		configMapLister:              configMapLister,
+		controllerInstallationLister: controllerInstallationLister,
 
-		seedQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
-		shootQueue:            workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
-		shootCareQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
-		shootMaintenanceQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
-		shootQuotaQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
-		shootSeedQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
-		configMapQueue:        workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "configMap"),
-		shootHibernationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-hibernation"),
+		seedQueue:                   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "seed"),
+		shootQueue:                  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot"),
+		shootCareQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-care"),
+		shootMaintenanceQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-maintenance"),
+		shootQuotaQueue:             workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-quota"),
+		shootSeedQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-seeds"),
+		configMapQueue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "configmaps"),
+		shootHibernationQueue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-hibernation"),
+		controllerInstallationQueue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "shoot-controllerinstallation"),
 
 		workerCh: make(chan int),
 	}
@@ -180,14 +195,20 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 		UpdateFunc: shootController.configMapUpdate,
 	})
 
+	controllerInstallationInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    shootController.controllerInstallationAdd,
+		UpdateFunc: shootController.controllerInstallationUpdate,
+	})
+
 	shootController.seedSynced = seedInformer.Informer().HasSynced
 	shootController.shootSynced = shootInformer.Informer().HasSynced
-	shootController.cloudProfileSynced = gardenv1beta1Informer.CloudProfiles().Informer().HasSynced
-	shootController.secretBindingSynced = gardenv1beta1Informer.SecretBindings().Informer().HasSynced
-	shootController.quotaSynced = gardenv1beta1Informer.Quotas().Informer().HasSynced
+	shootController.cloudProfileSynced = gardenV1beta1Informer.CloudProfiles().Informer().HasSynced
+	shootController.secretBindingSynced = gardenV1beta1Informer.SecretBindings().Informer().HasSynced
+	shootController.quotaSynced = gardenV1beta1Informer.Quotas().Informer().HasSynced
 	shootController.projectSynced = projectInformer.Informer().HasSynced
 	shootController.namespaceSynced = namespaceInformer.Informer().HasSynced
 	shootController.configMapSynced = configMapInformer.Informer().HasSynced
+	shootController.controllerInstallationSynced = controllerInstallationInformer.Informer().HasSynced
 
 	return shootController
 }
@@ -196,7 +217,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, shootMaintenanceWorkers, shootQuotaWorkers, shootHibernationWorkers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.quotaSynced, c.projectSynced, c.namespaceSynced, c.configMapSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.shootSynced, c.seedSynced, c.cloudProfileSynced, c.secretBindingSynced, c.quotaSynced, c.projectSynced, c.namespaceSynced, c.configMapSynced, c.controllerInstallationSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -247,6 +268,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds", c.reconcileShootKey, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed Queue", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.CreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation Queue", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootWorkers/5+1; i++ {
 		controllerutils.CreateWorker(ctx, c.configMapQueue, "ConfigMap", c.reconcileConfigMapKey, &waitGroup, c.workerCh)
@@ -264,18 +286,20 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 	c.shootSeedQueue.ShutDown()
 	c.configMapQueue.ShutDown()
 	c.shootHibernationQueue.ShutDown()
+	c.controllerInstallationQueue.ShutDown()
 
 	for {
 		var (
-			shootQueueLength            = c.shootQueue.Len()
-			shootCareQueueLength        = c.shootCareQueue.Len()
-			shootMaintenanceQueueLength = c.shootMaintenanceQueue.Len()
-			shootQuotaQueueLength       = c.shootQuotaQueue.Len()
-			shootSeedQueueLength        = c.shootSeedQueue.Len()
-			seedQueueLength             = c.seedQueue.Len()
-			configMapQueueLength        = c.configMapQueue.Len()
-			shootHibernationQueueLength = c.shootHibernationQueue.Len()
-			queueLengths                = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength + shootSeedQueueLength + seedQueueLength + configMapQueueLength + shootHibernationQueueLength
+			shootQueueLength                  = c.shootQueue.Len()
+			shootCareQueueLength              = c.shootCareQueue.Len()
+			shootMaintenanceQueueLength       = c.shootMaintenanceQueue.Len()
+			shootQuotaQueueLength             = c.shootQuotaQueue.Len()
+			shootSeedQueueLength              = c.shootSeedQueue.Len()
+			seedQueueLength                   = c.seedQueue.Len()
+			configMapQueueLength              = c.configMapQueue.Len()
+			shootHibernationQueueLength       = c.shootHibernationQueue.Len()
+			controllerInstallationQueueLength = c.controllerInstallationQueue.Len()
+			queueLengths                      = shootQueueLength + shootCareQueueLength + shootMaintenanceQueueLength + shootQuotaQueueLength + shootSeedQueueLength + seedQueueLength + configMapQueueLength + shootHibernationQueueLength + controllerInstallationQueueLength
 		)
 		if queueLengths == 0 && c.numberOfRunningWorkers == 0 {
 			logger.Logger.Debug("No running Shoot worker and no items left in the queues. Terminated Shoot controller...")

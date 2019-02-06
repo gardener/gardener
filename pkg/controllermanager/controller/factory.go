@@ -130,7 +130,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	gardenmetrics.RegisterWorkqueMetrics()
 
 	var (
-		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
+		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.cfg, f.recorder)
 		quotaController                  = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)

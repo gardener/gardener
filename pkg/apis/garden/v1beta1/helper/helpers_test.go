@@ -50,7 +50,7 @@ var _ = Describe("helper", func() {
 		}, true),
 	)
 
-	DescribeTable("#GetShootCloudProviderWOrkers",
+	DescribeTable("#GetShootCloudProviderWorkers",
 		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected []gardenv1beta1.Worker) {
 			Expect(GetShootCloudProviderWorkers(cloudProvider, shoot)).To(Equal(expected))
 		},
@@ -105,7 +105,89 @@ var _ = Describe("helper", func() {
 		Entry("Local",
 			gardenv1beta1.CloudProviderLocal,
 			&gardenv1beta1.Shoot{},
-			[]gardenv1beta1.Worker{{Name: "local", AutoScalerMin: 1, AutoScalerMax: 1}}))
+			[]gardenv1beta1.Worker{{Name: "local", AutoScalerMin: 1, AutoScalerMax: 1}}),
+	)
+
+	DescribeTable("#GetMachineImageNameFromShoot",
+		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected gardenv1beta1.MachineImageName) {
+			Expect(GetMachineImageNameFromShoot(cloudProvider, shoot)).To(Equal(expected))
+		},
+		Entry("AWS",
+			gardenv1beta1.CloudProviderAWS,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						AWS: &gardenv1beta1.AWSCloud{
+							MachineImage: &gardenv1beta1.AWSMachineImage{
+								Name: gardenv1beta1.MachineImageCoreOS,
+							},
+						},
+					},
+				},
+			},
+			gardenv1beta1.MachineImageCoreOS,
+		),
+		Entry("Azure",
+			gardenv1beta1.CloudProviderAzure,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						Azure: &gardenv1beta1.AzureCloud{
+							MachineImage: &gardenv1beta1.AzureMachineImage{
+								Name: gardenv1beta1.MachineImageCoreOS,
+							},
+						},
+					},
+				},
+			},
+			gardenv1beta1.MachineImageCoreOS,
+		),
+		Entry("GCP",
+			gardenv1beta1.CloudProviderGCP,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						GCP: &gardenv1beta1.GCPCloud{
+							MachineImage: &gardenv1beta1.GCPMachineImage{
+								Name: gardenv1beta1.MachineImageCoreOS,
+							},
+						},
+					},
+				},
+			},
+			gardenv1beta1.MachineImageCoreOS,
+		),
+		Entry("OpenStack",
+			gardenv1beta1.CloudProviderOpenStack,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						OpenStack: &gardenv1beta1.OpenStackCloud{
+							MachineImage: &gardenv1beta1.OpenStackMachineImage{
+								Name: gardenv1beta1.MachineImageCoreOS,
+							},
+						},
+					},
+				},
+			},
+			gardenv1beta1.MachineImageCoreOS,
+		),
+		Entry("Alicloud",
+			gardenv1beta1.CloudProviderAlicloud,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						Alicloud: &gardenv1beta1.Alicloud{
+							MachineImage: &gardenv1beta1.AlicloudMachineImage{
+								Name: gardenv1beta1.MachineImageCoreOSAlicloud,
+							},
+						},
+					},
+				},
+			},
+			gardenv1beta1.MachineImageCoreOSAlicloud,
+		),
+	)
 
 	DescribeTable("#ShootWantsClusterAutoscaler",
 		func(shoot *gardenv1beta1.Shoot, wantsAutoscaler bool) {

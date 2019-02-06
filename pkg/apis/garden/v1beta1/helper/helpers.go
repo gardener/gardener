@@ -139,6 +139,33 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 	return workers
 }
 
+// GetMachineImageNameFromShoot returns the machine image name used in a shoot manifest, however, it requires the cloudprovider as input.
+func GetMachineImageNameFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) gardenv1beta1.MachineImageName {
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return shoot.Spec.Cloud.AWS.MachineImage.Name
+	case gardenv1beta1.CloudProviderAzure:
+		return shoot.Spec.Cloud.Azure.MachineImage.Name
+	case gardenv1beta1.CloudProviderGCP:
+		return shoot.Spec.Cloud.GCP.MachineImage.Name
+	case gardenv1beta1.CloudProviderAlicloud:
+		return shoot.Spec.Cloud.Alicloud.MachineImage.Name
+	case gardenv1beta1.CloudProviderOpenStack:
+		return shoot.Spec.Cloud.OpenStack.MachineImage.Name
+	}
+	return ""
+}
+
+// GetShootMachineImageName returns the machine image name used in a shoot manifest.
+func GetShootMachineImageName(shoot *gardenv1beta1.Shoot) (gardenv1beta1.MachineImageName, error) {
+	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
+	if err != nil {
+		return "", err
+	}
+
+	return GetMachineImageNameFromShoot(cloudProvider, shoot), nil
+}
+
 // GetMachineTypesFromCloudProfile retrieves list of machine types from cloud profile
 func GetMachineTypesFromCloudProfile(cloudProvider gardenv1beta1.CloudProvider, profile *gardenv1beta1.CloudProfile) []gardenv1beta1.MachineType {
 	var (
