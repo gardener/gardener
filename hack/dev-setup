@@ -14,17 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/bin/sh
-
 set -e
 
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
 
 source $(dirname "${0}")/common
+env="$(k8s_env)"
 
-# test if we are running against a Minikube or Docker Kubernetes local setup
-case $(k8s_env) in
+# test if we are running against a Minikube, Docker or kind Kubernetes local setup
+case "$env" in
+    $KIND)
+        echo "Found kind ..."
+        LOCAL_K8S_HOST_IP=localhost
+        ETCD_DATA_DIR="/var/lib/docker/gardener/gardener-etcd"
+        ;;
     $DOCKER_FOR_DESKTOP)
         echo "Found Docker Kubernetes ..."
         LOCAL_K8S_HOST_IP=localhost
