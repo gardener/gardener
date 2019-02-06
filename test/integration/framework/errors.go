@@ -17,12 +17,6 @@ package framework
 import "errors"
 
 var (
-	// ErrEmptyShootGardenerTest can not use an empty ShootGardenerTest object
-	ErrEmptyShootGardenerTest = errors.New("can not use an empty ShootGardenerTest object")
-
-	// ErrEmptyShootNamespaceNames can not use an empty seed/shoot/namespace strings
-	ErrEmptyShootNamespaceNames = errors.New("can not use an empty  shoot/namespace strings")
-
 	// ErrNoRepositoriesFound no repositories found in repoitories file
 	ErrNoRepositoriesFound = errors.New("no repositories found in repoitories file")
 

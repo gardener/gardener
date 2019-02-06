@@ -22,6 +22,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -69,7 +70,9 @@ const (
 	RedisSalve            = "redis-slave"
 	APIServer             = "kube-apiserver"
 	GuestBookTemplateName = "guestbook-app.yaml.tpl"
-	helmDeployNamespace   = metav1.NamespaceSystem
+
+	helmDeployNamespace = metav1.NamespaceSystem
+	RedisChart          = "stable/redis"
 )
 
 func validateFlags() {
@@ -105,6 +108,8 @@ var _ = Describe("Shoot application testing", func() {
 		apiserverLabels     labels.Selector
 		guestBooktpl        *template.Template
 		targetTestShoot     *v1beta1.Shoot
+		resourcesDir        = filepath.Join("..", "..", "resources")
+		chartRepo           = filepath.Join(resourcesDir, "charts")
 	)
 
 	CBeforeSuite(func(ctx context.Context) {
@@ -235,6 +240,12 @@ var _ = Describe("Shoot application testing", func() {
 		cleanupGuestbook()
 		cleanupRedis()
 
+		err := os.RemoveAll(filepath.Join(resourcesDir, "charts"))
+		Expect(err).NotTo(HaveOccurred())
+
+		err = os.RemoveAll(filepath.Join(resourcesDir, "repository", "cache"))
+		Expect(err).NotTo(HaveOccurred())
+
 		By("redis and the guestbook app have been cleaned up!")
 
 		if *cleanup {
@@ -245,7 +256,7 @@ var _ = Describe("Shoot application testing", func() {
 	}, FinalizationTimeout)
 
 	CIt("should download shoot kubeconfig successfully", func(ctx context.Context) {
-		err := shootTestOperations.DownloadKubeconfig(ctx, *downloadPath)
+		err := shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), v1beta1.GardenerName, *downloadPath)
 		Expect(err).NotTo(HaveOccurred())
 
 		By(fmt.Sprintf("Shoot Kubeconfig downloaded successfully to %s", *downloadPath))
@@ -254,11 +265,16 @@ var _ = Describe("Shoot application testing", func() {
 	CIt("should deploy guestbook app successfully", func(ctx context.Context) {
 		ctx = context.WithValue(ctx, "name", "guestbook app")
 
-		helm := Helm(ResourcesDir)
-		err := shootTestOperations.EnsureDirectories(helm)
+		helm := Helm(resourcesDir)
+		err := EnsureDirectories(helm)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = shootTestOperations.DownloadAndDeployHelmChart(ctx, helm, helmDeployNamespace, "stable/redis")
+		By("Downloading chart artifacts")
+		err = shootTestOperations.DownloadChartArtifacts(ctx, helm, chartRepo, RedisChart)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Applying redis chart")
+		err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis")
 		Expect(err).NotTo(HaveOccurred())
 
 		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-master", helmDeployNamespace, shootTestOperations.ShootClient)
@@ -280,13 +296,12 @@ var _ = Describe("Shoot application testing", func() {
 			fmt.Sprintf("guestbook.ingress.%s", *shootTestOperations.Shoot.Spec.DNS.Domain),
 		}
 
-		// Parse the guestbook app template
+		By("Deploy the guestbook application")
 		var writer bytes.Buffer
 		err = guestBooktpl.Execute(&writer, guestBookParams)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Apply the guestbook app resources to shoot
-
 		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
 		err = shootTestOperations.ShootClient.Applier().ApplyManifest(ctx, manifestReader)
 		Expect(err).NotTo(HaveOccurred())
@@ -316,7 +331,6 @@ var _ = Describe("Shoot application testing", func() {
 		// test if foobar-<shoot-name> was pulled successfully
 		bodyString := string(responseBytes)
 		Expect(bodyString).To(ContainSubstring(fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Name)))
-
 		By("Guestbook app was deployed successfully!")
 
 	}, GuestbookAppTimeout)
@@ -326,7 +340,7 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 	}, DashboardAvailableTimeout)
 
-	FContext("Network Policy Testing", func() {
+	Context("Network Policy Testing", func() {
 		var (
 			NetworkPolicyTimeout = 1 * time.Minute
 
