@@ -118,7 +118,7 @@ func (b *AzureBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interfa
 	if seedK8s112 {
 		values = map[string]interface{}{
 			"annotations": map[string]interface{}{
-				"service.beta.kubernetes.io/azure-load-balancer-tcp-idle-timeout": "60",
+				"service.beta.kubernetes.io/azure-load-balancer-tcp-idle-timeout": "30",
 			},
 		}
 	}
