@@ -19,6 +19,5 @@ groups:
       severity: critical
       type: shoot
     annotations:
-      description: VPN connection for {{ $labels.pod }} is down. No resources of the Shoot cluster
-        can be accessed by this pod.
+      description: VPN connection for {{ $labels.pod }} is down. No resources of the Shoot clustercan be accessed by this pod.
       summary: VPN connection down

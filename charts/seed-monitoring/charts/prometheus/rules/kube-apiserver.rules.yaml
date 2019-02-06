@@ -27,58 +27,46 @@ groups:
   # Some verbs excluded because they are expected to be long-lasting:
   # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
   - alert: KubeApiServerLatency
-    expr: |
-      histogram_quantile(
-        0.99,
-        sum without (instance,resource) (apiserver_request_latencies_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY|proxy"})
-      ) / 1e6 > 1.0
+    expr: histogram_quantile(0.99, sum without (instance,resource) (apiserver_request_latencies_bucket{subresource!="log",verb!~"CONNECT|WATCHLIST|WATCH|PROXY proxy"})) / 1e6 > 1.0
     for: 10m
     labels:
       service: kube-apiserver
       severity: warning
       type: seed
     annotations:
-      description: 99th percentile Latency for {{ $labels.verb }} requests to the
-        kube-apiserver is higher than 1s.
+      description: 99th percentile Latency for {{ $labels.verb }} requests to the kube-apiserver is higher than 1s.
       summary: Kubernetes apiserver latency is high
   ### API latency ###
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) /
-      1e+06
+    expr: histogram_quantile(0.99, rate(apiserver_request_latencies_bucket[5m])) / 1e+06
     labels:
       quantile: "0.99"
   - record: apiserver_latency:quantile_seconds
-    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) /
-      1e+06
+    expr: histogram_quantile(0.9, rate(apiserver_request_latencies_bucket[5m])) / 1e+06
     labels:
       quantile: "0.9"
   - record: apiserver_latency_seconds:quantile
-    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) /
-      1e+06
+    expr: histogram_quantile(0.5, rate(apiserver_request_latencies_bucket[5m])) / 1e+06
     labels:
       quantile: "0.5"
   # TODO: DRY?
   - alert: KubeTooManyOpenFiles
-    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds >
-      50
+    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds > 50
     for: 10m
     labels:
       service: kube-apiserver
       severity: warning
       type: seed
     annotations:
-      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
-        descriptors.'
+      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket descriptors.'
       summary: '{{ $labels.job }} has too many open file descriptors'
   - alert: KubeTooManyOpenFiles
-    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds >
-      80
+    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds > 80
     for: 10m
     labels:
       service: kube-apiserver
       severity: critical
       type: seed
     annotations:
-      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket
-        descriptors.'
+      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket descriptors.'
       summary: '{{ $labels.job }} has too many open file descriptors'

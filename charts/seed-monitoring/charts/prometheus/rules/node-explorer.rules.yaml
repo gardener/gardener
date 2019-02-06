@@ -136,8 +136,7 @@ groups:
       severity: critical
       type: shoot
     annotations:
-      description: '{{ $labels.job }} instance {{ $labels.instance }} will exhaust
-        in file descriptors soon'
+      description: '{{ $labels.job }} instance {{ $labels.instance }} will exhaust in file descriptors soon'
       summary: file descriptors soon exhausted
 
   # Alert for Swap Usage Warning
@@ -149,8 +148,7 @@ groups:
       severity: warning
       type: shoot
     annotations:
-      description: instance {{ $labels.instance }} is currently using {{ $value }}%
-        of its swap memory
+      description: instance {{ $labels.instance }} is currently using {{ $value }}% of its swap memory
       summary: swap usage
 
   # Alert for Swap Usage Crtical
@@ -162,6 +160,5 @@ groups:
       severity: severe
       type: shoot
     annotations:
-      description: instance {{ $labels.instance }} has is using {{ value }}% of its
-        swap memory
+      description: instance {{ $labels.instance }} has is using {{ value }}% of its swap memory
       summary: high swap usage

@@ -21,8 +21,7 @@ groups:
       severity: warning
       type: seed
     annotations:
-      description: Prometheus failed to scrape metrics. Instance {{ $labels.instance
-        }}, job {{ $labels.job }}.
+      description: Prometheus failed to scrape metrics. Instance {{ $labels.instance}}, job {{ $labels.job }}.
       summary: No metrics are scraped from target
   - alert: PrometheusConfigurationFailure
     expr: prometheus_config_last_reload_successful == 0
@@ -32,6 +31,5 @@ groups:
       severity: warning
       type: seed
     annotations:
-      description: Latest Prometheus configuration is broken and Prometheus is using
-        the previous one
+      description: Latest Prometheus configuration is broken and Prometheus is using the previous one
       summary: Prometheus is misconfigured

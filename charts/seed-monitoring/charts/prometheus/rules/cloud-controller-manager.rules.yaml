@@ -10,6 +10,7 @@ groups:
       severity: critical
       type: seed
     annotations:
-      description: There is no running K8S cloud controller manager. Cloud specific resources
+      description: |
+        There is no running K8S cloud controller manager. Cloud specific resources
         such as loadbalancers and persistent volumes are not reconcilded.
       summary: Cloud controller manager is down

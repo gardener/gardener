@@ -10,6 +10,5 @@ groups:
       severity: critical
       type: seed
     annotations:
-      description: There is no running machine controller manager. No Shoot Nodes
-        can be created.
+      description: There is no running machine controller manager. No Shoot Nodes can be created.
       summary: Machine controller manager is down

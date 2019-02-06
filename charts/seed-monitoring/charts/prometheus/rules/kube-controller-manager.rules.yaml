@@ -10,6 +10,7 @@ groups:
       severity: critical
       type: seed
     annotations:
-      description: There is no running K8S controller manager. Deployments and replication
+      description: |
+        There is no running K8S controller manager. Deployments and replication
         controllers are not making progress.
-      summary: Controller manager is down
+      summary: Controller manager is down.
