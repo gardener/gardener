@@ -29,26 +29,37 @@ data:
         Mem_Buf_Limit     12MB
         Refresh_Interval  10
         ignore_older      1800s
+
   input-systemd.conf: |-
     [INPUT]
         Name            systemd
-        Tag             journald.docker.*
+        Tag             journald.docker
+        Path            /var/log/journal/
+        Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=docker.service
     [INPUT]
         Name            systemd
-        Tag             journald.kubelet.*
+        Tag             journald.kubelet
+        Path            /var/log/journal/
+        Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=kubelet.service
     [INPUT]
         Name            systemd
-        Tag             journald.cloud-config-downloader.*
+        Tag             journald.cloud-config-downloader
+        Path            /var/log/journal/
+        Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=cloud-config-downloader.service
     [INPUT]
         Name            systemd
-        Tag             journald.docker-monitor.*
+        Tag             journald.docker-monitor
+        Path            /var/log/journal/
+        Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=docker-monitor.service
     [INPUT]
         Name            systemd
-        Tag             journald.kubelet-monitor.*
+        Tag             journald.kubelet-monitor
+        Path            /var/log/journal/
+        Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=kubelet-monitor.service
 
   filter-kubernetes.conf: |-
@@ -253,7 +264,7 @@ data:
 
     [FILTER]
         Name                lua
-        Match               *
+        Match               kubernetes.*
         script              modify_severity.lua
         call                cb_modify
 
@@ -275,13 +286,6 @@ data:
         # Command      |  Decoder | Field | Optional Action
         # =============|==================|=================
         Decode_Field_As   escaped    log
-
-    [PARSER]
-        Name        syslog
-        Format      regex
-        Regex       ^\<(?<pri>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
-        Time_Key    time
-        Time_Format %b %d %H:%M:%S
 
     [PARSER]
         Name        kubeapiserverParser

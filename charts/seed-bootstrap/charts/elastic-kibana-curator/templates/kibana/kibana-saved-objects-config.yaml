@@ -38,7 +38,7 @@ data:
             "visState": "{\"title\":\"Namespaces\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{\"customLabel\":\"#Logs\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"kubernetes.namespace_name.keyword\",\"size\":5,\"order\":\"desc\",\"orderBy\":\"1\",\"otherBucket\":true,\"otherBucketLabel\":\"Other\",\"missingBucket\":true,\"missingBucketLabel\":\"Missing\",\"customLabel\":\"Namespaces\"}}]}",
             "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
             "kibanaSavedObjectMeta": {
-              "searchSourceJSON": "{\"index\":\"logstash-*\",\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[]}"
+              "searchSourceJSON": "{\"index\":\"logstash-*\",\"query\":{\"query\":\"_exists_:log\",\"language\":\"lucene\"},\"filter\":[]}"
             }
           }
         },
@@ -50,7 +50,7 @@ data:
             "visState": "{\"title\":\"Pod table\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{\"customLabel\":\"#Logs\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"kubernetes.pod_name.keyword\",\"size\":8,\"order\":\"desc\",\"orderBy\":\"1\",\"otherBucket\":true,\"otherBucketLabel\":\"Other\",\"missingBucket\":true,\"missingBucketLabel\":\"Missing\",\"customLabel\":\"Pods\"}}]}",
             "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
             "kibanaSavedObjectMeta": {
-              "searchSourceJSON": "{\"index\":\"logstash-*\",\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[]}"
+              "searchSourceJSON": "{\"index\":\"logstash-*\",\"query\":{\"query\":\"_exists_:log\",\"language\":\"lucene\"},\"filter\":[]}"
             }
           }
         },
@@ -81,19 +81,7 @@ data:
               "desc"
             ],
             "kibanaSavedObjectMeta": {
-              "searchSourceJSON": "{\"index\":\"logstash-*\",\"highlightAll\":true,\"version\":true,\"query\":{\"language\":\"lucene\",\"query\":\"\"},\"filter\":[]}"
-            }
-          }
-        },
-        {
-          "id": "9bdd26b0-127b-11e9-b691-d5e6ef2b76df",
-          "type": "visualization",
-          "attributes": {
-            "title": "Log msgs",
-            "visState": "{\"title\":\"Log msgs\",\"type\":\"table\",\"params\":{\"perPage\":10,\"showPartialRows\":false,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":true,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{\"customLabel\":\"#Logs\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"log.keyword\",\"size\":8,\"order\":\"desc\",\"orderBy\":\"1\",\"otherBucket\":true,\"otherBucketLabel\":\"- other log msgs -\",\"missingBucket\":true,\"missingBucketLabel\":\"- no log msg -\",\"customLabel\":\"Log msg\"}}]}",
-            "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
-            "kibanaSavedObjectMeta": {
-              "searchSourceJSON": "{\"index\":\"logstash-*\",\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[]}"
+              "searchSourceJSON": "{\"index\":\"logstash-*\",\"highlightAll\":true,\"version\":true,\"query\":{\"language\":\"lucene\",\"query\":\"_exists_:log\"},\"filter\":[]}"
             }
           }
         },
