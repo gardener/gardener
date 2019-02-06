@@ -32,6 +32,10 @@ dev-setup:
 dev-setup-local:
 	@./hack/dev-setup-local
 
+.PHONY: dev-setup-extensions
+dev-setup-extensions:
+	@./hack/dev-setup-extensions
+
 .PHONY: start-api
 start-api:
 	@./hack/start-api

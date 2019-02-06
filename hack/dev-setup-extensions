@@ -1,0 +1,68 @@
+#!/bin/bash -e
+#
+# Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+if ! which yaml2json >/dev/null; then
+  echo "ERROR: Missing `yaml2json` executable. Cannot run this script."
+  exit 1
+fi
+if ! which jq >/dev/null; then
+  echo "ERROR: Missing `jq` executable. Cannot run this script."
+  exit 1
+fi
+
+EXTENSIONS_FILE="$(curl -s https://raw.githubusercontent.com/gardener/gardener-extensions/master/extensions.yaml)"
+extensions="$(echo "$EXTENSIONS_FILE" | yaml2json | jq -r '.extensions')"
+location="$(pwd)"
+
+function end_execution() {
+  trap - HUP QUIT PIPE INT TERM EXIT
+  cd "$location"
+  rm -rf tmp
+}
+trap end_execution INT TERM EXIT
+
+for extension in `echo "$extensions" | jq -r '.[].name'`; do
+  echo
+
+  gitHubRepo="$(echo $extensions | jq -r ".[] | select(.name==\"$extension\") | .gitHubRepo")"
+  path="$(echo $extensions | jq -r ".[] | select(.name==\"$extension\") | .path")"
+  if [[ "$path" == "null" ]]; then
+    path="."
+  fi
+
+  read -p "> Found extension '$extension'. Do you want to install it into your local Gardener setup? (y/n) " response
+  [[ ! "$response" =~ ^(yes|y) ]] && echo "  > Installation skipped." && continue
+  git clone -q "$gitHubRepo" tmp
+
+  pushd tmp >/dev/null
+  latest_tag="$(git tag --sort=-creatordate | head -1)"
+  git checkout -q "$latest_tag"
+
+  read -p "  > '$extension' will be installed in its latest released version '$latest_tag'. Proceed? (y/n) " response
+  [[ ! "$response" =~ ^(yes|y) ]] && echo "    > Installation skipped." && continue
+
+  controllerregistration="$path/example/controller-registration.yaml"
+  if [[ ! -f "$controllerregistration" ]]; then
+    echo "    > ERROR: Could not find the file $controllerregistration."
+    continue
+  fi
+  if kubectl apply -f "$controllerregistration" | sed 's/^/     /'; then
+    echo "    > Successfully installed."
+  fi
+
+  popd >/dev/null
+  rm -rf tmp
+done

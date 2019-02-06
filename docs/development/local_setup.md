@@ -228,7 +228,18 @@ I0201 15:39:43.750573   84958 serve.go:89] Serving securely on [::]:8443
 [...]
 ```
 
-In another terminal, launch the Gardener Controller Manager
+In another terminal, run the following script to install extension controllers - make sure that you install all of them required for your local development.
+
+Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
+
+```yaml
+$ make dev-setup-extensions
+
+> Found extension 'os-coreos'. Do you want to install it into your local Gardener setup? (y/n)
+...
+```
+
+Now you are ready to launch the Gardener Controller Manager
 
 ```bash
 $ make start
