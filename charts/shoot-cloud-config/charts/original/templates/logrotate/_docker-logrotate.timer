@@ -1,0 +1,16 @@
+{{- define "docker-logrotate-timer" -}}
+- name: docker-logrotate.timer
+  enable: true
+  command: start
+  content: |
+    [Unit]
+    Description=Hourly Log Rotation
+
+    [Timer]
+    OnCalendar=hourly
+    AccuracySec=10m
+    Persistent=true
+
+    [Install]
+    WantedBy=multi-user.target
+{{- end -}}
