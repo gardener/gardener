@@ -16,8 +16,9 @@ package framework
 
 import (
 	"context"
-	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -25,35 +26,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	shootop "github.com/gardener/gardener/pkg/operation/shoot"
-	"github.com/sirupsen/logrus"
-
-	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
-	"k8s.io/apimachinery/pkg/labels"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	appsv1 "k8s.io/api/apps/v1"
-
-	"github.com/gardener/gardener/pkg/chartrenderer"
-
-	"k8s.io/helm/pkg/repo"
-
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
+	shootop "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/helm/pkg/repo"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
-	defaultPollInterval = 5 * time.Second
-	dashboardUserName   = "admin"
+	defaultPollInterval  = 5 * time.Second
+	dashboardUserName    = "admin"
+	elasticsearchLogging = "elasticsearch-logging"
+	elasticsearchPort    = 9200
 )
 
 // NewGardenTestOperation initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
@@ -128,41 +122,26 @@ func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, client k
 	return nil
 }
 
-// DashboardAvailable checks if the dashboard is available
+// DashboardAvailable checks if the kubernetes dashboard is available
 func (o *GardenerTestOperation) DashboardAvailable(ctx context.Context) error {
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
-	httpClient := http.Client{
-		Transport: transport,
-		Timeout:   time.Duration(5 * time.Second),
-	}
-
 	url := fmt.Sprintf("https://api.%s/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy", *o.Shoot.Spec.DNS.Domain)
-	httpRequest, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-
 	dashboardPassword, err := o.getAdminPassword(ctx)
 	if err != nil {
 		return err
 	}
 
-	httpRequest.SetBasicAuth(dashboardUserName, dashboardPassword)
-	httpRequest.WithContext(ctx)
+	return o.dashboardAvailable(ctx, url, dashboardUserName, dashboardPassword)
+}
 
-	r, err := httpClient.Do(httpRequest)
+// KibanaDashboardAvailable checks if Kibana instance in shoot seed namespace is available
+func (o *GardenerTestOperation) KibanaDashboardAvailable(ctx context.Context) error {
+	url := fmt.Sprintf("https://k.%s.%s.%s/api/status", o.Shoot.Name, o.Project.Name, o.Seed.Spec.IngressDomain)
+	loggingPassword, err := o.getLoggingPassword(ctx)
 	if err != nil {
 		return err
 	}
 
-	if r.StatusCode != http.StatusOK {
-		return fmt.Errorf("dashboard unavailable")
-	}
-
-	return nil
+	return o.dashboardAvailable(ctx, url, dashboardUserName, loggingPassword)
 }
 
 // HTTPGet performs an HTTP GET request with context
@@ -177,7 +156,7 @@ func (o *GardenerTestOperation) HTTPGet(ctx context.Context, url string) (*http.
 	return httpClient.Do(httpRequest)
 }
 
-// WaitUntilDeploymentIsRunning waits until the deployment with <podName> is running
+// WaitUntilDeploymentIsRunning waits until the deployment with <deploymentName> is running
 func (o *GardenerTestOperation) WaitUntilDeploymentIsRunning(ctx context.Context, deploymentName, deploymentNamespace string, c kubernetes.Interface) error {
 	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
 		deployment := &appsv1.Deployment{}
@@ -195,7 +174,7 @@ func (o *GardenerTestOperation) WaitUntilDeploymentIsRunning(ctx context.Context
 	}, ctx.Done())
 }
 
-// WaitUntilStatefulSetIsRunning waits until the deployment with <podName> is running
+// WaitUntilStatefulSetIsRunning waits until the stateful set with <statefulSetName> is running
 func (o *GardenerTestOperation) WaitUntilStatefulSetIsRunning(ctx context.Context, statefulSetName, statefulSetNamespace string, c kubernetes.Interface) error {
 	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
 		statefulSet := &appsv1.StatefulSet{}
@@ -322,7 +301,6 @@ func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, char
 
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
 	return common.ApplyChartInNamespace(ctx, o.ShootClient, renderer, chartPathToRender, chartNameToDeploy, namespace, nil, nil)
-
 }
 
 // EnsureDirectories creates the repository directory which holds the repositories.yaml config file
@@ -344,14 +322,13 @@ func EnsureDirectories(helm Helm) error {
 }
 
 // PodExecByLabel executes a command inside pods filtered by label
-func (o *GardenerTestOperation) PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer, command, namespace string, client kubernetes.Interface) error {
+func (o *GardenerTestOperation) PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer, command, namespace string, client kubernetes.Interface) (io.Reader, error) {
 	pod, err := o.getFirstRunningPodWithLabels(ctx, podLabels, namespace, client)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err = kubernetes.NewPodExecutor(o.SeedClient.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
-	return err
+	return kubernetes.NewPodExecutor(client.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
 }
 
 // GetFirstNodeInternalIP gets the internal IP of the first node
@@ -385,4 +362,49 @@ func (o *GardenerTestOperation) GetDashboardPodIP(ctx context.Context) (string, 
 	}
 
 	return dashboardPod.Status.PodIP, nil
+}
+
+// GetElasticsearchLogs gets logs for <podName> from the elasticsearch instance in <elasticsearchNamespace>
+func (o *GardenerTestOperation) GetElasticsearchLogs(ctx context.Context, elasticsearchNamespace, podName string, client kubernetes.Interface) (*SearchResponse, error) {
+	elasticsearchLabels := labels.SelectorFromSet(labels.Set(map[string]string{
+		"app":  elasticsearchLogging,
+		"role": "logging",
+	}))
+
+	now := time.Now()
+	formattedDate := fmt.Sprintf("%d.%02d.%d", now.Year(), now.Month(), now.Day())
+	command := fmt.Sprintf("curl http://localhost:%d/logstash-%s/_search?q=kubernetes.pod_name:%s", elasticsearchPort, formattedDate, podName)
+	reader, err := o.PodExecByLabel(ctx, elasticsearchLabels, elasticsearchLogging,
+		command, elasticsearchNamespace, client)
+	if err != nil {
+		return nil, err
+	}
+
+	search := &SearchResponse{}
+	if err = json.NewDecoder(reader).Decode(search); err != nil {
+		return nil, err
+	}
+
+	return search, nil
+}
+
+// WaitUntilElasticsearchReceivesLogs waits until the elasticsearch instance in <elasticsearchNamespace> receives <expected> logs from <podName>
+func (o *GardenerTestOperation) WaitUntilElasticsearchReceivesLogs(ctx context.Context, elasticsearchNamespace, podName string, expected uint64, client kubernetes.Interface) error {
+	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+		search, err := o.GetElasticsearchLogs(ctx, elasticsearchNamespace, podName, client)
+		if err != nil {
+			return true, err
+		}
+
+		actual := search.Hits.Total
+		if expected > actual {
+			o.Logger.Infof("Waiting to receive %d logs, currently received %d", expected, actual)
+			return false, nil
+		} else if expected < search.Hits.Total {
+			return true, fmt.Errorf("expected to receive %d logs but was %d", expected, actual)
+		}
+
+		o.Logger.Infof("Received all of %d logs", actual)
+		return true, nil
+	}, ctx.Done())
 }

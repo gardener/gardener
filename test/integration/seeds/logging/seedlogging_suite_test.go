@@ -12,27 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package features
+package logging_test
 
 import (
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	"testing"
 )
 
-const (
-	// Every feature gate should add method here following this template:
-	//
-	// // MyFeature enable Foo.
-	// // owner: @username
-	// // alpha: v5.X
-	// MyFeature utilfeature.Feature = "MyFeature"
-
-	// Logging enables logging stack for clusters.
-	// owner @mvladev, @ialidzhikov
-	// alpha: v0.13.0
-	Logging utilfeature.Feature = "Logging"
-
-	// CertificateManagement enables certificate management for Shoot clusters.
-	// owner @timuthy, @zanetworker
-	// alpha: v0.1.0
-	CertificateManagement utilfeature.Feature = "CertificateManagement"
-)
+func TestSeedLogging(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Seed Logging Integration Test Suite")
+}

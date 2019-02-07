@@ -15,8 +15,11 @@ package framework
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/labels"
 
@@ -34,9 +37,10 @@ import (
 )
 
 const (
-	kubecfg    = "kubecfg"
-	kubeconfig = "kubeconfig"
-	password   = "password"
+	kubecfg                   = "kubecfg"
+	kubeconfig                = "kubeconfig"
+	loggingIngressCredentials = "logging-ingress-credentials"
+	password                  = "password"
 )
 
 // getFirstRunningPodWithLabels fetches the first running pod with the desired set of labels <labelsMap>
@@ -65,6 +69,40 @@ func (o *GardenerTestOperation) getFirstRunningPodWithLabels(ctx context.Context
 // getAdminPassword gets the admin password for authenticating against the api
 func (o *GardenerTestOperation) getAdminPassword(ctx context.Context) (string, error) {
 	return getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), kubecfg, password)
+}
+
+func (o *GardenerTestOperation) getLoggingPassword(ctx context.Context) (string, error) {
+	return getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), loggingIngressCredentials, password)
+}
+
+func (o *GardenerTestOperation) dashboardAvailable(ctx context.Context, url, userName, password string) error {
+	transport := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	httpClient := http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(5 * time.Second),
+	}
+
+	httpRequest, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+
+	httpRequest.SetBasicAuth(userName, password)
+	httpRequest.WithContext(ctx)
+
+	r, err := httpClient.Do(httpRequest)
+	if err != nil {
+		return err
+	}
+
+	if r.StatusCode != http.StatusOK {
+		return fmt.Errorf("dashboard unavailable")
+	}
+
+	return nil
 }
 
 func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *v1beta1.Shoot) error {

@@ -1,0 +1,22 @@
+kind: TestDefinition
+metadata:
+  name: seedlogging-test
+spec:
+  owner: i.alidjikov@gmail.com
+  recipientsOnFailure:
+  - i.alidjikov@gmail.com
+  description: Tests shoot control plane logging.
+
+  activeDeadlineSeconds: 600
+  labels: ["default"]
+
+  command: [bash, -c]
+  args:
+  - >-
+    /tm/setup github.com/gardener gardener &&
+    go test $GOPATH/src/github.com/gardener/gardener/test/integration/seeds/logging
+    -ginkgo.v -ginkgo.progress
+    -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    -shootName=$SHOOT_NAME
+    -shootNamespace=$PROJECT_NAMESPACE
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0
