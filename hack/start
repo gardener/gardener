@@ -18,9 +18,11 @@ source $(dirname "${0}")/common
 
 ld_flags="$(./hack/get-build-ld-flags)"
 
-KUBECONFIG="$HOME/.kube/config" \
-GARDENER_KUBECONFIG="$HOME/.kube/config" \
-go run \
-  -ldflags "$ld_flags" \
-  cmd/gardener-controller-manager/main.go \
-  --config=dev/20-componentconfig-gardener-controller-manager.yaml
+kubeconfig="$(mktemp_kubeconfig)"
+trap cleanup_kubeconfig EXIT
+
+KUBECONFIG="$kubeconfig" GARDENER_KUBECONFIG="$kubeconfig" \
+    go run \
+      -ldflags "$ld_flags" \
+      cmd/gardener-controller-manager/main.go \
+      --config=dev/20-componentconfig-gardener-controller-manager.yaml

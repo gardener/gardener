@@ -16,17 +16,32 @@
 
 source $(dirname "${0}")/common
 
+kubeconfig="$(mktemp_kubeconfig)"
+trap cleanup_kubeconfig EXIT
+
 apiserver_flags="
-  --authentication-kubeconfig $HOME/.kube/config \
-  --authorization-kubeconfig $HOME/.kube/config \
+  --authentication-kubeconfig $kubeconfig \
+  --authorization-kubeconfig $kubeconfig \
   --authorization-always-allow-paths=/healthz \
-  --kubeconfig $HOME/.kube/config \
+  --kubeconfig $kubeconfig \
   --secure-port=$API_SERVER_SECURE_PORT \
   --v 2"
 
 ld_flags="$(./hack/get-build-ld-flags)"
 
 case $(k8s_env) in
+    $KIND)
+        echo "Found kind ..."
+        kubectl -n garden port-forward service/etcd 32379:2379 > /dev/null &
+        trap "kill -9 $! > /dev/null" EXIT
+        go run \
+          -ldflags "$ld_flags" \
+          cmd/gardener-apiserver/main.go \
+          --etcd-servers http://localhost:32379 \
+          --tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "kubernetes-admin"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \
+          --tls-private-key-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "kubernetes-admin"}}{{index .user "client-key-data"}}{{end}}{{end}}' --raw | base64 -d) \
+          $apiserver_flags
+        ;;
     $DOCKER_FOR_DESKTOP)
         echo "Found Docker Kubernetes ..."
         go run \

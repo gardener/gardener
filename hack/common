@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 #
@@ -18,21 +18,43 @@ set -e
 
 DOCKER_FOR_DESKTOP="docker-for-desktop"
 MINIKUBE="minikube"
-SUPPORTED_K8S_ENVS=($DOCKER_FOR_DESKTOP $MINIKUBE)
+KIND="kind"
+SUPPORTED_K8S_ENVS=($DOCKER_FOR_DESKTOP $MINIKUBE $KIND)
 
 API_SERVER_SECURE_PORT="${API_SERVER_SECURE_PORT:-8443}"
 
 __k8s_env=""
 k8s_env() {
-    if [[ "$__k8s_env" == "" ]]; then
-        __k8s_env=$(kubectl get node -o jsonpath="{.items[*].metadata.name}")
+    if [[ "$__k8s_env" != "" ]]; then
+        echo "$__k8s_env"
+        return
     fi
-    for supported_k8s_env in ${SUPPORTED_K8S_ENVS[@]}; do
-        if [[ "$supported_k8s_env" == "$__k8s_env" ]]; then
+    node_name=$(kubectl get node -o jsonpath="{.items[0].metadata.name}")
+    for supported_k8s_env in "${SUPPORTED_K8S_ENVS[@]}"; do
+        if [[ "$node_name" == "$supported_k8s_env"* ]]; then
+            __k8s_env="$supported_k8s_env"
             echo "$supported_k8s_env"
             return
         fi
     done
     >&2 echo "Unsupported Kubernetes Environment: $__k8s_env"
-    exit 1
+    return 1
+}
+
+__tmp_kubeconfig=""
+mktemp_kubeconfig() {
+    if [[ "$__tmp_kubeconfig" != "" ]]; then
+        echo "$__tmp_kubeconfig"
+        return
+    fi
+    __tmp_kubeconfig="$(mktemp)"
+    kubectl config view --raw > "$__tmp_kubeconfig"
+    echo "$__tmp_kubeconfig"
+}
+
+cleanup_kubeconfig() {
+    if [[ "$__tmp_kubeconfig" != "" ]]; then
+        rm -f "$__tmp_kubeconfig"
+        __tmp_kubeconfig=""
+    fi
 }
