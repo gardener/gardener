@@ -43,3 +43,10 @@ spec:
 If you update the CloudProfile used in the Shoot and add `1.10.5` and `1.11.0` to the `.spec.<provider>.constraints.kubernetes.versions` list, the Shoot will be updated to `1.10.5` between 22:00-23:00 UTC. Your Shoot won't be updated to `1.11.0` even though its the highest Kubernetes in the CloudProfile, this is because that woulnd't be a patch release update but a minor release update, and potentially have breaking changes that could impact your deployed resources.
 
 In this example if the operator wants to update the Kubernetes version to `1.11.0`, he/she must update the Shoot's `.spec.kubernetes.version` to `1.11.0` manually.
+
+# Configure a Shoot cluster alert receiver
+The receiver of the Shoot alerts can be configured by adding the annotation `garden.sapcloud.io/operatedBy` to the Shoot resource. The value of the annotation has to be a valid mail address.
+
+The alerting for the Shoot clusters is handled by the Prometheus Alertmanager. The Alertmanager will be deployed next to the control plane when the `Shoot` resource is annotated with the `garden.sapcloud.io/operatedBy` annotation and if a [SMTP secret](../deployment/configuration.md) exists.
+
+If the annotation gets removed then the Alertmanager will be also removed during the next reconcilation of the cluster. The same is valid in the opposite if the annotation is added to an existing cluster.

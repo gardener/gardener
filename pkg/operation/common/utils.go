@@ -498,3 +498,29 @@ func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error 
 	}
 	return nil
 }
+
+// DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
+func DeleteAlertmanager(k8sClient kubernetes.Interface, namespace string) error {
+	var (
+		services = []string{"alertmanager-client", "alertmanager"}
+		secrets  = []string{"alertmanager-basic-auth", "alertmanager-tls", "alertmanager-config"}
+	)
+
+	if err := k8sClient.DeleteStatefulSet(namespace, AlertManagerStatefulSetName); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sClient.DeleteIngress(namespace, "alertmanager"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	for _, svc := range services {
+		if err := k8sClient.DeleteService(namespace, svc); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	for _, secret := range secrets {
+		if err := k8sClient.DeleteSecret(namespace, secret); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
+}

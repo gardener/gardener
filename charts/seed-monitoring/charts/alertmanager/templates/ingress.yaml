@@ -1,3 +1,4 @@
+{{- if .Values.emailConfigs }}
 apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
@@ -22,3 +23,4 @@ spec:
           serviceName: alertmanager-client
           servicePort: 9093
         path: /
+{{- end }}
