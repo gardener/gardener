@@ -1,12 +1,12 @@
-{{ define "logrotate" -}}
-- name: logrotate.service
+{{ define "docker-logrotate" -}}
+- name: docker-logrotate.service
   enable: true
   content: |
     [Unit]
     Description=Rotate and Compress System Logs
 
     [Service]
-    ExecStart=/usr/sbin/logrotate /usr/share/logrotate/logrotate.conf
+    ExecStart=/usr/sbin/logrotate /etc/systemd/docker.conf
 
     [Install]
     WantedBy=multi-user.target

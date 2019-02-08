@@ -9,14 +9,15 @@ coreos:
     mask: true
   - name: locksmithd.service
     mask: true
-{{ include "logrotate" . | indent 2 }}
+{{ include "docker-logrotate" . | indent 2 }}
+{{ include "docker-logrotate-timer" . | indent 2 }}
 {{ include "docker-monitor" . | indent 2 }}
 {{ include "kubelet" . | indent 2 }}
 {{ include "kubelet-monitor" . | indent 2 }}
 {{ include "update-ca-certs" . | indent 2 }}
 {{ include "systemd-sysctl" . | indent 2 }}
 write_files:
-{{ include "logrotate-config" . }}
+{{ include "docker-logrotate-config" . }}
 {{ include "journald-config" . }}
 {{ include "kubelet-binary" . }}
 {{ include "root-certs" . }}
