@@ -1,0 +1,21 @@
+kind: TestDefinition
+metadata:
+  name: shootapp-test
+spec:
+  owner: tim.schrodi@sap.com
+  recipientsOnFailure: DL_5C5BE3E2970B9F404D0E2F50@sap.com # OutputQualification DL
+  description: Tests the deployment of a guestbook.
+
+  activeDeadlineSeconds: 600
+  labels: ["default"]
+
+  command: [bash, -c]
+  args:
+  - >-
+    /tm/setup github.com/gardener gardener &&
+    go test $GOPATH/src/github.com/gardener/gardener/test/integration/shoots/applications
+    -ginkgo.v -ginkgo.progress
+    -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    -shootName=$SHOOT_NAME
+    -shootNamespace=$PROJECT_NAMESPACE
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0
