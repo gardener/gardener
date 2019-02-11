@@ -302,7 +302,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	}
 	nodeCount := len(nodes.Items)
 
-	chartRenderer, err := chartrenderer.New(k8sSeedClient)
+	chartRenderer, err := chartrenderer.New(k8sSeedClient.Kubernetes())
 	if err != nil {
 		return err
 	}

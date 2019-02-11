@@ -188,7 +188,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		}
 		return err
 	}
-	chartRenderer, err := chartrenderer.New(k8sSeedClient)
+	chartRenderer, err := chartrenderer.New(k8sSeedClient.Kubernetes())
 	if err != nil {
 		conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionUnknown, "ChartRendererCreationFailed", fmt.Sprintf("ChartRenderer cannot be recreated for referenced Seed: %+v", err))
 		return err

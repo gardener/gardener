@@ -92,7 +92,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 		}
 	}
 
-	chartRenderer, err := chartrenderer.New(c.k8sGardenClient)
+	chartRenderer, err := chartrenderer.New(c.k8sGardenClient.Kubernetes())
 	if err != nil {
 		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
 		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))

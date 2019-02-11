@@ -55,7 +55,7 @@ func New(logger *logrus.Entry, k8sClient kubernetes.Interface, purpose, name, na
 		image = img.String()
 	}
 
-	chartRenderer, err := chartrenderer.New(k8sClient)
+	chartRenderer, err := chartrenderer.New(k8sClient.Kubernetes())
 	if err != nil {
 		return nil, err
 	}

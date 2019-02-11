@@ -82,7 +82,7 @@ func newOperation(
 		return nil, err
 	}
 
-	chartRenderer, err := chartrenderer.New(k8sGardenClient)
+	chartRenderer, err := chartrenderer.New(k8sGardenClient.Kubernetes())
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (o *Operation) InitializeSeedClients() error {
 	}
 
 	o.K8sSeedClient = k8sSeedClient
-	o.ChartSeedRenderer, err = chartrenderer.New(k8sSeedClient)
+	o.ChartSeedRenderer, err = chartrenderer.New(k8sSeedClient.Kubernetes())
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (o *Operation) InitializeShootClients() error {
 	}
 
 	o.K8sShootClient = k8sShootClient
-	o.ChartShootRenderer, err = chartrenderer.New(k8sShootClient)
+	o.ChartShootRenderer, err = chartrenderer.New(k8sShootClient.Kubernetes())
 	if err != nil {
 		return err
 	}

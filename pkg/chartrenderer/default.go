@@ -21,10 +21,10 @@ import (
 	"path"
 	"strings"
 
-	"k8s.io/helm/pkg/engine"
+	"k8s.io/client-go/kubernetes"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/helm/pkg/chartutil"
+	"k8s.io/helm/pkg/engine"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
 	"k8s.io/helm/pkg/timeconv"
 )
@@ -43,7 +43,7 @@ type DefaultChartRenderer struct {
 // New creates a new DefaultChartRenderer object. It requires a Kubernetes client as input which will be
 // injected in the Tiller environment.
 func New(client kubernetes.Interface) (ChartRenderer, error) {
-	sv, err := client.Kubernetes().Discovery().ServerVersion()
+	sv, err := client.Discovery().ServerVersion()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubernetes server version %v", err)
 	}
