@@ -13,6 +13,7 @@ type ExtensionsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	InfrastructuresGetter
 	OperatingSystemConfigsGetter
+	WorkersGetter
 }
 
 // ExtensionsV1alpha1Client is used to interact with features provided by the extensions.gardener.cloud group.
@@ -26,6 +27,10 @@ func (c *ExtensionsV1alpha1Client) Infrastructures(namespace string) Infrastruct
 
 func (c *ExtensionsV1alpha1Client) OperatingSystemConfigs(namespace string) OperatingSystemConfigInterface {
 	return newOperatingSystemConfigs(c, namespace)
+}
+
+func (c *ExtensionsV1alpha1Client) Workers(namespace string) WorkerInterface {
+	return newWorkers(c, namespace)
 }
 
 // NewForConfig creates a new ExtensionsV1alpha1Client for the given config.

@@ -17,3 +17,11 @@ type OperatingSystemConfigListerExpansion interface{}
 // OperatingSystemConfigNamespaceListerExpansion allows custom methods to be added to
 // OperatingSystemConfigNamespaceLister.
 type OperatingSystemConfigNamespaceListerExpansion interface{}
+
+// WorkerListerExpansion allows custom methods to be added to
+// WorkerLister.
+type WorkerListerExpansion interface{}
+
+// WorkerNamespaceListerExpansion allows custom methods to be added to
+// WorkerNamespaceLister.
+type WorkerNamespaceListerExpansion interface{}

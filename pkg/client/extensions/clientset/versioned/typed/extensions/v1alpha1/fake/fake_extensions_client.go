@@ -20,6 +20,10 @@ func (c *FakeExtensionsV1alpha1) OperatingSystemConfigs(namespace string) v1alph
 	return &FakeOperatingSystemConfigs{c, namespace}
 }
 
+func (c *FakeExtensionsV1alpha1) Workers(namespace string) v1alpha1.WorkerInterface {
+	return &FakeWorkers{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeExtensionsV1alpha1) RESTClient() rest.Interface {
