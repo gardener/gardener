@@ -12,6 +12,8 @@ type Interface interface {
 	Infrastructures() InfrastructureInformer
 	// OperatingSystemConfigs returns a OperatingSystemConfigInformer.
 	OperatingSystemConfigs() OperatingSystemConfigInformer
+	// Workers returns a WorkerInformer.
+	Workers() WorkerInformer
 }
 
 type version struct {
@@ -33,4 +35,9 @@ func (v *version) Infrastructures() InfrastructureInformer {
 // OperatingSystemConfigs returns a OperatingSystemConfigInformer.
 func (v *version) OperatingSystemConfigs() OperatingSystemConfigInformer {
 	return &operatingSystemConfigInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Workers returns a WorkerInformer.
+func (v *version) Workers() WorkerInformer {
+	return &workerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
