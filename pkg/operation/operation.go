@@ -110,6 +110,7 @@ func newOperation(
 			return nil, err
 		}
 		operation.Shoot = shootObj
+		operation.Shoot.WantsAlertmanager = helper.ShootWantsAlertmanager(shoot, secrets)
 
 		shootedSeed, err := helper.ReadShootedSeed(shoot)
 		if err != nil {

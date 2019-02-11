@@ -211,6 +211,16 @@ func computeRequiredControlPlaneDeployments(shoot *gardenv1beta1.Shoot, seedClou
 	return requiredControlPlaneDeployments, nil
 }
 
+// computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
+// which should exist next to the control plane.
+func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
+	var requiredMonitoringStatefulSets = sets.NewString(common.PrometheusStatefulSetName)
+	if wantsAlertmanager {
+		requiredMonitoringStatefulSets.Insert(common.AlertManagerStatefulSetName)
+	}
+	return requiredMonitoringStatefulSets
+}
+
 // CheckControlPlane checks whether the control plane components in the given listers are complete and healthy.
 func (b *HealthChecker) CheckControlPlane(
 	shoot *gardenv1beta1.Shoot,
@@ -471,6 +481,7 @@ func (b *HealthChecker) CheckMonitoringSystemComponents(
 // CheckMonitoringControlPlane checks whether the monitoring in the given listers are complete and healthy.
 func (b *HealthChecker) CheckMonitoringControlPlane(
 	namespace string,
+	wantsAlertmanager bool,
 	condition *gardenv1beta1.Condition,
 	deploymentLister kutil.DeploymentLister,
 	statefulSetLister kutil.StatefulSetLister,
@@ -493,7 +504,7 @@ func (b *HealthChecker) CheckMonitoringControlPlane(
 		return nil, err
 	}
 
-	if exitCondition := b.checkRequiredStatefulSets(condition, common.RequiredMonitoringSeedStatefulSets, statefulSetList); exitCondition != nil {
+	if exitCondition := b.checkRequiredStatefulSets(condition, computeRequiredMonitoringStatefulSets(wantsAlertmanager), statefulSetList); exitCondition != nil {
 		return exitCondition, nil
 	}
 	if exitCondition := b.checkStatefulSets(condition, statefulSetList); exitCondition != nil {
@@ -576,7 +587,7 @@ func (b *Botanist) checkControlPlane(
 	if exitCondition, err := checker.CheckControlPlane(b.Shoot.Info, b.Shoot.SeedNamespace, b.Seed.CloudProvider, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
-	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
+	if exitCondition, err := checker.CheckMonitoringControlPlane(b.Shoot.SeedNamespace, b.Shoot.WantsAlertmanager, condition, seedDeploymentLister, seedStatefulSetLister); err != nil || exitCondition != nil {
 		return exitCondition, err
 	}
 	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {

@@ -556,12 +556,6 @@ var (
 		KubeStateMetricsShootDeploymentName,
 	)
 
-	// RequiredMonitoringSeedStatefulSets is a set of the required seed monitoring stateful sets.
-	RequiredMonitoringSeedStatefulSets = sets.NewString(
-		AlertManagerStatefulSetName,
-		PrometheusStatefulSetName,
-	)
-
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
 	RequiredMonitoringShootDaemonSets = sets.NewString(
 		NodeExporterDaemonSetName,

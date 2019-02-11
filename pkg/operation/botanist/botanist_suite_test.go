@@ -15,6 +15,8 @@
 package botanist_test
 
 import (
+	"time"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/botanist"
@@ -29,7 +31,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
 
 	"testing"
 )
@@ -501,20 +502,21 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			requiredMonitoringControlPlaneDeployments,
 			requiredMonitoringControlPlaneStatefulSets,
+			true,
 			BeNil()),
 		Entry("required deployment set missing",
 			[]*appsv1.Deployment{
@@ -522,12 +524,14 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
+			true,
 			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required stateful set set missing",
 			requiredMonitoringControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				prometheusStatefulSet,
 			},
+			true,
 			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{
@@ -536,13 +540,14 @@ var _ = Describe("health check", func() {
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
-			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
+			true, beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("stateful set unhealthy",
 			requiredMonitoringControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 				prometheusStatefulSet,
 			},
+			true,
 			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 	)
 

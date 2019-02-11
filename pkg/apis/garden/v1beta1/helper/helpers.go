@@ -25,6 +25,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -98,6 +99,16 @@ func ShootWantsClusterAutoscaler(shoot *gardenv1beta1.Shoot) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+// ShootWantsAlertmanager checks if the given Shoot needs an Alertmanger.
+func ShootWantsAlertmanager(shoot *gardenv1beta1.Shoot, secrets map[string]*corev1.Secret) bool {
+	if alertingSMTPSecret := common.GetSecretKeysWithPrefix(common.GardenRoleAlertingSMTP, secrets); len(alertingSMTPSecret) > 0 {
+		if address, ok := shoot.Annotations[common.GardenOperatedBy]; ok && utils.TestEmail(address) {
+			return true
+		}
+	}
+	return false
 }
 
 // GetShootCloudProviderWorkers retrieves the cloud-specific workers of the given Shoot.

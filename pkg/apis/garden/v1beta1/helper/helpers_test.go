@@ -18,6 +18,7 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
@@ -145,6 +146,37 @@ var _ = Describe("helper", func() {
 				},
 			},
 			true))
+
+	var (
+		alertingSecrets = map[string]*corev1.Secret{
+			common.GardenRoleAlertingSMTP: &corev1.Secret{},
+		}
+	)
+	DescribeTable("#ShootWantsAlertmanager",
+		func(shoot *gardenv1beta1.Shoot, secrets map[string]*corev1.Secret, wantsAlertmanager bool) {
+			actualWantsAlertmanager := ShootWantsAlertmanager(shoot, secrets)
+			Expect(actualWantsAlertmanager).To(Equal(wantsAlertmanager))
+		},
+		Entry("alertmanger wanted", &gardenv1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					common.GardenOperatedBy: "test@gardener.cloud",
+				},
+			},
+		}, alertingSecrets, true),
+		Entry("no alertmanager due to missing smtp secret", &gardenv1beta1.Shoot{}, map[string]*corev1.Secret{}, false),
+		Entry("no alertmanager due to missing operatedBy annotation", &gardenv1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{},
+			},
+		}, alertingSecrets, false),
+		Entry("no alertmanager wanted due to invalid mail address", &gardenv1beta1.Shoot{
+			ObjectMeta: metav1.ObjectMeta{
+				Annotations: map[string]string{
+					common.GardenOperatedBy: "invalid-mail-address",
+				},
+			},
+		}, alertingSecrets, false))
 
 	var zeroTime metav1.Time
 

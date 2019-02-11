@@ -375,19 +375,12 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		"kube-state-metrics-shoot": kubeStateMetricsShoot,
 	}
 
-	alertingSMTPKeys := b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)
-	emailConfigs := []map[string]interface{}{}
-	if len(alertingSMTPKeys) > 0 {
+	if b.Shoot.WantsAlertmanager {
+		alertingSMTPKeys := b.GetSecretKeysOfRole(common.GardenRoleAlertingSMTP)
+		emailConfigs := []map[string]interface{}{}
+		to, _ := b.Shoot.Info.Annotations[common.GardenOperatedBy]
 		for _, key := range alertingSMTPKeys {
-			var (
-				secret = b.Secrets[key]
-				to     = string(secret.Data["to"])
-			)
-			to, ok := b.Shoot.Info.Annotations[common.GardenOperatedBy]
-			if !ok || !utils.TestEmail(to) {
-				continue
-			}
-
+			secret := b.Secrets[key]
 			emailConfigs = append(emailConfigs, map[string]interface{}{
 				"to":            to,
 				"from":          string(secret.Data["from"]),
@@ -398,18 +391,14 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			})
 		}
 		values["alertmanager"].(map[string]interface{})["emailConfigs"] = emailConfigs
+	} else {
+		if err := common.DeleteAlertmanager(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
+			return err
+		}
 	}
 
 	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values); err != nil {
 		return err
-	}
-
-	// If no mail receivers for the Shoot alerts provided than there is no need
-	// to run the Alertmanager and it can be removed from the control plane.
-	if len(emailConfigs) == 0 {
-		if err := common.DeleteAlertmanager(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
-			return err
-		}
 	}
 	return nil
 }
