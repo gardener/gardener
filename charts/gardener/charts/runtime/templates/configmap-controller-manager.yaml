@@ -6,7 +6,7 @@ metadata:
   namespace: garden
   labels:
     app: gardener
-    role: apiserver
+    role: controller-manager
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     release: "{{ .Release.Name }}"
     heritage: "{{ .Release.Service }}"

@@ -18,6 +18,7 @@ package imagevector
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -29,14 +30,45 @@ import (
 // ReadImageVector reads the image.yaml in the chart directory, unmarshals it
 // into a []*ImageSource type and returns it.
 func ReadImageVector() (ImageVector, error) {
-	var (
-		path   = filepath.Join(common.ChartPath, "images.yaml")
-		vector = struct {
-			Images ImageVector `json:"images" yaml:"images"`
-		}{}
-	)
+	path := filepath.Join(common.ChartPath, "images.yaml")
 
-	bytes, err := ioutil.ReadFile(path)
+	vector, err := readImageVector(path)
+	if err != nil {
+		return nil, err
+	}
+
+	overwritePath := os.Getenv("IMAGEVECTOR_OVERWRITE")
+	if len(overwritePath) == 0 {
+		return vector, nil
+	}
+
+	overwrite, err := readImageVector(overwritePath)
+	if err != nil {
+		return nil, err
+	}
+
+	overwrittenImages := make(map[string]*ImageSource, len(overwrite))
+	for _, image := range overwrite {
+		overwrittenImages[image.Name] = image
+	}
+
+	var out ImageVector
+	for _, image := range vector {
+		if overwritten, ok := overwrittenImages[image.Name]; ok {
+			out = append(out, overwritten)
+			continue
+		}
+		out = append(out, image)
+	}
+	return out, nil
+}
+
+func readImageVector(filePath string) (ImageVector, error) {
+	vector := struct {
+		Images ImageVector `json:"images" yaml:"images"`
+	}{}
+
+	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
