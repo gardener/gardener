@@ -1,0 +1,16 @@
+{{- if and .Values.global.controller.enabled .Values.global.controller.imageVectorOverwrite }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-controller-manager-imagevector-overwrite
+  namespace: garden
+  labels:
+    app: gardener
+    role: controller-manager
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  images_overwrite.yaml: |
+{{ .Values.global.controller.imageVectorOverwrite | indent 4 }}
+{{- end }}

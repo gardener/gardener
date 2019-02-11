@@ -19,6 +19,9 @@ spec:
   template:
     metadata:
       annotations:
+        {{- if .Values.global.controller.imageVectorOverwrite }}
+        checksum/configmap-gardener-controller-manager-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-controller-manager-imagevector-overwrite.yaml") . | sha256sum }}
+        {{- end }}
         checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/configmap-controller-manager.yaml") . | sha256sum }}
         checksum/secret-gardener-controller-manager-cert: {{ include (print $.Template.BasePath "/secret-controller-manager-cert.yaml") . | sha256sum }}
         checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/secret-controller-manager-kubeconfig.yaml") . | sha256sum }}
@@ -44,6 +47,19 @@ spec:
         command:
         - /gardener-controller-manager
         - --config=/etc/gardener-controller-manager/config/config.yaml
+        {{- if or .Values.global.controller.env .Values.global.controller.imageVectorOverwrite }}
+        env:
+        {{- if .Values.global.controller.imageVectorOverwrite }}
+        - name: IMAGEVECTOR_OVERWRITE
+          value: /charts/images_overwrite.yaml
+        {{- end }}
+        {{- range $index, $value := .Values.global.controller.env }}
+        {{- if not (empty $value) }}
+        - name: {{ index $value "name" | quote }}
+          value: {{ index $value "value" | quote }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
         {{- if .Values.global.controller.resources }}
         resources:
 {{ toYaml .Values.global.controller.resources | indent 10 }}
@@ -70,6 +86,11 @@ spec:
           mountPath: /etc/gardener-controller-manager/kubeconfig
           readOnly: true
         {{- end }}
+        {{- if .Values.global.controller.imageVectorOverwrite }}
+        - name: gardener-controller-manager-imagevector-overwrite
+          mountPath: /charts/images_overwrite.yaml
+          readOnly: true
+        {{- end }}
         - name: gardener-controller-manager-config
           mountPath: /etc/gardener-controller-manager/config
 {{- if .Values.global.controller.additionalVolumeMounts }}
@@ -84,6 +105,11 @@ spec:
       - name: gardener-controller-manager-kubeconfig
         secret:
           secretName: gardener-controller-manager-kubeconfig
+      {{- end }}
+      {{- if .Values.global.controller.imageVectorOverwrite }}
+      - name: gardener-controller-manager-imagevector-overwrite
+        configMap:
+          name: gardener-controller-manager-imagevector-overwrite
       {{- end }}
       - name: gardener-controller-manager-config
         configMap:
