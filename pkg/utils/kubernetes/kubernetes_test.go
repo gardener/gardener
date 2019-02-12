@@ -15,6 +15,12 @@
 package kubernetes
 
 import (
+	"errors"
+	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
+	"github.com/golang/mock/gomock"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -34,6 +40,121 @@ func TestKubernetes(t *testing.T) {
 }
 
 var _ = Describe("kubernetes", func() {
+	var (
+		ctrl *gomock.Controller
+		c    *mockclient.MockClient
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		c = mockclient.NewMockClient(ctrl)
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	Describe("#Key", func() {
+		It("should return an ObjectKey with namespace and name set", func() {
+			const (
+				namespace = "namespace"
+				name      = "name"
+			)
+			Expect(Key(namespace, name)).To(Equal(client.ObjectKey{Namespace: namespace, Name: name}))
+		})
+
+		It("should return an ObjectKey with only name set", func() {
+			const name = "name"
+			Expect(Key(name)).To(Equal(client.ObjectKey{Name: name}))
+		})
+
+		It("should panic if nameOpt is longer than 1", func() {
+			Expect(func() { Key("foo", "bar", "baz") }).To(Panic())
+		})
+	})
+
+	Describe("#ObjectMeta", func() {
+		It("should return an ObjectKey with namespace and name set", func() {
+			const (
+				namespace = "namespace"
+				name      = "name"
+			)
+			Expect(ObjectMeta(namespace, name)).To(Equal(metav1.ObjectMeta{Namespace: namespace, Name: name}))
+		})
+
+		It("should return an ObjectKey with only name set", func() {
+			const name = "name"
+			Expect(ObjectMeta(name)).To(Equal(metav1.ObjectMeta{Name: name}))
+		})
+
+		It("should panic if nameOpt is longer than 1", func() {
+			Expect(func() { ObjectMeta("foo", "bar", "baz") }).To(Panic())
+		})
+	})
+
+	Describe("#CreateOrUpdate", func() {
+		const (
+			namespace = "foo"
+			name      = "bar"
+		)
+
+		It("should create the non-existent object", func() {
+			var (
+				configMap = &corev1.ConfigMap{ObjectMeta: ObjectMeta(namespace, name)}
+				called    = false
+				mutateFn  = func() error { called = true; return nil }
+			)
+
+			gomock.InOrder(
+				c.EXPECT().
+					Get(gomock.Any(), Key(namespace, name), configMap).
+					Return(apierrors.NewNotFound(schema.GroupResource{Resource: "ConfigMaps"}, name)),
+				c.EXPECT().
+					Create(gomock.Any(), configMap).
+					Return(nil),
+			)
+
+			Expect(CreateOrUpdate(nil, c, configMap, mutateFn)).NotTo(HaveOccurred())
+			Expect(called).To(BeTrue())
+		})
+
+		It("should update the existing object", func() {
+			var (
+				configMap = &corev1.ConfigMap{ObjectMeta: ObjectMeta(namespace, name)}
+				called    = false
+				mutateFn  = func() error { called = true; return nil }
+			)
+
+			gomock.InOrder(
+				c.EXPECT().
+					Get(gomock.Any(), Key(namespace, name), configMap).
+					Return(nil),
+				c.EXPECT().
+					Update(gomock.Any(), configMap).
+					Return(nil),
+			)
+
+			Expect(CreateOrUpdate(nil, c, configMap, mutateFn)).NotTo(HaveOccurred())
+			Expect(called).To(BeTrue())
+		})
+
+		It("should error without calling the mutateFn when encountering an unknown error", func() {
+			var (
+				configMap   = &corev1.ConfigMap{ObjectMeta: ObjectMeta(namespace, name)}
+				mutateFn    = func() error { Fail("Mutation function should not be called"); return nil }
+				expectedErr = errors.New("unexpected error")
+			)
+
+			gomock.InOrder(
+				c.EXPECT().
+					Get(gomock.Any(), Key(namespace, name), configMap).
+					Return(expectedErr),
+			)
+
+			Expect(CreateOrUpdate(nil, c, configMap, mutateFn)).To(Equal(expectedErr))
+		})
+	})
+
 	Describe("#CreateTwoWayMergePatch", func() {
 		It("should fail for two different object types", func() {
 			_, err := CreateTwoWayMergePatch(&corev1.ConfigMap{}, &corev1.Secret{})

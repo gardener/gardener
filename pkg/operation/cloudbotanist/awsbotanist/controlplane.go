@@ -19,7 +19,6 @@ import (
 	"path/filepath"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
@@ -42,7 +41,7 @@ func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
 		vpcID    = "vpc_id"
 		subnetID = "subnet_public_utility_z0"
 	)
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return "", err
 	}
@@ -179,12 +178,9 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	var (
-		bucketName               = "bucketName"
-		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
-		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
-	)
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector)
+	bucketName := "bucketName"
+
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return nil, nil, err
 	}

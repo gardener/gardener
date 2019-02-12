@@ -16,6 +16,7 @@ package common
 
 import (
 	"fmt"
+	"path/filepath"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -512,6 +513,9 @@ const (
 )
 
 var (
+	// TerraformerChartPath is the path where the seed-terraformer charts reside.
+	TerraformerChartPath = filepath.Join(ChartPath, "seed-terraformer", "charts")
+
 	// ETCDMainStatefulSetName is the name of the etcd-main stateful set.
 	ETCDMainStatefulSetName = fmt.Sprintf("etcd-%s", EtcdRoleMain)
 	// ETCDEventsStatefulSetName is the name of the etcd-events stateful set.

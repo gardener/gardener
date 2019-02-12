@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -347,6 +350,56 @@ func (o *Operation) SeedVersion() string {
 // ShootVersion is a shorthand for the desired kubernetes version of the operation's shoot.
 func (o *Operation) ShootVersion() string {
 	return o.Shoot.Info.Spec.Kubernetes.Version
+}
+
+func (o *Operation) newTerraformer(purpose, namespace, name string) (*terraformer.Terraformer, error) {
+	image, err := o.ImageVector.FindImage(common.TerraformerImageName, o.K8sSeedClient.Version(), o.K8sSeedClient.Version())
+	if err != nil {
+		return nil, err
+	}
+
+	return terraformer.NewForConfig(o.Logger, o.K8sSeedClient.RESTConfig(), purpose, namespace, name, image.String())
+}
+
+// NewBackupInfrastructureTerraformer creates a new Terraformer for the matching BackupInfrastructure.
+func (o *Operation) NewBackupInfrastructureTerraformer() (*terraformer.Terraformer, error) {
+	var backupInfrastructureName string
+	if o.Shoot != nil {
+		backupInfrastructureName = common.GenerateBackupInfrastructureName(o.Shoot.SeedNamespace, o.Shoot.Info.Status.UID)
+	} else {
+		backupInfrastructureName = o.BackupInfrastructure.Name
+	}
+
+	return o.newTerraformer(common.TerraformerPurposeBackup, common.GenerateBackupNamespaceName(backupInfrastructureName), backupInfrastructureName)
+}
+
+// NewShootTerraformer creates a new Terraformer for the current shoot with the given purpose.
+func (o *Operation) NewShootTerraformer(purpose string) (*terraformer.Terraformer, error) {
+	return o.newTerraformer(purpose, o.Shoot.SeedNamespace, o.Shoot.Info.Name)
+}
+
+// ChartInitializer initializes a terraformer based on the given chart and values.
+func (o *Operation) ChartInitializer(chartName string, values map[string]interface{}) terraformer.Initializer {
+	return func(config *terraformer.InitializerConfig) error {
+		chartRenderer, err := chartrenderer.New(o.K8sSeedClient.Kubernetes())
+		if err != nil {
+			return err
+		}
+
+		values["names"] = map[string]interface{}{
+			"configuration": config.ConfigurationName,
+			"variables":     config.VariablesName,
+			"state":         config.StateName,
+		}
+		values["initializeEmptyState"] = config.InitializeState
+
+		return utils.Retry(5*time.Second, 30*time.Second, func() (bool, bool, error) {
+			if err := common.ApplyChart(o.K8sSeedClient, chartRenderer, filepath.Join(common.TerraformerChartPath, chartName), chartName, config.Namespace, nil, values); err != nil {
+				return false, false, nil
+			}
+			return true, false, nil
+		})
+	}
 }
 
 // constructInternalDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster

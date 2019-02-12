@@ -18,7 +18,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -59,7 +58,7 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 		routeTableName      = "routeTableName"
 		securityGroupName   = "securityGroupName"
 	)
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return "", err
 	}
@@ -169,13 +168,11 @@ func (b *AzureBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	var (
-		storageAccountName       = "storageAccountName"
-		storageAccessKey         = "storageAccessKey"
-		containerName            = "containerName"
-		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
-		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
+		storageAccountName = "storageAccountName"
+		storageAccessKey   = "storageAccessKey"
+		containerName      = "containerName"
 	)
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return nil, nil, err
 	}

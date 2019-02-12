@@ -19,7 +19,6 @@ import (
 	"path"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 const cloudProviderConfigTemplate = `
@@ -118,12 +117,10 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	var (
-		mountPath                = "/root/.gcp/"
-		bucketName               = "bucketName"
-		backupInfrastructureName = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
-		backupNamespace          = common.GenerateBackupNamespaceName(backupInfrastructureName)
+		mountPath  = "/root/.gcp/"
+		bucketName = "bucketName"
 	)
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, backupInfrastructureName, backupNamespace, b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return nil, nil, err
 	}

@@ -19,7 +19,6 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -56,19 +55,19 @@ func (b *AzureBotanist) DeployInfrastructure() error {
 	if err != nil {
 		return err
 	}
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		DefineConfig("azure-infra", b.generateTerraformInfraConfig(createResourceGroup, createVNet, resourceGroupName, vnetName, vnetCIDR, countUpdateDomains, countFaultDomains)).
+		InitializeWith(b.ChartInitializer("azure-infra", b.generateTerraformInfraConfig(createResourceGroup, createVNet, resourceGroupName, vnetName, vnetCIDR, countUpdateDomains, countFaultDomains))).
 		Apply()
 }
 
 // DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
 func (b *AzureBotanist) DestroyInfrastructure() error {
-	tf, err := terraformer.NewFromOperation(b.Operation, common.TerraformerPurposeInfra)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
 		return err
 	}
@@ -80,7 +79,7 @@ func (b *AzureBotanist) DestroyInfrastructure() error {
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() []map[string]interface{} {
+func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"CLIENT_ID":     ClientID,
 		"CLIENT_SECRET": ClientSecret,
@@ -118,19 +117,19 @@ func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, create
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *AzureBotanist) DeployBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
 	return tf.
 		SetVariablesEnvironment(b.generateTerraformBackupVariablesEnvironment()).
-		DefineConfig("azure-backup", b.generateTerraformBackupConfig()).
+		InitializeWith(b.ChartInitializer("azure-backup", b.generateTerraformBackupConfig())).
 		Apply()
 }
 
 // DestroyBackupInfrastructure kicks off a Terraform job which destroys the infrastructure for backup.
 func (b *AzureBotanist) DestroyBackupInfrastructure() error {
-	tf, err := terraformer.New(b.Logger, b.K8sSeedClient, common.TerraformerPurposeBackup, b.BackupInfrastructure.Name, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name), b.ImageVector)
+	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
 		return err
 	}
@@ -142,7 +141,7 @@ func (b *AzureBotanist) DestroyBackupInfrastructure() error {
 // generateTerraformBackupVariablesEnvironment generates the environment containing the credentials which
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
-func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() []map[string]interface{} {
+func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
 	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"CLIENT_ID":     ClientID,
 		"CLIENT_SECRET": ClientSecret,

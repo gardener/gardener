@@ -15,7 +15,6 @@
 package kubernetes
 
 import (
-	"bytes"
 	"context"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -303,8 +302,6 @@ type Interface interface {
 	GetPod(string, string) (*corev1.Pod, error)
 	// Deprecated: Use `Client()` and utils instead.
 	ListPods(string, metav1.ListOptions) (*corev1.PodList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	GetPodLogs(string, string, *corev1.PodLogOptions) (*bytes.Buffer, error)
 
 	// Deprecated: Use `Client()` and utils instead.
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)

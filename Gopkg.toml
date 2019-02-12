@@ -130,6 +130,10 @@ ignored = [
   name = "github.com/miekg/dns"
   version = "1.0.15"
 
+[[constraint]]
+  name = "github.com/golang/mock"
+  version = "1.2.0"
+
 [prune]
   unused-packages = true
   go-tests = true

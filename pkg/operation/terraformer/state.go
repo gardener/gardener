@@ -15,8 +15,11 @@
 package terraformer
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	corev1 "k8s.io/api/core/v1"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -30,11 +33,13 @@ type terraformState struct {
 
 // GetState returns the Terraform state as byte slice.
 func (t *Terraformer) GetState() ([]byte, error) {
-	configmap, err := t.k8sClient.GetConfigMap(t.namespace, t.stateName)
-	if err != nil {
+	ctx := context.TODO()
+	configMap := &corev1.ConfigMap{}
+	if err := t.client.Get(ctx, kutil.Key(t.namespace, t.stateName), configMap); err != nil {
 		return nil, err
 	}
-	return []byte(configmap.Data["terraform.tfstate"]), nil
+
+	return []byte(configMap.Data[StateKey]), nil
 }
 
 // GetStateOutputVariables returns the given <variable> from the given Terraform <stateData>.
@@ -75,8 +80,8 @@ func (t *Terraformer) GetStateOutputVariables(variables ...string) (map[string]s
 	return output, nil
 }
 
-// IsStateEmpty returns true if the Terraform state is empty, and false otherwise.
-func (t *Terraformer) IsStateEmpty() bool {
+// isStateEmpty returns true if the Terraform state is empty, and false otherwise.
+func (t *Terraformer) isStateEmpty() bool {
 	state, err := t.GetState()
 	if err != nil {
 		if apierrors.IsNotFound(err) {
