@@ -74,10 +74,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	if cloud.Alicloud != nil {
 		if cloud.Alicloud.Networks.Pods == nil {
-			obj.Spec.Cloud.Alicloud.Networks.Pods = &defaultPodCIDR
+			podCIDR := CIDR("100.64.0.0/11")
+			obj.Spec.Cloud.Alicloud.Networks.Pods = &podCIDR
 		}
 		if cloud.Alicloud.Networks.Services == nil {
-			obj.Spec.Cloud.Alicloud.Networks.Services = &defaultServiceCIDR
+			svcCIDR := CIDR("100.104.0.0/13")
+			obj.Spec.Cloud.Alicloud.Networks.Services = &svcCIDR
 		}
 		if cloud.Alicloud.Networks.Nodes == nil {
 			if cloud.Alicloud.Networks.VPC.CIDR != nil {
