@@ -303,7 +303,7 @@ var _ = Describe("Shoot application testing", func() {
 
 		// Apply the guestbook app resources to shoot
 		manifestReader := kubernetes.NewManifestReader(writer.Bytes())
-		err = shootTestOperations.ShootClient.Applier().ApplyManifest(ctx, manifestReader)
+		err = shootTestOperations.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultApplierOptions)
 		Expect(err).NotTo(HaveOccurred())
 
 		// define guestbook app urls

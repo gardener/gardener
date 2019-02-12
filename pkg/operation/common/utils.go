@@ -31,7 +31,7 @@ import (
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
-	"github.com/json-iterator/go"
+	jsoniter "github.com/json-iterator/go"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,13 +48,22 @@ var json = jsoniter.ConfigFastest
 // based on the merged result of both value maps. The resulting manifest will be applied to the cluster the
 // Kubernetes client has been created for.
 func ApplyChart(k8sClient kubernetes.Interface, renderer chartrenderer.ChartRenderer, chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
+	return ApplyChartWithOptions(k8sClient, renderer, chartPath, name, namespace, defaultValues, additionalValues, kubernetes.DefaultApplierOptions)
+}
+
+// ApplyChartWithOptions takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
+// release's namespace <namespace> and two maps <defaultValues>, <additionalValues>, and renders the template
+// based on the merged result of both value maps. The resulting manifest will be applied to the cluster the
+// Kubernetes client has been created for.
+// <options> determines how the apply logic is executed.
+func ApplyChartWithOptions(k8sClient kubernetes.Interface, renderer chartrenderer.ChartRenderer, chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}, options kubernetes.ApplierOptions) error {
 	release, err := renderer.Render(chartPath, name, namespace, utils.MergeMaps(defaultValues, additionalValues))
 	if err != nil {
 		return err
 	}
 	manifestReader := kubernetes.NewManifestReader(release.Manifest())
 
-	return k8sClient.Applier().ApplyManifest(context.Background(), manifestReader)
+	return k8sClient.Applier().ApplyManifest(context.Background(), manifestReader, options)
 }
 
 // ApplyChartInNamespace is the same as ApplyChart except that it forces the namespace for chart objects when applying the chart, this is because sometimes native chart
@@ -67,7 +76,7 @@ func ApplyChartInNamespace(ctx context.Context, k8sClient kubernetes.Interface, 
 
 	manifestReader := kubernetes.NewManifestReader(release.Manifest())
 	nameSpaceSettingsReader := kubernetes.NewNamespaceSettingReader(manifestReader, namespace)
-	return k8sClient.Applier().ApplyManifest(ctx, nameSpaceSettingsReader)
+	return k8sClient.Applier().ApplyManifest(ctx, nameSpaceSettingsReader, kubernetes.DefaultApplierOptions)
 }
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.

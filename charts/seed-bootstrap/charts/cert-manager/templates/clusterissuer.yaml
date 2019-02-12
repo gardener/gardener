@@ -12,7 +12,8 @@ spec:
     dns01:
       providers:
       {{- range .Values.clusterissuer.acme.dns01.providers }}
-      - name: {{ .name }}
+      - cnameStrategy: {{ .cnameStrategy | default "None" | quote }} 
+        name: {{ .name }}
       {{- if eq .type "aws-route53" }}
         route53:
           region: {{ .region }}

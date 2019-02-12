@@ -95,11 +95,13 @@ clusterissuer:
     dns01:
       providers:
       - name: prod-route53
+        cnameStrategy: None
         type: aws-route53
         region: us-east-1
         accessKeyID:
         accessKey: your-access-key
       - name: prod-clouddns
+        cnameStrategy: None
         type: google-clouddns
         project:
         accessKey: your-access-key

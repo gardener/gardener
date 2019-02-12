@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"context"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
@@ -174,10 +176,21 @@ type Applier struct {
 	discovery discovery.CachedDiscoveryInterface
 }
 
+// Kind is a type alias for a k8s Kind of ObjectKind.
+type Kind string
+
+// MergeFunc determines how oldOj is merged into new oldObj.
+type MergeFunc func(newObj, oldObj *unstructured.Unstructured)
+
+// ApplierOptions contains options used by the Applier.
+type ApplierOptions struct {
+	MergeFuncs map[Kind]MergeFunc
+}
+
 // ApplierInterface is an interface which describes declarative operations to apply multiple
 // Kubernetes objects.
 type ApplierInterface interface {
-	ApplyManifest(ctx context.Context, unstructured UnstructuredReader) error
+	ApplyManifest(ctx context.Context, unstructured UnstructuredReader, options ApplierOptions) error
 }
 
 // Interface is used to wrap the interactions with a Kubernetes cluster
