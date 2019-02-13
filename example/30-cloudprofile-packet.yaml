@@ -1,0 +1,63 @@
+---
+apiVersion: garden.sapcloud.io/v1beta1
+kind: CloudProfile
+metadata:
+  name: packet
+spec:
+# caBundle: |
+#   -----BEGIN CERTIFICATE-----
+#   ...
+#   -----END CERTIFICATE-----
+  packet:
+    constraints:
+      dnsProviders:
+      - name: aws-route53
+      - name: unmanaged
+      kubernetes:
+        versions:
+        - 1.13.3
+      machineImages:
+      - name: coreos
+        id: d61c3912-8422-4daf-835e-854efa0062e4
+      machineTypes:
+      - name: t1.small
+        cpu: "4"
+        gpu: "0"
+        memory: 8Gi
+        usable: true
+      - name: c1.small
+        cpu: "4"
+        gpu: "0"
+        memory: 32Gi
+        usable: true
+      - name: c2.medium
+        cpu: "24"
+        gpu: "0"
+        memory: 64Gi
+        usable: true
+      - name: m1.xlarge
+        cpu: "24"
+        gpu: "0"
+        memory: 256Gi
+        usable: true
+      - name: c1.large.arm
+        cpu: "96"
+        gpu: "0"
+        memory: 128Gi
+        usable: true
+      - name: g2.large
+        cpu: "28"
+        gpu: "2"
+        memory: 192Gi
+        usable: true
+      volumeTypes:
+      - name: storage_1
+        class: standard
+        usable: true
+      - name: storage_2
+        class: performance
+        usable: true
+      zones: # List of availablity zones together with resource contraints in a specific region
+      - region: EWR1
+        names:
+        - EWR1

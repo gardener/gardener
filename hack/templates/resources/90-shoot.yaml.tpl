@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -35,6 +35,9 @@
   elif cloud == "alicloud":
     region="cn-beijing"
     kubernetesVersion="1.13.4"
+  elif cloud == "packet":
+    region="EWR1"
+    kubernetesVersion="1.13.3"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
     kubernetesVersion="1.13.4"
@@ -145,6 +148,21 @@ spec:
         autoScalerMax: 2
       % endif
       zones: ${value("spec.cloud.alicloud.zones", ["cn-beijing-f"])}
+    % endif
+    % if cloud == "packet":
+    packet:
+      workers:<% workers=value("spec.cloud.packet.workers", []) %>
+      % if workers != []:
+      ${yaml.dump(workers, width=10000)}
+      % else:
+      - name: small
+        machineType: c1.small
+        volumeType: standard
+        volumeSize: 30Gi
+        autoScalerMin: 1
+        autoScalerMax: 2
+      % endif
+      zones: ${value("spec.cloud.packet.zones", ["EWR1"])}
     % endif
     % if cloud == "gcp":
     gcp:

@@ -48,13 +48,17 @@ func DetermineCloudProviderInProfile(spec garden.CloudProfileSpec) (garden.Cloud
 		numClouds++
 		cloud = garden.CloudProviderAlicloud
 	}
+	if spec.Packet != nil {
+		numClouds++
+		cloud = garden.CloudProviderPacket
+	}
 	if spec.Local != nil {
 		numClouds++
 		cloud = garden.CloudProviderLocal
 	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/local")
+		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/packet/local")
 	}
 	return cloud, nil
 }
@@ -87,13 +91,17 @@ func DetermineCloudProviderInShoot(cloudObj garden.Cloud) (garden.CloudProvider,
 		numClouds++
 		cloud = garden.CloudProviderAlicloud
 	}
+	if cloudObj.Packet != nil {
+		numClouds++
+		cloud = garden.CloudProviderPacket
+	}
 	if cloudObj.Local != nil {
 		numClouds++
 		cloud = garden.CloudProviderLocal
 	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/local")
+		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/packet/local")
 	}
 	return cloud, nil
 }
@@ -116,6 +124,8 @@ func GetK8SNetworks(shoot *garden.Shoot) (garden.K8SNetworks, error) {
 		return shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, nil
 	case garden.CloudProviderAlicloud:
 		return shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, nil
+	case garden.CloudProviderPacket:
+		return shoot.Spec.Cloud.Packet.Networks.K8SNetworks, nil
 	case garden.CloudProviderLocal:
 		return shoot.Spec.Cloud.Local.Networks.K8SNetworks, nil
 	}

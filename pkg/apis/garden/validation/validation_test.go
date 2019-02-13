@@ -132,7 +132,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/local"),
+				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/packet/local"),
 			}))
 		})
 
@@ -1739,6 +1739,246 @@ var _ = Describe("validation", func() {
 				})
 			})
 		})
+
+		// BEGIN PACKET
+		Context("tests for Packet cloud profiles", func() {
+			var (
+				fldPath         = "packet"
+				packetProfile *garden.CloudProfile
+			)
+
+			BeforeEach(func() {
+				packetProfile = &garden.CloudProfile{
+					ObjectMeta: metadata,
+					Spec: garden.CloudProfileSpec{
+						Packet: &garden.PacketProfile{
+							Constraints: garden.PacketConstraints{
+								DNSProviders: dnsProviderConstraint,
+								Kubernetes:   kubernetesVersionConstraint,
+								MachineImages: []garden.PacketMachineImage{
+									{
+										Name: "Container Linux - Stable",
+										ID:   "d61c3912-8422-4daf-835e-854efa0062e4",
+									},
+								},
+								MachineTypes: machineTypesConstraint,
+								VolumeTypes:  volumeTypesConstraint,
+								Zones: zonesConstraint,
+							},
+						},
+					},
+				}
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateCloudProfile(packetProfile)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+
+			It("should forbid ca bundles with unsupported format", func() {
+				packetProfile.Spec.CABundle = makeStringPointer("unsupported")
+
+				errorList := ValidateCloudProfile(packetProfile)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.caBundle"),
+				}))))
+
+			})
+
+			Context("dns provider constraints", func() {
+				It("should enforce that at least one provider has been defined", func() {
+					packetProfile.Spec.Packet.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
+					}))))
+				})
+
+				It("should forbid unsupported providers", func() {
+					packetProfile.Spec.Packet.Constraints.DNSProviders = invalidDNSProviders
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeNotSupported),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
+					}))))
+				})
+			})
+
+			Context("kubernetes version constraints", func() {
+				It("should enforce that at least one version has been defined", func() {
+					packetProfile.Spec.Packet.Constraints.Kubernetes.Versions = []string{}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions", fldPath)),
+					}))))
+				})
+
+				It("should forbid versions of a not allowed pattern", func() {
+					packetProfile.Spec.Packet.Constraints.Kubernetes.Versions = invalidKubernetes
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.kubernetes.versions[0]", fldPath)),
+					}))))
+				})
+			})
+
+			Context("machine image validation", func() {
+				It("should forbid an empty list of machine images", func() {
+					packetProfile.Spec.Packet.Constraints.MachineImages = []garden.PacketMachineImage{}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages", fldPath)),
+					}))))
+				})
+
+				It("should forbid empty machine image id", func() {
+					packetProfile.Spec.Packet.Constraints.MachineImages[0].ID = ""
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].id", fldPath)),
+					}))))
+				})
+			})
+
+			Context("machine types validation", func() {
+				It("should enforce that at least one machine type has been defined", func() {
+					packetProfile.Spec.Packet.Constraints.MachineTypes = []garden.MachineType{}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes", fldPath)),
+					}))))
+				})
+
+				It("should enforce uniqueness of machine type names", func() {
+					packetProfile.Spec.Packet.Constraints.MachineTypes = []garden.MachineType{
+						packetProfile.Spec.Packet.Constraints.MachineTypes[0],
+						packetProfile.Spec.Packet.Constraints.MachineTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[1].name", fldPath)),
+					}))))
+				})
+
+				It("should forbid machine types with unsupported property values", func() {
+					packetProfile.Spec.Packet.Constraints.MachineTypes = invalidMachineTypes
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].name", fldPath)),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].cpu", fldPath)),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].gpu", fldPath)),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeInvalid),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineTypes[0].memory", fldPath)),
+					}))))
+				})
+			})
+
+			Context("volume types validation", func() {
+				It("should enforce that at least one volume type has been defined", func() {
+					packetProfile.Spec.Packet.Constraints.VolumeTypes = []garden.VolumeType{}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes", fldPath)),
+					}))))
+				})
+
+				It("should enforce uniqueness of volume type names", func() {
+					packetProfile.Spec.Packet.Constraints.VolumeTypes = []garden.VolumeType{
+						packetProfile.Spec.Packet.Constraints.VolumeTypes[0],
+						packetProfile.Spec.Packet.Constraints.VolumeTypes[0],
+					}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeDuplicate),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[1].name", fldPath)),
+					}))))
+				})
+
+				It("should forbid volume types with unsupported property values", func() {
+					packetProfile.Spec.Packet.Constraints.VolumeTypes = invalidVolumeTypes
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].name", fldPath)),
+					})), PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.volumeTypes[0].class", fldPath)),
+					}))))
+				})
+
+			})
+
+			Context("zone validation", func() {
+				It("should forbid empty zones", func() {
+					packetProfile.Spec.Packet.Constraints.Zones = []garden.Zone{}
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones", fldPath)),
+					}))))
+				})
+
+				It("should forbid zones with unsupported name values", func() {
+					packetProfile.Spec.Packet.Constraints.Zones = invalidZones
+
+					errorList := ValidateCloudProfile(packetProfile)
+
+					Expect(len(errorList)).To(Equal(2))
+					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].region", fldPath)),
+					}))
+					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.zones[0].names[0]", fldPath)),
+					}))
+				})
+			})
+		})
+		// END PACKET
 	})
 
 	Describe("#ValidateProject, #ValidateProjectUpdate", func() {
@@ -2581,7 +2821,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
+				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
 			}))
 		})
 
@@ -3113,7 +3353,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
 				}))
 			})
 		})
@@ -3525,7 +3765,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
 				}))
 			})
 		})
@@ -3871,7 +4111,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
 				}))
 			})
 		})
@@ -4263,10 +4503,235 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
 				}))
 			})
 		})
+
+		// BEGIN PACKET
+		Context("Packet specific validation", func() {
+			var (
+				fldPath  = "packet"
+				packet *garden.PacketCloud
+			)
+
+			BeforeEach(func() {
+				packet = &garden.PacketCloud{
+					Networks: garden.PacketNetworks{
+						K8SNetworks: k8sNetworks,
+					},
+					Workers: []garden.PacketWorker{
+						{
+							Worker:     worker,
+							VolumeSize: "20Gi",
+							VolumeType: "default",
+						},
+					},
+					Zones: []string{"EWR1"},
+				}
+
+				shoot.Spec.Cloud.AWS = nil
+				shoot.Spec.Cloud.Packet = packet
+			})
+
+			It("should not return any errors", func() {
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(0))
+			})
+
+			Context("CIDR", func() {
+
+				It("should forbid non-specified k8s networks", func() {
+					shoot.Spec.Cloud.Packet.Networks.K8SNetworks = garden.K8SNetworks{}
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.packet.networks.nodes"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.packet.networks.pods"),
+					}, Fields{
+						"Type":  Equal(field.ErrorTypeRequired),
+						"Field": Equal("spec.cloud.packet.networks.services"),
+					}))
+				})
+
+				It("should forbid invalid k8s networks", func() {
+					shoot.Spec.Cloud.Packet.Networks.K8SNetworks = invalidK8sNetworks
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.packet.networks.nodes"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.packet.networks.pods"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.packet.networks.services"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}))
+				})
+			})
+
+			It("should forbid an empty worker list", func() {
+				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers", fldPath)),
+				}))))
+			})
+
+			It("should enforce unique worker names", func() {
+				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+					{
+						Worker:     worker,
+						VolumeSize: "20Gi",
+						VolumeType: "default",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeDuplicate),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[1]", fldPath)),
+				}))))
+			})
+
+			It("should forbid invalid worker configuration", func() {
+				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
+					{
+						Worker:     invalidWorker,
+						VolumeSize: "hugo",
+						VolumeType: "",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(len(errorList)).To(Equal(7))
+				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))
+				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].machineType", fldPath)),
+				}))
+				Expect(*errorList[5]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))
+				Expect(*errorList[6]).To(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeType", fldPath)),
+				}))
+			})
+
+			It("should forbid worker pools with too less volume size", func() {
+				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
+					{
+						Worker:     worker,
+						VolumeSize: "10Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].volumeSize", fldPath)),
+				}))))
+			})
+
+			It("should forbid too long worker names", func() {
+				shoot.Spec.Cloud.Packet.Workers[0].Worker = invalidWorkerTooLongName
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeTooLong),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))))
+			})
+
+			It("should forbid worker pools with names that are not DNS-1123 label compliant", func() {
+				shoot.Spec.Cloud.Packet.Workers = []garden.PacketWorker{
+					{
+						Worker:     invalidWorkerName,
+						VolumeSize: "20Gi",
+						VolumeType: "gp2",
+					},
+				}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.workers[0].name", fldPath)),
+				}))))
+			})
+
+			It("should forbid an empty zones list", func() {
+				shoot.Spec.Cloud.Packet.Zones = []string{}
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))))
+			})
+
+			It("should forbid updating networks and zones", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				cidr := garden.CIDR("255.255.255.255/32")
+				newShoot.Spec.Cloud.Packet.Networks.Pods = &cidr
+				newShoot.Spec.Cloud.Packet.Zones = []string{"another-zone"}
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.networks", fldPath)),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s.zones", fldPath)),
+				}))))
+			})
+
+			It("should forbid removing the Packet section", func() {
+				newShoot := prepareShootForUpdate(shoot)
+				newShoot.Spec.Cloud.Packet = nil
+
+				errorList := ValidateShootUpdate(newShoot, shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
+				})), PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeForbidden),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+				}))))
+			})
+		})
+		// END PACKET
 
 		Context("OpenStack specific validation", func() {
 			var (
@@ -4580,7 +5045,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
 				}))
 			})
 		})

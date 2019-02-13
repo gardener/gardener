@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -30,6 +30,8 @@
     entity="GCP project"
   elif cloud == "alicloud":
     entity="Alicloud project"
+  elif cloud == "packet":
+    entity="Packet project"
   elif cloud == "openstack" or cloud == "os":
     entity="OpenStack tenant"
 %>---<% if entity != "": print("# Secret containing cloud provider credentials for " + entity + " into which the Seed cluster have been provisioned.") %>
@@ -62,6 +64,9 @@ data:
   % endif
   % if cloud == "gcp":
   serviceaccount.json: ${value("data.serviceaccountjson", "base64(serviceaccount-json)")}
+  % endif
+  % if cloud == "packet":
+  apiToken: ${value("data.apiToken", "base64(api-token)")}
   % endif
   % if cloud == "openstack" or cloud == "os":
   domainName: ${value("data.domainName", "base64(domain-name)")}
