@@ -31,10 +31,16 @@ func (b *LocalBotanist) DeployInfrastructure() error {
 
 	// TODO: use b.Operation.ComputeDownloaderCloudConfig("local")
 	// At this stage we don't have the shoot api server
-	chart, err := b.Operation.ChartSeedRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, map[string]interface{}{
-		"kubeconfig": string(b.Operation.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
-		"secretName": b.Operation.Shoot.ComputeCloudConfigSecretName("local"),
-	})
+	config := map[string]interface{}{
+		"kubeconfig":    string(b.Operation.Secrets["cloud-config-downloader"].Data["kubeconfig"]),
+		"secretName":    b.Operation.Shoot.ComputeCloudConfigSecretName("local"),
+		"cloudProvider": "local",
+	}
+	config, err := b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	if err != nil {
+		return err
+	}
+	chart, err := b.Operation.ChartSeedRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, config)
 	if err != nil {
 		return err
 	}
