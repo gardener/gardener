@@ -3932,7 +3932,7 @@ var _ = Describe("validation", func() {
 					Workers: []garden.AlicloudWorker{
 						{
 							Worker:     worker,
-							VolumeSize: "20Gi",
+							VolumeSize: "30Gi",
 							VolumeType: "default",
 						},
 					},
@@ -4106,12 +4106,12 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
 					{
 						Worker:     worker,
-						VolumeSize: "20Gi",
+						VolumeSize: "30Gi",
 						VolumeType: "default",
 					},
 					{
 						Worker:     worker,
-						VolumeSize: "20Gi",
+						VolumeSize: "30Gi",
 						VolumeType: "default",
 					},
 				}
@@ -4171,7 +4171,7 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
 					{
 						Worker:     workerAutoScalingInvalid,
-						VolumeSize: "20Gi",
+						VolumeSize: "30Gi",
 						VolumeType: "default",
 					},
 					{
@@ -4243,7 +4243,7 @@ var _ = Describe("validation", func() {
 				shoot.Spec.Cloud.Alicloud.Workers = []garden.AlicloudWorker{
 					{
 						Worker:     invalidWorkerName,
-						VolumeSize: "20Gi",
+						VolumeSize: "30Gi",
 						VolumeType: "gp2",
 					},
 				}
