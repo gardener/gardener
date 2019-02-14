@@ -97,7 +97,6 @@ func validateFlags() {
 	if !FileExists(*kubeconfig) {
 		Fail("kubeconfig path does not exist")
 	}
-
 }
 
 var _ = Describe("Shoot application testing", func() {
@@ -312,7 +311,7 @@ var _ = Describe("Shoot application testing", func() {
 		pushUrl := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
 		pullUrl := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
 
-		// Check availability fo the guestbook app
+		// Check availability of the guestbook app
 		err = shootTestOperations.WaitUntilGuestbookAppIsAvailable(ctx, []string{guestBookAppURL, pushUrl, pullUrl})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -345,8 +344,10 @@ var _ = Describe("Shoot application testing", func() {
 			NetworkPolicyTimeout = 1 * time.Minute
 
 			ExecNCOnAPIServer = func(ctx context.Context, host, port string) error {
-				return shootTestOperations.PodExecByLabel(ctx, apiserverLabels, APIServer,
+				_, err := shootTestOperations.PodExecByLabel(ctx, apiserverLabels, APIServer,
 					fmt.Sprintf("apt-get update && apt-get -y install netcat && nc -z -w5 %s %s", host, port), shootTestOperations.ShootSeedNamespace(), shootTestOperations.SeedClient)
+
+				return err
 			}
 
 			ItShouldAllowTrafficTo = func(name, host, port string) {

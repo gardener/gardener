@@ -9,11 +9,12 @@ is divided into the following major subdirectories:
 
 ```console
 ├── framework
-│   └── testlogger
 ├── resources
 │   ├── charts
 │   ├── repository
 │   └── templates
+└── seeds
+    ├── logging
 └── shoots
     ├── applications
     └── operations
@@ -32,10 +33,6 @@ framework
 ├── helm_utils.go
 ├── shoot_app.go
 ├── shoot_operations.go
-├── testlogger
-│   ├── testlogger.go
-│   ├── testlogger_suite_test.go
-│   └── testlogger_test.go
 ├── tiller.go
 ├── types.go
 └── utils.go
@@ -54,6 +51,7 @@ resources
 │   └── repositories.yaml
 └── templates
     └── guestbook-app.yaml.tp
+    └── (...)
 ```
 
 There are two special directories that are dynamically filled with the correct test files:
@@ -76,7 +74,7 @@ The test takes the following options
 
 ```go
 // Required kubeconfig for the garden cluster
-kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig  of Garden the cluster that will be used for integration tests")
+kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
 
 // Needed for the standalone shoot creation test and the coupled creation / deletion test
 shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
@@ -89,11 +87,10 @@ logLevel          = flag.String("verbose", "", "verbosity level, when set, loggi
 testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
 ```
 
-
 #### Example Run
 
 ```console
-go test -kubeconfig $HOME/.kube/config  -shootpath shoot.yaml -shootNamespace garden-dev -ginkgo.v
+go test -kubeconfig $HOME/.kube/config -shootpath shoot.yaml -shootNamespace garden-dev -ginkgo.v
 ```
 
 > NOTE: please remove the shoot name `metadata.name` and the DNS domain `spec.dns.domain` from your shoot YAML as the testing framework will be creating those for you.
@@ -104,14 +101,14 @@ The above command will read the garden kubeconfig from `$HOME/.kube/config`, the
 
 Shoot applications tests are tests that are executed on a shoot. There are two possiblities for running these tests:
 
-- execute against an existing shoot by specifying the shoot-name
+- execute against an existing shoot by specifying the shootName
 - create a shoot from a yaml spec and execute the tests against this shoot
 
 Below are the flags used for running the application tests:
 
 ```go
 // Required kubeconfig for the garden cluster
-kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig  of the garden cluster that will be used for integration tests")
+kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
 
 // Shoot options if running tests against an existing shoot
 shootName         = flag.String("shootName", "", "the name of the shoot we want to test")
@@ -146,8 +143,55 @@ The command requires a garden kubeconfig and the shoot yaml path. Additionally, 
 To use an existing shoot, the following command can be used:
 
 ```console
-go test  -kubeconfig $Home/.kube/config  -shootName "test-zefc8aswue" -shootNamespace "garden-dev"  -ginkgo.v -ginkgo.progress
+go test -kubeconfig $HOME/.kube/config -shootName "test-zefc8aswue" -shootNamespace "garden-dev" -ginkgo.v -ginkgo.progress
 ```
 
 The above command requires a garden kubeconfig, the seed name, the shoot name, and the project namespace.
 
+### Seed Logging
+
+Seed logging tests are meant to test the logging functionality for seed clusters. There are two possiblities for running these tests:
+
+- execute against an existing shoot by specifying the shootName
+- create a shoot from a yaml spec and execute the tests against this shoot
+
+Below are the flags used for running the logging tests:
+
+```go
+// Required kubeconfig for the garden cluster
+kubeconfig           = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+
+// Shoot options if running tests against an existing shoot
+shootName            = flag.String("shootName", "", "the name of the shoot we want to test")
+shootNamespace       = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
+
+// Prefix for the names of the test shoots
+testShootsPrefix     = flag.String("prefix", "", "prefix to use for test shoots")
+
+// If it is preferrable to create a test shoot for running the application test, the shoot yaml path needs to be specified
+shootTestYamlPath    = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
+logLevel             = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+logsCount            = flag.Uint64("logsCount", 10000, "the logs count to be logged by the logger application")
+
+// If specified the test will skip the feature gate check
+skipFeatureGateCheck = flag.Bool("skipFeatureGateCheck", false, "whether to skip the feature gate check or not")
+
+// If specified the test will clean up the created shoot
+cleanup              = flag.Bool("cleanup", false, "deletes the newly created test shoot after the test suite is done")
+```
+
+#### Example Run
+
+To create a test shoot and run the tests on it, use the following command:
+
+```console
+cd test/integration/seeds/logging
+go test -kubeconfig $HOME/.kube/config -shootpath shoot.yaml -timeout 20m -cleanup -ginkgo.v 
+```
+
+To use an existing shoot, the following command can be used:
+
+```console
+cd test/integration/seeds/logging
+go test -kubeconfig $HOME/.kube/config -shootName "test-zefc8aswue" -shootNamespace "garden-dev" -ginkgo.v -ginkgo.progress
+```

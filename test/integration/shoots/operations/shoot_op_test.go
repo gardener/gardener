@@ -30,7 +30,7 @@ import (
 )
 
 var (
-	kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig  of Garden the cluster that will be used for integration tests")
+	kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
 	shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
 	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
 	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")

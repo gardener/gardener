@@ -58,7 +58,6 @@ func CreateShootTestArtifacts(shootTestYamlPath, prefix string) (string, *v1beta
 	shoot.Spec.DNS.Domain = &shootToReturnDomain
 
 	return integrationTestName, shoot, nil
-
 }
 
 func generateRandomShootName(prefix string) (string, error) {

@@ -78,3 +78,10 @@ type GardenerTestOperation struct {
 type HelmAccess struct {
 	HelmPath Helm
 }
+
+// SearchResponse represents the response from a search query to elasticsearch
+type SearchResponse struct {
+	Hits struct {
+		Total uint64 `json:"total"`
+	} `json:"hits"`
+}
