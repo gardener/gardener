@@ -32,5 +32,6 @@ type Shoot struct {
 	KubernetesMajorMinorVersion string
 
 	WantsClusterAutoscaler bool
+	WantsAlertmanager      bool
 	IsHibernated           bool
 }
