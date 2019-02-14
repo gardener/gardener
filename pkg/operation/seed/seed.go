@@ -346,6 +346,9 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		},
 		"fluentd-es": map[string]interface{}{
 			"enabled": loggingEnabled,
+			"fluentd": map[string]interface{}{
+				"storage": seed.GetValidVolumeSize("9Gi"),
+			},
 		},
 		"cert-manager": map[string]interface{}{
 			"enabled":       certManagerEnabled,
