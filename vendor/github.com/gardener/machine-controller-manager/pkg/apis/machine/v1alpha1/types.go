@@ -1158,6 +1158,9 @@ const (
 	AlicloudAccessKeyID string = "alicloudAccessKeyID"
 	// AlicloudAccessKeySecret is a constant for a key name that is part of the Alibaba cloud credentials.
 	AlicloudAccessKeySecret string = "alicloudAccessKeySecret"
+
+	// PacketAPIKey is a constant for a key name that is part of the Packet cloud credentials
+	PacketAPIKey string = "packetAPIKey"
 )
 
 /********************** AlicloudMachineClass APIs ***************/
@@ -1216,4 +1219,55 @@ type AlicloudMachineClassSpec struct {
 type AlicloudSystemDisk struct {
 	Category string `json:"category"`
 	Size     int    `json:"size"`
+}
+
+/********************** PacketMachineClass APIs ***************/
+
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// PacketMachineClass TODO
+type PacketMachineClass struct {
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// +optional
+	metav1.TypeMeta `json:",inline"`
+
+	// +optional
+	Spec PacketMachineClassSpec `json:"spec,omitempty"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// PacketMachineClassList is a collection of PacketMachineClasses.
+type PacketMachineClassList struct {
+	// +optional
+	metav1.TypeMeta `json:",inline"`
+
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
+
+	// +optional
+	Items []PacketMachineClass `json:"items"`
+}
+
+// PacketMachineClassSpec is the specification of a cluster.
+type PacketMachineClassSpec struct {
+	Facility     []string           `json:"facility"`
+	MachineType  string             `json:"machineType"`
+	BillingCycle string             `json:"billingCycle"`
+	OS           string             `json:"OS"`
+	ProjectID    string             `json:"projectID"`
+	Tags         map[string]string  `json:"tags,omitempty"`
+	SSHKeys      []PacketSSHKeySpec `json:"sshKeys,omitempty"`
+	UserData     string             `json:"userdata,omitempty"`
+
+	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
+}
+
+// PacketSSHKeySpec describes ssh keys for packet
+type PacketSSHKeySpec struct {
+	ID          string `json:"id"`
+	Fingerprint string `json:"fingerprint"`
 }

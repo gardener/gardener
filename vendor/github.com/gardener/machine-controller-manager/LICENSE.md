@@ -301,8 +301,10 @@ Apache 2 license (https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/LIC
 
 ------
 ## BSD 3-clause "New" or "Revised" License
+
+SPDX short identifier: BSD-3-Clause
+
 ```
-    Copyright (c) <year> <author> All rights reserved.
     Copyright (c) <year> <author> All rights reserved.
 
     Redistribution and use in source and binary forms, with or without

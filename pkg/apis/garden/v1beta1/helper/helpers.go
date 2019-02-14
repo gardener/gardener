@@ -396,9 +396,10 @@ func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, c
 }
 
 type ShootedSeed struct {
-	Protected *bool
-	Visible   *bool
-	APIServer *ShootedSeedAPIServer
+	Protected         *bool
+	Visible           *bool
+	MinimumVolumeSize *string
+	APIServer         *ShootedSeedAPIServer
 }
 
 type ShootedSeedAPIServer struct {
@@ -448,8 +449,11 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	shootedSeed.APIServer = apiServer
+
+	if size, ok := settings["minimumVolumeSize"]; ok {
+		shootedSeed.MinimumVolumeSize = &size
+	}
 
 	if _, ok := flags["protected"]; ok {
 		shootedSeed.Protected = &trueVar

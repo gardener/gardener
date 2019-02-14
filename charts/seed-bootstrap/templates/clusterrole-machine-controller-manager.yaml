@@ -6,11 +6,12 @@ rules:
 - apiGroups:
   - machine.sapcloud.io
   resources:
+  - alicloudmachineclasses
   - awsmachineclasses
   - azuremachineclasses
   - gcpmachineclasses
   - openstackmachineclasses
-  - alicloudmachineclasses
+  - packetmachineclasses
   - machinedeployments
   - machines
   - machinesets

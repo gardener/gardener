@@ -104,7 +104,7 @@ extractQueries:
 				containFiles = append(containFiles, value)
 			case "pattern":
 				restPatterns = append(restPatterns, value)
-			case "name":
+			case "iamashamedtousethedisabledqueryname":
 				packagesNamed = append(packagesNamed, value)
 			case "": // not a reserved query
 				restPatterns = append(restPatterns, pattern)
@@ -120,7 +120,6 @@ extractQueries:
 			}
 		}
 	}
-	patterns = restPatterns
 
 	// TODO(matloob): Remove the definition of listfunc and just use golistPackages once go1.12 is released.
 	var listfunc driver
@@ -139,8 +138,10 @@ extractQueries:
 	response := &responseDeduper{}
 	var err error
 
-	// see if we have any patterns to pass through to go list.
-	if len(restPatterns) > 0 {
+	// See if we have any patterns to pass through to go list. Zero initial
+	// patterns also requires a go list call, since it's the equivalent of
+	// ".".
+	if len(restPatterns) > 0 || len(patterns) == 0 {
 		dr, err := listfunc(cfg, restPatterns...)
 		if err != nil {
 			return nil, err
@@ -282,7 +283,10 @@ func runNamedQueries(cfg *Config, driver driver, response *responseDeduper, quer
 		matchesMu.Lock()
 		defer matchesMu.Unlock()
 
-		path := dir[len(root.Path)+1:]
+		path := dir
+		if dir != root.Path {
+			path = dir[len(root.Path)+1:]
+		}
 		if pathMatchesQueries(path, queries) {
 			switch root.Type {
 			case gopathwalk.RootModuleCache:
