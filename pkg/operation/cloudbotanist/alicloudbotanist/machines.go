@@ -74,10 +74,6 @@ func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, op
 	}
 	for zoneIndex, zone := range zones {
 		for _, worker := range workers {
-			cloudConfig, err := b.ComputeDownloaderCloudConfig(worker.Name)
-			if err != nil {
-				return nil, nil, err
-			}
 			machineClassSpec := map[string]interface{}{
 				"imageID":         b.Shoot.Info.Spec.Cloud.Alicloud.MachineImage.ID,
 				"instanceType":    worker.MachineType,
@@ -116,7 +112,7 @@ func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, op
 
 			machineClassSpec["name"] = className
 			machineClassSpec["secret"] = map[string]interface{}{
-				UserData:        cloudConfig.FileContent("cloud-config.yaml"),
+				UserData:        b.Shoot.CloudConfigMap[worker.Name].Downloader.Content,
 				AccessKeyID:     secretData[machinev1alpha1.AlicloudAccessKeyID],
 				AccessKeySecret: secretData[machinev1alpha1.AlicloudAccessKeySecret],
 			}

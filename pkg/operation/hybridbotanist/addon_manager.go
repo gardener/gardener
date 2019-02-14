@@ -25,7 +25,7 @@ import (
 func (b *HybridBotanist) DeployKubeAddonManager() error {
 	var name = "kube-addon-manager"
 
-	cloudConfig, err := b.generateCloudConfigChart()
+	cloudConfig, err := b.generateCloudConfigExecutionChart()
 	if err != nil {
 		return err
 	}

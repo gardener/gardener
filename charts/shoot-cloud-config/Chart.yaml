@@ -1,4 +1,4 @@
 apiVersion: v1
-description: Meta chart for cloud-config user data
+description: Script execution the operating system config.
 name: shoot-cloud-config
 version: 0.1.0

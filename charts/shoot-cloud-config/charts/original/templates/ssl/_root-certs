@@ -1,8 +1,0 @@
-{{- define "root-certs" -}}
-{{- if .caBundle -}}
-- path: /etc/ssl/certs/ROOTcerts.pem
-  permissions: 0644
-  encoding: b64
-  content: {{ .caBundle | b64enc }}
-{{- end -}}
-{{- end -}}

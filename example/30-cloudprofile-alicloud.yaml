@@ -17,7 +17,7 @@ spec:
         versions:
         - 1.11.7
       machineImages:
-      - name: CoreOS
+      - name: coreos-alicloud
         id: coreos_1911_5_0_64_30G_alibase_20181219.vhd
       machineTypes:
       - name: ecs.sn2ne.large

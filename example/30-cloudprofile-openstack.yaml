@@ -24,7 +24,7 @@ spec:
       loadBalancerProviders:
       - name: haproxy
       machineImages:
-      - name: CoreOS
+      - name: coreos
         image: coreos-1911.5.0
       machineTypes:
       - name: medium_2_4

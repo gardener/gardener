@@ -19,6 +19,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// OperatingSystemConfigResource is a constant for the name of the OperatingSystemConfig resource.
+const OperatingSystemConfigResource = "OperatingSystemConfig"
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

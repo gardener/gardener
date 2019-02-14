@@ -1,0 +1,36 @@
+---
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: OperatingSystemConfig
+metadata:
+  name: {{ required "secretName is required" .Values.secretName }}-downloader
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: {{ required "type is required" .Values.type }}
+  purpose: {{ required "purpose is required" .Values.purpose }}
+  units:
+  - name: cloud-config-downloader.service
+    command: start
+    enable: true
+    content: |
+      [Unit]
+      Description=Downloads the actual cloud config from the Shoot API server and executes it
+      After=docker.service docker.socket
+      Wants=docker.socket
+      [Service]
+      Restart=always
+      RestartSec=30
+      EnvironmentFile=/etc/environment
+      ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
+  files:
+  - path: /var/lib/cloud-config-downloader/kubeconfig
+    permissions: 0644
+    content:
+      secretRef:
+        name: cloud-config-downloader
+        dataKey: kubeconfig
+  - path: /var/lib/cloud-config-downloader/download-cloud-config.sh
+    permissions: 0744
+    content:
+      inline:
+        encoding: b64
+        data: {{ include "seed-operatingsystemconfig.downloader.download-script" . | b64enc }}

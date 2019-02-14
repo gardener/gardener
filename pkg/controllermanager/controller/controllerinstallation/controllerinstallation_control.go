@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -31,18 +30,19 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	multierror "github.com/hashicorp/go-multierror"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -64,6 +64,16 @@ func (c *Controller) controllerInstallationAdd(obj interface{}) {
 }
 
 func (c *Controller) controllerInstallationUpdate(oldObj, newObj interface{}) {
+	old, ok1 := oldObj.(*gardencorev1alpha1.ControllerInstallation)
+	new, ok2 := newObj.(*gardencorev1alpha1.ControllerInstallation)
+	if !ok1 || !ok2 {
+		return
+	}
+
+	if new.DeletionTimestamp == nil && old.Spec.RegistrationRef.ResourceVersion == new.Spec.RegistrationRef.ResourceVersion && old.Spec.SeedRef.ResourceVersion == new.Spec.SeedRef.ResourceVersion {
+		return
+	}
+
 	c.controllerInstallationAdd(newObj)
 }
 
@@ -92,12 +102,7 @@ func (c *Controller) reconcileControllerInstallationKey(key string) error {
 		return err
 	}
 
-	if err := c.controllerInstallationControl.Reconcile(controllerInstallation); err != nil {
-		return err
-	}
-
-	c.controllerInstallationQueue.AddAfter(key, 30*time.Second)
-	return nil
+	return c.controllerInstallationControl.Reconcile(controllerInstallation)
 }
 
 // ControlInterface implements the control logic for updating ControllerInstallations. It is implemented as an interface to allow
@@ -200,7 +205,12 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
-	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, common.GardenNamespace, helmDeployment.Values)
+	namespace := getNamespaceForControllerInstallation(controllerInstallation)
+	if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), namespace, func(existing runtime.Object) error { return nil }); err != nil {
+		return err
+	}
+
+	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, helmDeployment.Values)
 	if err != nil {
 		conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
 		return err
@@ -211,9 +221,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		manifest        = release.Manifest()
 		newResources    DeployedResources
 		newResourcesSet = sets.NewString()
-	)
 
-	var (
 		decoder    = yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 1024)
 		decodedObj map[string]interface{}
 	)
@@ -306,6 +314,9 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		} else {
 			conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
 		}
+		return err
+	}
+	if err := k8sSeedClient.Client().Delete(context.TODO(), getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
@@ -401,4 +412,12 @@ func (c *defaultControllerInstallationControl) getSeedClient(controllerInstallat
 
 func objectReferenceToString(o corev1.ObjectReference) string {
 	return fmt.Sprintf("%s/%s/%s/%s", o.APIVersion, o.Kind, o.Namespace, o.Name)
+}
+
+func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1alpha1.ControllerInstallation) *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: fmt.Sprintf("extension-%s", controllerInstallation.Name),
+		},
+	}
 }

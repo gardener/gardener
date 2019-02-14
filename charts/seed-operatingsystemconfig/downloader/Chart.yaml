@@ -1,0 +1,4 @@
+apiVersion: v1
+description: OperatingSystemConfig extension resource for generating the cloud-config for the script that downloads the actual/original cloud config.
+name: downloader
+version: 0.1.0

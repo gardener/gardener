@@ -1,0 +1,23 @@
+{{- define "kubelet" -}}
+- name: kubelet.service
+  command: start
+  enable: true
+  content: |
+    [Unit]
+    Description=kubelet daemon
+    Documentation=https://kubernetes.io/docs/admin/kubelet
+    After=docker.service
+    Wants=docker.socket rpc-statd.service
+    [Install]
+    WantedBy=multi-user.target
+    [Service]
+    Restart=always
+    RestartSec=5
+    EnvironmentFile=/etc/environment
+    ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} cp /hyperkube /opt/bin/
+{{- if .Values.kubernetes.kubelet.hostnameOverride }}
+    ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
+{{- end }}
+    ExecStart=/opt/bin/hyperkube kubelet \
+{{ include "kubelet-flags" . | indent 8 }}
+{{- end -}}

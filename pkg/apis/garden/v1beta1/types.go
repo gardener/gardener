@@ -375,7 +375,11 @@ type MachineImageName string
 
 const (
 	// MachineImageCoreOS is a constant for the CoreOS machine image.
-	MachineImageCoreOS MachineImageName = "CoreOS"
+	MachineImageCoreOS MachineImageName = "coreos"
+	// MachineImageCoreOSAlicloud is a constant for the CoreOS machine image used by Alicloud.
+	// The Alicloud CoreOS image is modified (e.g., it does not support cloud-config, and is therefore
+	// treated like another OS).
+	MachineImageCoreOSAlicloud MachineImageName = "coreos-alicloud"
 )
 
 ////////////////////////////////////////////////////

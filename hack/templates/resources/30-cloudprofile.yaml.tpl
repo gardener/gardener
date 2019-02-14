@@ -78,7 +78,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if machineImages != []:
       ${yaml.dump(machineImages, width=10000)}
       % else:
-      - name: CoreOS
+      - name: coreos
         regions:
         - name: eu-west-1
           ami: ami-030d1bab626c90e46
@@ -183,7 +183,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if machineImages != []:
         ${yaml.dump(machineImages, width=10000)}
         % else:
-      - name: CoreOS
+      - name: coreos
         publisher: CoreOS
         offer: CoreOS
         sku: Stable
@@ -284,7 +284,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if machineImages != []:
       ${yaml.dump(machineImages, width=10000)}
       % else:
-      - name: CoreOS
+      - name: coreos
         image: projects/coreos-cloud/global/images/coreos-stable-1911-5-0-v20181219
       % endif
       machineTypes:<% machineTypes=value("spec.gcp.constraints.machineTypes", []) %>
@@ -370,7 +370,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if machineImages != []:
       ${yaml.dump(machineImages, width=10000)}
       % else:
-      - name: CoreOS
+      - name: coreos-alicloud
         id: coreos_1911_5_0_64_30G_alibase_20181219.vhd
       % endif
       machineTypes:<% machineTypes=value("spec.alicloud.constraints.machineTypes", []) %>
@@ -466,7 +466,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if machineImages != []:
       ${yaml.dump(machineImages, width=10000)}
       % else:
-      - name: CoreOS
+      - name: coreos
         image: coreos-1911.5.0
       % endif
       machineTypes:<% machineTypes=value("spec.openstack.constraints.machineTypes", []) %>

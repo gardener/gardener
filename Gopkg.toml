@@ -46,7 +46,7 @@ ignored = [
 
 [[override]]
   name = "sigs.k8s.io/controller-runtime"
-  version = "0.1.9"
+  version = "0.1.10"
 
 [[override]]
   name = "k8s.io/code-generator"

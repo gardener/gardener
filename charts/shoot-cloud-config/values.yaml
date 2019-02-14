@@ -1,0 +1,17 @@
+# images:
+#   hyperkube: image-repository
+# bootstrapToken: hugo
+# configFilePath: /var/lib/cloud-config-downloader/downloads/cloud_config
+# workers:
+# - name: cpu-worker
+#   secretName: cloud-config-cpu-worker-ab234
+#   cloudConfig: generated-original-cloud-config-data
+#   command: /usr/bin/reload --path=<path>
+#   units:
+#   - kubelet.service
+# - name: cpu-worker2
+#   secretName: cloud-config-cpu-worker2-4av4a
+#   cloudConfig: generated-original-cloud-config-data
+#   command: /usr/bin/reload --path=<path>
+#   units:
+#   - kubelet.service

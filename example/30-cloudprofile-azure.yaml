@@ -20,7 +20,7 @@ spec:
         - 1.11.7
         - 1.10.12
       machineImages:
-      - name: CoreOS
+      - name: coreos
         publisher: CoreOS
         offer: CoreOS
         sku: Stable

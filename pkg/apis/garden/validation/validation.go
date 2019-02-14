@@ -433,8 +433,8 @@ func validateAlicloudMachineImages(machineImages []garden.AlicloudMachineImage, 
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
 
-		if image.Name != garden.MachineImageCoreOS {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), image.Name, []string{string(garden.MachineImageCoreOS)}))
+		if image.Name != garden.MachineImageCoreOSAlicloud {
+			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), image.Name, []string{string(garden.MachineImageCoreOSAlicloud)}))
 		}
 
 		if len(image.ID) == 0 {

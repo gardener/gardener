@@ -18,12 +18,14 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -60,6 +62,8 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 		IsHibernated:           helper.IsShootHibernated(shoot),
 		WantsClusterAutoscaler: false,
 	}
+
+	shootObj.CloudConfigMap = make(map[string]CloudConfig, len(shootObj.GetWorkerNames()))
 
 	// Determine the external Shoot cluster domain, i.e. the domain which will be put into the Kubeconfig handed out
 	// to the user.
@@ -171,19 +175,7 @@ func (s *Shoot) GetNodeNetwork() gardenv1beta1.CIDR {
 
 // GetMachineImageName returns the name of the used machine image.
 func (s *Shoot) GetMachineImageName() gardenv1beta1.MachineImageName {
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		return s.Info.Spec.Cloud.AWS.MachineImage.Name
-	case gardenv1beta1.CloudProviderAzure:
-		return s.Info.Spec.Cloud.Azure.MachineImage.Name
-	case gardenv1beta1.CloudProviderGCP:
-		return s.Info.Spec.Cloud.GCP.MachineImage.Name
-	case gardenv1beta1.CloudProviderAlicloud:
-		return s.Info.Spec.Cloud.Alicloud.MachineImage.Name
-	case gardenv1beta1.CloudProviderOpenStack:
-		return s.Info.Spec.Cloud.OpenStack.MachineImage.Name
-	}
-	return ""
+	return helper.GetMachineImageNameFromShoot(s.CloudProvider, s.Info)
 }
 
 // ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.

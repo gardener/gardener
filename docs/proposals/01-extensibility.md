@@ -117,7 +117,7 @@ spec:
     constraints:
       minimumVolumeSize: 20Gi
       machineImages:
-      - name: CoreOS
+      - name: coreos
         regions:
         - name: eu-west-1
           ami: ami-32d1474b
@@ -186,7 +186,7 @@ spec:
         apiVersion: aws.cloud.gardener.cloud/v1alpha1
         kind: WorkerPoolConfig
         machineImage:
-          name: CoreOS
+          name: coreos
           ami: ami-d0dcef3
         zones:
         - eu-west-1a

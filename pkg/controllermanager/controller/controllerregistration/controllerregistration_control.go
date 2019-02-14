@@ -15,8 +15,12 @@
 package controllerregistration
 
 import (
+	"encoding/json"
 	"fmt"
-	"time"
+
+	"github.com/gardener/gardener/pkg/operation/common"
+
+	"github.com/gardener/gardener/pkg/utils"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -28,7 +32,6 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	multierror "github.com/hashicorp/go-multierror"
 
 	"github.com/sirupsen/logrus"
@@ -81,12 +84,7 @@ func (c *Controller) reconcileControllerRegistrationKey(key string) error {
 		return err
 	}
 
-	if err := c.controllerRegistrationControl.Reconcile(controllerRegistration); err != nil {
-		return err
-	}
-
-	c.controllerRegistrationQueue.AddAfter(key, 30*time.Second)
-	return nil
+	return c.controllerRegistrationControl.Reconcile(controllerRegistration)
 }
 
 // ControlInterface implements the control logic for updating ControllerRegistrations. It is implemented as an interface to allow
@@ -218,20 +216,37 @@ func (c *defaultControllerRegistrationControl) reconcileSeedInstallations(contro
 		},
 	}
 
+	seedSpecMap, err := convertObjToMap(seed.Spec)
+	if err != nil {
+		return err
+	}
+	registrationSpecMap, err := convertObjToMap(controllerRegistration.Spec)
+	if err != nil {
+		return err
+	}
+
+	var (
+		seedSpecHash         = utils.HashForMap(seedSpecMap)[:16]
+		registrationSpecHash = utils.HashForMap(registrationSpecMap)[:16]
+	)
+
 	if name, ok := installationsMap[seed.Name]; ok {
-		if _, err := kutil.CreateOrPatchControllerInstallation(c.k8sGardenClient.GardenCore(), metav1.ObjectMeta{Name: name}, func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) *gardencorev1alpha1.ControllerInstallation {
+		_, err := kutil.CreateOrPatchControllerInstallation(c.k8sGardenClient.GardenCore(), metav1.ObjectMeta{Name: name}, func(controllerInstallation *gardencorev1alpha1.ControllerInstallation) *gardencorev1alpha1.ControllerInstallation {
+			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.SeedSpecHash, seedSpecHash)
+			kutil.SetMetaDataLabel(&controllerInstallation.ObjectMeta, common.RegistrationSpecHash, registrationSpecHash)
 			controllerInstallation.Spec = installationSpec
 			return controllerInstallation
-		}); err != nil {
-			return err
-		}
-
-		return nil
+		})
+		return err
 	}
 
 	controllerInstallation := &gardencorev1alpha1.ControllerInstallation{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", controllerRegistration.Name),
+			Labels: map[string]string{
+				common.SeedSpecHash:         seedSpecHash,
+				common.RegistrationSpecHash: registrationSpecHash,
+			},
 		},
 		Spec: installationSpec,
 	}
@@ -277,4 +292,18 @@ func (c *defaultControllerRegistrationControl) delete(controllerRegistration *ga
 		return !sets.NewString(cur.Finalizers...).Has(FinalizerName)
 	})
 	return err
+}
+
+func convertObjToMap(in interface{}) (map[string]interface{}, error) {
+	var out map[string]interface{}
+
+	data, err := json.Marshal(in)
+	if err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(data, &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }

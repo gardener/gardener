@@ -17,10 +17,9 @@ package kubernetes
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
-
+	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
+	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardenscheme "github.com/gardener/gardener/pkg/client/garden/clientset/versioned/scheme"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
@@ -36,6 +35,7 @@ import (
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
@@ -119,14 +119,15 @@ func init() {
 	gardenSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
 		gardenscheme.AddToScheme,
+		gardencorescheme.AddToScheme,
 	)
 
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
-		gardenscheme.AddToScheme,
 		machinescheme.AddToScheme,
+		gardenextensionsscheme.AddToScheme,
 	)
 
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
