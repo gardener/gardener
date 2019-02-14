@@ -72,7 +72,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.3
         - 1.12.5
         - 1.11.7
-        - 1.10.12
+        - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -177,7 +177,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.3
         - 1.12.5
         - 1.11.7
-        - 1.10.12
+        - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
@@ -278,7 +278,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.3
         - 1.12.5
         - 1.11.7
-        - 1.10.12
+        - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -454,7 +454,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.3
         - 1.12.5
         - 1.11.7
-        - 1.10.12
+        - 1.10.13
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:

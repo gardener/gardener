@@ -50,7 +50,7 @@ $ go get -u github.com/onsi/ginkgo/ginkgo
 $ go get -u github.com/onsi/gomega
 ```
 
-## Installing `kubectl` and `helm`
+## Installing kubectl and helm
 
 As already mentioned in the introduction, the communication with the Gardener happens via the Kubernetes (Garden) cluster it is targeting. To interact with that cluster, you need to install `kubectl`. Please make sure that the version of `kubectl` is at least `v1.11.x`.
 
@@ -72,7 +72,7 @@ $ brew install kubernetes-helm
 
 On other OS please check the [Helm installation documentation](https://github.com/kubernetes/helm/blob/master/docs/install.md).
 
-## Installing `git`
+## Installing git
 
 We use `git` as VCS which you need to install.
 
@@ -84,7 +84,7 @@ $ brew install git
 
 On other OS, please check the [Git installation documentation](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git).
 
-## Installing `openvpn`
+## Installing openvpn
 
 We use `OpenVPN` to establish network connectivity from the control plane running in the Seed cluster to the Shoot's worker nodes running in private networks.
 To harden the security we need to generate another secret to encrypt the network traffic ([details](https://openvpn.net/index.php/open-source/documentation/howto.html#security)).
@@ -111,6 +111,13 @@ On Mac OS run
 $ brew install iproute2mac
 ```
 
+## Installing yaml2json and jq
+
+```bash
+$ go get -u github.com/bronze1man/yaml2json
+$ brew install jq
+```
+
 ## [Mac OS X only] Install GNU core utilities
 
 When running on Mac OS X you have to install the GNU core utilities:
@@ -120,24 +127,23 @@ $ brew install coreutils gnu-sed
 
 This will create symlinks for the GNU utilities with `g` prefix in `/usr/local/bin`, e.g., `gsed` or `gbase64`. To allow using them without the `g` prefix please put `/usr/local/opt/coreutils/libexec/gnubin` at the beginning of your `PATH` environment variable, e.g., `export PATH=/usr/local/opt/coreutils/libexec/gnubin:$PATH`.
 
-
 ## [Optional] Installing Docker
 
 In case you want to use the "Docker for Mac Kubernetes" or if you want to build Docker images for the Gardener you have to install Docker itself. On Mac OS X, please use [Docker for Mac OS X](https://docs.docker.com/docker-for-mac/) which can be downloaded [here](https://download.docker.com/mac/stable/Docker.dmg).
 
 On other OS, please check the [Docker installation documentation](https://docs.docker.com/install/).
 
-## [Optional] Installing `gcloud` SDK
+## [Optional] Installing gcloud SDK
 
 In case you have to create a new release or a new hotfix of the Gardener you have to push the resulting Docker image into a Docker registry. Currently, we are using the Google Container Registry (this could change in the future). Please follow the official [installation instructions from Google](https://cloud.google.com/sdk/downloads).
 
-## Installing `Vagrant`
+## Installing Vagrant
 
 In case you want to run the `gardener-local-provider` and test the creation of Shoot clusters on your machine you have to [install](https://www.vagrantup.com/downloads.html) Vagrant.
 
 Please make sure that the executable `bsdtar` is available on your system.
 
-## Installing `Virtualbox`
+## Installing Virtualbox
 
 In this local setup a virtualizer is needed. Here, [`Virtualbox`](https://www.virtualbox.org) is used. However, Vagrant supports other virtualizers as well. Please check the [`Vagrant` documentation](https://www.vagrantup.com/docs/index.html) for further details.
 
@@ -183,7 +189,7 @@ The development of the Gardener could happen by targeting any cluster. You basic
 
 The commands below will configure your `minikube` with the absolute minimum resources to launch Gardener API Server and Gardener Controller Manager on a local machine.
 
-#### Start `minikube`
+#### Start minikube
 
 First, start `minikube` with at least Kubernetes v1.11.x. Default cpu and memory settings of minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 4 CPUs and 8192MB memory.
 
@@ -232,7 +238,7 @@ In another terminal, run the following script to install extension controllers -
 
 Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
 
-```yaml
+```bash
 $ make dev-setup-extensions
 
 > Found extension 'os-coreos'. Do you want to install it into your local Gardener setup? (y/n)
@@ -271,7 +277,7 @@ to operate against your local running Gardener API server.
 
 > Note: It may take several seconds until the `minikube` cluster recognizes that the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
 
-#### Configure `minikube` to act as Gardener and Seed Cluster
+#### Configure minikube to act as Gardener and Seed Cluster
 
 The Gardener Local Provider gives you the ability to create Shoot clusters on your local machine without the need to have an account on a Cloud Provider. Please make sure that Vagrant is installed (see section [Installing Vagrant](#installing-vagrant))
 
