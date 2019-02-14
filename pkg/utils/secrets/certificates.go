@@ -297,7 +297,7 @@ func GenerateCertificateAuthorities(k8sClusterClient kubernetes.Interface, exist
 }
 
 // GenerateClusterSecrets try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
-// The function returns a map with all of the successfuly deployed wanted secrets plus those alredy deployed(only from the wantedSecretsList)
+// The function returns a map with all of the successfully deployed wanted secrets plus those already deployed (only from the wantedSecretsList).
 func GenerateClusterSecrets(k8sClusterClient kubernetes.Interface, existingSecretsMap map[string]*corev1.Secret, wantedSecretsList []ConfigInterface, namespace string) (map[string]*corev1.Secret, error) {
 	type secretOutput struct {
 		secret *corev1.Secret

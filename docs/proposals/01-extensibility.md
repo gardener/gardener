@@ -401,7 +401,7 @@ spec:
       EnvironmentFile=/etc/environment
       ExecStart=/bin/sh /var/lib/cloud-config-downloader/download-cloud-config.sh
   files:
-  - path: /var/lib/cloud-config-downloader/kubeconfig
+  - path: /var/lib/cloud-config-downloader/credentials/kubeconfig
     permissions: 0644
     content:
       secretRef:

@@ -223,6 +223,21 @@ func (s *Shoot) UsesCSI() bool {
 	return s.CloudProvider == gardenv1beta1.CloudProviderAlicloud
 }
 
+// ComputeAPIServerURL takes a boolean value identifying whether the component connecting to the API server
+// runs in the Seed cluster <runsInSeed>, and a boolean value <useInternalClusterDomain> which determines whether the
+// internal or the external cluster domain should be used.
+func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) string {
+	if runsInSeed {
+		return common.KubeAPIServerDeploymentName
+	}
+
+	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider == gardenv1beta1.DNSUnmanaged || (dnsProvider != gardenv1beta1.DNSUnmanaged && useInternalClusterDomain) {
+		return s.InternalClusterDomain
+	}
+
+	return *(s.ExternalClusterDomain)
+}
+
 // ComputeTechnicalID determines the technical id of that Shoot which is later used for the name of the
 // namespace and for tagging all the resources created in the infrastructure.
 func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {

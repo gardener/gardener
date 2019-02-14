@@ -63,10 +63,7 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 		machineImageName = b.Shoot.GetMachineImageName()
 	)
 
-	downloaderConfig, err := b.generateDownloaderConfig(machineImageName)
-	if err != nil {
-		return err
-	}
+	downloaderConfig := b.generateDownloaderConfig(machineImageName)
 	originalConfig, err := b.generateOriginalConfig()
 	if err != nil {
 		return err
@@ -113,13 +110,12 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	return nil
 }
 
-func (b *HybridBotanist) generateDownloaderConfig(machineImageName gardenv1beta1.MachineImageName) (map[string]interface{}, error) {
-	downloaderConfig := map[string]interface{}{
+func (b *HybridBotanist) generateDownloaderConfig(machineImageName gardenv1beta1.MachineImageName) map[string]interface{} {
+	return map[string]interface{}{
 		"type":    machineImageName,
 		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
+		"server":  fmt.Sprintf("https://%s", b.Shoot.ComputeAPIServerURL(false, true)),
 	}
-
-	return b.InjectImages(downloaderConfig, b.ShootVersion(), common.KubectlVersion, common.HyperkubeImageName)
 }
 
 func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error) {
