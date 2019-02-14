@@ -216,6 +216,13 @@ etcd-for-test-0   2/2     Running   0          1m
 
 ## Deploy Gardener Helm Chart
 
+Check (current releases)[https://github.com/gardener/gardener/releases] and
+pick a suitable one to install.
+
+```
+GARDENER_RELEASE=0.17.1
+```
+
 gardener-controller-manager will need to maintain some DNS records for Seed.
 So, you need to provide Route53 credentials in the values.yaml file:
 * **global.controller.internalDomain.hostedZoneID**
@@ -238,10 +245,14 @@ SECRET_ACCESS_KEY=$(aws configure get aws_secret_access_key)
 cat <<EOF > gardener-values.yaml
 global:
   apiserver:
+    image:
+      tag: ${GARDENER_RELEASE:?"GARDENER_RELEASE is missing"}
     etcd:
       servers: http://etcd-for-test-client:2379
       useSidecar: false
   controller:
+    image:
+      tag: ${GARDENER_RELEASE:?"GARDENER_RELEASE is missing"}
     internalDomain:
       provider: aws-route53
       hostedZoneID: ${HOSTED_ZONE_ID}
@@ -253,9 +264,12 @@ global:
 EOF
 ```
 
-After creating the `gardener-values.yaml` file, run:
+After creating the `gardener-values.yaml` file, since chart definition in
+master branch can have breaking changes after the release, checkout the
+gardener tag for that release, and run:
 
 ```
+git checkout ${GARDENER_RELEASE:?"GARDENER_RELEASE is missing"}
 helm upgrade --install \
   --namespace garden \
   garden charts/gardener \
