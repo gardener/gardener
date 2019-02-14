@@ -827,10 +827,10 @@ type Alicloud struct {
 type AlicloudVPC struct {
 	// ID is the Alicloud VPC id of an existing VPC.
 	// +optional
-	ID *string ` json:"id"`
+	ID *string `json:"id,omitempty"`
 	// CIDR is a CIDR range for a new VPC.
 	// +optional
-	CIDR *CIDR `json:"cidr"`
+	CIDR *CIDR `json:"cidr,omitempty"`
 }
 
 // AlicloudNetworks holds information about the Kubernetes and infrastructure networks.
