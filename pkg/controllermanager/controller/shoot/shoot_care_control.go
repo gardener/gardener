@@ -200,7 +200,9 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 
 	if err := initShootClients(); err != nil {
 		botanist.Logger.Errorf("Could not initialize Shoot client for garbage collection of shoot %s: %+v", qualifiedShootName, err)
-		botanist.PerformGarbageCollectionSeed()
+		if err := botanist.PerformGarbageCollectionSeed(); err != nil {
+			botanist.Logger.Errorf("Error during seed garbage collection: %+v", err)
+		}
 		botanist.Logger.Debugf("Successfully performed Seed garbage collection for Shoot %s", qualifiedShootName)
 		return
 	}
@@ -208,11 +210,15 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		botanist.PerformGarbageCollectionSeed()
+		if err := botanist.PerformGarbageCollectionSeed(); err != nil {
+			botanist.Logger.Errorf("Error during seed garbage collection: %+v", err)
+		}
 	}()
 	go func() {
 		defer wg.Done()
-		botanist.PerformGarbageCollectionShoot()
+		if err := botanist.PerformGarbageCollectionShoot(); err != nil {
+			botanist.Logger.Errorf("Error during shoot garbage collection: %+v", err)
+		}
 	}()
 	wg.Wait()
 
