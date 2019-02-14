@@ -30,6 +30,8 @@ func updateWorkerZone(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.Cl
 		return
 	case gardenv1beta1.CloudProviderOpenStack:
 		shoot.Spec.Cloud.OpenStack.Zones = []string{zone}
+	case gardenv1beta1.CloudProviderAlicloud:
+		shoot.Spec.Cloud.Alicloud.Zones = []string{zone}
 	default:
 		testLogger.Warnf("unsupported cloudprovider %s", cloudprovider)
 	}
@@ -47,6 +49,8 @@ func updateMachineType(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.C
 			shoot.Spec.Cloud.Azure.Workers[0].MachineType = machinetype
 		case gardenv1beta1.CloudProviderOpenStack:
 			shoot.Spec.Cloud.OpenStack.Workers[0].MachineType = machinetype
+		case gardenv1beta1.CloudProviderAlicloud:
+			shoot.Spec.Cloud.Alicloud.Workers[0].MachineType = machinetype
 		default:
 			testLogger.Warnf("unsupported cloudprovider %s", cloudprovider)
 		}
@@ -65,6 +69,8 @@ func updateAutoscalerMinMax(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1be
 			shoot.Spec.Cloud.Azure.Workers[0].AutoScalerMin = *min
 		case gardenv1beta1.CloudProviderOpenStack:
 			shoot.Spec.Cloud.OpenStack.Workers[0].AutoScalerMin = *min
+		case gardenv1beta1.CloudProviderAlicloud:
+			shoot.Spec.Cloud.Alicloud.Workers[0].AutoScalerMin = *min
 		default:
 			testLogger.Warnf("unsupported cloudprovider %s", cloudprovider)
 		}
@@ -79,6 +85,8 @@ func updateAutoscalerMinMax(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1be
 			shoot.Spec.Cloud.Azure.Workers[0].AutoScalerMax = *max
 		case gardenv1beta1.CloudProviderOpenStack:
 			shoot.Spec.Cloud.OpenStack.Workers[0].AutoScalerMax = *max
+		case gardenv1beta1.CloudProviderAlicloud:
+			shoot.Spec.Cloud.Alicloud.Workers[0].AutoScalerMax = *max
 		default:
 			testLogger.Warnf("unsupported cloudprovider %s", cloudprovider)
 		}
