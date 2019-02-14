@@ -107,8 +107,7 @@ func (b *HybridBotanist) DeployETCD() error {
 
 	// Some cloud botanists do not yet support backup and won't return secret data.
 	if secretData != nil {
-		_, err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, common.BackupSecretName, corev1.SecretTypeOpaque, secretData, true)
-		if err != nil {
+		if _, err := b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, common.BackupSecretName, corev1.SecretTypeOpaque, secretData, true); err != nil {
 			return err
 		}
 	}
@@ -125,6 +124,7 @@ func (b *HybridBotanist) DeployETCD() error {
 	// Some cloud botanists do not yet support backup and won't return backup config data.
 	if backupConfigData != nil {
 		etcdConfig["backup"] = backupConfigData
+		etcdConfig["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-backup"] = utils.HashForMap(backupConfigData)
 	}
 
 	etcd, err := b.Botanist.InjectImages(etcdConfig, b.SeedVersion(), b.ShootVersion(), common.ETCDImageName, common.ETCDBackupRestoreImageName)
@@ -136,7 +136,7 @@ func (b *HybridBotanist) DeployETCD() error {
 		etcd["role"] = role
 		if role == common.EtcdRoleEvents {
 			etcd["backup"] = map[string]interface{}{
-				"storageProvider": "", //No storage provider means no backup
+				"storageProvider": "", // No storage provider means no backup
 			}
 		}
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), fmt.Sprintf("etcd-%s", role), b.Shoot.SeedNamespace, nil, etcd); err != nil {
