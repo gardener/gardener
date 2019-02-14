@@ -269,10 +269,11 @@ var _ = Describe("helper", func() {
 
 	Describe("#ReadShootedSeed", func() {
 		var (
-			shoot              *gardenv1beta1.Shoot
-			defaultReplicas    int32 = 3
-			defaultMinReplicas int32 = 3
-			defaultMaxReplicas int32 = 3
+			shoot                    *gardenv1beta1.Shoot
+			defaultReplicas          int32 = 3
+			defaultMinReplicas       int32 = 3
+			defaultMaxReplicas       int32 = 3
+			defaultMinimumVolumeSize       = "20Gi"
 
 			defaultAPIServerAutoscaler = ShootedSeedAPIServerAutoscaler{
 				MinReplicas: &defaultMinReplicas,
@@ -360,9 +361,26 @@ var _ = Describe("helper", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(shootedSeed).To(Equal(&ShootedSeed{
-				Protected: &falseVar,
-				Visible:   &falseVar,
-				APIServer: &defaultAPIServer,
+				Protected:         &falseVar,
+				Visible:           &falseVar,
+				APIServer:         &defaultAPIServer,
+				MinimumVolumeSize: nil,
+			}))
+		})
+
+		It("should return the min volume size because annotation is set properly", func() {
+			shoot.Annotations = map[string]string{
+				common.ShootUseAsSeed: "true,unprotected,invisible,minimumVolumeSize=20Gi",
+			}
+
+			shootedSeed, err := ReadShootedSeed(shoot)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(shootedSeed).To(Equal(&ShootedSeed{
+				Protected:         &falseVar,
+				Visible:           &falseVar,
+				APIServer:         &defaultAPIServer,
+				MinimumVolumeSize: &defaultMinimumVolumeSize,
 			}))
 		})
 
