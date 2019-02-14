@@ -90,4 +90,4 @@ spec:
       - ReadWriteOnce
       resources:
         requests:
-          storage: 9Gi
+          storage: {{ .Values.fluentd.storage }}
