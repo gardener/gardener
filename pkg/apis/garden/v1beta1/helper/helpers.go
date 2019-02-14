@@ -330,7 +330,7 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		for _, image := range cloudProfile.Spec.AWS.Constraints.MachineImages {
-			if image.Name == name {
+			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
 				for _, regionMapping := range image.Regions {
 					if regionMapping.Name == region {
 						return true, &gardenv1beta1.AWSMachineImage{
@@ -343,28 +343,28 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 		}
 	case gardenv1beta1.CloudProviderAzure:
 		for _, image := range cloudProfile.Spec.Azure.Constraints.MachineImages {
-			if image.Name == name {
+			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
 				ptr := image
 				return true, &ptr, nil
 			}
 		}
 	case gardenv1beta1.CloudProviderGCP:
 		for _, image := range cloudProfile.Spec.GCP.Constraints.MachineImages {
-			if image.Name == name {
+			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
 				ptr := image
 				return true, &ptr, nil
 			}
 		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, image := range cloudProfile.Spec.OpenStack.Constraints.MachineImages {
-			if image.Name == name {
+			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
 				ptr := image
 				return true, &ptr, nil
 			}
 		}
 	case gardenv1beta1.CloudProviderAlicloud:
 		for _, image := range cloudProfile.Spec.Alicloud.Constraints.MachineImages {
-			if image.Name == name {
+			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
 				ptr := image
 				return true, &ptr, nil
 			}
