@@ -62,6 +62,7 @@ func (b *AlicloudBotanist) GenerateCloudProviderConfig() (string, error) {
 	cfg.Global.VswitchID = stateVariables[vswitchID]
 	cfg.Global.AccessKeyID = key
 	cfg.Global.AccessKeySecret = secret
+	cfg.Global.Region = b.Shoot.Info.Spec.Cloud.Region
 
 	cfgJSON, err := json.Marshal(cfg)
 	if err != nil {
