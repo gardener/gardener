@@ -340,6 +340,9 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"shoot": map[string]interface{}{
 				"apiserver": fmt.Sprintf("https://%s", b.APIServerAddress),
 			},
+			"vpa": map[string]interface{}{
+				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),

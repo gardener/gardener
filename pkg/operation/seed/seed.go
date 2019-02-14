@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 
@@ -116,36 +117,60 @@ func List(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninforme
 // each containing their specific configuration for the creation of certificates (server/client), RSA key pairs, basic
 // authentication credentials, etc.
 func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*secrets.Certificate) ([]secrets.ConfigInterface, error) {
-	var (
-		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
-	)
 
 	if len(certificateAuthorities) != len(wantedCertificateAuthorities) {
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
 
-	secretList := []secrets.ConfigInterface{
-		&secrets.CertificateSecretConfig{
-			Name: "kibana-tls",
+	secretList := []secrets.ConfigInterface{}
 
-			CommonName:   "kibana",
-			Organization: []string{fmt.Sprintf("%s:logging:ingress", garden.GroupName)},
-			DNSNames:     []string{kibanaHost},
-			IPAddresses:  nil,
+	// Logging feature gate
+	var (
+		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
+	)
 
-			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[caSeed],
-		},
-		// Secret definition for monitoring
-		&secrets.BasicAuthSecretConfig{
-			Name:   "seed-logging-ingress-credentials",
-			Format: secrets.BasicAuthFormatNormal,
+	loggingEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
+	if loggingEnabled {
+		secretList = append(secretList,
+			&secrets.CertificateSecretConfig{
+				Name: "kibana-tls",
 
-			Username:       "admin",
-			PasswordLength: 32,
-		},
+				CommonName:   "kibana",
+				Organization: []string{fmt.Sprintf("%s:logging:ingress", garden.GroupName)},
+				DNSNames:     []string{kibanaHost},
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[caSeed],
+			},
+			// Secret definition for monitoring
+			&secrets.BasicAuthSecretConfig{
+				Name:   "seed-logging-ingress-credentials",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:       "admin",
+				PasswordLength: 32,
+			},
+		)
 	}
 
+	// VPA feature gate
+	vpaEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.VPA)
+	if vpaEnabled {
+		secretList = append(secretList,
+			&secrets.CertificateSecretConfig{
+				Name: "vpa-tls-certs",
+
+				CommonName:   "vpa-webhook.garden.svc",
+				Organization: nil,
+				DNSNames:     []string{"vpa-webhook.garden.svc", "vpa-webhook"},
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerCert,
+				SigningCA: certificateAuthorities[caSeed],
+			},
+		)
+	}
 	return secretList, nil
 }
 
@@ -177,7 +202,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	if err != nil {
 		return err
 	}
-
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.GardenNamespace,
@@ -213,6 +237,9 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		common.KibanaImageName,
 		common.PauseContainerImageName,
 		common.PrometheusImageName,
+		common.VpaAdmissionControllerImageName,
+		common.VpaRecommenderImageName,
+		common.VpaUpdaterImageName,
 	}, k8sSeedClient.Version(), k8sSeedClient.Version())
 	if err != nil {
 		return err
@@ -237,7 +264,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
 		}
 
-		// currently the generated certificates are only used by the kibana so they are all disabled/enabled when the logging feature is disabled/enabled
 		deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
 		if err != nil {
 			return err
@@ -245,8 +271,8 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 
 		credentials := deployedSecretsMap["seed-logging-ingress-credentials"]
 		basicAuth = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
-
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
+
 	} else {
 		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -271,6 +297,42 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		}
 	} else {
 		if err := k8sSeedClient.DeleteDeployment(common.GardenNamespace, common.CertManagerResourceName); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	// VPA feature gate
+	var (
+		vpaEnabled        = controllermanagerfeatures.FeatureGate.Enabled(features.VPA)
+		vpaPodAnnotations map[string]interface{}
+	)
+
+	if vpaEnabled {
+		existingSecrets, err := k8sSeedClient.ListSecrets(common.GardenNamespace, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		for _, secret := range existingSecrets.Items {
+			secretObj := secret
+			existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
+		}
+
+		deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
+		if err != nil {
+			return err
+		}
+		jsonString, err := json.Marshal(deployedSecretsMap["vpa-tls-certs"].Data)
+		if err != nil {
+			return err
+		}
+
+		vpaPodAnnotations = map[string]interface{}{
+			"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
+		}
+
+	} else {
+		if err := common.DeleteVpa(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -355,6 +417,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			"clusterissuer": clusterIssuer,
 		},
 		"alertmanager": alertManagerConfig,
+		"vpa": map[string]interface{}{
+			"enabled":        vpaEnabled,
+			"podAnnotations": vpaPodAnnotations,
+		},
 	}, applierOptions)
 }
 

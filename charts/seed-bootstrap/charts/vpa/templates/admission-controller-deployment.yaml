@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpa-webhook
+  namespace: garden
+spec:
+  ports:
+    - port: 443
+      targetPort: 8000
+  selector:
+    app: vpa-admission-controller
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-admission-controller
+  namespace: garden
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: vpa-admission-controller
+  namespace: garden
+  labels:
+    app: vpa-admission-controller
+{{ toYaml .Values.vpa.labels | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-admission-controller
+{{ toYaml .Values.vpa.labels | indent 6 }}
+  template:
+    metadata:
+      annotations:
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: vpa-admission-controller
+{{ toYaml .Values.vpa.labels | indent 8 }}
+    spec:
+      serviceAccountName: vpa-admission-controller
+      containers:
+      - name: admission-controller
+        args:
+        - ./admission-controller
+        - --v=4
+        - --stderrthreshold=info
+        - --client-ca-file=/etc/tls-certs/ca.crt
+        - --tls-cert-file=/etc/tls-certs/tls.crt
+        - --tls-private-key=/etc/tls-certs/tls.key
+        image: {{ index .Values.global.images "vpa-admission-controller" }}
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+          - name: vpa-tls-certs
+            mountPath: "/etc/tls-certs"
+            readOnly: true
+        resources:
+          limits:
+            cpu: 200m
+            memory: 500Mi
+          requests:
+            cpu: 50m
+            memory: 200Mi
+        ports:
+        - containerPort: 8000
+      volumes:
+        - name: vpa-tls-certs
+          secret:
+            secretName: vpa-tls-certs

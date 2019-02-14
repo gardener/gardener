@@ -25,6 +25,7 @@ var (
 	featureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
 		features.Logging:               {Default: false, PreRelease: utilfeature.Alpha},
 		features.CertificateManagement: {Default: false, PreRelease: utilfeature.Alpha},
+		features.VPA:                   {Default: false, PreRelease: utilfeature.Alpha},
 	}
 )
 

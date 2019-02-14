@@ -1,0 +1,11 @@
+global:
+  images:
+    vpa-admission-controller: image-repository:image-tag
+    vpa-recommender: image-repository:image-tag
+    vpa-updater: image-repository:image-tag
+
+vpa:
+  podAnnotations: {}
+  enabled: true
+  labels:
+    garden.sapcloud.io/role: vpa

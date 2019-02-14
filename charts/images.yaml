@@ -197,3 +197,17 @@ images:
   sourceRepository: github.com/gardener/cert-broker
   repository: eu.gcr.io/gardener-project/gardener/cert-broker
   tag: "0.2.0"
+
+# VPA
+- name: vpa-admission-controller
+  sourceRepository: github.com/kubernetes/autoscaler
+  repository: k8s.gcr.io/vpa-admission-controller
+  tag: "0.3.1"
+- name: vpa-recommender
+  sourceRepository: github.com/kubernetes/autoscaler
+  repository: k8s.gcr.io/vpa-recommender
+  tag: "0.3.1"
+- name: vpa-updater
+  sourceRepository: github.com/kubernetes/autoscaler
+  repository: k8s.gcr.io/vpa-updater
+  tag: "0.3.1"
