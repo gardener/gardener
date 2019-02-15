@@ -22,12 +22,36 @@ spec:
       EnvironmentFile=/etc/environment
       ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
   files:
-  - path: /var/lib/cloud-config-downloader/kubeconfig
+  - path: /var/lib/cloud-config-downloader/credentials/kubeconfig
     permissions: 0644
     content:
       secretRef:
         name: cloud-config-downloader
         dataKey: kubeconfig
+  - path: /var/lib/cloud-config-downloader/credentials/server
+    permissions: 0644
+    content:
+      inline:
+        encoding: b64
+        data: {{ .Values.server | b64enc }}
+  - path: /var/lib/cloud-config-downloader/credentials/ca.crt
+    permissions: 0644
+    content:
+      secretRef:
+        name: cloud-config-downloader
+        dataKey: ca.crt
+  - path: /var/lib/cloud-config-downloader/credentials/client.crt
+    permissions: 0644
+    content:
+      secretRef:
+        name: cloud-config-downloader
+        dataKey: cloud-config-downloader.crt
+  - path: /var/lib/cloud-config-downloader/credentials/client.key
+    permissions: 0644
+    content:
+      secretRef:
+        name: cloud-config-downloader
+        dataKey: cloud-config-downloader.key
   - path: /var/lib/cloud-config-downloader/download-cloud-config.sh
     permissions: 0744
     content:

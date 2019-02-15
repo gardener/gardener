@@ -508,10 +508,6 @@ const (
 	// CertBrokerResourceName is the name of the Cert-Broker resources.
 	CertBrokerResourceName = "cert-broker"
 
-	// KubectlVersion specifies the version of kubectl that is used by the scripts bootstrapping shoot worker nodes,
-	// e.g. the cloud-config-downloader script.
-	KubectlVersion = "1.12.3"
-
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
 

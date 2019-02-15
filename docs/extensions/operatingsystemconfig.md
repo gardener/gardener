@@ -7,9 +7,12 @@ MCM does not have any restrictions regarding supported operating systems as it d
 Consequently, Gardener needs to provide this information when interacting with the machine-controller-manager.
 This means that basically every operating system is possible to be used as long as there is some implementation that generates the OS-specific configuration in order to provision/bootstrap the machines.
 
-:warning: Currently, there are two requirements:
+:warning: Currently, there are a few requirements:
+
 1) The operating system must have built-in [Docker](https://www.docker.com/) support.
 2) The operating system must have [systemd](https://www.freedesktop.org/wiki/Software/systemd/) support.
+3) The operating system must have [`wget`](https://www.gnu.org/software/wget/) pre-installed.
+
 The reasons for that will become evident later.
 
 ## What does the user-data bootstrapping the machines contain?
