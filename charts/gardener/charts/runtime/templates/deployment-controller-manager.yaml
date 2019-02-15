@@ -51,7 +51,7 @@ spec:
         env:
         {{- if .Values.global.controller.imageVectorOverwrite }}
         - name: IMAGEVECTOR_OVERWRITE
-          value: /charts/images_overwrite.yaml
+          value: /charts_overwrite/images_overwrite.yaml
         {{- end }}
         {{- range $index, $value := .Values.global.controller.env }}
         {{- if not (empty $value) }}
@@ -88,7 +88,7 @@ spec:
         {{- end }}
         {{- if .Values.global.controller.imageVectorOverwrite }}
         - name: gardener-controller-manager-imagevector-overwrite
-          mountPath: /charts/images_overwrite.yaml
+          mountPath: /charts_overwrite
           readOnly: true
         {{- end }}
         - name: gardener-controller-manager-config
