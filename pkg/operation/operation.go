@@ -297,29 +297,6 @@ func (o *Operation) ReportBackupInfrastructureProgress(stats *flow.Stats) {
 	}
 }
 
-// InjectImages injects images from the image vector into the provided <values> map.
-func (o *Operation) InjectImages(values map[string]interface{}, k8sVersionRuntime, k8sVersionTarget string, images ...string) (map[string]interface{}, error) {
-	var (
-		copy = make(map[string]interface{})
-		i    = make(map[string]interface{})
-	)
-
-	for k, v := range values {
-		copy[k] = v
-	}
-
-	for _, imageName := range images {
-		image, err := o.ImageVector.FindImage(imageName, k8sVersionRuntime, k8sVersionTarget)
-		if err != nil {
-			return nil, err
-		}
-		i[imageName] = image.String()
-	}
-
-	copy["images"] = i
-	return copy, nil
-}
-
 // SeedVersion is a shorthand for the kubernetes version of the K8sSeedClient.
 func (o *Operation) SeedVersion() string {
 	return o.K8sSeedClient.Version()
