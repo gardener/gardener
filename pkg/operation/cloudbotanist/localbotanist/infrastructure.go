@@ -36,7 +36,7 @@ func (b *LocalBotanist) DeployInfrastructure() error {
 		"secretName":    b.Operation.Shoot.ComputeCloudConfigSecretName("local"),
 		"cloudProvider": "local",
 	}
-	config, err := b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	config, err := b.ImageVector.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}

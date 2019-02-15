@@ -19,19 +19,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 // ReadImageVector reads the image.yaml in the chart directory, unmarshals it
 // into a []*ImageSource type and returns it.
-func ReadImageVector() (ImageVector, error) {
-	path := filepath.Join(common.ChartPath, "images.yaml")
-
+func ReadImageVector(path string) (ImageVector, error) {
 	vector, err := readImageVector(path)
 	if err != nil {
 		return nil, err
@@ -128,6 +124,29 @@ func (v ImageVector) FindImages(names []string, k8sVersionRuntime, k8sVersionTar
 		images[imageName] = image.String()
 	}
 	return images, nil
+}
+
+// InjectImages injects images from a given image vector into the provided <values> map.
+func (v ImageVector) InjectImages(values map[string]interface{}, k8sVersionRuntime, k8sVersionTarget string, images ...string) (map[string]interface{}, error) {
+	var (
+		copy = make(map[string]interface{})
+		i    = make(map[string]interface{})
+	)
+
+	for k, v := range values {
+		copy[k] = v
+	}
+
+	for _, imageName := range images {
+		image, err := v.FindImage(imageName, k8sVersionRuntime, k8sVersionTarget)
+		if err != nil {
+			return nil, err
+		}
+		i[imageName] = image.String()
+	}
+
+	copy["images"] = i
+	return copy, nil
 }
 
 // ToImage applies the given <targetK8sVersion> to the source to produce an output image.

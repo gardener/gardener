@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"path/filepath"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -115,7 +116,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		panic(err)
 	}
 
-	imageVector, err := imagevector.ReadImageVector()
+	imageVector, err := imagevector.ReadImageVector(filepath.Join(common.ChartPath, "images.yaml"))
 	if err != nil {
 		panic(err)
 	}

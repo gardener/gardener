@@ -202,7 +202,7 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		defaultValues["replicas"] = *deployment.Spec.Replicas
 	}
 
-	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
+	values, err := b.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
 	if err != nil {
 		return err
 	}
@@ -246,7 +246,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		"workerPools": workerPools,
 	}
 
-	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.ClusterAutoscalerImageName)
+	values, err := b.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.ClusterAutoscalerImageName)
 	if err != nil {
 		return err
 	}
@@ -336,15 +336,15 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
-	alertManager, err := b.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
+	alertManager, err := b.ImageVector.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
 	if err != nil {
 		return err
 	}
-	grafana, err := b.InjectImages(grafanaConfig, b.SeedVersion(), b.ShootVersion(), common.GrafanaImageName, common.BusyboxImageName)
+	grafana, err := b.ImageVector.InjectImages(grafanaConfig, b.SeedVersion(), b.ShootVersion(), common.GrafanaImageName, common.BusyboxImageName)
 	if err != nil {
 		return err
 	}
-	prometheus, err := b.InjectImages(prometheusConfig, b.SeedVersion(), b.ShootVersion(),
+	prometheus, err := b.ImageVector.InjectImages(prometheusConfig, b.SeedVersion(), b.ShootVersion(),
 		common.PrometheusImageName,
 		common.ConfigMapReloaderImageName,
 		common.VPNSeedImageName,
@@ -353,11 +353,11 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsSeed, err := b.InjectImages(kubeStateMetricsSeedConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
+	kubeStateMetricsSeed, err := b.ImageVector.InjectImages(kubeStateMetricsSeedConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsShoot, err := b.InjectImages(kubeStateMetricsShootConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
+	kubeStateMetricsShoot, err := b.ImageVector.InjectImages(kubeStateMetricsShootConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
 	}
@@ -463,7 +463,7 @@ func (b *Botanist) DeploySeedLogging() error {
 		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 	)
 
-	images, err := b.InjectImages(map[string]interface{}{}, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
+	images, err := b.ImageVector.InjectImages(map[string]interface{}{}, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
 		common.ElasticsearchImageName,
 		common.CuratorImageName,
 		common.KibanaImageName,
@@ -560,7 +560,7 @@ func (b *Botanist) DeployCertBroker() error {
 		},
 	}
 
-	certBroker, err := b.InjectImages(certBrokerConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(), common.CertBrokerImageName)
+	certBroker, err := b.ImageVector.InjectImages(certBrokerConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(), common.CertBrokerImageName)
 	if err != nil {
 		return nil
 	}

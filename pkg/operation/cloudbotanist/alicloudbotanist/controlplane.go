@@ -105,7 +105,7 @@ func (b *AlicloudBotanist) GenerateCloudControllerManagerConfig() (map[string]in
 	conf := map[string]interface{}{
 		"configureRoutes": false,
 	}
-	newConf, err := b.InjectImages(conf, b.SeedVersion(), b.ShootVersion(), common.AlicloudControllerManagerImageName)
+	newConf, err := b.ImageVector.InjectImages(conf, b.SeedVersion(), b.ShootVersion(), common.AlicloudControllerManagerImageName)
 	if err != nil {
 		return conf, chartName, err
 	}
@@ -123,7 +123,7 @@ func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 		"enabled": true,
 	}
 
-	return b.InjectImages(conf, b.SeedVersion(), b.ShootVersion(),
+	return b.ImageVector.InjectImages(conf, b.SeedVersion(), b.ShootVersion(),
 		common.CSIAttacherImageName,
 		common.CSIDriverRegistrarImageName,
 		common.CSIPluginAlicloudImageName,
