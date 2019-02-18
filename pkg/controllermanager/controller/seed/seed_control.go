@@ -236,6 +236,14 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		return err
 	}
 
+	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
+	if err := seedObj.CheckMinimumK8SVersion(); err != nil {
+		conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
+		c.updateSeedStatus(seed, *conditionSeedAvailable)
+		seedLogger.Error(err.Error())
+		return err
+	}
+
 	// Bootstrap the Seed cluster.
 	if c.config.Controllers.Seed.ReserveExcessCapacity != nil {
 		seedObj.MustReserveExcessCapacity(*c.config.Controllers.Seed.ReserveExcessCapacity)
@@ -247,13 +255,6 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		return err
 	}
 
-	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
-	if err := seedObj.CheckMinimumK8SVersion(); err != nil {
-		conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		c.updateSeedStatus(seed, *conditionSeedAvailable)
-		seedLogger.Error(err.Error())
-		return err
-	}
 	conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionTrue, "Passed", "all checks passed")
 	c.updateSeedStatus(seed, *conditionSeedAvailable)
 

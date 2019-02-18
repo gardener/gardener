@@ -473,7 +473,11 @@ func (s *Seed) GetIngressFQDN(subDomain, shootName, projectName string) string {
 
 // CheckMinimumK8SVersion checks whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 func (s *Seed) CheckMinimumK8SVersion() error {
-	minSeedVersion := "1.11" // CRD status subresources
+	// We require CRD status subresources for the extension controllers that we install into the seeds.
+	// CRD status subresources are alpha in 1.10 and can be enabled with the `CustomResourceSubresources` feature gate.
+	// They are enabled by default in 1.11. We allow 1.10 but users must make sure that the feature gate is enabled in
+	// this case.
+	minSeedVersion := "1.10"
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(s.Secret, client.Options{
 		Scheme: kubernetes.SeedScheme,
