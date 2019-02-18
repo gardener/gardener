@@ -242,5 +242,7 @@ spec:
                 type: string
               type: array
           type: object
+{{- if semverCompare ">= 1.11-0" .Capabilities.KubeVersion.GitVersion }}
       required:
         - spec
+{{- end }}
