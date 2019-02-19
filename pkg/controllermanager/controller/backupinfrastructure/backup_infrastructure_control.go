@@ -160,7 +160,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	if backupInfrastructure.DeletionTimestamp == nil &&
 		!nextReconcileScheduleReached(obj, syncPeriod) &&
 		!kutil.HasMetaDataAnnotation(&obj.ObjectMeta, common.BackupInfrastructureOperation, common.BackupInfrastructureReconcile) {
-		logger.Logger.Infof("Skip reconciliation for BackupInfrastructure %s. Last successful operation happend less than %q ago and reconcile annotation is not set.", key, syncPeriod)
+		logger.Logger.Infof("Skip reconciliation for BackupInfrastructure %s. Last successful operation happened less than %q ago and reconcile annotation is not set.", key, syncPeriod)
 		return nil
 	}
 
