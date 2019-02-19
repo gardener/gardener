@@ -163,7 +163,6 @@ func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, optio
 		if err := c.applyObject(ctx, obj, options); err != nil {
 			return err
 		}
-		obj = nil
 	}
 	return nil
 }

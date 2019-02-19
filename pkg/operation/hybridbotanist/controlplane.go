@@ -55,10 +55,12 @@ func init() {
 
 // getResourcesForAPIServer returns the cpu and memory requirements for API server based on nodeCount
 func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
-	cpuRequest := "0m"
-	memoryRequest := "0Mi"
-	cpuLimit := "0m"
-	memoryLimit := "0Mi"
+	var (
+		cpuRequest    string
+		memoryRequest string
+		cpuLimit      string
+		memoryLimit   string
+	)
 
 	switch {
 	case nodeCount <= 2:
