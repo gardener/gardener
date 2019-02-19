@@ -18,11 +18,11 @@ images:
 - name: etcd
   sourceRepository: github.com/coreos/etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.10
+  tag: v3.3.12
 - name: etcd-backup-restore
   sourceRepository: github.com/gardener/etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.4.1"
+  tag: "0.5.0"
 - name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
