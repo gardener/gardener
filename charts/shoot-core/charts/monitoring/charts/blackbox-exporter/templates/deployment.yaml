@@ -43,6 +43,10 @@ spec:
         volumeMounts:
         - name: blackbox-exporter-config
           mountPath: /etc/blackbox_exporter
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "3"
       volumes:
       - name: blackbox-exporter-config
         configMap:
