@@ -249,6 +249,48 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
+
+		// Migration from in-tree CoreOS/operating system support to out-of-tree: We have to rename the old machine image names so that
+		// they fit with the new extension controllers.
+		// This code can be removed in a futher version.
+		var (
+			needsUpdate = false
+			cloud       = shoot.Spec.Cloud
+		)
+
+		switch {
+		case cloud.Alicloud != nil:
+			if machineImage := cloud.Alicloud.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
+				needsUpdate = true
+				newShoot.Spec.Cloud.Alicloud.MachineImage.Name = gardenv1beta1.MachineImageCoreOSAlicloud
+			}
+		case cloud.AWS != nil:
+			if machineImage := cloud.AWS.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
+				needsUpdate = true
+				newShoot.Spec.Cloud.AWS.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
+			}
+		case cloud.Azure != nil:
+			if machineImage := cloud.Azure.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
+				needsUpdate = true
+				newShoot.Spec.Cloud.Azure.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
+			}
+		case cloud.GCP != nil:
+			if machineImage := cloud.GCP.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
+				needsUpdate = true
+				newShoot.Spec.Cloud.GCP.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
+			}
+		case cloud.OpenStack != nil:
+			if machineImage := cloud.OpenStack.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
+				needsUpdate = true
+				newShoot.Spec.Cloud.OpenStack.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
+			}
+		}
+
+		if needsUpdate {
+			if _, err := c.k8sGardenClient.Garden().Garden().Shoots(newShoot.Namespace).Update(newShoot); err != nil {
+				panic(fmt.Sprintf("Failed to update shoot machine image [%v]: %v ", newShoot.Name, err.Error()))
+			}
+		}
 	}
 
 	logger.Logger.Info("Shoot controller initialized.")
