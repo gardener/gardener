@@ -180,23 +180,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 
 	var updateMachineImage func(s *gardenv1beta1.Cloud)
 	if machineImageFound {
-		switch operation.Shoot.CloudProvider {
-		case gardenv1beta1.CloudProviderAWS:
-			image := machineImage.(*gardenv1beta1.AWSMachineImage)
-			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = image }
-		case gardenv1beta1.CloudProviderAzure:
-			image := machineImage.(*gardenv1beta1.AzureMachineImage)
-			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.Azure.MachineImage = image }
-		case gardenv1beta1.CloudProviderGCP:
-			image := machineImage.(*gardenv1beta1.GCPMachineImage)
-			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.GCP.MachineImage = image }
-		case gardenv1beta1.CloudProviderOpenStack:
-			image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
-			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = image }
-		case gardenv1beta1.CloudProviderAlicloud:
-			image := machineImage.(*gardenv1beta1.AlicloudMachineImage)
-			updateMachineImage = func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = image }
-		}
+		updateMachineImage = helper.UpdateMachineImage(operation.Shoot.CloudProvider, machineImage)
 	}
 
 	// Check if the CloudProfile contains a newer Kubernetes patch version.

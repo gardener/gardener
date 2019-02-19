@@ -327,14 +327,16 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 		return false, nil, err
 	}
 
+	currentMachineImageName := machineImageToString(name)
+
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		for _, image := range cloudProfile.Spec.AWS.Constraints.MachineImages {
-			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
+			if machineImageToString(image.Name) == currentMachineImageName {
 				for _, regionMapping := range image.Regions {
 					if regionMapping.Name == region {
 						return true, &gardenv1beta1.AWSMachineImage{
-							Name: name,
+							Name: image.Name,
 							AMI:  regionMapping.AMI,
 						}, nil
 					}
@@ -343,28 +345,30 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 		}
 	case gardenv1beta1.CloudProviderAzure:
 		for _, image := range cloudProfile.Spec.Azure.Constraints.MachineImages {
-			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
+			if machineImageToString(image.Name) == currentMachineImageName {
 				ptr := image
 				return true, &ptr, nil
 			}
 		}
 	case gardenv1beta1.CloudProviderGCP:
 		for _, image := range cloudProfile.Spec.GCP.Constraints.MachineImages {
-			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
+			if machineImageToString(image.Name) == currentMachineImageName {
 				ptr := image
 				return true, &ptr, nil
 			}
 		}
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, image := range cloudProfile.Spec.OpenStack.Constraints.MachineImages {
-			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
+			if machineImageToString(image.Name) == currentMachineImageName {
 				ptr := image
 				return true, &ptr, nil
 			}
 		}
 	case gardenv1beta1.CloudProviderAlicloud:
 		for _, image := range cloudProfile.Spec.Alicloud.Constraints.MachineImages {
-			if strings.ToLower(string(image.Name)) == strings.ToLower(string(name)) {
+			// The OR-case can be removed in a further version of Gardener. We need it to migrate from in-tree OS support
+			// to out-of-tree extensions.
+			if name := machineImageToString(image.Name); name == currentMachineImageName || (currentMachineImageName == "CoreOS" && name == "coreos-alicloud") {
 				ptr := image
 				return true, &ptr, nil
 			}
@@ -374,6 +378,33 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 	}
 
 	return false, nil, nil
+}
+
+// UpdateMachineImage updates the machine image for the given cloud provider.
+func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage interface{}) func(*gardenv1beta1.Cloud) {
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		image := machineImage.(*gardenv1beta1.AWSMachineImage)
+		return func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = image }
+	case gardenv1beta1.CloudProviderAzure:
+		image := machineImage.(*gardenv1beta1.AzureMachineImage)
+		return func(s *gardenv1beta1.Cloud) { s.Azure.MachineImage = image }
+	case gardenv1beta1.CloudProviderGCP:
+		image := machineImage.(*gardenv1beta1.GCPMachineImage)
+		return func(s *gardenv1beta1.Cloud) { s.GCP.MachineImage = image }
+	case gardenv1beta1.CloudProviderOpenStack:
+		image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
+		return func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = image }
+	case gardenv1beta1.CloudProviderAlicloud:
+		image := machineImage.(*gardenv1beta1.AlicloudMachineImage)
+		return func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = image }
+	}
+
+	return nil
+}
+
+func machineImageToString(name gardenv1beta1.MachineImageName) string {
+	return strings.ToLower(string(name))
 }
 
 // DetermineLatestKubernetesVersion finds the latest Kubernetes patch version in the <cloudProfile> compared

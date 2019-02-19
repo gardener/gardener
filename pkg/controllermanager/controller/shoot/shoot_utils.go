@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"fmt"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -95,7 +96,7 @@ func shootIsFailed(shoot *gardenv1beta1.Shoot) bool {
 	return lastOperation != nil && lastOperation.State == gardenv1beta1.ShootLastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration
 }
 
-// ConditionStatusToStatus converts the given CondtionStatus to a shoot label Status.
+// ConditionStatusToStatus converts the given ConditionStatus to a shoot label Status.
 func ConditionStatusToStatus(status gardenv1beta1.ConditionStatus) Status {
 	switch status {
 	case gardenv1beta1.ConditionTrue:

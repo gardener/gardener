@@ -21,6 +21,7 @@ import (
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
@@ -31,15 +32,21 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
+
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/robfig/cron"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -253,44 +260,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		// Migration from in-tree CoreOS/operating system support to out-of-tree: We have to rename the old machine image names so that
 		// they fit with the new extension controllers.
 		// This code can be removed in a futher version.
-		var (
-			needsUpdate = false
-			cloud       = shoot.Spec.Cloud
-		)
-
-		switch {
-		case cloud.Alicloud != nil:
-			if machineImage := cloud.Alicloud.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
-				needsUpdate = true
-				newShoot.Spec.Cloud.Alicloud.MachineImage.Name = gardenv1beta1.MachineImageCoreOSAlicloud
-			}
-		case cloud.AWS != nil:
-			if machineImage := cloud.AWS.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
-				needsUpdate = true
-				newShoot.Spec.Cloud.AWS.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
-			}
-		case cloud.Azure != nil:
-			if machineImage := cloud.Azure.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
-				needsUpdate = true
-				newShoot.Spec.Cloud.Azure.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
-			}
-		case cloud.GCP != nil:
-			if machineImage := cloud.GCP.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
-				needsUpdate = true
-				newShoot.Spec.Cloud.GCP.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
-			}
-		case cloud.OpenStack != nil:
-			if machineImage := cloud.OpenStack.MachineImage; machineImage != nil && machineImage.Name == "CoreOS" {
-				needsUpdate = true
-				newShoot.Spec.Cloud.OpenStack.MachineImage.Name = gardenv1beta1.MachineImageCoreOS
-			}
-		}
-
-		if needsUpdate {
-			if _, err := c.k8sGardenClient.Garden().Garden().Shoots(newShoot.Namespace).Update(newShoot); err != nil {
-				panic(fmt.Sprintf("Failed to update shoot machine image [%v]: %v ", newShoot.Name, err.Error()))
-			}
-		}
+		utilruntime.Must(errors.Wrapf(c.migrateMachineImageNames(newShoot), "Failed to migrate machine image for shoot %q", shoot.Name))
 	}
 
 	logger.Logger.Info("Shoot controller initialized.")
@@ -374,4 +344,39 @@ func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterf
 		return c.shootSeedQueue
 	}
 	return c.shootQueue
+}
+
+func (c *Controller) migrateMachineImageNames(shoot *gardenv1beta1.Shoot) error {
+	if shoot.DeletionTimestamp != nil {
+		return nil
+	}
+
+	cloudProfile, err := c.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Lister().Get(shoot.Spec.Cloud.Profile)
+	if err != nil {
+		return err
+	}
+	cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
+	if err != nil {
+		return err
+	}
+
+	machineImageName := helper.GetMachineImageNameFromShoot(cloudProvider, shoot)
+	machineImageFound, machineImage, err := helper.DetermineMachineImage(*cloudProfile, machineImageName, shoot.Spec.Cloud.Region)
+	if err != nil {
+		return err
+	}
+
+	if !machineImageFound {
+		return nil
+	}
+
+	if updateMachineImage := helper.UpdateMachineImage(cloudProvider, machineImage); updateMachineImage != nil {
+		_, err = kutil.TryUpdateShoot(c.k8sGardenClient.Garden(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
+			updateMachineImage(&s.Spec.Cloud)
+			return s, nil
+		})
+		return err
+	}
+
+	return nil
 }
