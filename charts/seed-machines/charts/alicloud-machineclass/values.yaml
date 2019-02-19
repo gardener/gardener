@@ -1,11 +1,11 @@
 # machineClasses:
 # - name: class-1
 #   imageID: coreos_1745_7_0_64_30G_alibase_20180705.vhd
-#   instanceType: ecs.n1.medium 
+#   instanceType: ecs.n1.medium
 #   region: cn-hangzhou
-#   zoneID: cn-hangzhou-e 
-#   securityGroupID: sg-1234567890 
-#   vSwitchID: vsw-1234567890 
+#   zoneID: cn-hangzhou-e
+#   securityGroupID: sg-1234567890
+#   vSwitchID: vsw-1234567890
 #   systemDisk:
 #     category: cloud_efficiency # cloud, cloud_efficiency, cloud_ssd, ephemeral_ssd
 #     size: 30 # 20-500

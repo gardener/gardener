@@ -340,10 +340,6 @@ func validateMachineImageNames(names []garden.MachineImageName, fldPath *field.P
 			allErrs = append(allErrs, field.Duplicate(idxPath, name))
 		}
 		imageNames[name] = true
-
-		if name != garden.MachineImageCoreOS {
-			allErrs = append(allErrs, field.NotSupported(idxPath, name, []string{string(garden.MachineImageCoreOS)}))
-		}
 	}
 
 	return allErrs
@@ -432,10 +428,6 @@ func validateAlicloudMachineImages(machineImages []garden.AlicloudMachineImage, 
 	}
 	for i, image := range machineImages {
 		idxPath := fldPath.Index(i)
-
-		if image.Name != garden.MachineImageCoreOSAlicloud {
-			allErrs = append(allErrs, field.NotSupported(idxPath.Child("name"), image.Name, []string{string(garden.MachineImageCoreOSAlicloud)}))
-		}
 
 		if len(image.ID) == 0 {
 			allErrs = append(allErrs, field.Required(idxPath.Child("id"), string(image.Name)))

@@ -120,13 +120,13 @@ var _ = Describe("helper", func() {
 					Cloud: gardenv1beta1.Cloud{
 						AWS: &gardenv1beta1.AWSCloud{
 							MachineImage: &gardenv1beta1.AWSMachineImage{
-								Name: gardenv1beta1.MachineImageCoreOS,
+								Name: gardenv1beta1.MachineImageName("some-machineimage"),
 							},
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageCoreOS,
+			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
 		Entry("Azure",
 			gardenv1beta1.CloudProviderAzure,
@@ -135,13 +135,13 @@ var _ = Describe("helper", func() {
 					Cloud: gardenv1beta1.Cloud{
 						Azure: &gardenv1beta1.AzureCloud{
 							MachineImage: &gardenv1beta1.AzureMachineImage{
-								Name: gardenv1beta1.MachineImageCoreOS,
+								Name: gardenv1beta1.MachineImageName("some-machineimage"),
 							},
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageCoreOS,
+			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
 		Entry("GCP",
 			gardenv1beta1.CloudProviderGCP,
@@ -150,13 +150,13 @@ var _ = Describe("helper", func() {
 					Cloud: gardenv1beta1.Cloud{
 						GCP: &gardenv1beta1.GCPCloud{
 							MachineImage: &gardenv1beta1.GCPMachineImage{
-								Name: gardenv1beta1.MachineImageCoreOS,
+								Name: gardenv1beta1.MachineImageName("some-machineimage"),
 							},
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageCoreOS,
+			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
 		Entry("OpenStack",
 			gardenv1beta1.CloudProviderOpenStack,
@@ -165,13 +165,13 @@ var _ = Describe("helper", func() {
 					Cloud: gardenv1beta1.Cloud{
 						OpenStack: &gardenv1beta1.OpenStackCloud{
 							MachineImage: &gardenv1beta1.OpenStackMachineImage{
-								Name: gardenv1beta1.MachineImageCoreOS,
+								Name: gardenv1beta1.MachineImageName("some-machineimage"),
 							},
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageCoreOS,
+			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
 		Entry("Alicloud",
 			gardenv1beta1.CloudProviderAlicloud,
@@ -180,13 +180,13 @@ var _ = Describe("helper", func() {
 					Cloud: gardenv1beta1.Cloud{
 						Alicloud: &gardenv1beta1.Alicloud{
 							MachineImage: &gardenv1beta1.AlicloudMachineImage{
-								Name: gardenv1beta1.MachineImageCoreOSAlicloud,
+								Name: gardenv1beta1.MachineImageName("some-machineimage"),
 							},
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageCoreOSAlicloud,
+			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
 	)
 

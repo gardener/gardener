@@ -276,7 +276,7 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.AWSMachineImageMapping{
 							{
-								Name: garden.MachineImageCoreOS,
+								Name: garden.MachineImageName("some-machineimage"),
 								Regions: []garden.AWSRegionalMachineImage{
 									{
 										Name: "europe",
@@ -332,7 +332,7 @@ var _ = Describe("validator", func() {
 				}
 				zones        = []string{"europe-a"}
 				machineImage = &garden.AWSMachineImage{
-					Name: garden.MachineImageCoreOS,
+					Name: garden.MachineImageName("some-machineimage"),
 					AMI:  "ami-12345678",
 				}
 				awsCloud = &garden.AWSCloud{}
@@ -577,9 +577,9 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.AzureMachineImage{
 							{
-								Name:      garden.MachineImageCoreOS,
-								Publisher: "CoreOS",
-								Offer:     "CoreOS",
+								Name:      garden.MachineImageName("some-machineimage"),
+								Publisher: "some-image",
+								Offer:     "some-image",
 								SKU:       "Beta",
 								Version:   "1.2.3",
 							},
@@ -818,7 +818,7 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.GCPMachineImage{
 							{
-								Name:  garden.MachineImageCoreOS,
+								Name:  garden.MachineImageName("some-machineimage"),
 								Image: "core-1.2.3",
 							},
 						},
@@ -1041,7 +1041,7 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.OpenStackMachineImage{
 							{
-								Name:  garden.MachineImageCoreOS,
+								Name:  garden.MachineImageName("some-machineimage"),
 								Image: "core-1.2.3",
 							},
 						},
@@ -1273,8 +1273,8 @@ var _ = Describe("validator", func() {
 						},
 						MachineImages: []garden.AlicloudMachineImage{
 							{
-								Name: garden.MachineImageCoreOS,
-								ID:   "coreos_1745_7_0_64_30G_alibase_20180705.vhd",
+								Name: garden.MachineImageName("some-machineimage"),
+								ID:   "abcd.vhd",
 							},
 						},
 						MachineTypes: []garden.AlicloudMachineType{

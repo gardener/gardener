@@ -200,7 +200,7 @@ type GCPMachineImage struct {
 	// Name is the name of the image.
 	Name MachineImageName
 	// Image is the technical name of the image. It contains the image name and the Google Cloud project.
-	// Example: projects/coreos-cloud/global/images/coreos-stable-1576-5-0-v20180105
+	// Example: projects/<name>/global/images/version23
 	Image string
 }
 

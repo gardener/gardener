@@ -201,7 +201,7 @@ type GCPMachineImage struct {
 	// Name is the name of the image.
 	Name MachineImageName `json:"name"`
 	// Image is the technical name of the image. It contains the image name and the Google Cloud project.
-	// Example: projects/coreos-cloud/global/images/coreos-stable-1576-5-0-v20180105
+	// Example: projects/<name>/global/images/version23
 	Image string `json:"image"`
 }
 
@@ -375,10 +375,12 @@ type MachineImageName string
 
 const (
 	// MachineImageCoreOS is a constant for the CoreOS machine image.
+	// deprecated
 	MachineImageCoreOS MachineImageName = "coreos"
 	// MachineImageCoreOSAlicloud is a constant for the CoreOS machine image used by Alicloud.
 	// The Alicloud CoreOS image is modified (e.g., it does not support cloud-config, and is therefore
 	// treated like another OS).
+	// deprecated
 	MachineImageCoreOSAlicloud MachineImageName = "coreos-alicloud"
 )
 
