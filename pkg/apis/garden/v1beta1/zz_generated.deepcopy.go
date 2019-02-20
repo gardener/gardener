@@ -1316,6 +1316,11 @@ func (in *GCPNetworks) DeepCopyInto(out *GCPNetworks) {
 		*out = make([]CIDR, len(*in))
 		copy(*out, *in)
 	}
+	if in.Internal != nil {
+		in, out := &in.Internal, &out.Internal
+		*out = new(CIDR)
+		**out = **in
+	}
 	return
 }
 

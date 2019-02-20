@@ -14,6 +14,7 @@ spec:
       networks:
       # vpc:
       #   name: my-vpc
+        internal: 10.250.112.0/22
         workers: ['10.250.0.0/19']
       workers:
       - name: cpu-worker

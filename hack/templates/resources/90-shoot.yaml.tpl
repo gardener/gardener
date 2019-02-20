@@ -156,6 +156,7 @@ spec:
       # vpc:
       #   name: my-vpc
       % endif
+        internal: ${value("spec.cloud.gcp.networks.internal", "10.250.112.0/22")}
         workers: ${value("spec.cloud.gcp.networks.workers", ["10.250.0.0/19"])}
       workers:<% workers=value("spec.cloud.gcp.workers", []) %>
       % if workers != []:

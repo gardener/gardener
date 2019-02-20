@@ -930,6 +930,9 @@ type GCPNetworks struct {
 	VPC *GCPVPC `json:"vpc,omitempty"`
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
 	Workers []CIDR `json:"workers"`
+	// Internal is a private subnet (used for internal load balancers).
+	// +optional
+	Internal *CIDR `json:"internal,omitempty"`
 }
 
 // GCPVPC indicates whether to use an existing VPC or create a new one.

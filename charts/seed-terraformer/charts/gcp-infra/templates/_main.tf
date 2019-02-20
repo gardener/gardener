@@ -32,6 +32,14 @@ resource "google_compute_subnetwork" "subnetwork-nodes" {
   region        = "{{ required "google.region is required" .Values.google.region }}"
 }
 
+{{ if .Values.networks.internal -}}
+resource "google_compute_subnetwork" "subnetwork-internal" {
+  name          = "{{ required "clusterName is required" .Values.clusterName }}-internal"
+  ip_cidr_range = "{{ required "networks.internal is required" .Values.networks.internal }}"
+  network       = "{{ required "vpc.name is required" .Values.vpc.name }}"
+  region        = "{{ required "google.region is required" .Values.google.region }}"
+}
+{{- end}}
 //=====================================================================
 //= Firewall
 //=====================================================================
@@ -121,4 +129,9 @@ output "service_account_email" {
 output "subnet_nodes" {
   value = "${google_compute_subnetwork.subnetwork-nodes.name}"
 }
+{{ if .Values.networks.internal -}}
+output "subnet_internal" {
+  value = "${google_compute_subnetwork.subnetwork-internal.name}"
+}
+{{- end}}
 {{- end -}}

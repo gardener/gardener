@@ -74,6 +74,14 @@ type OpenStackMachineClassListerExpansion interface{}
 // OpenStackMachineClassNamespaceLister.
 type OpenStackMachineClassNamespaceListerExpansion interface{}
 
+// PacketMachineClassListerExpansion allows custom methods to be added to
+// PacketMachineClassLister.
+type PacketMachineClassListerExpansion interface{}
+
+// PacketMachineClassNamespaceListerExpansion allows custom methods to be added to
+// PacketMachineClassNamespaceLister.
+type PacketMachineClassNamespaceListerExpansion interface{}
+
 // ScaleListerExpansion allows custom methods to be added to
 // ScaleLister.
 type ScaleListerExpansion interface{}

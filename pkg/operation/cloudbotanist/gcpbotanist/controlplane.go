@@ -19,12 +19,14 @@ import (
 	"path"
 
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 )
 
 const cloudProviderConfigTemplate = `
 [Global]
 project-id=%q
 network-name=%q
+%v
 multizone=true
 local-zone=%q
 token-url=nil
@@ -40,10 +42,28 @@ func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 		networkName = b.Shoot.SeedNamespace
 	}
 
+	var (
+		subnetID       = "subnet_internal"
+		subNetworkName = ""
+	)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	if err != nil {
+		return "", err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(subnetID)
+	if err != nil {
+		if !terraformer.IsVariablesNotFoundError(err) {
+			return "", err
+		}
+		b.Logger.Debugf("Skipping explicit GCP subnet creation for internal loadbalancers because subnet_internal variable has not been found in the Terraform state.")
+	} else {
+		subNetworkName = fmt.Sprintf("subnetwork-name=%q", stateVariables[subnetID])
+	}
 	return fmt.Sprintf(
 		cloudProviderConfigTemplate,
 		b.Project,
 		networkName,
+		subNetworkName,
 		b.Shoot.Info.Spec.Cloud.GCP.Zones[0],
 		b.Shoot.SeedNamespace,
 	), nil
