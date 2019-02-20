@@ -174,9 +174,26 @@ func determineSeed(shoot *garden.Shoot, seedLister gardenlisters.SeedLister, sho
 
 	// Determine all candidate seed cluster matching the shoot's cloud and region.
 	for _, seed := range seedList {
-		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) && hasDisjointedNetworks(seed, shoot) {
+		if seed.DeletionTimestamp == nil && seed.Spec.Cloud.Profile == shoot.Spec.Cloud.Profile && seed.Spec.Cloud.Region == shoot.Spec.Cloud.Region && seed.Spec.Visible != nil && *seed.Spec.Visible && verifySeedAvailability(seed) {
 			candidates = append(candidates, seed)
 		}
+	}
+
+	if candidates == nil {
+		return nil, errors.New("no adequate seed cluster found for this cloud profile and region")
+	}
+
+	old := candidates
+	candidates = nil
+
+	for _, seed := range old {
+		if hasDisjointedNetworks(seed, shoot) {
+			candidates = append(candidates, seed)
+		}
+	}
+
+	if candidates == nil {
+		return nil, errors.New("no adequate seed cluster found with disjoint network")
 	}
 
 	var (
@@ -190,10 +207,6 @@ func determineSeed(shoot *garden.Shoot, seedLister gardenlisters.SeedLister, sho
 			bestCandidate = seed
 			min = &numberOfManagedShoots
 		}
-	}
-
-	if bestCandidate == nil {
-		return nil, errors.New("no adequate seed cluster found for this cloud profile and region")
 	}
 
 	return bestCandidate, nil
