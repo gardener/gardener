@@ -25,6 +25,7 @@ podAnnotations: {}
 replicas: 1
 apiserverServiceIP: 100.10.10.10
 port: 9090
+vpnEndpointIP: 192.168.123.1
 
 allowedMetrics:
   alertManager:
@@ -171,6 +172,9 @@ allowedMetrics:
   - probe_http_duration_seconds
   - probe_success
   - probe_http_status_code
+  vpn:
+  - probe_http_status_code
+  - probe_success
 
 seed:
   apiserver: https://api.foo.bar
