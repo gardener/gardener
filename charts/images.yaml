@@ -37,7 +37,7 @@ images:
 - name: kube-addon-manager
   sourceRepository: github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager
   repository: k8s.gcr.io/kube-addon-manager
-  tag: v8.8
+  tag: v9.0
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
