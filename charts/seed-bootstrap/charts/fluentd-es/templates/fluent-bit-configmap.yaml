@@ -382,34 +382,46 @@ data:
     [PARSER]
         Name        addonmanagerParser
         Format      regex
-        Regex       ^(?<severity>.[^:]*):\s(?<log>.*)
+        Regex       ^(?<severity>[A-Z]+):\s(?<log>.*)
 
   modify_severity.lua: |-
     function cb_modify(tag, timestamp, record)
+      local severity = record["severity"]
 
-        local modified = false
-
-        for key, val in pairs(record) do
-          if key == "severity" then 
-            if val:upper() == "I" or val:upper() == "INFO" then
-                record[key] = "INF"
-                modified = true
-            elseif val:upper() == "W" or val:upper() == "WARN" or val:upper() == "WARNING" then
-                record[key] = "WARN"
-                modified = true
-            elseif val:upper() == "E" or val:upper() == "ERR" or val:upper() == "ERROR" then
-                record[key] = "ERR"
-                modified = true
-            elseif val:upper() == "D" or val:upper() == "DBG" or val:upper() == "DEBUG" then
-                record[key] = "DBG"
-                modified = true
-            end
-          end
-        end
-   
-        if modified then
-            return 1, timestamp, record
-        end
-
+      if severity == nil or severity == "" then
         return 0, 0, 0
+      end
+
+      severity = trim(severity):upper()
+      local modified = false
+
+      if severity == "I" or severity == "INF" or severity == "INFO" then
+        record["severity"] = "INFO"
+        modified = true
+      elseif severity == "W" or severity == "WRN" or severity == "WARN" or severity == "WARNING" then
+        record["severity"] = "WARN"
+        modified = true
+      elseif severity == "E" or severity == "ERR" or severity == "ERROR" then
+        record["severity"] = "ERR"
+        modified = true
+      elseif severity == "D" or severity == "DBG" or severity == "DEBUG" then
+        record["severity"] = "DBG"
+        modified = true
+      elseif severity == "N" or severity == "NOTICE" then
+        record["severity"] = "NOTICE"
+        modified = true
+      elseif severity == "F" or severity == "FATAL" then
+        record["severity"] = "FATAL"
+        modified = true
+      end
+
+      if not modified then
+        return 0, 0, 0
+      end
+
+      return 1, timestamp, record
+    end
+
+    function trim(s)
+      return (s:gsub("^%s*(.-)%s*$", "%1"))
     end
