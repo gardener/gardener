@@ -16,6 +16,7 @@ spec:
   - pathPrefix: /var/lib/calico
   - pathPrefix: /opt/cni/bin
   - pathPrefix: /etc/cni/net.d
+  - pathPrefix: /run/xtables.lock
   runAsUser:
     rule: RunAsAny
   seLinux:
