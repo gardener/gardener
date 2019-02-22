@@ -138,7 +138,7 @@ Based on the resources discussed in GEP-1 the following table provides informati
 
 | Status             | Resource                | Providers                                                               |
 |--------------------|-------------------------|-------------------------------------------------------------------------|
-| :x:                | `DNS`                   |  alicloud-dns<br>aws-route53<br>google-clouddns<br> openstack-designate |
+| :x:                | `DNS`                   |  alicloud-dns<br>aws-route53<br>azure-dns<br>google-clouddns<br> openstack-designate |
 | :x:                | `BackupInfrastructure`  | aws<br>azure<br>gcp<br>openstack                                        |
 | :x:                | `Generic`               | certmgmt                                                                |
 | :x:                | `Infrastructure`        | alicloud<br>aws<br>azure<br>gcp<br>openstack<br>local (discontinued)    |
