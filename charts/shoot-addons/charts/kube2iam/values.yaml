@@ -38,8 +38,8 @@ resources:
     cpu: 10m
     memory: 16Mi
   limits:
-    cpu: 50m
-    memory: 32Mi
+    cpu: 80m
+    memory: 128Mi
 
 ## Strategy for DaemonSet updates (requires Kubernetes 1.6+)
 ## Ref: https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
