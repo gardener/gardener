@@ -125,7 +125,7 @@ images:
 - name: nginx-ingress-controller
   sourceRepository: github.com/kubernetes/ingress-nginx
   repository: quay.io/kubernetes-ingress-controller/nginx-ingress-controller
-  tag: "0.21.0"
+  tag: "0.22.0"
 - name: ingress-default-backend
   sourceRepository: github.com/gardener/ingress-default-backend
   repository: eu.gcr.io/gardener-project/gardener/ingress-default-backend
