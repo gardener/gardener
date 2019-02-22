@@ -64,8 +64,8 @@ spec:
         - --etcd-cafile=/srv/kubernetes/etcd/ca/ca.crt
         - --etcd-certfile=/srv/kubernetes/etcd/client/tls.crt
         - --etcd-keyfile=/srv/kubernetes/etcd/client/tls.key
-        - --etcd-servers=https://{{ .Values.etcdMainServiceFqdn }}:{{ .Values.etcdServicePort }}
-        - --etcd-servers-overrides=/events#https://{{ .Values.etcdEventsServiceFqdn }}:{{ .Values.etcdServicePort }}
+        - --etcd-servers=https://etcd-main-client:{{ .Values.etcdServicePort }}
+        - --etcd-servers-overrides=/events#https://etcd-events-client:{{ .Values.etcdServicePort }}
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
         - --kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt
