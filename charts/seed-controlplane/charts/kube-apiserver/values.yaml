@@ -61,8 +61,6 @@ images:
   vpn-seed: image-repository:image-tag
   blackbox-exporter: image-repository:image-tag
 
-etcdMainServiceFqdn: etcd-main.svc
-etcdEventsServiceFqdn: etcd-events.svc
 etcdServicePort: 2379
 
 apiServerResources:

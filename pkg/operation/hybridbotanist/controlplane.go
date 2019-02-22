@@ -210,10 +210,8 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 // kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
 	defaultValues := map[string]interface{}{
-		"etcdServicePort":       2379,
-		"etcdMainServiceFqdn":   fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleMain, b.Shoot.SeedNamespace),
-		"etcdEventsServiceFqdn": fmt.Sprintf("etcd-%s-client.%s.svc", common.EtcdRoleEvents, b.Shoot.SeedNamespace),
-		"kubernetesVersion":     b.Shoot.Info.Spec.Kubernetes.Version,
+		"etcdServicePort":   2379,
+		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"shootNetworks": map[string]interface{}{
 			"service": b.Shoot.GetServiceNetwork(),
 		},
