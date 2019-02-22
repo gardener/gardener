@@ -258,8 +258,8 @@ data:
         Match               kubernetes.*
         Kube_URL            https://kubernetes.default.svc.cluster.local:443
         Buffer_Size         1M
-        Merge_Log           On
         K8S-Logging.Parser  On
+        Annotations         Off
         tls.verify          Off
 
     [FILTER]
@@ -386,14 +386,33 @@ data:
 
   modify_severity.lua: |-
     function cb_modify(tag, timestamp, record)
-      local severity = record["severity"]
+      local removed_labels = cb_modify_remove_labels(record)
+      local unified_severity = cb_modify_unify_severity(record)
 
-      if severity == nil or severity == "" then
+      if (not removed_labels) and (not unified_severity) then
         return 0, 0, 0
       end
 
-      severity = trim(severity):upper()
+      return 1, timestamp, record
+    end
+
+    function cb_modify_remove_labels(record)
+      if record["kubernetes"] == nil or record["kubernetes"]["labels"] == nil then
+        return false
+      end
+
+      record["kubernetes"]["labels"] = nil
+      return true
+    end
+
+    function cb_modify_unify_severity(record)
       local modified = false
+      local severity = record["severity"]
+      if severity == nil or severity == "" then
+        return modified
+      end
+
+      severity = trim(severity):upper()
 
       if severity == "I" or severity == "INF" or severity == "INFO" then
         record["severity"] = "INFO"
@@ -415,11 +434,7 @@ data:
         modified = true
       end
 
-      if not modified then
-        return 0, 0, 0
-      end
-
-      return 1, timestamp, record
+      return modified
     end
 
     function trim(s)

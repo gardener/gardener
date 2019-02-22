@@ -174,7 +174,7 @@ images:
 - name: fluent-bit
   sourceRepository: github.com/fluent/fluent-bit
   repository: fluent/fluent-bit
-  tag: "1.0.3"
+  tag: "1.0.4"
 - name: elasticsearch-oss
   sourceRepository: github.com/elastic/elasticsearch-docker
   repository: docker.elastic.co/elasticsearch/elasticsearch-oss
