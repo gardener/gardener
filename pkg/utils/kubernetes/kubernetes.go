@@ -16,7 +16,6 @@ func SetMetaDataLabel(meta *metav1.ObjectMeta, key, value string) {
 	if meta.Labels == nil {
 		meta.Labels = make(map[string]string)
 	}
-
 	meta.Labels[key] = value
 }
 
