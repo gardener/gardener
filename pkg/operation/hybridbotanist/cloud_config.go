@@ -86,7 +86,7 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 
 		go func(worker gardenv1beta1.Worker) {
 			defer wg.Done()
-			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImageName, downloaderConfig, originalConfig, worker)
+			cloudConfig, err := b.computeOperatingSystemConfigsForWorker(machineTypes, machineImageName, utils.MergeMaps(downloaderConfig, nil), utils.MergeMaps(originalConfig, nil), worker)
 			results <- &oscOutput{worker.Name, cloudConfig, err}
 		}(worker)
 	}
