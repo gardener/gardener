@@ -17,6 +17,8 @@ package terraformer
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
@@ -228,4 +230,15 @@ func (t *Terraformer) ensureCleanedUp() error {
 		return err
 	}
 	return t.waitForCleanEnvironment(ctx)
+}
+
+// GenerateVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
+// can be injected into the Terraformer job/pod manifest. The keys of the <keyValueMap> will be prefixed with
+// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
+func GenerateVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
+	out := make(map[string]string, len(keyValueMap))
+	for key, value := range keyValueMap {
+		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
+	}
+	return out
 }

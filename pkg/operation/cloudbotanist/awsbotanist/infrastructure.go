@@ -93,7 +93,7 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"SECRET_ACCESS_KEY": SecretAccessKey,
 	})
@@ -219,7 +219,7 @@ func (b *AWSBotanist) DestroyBackupInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AWSBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"SECRET_ACCESS_KEY": SecretAccessKey,
 	})
