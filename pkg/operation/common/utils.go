@@ -230,17 +230,6 @@ func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string)
 	return loadBalancerIngress, serviceStatusIngress, nil
 }
 
-// GenerateTerraformVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
-// can be injected into the Terraformer job/pod manifest. The keys of the <keyValueMap> will be prefixed with
-// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
-func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
-	out := make(map[string]string)
-	for key, value := range keyValueMap {
-		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
-	}
-	return out
-}
-
 // ExtractShootName returns Shoot resource name extracted from provided <backupInfrastructureName>.
 func ExtractShootName(backupInfrastructureName string) string {
 	tokens := strings.Split(backupInfrastructureName, "-")

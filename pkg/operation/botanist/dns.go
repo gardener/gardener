@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/gcpbotanist"
 	"github.com/gardener/gardener/pkg/operation/cloudbotanist/openstackbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -197,7 +198,7 @@ func (b *Botanist) GenerateTerraformRoute53VariablesEnvironment(purposeInternalD
 		"ACCESS_KEY_ID":     awsbotanist.AccessKeyID,
 		"SECRET_ACCESS_KEY": awsbotanist.SecretAccessKey,
 	}
-	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
+	return terraformer.GenerateVariablesEnvironment(secret, keyValueMap), nil
 }
 
 // GenerateTerraformAlicloudDNSVariablesEnvironment generates the environment containing the credentials which
@@ -214,7 +215,7 @@ func (b *Botanist) GenerateTerraformAlicloudDNSVariablesEnvironment(purposeInter
 		"ACCESS_KEY_SECRET": alicloudbotanist.AccessKeySecret,
 	}
 
-	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
+	return terraformer.GenerateVariablesEnvironment(secret, keyValueMap), nil
 }
 
 // GenerateTerraformCloudDNSVariablesEnvironment generates the environment containing the credentials which
@@ -255,7 +256,7 @@ func (b *Botanist) GenerateTerraformDesignateDNSVariablesEnvironment(purposeInte
 		"OS_PASSWORD":         openstackbotanist.Password,
 	}
 
-	return common.GenerateTerraformVariablesEnvironment(secret, keyValueMap), nil
+	return terraformer.GenerateVariablesEnvironment(secret, keyValueMap), nil
 }
 
 // GenerateTerraformDNSConfig creates the Terraform variables and the Terraform config (for the DNS record)
