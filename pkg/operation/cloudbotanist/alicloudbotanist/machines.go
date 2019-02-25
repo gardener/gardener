@@ -94,6 +94,9 @@ func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, op
 					fmt.Sprintf("kubernetes.io/cluster/%s", b.Shoot.SeedNamespace):     "1",
 					fmt.Sprintf("kubernetes.io/role/worker/%s", b.Shoot.SeedNamespace): "1",
 				},
+				"secret": map[string]interface{}{
+					UserData: b.Shoot.CloudConfigMap[worker.Name].Downloader.Content,
+				},
 				"keyPairName": stateVariables[keyPairName],
 			}
 
@@ -111,11 +114,8 @@ func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, op
 			})
 
 			machineClassSpec["name"] = className
-			machineClassSpec["secret"] = map[string]interface{}{
-				UserData:        b.Shoot.CloudConfigMap[worker.Name].Downloader.Content,
-				AccessKeyID:     secretData[machinev1alpha1.AlicloudAccessKeyID],
-				AccessKeySecret: secretData[machinev1alpha1.AlicloudAccessKeySecret],
-			}
+			machineClassSpec["secret"].(map[string]interface{})[AccessKeyID] = string(secretData[machinev1alpha1.AlicloudAccessKeyID])
+			machineClassSpec["secret"].(map[string]interface{})[AccessKeySecret] = string(secretData[machinev1alpha1.AlicloudAccessKeySecret])
 
 			machineClasses = append(machineClasses, machineClassSpec)
 

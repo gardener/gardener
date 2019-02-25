@@ -41,8 +41,8 @@ function docker-preload() {
 docker-preload "{{ $name }}" "{{ $image }}"
 {{ end }}
 
-cat << 'EOF' > "$PATH_CLOUDCONFIG"
-{{ .worker.cloudConfig }}
+cat << 'EOF' | base64 -d > "$PATH_CLOUDCONFIG"
+{{ .worker.cloudConfig | b64enc }}
 EOF
 
 if [[ ! -f "$DIR_KUBELET/kubeconfig-real" ]]; then
