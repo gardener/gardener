@@ -163,6 +163,8 @@ func GetMachineImageNameFromShoot(cloudProvider gardenv1beta1.CloudProvider, sho
 		return shoot.Spec.Cloud.Alicloud.MachineImage.Name
 	case gardenv1beta1.CloudProviderOpenStack:
 		return shoot.Spec.Cloud.OpenStack.MachineImage.Name
+	case gardenv1beta1.CloudProviderLocal:
+		return "coreos"
 	}
 	return ""
 }

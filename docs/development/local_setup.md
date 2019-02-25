@@ -234,17 +234,6 @@ I0201 15:39:43.750573   84958 serve.go:89] Serving securely on [::]:8443
 [...]
 ```
 
-In another terminal, run the following script to install extension controllers - make sure that you install all of them required for your local development.
-
-Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
-
-```bash
-$ make dev-setup-extensions
-
-> Found extension 'os-coreos'. Do you want to install it into your local Gardener setup? (y/n)
-...
-```
-
 Now you are ready to launch the Gardener Controller Manager
 
 ```bash
@@ -265,6 +254,18 @@ time="2018-02-20T13:24:39+02:00" level=info msg="Seed controller initialized."
 ```
 
 :information_source: Your username is inferred from the user you are logged in with on your machine. The version is incremented based on the content of the `VERSION` file. The version is important for the Gardener in order to identify which Gardener version has last operated a Shoot cluster.
+
+In another terminal, run the following script to install extension controllers - make sure that you install all of them required for your local development.
+
+Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
+
+```bash
+$ make dev-setup-extensions
+
+> Found extension 'os-coreos'. Do you want to install it into your local Gardener setup? (y/n)
+...
+```
+
 
 The Gardener should now be ready to operate on Shoot resources. You can use
 

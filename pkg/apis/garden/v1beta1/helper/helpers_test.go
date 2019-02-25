@@ -188,6 +188,17 @@ var _ = Describe("helper", func() {
 			},
 			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
+		Entry("Local",
+			gardenv1beta1.CloudProviderLocal,
+			&gardenv1beta1.Shoot{
+				Spec: gardenv1beta1.ShootSpec{
+					Cloud: gardenv1beta1.Cloud{
+						Local:&gardenv1beta1.Local{},
+					},
+				},
+			},
+			gardenv1beta1.MachineImageName("coreos"),
+		),
 	)
 
 	DescribeTable("#ShootWantsClusterAutoscaler",
