@@ -38,8 +38,8 @@ case $(k8s_env) in
           -ldflags "$ld_flags" \
           cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
-          --tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "kubernetes-admin"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \
-          --tls-private-key-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "kubernetes-admin"}}{{index .user "client-key-data"}}{{end}}{{end}}' --raw | base64 -d) \
+          --tls-cert-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-certificate-data\"}}{{end}}{{end}}" --raw | base64 -d) \
+          --tls-private-key-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-key-data\"}}{{end}}{{end}}" --raw | base64 -d) \
           $apiserver_flags
         ;;
     $DOCKER_FOR_DESKTOP)
@@ -48,8 +48,8 @@ case $(k8s_env) in
           -ldflags "$ld_flags" \
           cmd/gardener-apiserver/main.go \
           --etcd-servers http://localhost:32379 \
-          --tls-cert-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-certificate-data"}}{{end}}{{end}}' --raw | base64 -d) \
-          --tls-private-key-file <(kubectl config view -o go-template='{{range .users}}{{if eq .name "docker-for-desktop"}}{{index .user "client-key-data"}}{{end}}{{end}}' --raw | base64 -d) \
+          --tls-cert-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-certificate-data\"}}{{end}}{{end}}" --raw | base64 -d) \
+          --tls-private-key-file <(kubectl config view -o go-template="{{range .users}}{{if eq .name \""$(k8s_username)"\"}}{{index .user \"client-key-data\"}}{{end}}{{end}}" --raw | base64 -d) \
           $apiserver_flags
         ;;
     $MINIKUBE)
