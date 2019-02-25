@@ -27,6 +27,7 @@ spec:
         checksum/secret-storageclasses: {{ include (print $.Template.BasePath "/storageclasses.yaml") . | sha256sum }}
         checksum/secret-core-addons: {{ include (print $.Template.BasePath "/core-addons.yaml") . | sha256sum }}
         checksum/secret-optional-addons: {{ include (print $.Template.BasePath "/optional-addons.yaml") . | sha256sum }}
+        checksum/secret-cloud-config: {{ include (print $.Template.BasePath "/cloud-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
