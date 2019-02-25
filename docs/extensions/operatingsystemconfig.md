@@ -120,6 +120,7 @@ The way how this is done is specific to the generated operating system config (e
 Consequently, besides the generated OS config, the extension controller must also provide a command for re-application an updated version of the user-data.
 As visible in the mentioned examples the command requires a path to the user-data file.
 Gardener will provide the path to the file in the `OperatingSystemConfig`s `.spec.reloadConfigFilePath` field (only if `.spec.purpose=reconcile`).
+As soon as Gardener detects that the user data has changed it will reload the systemd daemon and restart all the units provided in the `.status.units[]` list (see below example). The same logic applies during the very first application of the whole configuration.
 
 After generation extension controllers are asked to store their OS config inside a `Secret` (as it might contain confidential data) in the same namespace.
 The secret's `.data` could look like this:

@@ -89,15 +89,13 @@ if ! diff "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD" >/dev/null; then
   echo "Seen newer cloud config version"
   if {{ .worker.command }}; then
     echo "Successfully applied new cloud config version"
-    if [ "$(stat -c%s "$PATH_CLOUDCONFIG_OLD")" -ne "0" ]; then
-      systemctl daemon-reload
+    systemctl daemon-reload
 {{- range $name := (required ".worker.units is required" .worker.units) }}
 {{- if ne $name "docker.service" }}
-      systemctl restart {{ $name }}
+    systemctl restart {{ $name }}
 {{- end }}
 {{- end }}
-      echo "Successfully restarted all units referenced in the cloud config."
-    fi
+    echo "Successfully restarted all units referenced in the cloud config."
     cp "$PATH_CLOUDCONFIG" "$PATH_CLOUDCONFIG_OLD"
   fi
 fi
