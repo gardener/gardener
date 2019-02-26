@@ -18,16 +18,13 @@ import (
 	"fmt"
 	"time"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	. "github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	. "github.com/gardener/gardener/pkg/utils/validation/gomega"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	gomegatypes "github.com/onsi/gomega/types"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -36,6 +33,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
+	gomegatypes "github.com/onsi/gomega/types"
 )
 
 var _ = Describe("validation", func() {
@@ -2175,9 +2178,9 @@ var _ = Describe("validation", func() {
 						Namespace: "garden",
 					},
 					Networks: garden.SeedNetworks{
-						Nodes:    garden.CIDR("10.250.0.0/16"),
-						Pods:     garden.CIDR("100.96.0.0/11"),
-						Services: garden.CIDR("100.64.0.0/13"),
+						Nodes:    gardencore.CIDR("10.250.0.0/16"),
+						Pods:     gardencore.CIDR("100.96.0.0/11"),
+						Services: gardencore.CIDR("100.64.0.0/13"),
 					},
 				},
 			}
@@ -2214,9 +2217,9 @@ var _ = Describe("validation", func() {
 			seed.Spec.IngressDomain = "invalid_dns1123-subdomain"
 			seed.Spec.SecretRef = corev1.SecretReference{}
 			seed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    garden.CIDR("invalid-cidr"),
-				Pods:     garden.CIDR("300.300.300.300/300"),
-				Services: garden.CIDR("invalid-cidr"),
+				Nodes:    gardencore.CIDR("invalid-cidr"),
+				Pods:     gardencore.CIDR("300.300.300.300/300"),
+				Services: gardencore.CIDR("invalid-cidr"),
 			}
 
 			errorList := ValidateSeed(seed)
@@ -2260,9 +2263,9 @@ var _ = Describe("validation", func() {
 			// Pods CIDR overlaps with Nodes network
 			// Services CIDR overlaps with Nodes and Pods
 			seed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    garden.CIDR("10.0.0.0/8"),   // 10.0.0.0 -> 10.255.255.255
-				Pods:     garden.CIDR("10.0.1.0/24"),  // 10.0.1.0 -> 10.0.1.255
-				Services: garden.CIDR("10.0.1.64/26"), // 10.0.1.64 -> 10.0.1.127
+				Nodes:    gardencore.CIDR("10.0.0.0/8"),   // 10.0.0.0 -> 10.255.255.255
+				Pods:     gardencore.CIDR("10.0.1.0/24"),  // 10.0.1.0 -> 10.0.1.255
+				Services: gardencore.CIDR("10.0.1.64/26"), // 10.0.1.64 -> 10.0.1.127
 			}
 
 			errorList := ValidateSeed(seed)
@@ -2285,9 +2288,9 @@ var _ = Describe("validation", func() {
 		It("should fail updating immutable fields", func() {
 			newSeed := prepareSeedForUpdate(seed)
 			newSeed.Spec.Networks = garden.SeedNetworks{
-				Nodes:    garden.CIDR("10.1.0.0/16"),
-				Pods:     garden.CIDR("10.2.0.0/16"),
-				Services: garden.CIDR("10.3.1.64/26"),
+				Nodes:    gardencore.CIDR("10.1.0.0/16"),
+				Pods:     gardencore.CIDR("10.2.0.0/16"),
+				Services: gardencore.CIDR("10.3.1.64/26"),
 			}
 			errorList := ValidateSeedUpdate(newSeed, seed)
 
@@ -2596,20 +2599,20 @@ var _ = Describe("validation", func() {
 			hostedZoneID = "ABCDEF1234"
 			domain       = "my-cluster.example.com"
 
-			nodeCIDR    = garden.CIDR("10.250.0.0/16")
-			podCIDR     = garden.CIDR("100.96.0.0/11")
-			serviceCIDR = garden.CIDR("100.64.0.0/13")
-			invalidCIDR = garden.CIDR("invalid-cidr")
-			vpcCIDR     = garden.CIDR("10.0.0.0/8")
+			nodeCIDR    = gardencore.CIDR("10.250.0.0/16")
+			podCIDR     = gardencore.CIDR("100.96.0.0/11")
+			serviceCIDR = gardencore.CIDR("100.64.0.0/13")
+			invalidCIDR = gardencore.CIDR("invalid-cidr")
+			vpcCIDR     = gardencore.CIDR("10.0.0.0/8")
 			addon       = garden.Addon{
 				Enabled: true,
 			}
-			k8sNetworks = garden.K8SNetworks{
+			k8sNetworks = gardencore.K8SNetworks{
 				Nodes:    &nodeCIDR,
 				Pods:     &podCIDR,
 				Services: &serviceCIDR,
 			}
-			invalidK8sNetworks = garden.K8SNetworks{
+			invalidK8sNetworks = gardencore.K8SNetworks{
 				Nodes:    &invalidCIDR,
 				Pods:     &invalidCIDR,
 				Services: &invalidCIDR,
@@ -2705,9 +2708,9 @@ var _ = Describe("validation", func() {
 						AWS: &garden.AWSCloud{
 							Networks: garden.AWSNetworks{
 								K8SNetworks: k8sNetworks,
-								Internal:    []garden.CIDR{"10.250.1.0/24"},
-								Public:      []garden.CIDR{"10.250.2.0/24"},
-								Workers:     []garden.CIDR{"10.250.3.0/24"},
+								Internal:    []gardencore.CIDR{"10.250.1.0/24"},
+								Public:      []gardencore.CIDR{"10.250.2.0/24"},
+								Workers:     []gardencore.CIDR{"10.250.3.0/24"},
 								VPC: garden.AWSVPC{
 									CIDR: &nodeCIDR,
 								},
@@ -2926,9 +2929,9 @@ var _ = Describe("validation", func() {
 				awsCloud = &garden.AWSCloud{
 					Networks: garden.AWSNetworks{
 						K8SNetworks: k8sNetworks,
-						Internal:    []garden.CIDR{"10.250.1.0/24"},
-						Public:      []garden.CIDR{"10.250.2.0/24"},
-						Workers:     []garden.CIDR{"10.250.3.0/24"},
+						Internal:    []gardencore.CIDR{"10.250.1.0/24"},
+						Public:      []gardencore.CIDR{"10.250.2.0/24"},
+						Workers:     []gardencore.CIDR{"10.250.3.0/24"},
 						VPC: garden.AWSVPC{
 							CIDR: &vpcCIDR,
 						},
@@ -2966,7 +2969,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid internal CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []gardencore.CIDR{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -2978,7 +2981,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid public CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Public = []gardencore.CIDR{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -2990,7 +2993,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []gardencore.CIDR{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3002,7 +3005,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid internal CIDR which is not in VPC CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []gardencore.CIDR{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3014,7 +3017,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid public CIDR which is not in VPC CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.AWS.Networks.Public = []gardencore.CIDR{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3026,7 +3029,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in VPC and Nodes CIDR", func() {
-					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{garden.CIDR("1.1.1.1/32")}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []gardencore.CIDR{gardencore.CIDR("1.1.1.1/32")}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3042,7 +3045,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Pod CIDR to overlap with VPC CIDR", func() {
-					podCIDR := garden.CIDR("10.0.0.1/32")
+					podCIDR := gardencore.CIDR("10.0.0.1/32")
 					shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Pods = &podCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3055,7 +3058,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Services CIDR to overlap with VPC CIDR", func() {
-					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					servicesCIDR := gardencore.CIDR("10.0.0.1/32")
 					shoot.Spec.Cloud.AWS.Networks.K8SNetworks.Services = &servicesCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3068,10 +3071,10 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid VPC CIDRs to overlap with other VPC CIDRs", func() {
-					overlappingCIDR := garden.CIDR("10.250.0.1/32")
-					shoot.Spec.Cloud.AWS.Networks.Public = []garden.CIDR{overlappingCIDR}
-					shoot.Spec.Cloud.AWS.Networks.Internal = []garden.CIDR{overlappingCIDR}
-					shoot.Spec.Cloud.AWS.Networks.Workers = []garden.CIDR{overlappingCIDR}
+					overlappingCIDR := gardencore.CIDR("10.250.0.1/32")
+					shoot.Spec.Cloud.AWS.Networks.Public = []gardencore.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Internal = []gardencore.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.AWS.Networks.Workers = []gardencore.CIDR{overlappingCIDR}
 					shoot.Spec.Cloud.AWS.Networks.Nodes = &overlappingCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3104,7 +3107,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.AWS.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3323,7 +3326,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("255.255.255.255/32")
+				cidr := gardencore.CIDR("255.255.255.255/32")
 				newShoot.Spec.Cloud.AWS.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.AWS.Zones = []string{"another-zone"}
 
@@ -3368,7 +3371,7 @@ var _ = Describe("validation", func() {
 				azureCloud = &garden.AzureCloud{
 					Networks: garden.AzureNetworks{
 						K8SNetworks: k8sNetworks,
-						Workers:     garden.CIDR("10.250.3.0/24"),
+						Workers:     gardencore.CIDR("10.250.3.0/24"),
 						VNet: garden.AzureVNet{
 							CIDR: &vpcCIDR,
 						},
@@ -3444,7 +3447,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers which are not in VNet anmd Nodes CIDR", func() {
-					notOverlappingCIDR := garden.CIDR("1.1.1.1/32")
+					notOverlappingCIDR := gardencore.CIDR("1.1.1.1/32")
 					// shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Nodes = &notOverlappingCIDR
 					shoot.Spec.Cloud.Azure.Networks.Workers = notOverlappingCIDR
 
@@ -3462,7 +3465,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Pod CIDR to overlap with VNet CIDR", func() {
-					podCIDR := garden.CIDR("10.0.0.1/32")
+					podCIDR := gardencore.CIDR("10.0.0.1/32")
 					shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Pods = &podCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3475,7 +3478,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Services CIDR to overlap with VNet CIDR", func() {
-					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					servicesCIDR := gardencore.CIDR("10.0.0.1/32")
 					shoot.Spec.Cloud.Azure.Networks.K8SNetworks.Services = &servicesCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3488,7 +3491,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3505,7 +3508,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.Azure.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3729,7 +3732,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating resource group and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("255.255.255.255/32")
+				cidr := gardencore.CIDR("255.255.255.255/32")
 				newShoot.Spec.Cloud.Azure.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.Azure.ResourceGroup = &garden.AzureResourceGroup{
 					Name: "another-group",
@@ -3774,7 +3777,7 @@ var _ = Describe("validation", func() {
 			var (
 				fldPath  = "gcp"
 				gcpCloud *garden.GCPCloud
-				internal = garden.CIDR("10.10.0.0/24")
+				internal = gardencore.CIDR("10.10.0.0/24")
 			)
 
 			BeforeEach(func() {
@@ -3782,7 +3785,7 @@ var _ = Describe("validation", func() {
 					Networks: garden.GCPNetworks{
 						K8SNetworks: k8sNetworks,
 						Internal:    &internal,
-						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						Workers:     []gardencore.CIDR{"10.250.0.0/16"},
 						VPC: &garden.GCPVPC{
 							Name: "hugo",
 						},
@@ -3807,7 +3810,7 @@ var _ = Describe("validation", func() {
 
 			Context("CIDR", func() {
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []gardencore.CIDR{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3819,7 +3822,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid internal CIDR", func() {
-					invalidCIDR = garden.CIDR("invalid-cidr")
+					invalidCIDR = gardencore.CIDR("invalid-cidr")
 					shoot.Spec.Cloud.GCP.Networks.Internal = &invalidCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3832,7 +3835,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []gardencore.CIDR{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -3844,9 +3847,9 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Internal CIDR to overlap with Node - and Worker CIDR", func() {
-					overlappingCIDR := garden.CIDR("10.250.1.1/30")
+					overlappingCIDR := gardencore.CIDR("10.250.1.1/30")
 					shoot.Spec.Cloud.GCP.Networks.Internal = &overlappingCIDR
-					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.GCP.Networks.Workers = []gardencore.CIDR{overlappingCIDR}
 					shoot.Spec.Cloud.GCP.Networks.Nodes = &overlappingCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -3863,7 +3866,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.GCP.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.GCP.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4081,7 +4084,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("255.255.255.255/32")
+				cidr := gardencore.CIDR("255.255.255.255/32")
 				newShoot.Spec.Cloud.GCP.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.GCP.Zones = []string{"another-zone"}
 
@@ -4129,7 +4132,7 @@ var _ = Describe("validation", func() {
 						VPC: garden.AlicloudVPC{
 							CIDR: &vpcCIDR,
 						},
-						Workers: []garden.CIDR{"10.250.3.0/24"},
+						Workers: []gardencore.CIDR{"10.250.3.0/24"},
 					},
 					Workers: []garden.AlicloudWorker{
 						{
@@ -4166,7 +4169,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []gardencore.CIDR{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4178,7 +4181,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
-					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []gardencore.CIDR{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4194,9 +4197,9 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Node which are not in VPC CIDR", func() {
-					notOverlappingCIDR := garden.CIDR("1.1.1.1/32")
+					notOverlappingCIDR := gardencore.CIDR("1.1.1.1/32")
 					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Nodes = &notOverlappingCIDR
-					shoot.Spec.Cloud.Alicloud.Networks.Workers = []garden.CIDR{notOverlappingCIDR}
+					shoot.Spec.Cloud.Alicloud.Networks.Workers = []gardencore.CIDR{notOverlappingCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4212,7 +4215,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Pod CIDR to overlap with VPC CIDR", func() {
-					podCIDR := garden.CIDR("10.0.0.1/32")
+					podCIDR := gardencore.CIDR("10.0.0.1/32")
 					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Pods = &podCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4225,7 +4228,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid Services CIDR to overlap with VPC CIDR", func() {
-					servicesCIDR := garden.CIDR("10.0.0.1/32")
+					servicesCIDR := gardencore.CIDR("10.0.0.1/32")
 					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks.Services = &servicesCIDR
 
 					errorList := ValidateShoot(shoot)
@@ -4238,7 +4241,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4255,7 +4258,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4473,7 +4476,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("255.255.255.255/32")
+				cidr := gardencore.CIDR("255.255.255.255/32")
 				newShoot.Spec.Cloud.Alicloud.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.Alicloud.Zones = []string{"another-zone"}
 
@@ -4543,7 +4546,7 @@ var _ = Describe("validation", func() {
 			Context("CIDR", func() {
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.Packet.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.Packet.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4701,7 +4704,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("255.255.255.255/32")
+				cidr := gardencore.CIDR("255.255.255.255/32")
 				newShoot.Spec.Cloud.Packet.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.Packet.Zones = []string{"another-zone"}
 
@@ -4745,7 +4748,7 @@ var _ = Describe("validation", func() {
 					LoadBalancerProvider: "haproxy",
 					Networks: garden.OpenStackNetworks{
 						K8SNetworks: k8sNetworks,
-						Workers:     []garden.CIDR{"10.250.0.0/16"},
+						Workers:     []gardencore.CIDR{"10.250.0.0/16"},
 						Router: &garden.OpenStackRouter{
 							ID: "router1234",
 						},
@@ -4794,7 +4797,7 @@ var _ = Describe("validation", func() {
 			Context("CIDR", func() {
 
 				It("should forbid invalid workers CIDR", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{invalidCIDR}
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []gardencore.CIDR{invalidCIDR}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4806,7 +4809,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid workers CIDR which are not in Nodes CIDR", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.Workers = []garden.CIDR{"1.1.1.1/32"}
+					shoot.Spec.Cloud.OpenStack.Networks.Workers = []gardencore.CIDR{"1.1.1.1/32"}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4818,7 +4821,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -4835,7 +4838,7 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid non-specified k8s networks", func() {
-					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = garden.K8SNetworks{}
+					shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks = gardencore.K8SNetworks{}
 
 					errorList := ValidateShoot(shoot)
 
@@ -5015,7 +5018,7 @@ var _ = Describe("validation", func() {
 
 			It("should forbid updating networks and zones", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				cidr := garden.CIDR("255.255.255.255/32")
+				cidr := gardencore.CIDR("255.255.255.255/32")
 				newShoot.Spec.Cloud.OpenStack.Networks.Pods = &cidr
 				newShoot.Spec.Cloud.OpenStack.Zones = []string{"another-zone"}
 

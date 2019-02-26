@@ -15,7 +15,6 @@
 package core
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -32,7 +31,7 @@ type Condition struct {
 	// Type of the Shoot condition.
 	Type ConditionType
 	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus
+	Status ConditionStatus
 	// Last time the condition transitioned from one status to another.
 	LastTransitionTime metav1.Time
 	// Last time the condition was updated.
@@ -43,10 +42,39 @@ type Condition struct {
 	Message string
 }
 
+// ConditionStatus is the status of a condition.
+type ConditionStatus string
+
 // ConditionType is a string alias.
 type ConditionType string
 
 const (
 	// ConditionAvailable is a condition type for indicating availability.
 	ConditionAvailable ConditionType = "Available"
+
+	// ConditionTrue means a resource is in the condition.
+	ConditionTrue ConditionStatus = "True"
+	// ConditionFalse means a resource is not in the condition.
+	ConditionFalse ConditionStatus = "False"
+	// ConditionUnknown" means Gardener can't decide if a resource is in the condition or not.
+	ConditionUnknown ConditionStatus = "Unknown"
+	// ConditionProgressing means the condition was seen true, failed but stayed within a predefined failure threshold.
+	// In the future, we could add other intermediate conditions, e.g. ConditionDegraded.
+	ConditionProgressing ConditionStatus = "Progressing"
+
+	// ConditionCheckError is a constant for a reason in condition.
+	ConditionCheckError = "ConditionCheckError"
 )
+
+// CIDR is a string alias.
+type CIDR string
+
+// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+type K8SNetworks struct {
+	// Nodes is the CIDR of the node network.
+	Nodes *CIDR
+	// Pods is the CIDR of the pod network.
+	Pods *CIDR
+	// Services is the CIDR of the service network.
+	Services *CIDR
+}

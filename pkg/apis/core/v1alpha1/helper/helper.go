@@ -19,7 +19,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
-	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -31,15 +30,45 @@ var Now = metav1.Now
 func InitCondition(conditionType gardencorev1alpha1.ConditionType) gardencorev1alpha1.Condition {
 	return gardencorev1alpha1.Condition{
 		Type:               conditionType,
-		Status:             corev1.ConditionUnknown,
+		Status:             gardencorev1alpha1.ConditionUnknown,
 		Reason:             "ConditionInitialized",
 		Message:            "The condition has been initialized but its semantic check has not been performed yet.",
 		LastTransitionTime: Now(),
 	}
 }
 
+// NewConditions initializes the provided conditions based on an existing list. If a condition type does not exist
+// in the list yet, it will be set to default values.
+func NewConditions(conditions []gardencorev1alpha1.Condition, conditionTypes ...gardencorev1alpha1.ConditionType) []*gardencorev1alpha1.Condition {
+	newConditions := []*gardencorev1alpha1.Condition{}
+
+	// We retrieve the current conditions in order to update them appropriately.
+	for _, conditionType := range conditionTypes {
+		if c := GetCondition(conditions, conditionType); c != nil {
+			newConditions = append(newConditions, c)
+			continue
+		}
+		initializedCondition := InitCondition(conditionType)
+		newConditions = append(newConditions, &initializedCondition)
+	}
+
+	return newConditions
+}
+
+// GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
+// In case the required type could not be found, it returns nil.
+func GetCondition(conditions []gardencorev1alpha1.Condition, conditionType gardencorev1alpha1.ConditionType) *gardencorev1alpha1.Condition {
+	for _, condition := range conditions {
+		if condition.Type == conditionType {
+			c := condition
+			return &c
+		}
+	}
+	return nil
+}
+
 // UpdatedCondition updates the properties of one specific condition.
-func UpdatedCondition(condition gardencorev1alpha1.Condition, status corev1.ConditionStatus, reason, message string) gardencorev1alpha1.Condition {
+func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string) gardencorev1alpha1.Condition {
 	newCondition := gardencorev1alpha1.Condition{
 		Type:               condition.Type,
 		Status:             status,
@@ -60,7 +89,7 @@ func UpdatedConditionUnknownError(condition gardencorev1alpha1.Condition, err er
 }
 
 func UpdatedConditionUnknownErrorMessage(condition gardencorev1alpha1.Condition, message string) gardencorev1alpha1.Condition {
-	return UpdatedCondition(condition, corev1.ConditionUnknown, gardencorev1alpha1.ConditionCheckError, message)
+	return UpdatedCondition(condition, gardencorev1alpha1.ConditionUnknown, gardencorev1alpha1.ConditionCheckError, message)
 }
 
 // MergeConditions merges the given <oldConditions> with the <newConditions>. Existing conditions are superseded by
@@ -87,18 +116,6 @@ func MergeConditions(oldConditions []gardencorev1alpha1.Condition, newConditions
 	return out
 }
 
-// GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
-// In case the required type could not be found, it returns nil.
-func GetCondition(conditions []gardencorev1alpha1.Condition, conditionType gardencorev1alpha1.ConditionType) *gardencorev1alpha1.Condition {
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			c := condition
-			return &c
-		}
-	}
-	return nil
-}
-
 // ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.
 func ConditionsNeedUpdate(existingConditions, newConditions []gardencorev1alpha1.Condition) bool {
 	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
@@ -119,10 +136,23 @@ func IsResourceSupported(resources []gardencorev1alpha1.ControllerResource, reso
 // installed.
 func IsControllerInstallationSuccessful(controllerInstallation gardencorev1alpha1.ControllerInstallation) bool {
 	for _, condition := range controllerInstallation.Status.Conditions {
-		if condition.Type == gardencorev1alpha1.ControllerInstallationInstalled && condition.Status == corev1.ConditionTrue {
+		if condition.Type == gardencorev1alpha1.ControllerInstallationInstalled && condition.Status == gardencorev1alpha1.ConditionTrue {
 			return true
 		}
 	}
 
 	return false
+}
+
+// ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation
+func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardencorev1alpha1.LastOperation) gardencorev1alpha1.LastOperationType {
+	switch {
+	case meta.DeletionTimestamp != nil:
+		return gardencorev1alpha1.LastOperationTypeDelete
+	case lastOperation == nil:
+		return gardencorev1alpha1.LastOperationTypeCreate
+	case (lastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate && lastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded):
+		return gardencorev1alpha1.LastOperationTypeCreate
+	}
+	return gardencorev1alpha1.LastOperationTypeReconcile
 }

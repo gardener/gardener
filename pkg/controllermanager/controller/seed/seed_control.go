@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -30,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -217,15 +219,15 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	}
 
 	// Initialize conditions based on the current status.
-	newConditions := helper.NewConditions(seed.Status.Conditions, gardenv1beta1.SeedAvailable)
+	newConditions := gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, gardencorev1alpha1helper.InitCondition(gardencorev1alpha1.ControllerInstallationValid), gardencorev1alpha1helper.InitCondition(gardenv1beta1.SeedAvailable))
 	conditionSeedAvailable := newConditions[0]
 
 	seedObj, err := seedpkg.New(c.k8sGardenClient, c.k8sGardenInformers.Garden().V1beta1(), seed)
 	if err != nil {
 		message := fmt.Sprintf("Failed to create a Seed object (%s).", err.Error())
-		conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
+		conditionSeedAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionSeedAvailable, gardencorev1alpha1.ConditionUnknown, gardencorev1alpha1.ConditionCheckError, message)
 		seedLogger.Error(message)
-		c.updateSeedStatus(seed, *conditionSeedAvailable)
+		c.updateSeedStatus(seed, conditionSeedAvailable)
 		return err
 	}
 
@@ -238,8 +240,8 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 
 	// Check whether the Kubernetes version of the Seed cluster fulfills the minimal requirements.
 	if err := seedObj.CheckMinimumK8SVersion(); err != nil {
-		conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionFalse, "K8SVersionTooOld", err.Error())
-		c.updateSeedStatus(seed, *conditionSeedAvailable)
+		conditionSeedAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionSeedAvailable, gardencorev1alpha1.ConditionFalse, "K8SVersionTooOld", err.Error())
+		c.updateSeedStatus(seed, conditionSeedAvailable)
 		seedLogger.Error(err.Error())
 		return err
 	}
@@ -249,20 +251,20 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 		seedObj.MustReserveExcessCapacity(*c.config.Controllers.Seed.ReserveExcessCapacity)
 	}
 	if err := seedpkg.BootstrapCluster(seedObj, c.secrets, c.imageVector, len(associatedShoots)); err != nil {
-		conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionFalse, "BootstrappingFailed", err.Error())
-		c.updateSeedStatus(seed, *conditionSeedAvailable)
+		conditionSeedAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionSeedAvailable, gardencorev1alpha1.ConditionFalse, "BootstrappingFailed", err.Error())
+		c.updateSeedStatus(seed, conditionSeedAvailable)
 		seedLogger.Error(err.Error())
 		return err
 	}
 
-	conditionSeedAvailable = helper.UpdatedCondition(conditionSeedAvailable, gardenv1beta1.ConditionTrue, "Passed", "all checks passed")
-	c.updateSeedStatus(seed, *conditionSeedAvailable)
+	conditionSeedAvailable = gardencorev1alpha1helper.UpdatedCondition(conditionSeedAvailable, gardencorev1alpha1.ConditionTrue, "Passed", "all checks passed")
+	c.updateSeedStatus(seed, conditionSeedAvailable)
 
 	return nil
 }
 
-func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, conditions ...gardenv1beta1.Condition) error {
-	if !helper.ConditionsNeedUpdate(seed.Status.Conditions, conditions) {
+func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, conditions ...gardencorev1alpha1.Condition) error {
+	if !gardencorev1alpha1helper.ConditionsNeedUpdate(seed.Status.Conditions, conditions) {
 		return nil
 	}
 

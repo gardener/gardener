@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -250,8 +251,8 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		newShoot := shoot.DeepCopy()
 
 		// Check if the status indicates that an operation is processing and mark it as "aborted".
-		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateProcessing {
-			newShoot.Status.LastOperation.State = gardenv1beta1.ShootLastOperationStateAborted
+		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateProcessing {
+			newShoot.Status.LastOperation.State = gardencorev1alpha1.LastOperationStateAborted
 			if _, err := c.k8sGardenClient.Garden().Garden().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}

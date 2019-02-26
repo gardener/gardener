@@ -18,27 +18,29 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 	"strings"
 	"time"
 
-	rbacv1 "k8s.io/api/rbac/v1"
-
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"github.com/sirupsen/logrus"
+
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const jobNameLabel = "job-name"
@@ -223,7 +225,7 @@ func (t *Terraformer) execute(ctx context.Context, scriptName string) error {
 		if terraformErrors := retrieveTerraformErrors(logList); terraformErrors != nil {
 			errorMessage += fmt.Sprintf(" The following issues have been found in the logs:\n\n%s", strings.Join(terraformErrors, "\n\n"))
 		}
-		return common.DetermineError(errorMessage)
+		return gardencorev1alpha1helper.DetermineError(errorMessage)
 	}
 	return nil
 }

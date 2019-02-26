@@ -18,14 +18,13 @@ import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-	"github.com/onsi/gomega/types"
 )
 
 var (
@@ -193,7 +192,7 @@ var _ = Describe("helper", func() {
 			&gardenv1beta1.Shoot{
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
-						Local:&gardenv1beta1.Local{},
+						Local: &gardenv1beta1.Local{},
 					},
 				},
 			},
@@ -270,95 +269,6 @@ var _ = Describe("helper", func() {
 				},
 			},
 		}, alertingSecrets, false))
-
-	var zeroTime metav1.Time
-
-	DescribeTable("#UpdatedCondition",
-		func(condition *gardenv1beta1.Condition, status gardenv1beta1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
-			updated := UpdatedCondition(condition, status, reason, message)
-
-			Expect(updated).To(matcher)
-		},
-		Entry("no update",
-			&gardenv1beta1.Condition{
-				Status:  gardenv1beta1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
-			},
-			gardenv1beta1.ConditionTrue,
-			"reason",
-			"message",
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(gardenv1beta1.ConditionTrue),
-				"Reason":             Equal("reason"),
-				"Message":            Equal("message"),
-				"LastTransitionTime": Equal(zeroTime),
-				"LastUpdateTime":     Not(Equal(zeroTime)),
-			})),
-		),
-		Entry("update reason",
-			&gardenv1beta1.Condition{
-				Status:  gardenv1beta1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
-			},
-			gardenv1beta1.ConditionTrue,
-			"OtherReason",
-			"message",
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(gardenv1beta1.ConditionTrue),
-				"Reason":             Equal("OtherReason"),
-				"Message":            Equal("message"),
-				"LastTransitionTime": Equal(zeroTime),
-				"LastUpdateTime":     Not(Equal(zeroTime)),
-			})),
-		),
-		Entry("update status",
-			&gardenv1beta1.Condition{
-				Status:  gardenv1beta1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
-			},
-			gardenv1beta1.ConditionFalse,
-			"OtherReason",
-			"message",
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(gardenv1beta1.ConditionFalse),
-				"Reason":             Equal("OtherReason"),
-				"Message":            Equal("message"),
-				"LastTransitionTime": Not(Equal(zeroTime)),
-				"LastUpdateTime":     Not(Equal(zeroTime)),
-			})),
-		),
-	)
-
-	Describe("#GetCondition", func() {
-		It("should return the found condition", func() {
-			var (
-				conditionType gardenv1beta1.ConditionType = "test-1"
-				condition                                 = gardenv1beta1.Condition{
-					Type: conditionType,
-				}
-				conditions = []gardenv1beta1.Condition{condition}
-			)
-
-			cond := GetCondition(conditions, conditionType)
-
-			Expect(cond).NotTo(BeNil())
-			Expect(*cond).To(Equal(condition))
-		})
-
-		It("should return nil because the required condition could not be found", func() {
-			var (
-				conditionType gardenv1beta1.ConditionType = "test-1"
-				conditions                                = []gardenv1beta1.Condition{}
-			)
-
-			cond := GetCondition(conditions, conditionType)
-
-			Expect(cond).To(BeNil())
-		})
-	})
 
 	Describe("#ReadShootedSeed", func() {
 		var (

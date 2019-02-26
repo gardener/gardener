@@ -22,6 +22,8 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -113,7 +115,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 
 	// Wait until all generated machine deployments are healthy/available.
 	if err := b.waitUntilMachineDeploymentsAvailable(wantedMachineDeployments); err != nil {
-		return common.DetermineError(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed while waiting for all machine deployments to be ready: '%s'", err.Error()))
 	}
 
 	// Delete all old machine deployments (i.e. those which were not previously computed but exist in the cluster).
@@ -187,7 +189,7 @@ func (b *HybridBotanist) DestroyMachines() error {
 
 	// Wait until all machine resources have been properly deleted.
 	if err := b.waitUntilMachineResourcesDeleted(machineClassPlural); err != nil {
-		return common.DetermineError(fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed while waiting for all machine resources to be deleted: '%s'", err.Error()))
 	}
 
 	return nil
@@ -462,7 +464,7 @@ func (b *HybridBotanist) cleanupMachineDeployments(existingMachineDeployments *m
 
 func (b *HybridBotanist) listMachineClassSecrets() (*corev1.SecretList, error) {
 	return b.K8sSeedClient.ListSecrets(b.Shoot.SeedNamespace, metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("%s=machineclass", common.GardenPurpose),
+		LabelSelector: fmt.Sprintf("%s=%s", gardencorev1alpha1.GardenPurpose, gardencorev1alpha1.GardenPurposeMachineClass),
 	})
 }
 

@@ -15,7 +15,6 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -36,12 +35,18 @@ func (ProviderConfig) OpenAPISchemaType() []string { return []string{"object"} }
 // the OpenAPI spec of this type.
 func (ProviderConfig) OpenAPISchemaFormat() string { return "" }
 
+// ConditionStatus is the status of a condition.
+type ConditionStatus string
+
+// ConditionType is a string alias.
+type ConditionType string
+
 // Condition holds the information about the state of a resource.
 type Condition struct {
 	// Type of the Shoot condition.
 	Type ConditionType `json:"type"`
 	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
+	Status ConditionStatus `json:"status"`
 	// Last time the condition transitioned from one status to another.
 	LastTransitionTime metav1.Time `json:"lastTransitionTime"`
 	// Last time the condition was updated.
@@ -52,13 +57,40 @@ type Condition struct {
 	Message string `json:"message"`
 }
 
-// ConditionType is a string alias.
-type ConditionType string
+const (
+	// ConditionTrue means a resource is in the condition.
+	ConditionTrue ConditionStatus = "True"
+	// ConditionFalse means a resource is not in the condition.
+	ConditionFalse ConditionStatus = "False"
+	// ConditionUnknown" means Gardener can't decide if a resource is in the condition or not.
+	ConditionUnknown ConditionStatus = "Unknown"
+	// ConditionProgressing means the condition was seen true, failed but stayed within a predefined failure threshold.
+	// In the future, we could add other intermediate conditions, e.g. ConditionDegraded.
+	ConditionProgressing ConditionStatus = "Progressing"
+
+	// ConditionCheckError is a constant for a reason in condition.
+	ConditionCheckError = "ConditionCheckError"
+)
+
+// CIDR is a string alias.
+type CIDR string
+
+// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
+type K8SNetworks struct {
+	// Nodes is the CIDR of the node network.
+	// +optional
+	Nodes *CIDR `json:"nodes,omitempty"`
+	// Pods is the CIDR of the pod network.
+	// +optional
+	Pods *CIDR `json:"pods,omitempty"`
+	// Services is the CIDR of the service network.
+	// +optional
+	Services *CIDR `json:"services,omitempty"`
+}
 
 const (
-	// ConditionAvailable is a condition type for indicating availability.
-	ConditionAvailable ConditionType = "Available"
-
-	// ConditionCheckError is a constant for indicating that a condition could not be checked.
-	ConditionCheckError = "ConditionCheckError"
+	// DefaultPodNetworkCIDR is a constant for the default pod network CIDR of a Shoot cluster.
+	DefaultPodNetworkCIDR = CIDR("100.96.0.0/11")
+	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
+	DefaultServiceNetworkCIDR = CIDR("100.64.0.0/13")
 )

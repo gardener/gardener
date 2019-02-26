@@ -18,8 +18,10 @@ import (
 	"errors"
 	"io"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorehelper "github.com/gardener/gardener/pkg/apis/core/helper"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	gardenhelper "github.com/gardener/gardener/pkg/apis/garden/helper"
 	admissioninitializer "github.com/gardener/gardener/pkg/apiserver/admission/initializer"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
@@ -225,14 +227,14 @@ func generateSeedUsageMap(shootList []*garden.Shoot) map[string]int {
 }
 
 func verifySeedAvailability(seed *garden.Seed) bool {
-	if cond := helper.GetCondition(seed.Status.Conditions, garden.SeedAvailable); cond != nil {
-		return cond.Status == garden.ConditionTrue
+	if cond := gardencorehelper.GetCondition(seed.Status.Conditions, garden.SeedAvailable); cond != nil {
+		return cond.Status == gardencore.ConditionTrue
 	}
 	return false
 }
 
 func hasDisjointedNetworks(seed *garden.Seed, shoot *garden.Shoot) bool {
 	// error cannot occur due to our static validation
-	k8sNetworks, _ := helper.GetK8SNetworks(shoot)
+	k8sNetworks, _ := gardenhelper.GetK8SNetworks(shoot)
 	return len(admissionutils.ValidateNetworkDisjointedness(seed.Spec.Networks, k8sNetworks, field.NewPath(""))) == 0
 }

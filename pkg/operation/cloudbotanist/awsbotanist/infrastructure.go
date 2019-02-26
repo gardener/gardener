@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -40,7 +42,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 		vpcID = *b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID
 		igwID, err := b.AWSClient.GetInternetGateway(vpcID)
 		if err != nil {
-			return common.DetermineError(err.Error())
+			return gardencorev1alpha1helper.DetermineError(err.Error())
 		}
 		internetGatewayID = igwID
 	} else if b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR != nil {

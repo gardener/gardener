@@ -26,6 +26,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -101,13 +102,13 @@ func (m metrics) initShootMetrics() {
 				operationType = string(shoot.Status.LastOperation.Type)
 
 				switch shoot.Status.LastOperation.State {
-				case gardenv1beta1.ShootLastOperationStateSucceeded:
+				case gardencorev1alpha1.LastOperationStateSucceeded:
 					operationState = 0
-				case gardenv1beta1.ShootLastOperationStateProcessing:
+				case gardencorev1alpha1.LastOperationStateProcessing:
 					operationState = 1
-				case gardenv1beta1.ShootLastOperationStateError:
+				case gardencorev1alpha1.LastOperationStateError:
 					operationState = 2
-				case gardenv1beta1.ShootLastOperationStateFailed:
+				case gardencorev1alpha1.LastOperationStateFailed:
 					operationState = 3
 				}
 			}
@@ -132,7 +133,7 @@ func (m metrics) initShootMetrics() {
 
 			for _, condition := range shoot.Status.Conditions {
 				var conditionStatus float64
-				if condition.Status == gardenv1beta1.ConditionTrue {
+				if condition.Status == gardencorev1alpha1.ConditionTrue {
 					conditionStatus = 1
 				}
 				metricShootStateConditions.With(prometheus.Labels{

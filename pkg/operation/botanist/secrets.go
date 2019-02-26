@@ -21,6 +21,7 @@ import (
 	"net"
 	"os/exec"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
@@ -36,37 +37,29 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
-const (
-	caCluster       = "ca"
-	caETCD          = "ca-etcd"
-	caFrontProxy    = "ca-front-proxy"
-	caKubelet       = "ca-kubelet"
-	caMetricsServer = "ca-metrics-server"
-)
-
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
-	caCluster: &secrets.CertificateSecretConfig{
-		Name:       caCluster,
+	gardencorev1alpha1.SecretNameCACluster: &secrets.CertificateSecretConfig{
+		Name:       gardencorev1alpha1.SecretNameCACluster,
 		CommonName: "kubernetes",
 		CertType:   secrets.CACert,
 	},
-	caETCD: &secrets.CertificateSecretConfig{
-		Name:       caETCD,
+	gardencorev1alpha1.SecretNameCAETCD: &secrets.CertificateSecretConfig{
+		Name:       gardencorev1alpha1.SecretNameCAETCD,
 		CommonName: "etcd",
 		CertType:   secrets.CACert,
 	},
-	caFrontProxy: &secrets.CertificateSecretConfig{
-		Name:       caFrontProxy,
+	gardencorev1alpha1.SecretNameCAFrontProxy: &secrets.CertificateSecretConfig{
+		Name:       gardencorev1alpha1.SecretNameCAFrontProxy,
 		CommonName: "front-proxy",
 		CertType:   secrets.CACert,
 	},
-	caKubelet: &secrets.CertificateSecretConfig{
-		Name:       caKubelet,
+	gardencorev1alpha1.SecretNameCAKubelet: &secrets.CertificateSecretConfig{
+		Name:       gardencorev1alpha1.SecretNameCAKubelet,
 		CommonName: "kubelet",
 		CertType:   secrets.CACert,
 	},
-	caMetricsServer: &secrets.CertificateSecretConfig{
-		Name:       caMetricsServer,
+	gardencorev1alpha1.SecretNameCAMetricsServer: &secrets.CertificateSecretConfig{
+		Name:       gardencorev1alpha1.SecretNameCAMetricsServer,
 		CommonName: "metrics-server",
 		CertType:   secrets.CACert,
 	},
@@ -124,7 +117,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  apiServerIPAddresses,
 
 				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 		},
 
@@ -139,7 +132,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caKubelet],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCAKubelet],
 			},
 		},
 
@@ -154,7 +147,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caFrontProxy],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCAFrontProxy],
 			},
 		},
 
@@ -169,7 +162,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 			KubeConfigRequest: &secrets.KubeConfigRequest{
 				ClusterName:  b.Shoot.SeedNamespace,
@@ -188,7 +181,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 		},
 
@@ -203,7 +196,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -223,7 +216,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 		},
 
@@ -238,7 +231,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -258,7 +251,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -278,7 +271,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 		},
 
@@ -293,7 +286,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -305,7 +298,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		// Secret definition for cluster-autoscaler
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "cluster-autoscaler",
+				Name: gardencorev1alpha1.DeploymentNameClusterAutoscaler,
 
 				CommonName:   "system:cluster-autoscaler",
 				Organization: nil,
@@ -313,7 +306,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -333,7 +326,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -353,7 +346,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -373,7 +366,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -393,7 +386,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -413,7 +406,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caKubelet],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCAKubelet],
 			},
 		},
 
@@ -428,7 +421,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			BasicAuth: basicAuthAPIServer,
@@ -442,7 +435,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		// Secret definition for gardener
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: gardenv1beta1.GardenerName,
+				Name: gardencorev1alpha1.SecretNameGardener,
 
 				CommonName:   gardenv1beta1.GardenerName,
 				Organization: []string{user.SystemPrivilegedGroup},
@@ -450,7 +443,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -470,7 +463,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ClientCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 
 			KubeConfigRequest: &secrets.KubeConfigRequest{
@@ -512,7 +505,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  []net.IP{},
 
 			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 		},
 
 		// Secret definition for vpn-seed (OpenVPN client side)
@@ -525,7 +518,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  []net.IP{},
 
 			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 		},
 
 		// Secret definition for etcd server
@@ -538,7 +531,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerClientCert,
-			SigningCA: certificateAuthorities[caETCD],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCAETCD],
 		},
 
 		// Secret definition for etcd server
@@ -551,7 +544,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ClientCert,
-			SigningCA: certificateAuthorities[caETCD],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCAETCD],
 		},
 
 		// Secret definition for metrics-server
@@ -568,7 +561,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses: nil,
 
 			CertType:  secrets.ServerClientCert,
-			SigningCA: certificateAuthorities[caMetricsServer],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCAMetricsServer],
 		},
 
 		// Secret definition for alertmanager (ingress)
@@ -581,7 +574,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 		},
 
 		// Secret definition for grafana (ingress)
@@ -594,7 +587,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 		},
 
 		// Secret definition for prometheus (ingress)
@@ -607,7 +600,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			IPAddresses:  nil,
 
 			CertType:  secrets.ServerCert,
-			SigningCA: certificateAuthorities[caCluster],
+			SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 		},
 	}
 
@@ -624,7 +617,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				IPAddresses:  nil,
 
 				CertType:  secrets.ServerCert,
-				SigningCA: certificateAuthorities[caCluster],
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
 			// Secret definition for logging
 			&secrets.BasicAuthSecretConfig{
@@ -646,7 +639,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 					CommonName: "garden.sapcloud.io:system:cert-broker",
 					CertType:   secrets.ClientCert,
-					SigningCA:  certificateAuthorities[caCluster],
+					SigningCA:  certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 				},
 
 				KubeConfigRequest: &secrets.KubeConfigRequest{
