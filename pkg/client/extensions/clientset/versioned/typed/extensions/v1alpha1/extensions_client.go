@@ -11,12 +11,17 @@ import (
 
 type ExtensionsV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	InfrastructuresGetter
 	OperatingSystemConfigsGetter
 }
 
 // ExtensionsV1alpha1Client is used to interact with features provided by the extensions.gardener.cloud group.
 type ExtensionsV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ExtensionsV1alpha1Client) Infrastructures(namespace string) InfrastructureInterface {
+	return newInfrastructures(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) OperatingSystemConfigs(namespace string) OperatingSystemConfigInterface {
