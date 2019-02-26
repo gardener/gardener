@@ -14,13 +14,15 @@
 package shoot_test
 
 import (
+	"testing"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller/shoot"
 	"github.com/gardener/gardener/pkg/operation/common"
-	. "github.com/onsi/ginkgo/extensions/table"
-	"testing"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -45,37 +47,37 @@ var _ = Describe("Shoot Utils", func() {
 		)
 
 		DescribeTable("#ConditionStatusToStatus",
-			func(status gardenv1beta1.ConditionStatus, expected shoot.Status) {
+			func(status gardencorev1alpha1.ConditionStatus, expected shoot.Status) {
 				Expect(shoot.ConditionStatusToStatus(status)).To(Equal(expected))
 			},
-			Entry("ConditionTrue", gardenv1beta1.ConditionTrue, shoot.StatusHealthy),
-			Entry("ConditionProgressing", gardenv1beta1.ConditionProgressing, shoot.StatusProgressing),
-			Entry("ConditionUnknown", gardenv1beta1.ConditionUnknown, shoot.StatusUnhealthy),
-			Entry("ConditionFalse", gardenv1beta1.ConditionFalse, shoot.StatusUnhealthy),
+			Entry("ConditionTrue", gardencorev1alpha1.ConditionTrue, shoot.StatusHealthy),
+			Entry("ConditionProgressing", gardencorev1alpha1.ConditionProgressing, shoot.StatusProgressing),
+			Entry("ConditionUnknown", gardencorev1alpha1.ConditionUnknown, shoot.StatusUnhealthy),
+			Entry("ConditionFalse", gardencorev1alpha1.ConditionFalse, shoot.StatusUnhealthy),
 		)
 
 		DescribeTable("#ComputeConditionStatus",
-			func(conditions []*gardenv1beta1.Condition, expected shoot.Status) {
+			func(conditions []gardencorev1alpha1.Condition, expected shoot.Status) {
 				Expect(shoot.ComputeConditionStatus(conditions...)).To(Equal(expected))
 			},
 			Entry("no conditions", nil, shoot.StatusHealthy),
-			Entry("true condition", []*gardenv1beta1.Condition{
-				{Status: gardenv1beta1.ConditionTrue},
+			Entry("true condition", []gardencorev1alpha1.Condition{
+				{Status: gardencorev1alpha1.ConditionTrue},
 			}, shoot.StatusHealthy),
-			Entry("progressing condition", []*gardenv1beta1.Condition{
-				{Status: gardenv1beta1.ConditionTrue},
-				{Status: gardenv1beta1.ConditionProgressing},
+			Entry("progressing condition", []gardencorev1alpha1.Condition{
+				{Status: gardencorev1alpha1.ConditionTrue},
+				{Status: gardencorev1alpha1.ConditionProgressing},
 			}, shoot.StatusProgressing),
-			Entry("unknown condition", []*gardenv1beta1.Condition{
-				{Status: gardenv1beta1.ConditionTrue},
-				{Status: gardenv1beta1.ConditionProgressing},
-				{Status: gardenv1beta1.ConditionUnknown},
+			Entry("unknown condition", []gardencorev1alpha1.Condition{
+				{Status: gardencorev1alpha1.ConditionTrue},
+				{Status: gardencorev1alpha1.ConditionProgressing},
+				{Status: gardencorev1alpha1.ConditionUnknown},
 			}, shoot.StatusUnhealthy),
-			Entry("false condition", []*gardenv1beta1.Condition{
-				{Status: gardenv1beta1.ConditionTrue},
-				{Status: gardenv1beta1.ConditionProgressing},
-				{Status: gardenv1beta1.ConditionUnknown},
-				{Status: gardenv1beta1.ConditionFalse},
+			Entry("false condition", []gardencorev1alpha1.Condition{
+				{Status: gardencorev1alpha1.ConditionTrue},
+				{Status: gardencorev1alpha1.ConditionProgressing},
+				{Status: gardencorev1alpha1.ConditionUnknown},
+				{Status: gardencorev1alpha1.ConditionFalse},
 			}, shoot.StatusUnhealthy),
 		)
 
@@ -88,31 +90,31 @@ var _ = Describe("Shoot Utils", func() {
 		)
 
 		DescribeTable("#ComputeStatus",
-			func(lastOperation *gardenv1beta1.LastOperation, lastError *gardenv1beta1.LastError, conditions []*gardenv1beta1.Condition, expected shoot.Status) {
+			func(lastOperation *gardencorev1alpha1.LastOperation, lastError *gardencorev1alpha1.LastError, conditions []gardencorev1alpha1.Condition, expected shoot.Status) {
 				Expect(shoot.ComputeStatus(lastOperation, lastError, conditions...)).To(Equal(expected))
 			},
 			Entry("lastOperation is nil",
 				nil, nil, nil, shoot.StatusHealthy),
-			Entry("lastOperation.Type is ShootLastOperationTypeCreate",
-				&gardenv1beta1.LastOperation{Type: gardenv1beta1.ShootLastOperationTypeCreate}, nil, nil, shoot.StatusHealthy),
-			Entry("lastOperation.Type is ShootLastOperationTypeDelete",
-				&gardenv1beta1.LastOperation{Type: gardenv1beta1.ShootLastOperationTypeDelete}, nil, nil, shoot.StatusHealthy),
-			Entry("lastOperation.Type is ShootLastOperationTypeCreate and lastError is set",
-				&gardenv1beta1.LastOperation{Type: gardenv1beta1.ShootLastOperationTypeCreate}, &gardenv1beta1.LastError{}, nil, shoot.StatusUnhealthy),
-			Entry("lastOperation.Type is ShootLastOperationTypeDelete and lastError is set",
-				&gardenv1beta1.LastOperation{Type: gardenv1beta1.ShootLastOperationTypeDelete}, &gardenv1beta1.LastError{}, nil, shoot.StatusUnhealthy),
-			Entry("lastOperation.State is ShootLastOperationStateProcessing with healthy conditions",
-				&gardenv1beta1.LastOperation{State: gardenv1beta1.ShootLastOperationStateProcessing}, nil, nil, shoot.StatusHealthy),
-			Entry("lastOperation.State is ShootLastOperationStateProcessing with unhealthy conditions",
-				&gardenv1beta1.LastOperation{State: gardenv1beta1.ShootLastOperationStateProcessing}, nil, []*gardenv1beta1.Condition{{Status: gardenv1beta1.ConditionFalse}}, shoot.StatusUnhealthy),
-			Entry("lastOperation.State is ShootLastOperationStateProcessing with healthy conditions but lastError set",
-				&gardenv1beta1.LastOperation{State: gardenv1beta1.ShootLastOperationStateProcessing}, &gardenv1beta1.LastError{}, nil, shoot.StatusUnhealthy),
-			Entry("lastOperation.State is neither ShootLastOperationStateProcessing nor ShootLastOperationStateSucceeded with healthy conditions",
-				&gardenv1beta1.LastOperation{State: gardenv1beta1.ShootLastOperationStateError}, nil, nil, shoot.StatusUnhealthy),
-			Entry("lastOperation.State is ShootLastOperationStateSucceeded with healthy conditions",
-				&gardenv1beta1.LastOperation{State: gardenv1beta1.ShootLastOperationStateSucceeded}, nil, nil, shoot.StatusHealthy),
-			Entry("lastOperation.State is ShootLastOperationStateSucceeded with unhealthy conditions",
-				&gardenv1beta1.LastOperation{State: gardenv1beta1.ShootLastOperationStateSucceeded}, nil, []*gardenv1beta1.Condition{{Status: gardenv1beta1.ConditionFalse}}, shoot.StatusUnhealthy),
+			Entry("lastOperation.Type is LastOperationTypeCreate",
+				&gardencorev1alpha1.LastOperation{Type: gardencorev1alpha1.LastOperationTypeCreate}, nil, nil, shoot.StatusHealthy),
+			Entry("lastOperation.Type is LastOperationTypeDelete",
+				&gardencorev1alpha1.LastOperation{Type: gardencorev1alpha1.LastOperationTypeDelete}, nil, nil, shoot.StatusHealthy),
+			Entry("lastOperation.Type is LastOperationTypeCreate and lastError is set",
+				&gardencorev1alpha1.LastOperation{Type: gardencorev1alpha1.LastOperationTypeCreate}, &gardencorev1alpha1.LastError{}, nil, shoot.StatusUnhealthy),
+			Entry("lastOperation.Type is LastOperationTypeDelete and lastError is set",
+				&gardencorev1alpha1.LastOperation{Type: gardencorev1alpha1.LastOperationTypeDelete}, &gardencorev1alpha1.LastError{}, nil, shoot.StatusUnhealthy),
+			Entry("lastOperation.State is LastOperationStateProcessing with healthy conditions",
+				&gardencorev1alpha1.LastOperation{State: gardencorev1alpha1.LastOperationStateProcessing}, nil, nil, shoot.StatusHealthy),
+			Entry("lastOperation.State is LastOperationStateProcessing with unhealthy conditions",
+				&gardencorev1alpha1.LastOperation{State: gardencorev1alpha1.LastOperationStateProcessing}, nil, []gardencorev1alpha1.Condition{{Status: gardencorev1alpha1.ConditionFalse}}, shoot.StatusUnhealthy),
+			Entry("lastOperation.State is LastOperationStateProcessing with healthy conditions but lastError set",
+				&gardencorev1alpha1.LastOperation{State: gardencorev1alpha1.LastOperationStateProcessing}, &gardencorev1alpha1.LastError{}, nil, shoot.StatusUnhealthy),
+			Entry("lastOperation.State is neither LastOperationStateProcessing nor LastOperationStateSucceeded with healthy conditions",
+				&gardencorev1alpha1.LastOperation{State: gardencorev1alpha1.LastOperationStateError}, nil, nil, shoot.StatusUnhealthy),
+			Entry("lastOperation.State is LastOperationStateSucceeded with healthy conditions",
+				&gardencorev1alpha1.LastOperation{State: gardencorev1alpha1.LastOperationStateSucceeded}, nil, nil, shoot.StatusHealthy),
+			Entry("lastOperation.State is LastOperationStateSucceeded with unhealthy conditions",
+				&gardencorev1alpha1.LastOperation{State: gardencorev1alpha1.LastOperationStateSucceeded}, nil, []gardencorev1alpha1.Condition{{Status: gardencorev1alpha1.ConditionFalse}}, shoot.StatusUnhealthy),
 		)
 
 		DescribeTable("#StatusLabelTransform",

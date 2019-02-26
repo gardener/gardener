@@ -7,6 +7,8 @@ package v1beta1
 import (
 	unsafe "unsafe"
 
+	core "github.com/gardener/gardener/pkg/apis/core"
+	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	garden "github.com/gardener/gardener/pkg/apis/garden"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -453,16 +455,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Condition)(nil), (*garden.Condition)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Condition_To_garden_Condition(a.(*Condition), b.(*garden.Condition), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.Condition)(nil), (*Condition)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Condition_To_v1beta1_Condition(a.(*garden.Condition), b.(*Condition), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*DNS)(nil), (*garden.DNS)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_DNS_To_garden_DNS(a.(*DNS), b.(*garden.DNS), scope)
 	}); err != nil {
@@ -613,16 +605,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*K8SNetworks)(nil), (*garden.K8SNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(a.(*K8SNetworks), b.(*garden.K8SNetworks), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.K8SNetworks)(nil), (*K8SNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(a.(*garden.K8SNetworks), b.(*K8SNetworks), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*Kube2IAM)(nil), (*garden.Kube2IAM)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_Kube2IAM_To_garden_Kube2IAM(a.(*Kube2IAM), b.(*garden.Kube2IAM), scope)
 	}); err != nil {
@@ -740,26 +722,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*garden.KubernetesDashboard)(nil), (*KubernetesDashboard)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(a.(*garden.KubernetesDashboard), b.(*KubernetesDashboard), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LastError)(nil), (*garden.LastError)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_LastError_To_garden_LastError(a.(*LastError), b.(*garden.LastError), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.LastError)(nil), (*LastError)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_LastError_To_v1beta1_LastError(a.(*garden.LastError), b.(*LastError), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LastOperation)(nil), (*garden.LastOperation)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_LastOperation_To_garden_LastOperation(a.(*LastOperation), b.(*garden.LastOperation), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.LastOperation)(nil), (*LastOperation)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_LastOperation_To_v1beta1_LastOperation(a.(*garden.LastOperation), b.(*LastOperation), scope)
 	}); err != nil {
 		return err
 	}
@@ -1335,15 +1297,16 @@ func Convert_garden_AWSMachineImageMapping_To_v1beta1_AWSMachineImageMapping(in 
 }
 
 func autoConvert_v1beta1_AWSNetworks_To_garden_AWSNetworks(in *AWSNetworks, out *garden.AWSNetworks, s conversion.Scope) error {
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	if err := Convert_v1beta1_AWSVPC_To_garden_AWSVPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
 	}
-	out.Internal = *(*[]garden.CIDR)(unsafe.Pointer(&in.Internal))
-	out.Public = *(*[]garden.CIDR)(unsafe.Pointer(&in.Public))
-	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = *(*[]core.CIDR)(unsafe.Pointer(&in.Internal))
+	out.Public = *(*[]core.CIDR)(unsafe.Pointer(&in.Public))
+	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -1353,15 +1316,16 @@ func Convert_v1beta1_AWSNetworks_To_garden_AWSNetworks(in *AWSNetworks, out *gar
 }
 
 func autoConvert_garden_AWSNetworks_To_v1beta1_AWSNetworks(in *garden.AWSNetworks, out *AWSNetworks, s conversion.Scope) error {
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	if err := Convert_garden_AWSVPC_To_v1beta1_AWSVPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
 	}
-	out.Internal = *(*[]CIDR)(unsafe.Pointer(&in.Internal))
-	out.Public = *(*[]CIDR)(unsafe.Pointer(&in.Public))
-	out.Workers = *(*[]CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Internal))
+	out.Public = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Public))
+	out.Workers = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -1418,7 +1382,7 @@ func Convert_garden_AWSRegionalMachineImage_To_v1beta1_AWSRegionalMachineImage(i
 
 func autoConvert_v1beta1_AWSVPC_To_garden_AWSVPC(in *AWSVPC, out *garden.AWSVPC, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*core.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -1429,7 +1393,7 @@ func Convert_v1beta1_AWSVPC_To_garden_AWSVPC(in *AWSVPC, out *garden.AWSVPC, s c
 
 func autoConvert_garden_AWSVPC_To_v1beta1_AWSVPC(in *garden.AWSVPC, out *AWSVPC, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.CIDR = (*CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*v1alpha1.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -1673,13 +1637,14 @@ func Convert_garden_AlicloudMachineType_To_v1beta1_AlicloudMachineType(in *garde
 }
 
 func autoConvert_v1beta1_AlicloudNetworks_To_garden_AlicloudNetworks(in *AlicloudNetworks, out *garden.AlicloudNetworks, s conversion.Scope) error {
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	if err := Convert_v1beta1_AlicloudVPC_To_garden_AlicloudVPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -1689,13 +1654,14 @@ func Convert_v1beta1_AlicloudNetworks_To_garden_AlicloudNetworks(in *AlicloudNet
 }
 
 func autoConvert_garden_AlicloudNetworks_To_v1beta1_AlicloudNetworks(in *garden.AlicloudNetworks, out *AlicloudNetworks, s conversion.Scope) error {
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	if err := Convert_garden_AlicloudVPC_To_v1beta1_AlicloudVPC(&in.VPC, &out.VPC, s); err != nil {
 		return err
 	}
-	out.Workers = *(*[]CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -1730,7 +1696,7 @@ func Convert_garden_AlicloudProfile_To_v1beta1_AlicloudProfile(in *garden.Aliclo
 
 func autoConvert_v1beta1_AlicloudVPC_To_garden_AlicloudVPC(in *AlicloudVPC, out *garden.AlicloudVPC, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*core.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -1741,7 +1707,7 @@ func Convert_v1beta1_AlicloudVPC_To_garden_AlicloudVPC(in *AlicloudVPC, out *gar
 
 func autoConvert_garden_AlicloudVPC_To_v1beta1_AlicloudVPC(in *garden.AlicloudVPC, out *AlicloudVPC, s conversion.Scope) error {
 	out.ID = (*string)(unsafe.Pointer(in.ID))
-	out.CIDR = (*CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*v1alpha1.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -1977,13 +1943,14 @@ func Convert_garden_AzureMachineImage_To_v1beta1_AzureMachineImage(in *garden.Az
 }
 
 func autoConvert_v1beta1_AzureNetworks_To_garden_AzureNetworks(in *AzureNetworks, out *garden.AzureNetworks, s conversion.Scope) error {
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	if err := Convert_v1beta1_AzureVNet_To_garden_AzureVNet(&in.VNet, &out.VNet, s); err != nil {
 		return err
 	}
-	out.Workers = garden.CIDR(in.Workers)
+	out.Workers = core.CIDR(in.Workers)
 	return nil
 }
 
@@ -1993,13 +1960,14 @@ func Convert_v1beta1_AzureNetworks_To_garden_AzureNetworks(in *AzureNetworks, ou
 }
 
 func autoConvert_garden_AzureNetworks_To_v1beta1_AzureNetworks(in *garden.AzureNetworks, out *AzureNetworks, s conversion.Scope) error {
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	if err := Convert_garden_AzureVNet_To_v1beta1_AzureVNet(&in.VNet, &out.VNet, s); err != nil {
 		return err
 	}
-	out.Workers = CIDR(in.Workers)
+	out.Workers = v1alpha1.CIDR(in.Workers)
 	return nil
 }
 
@@ -2058,7 +2026,7 @@ func Convert_garden_AzureResourceGroup_To_v1beta1_AzureResourceGroup(in *garden.
 
 func autoConvert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.AzureVNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
-	out.CIDR = (*garden.CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*core.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -2069,7 +2037,7 @@ func Convert_v1beta1_AzureVNet_To_garden_AzureVNet(in *AzureVNet, out *garden.Az
 
 func autoConvert_garden_AzureVNet_To_v1beta1_AzureVNet(in *garden.AzureVNet, out *AzureVNet, s conversion.Scope) error {
 	out.Name = (*string)(unsafe.Pointer(in.Name))
-	out.CIDR = (*CIDR)(unsafe.Pointer(in.CIDR))
+	out.CIDR = (*v1alpha1.CIDR)(unsafe.Pointer(in.CIDR))
 	return nil
 }
 
@@ -2225,8 +2193,8 @@ func Convert_garden_BackupInfrastructureSpec_To_v1beta1_BackupInfrastructureSpec
 }
 
 func autoConvert_v1beta1_BackupInfrastructureStatus_To_garden_BackupInfrastructureStatus(in *BackupInfrastructureStatus, out *garden.BackupInfrastructureStatus, s conversion.Scope) error {
-	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
+	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
 	if err := metav1.Convert_int64_To_Pointer_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
 		return err
 	}
@@ -2239,8 +2207,8 @@ func Convert_v1beta1_BackupInfrastructureStatus_To_garden_BackupInfrastructureSt
 }
 
 func autoConvert_garden_BackupInfrastructureStatus_To_v1beta1_BackupInfrastructureStatus(in *garden.BackupInfrastructureStatus, out *BackupInfrastructureStatus, s conversion.Scope) error {
-	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
+	out.LastOperation = (*v1alpha1.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastError = (*v1alpha1.LastError)(unsafe.Pointer(in.LastError))
 	if err := metav1.Convert_Pointer_int64_To_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
 		return err
 	}
@@ -2498,36 +2466,6 @@ func Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.Cl
 	return autoConvert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in, out, s)
 }
 
-func autoConvert_v1beta1_Condition_To_garden_Condition(in *Condition, out *garden.Condition, s conversion.Scope) error {
-	out.Type = garden.ConditionType(in.Type)
-	out.Status = garden.ConditionStatus(in.Status)
-	out.LastTransitionTime = in.LastTransitionTime
-	out.LastUpdateTime = in.LastUpdateTime
-	out.Reason = in.Reason
-	out.Message = in.Message
-	return nil
-}
-
-// Convert_v1beta1_Condition_To_garden_Condition is an autogenerated conversion function.
-func Convert_v1beta1_Condition_To_garden_Condition(in *Condition, out *garden.Condition, s conversion.Scope) error {
-	return autoConvert_v1beta1_Condition_To_garden_Condition(in, out, s)
-}
-
-func autoConvert_garden_Condition_To_v1beta1_Condition(in *garden.Condition, out *Condition, s conversion.Scope) error {
-	out.Type = ConditionType(in.Type)
-	out.Status = ConditionStatus(in.Status)
-	out.LastTransitionTime = in.LastTransitionTime
-	out.LastUpdateTime = in.LastUpdateTime
-	out.Reason = in.Reason
-	out.Message = in.Message
-	return nil
-}
-
-// Convert_garden_Condition_To_v1beta1_Condition is an autogenerated conversion function.
-func Convert_garden_Condition_To_v1beta1_Condition(in *garden.Condition, out *Condition, s conversion.Scope) error {
-	return autoConvert_garden_Condition_To_v1beta1_Condition(in, out, s)
-}
-
 func autoConvert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Scope) error {
 	out.Provider = garden.DNSProvider(in.Provider)
 	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
@@ -2681,12 +2619,13 @@ func Convert_garden_GCPMachineImage_To_v1beta1_GCPMachineImage(in *garden.GCPMac
 }
 
 func autoConvert_v1beta1_GCPNetworks_To_garden_GCPNetworks(in *GCPNetworks, out *garden.GCPNetworks, s conversion.Scope) error {
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	out.VPC = (*garden.GCPVPC)(unsafe.Pointer(in.VPC))
-	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
-	out.Internal = (*garden.CIDR)(unsafe.Pointer(in.Internal))
+	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = (*core.CIDR)(unsafe.Pointer(in.Internal))
 	return nil
 }
 
@@ -2696,12 +2635,13 @@ func Convert_v1beta1_GCPNetworks_To_garden_GCPNetworks(in *GCPNetworks, out *gar
 }
 
 func autoConvert_garden_GCPNetworks_To_v1beta1_GCPNetworks(in *garden.GCPNetworks, out *GCPNetworks, s conversion.Scope) error {
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	out.VPC = (*GCPVPC)(unsafe.Pointer(in.VPC))
-	out.Internal = (*CIDR)(unsafe.Pointer(in.Internal))
-	out.Workers = *(*[]CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = (*v1alpha1.CIDR)(unsafe.Pointer(in.Internal))
+	out.Workers = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -2928,30 +2868,6 @@ func autoConvert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAu
 // Convert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig is an autogenerated conversion function.
 func Convert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in *garden.HorizontalPodAutoscalerConfig, out *HorizontalPodAutoscalerConfig, s conversion.Scope) error {
 	return autoConvert_garden_HorizontalPodAutoscalerConfig_To_v1beta1_HorizontalPodAutoscalerConfig(in, out, s)
-}
-
-func autoConvert_v1beta1_K8SNetworks_To_garden_K8SNetworks(in *K8SNetworks, out *garden.K8SNetworks, s conversion.Scope) error {
-	out.Nodes = (*garden.CIDR)(unsafe.Pointer(in.Nodes))
-	out.Pods = (*garden.CIDR)(unsafe.Pointer(in.Pods))
-	out.Services = (*garden.CIDR)(unsafe.Pointer(in.Services))
-	return nil
-}
-
-// Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks is an autogenerated conversion function.
-func Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(in *K8SNetworks, out *garden.K8SNetworks, s conversion.Scope) error {
-	return autoConvert_v1beta1_K8SNetworks_To_garden_K8SNetworks(in, out, s)
-}
-
-func autoConvert_garden_K8SNetworks_To_v1beta1_K8SNetworks(in *garden.K8SNetworks, out *K8SNetworks, s conversion.Scope) error {
-	out.Nodes = (*CIDR)(unsafe.Pointer(in.Nodes))
-	out.Pods = (*CIDR)(unsafe.Pointer(in.Pods))
-	out.Services = (*CIDR)(unsafe.Pointer(in.Services))
-	return nil
-}
-
-// Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks is an autogenerated conversion function.
-func Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(in *garden.K8SNetworks, out *K8SNetworks, s conversion.Scope) error {
-	return autoConvert_garden_K8SNetworks_To_v1beta1_K8SNetworks(in, out, s)
 }
 
 func autoConvert_v1beta1_Kube2IAM_To_garden_Kube2IAM(in *Kube2IAM, out *garden.Kube2IAM, s conversion.Scope) error {
@@ -3258,56 +3174,6 @@ func Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *garde
 	return autoConvert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in, out, s)
 }
 
-func autoConvert_v1beta1_LastError_To_garden_LastError(in *LastError, out *garden.LastError, s conversion.Scope) error {
-	out.Description = in.Description
-	out.Codes = *(*[]garden.ErrorCode)(unsafe.Pointer(&in.Codes))
-	return nil
-}
-
-// Convert_v1beta1_LastError_To_garden_LastError is an autogenerated conversion function.
-func Convert_v1beta1_LastError_To_garden_LastError(in *LastError, out *garden.LastError, s conversion.Scope) error {
-	return autoConvert_v1beta1_LastError_To_garden_LastError(in, out, s)
-}
-
-func autoConvert_garden_LastError_To_v1beta1_LastError(in *garden.LastError, out *LastError, s conversion.Scope) error {
-	out.Description = in.Description
-	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
-	return nil
-}
-
-// Convert_garden_LastError_To_v1beta1_LastError is an autogenerated conversion function.
-func Convert_garden_LastError_To_v1beta1_LastError(in *garden.LastError, out *LastError, s conversion.Scope) error {
-	return autoConvert_garden_LastError_To_v1beta1_LastError(in, out, s)
-}
-
-func autoConvert_v1beta1_LastOperation_To_garden_LastOperation(in *LastOperation, out *garden.LastOperation, s conversion.Scope) error {
-	out.Description = in.Description
-	out.LastUpdateTime = in.LastUpdateTime
-	out.Progress = in.Progress
-	out.State = garden.ShootLastOperationState(in.State)
-	out.Type = garden.ShootLastOperationType(in.Type)
-	return nil
-}
-
-// Convert_v1beta1_LastOperation_To_garden_LastOperation is an autogenerated conversion function.
-func Convert_v1beta1_LastOperation_To_garden_LastOperation(in *LastOperation, out *garden.LastOperation, s conversion.Scope) error {
-	return autoConvert_v1beta1_LastOperation_To_garden_LastOperation(in, out, s)
-}
-
-func autoConvert_garden_LastOperation_To_v1beta1_LastOperation(in *garden.LastOperation, out *LastOperation, s conversion.Scope) error {
-	out.Description = in.Description
-	out.LastUpdateTime = in.LastUpdateTime
-	out.Progress = in.Progress
-	out.State = ShootLastOperationState(in.State)
-	out.Type = ShootLastOperationType(in.Type)
-	return nil
-}
-
-// Convert_garden_LastOperation_To_v1beta1_LastOperation is an autogenerated conversion function.
-func Convert_garden_LastOperation_To_v1beta1_LastOperation(in *garden.LastOperation, out *LastOperation, s conversion.Scope) error {
-	return autoConvert_garden_LastOperation_To_v1beta1_LastOperation(in, out, s)
-}
-
 func autoConvert_v1beta1_Local_To_garden_Local(in *Local, out *garden.Local, s conversion.Scope) error {
 	if err := Convert_v1beta1_LocalNetworks_To_garden_LocalNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
@@ -3355,10 +3221,11 @@ func Convert_garden_LocalConstraints_To_v1beta1_LocalConstraints(in *garden.Loca
 }
 
 func autoConvert_v1beta1_LocalNetworks_To_garden_LocalNetworks(in *LocalNetworks, out *garden.LocalNetworks, s conversion.Scope) error {
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
-	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -3368,10 +3235,11 @@ func Convert_v1beta1_LocalNetworks_To_garden_LocalNetworks(in *LocalNetworks, ou
 }
 
 func autoConvert_garden_LocalNetworks_To_v1beta1_LocalNetworks(in *garden.LocalNetworks, out *LocalNetworks, s conversion.Scope) error {
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
-	out.Workers = *(*[]CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -3763,11 +3631,12 @@ func Convert_garden_OpenStackMachineType_To_v1beta1_OpenStackMachineType(in *gar
 }
 
 func autoConvert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(in *OpenStackNetworks, out *garden.OpenStackNetworks, s conversion.Scope) error {
-	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	out.Router = (*garden.OpenStackRouter)(unsafe.Pointer(in.Router))
-	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -3777,11 +3646,12 @@ func Convert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(in *OpenStack
 }
 
 func autoConvert_garden_OpenStackNetworks_To_v1beta1_OpenStackNetworks(in *garden.OpenStackNetworks, out *OpenStackNetworks, s conversion.Scope) error {
-	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+	// TODO: Inefficient conversion - can we improve it?
+	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
 		return err
 	}
 	out.Router = (*OpenStackRouter)(unsafe.Pointer(in.Router))
-	out.Workers = *(*[]CIDR)(unsafe.Pointer(&in.Workers))
+	out.Workers = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }
 
@@ -4167,9 +4037,9 @@ func Convert_garden_SeedList_To_v1beta1_SeedList(in *garden.SeedList, out *SeedL
 }
 
 func autoConvert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *garden.SeedNetworks, s conversion.Scope) error {
-	out.Nodes = garden.CIDR(in.Nodes)
-	out.Pods = garden.CIDR(in.Pods)
-	out.Services = garden.CIDR(in.Services)
+	out.Nodes = core.CIDR(in.Nodes)
+	out.Pods = core.CIDR(in.Pods)
+	out.Services = core.CIDR(in.Services)
 	return nil
 }
 
@@ -4179,9 +4049,9 @@ func Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(in *SeedNetworks, out *
 }
 
 func autoConvert_garden_SeedNetworks_To_v1beta1_SeedNetworks(in *garden.SeedNetworks, out *SeedNetworks, s conversion.Scope) error {
-	out.Nodes = CIDR(in.Nodes)
-	out.Pods = CIDR(in.Pods)
-	out.Services = CIDR(in.Services)
+	out.Nodes = v1alpha1.CIDR(in.Nodes)
+	out.Pods = v1alpha1.CIDR(in.Pods)
+	out.Services = v1alpha1.CIDR(in.Services)
 	return nil
 }
 
@@ -4229,7 +4099,7 @@ func Convert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *SeedS
 }
 
 func autoConvert_v1beta1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *garden.SeedStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -4239,7 +4109,7 @@ func Convert_v1beta1_SeedStatus_To_garden_SeedStatus(in *SeedStatus, out *garden
 }
 
 func autoConvert_garden_SeedStatus_To_v1beta1_SeedStatus(in *garden.SeedStatus, out *SeedStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]v1alpha1.Condition)(unsafe.Pointer(&in.Conditions))
 	return nil
 }
 
@@ -4367,12 +4237,12 @@ func Convert_garden_ShootSpec_To_v1beta1_ShootSpec(in *garden.ShootSpec, out *Sh
 }
 
 func autoConvert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *garden.ShootStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]garden.Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
 	if err := Convert_v1beta1_Gardener_To_garden_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
-	out.LastOperation = (*garden.LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*garden.LastError)(unsafe.Pointer(in.LastError))
+	out.LastOperation = (*core.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastError = (*core.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed
@@ -4387,12 +4257,12 @@ func Convert_v1beta1_ShootStatus_To_garden_ShootStatus(in *ShootStatus, out *gar
 }
 
 func autoConvert_garden_ShootStatus_To_v1beta1_ShootStatus(in *garden.ShootStatus, out *ShootStatus, s conversion.Scope) error {
-	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
+	out.Conditions = *(*[]v1alpha1.Condition)(unsafe.Pointer(&in.Conditions))
 	if err := Convert_garden_Gardener_To_v1beta1_Gardener(&in.Gardener, &out.Gardener, s); err != nil {
 		return err
 	}
-	out.LastOperation = (*LastOperation)(unsafe.Pointer(in.LastOperation))
-	out.LastError = (*LastError)(unsafe.Pointer(in.LastError))
+	out.LastOperation = (*v1alpha1.LastOperation)(unsafe.Pointer(in.LastOperation))
+	out.LastError = (*v1alpha1.LastError)(unsafe.Pointer(in.LastError))
 	out.ObservedGeneration = in.ObservedGeneration
 	out.RetryCycleStartTime = (*metav1.Time)(unsafe.Pointer(in.RetryCycleStartTime))
 	out.Seed = in.Seed

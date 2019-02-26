@@ -44,6 +44,9 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationList":     schema_pkg_apis_core_v1alpha1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":     schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":             schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.K8SNetworks":                    schema_pkg_apis_core_v1alpha1_K8SNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError":                      schema_pkg_apis_core_v1alpha1_LastError(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation":                  schema_pkg_apis_core_v1alpha1_LastOperation(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig":                 schema_pkg_apis_core_v1alpha1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud":                      schema_pkg_apis_garden_v1beta1_AWSCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints":                schema_pkg_apis_garden_v1beta1_AWSConstraints(ref),
@@ -88,7 +91,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfileList":              schema_pkg_apis_garden_v1beta1_CloudProfileList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudProfileSpec":              schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler":             schema_pkg_apis_garden_v1beta1_ClusterAutoscaler(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition":                     schema_pkg_apis_garden_v1beta1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS":                           schema_pkg_apis_garden_v1beta1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint":         schema_pkg_apis_garden_v1beta1_DNSProviderConstraint(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud":                      schema_pkg_apis_garden_v1beta1_GCPCloud(ref),
@@ -105,7 +107,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation":                   schema_pkg_apis_garden_v1beta1_Hibernation(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HibernationSchedule":           schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.HorizontalPodAutoscalerConfig": schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.K8SNetworks":                   schema_pkg_apis_garden_v1beta1_K8SNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM":                      schema_pkg_apis_garden_v1beta1_Kube2IAM(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAMRole":                  schema_pkg_apis_garden_v1beta1_Kube2IAMRole(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeAPIServerConfig":           schema_pkg_apis_garden_v1beta1_KubeAPIServerConfig(ref),
@@ -118,8 +119,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig":              schema_pkg_apis_garden_v1beta1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints":         schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard":           schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError":                     schema_pkg_apis_garden_v1beta1_LastError(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation":                 schema_pkg_apis_garden_v1beta1_LastOperation(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local":                         schema_pkg_apis_garden_v1beta1_Local(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints":              schema_pkg_apis_garden_v1beta1_LocalConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks":                 schema_pkg_apis_garden_v1beta1_LocalNetworks(ref),
@@ -803,6 +802,124 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_K8SNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.",
+				Properties: map[string]spec.Schema{
+					"nodes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Nodes is the CIDR of the node network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_LastError(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LastError indicates the last occurred error for an operation on a resource.",
+				Properties: map[string]spec.Schema{
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A human readable message indicating details about the last error.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"codes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Well-defined error codes of the last error(s).",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"description"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_LastOperation(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LastOperation indicates the type and the state of the last operation, along with a description message and a progress indicator.",
+				Properties: map[string]spec.Schema{
+					"description": {
+						SchemaProps: spec.SchemaProps{
+							Description: "A human readable message indicating details about the last operation.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"lastUpdateTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Last time the operation state transitioned from one to another.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+					"progress": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The progress in percentage (0-100) of the last operation.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"state": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type of the last operation, one of Create, Reconcile, Delete.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"description", "lastUpdateTime", "progress", "state", "type"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -2415,13 +2532,13 @@ func schema_pkg_apis_garden_v1beta1_BackupInfrastructureStatus(ref common.Refere
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the BackupInfrastructure.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation"),
 						},
 					},
 					"lastError": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastError holds information about the last occurred error during an operation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError"),
 						},
 					},
 					"observedGeneration": {
@@ -2435,7 +2552,7 @@ func schema_pkg_apis_garden_v1beta1_BackupInfrastructureStatus(ref common.Refere
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation"},
 	}
 }
 
@@ -2707,61 +2824,6 @@ func schema_pkg_apis_garden_v1beta1_ClusterAutoscaler(ref common.ReferenceCallba
 			},
 		},
 		Dependencies: []string{},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_Condition(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Condition holds the information about the state of a resource.",
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type of the Shoot condition.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Status of the condition, one of True, False, Unknown.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"lastTransitionTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Last time the condition transitioned from one status to another.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastUpdateTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Last time the condition was updated.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"reason": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The reason for the condition's last transition.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"message": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A human readable message indicating details about the transition.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"type", "status", "lastTransitionTime", "lastUpdateTime", "reason", "message"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -3378,40 +3440,6 @@ func schema_pkg_apis_garden_v1beta1_HorizontalPodAutoscalerConfig(ref common.Ref
 	}
 }
 
-func schema_pkg_apis_garden_v1beta1_K8SNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.",
-				Properties: map[string]spec.Schema{
-					"nodes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the node network.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"pods": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Pods is the CIDR of the pod network.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"services": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Services is the CIDR of the service network.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{},
-	}
-}
-
 func schema_pkg_apis_garden_v1beta1_Kube2IAM(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -3830,90 +3858,6 @@ func schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref common.ReferenceCall
 			},
 		},
 		Dependencies: []string{},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_LastError(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LastError indicates the last occurred error for an operation on a Shoot cluster.",
-				Properties: map[string]spec.Schema{
-					"description": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A human readable message indicating details about the last error.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"codes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Well-defined error codes of the last error(s).",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"description"},
-			},
-		},
-		Dependencies: []string{},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_LastOperation(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LastOperation indicates the type and the state of the last operation, along with a description message and a progress indicator.",
-				Properties: map[string]spec.Schema{
-					"description": {
-						SchemaProps: spec.SchemaProps{
-							Description: "A human readable message indicating details about the last operation.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"lastUpdateTime": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Last time the operation state transitioned from one to another.",
-							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"progress": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The progress in percentage (0-100) of the last operation.",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
-					"state": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Type of the last operation, one of Create, Reconcile, Delete.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"description", "lastUpdateTime", "progress", "state", "type"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -5436,7 +5380,7 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
 									},
 								},
 							},
@@ -5446,7 +5390,7 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"},
 	}
 }
 
@@ -5617,7 +5561,7 @@ func schema_pkg_apis_garden_v1beta1_ShootStatus(ref common.ReferenceCallback) co
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition"),
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
 									},
 								},
 							},
@@ -5632,13 +5576,13 @@ func schema_pkg_apis_garden_v1beta1_ShootStatus(ref common.ReferenceCallback) co
 					"lastOperation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastOperation holds information about the last operation on the Shoot.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation"),
 						},
 					},
 					"lastError": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LastError holds information about the last occurred error during an operation.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError"),
 						},
 					},
 					"observedGeneration": {
@@ -5680,7 +5624,7 @@ func schema_pkg_apis_garden_v1beta1_ShootStatus(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Condition", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastError", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LastOperation", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

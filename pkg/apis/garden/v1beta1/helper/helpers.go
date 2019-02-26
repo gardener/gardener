@@ -26,7 +26,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
@@ -242,82 +241,6 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/local")
 	}
 	return cloud, nil
-}
-
-// InitCondition initializes a new Condition with an Unknown status.
-func InitCondition(conditionType gardenv1beta1.ConditionType, reason, message string) *gardenv1beta1.Condition {
-	if reason == "" {
-		reason = "ConditionInitialized"
-	}
-	if message == "" {
-		message = "The condition has been initialized but its semantic check has not been performed yet."
-	}
-	return &gardenv1beta1.Condition{
-		Type:               conditionType,
-		Status:             gardenv1beta1.ConditionUnknown,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: Now(),
-	}
-}
-
-// UpdatedCondition updates the properties of one specific condition.
-func UpdatedCondition(condition *gardenv1beta1.Condition, status gardenv1beta1.ConditionStatus, reason, message string) *gardenv1beta1.Condition {
-	newCondition := &gardenv1beta1.Condition{
-		Type:               condition.Type,
-		Status:             status,
-		Reason:             reason,
-		Message:            message,
-		LastTransitionTime: condition.LastTransitionTime,
-		LastUpdateTime:     Now(),
-	}
-
-	if condition.Status != status {
-		newCondition.LastTransitionTime = Now()
-	}
-	return newCondition
-}
-
-func UpdatedConditionUnknownError(condition *gardenv1beta1.Condition, err error) *gardenv1beta1.Condition {
-	return UpdatedConditionUnknownErrorMessage(condition, err.Error())
-}
-
-func UpdatedConditionUnknownErrorMessage(condition *gardenv1beta1.Condition, message string) *gardenv1beta1.Condition {
-	return UpdatedCondition(condition, gardenv1beta1.ConditionUnknown, gardenv1beta1.ConditionCheckError, message)
-}
-
-// NewConditions initializes the provided conditions based on an existing list. If a condition type does not exist
-// in the list yet, it will be set to default values.
-func NewConditions(conditions []gardenv1beta1.Condition, conditionTypes ...gardenv1beta1.ConditionType) []*gardenv1beta1.Condition {
-	newConditions := []*gardenv1beta1.Condition{}
-
-	// We retrieve the current conditions in order to update them appropriately.
-	for _, conditionType := range conditionTypes {
-		if c := GetCondition(conditions, conditionType); c != nil {
-			newConditions = append(newConditions, c)
-			continue
-		}
-		newConditions = append(newConditions, InitCondition(conditionType, "", ""))
-	}
-
-	return newConditions
-}
-
-// GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
-// In case the required type could not be found, it returns nil.
-func GetCondition(conditions []gardenv1beta1.Condition, conditionType gardenv1beta1.ConditionType) *gardenv1beta1.Condition {
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			c := condition
-			return &c
-		}
-	}
-	return nil
-}
-
-// ConditionsNeedUpdate returns true if the <existingConditions> must be updated based on <newConditions>.
-func ConditionsNeedUpdate(existingConditions, newConditions []gardenv1beta1.Condition) bool {
-	return existingConditions == nil || !apiequality.Semantic.DeepEqual(newConditions, existingConditions)
 }
 
 // DetermineMachineImage finds the cloud specific machine image in the <cloudProfile> for the given <name> and
@@ -698,29 +621,4 @@ func ReadShootedSeed(shoot *gardenv1beta1.Shoot) (*ShootedSeed, error) {
 	}
 
 	return shootedSeed, nil
-}
-
-// Coder is an error that may produce an ErrorCode visible to the outside.
-type Coder interface {
-	error
-	Code() gardenv1beta1.ErrorCode
-}
-
-// ExtractErrorCodes extracts all error codes from the given error by using utils.Errors
-func ExtractErrorCodes(err error) []gardenv1beta1.ErrorCode {
-	var codes []gardenv1beta1.ErrorCode
-	for _, err := range utils.Errors(err) {
-		if coder, ok := err.(Coder); ok {
-			codes = append(codes, coder.Code())
-		}
-	}
-	return codes
-}
-
-func FormatLastErrDescription(err error) string {
-	errString := err.Error()
-	if len(errString) > 0 {
-		errString = strings.ToUpper(string(errString[0])) + errString[1:]
-	}
-	return errString
 }

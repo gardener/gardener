@@ -18,7 +18,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/onsi/ginkgo"
@@ -34,184 +33,186 @@ var (
 )
 
 var _ = Describe("helper", func() {
-	var zeroTime metav1.Time
+	Describe("errors", func() {
+		var zeroTime metav1.Time
 
-	DescribeTable("#UpdatedCondition",
-		func(condition gardencorev1alpha1.Condition, status corev1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
-			updated := UpdatedCondition(condition, status, reason, message)
+		DescribeTable("#UpdatedCondition",
+			func(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string, matcher types.GomegaMatcher) {
+				updated := UpdatedCondition(condition, status, reason, message)
 
-			Expect(updated).To(matcher)
-		},
-		Entry("no update",
-			gardencorev1alpha1.Condition{
-				Status:  corev1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
+				Expect(updated).To(matcher)
 			},
-			corev1.ConditionTrue,
-			"reason",
-			"message",
-			MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(corev1.ConditionTrue),
-				"Reason":             Equal("reason"),
-				"Message":            Equal("message"),
-				"LastTransitionTime": Equal(zeroTime),
-				"LastUpdateTime":     Not(Equal(zeroTime)),
-			}),
-		),
-		Entry("update reason",
-			gardencorev1alpha1.Condition{
-				Status:  corev1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
-			},
-			corev1.ConditionTrue,
-			"OtherReason",
-			"message",
-			MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(corev1.ConditionTrue),
-				"Reason":             Equal("OtherReason"),
-				"Message":            Equal("message"),
-				"LastTransitionTime": Equal(zeroTime),
-				"LastUpdateTime":     Not(Equal(zeroTime)),
-			}),
-		),
-		Entry("update status",
-			gardencorev1alpha1.Condition{
-				Status:  corev1.ConditionTrue,
-				Reason:  "reason",
-				Message: "message",
-			},
-			corev1.ConditionFalse,
-			"OtherReason",
-			"message",
-			MatchFields(IgnoreExtras, Fields{
-				"Status":             Equal(corev1.ConditionFalse),
-				"Reason":             Equal("OtherReason"),
-				"Message":            Equal("message"),
-				"LastTransitionTime": Not(Equal(zeroTime)),
-				"LastUpdateTime":     Not(Equal(zeroTime)),
-			}),
-		),
-	)
-
-	Describe("#MergeConditions", func() {
-		It("should merge the conditions", func() {
-			var (
-				typeFoo gardencorev1alpha1.ConditionType = "foo"
-				typeBar gardencorev1alpha1.ConditionType = "bar"
-			)
-
-			oldConditions := []gardencorev1alpha1.Condition{
-				{
-					Type:   typeFoo,
-					Reason: "hugo",
+			Entry("no update",
+				gardencorev1alpha1.Condition{
+					Status:  gardencorev1alpha1.ConditionTrue,
+					Reason:  "reason",
+					Message: "message",
 				},
-			}
+				gardencorev1alpha1.ConditionTrue,
+				"reason",
+				"message",
+				MatchFields(IgnoreExtras, Fields{
+					"Status":             Equal(gardencorev1alpha1.ConditionTrue),
+					"Reason":             Equal("reason"),
+					"Message":            Equal("message"),
+					"LastTransitionTime": Equal(zeroTime),
+					"LastUpdateTime":     Not(Equal(zeroTime)),
+				}),
+			),
+			Entry("update reason",
+				gardencorev1alpha1.Condition{
+					Status:  gardencorev1alpha1.ConditionTrue,
+					Reason:  "reason",
+					Message: "message",
+				},
+				gardencorev1alpha1.ConditionTrue,
+				"OtherReason",
+				"message",
+				MatchFields(IgnoreExtras, Fields{
+					"Status":             Equal(gardencorev1alpha1.ConditionTrue),
+					"Reason":             Equal("OtherReason"),
+					"Message":            Equal("message"),
+					"LastTransitionTime": Equal(zeroTime),
+					"LastUpdateTime":     Not(Equal(zeroTime)),
+				}),
+			),
+			Entry("update status",
+				gardencorev1alpha1.Condition{
+					Status:  gardencorev1alpha1.ConditionTrue,
+					Reason:  "reason",
+					Message: "message",
+				},
+				gardencorev1alpha1.ConditionFalse,
+				"OtherReason",
+				"message",
+				MatchFields(IgnoreExtras, Fields{
+					"Status":             Equal(gardencorev1alpha1.ConditionFalse),
+					"Reason":             Equal("OtherReason"),
+					"Message":            Equal("message"),
+					"LastTransitionTime": Not(Equal(zeroTime)),
+					"LastUpdateTime":     Not(Equal(zeroTime)),
+				}),
+			),
+		)
 
-			result := MergeConditions(oldConditions, gardencorev1alpha1.Condition{Type: typeFoo}, gardencorev1alpha1.Condition{Type: typeBar})
+		Describe("#MergeConditions", func() {
+			It("should merge the conditions", func() {
+				var (
+					typeFoo gardencorev1alpha1.ConditionType = "foo"
+					typeBar gardencorev1alpha1.ConditionType = "bar"
+				)
 
-			Expect(result).To(Equal([]gardencorev1alpha1.Condition{gardencorev1alpha1.Condition{Type: typeFoo}, gardencorev1alpha1.Condition{Type: typeBar}}))
-		})
-	})
-
-	Describe("#GetCondition", func() {
-		It("should return the found condition", func() {
-			var (
-				conditionType gardencorev1alpha1.ConditionType = "test-1"
-				condition                                      = gardencorev1alpha1.Condition{
-					Type: conditionType,
+				oldConditions := []gardencorev1alpha1.Condition{
+					{
+						Type:   typeFoo,
+						Reason: "hugo",
+					},
 				}
-				conditions = []gardencorev1alpha1.Condition{condition}
-			)
 
-			cond := GetCondition(conditions, conditionType)
+				result := MergeConditions(oldConditions, gardencorev1alpha1.Condition{Type: typeFoo}, gardencorev1alpha1.Condition{Type: typeBar})
 
-			Expect(cond).NotTo(BeNil())
-			Expect(*cond).To(Equal(condition))
+				Expect(result).To(Equal([]gardencorev1alpha1.Condition{gardencorev1alpha1.Condition{Type: typeFoo}, gardencorev1alpha1.Condition{Type: typeBar}}))
+			})
 		})
 
-		It("should return nil because the required condition could not be found", func() {
-			var (
-				conditionType gardencorev1alpha1.ConditionType = "test-1"
-				conditions                                     = []gardencorev1alpha1.Condition{}
-			)
+		Describe("#GetCondition", func() {
+			It("should return the found condition", func() {
+				var (
+					conditionType gardencorev1alpha1.ConditionType = "test-1"
+					condition                                      = gardencorev1alpha1.Condition{
+						Type: conditionType,
+					}
+					conditions = []gardencorev1alpha1.Condition{condition}
+				)
 
-			cond := GetCondition(conditions, conditionType)
+				cond := GetCondition(conditions, conditionType)
 
-			Expect(cond).To(BeNil())
+				Expect(cond).NotTo(BeNil())
+				Expect(*cond).To(Equal(condition))
+			})
+
+			It("should return nil because the required condition could not be found", func() {
+				var (
+					conditionType gardencorev1alpha1.ConditionType = "test-1"
+					conditions                                     = []gardencorev1alpha1.Condition{}
+				)
+
+				cond := GetCondition(conditions, conditionType)
+
+				Expect(cond).To(BeNil())
+			})
 		})
+
+		DescribeTable("#IsResourceSupported",
+			func(resources []gardencorev1alpha1.ControllerResource, resourceKind, resourceType string, expectation bool) {
+				Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
+			},
+			Entry("expect true",
+				[]gardencorev1alpha1.ControllerResource{
+					{
+						Kind: "foo",
+						Type: "bar",
+					},
+				},
+				"foo",
+				"bar",
+				true,
+			),
+			Entry("expect true",
+				[]gardencorev1alpha1.ControllerResource{
+					{
+						Kind: "foo",
+						Type: "bar",
+					},
+				},
+				"foo",
+				"BAR",
+				true,
+			),
+			Entry("expect false",
+				[]gardencorev1alpha1.ControllerResource{
+					{
+						Kind: "foo",
+						Type: "bar",
+					},
+				},
+				"foo",
+				"baz",
+				false,
+			),
+		)
+
+		DescribeTable("#IsControllerInstallationSuccessful",
+			func(conditions []gardencorev1alpha1.Condition, expectation bool) {
+				controllerInstallation := gardencorev1alpha1.ControllerInstallation{
+					Status: gardencorev1alpha1.ControllerInstallationStatus{
+						Conditions: conditions,
+					},
+				}
+				Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
+			},
+			Entry("expect true",
+				[]gardencorev1alpha1.Condition{
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationInstalled,
+						Status: gardencorev1alpha1.ConditionTrue,
+					},
+				},
+				true,
+			),
+			Entry("expect false",
+				[]gardencorev1alpha1.Condition{
+					{
+						Type:   gardencorev1alpha1.ControllerInstallationInstalled,
+						Status: gardencorev1alpha1.ConditionFalse,
+					},
+				},
+				false,
+			),
+			Entry("expect false",
+				[]gardencorev1alpha1.Condition{},
+				false,
+			),
+		)
 	})
-
-	DescribeTable("#IsResourceSupported",
-		func(resources []gardencorev1alpha1.ControllerResource, resourceKind, resourceType string, expectation bool) {
-			Expect(IsResourceSupported(resources, resourceKind, resourceType)).To(Equal(expectation))
-		},
-		Entry("expect true",
-			[]gardencorev1alpha1.ControllerResource{
-				{
-					Kind: "foo",
-					Type: "bar",
-				},
-			},
-			"foo",
-			"bar",
-			true,
-		),
-		Entry("expect true",
-			[]gardencorev1alpha1.ControllerResource{
-				{
-					Kind: "foo",
-					Type: "bar",
-				},
-			},
-			"foo",
-			"BAR",
-			true,
-		),
-		Entry("expect false",
-			[]gardencorev1alpha1.ControllerResource{
-				{
-					Kind: "foo",
-					Type: "bar",
-				},
-			},
-			"foo",
-			"baz",
-			false,
-		),
-	)
-
-	DescribeTable("#IsControllerInstallationSuccessful",
-		func(conditions []gardencorev1alpha1.Condition, expectation bool) {
-			controllerInstallation := gardencorev1alpha1.ControllerInstallation{
-				Status: gardencorev1alpha1.ControllerInstallationStatus{
-					Conditions: conditions,
-				},
-			}
-			Expect(IsControllerInstallationSuccessful(controllerInstallation)).To(Equal(expectation))
-		},
-		Entry("expect true",
-			[]gardencorev1alpha1.Condition{
-				{
-					Type:   gardencorev1alpha1.ControllerInstallationInstalled,
-					Status: corev1.ConditionTrue,
-				},
-			},
-			true,
-		),
-		Entry("expect false",
-			[]gardencorev1alpha1.Condition{
-				{
-					Type:   gardencorev1alpha1.ControllerInstallationInstalled,
-					Status: corev1.ConditionFalse,
-				},
-			},
-			false,
-		),
-		Entry("expect false",
-			[]gardencorev1alpha1.Condition{},
-			false,
-		),
-	)
 })

@@ -15,9 +15,11 @@
 package seedmanager_test
 
 import (
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
@@ -53,16 +55,16 @@ var _ = Describe("seedmanager", func() {
 					Visible:   &trueVar,
 					Protected: &falseVar,
 					Networks: garden.SeedNetworks{
-						Nodes:    garden.CIDR("10.10.0.0/16"),
-						Pods:     garden.CIDR("10.20.0.0/16"),
-						Services: garden.CIDR("10.30.0.0/16"),
+						Nodes:    gardencore.CIDR("10.10.0.0/16"),
+						Pods:     gardencore.CIDR("10.20.0.0/16"),
+						Services: gardencore.CIDR("10.30.0.0/16"),
 					},
 				},
 				Status: garden.SeedStatus{
-					Conditions: []garden.Condition{
+					Conditions: []gardencore.Condition{
 						{
 							Type:   garden.SeedAvailable,
-							Status: garden.ConditionTrue,
+							Status: gardencore.ConditionTrue,
 						},
 					},
 				},
@@ -78,7 +80,7 @@ var _ = Describe("seedmanager", func() {
 						Region:  region,
 						AWS: &garden.AWSCloud{
 							Networks: garden.AWSNetworks{
-								K8SNetworks: garden.K8SNetworks{
+								K8SNetworks: gardencore.K8SNetworks{
 									Nodes:    makeCIDRPtr("10.40.0.0/16"),
 									Pods:     makeCIDRPtr("10.50.0.0/16"),
 									Services: makeCIDRPtr("10.60.0.0/16"),
@@ -159,7 +161,7 @@ var _ = Describe("seedmanager", func() {
 			})
 
 			It("should fail because the networks of the shoot overlaps with the seed networks", func() {
-				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{
+				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = gardencore.K8SNetworks{
 					Pods:     &seed.Spec.Networks.Pods,
 					Services: &seed.Spec.Networks.Services,
 					Nodes:    &seed.Spec.Networks.Nodes,
@@ -211,7 +213,7 @@ var _ = Describe("seedmanager", func() {
 			})
 
 			It("should fail because it cannot find a seed cluster due to network disjointedness", func() {
-				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = garden.K8SNetworks{
+				shoot.Spec.Cloud.AWS.Networks.K8SNetworks = gardencore.K8SNetworks{
 					Pods:     &seed.Spec.Networks.Pods,
 					Services: &seed.Spec.Networks.Services,
 					Nodes:    &seed.Spec.Networks.Nodes,
@@ -254,10 +256,10 @@ var _ = Describe("seedmanager", func() {
 			})
 
 			It("should fail because it cannot find a seed cluster due to unavailability", func() {
-				seed.Status.Conditions = []garden.Condition{
+				seed.Status.Conditions = []gardencore.Condition{
 					{
 						Type:   garden.SeedAvailable,
-						Status: garden.ConditionFalse,
+						Status: gardencore.ConditionFalse,
 					},
 				}
 
@@ -287,7 +289,7 @@ var _ = Describe("seedmanager", func() {
 	})
 })
 
-func makeCIDRPtr(cidr string) *garden.CIDR {
-	c := garden.CIDR(cidr)
+func makeCIDRPtr(cidr string) *gardencore.CIDR {
+	c := gardencore.CIDR(cidr)
 	return &c
 }

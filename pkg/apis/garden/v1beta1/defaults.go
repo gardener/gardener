@@ -15,7 +15,9 @@
 package v1beta1
 
 import (
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/utils"
+
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -28,8 +30,8 @@ func addDefaultingFuncs(scheme *runtime.Scheme) error {
 func SetDefaults_Shoot(obj *Shoot) {
 	var (
 		cloud              = obj.Spec.Cloud
-		defaultPodCIDR     = DefaultPodNetworkCIDR
-		defaultServiceCIDR = DefaultServiceNetworkCIDR
+		defaultPodCIDR     = gardencorev1alpha1.DefaultPodNetworkCIDR
+		defaultServiceCIDR = gardencorev1alpha1.DefaultServiceNetworkCIDR
 	)
 
 	if cloud.AWS != nil {
@@ -74,11 +76,11 @@ func SetDefaults_Shoot(obj *Shoot) {
 
 	if cloud.Alicloud != nil {
 		if cloud.Alicloud.Networks.Pods == nil {
-			podCIDR := CIDR("100.64.0.0/11")
+			podCIDR := gardencorev1alpha1.CIDR("100.64.0.0/11")
 			obj.Spec.Cloud.Alicloud.Networks.Pods = &podCIDR
 		}
 		if cloud.Alicloud.Networks.Services == nil {
-			svcCIDR := CIDR("100.104.0.0/13")
+			svcCIDR := gardencorev1alpha1.CIDR("100.104.0.0/13")
 			obj.Spec.Cloud.Alicloud.Networks.Services = &svcCIDR
 		}
 		if cloud.Alicloud.Networks.Nodes == nil {

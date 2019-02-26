@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -153,7 +154,7 @@ func (c *Controller) reconcileShootKey(key string) error {
 	case shoot.DeletionTimestamp != nil:
 		c.scheduler.Delete(shootID)
 		mayReconcile, reason = true, reconcilescheduler.NewReason(reconcilescheduler.CodeOther, "shoot shall be deleted")
-	case shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate:
+	case shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate:
 		mayReconcile, reason = true, reconcilescheduler.NewReason(reconcilescheduler.CodeOther, "shoot shall be created")
 	default:
 		mayReconcile, reason = c.scheduler.TestAndActivate(shootElement, shoot.Generation != shoot.Status.ObservedGeneration, shootIsSeed(shoot))
@@ -192,9 +193,9 @@ func (c *Controller) reconcileShootKey(key string) error {
 func (c *Controller) updateShootStatusPending(shoot *gardenv1beta1.Shoot, message string) error {
 	_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-			shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
+			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
 				Type:           controllerutils.ComputeOperationType(shoot.ObjectMeta, shoot.Status.LastOperation),
-				State:          gardenv1beta1.ShootLastOperationStateProcessing,
+				State:          gardencorev1alpha1.LastOperationStateProcessing,
 				Progress:       0,
 				Description:    message,
 				LastUpdateTime: metav1.Now(),
@@ -304,7 +305,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	// will not be retried unless the shoot generation changes).
 	if shootIsFailed(shoot) {
 		if shoot.Status.Gardener.Version == version.Get().GitVersion {
-			shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardenv1beta1.ShootLastOperationStateFailed)
+			shootLogger.Infof("Will not reconcile as the last operation has been set to '%s' and the generation has not changed since then.", gardencorev1alpha1.LastOperationStateFailed)
 			return false, nil
 		}
 
@@ -327,7 +328,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "[%s] %s", operationID, deleteErr.Description)
 			if state, updateErr := c.updateShootStatusDeleteError(operation, deleteErr); updateErr != nil {
 				shootLogger.Errorf("Could not update the Shoot status after deletion error: %+v", updateErr)
-				return state != gardenv1beta1.ShootLastOperationStateFailed, updateErr
+				return state != gardencorev1alpha1.LastOperationStateFailed, updateErr
 			}
 			return true, errors.New(deleteErr.Description)
 		}
@@ -349,7 +350,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventReconcileError, "[%s] %s", operationID, reconcileErr.Description)
 		if state, updateErr := c.updateShootStatusReconcileError(operation, operationType, reconcileErr); updateErr != nil {
 			shootLogger.Errorf("Could not update the Shoot status after reconciliation error: %+v", updateErr)
-			return state != gardenv1beta1.ShootLastOperationStateFailed, updateErr
+			return state != gardencorev1alpha1.LastOperationStateFailed, updateErr
 		}
 		return true, errors.New(reconcileErr.Description)
 	}

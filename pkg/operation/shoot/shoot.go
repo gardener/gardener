@@ -19,6 +19,7 @@ import (
 
 	"github.com/Masterminds/semver"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
@@ -131,7 +132,7 @@ func (s *Shoot) GetNodeCount() int {
 }
 
 // GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
-func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
+func (s *Shoot) GetK8SNetworks() *gardencorev1alpha1.K8SNetworks {
 	switch s.CloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		return &s.Info.Spec.Cloud.AWS.Networks.K8SNetworks
@@ -150,7 +151,7 @@ func (s *Shoot) GetK8SNetworks() *gardenv1beta1.K8SNetworks {
 }
 
 // GetPodNetwork returns the pod network CIDR for the Shoot cluster.
-func (s *Shoot) GetPodNetwork() gardenv1beta1.CIDR {
+func (s *Shoot) GetPodNetwork() gardencorev1alpha1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
 		return *k8sNetworks.Pods
 	}
@@ -158,7 +159,7 @@ func (s *Shoot) GetPodNetwork() gardenv1beta1.CIDR {
 }
 
 // GetServiceNetwork returns the service network CIDR for the Shoot cluster.
-func (s *Shoot) GetServiceNetwork() gardenv1beta1.CIDR {
+func (s *Shoot) GetServiceNetwork() gardencorev1alpha1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
 		return *k8sNetworks.Services
 	}
@@ -166,7 +167,7 @@ func (s *Shoot) GetServiceNetwork() gardenv1beta1.CIDR {
 }
 
 // GetNodeNetwork returns the node network CIDR for the Shoot cluster.
-func (s *Shoot) GetNodeNetwork() gardenv1beta1.CIDR {
+func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
 		return *k8sNetworks.Nodes
 	}

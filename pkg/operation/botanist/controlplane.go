@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
@@ -218,11 +219,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		return b.DeleteClusterAutoscaler()
 	}
 
-	var (
-		name        = "cluster-autoscaler"
-		workerPools = []map[string]interface{}{}
-	)
-
+	var workerPools []map[string]interface{}
 	for _, worker := range b.MachineDeployments {
 		// Skip worker pools for which min=0. Auto scaler cannot handle worker pools having a min count of 0.
 		if worker.Minimum == 0 {
@@ -238,7 +235,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cluster-autoscaler": b.CheckSums[name],
+			"checksum/secret-cluster-autoscaler": b.CheckSums[gardencorev1alpha1.DeploymentNameClusterAutoscaler],
 		},
 		"namespace": map[string]interface{}{
 			"uid": b.SeedNamespaceObject.UID,
@@ -252,12 +249,12 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, nil, values)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, nil, values)
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteClusterAutoscaler() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.ClusterAutoscalerDeploymentName)
+	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}

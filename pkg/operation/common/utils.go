@@ -22,14 +22,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+
 	jsoniter "github.com/json-iterator/go"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,7 +125,7 @@ func IdentifyAddressType(address string) (string, net.IP) {
 
 // ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
 // For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
-func ComputeClusterIP(cidr gardenv1beta1.CIDR, lastByte byte) string {
+func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {
 	ip, _, _ := net.ParseCIDR(string(cidr))
 	ip = ip.To4()
 	ip[3] = lastByte
@@ -222,56 +224,6 @@ func IsFollowingNewNamingConvention(seedNamespace string) bool {
 func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
 	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s)([^\n]*)`, key, separator))
 	return keyValueRegexp.ReplaceAllString(cloudProviderConfig, fmt.Sprintf(`${1}%q`, strings.Replace(value, `$`, `$$`, -1)))
-}
-
-type errorWithCode struct {
-	code    gardenv1beta1.ErrorCode
-	message string
-}
-
-// NewErrorWithCode creates a new error that additionally exposes the given code via the Coder interface.
-func NewErrorWithCode(code gardenv1beta1.ErrorCode, message string) error {
-	return &errorWithCode{code, message}
-}
-
-func (e *errorWithCode) Code() gardenv1beta1.ErrorCode {
-	return e.code
-}
-
-func (e *errorWithCode) Error() string {
-	return e.message
-}
-
-var (
-	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions)`)
-	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
-	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
-	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict)`)
-)
-
-func determineErrorCode(message string) gardenv1beta1.ErrorCode {
-	switch {
-	case unauthorizedRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraUnauthorized
-	case quotaExceededRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraQuotaExceeded
-	case insufficientPrivilegesRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraInsufficientPrivileges
-	case dependenciesRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraDependencies
-	default:
-		return ""
-	}
-}
-
-// DetermineError determines the Garden error code for the given error message.
-func DetermineError(message string) error {
-	code := determineErrorCode(message)
-	if code == "" {
-		return errors.New(message)
-	}
-
-	return &errorWithCode{code, message}
 }
 
 // ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace

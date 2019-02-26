@@ -17,6 +17,8 @@ package garden
 import (
 	"time"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
+
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -528,7 +530,7 @@ type SeedSpec struct {
 type SeedStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +optional
-	Conditions []Condition
+	Conditions []gardencore.Condition
 }
 
 // SeedCloud defines the cloud profile and the region this Seed cluster belongs to.
@@ -542,11 +544,11 @@ type SeedCloud struct {
 // SeedNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
 type SeedNetworks struct {
 	// Nodes is the CIDR of the node network.
-	Nodes CIDR
+	Nodes gardencore.CIDR
 	// Pods is the CIDR of the pod network.
-	Pods CIDR
+	Pods gardencore.CIDR
 	// Services is the CIDR of the service network.
-	Services CIDR
+	Services gardencore.CIDR
 }
 
 ////////////////////////////////////////////////////
@@ -705,15 +707,15 @@ type ShootSpec struct {
 type ShootStatus struct {
 	// Conditions represents the latest available observations of a Shoots's current state.
 	// +optional
-	Conditions []Condition
+	Conditions []gardencore.Condition
 	// Gardener holds information about the Gardener which last acted on the Shoot.
 	Gardener Gardener
 	// LastOperation holds information about the last operation on the Shoot.
 	// +optional
-	LastOperation *LastOperation
+	LastOperation *gardencore.LastOperation
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
-	LastError *LastError
+	LastError *gardencore.LastError
 	// ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the
 	// Shoot's generation, which is updated on mutation by the API Server.
 	// +optional
@@ -769,19 +771,6 @@ type Cloud struct {
 	Local *Local
 }
 
-// K8SNetworks contains CIDRs for the pod, service and node networks of a Kubernetes cluster.
-type K8SNetworks struct {
-	// Nodes is the CIDR of the node network.
-	// +optional
-	Nodes *CIDR
-	// Pods is the CIDR of the pod network.
-	// +optional
-	Pods *CIDR
-	// Services is the CIDR of the service network.
-	// +optional
-	Services *CIDR
-}
-
 // AWSCloud contains the Shoot specification for AWS.
 
 type AWSCloud struct {
@@ -800,15 +789,15 @@ type AWSCloud struct {
 
 // AWSNetworks holds information about the Kubernetes and infrastructure networks.
 type AWSNetworks struct {
-	K8SNetworks
+	gardencore.K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AWSVPC
 	// Internal is a list of private subnets to create (used for internal load balancers).
-	Internal []CIDR
+	Internal []gardencore.CIDR
 	// Public is a list of public subnets to create (used for bastion and load balancers).
-	Public []CIDR
+	Public []gardencore.CIDR
 	// Workers is a list of worker subnets (private) to create (used for the VMs).
-	Workers []CIDR
+	Workers []gardencore.CIDR
 }
 
 // AWSVPC contains either an id (of an existing VPC) or the CIDR (for a VPC to be created).
@@ -818,7 +807,7 @@ type AWSVPC struct {
 	ID *string
 	// CIDR is a CIDR range for a new VPC.
 	// +optional
-	CIDR *CIDR
+	CIDR *gardencore.CIDR
 }
 
 // AWSWorker is the definition of a worker group.
@@ -852,16 +841,16 @@ type AlicloudVPC struct {
 	ID *string
 	// CIDR is a CIDR range for a new VPC.
 	// +optional
-	CIDR *CIDR
+	CIDR *gardencore.CIDR
 }
 
 // AlicloudNetworks holds information about the Kubernetes and infrastructure networks.
 type AlicloudNetworks struct {
-	K8SNetworks
+	gardencore.K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	VPC AlicloudVPC
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers []CIDR
+	Workers []gardencore.CIDR
 }
 
 // AlicloudWorker is the definition of a worker group.
@@ -897,11 +886,11 @@ type AzureResourceGroup struct {
 
 // AzureNetworks holds information about the Kubernetes and infrastructure networks.
 type AzureNetworks struct {
-	K8SNetworks
+	gardencore.K8SNetworks
 	// VNet indicates whether to use an existing VNet or create a new one.
 	VNet AzureVNet
 	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers CIDR
+	Workers gardencore.CIDR
 }
 
 // AzureVNet indicates whether to use an existing VNet or create a new one.
@@ -911,7 +900,7 @@ type AzureVNet struct {
 	Name *string
 	// CIDR is a CIDR range for a new VNet.
 	// +optional
-	CIDR *CIDR
+	CIDR *gardencore.CIDR
 }
 
 // AzureWorker is the definition of a worker group.
@@ -940,14 +929,14 @@ type GCPCloud struct {
 
 // GCPNetworks holds information about the Kubernetes and infrastructure networks.
 type GCPNetworks struct {
-	K8SNetworks
+	gardencore.K8SNetworks
 	// VPC indicates whether to use an existing VPC or create a new one.
 	// +optional
 	VPC *GCPVPC
 	// Internal is a private subnet (used for internal load balancers).
-	Internal *CIDR
+	Internal *gardencore.CIDR
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []CIDR
+	Workers []gardencore.CIDR
 }
 
 // GCPVPC indicates whether to use an existing VPC or create a new one.
@@ -986,12 +975,12 @@ type OpenStackCloud struct {
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
-	K8SNetworks
+	gardencore.K8SNetworks
 	// Router indicates whether to use an existing router or create a new one.
 	// +optional
 	Router *OpenStackRouter
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []CIDR
+	Workers []gardencore.CIDR
 }
 
 // OpenStackRouter indicates whether to use an existing router or create a new one.
@@ -1015,9 +1004,9 @@ type Local struct {
 
 // LocalNetworks holds information about the Kubernetes and infrastructure networks.
 type LocalNetworks struct {
-	K8SNetworks
+	gardencore.K8SNetworks
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []CIDR
+	Workers []gardencore.CIDR
 }
 
 // Worker is the base definition of a worker group.
@@ -1191,9 +1180,6 @@ const (
 	// CloudProviderLocal is a constant for the local development provider.
 	CloudProviderLocal CloudProvider = "local"
 )
-
-// CIDR is a string alias.
-type CIDR string
 
 // Hibernation contains information whether the Shoot is suspended or not.
 type Hibernation struct {
@@ -1412,10 +1398,6 @@ type MaintenanceTimeWindow struct {
 }
 
 const (
-	// DefaultPodNetworkCIDR is a constant for the default pod network CIDR of a Shoot cluster.
-	DefaultPodNetworkCIDR = CIDR("100.96.0.0/11")
-	// DefaultServiceNetworkCIDR is a constant for the default service network CIDR of a Shoot cluster.
-	DefaultServiceNetworkCIDR = CIDR("100.64.0.0/13")
 	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (5 minutes).
 	DefaultETCDBackupSchedule = "0 */24 * * *"
 	// DefaultETCDBackupMaximum is a constant for the default number of etcd backups to keep for a Shoot cluster.
@@ -1437,74 +1419,6 @@ type Gardener struct {
 	// Version is the version of the Gardener which last acted on a Shoot cluster.
 	Version string
 }
-
-// LastOperation indicates the type and the state of the last operation, along with a description
-// message and a progress indicator.
-type LastOperation struct {
-	// A human readable message indicating details about the last operation.
-	Description string
-	// Last time the operation state transitioned from one to another.
-	LastUpdateTime metav1.Time
-	// The progress in percentage (0-100) of the last operation.
-	Progress int
-	// Status of the last operation, one of Aborted, Processing, Succeeded, Error, Failed.
-	State ShootLastOperationState
-	// Type of the last operation, one of Create, Reconcile, Delete.
-	Type ShootLastOperationType
-}
-
-// ShootLastOperationType is a string alias.
-type ShootLastOperationType string
-
-const (
-	// ShootLastOperationTypeCreate indicates a 'create' operation.
-	ShootLastOperationTypeCreate ShootLastOperationType = "Create"
-	// ShootLastOperationTypeReconcile indicates a 'reconcile' operation.
-	ShootLastOperationTypeReconcile ShootLastOperationType = "Reconcile"
-	// ShootLastOperationTypeDelete indicates a 'delete' operation.
-	ShootLastOperationTypeDelete ShootLastOperationType = "Delete"
-)
-
-// ShootLastOperationState is a string alias.
-type ShootLastOperationState string
-
-const (
-	// ShootLastOperationStateProcessing indicates that an operation is ongoing.
-	ShootLastOperationStateProcessing ShootLastOperationState = "Processing"
-	// ShootLastOperationStateSucceeded indicates that an operation has completed successfully.
-	ShootLastOperationStateSucceeded ShootLastOperationState = "Succeeded"
-	// ShootLastOperationStateError indicates that an operation is completed with errors and will be retried.
-	ShootLastOperationStateError ShootLastOperationState = "Error"
-	// ShootLastOperationStateFailed indicates that an operation is completed with errors and won't be retried.
-	ShootLastOperationStateFailed ShootLastOperationState = "Failed"
-	// ShootLastOperationStatePending indicates that an operation cannot be done now, but will be tried in future.
-	ShootLastOperationStatePending ShootLastOperationState = "Pending"
-	// ShootLastOperationStateAborted indicates that an operation has been aborted.
-	ShootLastOperationStateAborted ShootLastOperationState = "Aborted"
-)
-
-// LastError indicates the last occurred error for an operation on a Shoot cluster.
-type LastError struct {
-	// A human readable message indicating details about the last error.
-	Description string
-	// Well-defined error codes of the last error(s).
-	// +optional
-	Codes []ErrorCode
-}
-
-// ErrorCode is a string alias.
-type ErrorCode string
-
-const (
-	// ErrorInfraUnauthorized indicates that the last error occurred due to invalid cloud provider credentials.
-	ErrorInfraUnauthorized ErrorCode = "ERR_INFRA_UNAUTHORIZED"
-	// ErrorInfraInsufficientPrivileges indicates that the last error occurred due to insufficient cloud provider privileges.
-	ErrorInfraInsufficientPrivileges ErrorCode = "ERR_INFRA_INSUFFICIENT_PRIVILEGES"
-	// ErrorInfraQuotaExceeded indicates that the last error occurred due to cloud provider quota limits.
-	ErrorInfraQuotaExceeded ErrorCode = "ERR_INFRA_QUOTA_EXCEEDED"
-	// ErrorInfraDependencies indicates that the last error occurred due to dependent objects on the cloud provider level.
-	ErrorInfraDependencies ErrorCode = "ERR_INFRA_DEPENDENCIES"
-)
 
 const (
 	// EventReconciling indicates that the a Reconcile operation started.
@@ -1548,55 +1462,18 @@ const (
 	DefaultDomain = "cluster.local"
 )
 
-// ConditionStatus is the status of a condition.
-type ConditionStatus string
-
-// These are valid condition statuses. "ConditionTrue" means a resource is in the condition.
-// "ConditionFalse" means a resource is not in the condition. "ConditionUnknown" means kubernetes
-// can't decide if a resource is in the condition or not. "ConditionProgressing" means the condition was
-// seen true, failed but stayed within a predefined failure threshold. In the future, we could add other
-// intermediate conditions, e.g. ConditionDegraded.
-const (
-	ConditionTrue        ConditionStatus = "True"
-	ConditionFalse       ConditionStatus = "False"
-	ConditionUnknown     ConditionStatus = "Unknown"
-	ConditionProgressing ConditionStatus = "Progressing"
-)
-
-// Condition holds the information about the state of a resource.
-type Condition struct {
-	// Type of the Shoot condition.
-	Type ConditionType
-	// Status of the condition, one of True, False, Unknown.
-	Status ConditionStatus
-	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time
-	// Last time the condition was updated.
-	LastUpdateTime metav1.Time
-	// The reason for the condition's last transition.
-	Reason string
-	// A human readable message indicating details about the transition.
-	Message string
-}
-
-// ConditionType is a string alias.
-type ConditionType string
-
 const (
 	// SeedAvailable is a constant for a condition type indicating the Seed cluster availability.
-	SeedAvailable ConditionType = "Available"
+	SeedAvailable gardencore.ConditionType = "Available"
 
 	// ShootControlPlaneHealthy is a constant for a condition type indicating the control plane health.
-	ShootControlPlaneHealthy ConditionType = "ControlPlaneHealthy"
+	ShootControlPlaneHealthy gardencore.ConditionType = "ControlPlaneHealthy"
 	// ShootEveryNodeReady is a constant for a condition type indicating the node health.
-	ShootEveryNodeReady ConditionType = "EveryNodeReady"
+	ShootEveryNodeReady gardencore.ConditionType = "EveryNodeReady"
 	// ShootSystemComponentsHealthy is a constant for a condition type indicating the system components health.
-	ShootSystemComponentsHealthy ConditionType = "SystemComponentsHealthy"
+	ShootSystemComponentsHealthy gardencore.ConditionType = "SystemComponentsHealthy"
 	// ShootAPIServerAvailable is a constant for a condition type indicating the api server is available.
-	ShootAPIServerAvailable ConditionType = "APIServerAvailable"
-
-	// ConditionCheckError is a constant for indicating that a condition could not be checked.
-	ConditionCheckError = "ConditionCheckError"
+	ShootAPIServerAvailable gardencore.ConditionType = "APIServerAvailable"
 )
 
 ////////////////////////////////////////////////////
@@ -1643,10 +1520,10 @@ type BackupInfrastructureSpec struct {
 type BackupInfrastructureStatus struct {
 	// LastOperation holds information about the last operation on the BackupInfrastructure.
 	// +optional
-	LastOperation *LastOperation
+	LastOperation *gardencore.LastOperation
 	// LastError holds information about the last occurred error during an operation.
 	// +optional
-	LastError *LastError
+	LastError *gardencore.LastError
 	// ObservedGeneration is the most recent generation observed for this BackupInfrastructure. It corresponds to the
 	// BackupInfrastructure's generation, which is updated on mutation by the API Server.
 	// +optional
