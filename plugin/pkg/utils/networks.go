@@ -17,12 +17,13 @@ package utils
 import (
 	"net"
 
+	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // ValidateNetworkDisjointedness validates that the given <seedNetworks> and <k8sNetworks> are disjoint.
-func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks garden.K8SNetworks, fldPath *field.Path) field.ErrorList {
+func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks gardencore.K8SNetworks, fldPath *field.Path) field.ErrorList {
 	var (
 		allErrs = field.ErrorList{}
 
@@ -58,7 +59,7 @@ func ValidateNetworkDisjointedness(seedNetworks garden.SeedNetworks, k8sNetworks
 	return allErrs
 }
 
-func networksIntersect(cidr1, cidr2 garden.CIDR) bool {
+func networksIntersect(cidr1, cidr2 gardencore.CIDR) bool {
 	_, net1, err1 := net.ParseCIDR(string(cidr1))
 	_, net2, err2 := net.ParseCIDR(string(cidr2))
 	return err1 != nil || err2 != nil || net2.Contains(net1.IP) || net1.Contains(net2.IP)

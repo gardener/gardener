@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
@@ -70,7 +71,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		}
 		metricsServerConfig = map[string]interface{}{
 			"tls": map[string]interface{}{
-				"caBundle": b.Secrets["ca-metrics-server"].Data[secrets.DataKeyCertificateCA],
+				"caBundle": b.Secrets[gardencorev1alpha1.SecretNameCAMetricsServer].Data[secrets.DataKeyCertificateCA],
 			},
 			"secret": map[string]interface{}{
 				"data": b.Secrets["metrics-server"].Data,

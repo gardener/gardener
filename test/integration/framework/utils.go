@@ -21,19 +21,17 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/apimachinery/pkg/labels"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	kubernetesutils "github.com/gardener/gardener/pkg/utils/kubernetes"
-
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	appsv1 "k8s.io/api/apps/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -106,7 +104,7 @@ func (o *GardenerTestOperation) dashboardAvailable(ctx context.Context, url, use
 }
 
 func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *v1beta1.Shoot) error {
-	patchBytes, err := kubernetesutils.CreateTwoWayMergePatch(oldShoot, newShoot)
+	patchBytes, err := kutil.CreateTwoWayMergePatch(oldShoot, newShoot)
 	if err != nil {
 		return fmt.Errorf("failed to patch bytes")
 	}
@@ -143,15 +141,15 @@ func shootCreationCompleted(newStatus *v1beta1.ShootStatus) bool {
 	}
 
 	for _, condition := range newStatus.Conditions {
-		if condition.Status != gardenv1beta1.ConditionTrue {
+		if condition.Status != gardencorev1alpha1.ConditionTrue {
 			return false
 		}
 	}
 
 	if newStatus.LastOperation != nil {
-		if newStatus.LastOperation.Type == v1beta1.ShootLastOperationTypeCreate ||
-			newStatus.LastOperation.Type == v1beta1.ShootLastOperationTypeReconcile {
-			if newStatus.LastOperation.State != v1beta1.ShootLastOperationStateSucceeded {
+		if newStatus.LastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate ||
+			newStatus.LastOperation.Type == gardencorev1alpha1.LastOperationTypeReconcile {
+			if newStatus.LastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded {
 				return false
 			}
 		}

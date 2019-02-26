@@ -21,9 +21,10 @@ import (
 	"sync"
 	"time"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -133,11 +134,11 @@ func (b *Botanist) WaitUntilBackupInfrastructureReconciled() error {
 			return false, err
 		}
 		if backupInfrastructures.Status.LastOperation != nil {
-			if backupInfrastructures.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded {
+			if backupInfrastructures.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
 				b.Logger.Info("Backup infrastructure has been successfully reconciled.")
 				return true, nil
 			}
-			if backupInfrastructures.Status.LastOperation.State == gardenv1beta1.ShootLastOperationStateError {
+			if backupInfrastructures.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateError {
 				b.Logger.Info("Backup infrastructure has been reconciled with error.")
 				return true, errors.New(backupInfrastructures.Status.LastError.Description)
 			}
@@ -220,13 +221,13 @@ func (b *Botanist) WaitUntilKubeAddonManagerDeleted() error {
 // been deleted.
 func (b *Botanist) WaitUntilClusterAutoscalerDeleted() error {
 	return wait.PollImmediate(5*time.Second, 600*time.Second, func() (bool, error) {
-		if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.ClusterAutoscalerDeploymentName); err != nil {
+		if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler); err != nil {
 			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
 			return false, err
 		}
-		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", common.ClusterAutoscalerDeploymentName)
+		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", gardencorev1alpha1.DeploymentNameClusterAutoscaler)
 		return false, nil
 	})
 }

@@ -176,9 +176,9 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	controllerRegistration, err := c.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionFalse, "RegistrationNotFound", fmt.Sprintf("Referenced ControllerRegistration does not exist: %+v", err))
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "RegistrationNotFound", fmt.Sprintf("Referenced ControllerRegistration does not exist: %+v", err))
 		} else {
-			conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionUnknown, "RegistrationReadError", fmt.Sprintf("Referenced ControllerRegistration cannot be read: %+v", err))
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionUnknown, "RegistrationReadError", fmt.Sprintf("Referenced ControllerRegistration cannot be read: %+v", err))
 		}
 		return err
 	}
@@ -187,21 +187,21 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	k8sSeedClient, err := c.getSeedClient(controllerInstallation)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
-			conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
 		}
 		return err
 	}
 	chartRenderer, err := chartrenderer.New(k8sSeedClient.Kubernetes())
 	if err != nil {
-		conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionUnknown, "ChartRendererCreationFailed", fmt.Sprintf("ChartRenderer cannot be recreated for referenced Seed: %+v", err))
+		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionUnknown, "ChartRendererCreationFailed", fmt.Sprintf("ChartRenderer cannot be recreated for referenced Seed: %+v", err))
 		return err
 	}
 
 	var helmDeployment HelmDeployment
 	if err := json.Unmarshal(controllerRegistration.Spec.Deployment.ProviderConfig.Raw, &helmDeployment); err != nil {
-		conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("Chart Information cannot be unmarshalled: %+v", err))
+		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "ChartInformationInvalid", fmt.Sprintf("Chart Information cannot be unmarshalled: %+v", err))
 		return err
 	}
 
@@ -212,10 +212,10 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, helmDeployment.Values)
 	if err != nil {
-		conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
+		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
 		return err
 	}
-	conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
+	conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionTrue, "RegistrationValid", "Chart could be rendered successfully.")
 
 	var (
 		manifest        = release.Manifest()
@@ -246,16 +246,16 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 	if deletionPending, err := c.cleanOldResources(k8sSeedClient, controllerInstallation, newResourcesSet); err != nil {
 		if deletionPending {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionPending", err.Error())
+			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
 		} else {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
+			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
 		}
 		return err
 	}
 
 	status, err := json.Marshal(newResources)
 	if err != nil {
-		conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not marshal status for new resources: %+v", err))
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not marshal status for new resources: %+v", err))
 		return err
 	}
 
@@ -272,16 +272,16 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		},
 	)
 	if err != nil {
-		conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not write status for new resources: %+v", err))
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Could not write status for new resources: %+v", err))
 		return err
 	}
 
 	if err := k8sSeedClient.Applier().ApplyManifest(context.TODO(), kubernetes.NewManifestReader(release.Manifest()), kubernetes.DefaultApplierOptions); err != nil {
-		conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Installation of new resources failed: %+v", err))
+		conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "InstallationFailed", fmt.Sprintf("Installation of new resources failed: %+v", err))
 		return err
 	}
 
-	conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionTrue, "InstallationSuccessful", "Installation of new resources succeeded.")
+	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionTrue, "InstallationSuccessful", "Installation of new resources succeeded.")
 	return nil
 }
 
@@ -301,25 +301,25 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 	k8sSeedClient, err := c.getSeedClient(controllerInstallation)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
 		} else {
-			conditionValid = helper.UpdatedCondition(conditionValid, corev1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionUnknown, "SeedReadError", fmt.Sprintf("Referenced Seed cannot be read: %+v", err))
 		}
 		return err
 	}
 
 	if deletionPending, err := c.cleanOldResources(k8sSeedClient, controllerInstallation, sets.NewString()); err != nil {
 		if deletionPending {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionPending", err.Error())
+			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
 		} else {
-			conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
+			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
 		}
 		return err
 	}
 	if err := k8sSeedClient.Client().Delete(context.TODO(), getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
-	conditionInstalled = helper.UpdatedCondition(conditionInstalled, corev1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
+	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
 
 	_, err = kutil.TryUpdateControllerInstallationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta, func(c *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
 		finalizers := sets.NewString(c.Finalizers...)

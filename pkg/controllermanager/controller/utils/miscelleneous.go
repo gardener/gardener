@@ -17,24 +17,9 @@ package utils
 import (
 	"strings"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// ComputeOperationType checksthe <lastOperation> and determines whether is it is Create operation or reconcile operation
-func ComputeOperationType(meta metav1.ObjectMeta, lastOperation *gardenv1beta1.LastOperation) gardenv1beta1.ShootLastOperationType {
-	switch {
-	case meta.DeletionTimestamp != nil:
-		return gardenv1beta1.ShootLastOperationTypeDelete
-	case lastOperation == nil:
-		return gardenv1beta1.ShootLastOperationTypeCreate
-	case (lastOperation.Type == gardenv1beta1.ShootLastOperationTypeCreate && lastOperation.State != gardenv1beta1.ShootLastOperationStateSucceeded):
-		return gardenv1beta1.ShootLastOperationTypeCreate
-	}
-	return gardenv1beta1.ShootLastOperationTypeReconcile
-}
 
 const separator = ","
 
