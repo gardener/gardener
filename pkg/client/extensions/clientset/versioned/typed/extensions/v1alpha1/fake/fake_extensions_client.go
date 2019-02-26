@@ -12,6 +12,10 @@ type FakeExtensionsV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeExtensionsV1alpha1) Infrastructures(namespace string) v1alpha1.InfrastructureInterface {
+	return &FakeInfrastructures{c, namespace}
+}
+
 func (c *FakeExtensionsV1alpha1) OperatingSystemConfigs(namespace string) v1alpha1.OperatingSystemConfigInterface {
 	return &FakeOperatingSystemConfigs{c, namespace}
 }
