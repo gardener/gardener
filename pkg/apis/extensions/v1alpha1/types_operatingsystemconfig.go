@@ -36,7 +36,7 @@ type OperatingSystemConfig struct {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OperatingSystemConfigList is a list of OperatingSystemConfig resources
+// OperatingSystemConfigList is a list of OperatingSystemConfig resources.
 type OperatingSystemConfigList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`
@@ -45,7 +45,7 @@ type OperatingSystemConfigList struct {
 	Items []OperatingSystemConfig `json:"items"`
 }
 
-// OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource
+// OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.
 type OperatingSystemConfigSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
@@ -137,7 +137,7 @@ type FileContentInline struct {
 	Data string `json:"data"`
 }
 
-// OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource
+// OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`

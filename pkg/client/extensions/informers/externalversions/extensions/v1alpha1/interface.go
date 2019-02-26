@@ -8,6 +8,8 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// Infrastructures returns a InfrastructureInformer.
+	Infrastructures() InfrastructureInformer
 	// OperatingSystemConfigs returns a OperatingSystemConfigInformer.
 	OperatingSystemConfigs() OperatingSystemConfigInformer
 }
@@ -21,6 +23,11 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// Infrastructures returns a InfrastructureInformer.
+func (v *version) Infrastructures() InfrastructureInformer {
+	return &infrastructureInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // OperatingSystemConfigs returns a OperatingSystemConfigInformer.
