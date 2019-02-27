@@ -1,3 +1,8 @@
+### !CAUTION! ###
+# Most cloud providers have a limit of 16 KB regarding the user-data that may be sent during VM creation.
+# The result of this operating system config is exactly the user-data that will be sent to the providers.
+# We must not exceed the 16 KB, so be careful when extending/changing anything in here.
+### !CAUTION! ###
 ---
 apiVersion: extensions.gardener.cloud/v1alpha1
 kind: OperatingSystemConfig
@@ -22,12 +27,6 @@ spec:
       EnvironmentFile=/etc/environment
       ExecStart=/var/lib/cloud-config-downloader/download-cloud-config.sh
   files:
-  - path: /var/lib/cloud-config-downloader/credentials/kubeconfig
-    permissions: 0644
-    content:
-      secretRef:
-        name: cloud-config-downloader
-        dataKey: kubeconfig
   - path: /var/lib/cloud-config-downloader/credentials/server
     permissions: 0644
     content:
