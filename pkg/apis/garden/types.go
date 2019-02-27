@@ -944,6 +944,8 @@ type GCPNetworks struct {
 	// VPC indicates whether to use an existing VPC or create a new one.
 	// +optional
 	VPC *GCPVPC
+	// Internal is a private subnet (used for internal load balancers).
+	Internal *CIDR
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
 	Workers []CIDR
 }

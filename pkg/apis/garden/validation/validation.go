@@ -1249,9 +1249,19 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 		if len(gcp.Networks.Workers) != zoneCount {
 			allErrs = append(allErrs, field.Invalid(gcpPath.Child("networks", "workers"), gcp.Networks.Workers, "must specify as many workers networks as zones"))
 		}
+
 		workerCIDRs := make([]cidrvalidation.CIDR, 0, len(gcp.Networks.Workers))
 		for i, cidr := range gcp.Networks.Workers {
 			workerCIDRs = append(workerCIDRs, cidrvalidation.NewCIDR(cidr, gcpPath.Child("networks", "workers").Index(i)))
+		}
+
+		if gcp.Networks.Internal != nil {
+			internalCIDR := make([]cidrvalidation.CIDR, 0, 1)
+			internalCIDR = append(internalCIDR, cidrvalidation.NewCIDR(*gcp.Networks.Internal, gcpPath.Child("networks", "internal")))
+			allErrs = append(allErrs, validateCIDRParse(internalCIDR...)...)
+			allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{pods, services}, internalCIDR, false)...)
+			allErrs = append(allErrs, validateCIDROVerlap([]cidrvalidation.CIDR{nodes}, internalCIDR, false)...)
+			allErrs = append(allErrs, validateCIDROVerlap(workerCIDRs, internalCIDR, false)...)
 		}
 
 		allErrs = append(allErrs, validateCIDRParse(workerCIDRs...)...)

@@ -1538,7 +1538,6 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
-
 				It("should forbid empty machine image id", func() {
 					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].ID = ""
 
@@ -3518,12 +3517,14 @@ var _ = Describe("validation", func() {
 			var (
 				fldPath  = "gcp"
 				gcpCloud *garden.GCPCloud
+				internal = garden.CIDR("10.10.0.0/24")
 			)
 
 			BeforeEach(func() {
 				gcpCloud = &garden.GCPCloud{
 					Networks: garden.GCPNetworks{
 						K8SNetworks: k8sNetworks,
+						Internal:    &internal,
 						Workers:     []garden.CIDR{"10.250.0.0/16"},
 						VPC: &garden.GCPVPC{
 							Name: "hugo",
@@ -3548,7 +3549,6 @@ var _ = Describe("validation", func() {
 			})
 
 			Context("CIDR", func() {
-
 				It("should forbid invalid workers CIDR", func() {
 					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{invalidCIDR}
 
@@ -3557,6 +3557,19 @@ var _ = Describe("validation", func() {
 					Expect(errorList).To(ConsistOfFields(Fields{
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.cloud.gcp.networks.workers[0]"),
+						"Detail": Equal("invalid CIDR address: invalid-cidr"),
+					}))
+				})
+
+				It("should forbid invalid internal CIDR", func() {
+					invalidCIDR = garden.CIDR("invalid-cidr")
+					shoot.Spec.Cloud.GCP.Networks.Internal = &invalidCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.internal"),
 						"Detail": Equal("invalid CIDR address: invalid-cidr"),
 					}))
 				})
@@ -3570,6 +3583,25 @@ var _ = Describe("validation", func() {
 						"Type":   Equal(field.ErrorTypeInvalid),
 						"Field":  Equal("spec.cloud.gcp.networks.workers[0]"),
 						"Detail": Equal(`must be a subset of "spec.cloud.gcp.networks.nodes" ("10.250.0.0/16")`),
+					}))
+				})
+
+				It("should forbid Internal CIDR to overlap with Node - and Worker CIDR", func() {
+					overlappingCIDR := garden.CIDR("10.250.1.1/30")
+					shoot.Spec.Cloud.GCP.Networks.Internal = &overlappingCIDR
+					shoot.Spec.Cloud.GCP.Networks.Workers = []garden.CIDR{overlappingCIDR}
+					shoot.Spec.Cloud.GCP.Networks.Nodes = &overlappingCIDR
+
+					errorList := ValidateShoot(shoot)
+
+					Expect(errorList).To(ConsistOfFields(Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.internal"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.gcp.networks.nodes" ("10.250.1.1/30")`),
+					}, Fields{
+						"Type":   Equal(field.ErrorTypeInvalid),
+						"Field":  Equal("spec.cloud.gcp.networks.internal"),
+						"Detail": Equal(`must not be a subset of "spec.cloud.gcp.networks.workers[0]" ("10.250.1.1/30")`),
 					}))
 				})
 

@@ -2686,6 +2686,7 @@ func autoConvert_v1beta1_GCPNetworks_To_garden_GCPNetworks(in *GCPNetworks, out 
 	}
 	out.VPC = (*garden.GCPVPC)(unsafe.Pointer(in.VPC))
 	out.Workers = *(*[]garden.CIDR)(unsafe.Pointer(&in.Workers))
+	out.Internal = (*garden.CIDR)(unsafe.Pointer(in.Internal))
 	return nil
 }
 
@@ -2699,6 +2700,7 @@ func autoConvert_garden_GCPNetworks_To_v1beta1_GCPNetworks(in *garden.GCPNetwork
 		return err
 	}
 	out.VPC = (*GCPVPC)(unsafe.Pointer(in.VPC))
+	out.Internal = (*CIDR)(unsafe.Pointer(in.Internal))
 	out.Workers = *(*[]CIDR)(unsafe.Pointer(&in.Workers))
 	return nil
 }

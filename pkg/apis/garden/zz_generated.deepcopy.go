@@ -1308,6 +1308,11 @@ func (in *GCPNetworks) DeepCopyInto(out *GCPNetworks) {
 		*out = new(GCPVPC)
 		**out = **in
 	}
+	if in.Internal != nil {
+		in, out := &in.Internal, &out.Internal
+		*out = new(CIDR)
+		**out = **in
+	}
 	if in.Workers != nil {
 		in, out := &in.Workers, &out.Workers
 		*out = make([]CIDR, len(*in))

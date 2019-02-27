@@ -63,6 +63,10 @@ func (b *GCPBotanist) generateTerraformInfraVariablesEnvironment() map[string]st
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName string) map[string]interface{} {
+	var internal string
+	if b.Shoot.Info.Spec.Cloud.GCP.Networks.Internal != nil {
+		internal = string(*b.Shoot.Info.Spec.Cloud.GCP.Networks.Internal)
+	}
 	return map[string]interface{}{
 		"google": map[string]interface{}{
 			"region":  b.Shoot.Info.Spec.Cloud.Region,
@@ -79,6 +83,7 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 			"pods":     b.Shoot.GetPodNetwork(),
 			"services": b.Shoot.GetServiceNetwork(),
 			"worker":   b.Shoot.Info.Spec.Cloud.GCP.Networks.Workers[0],
+			"internal": internal,
 		},
 	}
 }
