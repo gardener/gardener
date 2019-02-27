@@ -9,9 +9,12 @@ metadata:
 data:
   blackbox.yaml: |
     modules:
+      icmp_probe:
+        prober: icmp
+        timeout: 5s
       tcp_vpn:
         prober: tcp
-        timeout: 2s
+        timeout: 5s
       http_apiserver:
         prober: http
         timeout: 10s
