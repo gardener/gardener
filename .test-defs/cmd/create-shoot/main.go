@@ -42,6 +42,9 @@ var (
 	autoScalerMin *int
 	autoScalerMax *int
 
+	// required for openstack
+	floatingPoolName string
+
 	testLogger *logrus.Logger
 )
 
@@ -100,6 +103,11 @@ func init() {
 		}
 		autoScalerMax = &autoScalerMaxInt
 	}
+
+	floatingPoolName = os.Getenv("FLOATING_POOL_NAME")
+	if cloudprovider == gardenv1beta1.CloudProviderOpenStack && floatingPoolName == "" {
+		testLogger.Fatalf("EnvVar 'FLOATING_POOL_NAME' needs to be specified when creating a shoot on openstack")
+	}
 }
 
 func main() {
@@ -124,6 +132,7 @@ func main() {
 	updateWorkerZone(shootObject, cloudprovider, zone)
 	updateMachineType(shootObject, cloudprovider, machineType)
 	updateAutoscalerMinMax(shootObject, cloudprovider, autoScalerMin, autoScalerMax)
+	updateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
 
 	testLogger.Infof("Create shoot %s in namespace %s", shootName, projectNamespace)
 	shootGardenerTest.Shoot = shootObject
