@@ -42,7 +42,6 @@ import (
 	"github.com/spf13/cobra"
 
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apiserver/pkg/admission"
 	openapinamer "k8s.io/apiserver/pkg/endpoints/openapi"
 	genericapiserver "k8s.io/apiserver/pkg/server"
@@ -130,17 +129,15 @@ func (o *Options) complete() error {
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
-		deletionconfirmation.PluginName,
 		shootdnshostedzone.PluginName,
 		shootquotavalidator.PluginName,
 		shootseedmanager.PluginName,
 		shootvalidator.PluginName,
 		controllerregistrationresources.PluginName,
+		deletionconfirmation.PluginName,
 	}
 
-	recommendedPluginOrder := sets.NewString(o.Recommended.Admission.RecommendedPluginOrder...)
-	recommendedPluginOrder.Insert(allOrderedPlugins...)
-	o.Recommended.Admission.RecommendedPluginOrder = recommendedPluginOrder.List()
+	o.Recommended.Admission.RecommendedPluginOrder = append(o.Recommended.Admission.RecommendedPluginOrder, allOrderedPlugins...)
 
 	return nil
 }
