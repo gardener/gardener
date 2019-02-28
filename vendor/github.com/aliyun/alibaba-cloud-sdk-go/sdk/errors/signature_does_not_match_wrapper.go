@@ -27,7 +27,7 @@ func (*SignatureDostNotMatchWrapper) tryWrap(error *ServerError, wrapInfo map[st
 
 			if clientStringToSign == serverStringToSign {
 				// user secret is error
-				error.recommend = "Please check you AccessKeySecret"
+				error.recommend = "InvalidAccessKeySecret: Please check you AccessKeySecret"
 			} else {
 				debug("Client StringToSign: %s", clientStringToSign)
 				debug("Server StringToSign: %s", serverStringToSign)

@@ -28,7 +28,6 @@ import (
 /********************** Machine APIs ***************/
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Machine TODO

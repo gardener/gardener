@@ -19,6 +19,7 @@ import (
 	"io"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 )
@@ -72,6 +73,8 @@ type AcsRequest interface {
 	GetLocationServiceCode() string
 	GetLocationEndpointType() string
 
+	GetUserAgent() map[string]string
+
 	SetStringToSign(stringToSign string)
 	GetStringToSign() string
 
@@ -95,8 +98,9 @@ type baseRequest struct {
 	Port     string
 	RegionId string
 
-	product string
-	version string
+	userAgent map[string]string
+	product   string
+	version   string
 
 	actionName string
 
@@ -137,6 +141,28 @@ func (request *baseRequest) GetActionName() string {
 
 func (request *baseRequest) SetContent(content []byte) {
 	request.Content = content
+}
+
+func (request *baseRequest) GetUserAgent() map[string]string {
+	return request.userAgent
+}
+
+func (request *baseRequest) AppendUserAgent(key, value string) {
+	newkey := true
+	if request.userAgent == nil {
+		request.userAgent = make(map[string]string)
+	}
+	if strings.ToLower(key) != "core" && strings.ToLower(key) != "go" {
+		for tag, _ := range request.userAgent {
+			if tag == key {
+				request.userAgent[tag] = value
+				newkey = false
+			}
+		}
+		if newkey {
+			request.userAgent[key] = value
+		}
+	}
 }
 
 func (request *baseRequest) addHeaderParam(key, value string) {
