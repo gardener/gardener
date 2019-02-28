@@ -803,8 +803,7 @@ func NewHealthChecker(conditionThresholds map[gardenv1beta1.ConditionType]time.D
 	}
 }
 
-// HealthChecks conducts the health checks on all the given conditions.
-func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMappings map[gardenv1beta1.ConditionType]time.Duration, apiserverAvailability, controlPlane, nodes, systemComponents *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
+func (b *Botanist) healthChecks(initializeShootClients func() error, thresholdMappings map[gardenv1beta1.ConditionType]time.Duration, apiserverAvailability, controlPlane, nodes, systemComponents *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
 	if b.Shoot.IsHibernated {
 		return shootHibernatedCondition(apiserverAvailability), shootHibernatedCondition(controlPlane), shootHibernatedCondition(nodes), shootHibernatedCondition(systemComponents)
 	}
@@ -860,6 +859,32 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 	wg.Wait()
 
 	return apiserverAvailability, controlPlane, nodes, systemComponents
+}
+
+var unstableOperationTypes = map[gardenv1beta1.ShootLastOperationType]struct{}{
+	gardenv1beta1.ShootLastOperationTypeCreate: {},
+	gardenv1beta1.ShootLastOperationTypeDelete: {},
+}
+
+func isUnstableOperationType(lastOperationType gardenv1beta1.ShootLastOperationType) bool {
+	_, ok := unstableOperationTypes[lastOperationType]
+	return ok
+}
+
+// pardonCondition pardons the given condition if there was no last error and the Shoot is either
+// in create or delete state.
+func (b *Botanist) pardonCondition(condition *gardenv1beta1.Condition) *gardenv1beta1.Condition {
+	shoot := b.Shoot.Info
+	if lastOp := shoot.Status.LastOperation; shoot.Status.LastError == nil && lastOp != nil && isUnstableOperationType(lastOp.Type) && condition.Status == gardenv1beta1.ConditionFalse {
+		return helper.UpdatedCondition(condition, gardenv1beta1.ConditionProgressing, condition.Reason, condition.Message)
+	}
+	return condition
+}
+
+// HealthChecks conducts the health checks on all the given conditions.
+func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMappings map[gardenv1beta1.ConditionType]time.Duration, apiserverAvailability, controlPlane, nodes, systemComponents *gardenv1beta1.Condition) (*gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition, *gardenv1beta1.Condition) {
+	apiServerAvailable, controlPlaneHealthy, everyNodeReady, systemComponentsHealthy := b.healthChecks(initializeShootClients, thresholdMappings, apiserverAvailability, controlPlane, nodes, systemComponents)
+	return b.pardonCondition(apiServerAvailable), b.pardonCondition(controlPlaneHealthy), b.pardonCondition(everyNodeReady), b.pardonCondition(systemComponentsHealthy)
 }
 
 // MonitoringHealthChecks performs the monitoring releated health checks.
