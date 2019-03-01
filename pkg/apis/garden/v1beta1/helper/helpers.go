@@ -370,7 +370,7 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 		for _, image := range cloudProfile.Spec.Alicloud.Constraints.MachineImages {
 			// The OR-case can be removed in a further version of Gardener. We need it to migrate from in-tree OS support
 			// to out-of-tree extensions.
-			if name := machineImageToString(image.Name); name == currentMachineImageName || (currentMachineImageName == "CoreOS" && name == "coreos-alicloud") {
+			if name := machineImageToString(image.Name); name == currentMachineImageName || (currentMachineImageName == "coreos" && name == "coreos-alicloud") {
 				ptr := image
 				return true, &ptr, nil
 			}

@@ -261,7 +261,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		// they fit with the new extension controllers.
 		// This code can be removed in a further version.
 		//'local' cloud provider doesn't need machine name migration
-		if newShoot.Spec.Cloud.Local != nil {
+		if newShoot.Spec.Cloud.Local != nil || shoot.DeletionTimestamp != nil {
 			continue
 		}
 		utilruntime.Must(errors.Wrapf(c.migrateMachineImageNames(newShoot), "Failed to migrate machine image for shoot %q", shoot.Name))
@@ -351,10 +351,6 @@ func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterf
 }
 
 func (c *Controller) migrateMachineImageNames(shoot *gardenv1beta1.Shoot) error {
-	if shoot.DeletionTimestamp != nil {
-		return nil
-	}
-
 	cloudProfile, err := c.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Lister().Get(shoot.Spec.Cloud.Profile)
 	if err != nil {
 		return err
@@ -365,6 +361,11 @@ func (c *Controller) migrateMachineImageNames(shoot *gardenv1beta1.Shoot) error 
 	}
 
 	machineImageName := helper.GetMachineImageNameFromShoot(cloudProvider, shoot)
+	// Only do the migration once
+	if machineImageName == gardenv1beta1.MachineImageCoreOS || machineImageName == gardenv1beta1.MachineImageCoreOSAlicloud {
+		return nil
+	}
+
 	machineImageFound, machineImage, err := helper.DetermineMachineImage(*cloudProfile, machineImageName, shoot.Spec.Cloud.Region)
 	if err != nil {
 		return err
