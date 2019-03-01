@@ -15,13 +15,11 @@
 package botanist
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -31,8 +29,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // New takes an operation object <o> and creates a new Botanist object. It checks whether the given Shoot DNS
@@ -163,8 +159,8 @@ func (b *Botanist) UnregisterAsSeed() error {
 
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
 func (b *Botanist) RequiredExtensionsExist(shoot *gardenv1beta1.Shoot) error {
-	controllerInstallationList := &corev1alpha1.ControllerInstallationList{}
-	if err := b.K8sGardenClient.Client().List(context.TODO(), nil, controllerInstallationList); err != nil {
+	controllerInstallationList, err := b.K8sGardenClient.GardenCore().CoreV1alpha1().ControllerInstallations().List(metav1.ListOptions{})
+	if err != nil {
 		return err
 	}
 
@@ -178,8 +174,8 @@ func (b *Botanist) RequiredExtensionsExist(shoot *gardenv1beta1.Shoot) error {
 			continue
 		}
 
-		controllerRegistration := &corev1alpha1.ControllerRegistration{}
-		if err := b.K8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
+		controllerRegistration, err := b.K8sGardenClient.GardenCore().CoreV1alpha1().ControllerRegistrations().Get(controllerInstallation.Spec.RegistrationRef.Name, metav1.GetOptions{})
+		if err != nil {
 			return err
 		}
 
