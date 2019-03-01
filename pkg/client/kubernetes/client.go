@@ -27,7 +27,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	apimachineryconfig "k8s.io/apimachinery/pkg/apis/config"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -35,31 +34,25 @@ import (
 )
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
-// read from the filesystem at location <kubeconfigPath>.
+// read from the filesystem at location <kubeconfigPath>. If given, <masterURL> overrides the
+// master URL in the kubeconfig.
 // If no filepath is given, the in-cluster configuration will be taken into account.
-func NewClientFromFile(kubeconfigPath string, clientConnection *apimachineryconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
-	clientConfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-		&clientcmd.ConfigOverrides{},
-	)
-	config, err := CreateRESTConfig(clientConfig, clientConnection)
+func NewClientFromFile(masterURL, kubeconfigPath string, opts client.Options) (Interface, error) {
+	config, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfigPath)
 	if err != nil {
 		return nil, err
 	}
+
 	return NewForConfig(config, opts)
 }
 
 // NewClientFromBytes creates a new Client struct for a given kubeconfig byte slice.
-func NewClientFromBytes(kubeconfig []byte, clientConnection *apimachineryconfig.ClientConnectionConfiguration, opts client.Options) (Interface, error) {
-	configObj, err := clientcmd.Load(kubeconfig)
+func NewClientFromBytes(kubeconfig []byte, opts client.Options) (Interface, error) {
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
 	if err != nil {
 		return nil, err
 	}
-	clientConfig := clientcmd.NewDefaultClientConfig(*configObj, &clientcmd.ConfigOverrides{})
-	config, err := CreateRESTConfig(clientConfig, clientConnection)
-	if err != nil {
-		return nil, err
-	}
+
 	return NewForConfig(config, opts)
 }
 
@@ -79,25 +72,9 @@ func NewClientFromSecret(k8sClient Interface, namespace, secretName string, opts
 // contain a field "kubeconfig" which will be used.
 func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Interface, error) {
 	if kubeconfig, ok := secret.Data["kubeconfig"]; ok {
-		return NewClientFromBytes(kubeconfig, nil, opts)
+		return NewClientFromBytes(kubeconfig, opts)
 	}
-	return nil, errors.New("The secret does not contain a field with name 'kubeconfig'")
-}
-
-// CreateRESTConfig creates a Config object for a rest client. If a clientConnection configuration object is passed
-// as well then the specified fields will be taken over as well.
-func CreateRESTConfig(clientConfig clientcmd.ClientConfig, clientConnection *apimachineryconfig.ClientConnectionConfiguration) (*rest.Config, error) {
-	config, err := clientConfig.ClientConfig()
-	if err != nil {
-		return nil, err
-	}
-	if clientConnection != nil {
-		config.Burst = int(clientConnection.Burst)
-		config.QPS = clientConnection.QPS
-		config.AcceptContentTypes = clientConnection.AcceptContentTypes
-		config.ContentType = clientConnection.ContentType
-	}
-	return config, nil
+	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")
 }
 
 var supportedKubernetesVersions = []string{

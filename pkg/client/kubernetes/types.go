@@ -211,11 +211,6 @@ type Interface interface {
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
 
-	// Deprecated: Use `Client()` and utils instead.
-	SetGarden(gardenclientset.Interface)
-	// Deprecated: Use `Client()` and utils instead.
-	SetGardenCore(gardencoreclientset.Interface)
-
 	// Cleanup
 	// Deprecated: Use `RESTMapper()` and utils instead.
 	GetResourceAPIGroups() map[string][]string
