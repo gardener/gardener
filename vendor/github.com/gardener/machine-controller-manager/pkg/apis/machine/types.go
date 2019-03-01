@@ -24,13 +24,12 @@ import (
 )
 
 // WARNING!
-// IF YOU MODIFY ANY OF THE TYPES HERE COPY THEM TO ../types.go
+// IF YOU MODIFY ANY OF THE TYPES HERE COPY THEM TO ./v1alpha1/types.go
 // AND RUN  ./hack/generate-code
 
 /********************** Machine APIs ***************/
 
 // +genclient
-// +genclient:noStatus
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Machine TODO

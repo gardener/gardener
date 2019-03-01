@@ -1,3 +1,24 @@
+# The set of CRDs used by machine-controller-manager
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: openstackmachineclasses.machine.sapcloud.io
+spec:
+  group: machine.sapcloud.io
+  version: v1alpha1
+  scope: Namespaced
+  names:
+    kind: OpenStackMachineClass
+    plural: openstackmachineclasses
+    singular: openstackmachineclass
+    shortNames:
+    - oscls
+  subresources:
+    status: {}
+
+---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -12,7 +33,11 @@ spec:
     singular: awsmachineclass
     shortNames:
     - awscls
+  subresources:
+    status: {}
+
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -27,7 +52,11 @@ spec:
     singular: azuremachineclass
     shortNames:
     - azurecls
+  subresources:
+    status: {}
+
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -42,22 +71,11 @@ spec:
     singular: gcpmachineclass
     shortNames:
     - gcpcls
+  subresources:
+    status: {}
+
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
-metadata:
-  name: openstackmachineclasses.machine.sapcloud.io
-spec:
-  group: machine.sapcloud.io
-  version: v1alpha1
-  scope: Namespaced
-  names:
-    kind: OpenStackMachineClass
-    plural: openstackmachineclasses
-    singular: openstackmachineclass
-    shortNames:
-    - openstackcls
----
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -72,7 +90,11 @@ spec:
     singular: alicloudmachineclass
     shortNames:
     - alicloudcls
+  subresources:
+    status: {}
+
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -87,7 +109,11 @@ spec:
     singular: packetmachineclass
     shortNames:
     - packetcls
+  subresources:
+    status: {}
+
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -102,7 +128,11 @@ spec:
     singular: machine
     shortNames:
     - mach
+  subresources:
+    status: {}
+
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -117,7 +147,11 @@ spec:
     singular: machineset
     shortNames:
     - machset
+  subresources:
+    status: {}
+
 ---
+
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -132,3 +166,5 @@ spec:
     singular: machinedeployment
     shortNames:
     - machdeploy
+  subresources:
+    status: {}

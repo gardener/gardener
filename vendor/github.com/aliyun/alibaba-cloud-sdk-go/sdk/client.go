@@ -17,6 +17,7 @@ package sdk
 import (
 	"fmt"
 	"net/http"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -39,6 +40,8 @@ func init() {
 // Version this value will be replaced while build: -ldflags="-X sdk.version=x.x.x"
 var Version = "0.0.1"
 
+var DefaultUserAgent = fmt.Sprintf("AlibabaCloud (%s; %s) Golang/%s Core/%s", runtime.GOOS, runtime.GOARCH, strings.Trim(runtime.Version(), "go"), Version)
+
 var hookDo = func(fn func(req *http.Request) (*http.Response, error)) func(req *http.Request) (*http.Response, error) {
 	return fn
 }
@@ -47,6 +50,7 @@ var hookDo = func(fn func(req *http.Request) (*http.Response, error)) func(req *
 type Client struct {
 	regionId       string
 	config         *Config
+	userAgent      map[string]string
 	signer         auth.Signer
 	httpClient     *http.Client
 	asyncTaskQueue chan func()
@@ -202,10 +206,53 @@ func (client *Client) buildRequestWithSigner(request requests.AcsRequest, signer
 		finalSigner = client.signer
 	}
 	httpRequest, err = buildHttpRequest(request, finalSigner, regionId)
-	if client.config.UserAgent != "" {
-		httpRequest.Header.Set("User-Agent", client.config.UserAgent)
+	if err == nil {
+		userAgent := DefaultUserAgent + getSendUserAgent(client.config.UserAgent, client.userAgent, request.GetUserAgent())
+		httpRequest.Header.Set("User-Agent", userAgent)
 	}
+
 	return
+}
+
+func getSendUserAgent(configUserAgent string, clientUserAgent, requestUserAgent map[string]string) string {
+	realUserAgent := ""
+	for key1, value1 := range clientUserAgent {
+		for key2, _ := range requestUserAgent {
+			if key1 == key2 {
+				key1 = ""
+			}
+		}
+		if key1 != "" {
+			realUserAgent += fmt.Sprintf(" %s/%s", key1, value1)
+
+		}
+	}
+	for key, value := range requestUserAgent {
+		realUserAgent += fmt.Sprintf(" %s/%s", key, value)
+	}
+	if configUserAgent != "" {
+		return realUserAgent + fmt.Sprintf(" Extra/%s", configUserAgent)
+	}
+	return realUserAgent
+}
+
+func (client *Client) AppendUserAgent(key, value string) {
+	newkey := true
+
+	if client.userAgent == nil {
+		client.userAgent = make(map[string]string)
+	}
+	if strings.ToLower(key) != "core" && strings.ToLower(key) != "go" {
+		for tag, _ := range client.userAgent {
+			if tag == key {
+				client.userAgent[tag] = value
+				newkey = false
+			}
+		}
+		if newkey {
+			client.userAgent[key] = value
+		}
+	}
 }
 
 func (client *Client) BuildRequestWithSigner(request requests.AcsRequest, signer auth.Signer) (err error) {
