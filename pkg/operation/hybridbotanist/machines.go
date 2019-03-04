@@ -90,7 +90,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 	values := map[string]interface{}{
 		"machineClasses": machineClassChartValues,
 	}
-	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-machines", "charts", machineClassChartName), machineClassChartName, b.Shoot.SeedNamespace, values, nil); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-machines", "charts", machineClassChartName), b.Shoot.SeedNamespace, machineClassChartName, values, nil); err != nil {
 		return fmt.Errorf("Failed to deploy the generated machine classes: '%s'", err.Error())
 	}
 
@@ -107,7 +107,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 	}
 
 	// Deploy generated machine deployments.
-	if err := b.ApplyChartSeed(filepath.Join(chartPathMachines), "machines", b.Shoot.SeedNamespace, machineDeploymentChartValues, nil); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(chartPathMachines), b.Shoot.SeedNamespace, "machines", machineDeploymentChartValues, nil); err != nil {
 		return fmt.Errorf("Failed to deploy the generated machine deployments: '%s'", err.Error())
 	}
 

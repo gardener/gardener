@@ -229,5 +229,5 @@ func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, nil, values)
 }

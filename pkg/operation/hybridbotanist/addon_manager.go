@@ -66,5 +66,5 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, values, nil)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, values, nil)
 }
