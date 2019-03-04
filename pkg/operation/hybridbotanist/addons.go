@@ -146,7 +146,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		ccmConfig["enableCSI"] = cfg.EnableCSI
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":              global,
 		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
@@ -245,7 +245,7 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		}
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"kube-lego":            kubeLego,
 		"kube2iam":             kube2IAM,
 		"kubernetes-dashboard": kubernetesDashboard,
@@ -262,5 +262,5 @@ func (b *HybridBotanist) generateStorageClassesChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-storageclasses"), "storageclasses", metav1.NamespaceSystem, config)
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-storageclasses"), "storageclasses", metav1.NamespaceSystem, config)
 }

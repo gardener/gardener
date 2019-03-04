@@ -200,7 +200,7 @@ func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []g
 func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
 	var result *shoot.CloudConfigData
 
-	if err := common.ApplyChart(b.K8sSeedClient, b.ChartSeedRenderer, chartPath, name, b.Shoot.SeedNamespace, values, nil); err != nil {
+	if err := b.ApplyChartSeed(chartPath, b.Shoot.SeedNamespace, name, values, nil); err != nil {
 		return nil, err
 	}
 
@@ -268,7 +268,7 @@ func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.Ren
 		return nil, err
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
 }
 
 func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err error) {

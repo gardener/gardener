@@ -113,7 +113,7 @@ func (b *Botanist) deleteNamespace(name string) error {
 // DeployCloudMetadataServiceNetworkPolicy creates a global network policy that allows access to the meta-data service only from
 // the cloud-controller-manager and the kube-controller-manager
 func (b *Botanist) DeployCloudMetadataServiceNetworkPolicy() error {
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cloud-metadata-service"), "cloud-metadata-service", b.Shoot.SeedNamespace, nil, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cloud-metadata-service"), b.Shoot.SeedNamespace, "cloud-metadata-service", nil, nil)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
@@ -150,7 +150,7 @@ func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
 // DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure() error {
-	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), "backup-infrastructure", b.Operation.Shoot.Info.Namespace, nil, map[string]interface{}{
+	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), b.Shoot.Info.Namespace, "backup-infrastructure", nil, map[string]interface{}{
 		"backupInfrastructure": map[string]interface{}{
 			"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
 		},
@@ -220,7 +220,7 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, nil, values)
 }
 
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
@@ -264,7 +264,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, nil, values)
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
@@ -410,7 +410,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		}
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), nil, values); err != nil {
 		return err
 	}
 	return nil
@@ -512,7 +512,7 @@ func (b *Botanist) DeploySeedLogging() error {
 		"global": images,
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), nil, elasticKibanaCurator)
 }
 
 // DeployCertBroker deploys the Cert-Broker to the Shoot namespace in the Seed.
@@ -561,7 +561,7 @@ func (b *Botanist) DeployCertBroker() error {
 		return nil
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cert-broker"), "cert-broker", b.Shoot.SeedNamespace, nil, certBroker)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CertBrokerResourceName), b.Shoot.SeedNamespace, common.CertBrokerResourceName, nil, certBroker)
 }
 
 func createDNSProviderValuesForDomain(config certmanagement.DNSProviderConfig, shootDomain string) []interface{} {
