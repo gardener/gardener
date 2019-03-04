@@ -61,6 +61,7 @@ rules:
   - extensions
   resources:
   - daemonsets
+  - replicasets
   verbs:
   - watch
   - list
@@ -76,7 +77,6 @@ rules:
   - apps
   resources:
   - statefulsets
-  - replicasets
   verbs:
   - watch
   - list
