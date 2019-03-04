@@ -23,6 +23,13 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	// DataKeyRSAPrivateKey is the key in a secret data holding the RSA private key.
+	DataKeyRSAPrivateKey = "id_rsa"
+	// DataKeySSHAuthorizedKeys is the key in a secret data holding the OpenSSH authorized keys.
+	DataKeySSHAuthorizedKeys = "id_rsa.pub"
+)
+
 // RSASecretConfig containing information about the number of bits which should be used for the to-be-created RSA private key.
 type RSASecretConfig struct {
 	Name string
@@ -46,8 +53,13 @@ func (s *RSASecretConfig) GetName() string {
 	return s.Name
 }
 
-// Generate computes a RSA private key based on the configured number of bits.
+// Generate implements ConfigInterface.
 func (s *RSASecretConfig) Generate() (Interface, error) {
+	return s.GenerateRSAKeys()
+}
+
+// GenerateRSAKeys computes a RSA private key based on the configured number of bits.
+func (s *RSASecretConfig) GenerateRSAKeys() (*RSAKeys, error) {
 	privateKey, err := generateRSAPrivateKey(s.Bits)
 	if err != nil {
 		return nil, err
@@ -74,11 +86,11 @@ func (s *RSASecretConfig) Generate() (Interface, error) {
 // SecretData computes the data map which can be used in a Kubernetes secret.
 func (r *RSAKeys) SecretData() map[string][]byte {
 	data := map[string][]byte{
-		"id_rsa": utils.EncodePrivateKey(r.PrivateKey),
+		DataKeyPrivateKey: utils.EncodePrivateKey(r.PrivateKey),
 	}
 
 	if r.OpenSSHAuthorizedKey != nil {
-		data["id_rsa.pub"] = r.OpenSSHAuthorizedKey
+		data[DataKeySSHAuthorizedKeys] = r.OpenSSHAuthorizedKey
 	}
 
 	return data

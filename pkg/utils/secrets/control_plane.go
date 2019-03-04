@@ -20,6 +20,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 )
 
+const (
+	// DataKeyKubeconfig is the key in a secret data holding the kubeconfig.
+	DataKeyKubeconfig = "kubeconfig"
+)
+
 // ControlPlaneSecretConfig is a struct which inherits from CertificateSecretConfig and is extended with a couple of additional
 // properties. A control plane secret will always contain a server/client certificate and optionally a kubeconfig.
 type ControlPlaneSecretConfig struct {
@@ -50,28 +55,28 @@ func (s *ControlPlaneSecretConfig) GetName() string {
 	return s.CertificateSecretConfig.Name
 }
 
-// Generate computes a secret for a control plane component of the clusters managed by Gardener.
-// It may include a Kubeconfig.
+// Generate implements ConfigInterface.
 func (s *ControlPlaneSecretConfig) Generate() (Interface, error) {
-	certificate, err := s.CertificateSecretConfig.Generate()
+	return s.GenerateControlPlane()
+}
+
+// GenerateControlPlane computes a secret for a control plane component of the clusters managed by Gardener.
+// It may include a Kubeconfig.
+func (s *ControlPlaneSecretConfig) GenerateControlPlane() (*ControlPlane, error) {
+	certificate, err := s.CertificateSecretConfig.GenerateCertificate()
 	if err != nil {
 		return nil, err
-	}
-
-	cert, ok := certificate.(*Certificate)
-	if !ok {
-		return nil, fmt.Errorf("certificate '%s' is not of the correct type: '%T'", s.GetName(), certificate)
 	}
 
 	controlPlane := &ControlPlane{
 		Name: s.Name,
 
-		Certificate: cert,
+		Certificate: certificate,
 		BasicAuth:   s.BasicAuth,
 	}
 
 	if s.KubeConfigRequest != nil {
-		kubeconfig, err := generateKubeconfig(s, cert)
+		kubeconfig, err := generateKubeconfig(s, certificate)
 		if err != nil {
 			return nil, err
 		}
@@ -90,12 +95,12 @@ func (c *ControlPlane) SecretData() map[string][]byte {
 	}
 
 	if c.BasicAuth != nil {
-		data["username"] = []byte(c.BasicAuth.Username)
-		data["password"] = []byte(c.BasicAuth.Password)
+		data[DataKeyUserName] = []byte(c.BasicAuth.Username)
+		data[DataKeyPassword] = []byte(c.BasicAuth.Password)
 	}
 
 	if c.Kubeconfig != nil {
-		data["kubeconfig"] = c.Kubeconfig
+		data[DataKeyKubeconfig] = c.Kubeconfig
 	}
 
 	return data

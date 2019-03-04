@@ -16,6 +16,7 @@ package alicloudbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -131,7 +132,7 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, n
 			"snatTableID":  snatTableID,
 		},
 		"clusterName":  b.Shoot.SeedNamespace,
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
+		"sshPublicKey": string(sshSecret.Data[secrets.DataKeySSHAuthorizedKeys]),
 		"zones":        zones,
 	}
 }
