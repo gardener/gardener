@@ -15,6 +15,7 @@
 package botanist
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -334,5 +335,22 @@ func (b *Botanist) WaitForControllersToBeActive() error {
 		}
 
 		return true, false, nil
+	})
+}
+
+// WaitUntilNodesDeleted waits until no nodes exist in the shoot cluster anymore.
+func (b *Botanist) WaitUntilNodesDeleted(ctx context.Context) error {
+	return utils.RetryUntil(ctx, 5*time.Second, func() (bool, bool, error) {
+		nodesList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
+		if err != nil {
+			return false, true, err
+		}
+
+		if len(nodesList.Items) == 0 {
+			return true, false, nil
+		}
+
+		b.Logger.Infof("Waiting until all nodes have been deleted in the shoot cluster...")
+		return false, false, nil
 	})
 }

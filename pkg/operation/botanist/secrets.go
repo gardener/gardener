@@ -949,18 +949,11 @@ func dnsNamesForService(name, namespace string) []string {
 }
 
 func dnsNamesForEtcd(namespace string) []string {
-	var (
-		etcdMain   = fmt.Sprintf("etcd-%s", common.EtcdRoleMain)
-		etcdEvents = fmt.Sprintf("etcd-%s", common.EtcdRoleEvents)
-
-		names = []string{
-			fmt.Sprintf("%s-0", etcdMain),
-			fmt.Sprintf("%s-0", etcdEvents),
-		}
-	)
-
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", etcdMain), namespace)...)
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", etcdEvents), namespace)...)
-
+	names := []string{
+		fmt.Sprintf("%s-0", common.EtcdMainStatefulSetName),
+		fmt.Sprintf("%s-0", common.EtcdEventsStatefulSetName),
+	}
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", common.EtcdMainStatefulSetName), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", common.EtcdEventsStatefulSetName), namespace)...)
 	return names
 }

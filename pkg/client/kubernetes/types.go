@@ -276,8 +276,6 @@ type Interface interface {
 	// Deprecated: Use `Client()` and utils instead.
 	PatchDeployment(string, string, []byte) (*appsv1.Deployment, error)
 	// Deprecated: Use `Client()` and utils instead.
-	ScaleDeployment(string, string, int32) (*appsv1.Deployment, error)
-	// Deprecated: Use `Client()` and utils instead.
 	DeleteDeployment(string, string) error
 
 	// StatefulSets

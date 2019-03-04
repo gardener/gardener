@@ -15,16 +15,21 @@
 package hybridbotanist
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -128,7 +133,7 @@ func (b *HybridBotanist) ReconcileMachines() error {
 
 	// Scale down machine-controller-manager if shoot is hibernated.
 	if b.Shoot.IsHibernated {
-		if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName, 0); err != nil {
+		if err := kubernetes.ScaleDeployment(context.TODO(), b.K8sSeedClient.Client(), kutil.Key(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName), 0); err != nil {
 			return err
 		}
 	}

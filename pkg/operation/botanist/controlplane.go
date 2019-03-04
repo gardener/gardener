@@ -15,17 +15,23 @@
 package botanist
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +49,8 @@ func (b *Botanist) DeployNamespace() error {
 			Annotations: getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID),
 			Name:        b.Shoot.SeedNamespace,
 			Labels: map[string]string{
-				common.GardenRole: common.GardenRoleShoot,
+				common.GardenRole:      common.GardenRoleShoot,
+				common.ShootHibernated: strconv.FormatBool(b.Shoot.IsHibernated),
 			},
 		},
 	}, true)
@@ -195,11 +202,16 @@ func (b *Botanist) DeployMachineControllerManager() error {
 	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
 	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
 	if b.Shoot.IsHibernated {
-		deployment, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName)
-		if err != nil {
+		deployment := &appsv1.Deployment{}
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
-		defaultValues["replicas"] = *deployment.Spec.Replicas
+
+		if deployment.Spec.Replicas == nil {
+			defaultValues["replicas"] = 0
+		} else {
+			defaultValues["replicas"] = *deployment.Spec.Replicas
+		}
 	}
 
 	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
@@ -326,7 +338,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 				},
 			},
 			"shoot": map[string]interface{}{
-				"apiserver": b.K8sShootClient.RESTConfig().Host,
+				"apiserver": fmt.Sprintf("https://%s", b.APIServerAddress),
 			},
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
@@ -365,7 +377,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"shootKubeVersion": map[string]interface{}{
-				"gitVersion": b.K8sShootClient.Version(),
+				"gitVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		},
 		"alertmanager":             alertManager,
@@ -502,23 +514,6 @@ func (b *Botanist) DeploySeedLogging() error {
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)
 }
 
-// WakeUpControllers scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
-// * cloud-controller-manager
-// * kube-controller-manager
-// * machine-controller-manager
-func (b *Botanist) WakeUpControllers() error {
-	if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName, 1); err != nil {
-		return err
-	}
-	if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName, 1); err != nil {
-		return err
-	}
-	if _, err := b.K8sSeedClient.ScaleDeployment(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName, 1); err != nil {
-		return err
-	}
-	return nil
-}
-
 // DeployCertBroker deploys the Cert-Broker to the Shoot namespace in the Seed.
 func (b *Botanist) DeployCertBroker() error {
 	certManagementEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement)
@@ -598,5 +593,70 @@ func (b *Botanist) DeleteCertBroker() error {
 	if err := b.K8sSeedClient.DeleteClusterRole(common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
+	return nil
+}
+
+// WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
+// * etcd-events
+// * etcd-main
+// * kube-apiserver
+// * cloud-controller-manager
+// * kube-controller-manager
+// * machine-controller-manager
+func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
+	client := b.K8sSeedClient.Client()
+
+	for _, statefulset := range []string{common.EtcdEventsStatefulSetName, common.EtcdMainStatefulSetName} {
+		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 1); err != nil {
+			return err
+		}
+	}
+	if err := b.WaitUntilEtcdReady(); err != nil {
+		return err
+	}
+
+	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), 1); err != nil {
+		return err
+	}
+	if err := b.WaitUntilKubeAPIServerReady(); err != nil {
+		return err
+	}
+
+	for _, deployment := range []string{common.KubeControllerManagerDeploymentName, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName} {
+		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// HibernateControlPlane hibernates the entire control plane if the shoot shall be hibernated.
+func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
+	client := b.K8sSeedClient.Client()
+
+	// If a shoot is hibernated we only want to scale down the entire control plane if no nodes exist anymore. The node-lifecycle-controller
+	// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs, so let's wait for that before scaling down.
+	if b.K8sShootClient != nil {
+		ctxWithTimeOut, cancel := context.WithTimeout(ctx, 10*time.Minute)
+		defer cancel()
+
+		if err := b.WaitUntilNodesDeleted(ctxWithTimeOut); err != nil {
+			return err
+		}
+	}
+
+	for _, deployment := range []string{common.KubeAddonManagerDeploymentName, common.KubeControllerManagerDeploymentName, common.KubeAPIServerDeploymentName} {
+		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	for _, statefulset := range []string{common.EtcdEventsStatefulSetName, common.EtcdMainStatefulSetName} {
+		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 0); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
 	return nil
 }

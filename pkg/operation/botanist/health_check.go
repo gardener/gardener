@@ -917,7 +917,7 @@ func (b *Botanist) HealthChecks(initializeShootClients func() error, thresholdMa
 	return b.pardonCondition(apiServerAvailable), b.pardonCondition(controlPlaneHealthy), b.pardonCondition(everyNodeReady), b.pardonCondition(systemComponentsHealthy)
 }
 
-// MonitoringHealthChecks performs the monitoring releated health checks.
+// MonitoringHealthChecks performs the monitoring related health checks.
 func (b *Botanist) MonitoringHealthChecks(checker *HealthChecker, inactiveAlerts *gardenv1beta1.Condition) *gardenv1beta1.Condition {
 	if b.Shoot.IsHibernated {
 		return shootHibernatedCondition(inactiveAlerts)
