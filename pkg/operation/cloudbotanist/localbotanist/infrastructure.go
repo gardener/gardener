@@ -40,7 +40,7 @@ func (b *LocalBotanist) DeployInfrastructure() error {
 	if err != nil {
 		return err
 	}
-	chart, err := b.Operation.ChartSeedRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, config)
+	chart, err := b.ChartApplierSeed.Renderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config", "charts", "downloader"), "shoot-cloud-config-downloader", metav1.NamespaceSystem, config)
 	if err != nil {
 		return err
 	}

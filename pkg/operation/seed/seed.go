@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -306,6 +307,11 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	if err != nil {
 		return err
 	}
+	applier, err := kubernetes.NewApplierForConfig(k8sSeedClient.RESTConfig())
+	if err != nil {
+		return err
+	}
+	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 	var (
 		applierOptions     = kubernetes.DefaultApplierOptions
@@ -316,7 +322,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	)
 	applierOptions.MergeFuncs["ClusterIssuer"] = clusterIssuerMerge
 
-	return common.ApplyChartWithOptions(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
+	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), common.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"global": map[string]interface{}{
 			"images": images,

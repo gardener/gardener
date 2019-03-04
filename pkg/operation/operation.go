@@ -15,6 +15,7 @@
 package operation
 
 import (
+	"context"
 	"crypto/x509"
 	"fmt"
 	"path/filepath"
@@ -87,7 +88,11 @@ func newOperation(
 		return nil, err
 	}
 
-	chartRenderer, err := chartrenderer.New(k8sGardenClient.Kubernetes())
+	renderer, err := chartrenderer.New(k8sGardenClient.Kubernetes())
+	if err != nil {
+		return nil, err
+	}
+	applier, err := kubernetes.NewApplierForConfig(k8sGardenClient.RESTConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +107,7 @@ func newOperation(
 		Seed:                 seedObj,
 		K8sGardenClient:      k8sGardenClient,
 		K8sGardenInformers:   k8sGardenInformers,
-		ChartGardenRenderer:  chartRenderer,
+		ChartApplierGarden:   kubernetes.NewChartApplier(renderer, applier),
 		BackupInfrastructure: backupInfrastructure,
 		ShootBackup:          shootBackup,
 		MachineDeployments:   MachineDeployments{},
@@ -133,7 +138,7 @@ func newOperation(
 // a Kubernetes client as well as a Chart renderer for the Seed cluster will be initialized and attached to
 // the already existing Operation object.
 func (o *Operation) InitializeSeedClients() error {
-	if o.K8sSeedClient != nil && o.ChartSeedRenderer != nil {
+	if o.K8sSeedClient != nil && o.ChartApplierSeed != nil {
 		return nil
 	}
 
@@ -143,12 +148,18 @@ func (o *Operation) InitializeSeedClients() error {
 	if err != nil {
 		return err
 	}
-
 	o.K8sSeedClient = k8sSeedClient
-	o.ChartSeedRenderer, err = chartrenderer.New(k8sSeedClient.Kubernetes())
+
+	renderer, err := chartrenderer.New(k8sSeedClient.Kubernetes())
 	if err != nil {
 		return err
 	}
+	applier, err := kubernetes.NewApplierForConfig(k8sSeedClient.RESTConfig())
+	if err != nil {
+		return err
+	}
+
+	o.ChartApplierSeed = kubernetes.NewChartApplier(renderer, applier)
 	return nil
 }
 
@@ -157,7 +168,7 @@ func (o *Operation) InitializeSeedClients() error {
 // a Kubernetes client as well as a Chart renderer for the Shoot cluster will be initialized and attached to
 // the already existing Operation object.
 func (o *Operation) InitializeShootClients() error {
-	if o.K8sShootClient != nil && o.ChartShootRenderer != nil {
+	if o.K8sShootClient != nil && o.ChartApplierShoot != nil {
 		return nil
 	}
 
@@ -167,12 +178,18 @@ func (o *Operation) InitializeShootClients() error {
 	if err != nil {
 		return err
 	}
-
 	o.K8sShootClient = k8sShootClient
-	o.ChartShootRenderer, err = chartrenderer.New(k8sShootClient.Kubernetes())
+
+	renderer, err := chartrenderer.New(k8sShootClient.Kubernetes())
 	if err != nil {
 		return err
 	}
+	applier, err := kubernetes.NewApplierForConfig(k8sShootClient.RESTConfig())
+	if err != nil {
+		return err
+	}
+
+	o.ChartApplierShoot = kubernetes.NewChartApplier(renderer, applier)
 	return nil
 }
 
@@ -224,22 +241,15 @@ func (o *Operation) InitializeMonitoringClient() error {
 // ApplyChartGarden takes a path to a chart <chartPath>, name of the release <name>, release's namespace <namespace>
 // and two maps <defaultValues>, <additionalValues>, and renders the template based on the merged result of both value maps.
 // The resulting manifest will be applied to the Garden cluster.
-func (o *Operation) ApplyChartGarden(chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
-	return common.ApplyChart(o.K8sGardenClient, o.ChartGardenRenderer, chartPath, name, namespace, defaultValues, additionalValues)
+func (o *Operation) ApplyChartGarden(chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
+	return o.ChartApplierGarden.ApplyChart(context.TODO(), chartPath, namespace, name, defaultValues, additionalValues)
 }
 
 // ApplyChartSeed takes a path to a chart <chartPath>, name of the release <name>, release's namespace <namespace>
 // and two maps <defaultValues>, <additionalValues>, and renders the template based on the merged result of both value maps.
 // The resulting manifest will be applied to the Seed cluster.
-func (o *Operation) ApplyChartSeed(chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
-	return common.ApplyChart(o.K8sSeedClient, o.ChartSeedRenderer, chartPath, name, namespace, defaultValues, additionalValues)
-}
-
-// ApplyChartShoot takes a path to a chart <chartPath>, name of the release <name>, release's namespace <namespace>
-// and two maps <defaultValues>, <additionalValues>, and renders the template based on the merged result of both value maps.
-// The resulting manifest will be applied to the Shoot cluster.
-func (o *Operation) ApplyChartShoot(chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
-	return common.ApplyChart(o.K8sShootClient, o.ChartShootRenderer, chartPath, name, namespace, defaultValues, additionalValues)
+func (o *Operation) ApplyChartSeed(chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
+	return o.ChartApplierSeed.ApplyChart(context.TODO(), chartPath, namespace, name, defaultValues, additionalValues)
 }
 
 // GetSecretKeysOfRole returns a list of keys which are present in the Garden Secrets map and which
@@ -340,6 +350,11 @@ func (o *Operation) ChartInitializer(chartName string, values map[string]interfa
 		if err != nil {
 			return err
 		}
+		applier, err := kubernetes.NewApplierForConfig(o.K8sSeedClient.RESTConfig())
+		if err != nil {
+			return err
+		}
+		chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 		values["names"] = map[string]interface{}{
 			"configuration": config.ConfigurationName,
@@ -349,7 +364,7 @@ func (o *Operation) ChartInitializer(chartName string, values map[string]interfa
 		values["initializeEmptyState"] = config.InitializeState
 
 		return utils.Retry(5*time.Second, 30*time.Second, func() (bool, bool, error) {
-			if err := common.ApplyChart(o.K8sSeedClient, chartRenderer, filepath.Join(common.TerraformerChartPath, chartName), chartName, config.Namespace, nil, values); err != nil {
+			if err := chartApplier.ApplyChart(context.TODO(), filepath.Join(common.TerraformerChartPath, chartName), config.Namespace, chartName, nil, values); err != nil {
 				return false, false, nil
 			}
 			return true, false, nil

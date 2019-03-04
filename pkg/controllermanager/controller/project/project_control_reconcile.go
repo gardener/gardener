@@ -15,12 +15,14 @@
 package project
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -98,11 +100,18 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
 		return err
 	}
+	applier, err := kubernetes.NewApplierForConfig(c.k8sGardenClient.RESTConfig())
+	if err != nil {
+		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, err.Error())
+		c.updateProjectStatus(project.ObjectMeta, setProjectPhase(gardenv1beta1.ProjectFailed))
+		return err
+	}
+	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 	// Create RBAC rules to allow project owner and project members to read, update, and delete the project.
 	// We also create a RoleBinding in the namespace that binds all members to the garden.sapcloud.io:system:project-member
 	// role to ensure access for listing shoots, creating secrets, etc.
-	if err := common.ApplyChart(c.k8sGardenClient, chartRenderer, filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), "project-rbac", namespace.Name, map[string]interface{}{
+	if err := chartApplier.ApplyChart(context.TODO(), filepath.Join(common.ChartPath, "garden-project", "charts", "project-rbac"), namespace.Name, "project-rbac", map[string]interface{}{
 		"project": map[string]interface{}{
 			"name":    project.Name,
 			"uid":     project.UID,

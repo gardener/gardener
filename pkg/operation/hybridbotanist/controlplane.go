@@ -142,7 +142,7 @@ func (b *HybridBotanist) DeployETCD() error {
 				"storageProvider": "", // No storage provider means no backup
 			}
 		}
-		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), fmt.Sprintf("etcd-%s", role), b.Shoot.SeedNamespace, nil, etcd); err != nil {
+		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
 			return err
 		}
 		if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
@@ -166,7 +166,7 @@ func (b *HybridBotanist) DeployCloudProviderConfig() error {
 		"cloudProviderConfig": cloudProviderConfig,
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CloudProviderConfigName), common.CloudProviderConfigName, b.Shoot.SeedNamespace, nil, defaultValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CloudProviderConfigName), b.Shoot.SeedNamespace, common.CloudProviderConfigName, nil, defaultValues)
 }
 
 // RefreshCloudProviderConfig asks the Cloud Botanist to refresh the cloud provider config in case it stores
@@ -204,7 +204,7 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, defaultValues, cloudSpecificValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, defaultValues, cloudSpecificValues)
 }
 
 // DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
@@ -334,7 +334,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, utils.MergeMaps(cloudSpecificExposeValues, cloudSpecificValues)); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName, values, utils.MergeMaps(cloudSpecificExposeValues, cloudSpecificValues)); err != nil {
 		return err
 	}
 
@@ -429,7 +429,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), common.KubeControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName, values, cloudSpecificValues)
 }
 
 // DeployCloudControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
@@ -472,7 +472,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, chartName), common.CloudControllerManagerDeploymentName, b.Shoot.SeedNamespace, values, cloudSpecificValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, chartName), b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName, values, cloudSpecificValues)
 }
 
 // DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the
@@ -510,5 +510,5 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), common.KubeSchedulerDeploymentName, b.Shoot.SeedNamespace, values, cloudValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), b.Shoot.SeedNamespace, common.KubeSchedulerDeploymentName, values, cloudValues)
 }
