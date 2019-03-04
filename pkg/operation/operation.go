@@ -209,7 +209,7 @@ func (o *Operation) InitializeMonitoringClient() error {
 	config := prometheusapi.Config{
 		Address: fmt.Sprintf("https://%s", o.ComputePrometheusIngressFQDN()),
 		RoundTripper: &prometheusRoundTripper{
-			authHeader: fmt.Sprintf("Basic %s", utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", credentials.Data["username"], credentials.Data["password"])))),
+			authHeader: fmt.Sprintf("Basic %s", utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])))),
 			ca:         ca,
 		},
 	}
