@@ -12,14 +12,15 @@ resource "azurerm_resource_group" "rg" {
 }
 
 resource "azurerm_storage_account" "storageAccount" {
-  name                     = "{{ required "azure.storageAccountName is required" .Values.azure.storageAccountName }}"
-  location                 = "{{ required "azure.region is required" .Values.azure.region }}"
-  resource_group_name      = "${azurerm_resource_group.rg.name}"
-  account_kind             = "BlobStorage"
-  access_tier              = "Hot"
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  enable_blob_encryption   = true
+  name                      = "{{ required "azure.storageAccountName is required" .Values.azure.storageAccountName }}"
+  location                  = "{{ required "azure.region is required" .Values.azure.region }}"
+  resource_group_name       = "${azurerm_resource_group.rg.name}"
+  account_kind              = "BlobStorage"
+  access_tier               = "Hot"
+  account_tier              = "Standard"
+  account_replication_type  = "LRS"
+  enable_blob_encryption    = true
+  enable_https_traffic_only = true
 }
 
 resource "azurerm_storage_container" "container" {
