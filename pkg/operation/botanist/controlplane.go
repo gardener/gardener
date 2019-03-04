@@ -25,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -268,7 +269,7 @@ func (b *Botanist) DeleteClusterAutoscaler() error {
 func (b *Botanist) DeploySeedMonitoring() error {
 	var (
 		credentials      = b.Secrets["monitoring-ingress-credentials"]
-		basicAuth        = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
+		basicAuth        = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name)
 		prometheusHost   = b.ComputePrometheusIngressFQDN()
@@ -459,7 +460,7 @@ func (b *Botanist) DeploySeedLogging() error {
 
 	var (
 		credentials = b.Secrets["logging-ingress-credentials"]
-		basicAuth   = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
+		basicAuth   = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 	)
 

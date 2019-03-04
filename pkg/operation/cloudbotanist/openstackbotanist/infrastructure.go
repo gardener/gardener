@@ -16,6 +16,7 @@ package openstackbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -77,7 +78,7 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 			"router": createRouter,
 		},
 		"dnsServers":   b.Shoot.CloudProfile.Spec.OpenStack.DNSServers,
-		"sshPublicKey": string(b.Secrets["ssh-keypair"].Data["id_rsa.pub"]),
+		"sshPublicKey": string(b.Secrets["ssh-keypair"].Data[secrets.DataKeySSHAuthorizedKeys]),
 		"router": map[string]interface{}{
 			"id": routerID,
 		},

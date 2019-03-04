@@ -21,6 +21,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -129,7 +130,7 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 		"create": map[string]interface{}{
 			"vpc": createVPC,
 		},
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
+		"sshPublicKey": string(sshSecret.Data[secrets.DataKeySSHAuthorizedKeys]),
 		"vpc": map[string]interface{}{
 			"id":                vpcID,
 			"cidr":              vpcCIDR,

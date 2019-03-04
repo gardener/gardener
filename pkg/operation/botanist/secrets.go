@@ -769,13 +769,9 @@ func (b *Botanist) deleteOldETCDServerCertificate(existingSecretsMap map[string]
 		return nil
 	}
 
-	val, err := secrets.LoadCertificate(certificateETCDServer, secret.Data[secrets.DataKeyPrivateKey], secret.Data[secrets.DataKeyCertificate])
+	certificate, err := secrets.LoadCertificate(certificateETCDServer, secret.Data[secrets.DataKeyPrivateKey], secret.Data[secrets.DataKeyCertificate])
 	if err != nil {
 		return err
-	}
-	certificate, ok := val.(*secrets.Certificate)
-	if !ok {
-		return fmt.Errorf("could not convert certificate into *secrets.Certificate struct")
 	}
 
 	if crt := certificate.Certificate; crt != nil {
