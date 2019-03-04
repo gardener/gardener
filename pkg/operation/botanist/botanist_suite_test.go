@@ -299,14 +299,15 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckControlPlane",
-		func(shoot *gardenv1beta1.Shoot, cloudProvider gardenv1beta1.CloudProvider, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, conditionMatcher types.GomegaMatcher) {
+		func(shoot *gardenv1beta1.Shoot, cloudProvider gardenv1beta1.CloudProvider, deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, machineDeployments []*machinev1alpha1.MachineDeployment, conditionMatcher types.GomegaMatcher) {
 			var (
-				deploymentLister  = constDeploymentLister(deployments)
-				statefulSetLister = constStatefulSetLister(statefulSets)
-				checker           = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
+				deploymentLister        = constDeploymentLister(deployments)
+				statefulSetLister       = constStatefulSetLister(statefulSets)
+				machineDeploymentLister = constMachineDeploymentLister(machineDeployments)
+				checker                 = botanist.NewHealthChecker(map[gardenv1beta1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, cloudProvider, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckControlPlane(shoot, seedNamespace, cloudProvider, condition, deploymentLister, statefulSetLister, machineDeploymentLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
@@ -315,6 +316,7 @@ var _ = Describe("health check", func() {
 			gardenv1beta1.CloudProviderGCP,
 			requiredControlPlaneDeployments,
 			requiredControlPlaneStatefulSets,
+			nil,
 			BeNil()),
 		Entry("all healthy (AWS)",
 			gcpShoot,
@@ -329,6 +331,7 @@ var _ = Describe("health check", func() {
 				awsLBReadvertiserDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			nil,
 			BeNil()),
 		Entry("all healthy (with autoscaler)",
 			gcpShootWithAutoscaler,
@@ -343,6 +346,7 @@ var _ = Describe("health check", func() {
 				clusterAutoscalerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			nil,
 			BeNil()),
 		Entry("missing required deployment",
 			gcpShoot,
@@ -355,6 +359,7 @@ var _ = Describe("health check", func() {
 				machineControllerManagerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			nil,
 			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required deployment unhealthy",
 			gcpShoot,
@@ -368,6 +373,7 @@ var _ = Describe("health check", func() {
 				machineControllerManagerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
+			nil,
 			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("missing required stateful set",
 			gcpShoot,
@@ -376,6 +382,7 @@ var _ = Describe("health check", func() {
 			[]*appsv1.StatefulSet{
 				etcdEventsStatefulSet,
 			},
+			nil,
 			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
 		Entry("required stateful set unhealthy",
 			gcpShoot,
@@ -385,7 +392,25 @@ var _ = Describe("health check", func() {
 				newStatefulSet(etcdMainStatefulSet.Namespace, etcdMainStatefulSet.Name, roleOf(etcdMainStatefulSet), false),
 				etcdEventsStatefulSet,
 			},
-			beConditionWithStatus(gardenv1beta1.ConditionFalse)))
+			nil,
+			beConditionWithStatus(gardenv1beta1.ConditionFalse)),
+		Entry("rolling update ongoing (with autoscaler)",
+			gcpShootWithAutoscaler,
+			gardenv1beta1.CloudProviderGCP,
+			[]*appsv1.Deployment{
+				cloudControllerManagerDeployment,
+				kubeAddonManagerDeployment,
+				kubeAPIServerDeployment,
+				kubeControllerManagerDeployment,
+				kubeSchedulerDeployment,
+				machineControllerManagerDeployment,
+			},
+			requiredControlPlaneStatefulSets,
+			[]*machinev1alpha1.MachineDeployment{
+				{Status: machinev1alpha1.MachineDeploymentStatus{Replicas: 2, UpdatedReplicas: 1}},
+			},
+			BeNil()),
+	)
 
 	DescribeTable("#CheckSystemComponents",
 		func(deployments []*appsv1.Deployment, daemonSets []*appsv1.DaemonSet, conditionMatcher types.GomegaMatcher) {
