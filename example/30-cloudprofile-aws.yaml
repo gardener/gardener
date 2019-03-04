@@ -17,7 +17,7 @@ spec:
         versions:
         - 1.13.4
         - 1.12.6
-        - 1.11.7
+        - 1.11.8
         - 1.10.13
       machineImages:
       - name: coreos

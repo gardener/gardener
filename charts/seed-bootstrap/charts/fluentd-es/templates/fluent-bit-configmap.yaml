@@ -258,7 +258,6 @@ data:
         Match               kubernetes.*
         Kube_URL            https://kubernetes.default.svc.cluster.local:443
         Buffer_Size         1M
-        K8S-Logging.Parser  On
         Annotations         Off
         tls.verify          Off
 
@@ -274,7 +273,6 @@ data:
         Match           *
         Host            ${FLUENTD_HOST}
         Port            ${FLUENTD_PORT}
-        Time_as_Integer True
 
   parsers.conf: |-
     [PARSER]
