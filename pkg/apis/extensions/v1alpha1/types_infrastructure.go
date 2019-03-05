@@ -32,6 +32,11 @@ type Infrastructure struct {
 	Status InfrastructureStatus `json:"status"`
 }
 
+// GetExtensionType returns the type of this Infrastructure resource.
+func (i *Infrastructure) GetExtensionType() string {
+	return i.Spec.Type
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // InfrastructureList is a list of Infrastructure resources.
