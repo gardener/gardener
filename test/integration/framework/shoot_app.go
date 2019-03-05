@@ -372,8 +372,8 @@ func (o *GardenerTestOperation) GetElasticsearchLogs(ctx context.Context, elasti
 	}))
 
 	now := time.Now()
-	formattedDate := fmt.Sprintf("%d.%02d.%d", now.Year(), now.Month(), now.Day())
-	command := fmt.Sprintf("curl http://localhost:%d/logstash-%s/_search?q=kubernetes.pod_name:%s", elasticsearchPort, formattedDate, podName)
+	index := fmt.Sprintf("logstash-%d.%02d.%02d", now.Year(), now.Month(), now.Day())
+	command := fmt.Sprintf("curl http://localhost:%d/%s/_search?q=kubernetes.pod_name:%s", elasticsearchPort, index, podName)
 	reader, err := o.PodExecByLabel(ctx, elasticsearchLabels, elasticsearchLogging,
 		command, elasticsearchNamespace, client)
 	if err != nil {
