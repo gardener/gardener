@@ -1,7 +1,7 @@
 # Register extension controllers
 
 Extensions are registered in the garden cluster via [`ControllerRegistration`](../../example/25-controllerregistration.yaml) resources.
-Gardener is evaluating the registrations and creates [`ControllerInstallation`](../../example/25-controllerinstallation.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
+Gardener is evaluating the registrations and creates [`ControllerInstallation`](../../example/25-controllerinstallation-aws.yaml) resources which describe the request "please install this controller `X` to this seed `Y`".
 
 Similar to how `CloudProfile` or `Seed` resources get into the system, the Gardener administrator must deploy the `ControllerRegistration` resources (this does not happen automatically in any way - the administrator decides which extensions shall be enabled).
 

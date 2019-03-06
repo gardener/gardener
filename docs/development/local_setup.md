@@ -191,26 +191,42 @@ The commands below will configure your `minikube` with the absolute minimum reso
 
 #### Start minikube
 
-First, start `minikube` with at least Kubernetes v1.11.x. Default cpu and memory settings of minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 4 CPUs and 8192MB memory.
+First, start `minikube` with at least Kubernetes v1.11.x. The default CPU and memory settings of the minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 3 CPUs and 4096 MB memory.
 
 ```bash
-$ minikube start --cpus=4 --memory=8192 --kubernetes-version=v1.11.0
-Starting local Kubernetes v1.11.0 cluster...
+$ minikube start --cpus=3 --memory=4096 --extra-config=apiserver.authorization-mode=RBAC
+minikube v0.34.1 on darwin (amd64)
+Creating virtualbox VM (CPUs=3, Memory=4096MB, Disk=20000MB) ...
 [...]
-Kubectl is now configured to use the cluster.
+Done! Thank you for using minikube!
+
+# Allow Tiller and Dashboard to run in RBAC mode
+$ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:default
+clusterrolebinding.rbac.authorization.k8s.io/add-on-cluster-admin created
 ```
 
 #### Prepare the Gardener
 
 ```bash
 $ make dev-setup
-namespace "garden" created
-namespace "garden-dev" created
-deployment "etcd" created
-service "etcd" created
-service "gardener-apiserver" created
-endpoints "gardener-apiserver" created
-apiservice "v1beta1.garden.sapcloud.io" created
+Found Minikube ...
+namespace/garden created
+namespace/garden-dev created
+deployment.apps/etcd created
+service/etcd created
+service/gardener-apiserver created
+service/gardener-controller-manager created
+endpoints/gardener-apiserver created
+endpoints/gardener-controller-manager created
+apiservice.apiregistration.k8s.io/v1beta1.garden.sapcloud.io created
+apiservice.apiregistration.k8s.io/v1alpha1.core.gardener.cloud created
+validatingwebhookconfiguration.admissionregistration.k8s.io/validate-namespace-deletion created
+```
+
+Optionally, you can switch off the `Logging` feature gate of Gardener Controller Manager to save resources:
+
+```bash
+$ vim dev/20-componentconfig-gardener-controller-manager.yaml
 ```
 
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
@@ -224,13 +240,15 @@ secret/internal-domain-unmanaged created
 
 #### Run the Gardener API Server and the Gardener Controller Manager
 
-Next, you need to run the Gardener API Server and the Gardener Controller Manager using rules in the `Makefile`.
+Next, run the Gardener API Server and the Gardener Controller Manager in different terminals using rules in the `Makefile`.
 
 ```bash
 $ make start-api
-[restful] 2018/02/01 15:39:43 log.go:33: [restful/swagger] listing is available at https:///swaggerapi
-[restful] 2018/02/01 15:39:43 log.go:33: [restful/swagger] https:///swaggerui/ is mapped to folder /swagger-ui/
-I0201 15:39:43.750573   84958 serve.go:89] Serving securely on [::]:8443
+Found Minikube ...
+I0306 15:23:51.044421   74536 plugins.go:84] Registered admission plugin "ResourceReferenceManager"
+I0306 15:23:51.044523   74536 plugins.go:84] Registered admission plugin "DeletionConfirmation"
+[...]
+I0306 15:23:51.626836   74536 secure_serving.go:116] Serving securely on [::]:8443
 [...]
 ```
 
@@ -238,26 +256,27 @@ Now you are ready to launch the Gardener Controller Manager
 
 ```bash
 $ make start
-time="2018-02-20T13:24:39+02:00" level=info msg="Starting Gardener controller manager..."
-time="2018-02-20T13:24:39+02:00" level=info msg="Feature Gates: "
-time="2018-02-20T13:24:39+02:00" level=info msg="Gardener controller manager HTTP server started (serving on 0.0.0.0:2718)"
-time="2018-02-20T13:24:39+02:00" level=info msg="Found internal domain secret internal-domain-unmanaged for domain nip.io."
-time="2018-02-20T13:24:39+02:00" level=info msg="Successfully bootstrapped the Garden cluster."
-time="2018-02-20T13:24:39+02:00" level=info msg="Gardener controller manager (version 0.2.0) initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="Quota controller initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="CloudProfile controller initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="SecretBinding controller initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="Watching all namespaces for Shoot resources..."
-time="2018-02-20T13:24:39+02:00" level=info msg="Shoot controller initialized."
-time="2018-02-20T13:24:39+02:00" level=info msg="Seed controller initialized."
+time="2019-03-06T15:24:17+02:00" level=info msg="Starting Gardener controller manager..."
+time="2019-03-06T15:24:17+02:00" level=info msg="Feature Gates: CertificateManagement=false,Logging=true"
+time="2019-03-06T15:24:17+02:00" level=info msg="Starting HTTP server on 0.0.0.0:2718"
+time="2019-03-06T15:24:17+02:00" level=info msg="Acquired leadership, starting controllers."
+time="2019-03-06T15:24:18+02:00" level=info msg="Starting HTTPS server on 0.0.0.0:2719"
+time="2019-03-06T15:24:18+02:00" level=info msg="Found internal domain secret internal-domain-unmanaged for domain nip.io."
+time="2019-03-06T15:24:18+02:00" level=info msg="Successfully bootstrapped the Garden cluster."
+time="2019-03-06T15:24:18+02:00" level=info msg="Gardener controller manager (version 0.19.0-dev) initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="ControllerInstallation controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="ControllerRegistration controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="Shoot controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="BackupInfrastructure controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="Seed controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="SecretBinding controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="Project controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="Quota controller initialized."
+time="2019-03-06T15:24:18+02:00" level=info msg="CloudProfile controller initialized."
 [...]
 ```
 
-:information_source: Your username is inferred from the user you are logged in with on your machine. The version is incremented based on the content of the `VERSION` file. The version is important for the Gardener in order to identify which Gardener version has last operated a Shoot cluster.
-
-In another terminal, run the following script to install extension controllers - make sure that you install all of them required for your local development.
-
-Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
+Run the following script to install extension controllers - make sure that you install all of them required for your local development. Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
 
 ```bash
 $ make dev-setup-extensions
@@ -266,7 +285,6 @@ $ make dev-setup-extensions
 ...
 ```
 
-
 The Gardener should now be ready to operate on Shoot resources. You can use
 
 ```bash
@@ -274,29 +292,30 @@ $ kubectl get shoots
 No resources found.
 ```
 
-to operate against your local running Gardener API server.
+to operate against your local running Gardener API Server.
 
 > Note: It may take several seconds until the `minikube` cluster recognizes that the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
 
 #### Configure minikube to act as Gardener and Seed Cluster
 
-The Gardener Local Provider gives you the ability to create Shoot clusters on your local machine without the need to have an account on a Cloud Provider. Please make sure that Vagrant is installed (see section [Installing Vagrant](#installing-vagrant))
-
-Make sure that you already run `make dev-setup` and that the Gardener API server and the Gardener controller manager are running via `make start-api` and `make start` as described before.
+Before continuing, make sure that Vagrant is installed (see section [Installing Vagrant](#installing-vagrant)), that you already ran `make dev-setup`, and that the Gardener API Server and the Gardener Controller Manager are running via `make start-api` and `make start` as described above.
 
 Next, you need to configure `minikube` to work as the Gardener and as the Seed cluster in such a way that it uses the local Vagrant installation to create the Shoot clusters.
 
 ```bash
 $ make dev-setup-local
-cloudprofile "local" created
-secret "dev-local" created
-secretbinding "core-local" created
+namespace/garden-dev unchanged
+project.garden.sapcloud.io/dev created
+cloudprofile.garden.sapcloud.io/local created
+secret/core-local created
+secretbinding.garden.sapcloud.io/core-local created
 Cluster "gardener-dev" set.
 User "gardener-dev" set.
 Context "gardener-dev" modified.
 Switched to context "gardener-dev".
-secret "seed-local-dev" created
-seed "local-dev" created
+controllerinstallation.core.gardener.cloud/os-coreos created
+secret/seed-local created
+seed.garden.sapcloud.io/local created
 ```
 
 #### Check Vagrant setup
@@ -308,8 +327,6 @@ $ cd vagrant
 $ vagrant up
 Bringing machine 'core-01' up with 'virtualbox' provider...
 ==> core-01: Importing base box 'coreos-stable'...
-==> core-01: Configuring Ignition Config Drive
-==> core-01: Matching MAC address for NAT networking...
 [...]
 ```
 
@@ -320,25 +337,8 @@ $ vagrant destroy --force
 ==> core-01: Forcing shutdown of VM...
 ==> core-01: Destroying VM and associated drives...
 
-$ cd $GOPATH/src/github.com/gardener/gardener
+$ cd ..
 ```
-
-#### Start the Gardener Local Provider
-
-The Seed cluster provides the possibility to create Shoot clusters on several cloud provider. The Gardener Provider implements a common interface to all supported cloud providers. Here, the corresponding Gardener Provider for Local is used.
-
-By executing
-
-```bash
-$ make start-local
-2018/02/14 10:53:34 Listening on :3777
-2018/02/14 10:53:34 Vagrant directory /Users/foo/go/src/github.com/gardener/gardener/vagrant
-2018/02/14 10:53:34 user-data path /Users/foo/git/go/src/github.com/gardener/gardener/dev/user-data
-```
-
-the Gardener Local Provider is started.
-
-At this point three processes should run in an individual terminal, the Gardener API server, the Gardener controller manager and finally the Gardener Local Provider.
 
 #### Create, access and delete a Shoot Cluster
 
@@ -349,7 +349,29 @@ $ kubectl apply -f dev/90-shoot-local.yaml
 shoot "local" created
 ```
 
-When the Shoot API server is created you can download the `kubeconfig` for it and access it:
+Wait until the 2 secrets `osc-result-cloud-config-local-*` appear in the Shoot cluster namespace and then copy `cloud_config` from the secret `osc-result-cloud-config-local-xxxxx-downloader` to the local file `dev/user-data`:
+
+```bash
+$ kubectl get secrets -n shoot--dev--local | grep osc-result-cloud-config-local
+osc-result-cloud-config-local-640f6-downloader   Opaque                                1      70s
+osc-result-cloud-config-local-640f6-original     Opaque                                1      68s
+
+$ kubectl get secrets osc-result-cloud-config-local-640f6-downloader -n shoot--dev--local -o jsonpath="{.data.cloud_config}" | base64 -d > dev/user-data
+```
+
+Manually start the Vagrant machine:
+
+```bash
+$ cd vagrant
+$ vagrant up
+Bringing machine 'core-01' up with 'virtualbox' provider...
+==> core-01: Importing base box 'coreos-stable'...
+[...]
+
+$ cd ..
+```
+
+At this point, you can download the `kubeconfig` for the Shoot cluster and access it:
 
 ```bash
 $ kubectl --namespace shoot--dev--local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
@@ -375,6 +397,17 @@ To delete the Shoot cluster
 $ ./hack/delete shoot local garden-dev
 shoot "local" deleted
 shoot "local" patched
+```
+
+Manually destroy the Vagrant machine when you no longer need it:
+
+```bash
+$ cd vagrant
+$ vagrant destroy --force
+==> core-01: Discarding saved state of VM...
+==> core-01: Destroying VM and associated drives...
+
+$ cd ..
 ```
 
 #### Limitations of local Shoot setup

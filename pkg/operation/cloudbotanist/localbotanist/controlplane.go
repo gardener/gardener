@@ -51,7 +51,7 @@ func (b *LocalBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interfac
 		return nil, fmt.Errorf("missing `.nip.io` TLD")
 	}
 	return map[string]interface{}{
-		"advertiseAddress": strings.TrimSuffix(*b.Shoot.Info.Spec.DNS.Domain, ".nip.io"),
+		"advertiseAddress": strings.Replace(strings.TrimSuffix(*b.Shoot.Info.Spec.DNS.Domain, ".nip.io"), "-", ".", -1),
 		"securePort":       31443,
 	}, nil
 }
