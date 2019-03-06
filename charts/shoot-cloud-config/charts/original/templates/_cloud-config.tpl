@@ -15,6 +15,8 @@ coreos:
 {{ include "kubelet-monitor" . | indent 2 }}
 {{ include "update-ca-certs" . | indent 2 }}
 {{ include "systemd-sysctl" . | indent 2 }}
+{{ include "systemd-journald-restart" . | indent 2 }}
+{{ include "systemd-journald-restart-timer" . | indent 2 }}
 write_files:
 {{ include "logrotate-config" . }}
 {{ include "journald-config" . }}

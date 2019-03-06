@@ -1,0 +1,16 @@
+{{- define "systemd-journald-restart-timer" -}}
+- name: systemd-journald-restart.timer
+  enable: true
+  command: start
+  content: |
+    [Unit]
+    Description=Restart systemd-journald at 30 minutes
+
+    [Timer]
+    OnUnitActiveSec=30m
+    AccuracySec=10m
+    Persistent=true
+
+    [Install]
+    WantedBy=multi-user.target
+{{- end -}}

@@ -1,0 +1,14 @@
+{{ define "systemd-journald-restart" -}}
+- name: systemd-journald-restart.service
+  enable: true
+  command: start
+  content: |
+    [Unit]
+    Description=Restart systemd-journald
+
+    [Service]
+    ExecStart=/usr/bin/systemctl restart systemd-journald
+
+    [Install]
+    WantedBy=multi-user.target
+{{- end}}
