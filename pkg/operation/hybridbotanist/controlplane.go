@@ -15,6 +15,7 @@
 package hybridbotanist
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -22,10 +23,11 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
@@ -141,6 +143,20 @@ func (b *HybridBotanist) DeployETCD() error {
 				"storageProvider": "", // No storage provider means no backup
 			}
 		}
+
+		if b.Shoot.IsHibernated {
+			statefulset := &appsv1.StatefulSet{}
+			if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
+				return err
+			}
+
+			if statefulset.Spec.Replicas == nil {
+				etcd["replicas"] = 0
+			} else {
+				etcd["replicas"] = *statefulset.Spec.Replicas
+			}
+		}
+
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), fmt.Sprintf("etcd-%s", role), b.Shoot.SeedNamespace, nil, etcd); err != nil {
 			return err
 		}
@@ -261,11 +277,20 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			},
 		}
 	} else {
+		deployment := &appsv1.Deployment{}
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+		replicas := deployment.Spec.Replicas
+
 		// As kube-apiserver HPA manages the number of replicas, we have to maintain current number of replicas
 		// otherwise keep the value to default
-		existingAPIServerDeployment, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
-		if err == nil && existingAPIServerDeployment.Spec.Replicas != nil && *existingAPIServerDeployment.Spec.Replicas > 0 {
-			defaultValues["replicas"] = *existingAPIServerDeployment.Spec.Replicas
+		if replicas != nil && *replicas > 0 {
+			defaultValues["replicas"] = *replicas
+		}
+		// If the shoot is hibernated then we want to keep the number of replicas (scale down happens later).
+		if b.Shoot.IsHibernated && (replicas == nil || *replicas == 0) {
+			defaultValues["replicas"] = 0
 		}
 
 		cpuRequest, memoryRequest, cpuLimit, memoryLimit := getResourcesForAPIServer(b.Shoot.GetNodeCount())
@@ -402,15 +427,16 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	// If a shoot is hibernated we only want to scale down the KCM if no nodes exist anymore. The node-lifecycle-controller
-	// inside KCM is responsible for deleting Node objects of terminated/non-existing VMs.
 	if b.Shoot.IsHibernated {
-		nodeList, err := b.K8sShootClient.ListNodes(metav1.ListOptions{})
-		if err != nil {
+		deployment := &appsv1.Deployment{}
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
-		if len(nodeList.Items) == 0 {
+
+		if deployment.Spec.Replicas == nil {
 			defaultValues["replicas"] = 0
+		} else {
+			defaultValues["replicas"] = *deployment.Spec.Replicas
 		}
 	}
 

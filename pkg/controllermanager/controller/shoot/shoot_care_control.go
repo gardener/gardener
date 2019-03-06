@@ -198,29 +198,28 @@ func garbageCollection(initShootClients func() error, botanist *botanistpkg.Bota
 		wg                 sync.WaitGroup
 	)
 
-	if err := initShootClients(); err != nil {
-		botanist.Logger.Errorf("Could not initialize Shoot client for garbage collection of shoot %s: %+v", qualifiedShootName, err)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		if err := botanist.PerformGarbageCollectionSeed(); err != nil {
 			botanist.Logger.Errorf("Error during seed garbage collection: %+v", err)
 		}
-		botanist.Logger.Debugf("Successfully performed Seed garbage collection for Shoot %s", qualifiedShootName)
-		return
+	}()
+
+	if !botanist.Shoot.IsHibernated {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := initShootClients(); err != nil {
+				botanist.Logger.Errorf("Could not initialize Shoot client for garbage collection of shoot %s: %+v", qualifiedShootName, err)
+				return
+			}
+			if err := botanist.PerformGarbageCollectionShoot(); err != nil {
+				botanist.Logger.Errorf("Error during shoot garbage collection: %+v", err)
+			}
+		}()
 	}
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		if err := botanist.PerformGarbageCollectionSeed(); err != nil {
-			botanist.Logger.Errorf("Error during seed garbage collection: %+v", err)
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		if err := botanist.PerformGarbageCollectionShoot(); err != nil {
-			botanist.Logger.Errorf("Error during shoot garbage collection: %+v", err)
-		}
-	}()
 	wg.Wait()
-
 	botanist.Logger.Debugf("Successfully performed full garbage collection for Shoot cluster %s", qualifiedShootName)
 }

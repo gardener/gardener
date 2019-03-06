@@ -4,8 +4,14 @@ metadata:
   name: kube-apiserver
   namespace: {{ .Release.Namespace }}
 spec:
-  maxReplicas: {{ .Values.maxReplicas }}
+  {{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
+  {{- if eq (.Values.replicas | toString) "0" }}
+  minReplicas: 0
+  maxReplicas: 0
+  {{- else }}
   minReplicas: {{ .Values.minReplicas }}
+  maxReplicas: {{ .Values.maxReplicas }}
+  {{- end }}
   scaleTargetRef:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
