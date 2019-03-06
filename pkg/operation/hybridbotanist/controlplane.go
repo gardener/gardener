@@ -358,6 +358,13 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		return err
 	}
 
+	// If shoot is hibernated we don't want the HPA to interfer with our scaling decisions.
+	if b.Shoot.IsHibernated {
+		if err := b.K8sSeedClient.DeleteHorizontalPodAutoscaler(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
 	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), common.KubeAPIServerDeploymentName, b.Shoot.SeedNamespace, values, utils.MergeMaps(cloudSpecificExposeValues, cloudSpecificValues)); err != nil {
 		return err
 	}
