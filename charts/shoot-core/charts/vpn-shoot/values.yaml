@@ -6,3 +6,12 @@ nodeNetwork: 172.16.0.0/20
 podAnnotations: {}
 diffieHellmanKey: LS0tLS1CRUdJTiBESCBQQVJBTUVURVJTLS0tLS0KTUlJQkNBS0NBUUVBN2NCWHhHOWFuNktSei9zQjV1aVNPVGY3RWcrdVdWa2hYTzRwZUtEVEFSek1ZYThiN1dSOApCL0F3K0F5VVh0QjN0WHRyemVDNU0zSUhudWhGd01vM0s0b1NPa0ZKeGF0TGxZS2VZMTVyK0t0NXZuT09UM0JXCmVONU9uV2xSNVdpN0daQldiYVFnWFZSNzlONHlzdDQzc1ZoSnVzNkJ5MGxONk9sYzl4RC95czlHSC95a0pWSWgKWi9OTHJ4QUM1bHhqd0NxSk1kOGhycnlDaHVEbHo1OTd2ZzZnWUZ1UlY2MFUvWVU0REs3MUY0SDdtSTA3YUdKOQpsK1NLOFRia0tXRjVJVEk3a1lXYmM0em10ZlhTWGFHak1oTTlvbVFVYVRIOWNzQjk2aHpGSmRlWjRYanh5YlJmClZjM3Q3WFA1cTdhZmVhS21NM0ZoU1hkZUhLQ1RxUXpRdXdJQkFnPT0KLS0tLS1FTkQgREggUEFSQU1FVEVSUy0tLS0tCg==
 tlsAuth: dummy-b64-data
+# 
+# optional initContainers
+# used to generate the nodeNetwork runtime, if it is not available at config time
+# to use, comment out the nodeNetwork key above, and create this
+# it should save the cidr to the file /init-config/nodeNetwork
+#initContainers:
+#- image: image-repository:image-tag
+#  command: ["sh","-c", "ip a eth0 > /init-config/nodeNetwork"]
+
