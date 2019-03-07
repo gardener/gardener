@@ -105,16 +105,6 @@ func (c *Clientset) RESTClient() rest.Interface {
 	return c.restClient
 }
 
-// SetGarden will set the garden attribute of the Client object.
-func (c *Clientset) SetGarden(client gardenclientset.Interface) {
-	c.garden = client
-}
-
-// SetGardenCore will set the gardenCore attribute of the Client object.
-func (c *Clientset) SetGardenCore(client gardencoreclientset.Interface) {
-	c.gardenCore = client
-}
-
 // Version returns the GitVersion of the Kubernetes client stored on the object.
 func (c *Clientset) Version() string {
 	return c.version

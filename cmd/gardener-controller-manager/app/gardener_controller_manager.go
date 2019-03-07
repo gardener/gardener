@@ -20,13 +20,17 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	apiconfig "k8s.io/apimachinery/pkg/apis/config"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"strings"
+	"time"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	coreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
-	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
@@ -52,7 +56,6 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
@@ -226,6 +229,44 @@ type Gardener struct {
 	LeaderElection         *leaderelection.LeaderElectionConfig
 }
 
+func restConfigFromClientConnectionConfiguration(cfg apiconfig.ClientConnectionConfiguration) (*rest.Config, error) {
+	restConfig, err := clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig.Burst = int(cfg.Burst)
+	restConfig.QPS = cfg.QPS
+	restConfig.AcceptContentTypes = cfg.AcceptContentTypes
+	restConfig.ContentType = cfg.ContentType
+	return restConfig, nil
+}
+
+func discoveryFromControllerManagerConfiguration(cfg *config.ControllerManagerConfiguration) (discovery.CachedDiscoveryInterface, error) {
+	restConfig, err := restConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	if err != nil {
+		return nil, err
+	}
+
+	discoveryCfg := cfg.Discovery
+	var discoveryCacheDir string
+	if discoveryCfg.DiscoveryCacheDir != nil {
+		discoveryCacheDir = *discoveryCfg.DiscoveryCacheDir
+	}
+
+	var httpCacheDir string
+	if discoveryCfg.HTTPCacheDir != nil {
+		httpCacheDir = *discoveryCfg.HTTPCacheDir
+	}
+
+	var ttl time.Duration
+	if discoveryCfg.TTL != nil {
+		ttl = discoveryCfg.TTL.Duration
+	}
+
+	return discovery.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, ttl)
+}
+
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
 func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) {
 	if cfg == nil {
@@ -248,42 +289,28 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
-	if kubeconfig := os.Getenv("GARDENER_KUBECONFIG"); kubeconfig != "" {
-		cfg.GardenerClientConnection.Kubeconfig = kubeconfig
+
+	restCfg, err := restConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	if err != nil {
+		return nil, err
 	}
 
-	k8sGardenClient, err := kubernetes.NewClientFromFile(cfg.ClientConnection.Kubeconfig, &cfg.ClientConnection, client.Options{
+	disc, err := discoveryFromControllerManagerConfiguration(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	k8sGardenClient, err := kubernetes.NewForConfig(restCfg, client.Options{
+		Mapper: restmapper.NewDeferredDiscoveryRESTMapper(disc),
 		Scheme: kubernetes.GardenScheme,
 	})
 	if err != nil {
 		return nil, err
 	}
-	k8sGardenClientLeaderElection, err := kubernetes.NewClientFromFile(cfg.ClientConnection.Kubeconfig, nil, client.Options{})
+	k8sGardenClientLeaderElection, err := k8s.NewForConfig(restCfg)
 	if err != nil {
 		return nil, err
 	}
-
-	// Create a GardenV1beta1Client and the respective API group scheme for the Garden API group.
-	gardenerClient := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: cfg.GardenerClientConnection.Kubeconfig},
-		&clientcmd.ConfigOverrides{},
-	)
-	gardenerClientConfig, err := kubernetes.CreateRESTConfig(gardenerClient, &cfg.ClientConnection)
-	if err != nil {
-		return nil, err
-	}
-	gardenClientset, err := gardenclientset.NewForConfig(gardenerClientConfig)
-	if err != nil {
-		return nil, err
-	}
-	k8sGardenClient.SetGarden(gardenClientset)
-
-	// Create a GardenCoreV1alpha1Client and the respective API group scheme for the core Garden API group.
-	gardenCoreClientset, err := coreclientset.NewForConfig(gardenerClientConfig)
-	if err != nil {
-		return nil, err
-	}
-	k8sGardenClient.SetGardenCore(gardenCoreClientset)
 
 	// Set up leader election if enabled and prepare event recorder.
 	var (
@@ -291,7 +318,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		recorder             = createRecorder(k8sGardenClient.Kubernetes())
 	)
 	if cfg.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = makeLeaderElectionConfig(cfg.LeaderElection, k8sGardenClientLeaderElection.Kubernetes(), recorder)
+		leaderElectionConfig, err = makeLeaderElectionConfig(cfg.LeaderElection, k8sGardenClientLeaderElection, recorder)
 		if err != nil {
 			return nil, err
 		}
@@ -316,8 +343,15 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	}, nil
 }
 
+func (g *Gardener) cleanup() {
+	if err := os.RemoveAll(controllermanagerconfigv1alpha1.DefaultDiscoveryDir); err != nil {
+		g.Logger.Errorf("Could not cleanup base discovery cache directory: %v", err)
+	}
+}
+
 // Run runs the Gardener. This should never exit.
 func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
+	defer g.cleanup()
 	leaderElectionCtx, leaderElectionCancel := context.WithCancel(context.Background())
 
 	// Prepare a reusable run function.

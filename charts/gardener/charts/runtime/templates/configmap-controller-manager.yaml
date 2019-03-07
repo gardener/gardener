@@ -106,6 +106,18 @@ data:
       renewDeadline: {{ required ".Values.global.controller.config.leaderElection.renewDeadline is required" .Values.global.controller.config.leaderElection.renewDeadline }}
       retryPeriod: {{ required ".Values.global.controller.config.leaderElection.retryPeriod is required" .Values.global.controller.config.leaderElection.retryPeriod }}
       resourceLock: {{ required ".Values.global.controller.config.leaderElection.resourceLock is required" .Values.global.controller.config.leaderElection.resourceLock }}
+    discovery:
+      {{- with .Values.global.controller.config.discovery }}
+      {{- if .discoveryCacheDir }}
+      discoveryCacheDir: {{ .discoveryCacheDir }}
+      {{- end }}
+      {{- if .httpCacheDir }}
+      httpCacheDir: {{ .httpCacheDir }}
+      {{- end }}
+      {{- if .ttl }}
+      ttl: {{ .ttl }}
+      {{- end }}
+      {{- end }}
     logLevel: {{ required ".Values.global.controller.config.logLevel is required" .Values.global.controller.config.logLevel }}
     server:
       http:

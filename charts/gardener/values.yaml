@@ -162,6 +162,11 @@ global:
         renewDeadline: 10s
         retryPeriod: 2s
         resourceLock: configmaps
+      # `discovery` allows specifying options for the cached discovery client
+      discovery:
+      #  discoveryCacheDir: /tmp/cache-dir
+      #  httpCacheDir: /tmp/http-cache-dir
+      #  ttl: 10s
       logLevel: info
       server:
         http:

@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiserverconfigv1alpha1 "k8s.io/apiserver/pkg/apis/config/v1alpha1"
 	"k8s.io/klog"
+	"time"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -30,14 +31,12 @@ type ControllerManagerConfiguration struct {
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
 	ClientConnection apimachineryconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection"`
-	// GardenerClientConnection specifies the kubeconfig file and client connection
-	// settings for the garden-apiserver.
-	// +optional
-	GardenerClientConnection *apimachineryconfigv1alpha1.ClientConnectionConfiguration `json:"gardenerClientConnection,omitempty"`
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration `json:"controllers"`
 	// LeaderElection defines the configuration of leader election client.
 	LeaderElection LeaderElectionConfiguration `json:"leaderElection"`
+	// Discovery defines the configuration of the discovery client.
+	Discovery DiscoveryConfiguration `json:"discovery"`
 	// LogLevel is the level/severity for the logs. Must be one of [info,debug,error].
 	LogLevel string `json:"logLevel"`
 	// KubernetesLogLevel is the log level used for Kubernetes' k8s.io/klog functions.
@@ -239,6 +238,22 @@ type BackupInfrastructureControllerConfiguration struct {
 	DeletionGracePeriodDays *int `json:"deletionGracePeriodDays,omitempty"`
 }
 
+// DiscoveryConfiguration defines the configuration of how to discover API groups.
+// It allows to set where to store caching data and to specify the TTL of that data.
+type DiscoveryConfiguration struct {
+	// DiscoveryCacheDir is the directory to store discovery cache information.
+	// If unset, the discovery client will use the current working directory.
+	// +optional
+	DiscoveryCacheDir *string `json:"discoveryCacheDir,omitempty"`
+	// HTTPCacheDir is the directory to store discovery HTTP cache information.
+	// If unset, no HTTP caching will be done.
+	// +optional
+	HTTPCacheDir *string `json:"httpCacheDir,omitempty"`
+	// TTL is the ttl how long discovery cache information shall be valid.
+	// +optional
+	TTL *metav1.Duration `json:"ttl,omitempty"`
+}
+
 // LeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
 type LeaderElectionConfiguration struct {
@@ -300,4 +315,7 @@ const (
 
 	// DefaultETCDBackupSchedule is a constant for the default schedule to take backups of a Shoot cluster (daily).
 	DefaultETCDBackupSchedule = "0 */24 * * *"
+
+	// DefaultDiscoveryTTL is the default ttl for the cached discovery client.
+	DefaultDiscoveryTTL = 10 * time.Second
 )

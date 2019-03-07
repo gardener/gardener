@@ -107,7 +107,7 @@ var _ = Describe("Seed logging testing", func() {
 		validateFlags()
 
 		seedLogTestLogger = logger.AddWriter(logger.NewLogger(*logLevel), GinkgoWriter)
-		k8sGardenClient, err := kubernetes.NewClientFromFile(*kubeconfig, nil, client.Options{
+		k8sGardenClient, err := kubernetes.NewClientFromFile("", *kubeconfig, client.Options{
 			Scheme: kubernetes.GardenScheme,
 		})
 		Expect(err).NotTo(HaveOccurred())
