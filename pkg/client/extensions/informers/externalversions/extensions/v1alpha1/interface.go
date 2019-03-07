@@ -10,6 +10,8 @@ import (
 type Interface interface {
 	// Clusters returns a ClusterInformer.
 	Clusters() ClusterInformer
+	// Extensions returns a ExtensionInformer.
+	Extensions() ExtensionInformer
 	// Infrastructures returns a InfrastructureInformer.
 	Infrastructures() InfrastructureInformer
 	// OperatingSystemConfigs returns a OperatingSystemConfigInformer.
@@ -32,6 +34,11 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Clusters returns a ClusterInformer.
 func (v *version) Clusters() ClusterInformer {
 	return &clusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Extensions returns a ExtensionInformer.
+func (v *version) Extensions() ExtensionInformer {
+	return &extensionInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Infrastructures returns a InfrastructureInformer.

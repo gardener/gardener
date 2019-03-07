@@ -12,6 +12,7 @@ import (
 type ExtensionsV1alpha1Interface interface {
 	RESTClient() rest.Interface
 	ClustersGetter
+	ExtensionsGetter
 	InfrastructuresGetter
 	OperatingSystemConfigsGetter
 	WorkersGetter
@@ -24,6 +25,10 @@ type ExtensionsV1alpha1Client struct {
 
 func (c *ExtensionsV1alpha1Client) Clusters(namespace string) ClusterInterface {
 	return newClusters(c, namespace)
+}
+
+func (c *ExtensionsV1alpha1Client) Extensions(namespace string) ExtensionInterface {
+	return newExtensions(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) Infrastructures(namespace string) InfrastructureInterface {

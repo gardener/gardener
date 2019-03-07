@@ -4,6 +4,8 @@ package v1alpha1
 
 type ClusterExpansion interface{}
 
+type ExtensionExpansion interface{}
+
 type InfrastructureExpansion interface{}
 
 type OperatingSystemConfigExpansion interface{}
