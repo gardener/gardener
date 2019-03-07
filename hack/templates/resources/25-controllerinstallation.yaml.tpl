@@ -5,9 +5,6 @@
   if context.get("values", "") != "":
     values=yaml.load(open(context.get("values", "")))
 
-  if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
-
   def value(path, default):
     keys=str.split(path, ".")
     root=values
@@ -41,4 +38,4 @@ spec:
   seedRef:
     apiVersion: core.gardener.cloud/v1alpha1
     kind: Seed
-    name: ${value("spec.cloud.profile", cloud)}
+    name: my-seed

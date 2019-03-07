@@ -19,7 +19,7 @@ func (b *LocalBotanist) DeployInfrastructure() error {
 	return nil
 }
 
-// DeployInfrastructure does currently nothing for Local.
+// DestroyInfrastructure does currently nothing for Local.
 func (b *LocalBotanist) DestroyInfrastructure() error {
 	return nil
 }

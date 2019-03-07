@@ -19,7 +19,7 @@ source $(dirname "${0}")/common
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
 MINIKUBE_IP=$(minikube ip)
-MINIKUBE_IP_DASHES=$(echo ${MINIKUBE_IP} | awk -F. '{print $1"-"$2"-"$3"-"$4}')
+MINIKUBE_IP_DASHES=$(echo ${MINIKUBE_IP} | tr '.' '-')
 IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
 MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
@@ -53,7 +53,7 @@ kubectl config use-context gardener-dev \
 # Different base64 implementations have different flags
 MINIKUBE_SEED_KUBECONFIG_B64=$(base64 ${MINIKUBE_SEED_KUBECONFIG} | tr -d '\r\n')
 
-cat example/25-controllerinstallation-local.yaml | \
+sed -e "s/name: my-seed/name: local/g" example/25-controllerinstallation.yaml | \
   kubectl apply -f -
 
 sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}/g" example/40-secret-seed-local.yaml | \

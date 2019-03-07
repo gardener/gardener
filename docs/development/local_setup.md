@@ -194,15 +194,11 @@ The commands below will configure your `minikube` with the absolute minimum reso
 First, start `minikube` with at least Kubernetes v1.11.x. The default CPU and memory settings of the minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 3 CPUs and 4096 MB memory.
 
 ```bash
-$ minikube start --cpus=3 --memory=4096 --extra-config=apiserver.authorization-mode=RBAC
+$ minikube start --cpus=3 --memory=4096
 minikube v0.34.1 on darwin (amd64)
 Creating virtualbox VM (CPUs=3, Memory=4096MB, Disk=20000MB) ...
 [...]
 Done! Thank you for using minikube!
-
-# Allow Tiller and Dashboard to run in RBAC mode
-$ kubectl create clusterrolebinding add-on-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:default
-clusterrolebinding.rbac.authorization.k8s.io/add-on-cluster-admin created
 ```
 
 #### Prepare the Gardener
@@ -226,7 +222,7 @@ validatingwebhookconfiguration.admissionregistration.k8s.io/validate-namespace-d
 Optionally, you can switch off the `Logging` feature gate of Gardener Controller Manager to save resources:
 
 ```bash
-$ vim dev/20-componentconfig-gardener-controller-manager.yaml
+$ sed -e 's/Logging: true/Logging: false/g' -i dev/20-componentconfig-gardener-controller-manager.yaml
 ```
 
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
@@ -349,7 +345,7 @@ $ kubectl apply -f dev/90-shoot-local.yaml
 shoot "local" created
 ```
 
-Wait until the 2 secrets `osc-result-cloud-config-local-*` appear in the Shoot cluster namespace and then copy `cloud_config` from the secret `osc-result-cloud-config-local-xxxxx-downloader` to the local file `dev/user-data`:
+Wait until the 2 secrets `osc-result-cloud-config-local-*` appear in the Shoot cluster namespace and then copy `cloud_config` from the secret `osc-result-cloud-config-local-xxxxx-downloader` to the local file `dev/user-data`. This file is used to pass the downloader configuration to the Vagrant machine, which triggers the mechanism that configures the machine properly and causes it to join the Shoot cluster as a node. 
 
 ```bash
 $ kubectl get secrets -n shoot--dev--local | grep osc-result-cloud-config-local
