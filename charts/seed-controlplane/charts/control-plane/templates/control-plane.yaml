@@ -1,0 +1,13 @@
+apiVersion: extensions.gardener.cloud/v1alpha1
+kind: ControlPlane
+metadata:
+  name: control-plane
+  namespace: {{ .Release.Namespace }}
+spec:
+  type: {{ required "type is required" .Values.type }}
+  providerConfig: {}
+  infrastructureProviderStatus: {}
+  region: {{ required "region is required" .Values.region }}
+  secretRef:
+    name: {{ required "secretRef.name is required" .Values.secretRef.name }}
+    namespace: {{ required "secretRef.namespace is required" .Values.secretRef.namespace }}

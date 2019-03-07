@@ -1,0 +1,4 @@
+apiVersion: v1
+description: ControlPlane extension resource for adding custom control plane components.
+name: control-plane
+version: 0.1.0
