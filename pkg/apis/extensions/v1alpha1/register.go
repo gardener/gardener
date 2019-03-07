@@ -43,6 +43,8 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&Cluster{},
+		&ClusterList{},
 		&Infrastructure{},
 		&InfrastructureList{},
 		&OperatingSystemConfig{},

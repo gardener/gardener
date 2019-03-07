@@ -20,17 +20,6 @@ import gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 type DefaultSpec struct {
 	// Type contains the instance of the resource's kind.
 	Type string `json:"type"`
-	// Shoot contains information about the shoot cluster's state.
-	Shoot Shoot `json:"shoot"`
-}
-
-// Shoot contains information about the shoot cluster's state.
-type Shoot struct {
-	// Hibernated describes whether the shoot is hibernated or not.
-	Hibernated bool `json:"hibernated"`
-	// Failed describes whether the shoot is in a failed state, i.e. whether Gardener does not want any operations to be
-	// retried automatically.
-	Failed bool `json:"failed"`
 }
 
 // DefaultStatus contains common status fields for every extension resource.
