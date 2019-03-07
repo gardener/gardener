@@ -191,12 +191,12 @@ The commands below will configure your `minikube` with the absolute minimum reso
 
 #### Start minikube
 
-First, start `minikube` with at least Kubernetes v1.11.x. The default CPU and memory settings of the minikube machine are not sufficient to host the control plane of a shoot cluster, thus use at least 3 CPUs and 4096 MB memory.
+First, start `minikube` with at least Kubernetes v1.11.x. The default CPU and memory settings of the minikube machine are not sufficient to host the control plane of a shoot cluster, thus the minimal resources should be 3 CPUs and 4096 MB memory, while the recommended are 4 CPUs and 8192 MB memory.
 
 ```bash
-$ minikube start --cpus=3 --memory=4096
+$ minikube start --cpus=4 --memory=8192
 minikube v0.34.1 on darwin (amd64)
-Creating virtualbox VM (CPUs=3, Memory=4096MB, Disk=20000MB) ...
+Creating virtualbox VM (CPUs=4, Memory=8192MB, Disk=20000MB) ...
 [...]
 Done! Thank you for using minikube!
 ```
@@ -272,7 +272,7 @@ time="2019-03-06T15:24:18+02:00" level=info msg="CloudProfile controller initial
 [...]
 ```
 
-Run the following script to install extension controllers - make sure that you install all of them required for your local development. Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
+Run the following command to install extension controllers - make sure that you install all of them required for your local development. Also, please refer to [this document](../extensions/controllerregistration.md) for further information about how extensions are registered in case you want to use other versions than the latest releases.
 
 ```bash
 $ make dev-setup-extensions
