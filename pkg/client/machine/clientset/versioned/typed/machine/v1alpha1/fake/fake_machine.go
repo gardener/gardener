@@ -100,6 +100,18 @@ func (c *FakeMachines) Update(machine *v1alpha1.Machine) (result *v1alpha1.Machi
 	return obj.(*v1alpha1.Machine), err
 }
 
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeMachines) UpdateStatus(machine *v1alpha1.Machine) (*v1alpha1.Machine, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(machinesResource, "status", c.ns, machine), &v1alpha1.Machine{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1alpha1.Machine), err
+}
+
 // Delete takes name of the machine and deletes it. Returns an error if one occurs.
 func (c *FakeMachines) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.

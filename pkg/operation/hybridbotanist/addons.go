@@ -25,7 +25,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,6 +66,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
 			},
+			"enableIPVS": b.Shoot.IPVSEnabled(),
 		}
 		metricsServerConfig = map[string]interface{}{
 			"tls": map[string]interface{}{
@@ -108,7 +108,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
-	kubeProxy, err := b.Botanist.InjectImages(kubeProxyConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	kubeProxy, err := b.Botanist.InjectImages(kubeProxyConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName, common.AlpineImageName)
 	if err != nil {
 		return nil, err
 	}

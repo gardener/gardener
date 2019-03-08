@@ -30,6 +30,19 @@ spec:
         app: kubernetes
         role: proxy
     spec:
+{{- if .Values.enableIPVS }}
+      # Temporary fix until https://github.com/kubernetes/kubernetes/issues/70113
+      # is fixed in 1.13, 1.12 and 1.11
+      initContainers:
+      - name: disable-ipv6
+        image: {{ index .Values.images "alpine"}}
+        command:
+        - /sbin/sysctl
+        - -w
+        - net.ipv6.conf.all.disable_ipv6=1
+        securityContext:
+          privileged: true
+{{- end }}
       priorityClassName: system-cluster-critical
       tolerations:
       - effect: NoSchedule
@@ -70,6 +83,8 @@ spec:
           readOnly: true
         - name: systembussocket
           mountPath: /var/run/dbus/system_bus_socket
+        - name: kernel-modules
+          mountPath: /lib/modules
       volumes:
       - name: kubeconfig
         secret:
@@ -83,3 +98,6 @@ spec:
       - name: systembussocket
         hostPath:
           path: /var/run/dbus/system_bus_socket
+      - name: kernel-modules
+        hostPath:
+          path: /lib/modules

@@ -41,7 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-var availableDNS sets.String
+var availableDNS, availableProxyMode sets.String
 
 func init() {
 	availableDNS = sets.NewString(
@@ -50,6 +50,10 @@ func init() {
 		string(garden.DNSGoogleCloudDNS),
 		string(garden.DNSAlicloud),
 		string(garden.DNSOpenstackDesignate),
+	)
+	availableProxyMode = sets.NewString(
+		string(garden.ProxyModeIPTables),
+		string(garden.ProxyModeIPVS),
 	)
 }
 
@@ -1678,6 +1682,7 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 	}
 
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.Version, kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
+	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, fldPath.Child("kubeProxy"))...)
 
 	return allErrs
 }
@@ -1734,6 +1739,20 @@ func validateKubeControllerManager(kubernetesVersion string, kcm *garden.KubeCon
 				}
 			}
 		}
+	}
+	return allErrs
+}
+
+func validateKubeProxy(kp *garden.KubeProxyConfig, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if kp != nil {
+		if kp.Mode == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("mode"), "must be set when .spec.kubernetes.kubeProxy is set"))
+		} else if mode := *kp.Mode; !availableProxyMode.Has(string(mode)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyMode.List()))
+		}
+
 	}
 	return allErrs
 }

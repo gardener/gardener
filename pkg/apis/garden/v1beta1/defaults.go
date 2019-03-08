@@ -30,6 +30,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		cloud              = obj.Spec.Cloud
 		defaultPodCIDR     = DefaultPodNetworkCIDR
 		defaultServiceCIDR = DefaultServiceNetworkCIDR
+		defaultProxyMode   = ProxyModeIPTables
 	)
 
 	if cloud.AWS != nil {
@@ -117,6 +118,12 @@ func SetDefaults_Shoot(obj *Shoot) {
 	trueVar := true
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar
+	}
+
+	if obj.Spec.Kubernetes.KubeProxy != nil {
+		if obj.Spec.Kubernetes.KubeProxy.Mode == nil {
+			obj.Spec.Kubernetes.KubeProxy.Mode = &defaultProxyMode
+		}
 	}
 
 	if obj.Spec.Maintenance == nil {

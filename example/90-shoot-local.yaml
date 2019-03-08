@@ -70,6 +70,7 @@ spec:
   # kubeProxy:
   #   featureGates:
   #     SomeKubernetesFeature: true
+  #   mode: IPVS
   # kubelet:
   #   featureGates:
   #     SomeKubernetesFeature: true
