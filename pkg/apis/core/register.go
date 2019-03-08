@@ -49,6 +49,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ControllerRegistrationList{},
 		&ControllerInstallation{},
 		&ControllerInstallationList{},
+		&Plant{},
+		&PlantList{},
 	)
 	return nil
 }

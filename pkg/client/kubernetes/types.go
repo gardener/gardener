@@ -102,6 +102,8 @@ var (
 	SeedScheme = runtime.NewScheme()
 	// ShootScheme is the scheme used in the Shoot cluster.
 	ShootScheme = runtime.NewScheme()
+	// PlantScheme is the scheme used in the Plant cluster
+	PlantScheme = runtime.NewScheme()
 
 	propagationPolicy    = metav1.DeletePropagationForeground
 	gracePeriodSeconds   = int64(60)
@@ -123,7 +125,6 @@ func init() {
 		gardenscheme.AddToScheme,
 		gardencorescheme.AddToScheme,
 	)
-
 	utilruntime.Must(gardenSchemeBuilder.AddToScheme(GardenScheme))
 
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
@@ -132,14 +133,19 @@ func init() {
 		dnsscheme.AddToScheme,
 		gardenextensionsscheme.AddToScheme,
 	)
-
 	utilruntime.Must(seedSchemeBuilder.AddToScheme(SeedScheme))
 
 	shootSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
 	)
-
 	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
+
+	plantSchemeBuilder := runtime.NewSchemeBuilder(
+		corescheme.AddToScheme,
+		gardencorescheme.AddToScheme,
+	)
+	utilruntime.Must(plantSchemeBuilder.AddToScheme(PlantScheme))
+
 }
 
 // Clientset is a struct containing the configuration for the respective Kubernetes

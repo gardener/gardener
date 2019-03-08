@@ -24,7 +24,6 @@ import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils"
-
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -32,6 +31,36 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
+
+// KubeConfig is the key to the keyconfig
+const KubeConfig = "kubeconfig"
+
+// NewRuntimeClientFromSecret creates a new controller runtime Client struct for a given secret.
+func NewRuntimeClientFromSecret(secret *corev1.Secret, opts client.Options) (client.Client, error) {
+	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
+		return NewRuntimeClientFromBytes(kubeconfig, opts)
+	}
+	return nil, errors.New("no valid kubeconfig found")
+
+}
+
+// NewRuntimeClientFromBytes creates a new controller runtime Client struct for a given kubeconfig byte slice.
+func NewRuntimeClientFromBytes(kubeconfig []byte, opts client.Options) (client.Client, error) {
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfig)
+	if err != nil {
+		return nil, err
+	}
+	return NewRuntimeClientForConfig(config, opts)
+}
+
+// NewRuntimeClientForConfig returns a new controller runtime client from a config.
+func NewRuntimeClientForConfig(config *rest.Config, opts client.Options) (client.Client, error) {
+	runtimeClient, err := client.New(config, opts)
+	if err != nil {
+		return nil, err
+	}
+	return runtimeClient, nil
+}
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be
 // read from the filesystem at location <kubeconfigPath>. If given, <masterURL> overrides the
@@ -69,9 +98,9 @@ func NewClientFromSecret(k8sClient Interface, namespace, secretName string, opts
 }
 
 // NewClientFromSecretObject creates a new Client struct for a given Kubernetes Secret object. The Secret must
-// contain a field "kubeconfig" which will be used.
+// contain a field "kubeconfig" which wi	ll be used.
 func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Interface, error) {
-	if kubeconfig, ok := secret.Data["kubeconfig"]; ok {
+	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
 		return NewClientFromBytes(kubeconfig, opts)
 	}
 	return nil, errors.New("the secret does not contain a field with name 'kubeconfig'")

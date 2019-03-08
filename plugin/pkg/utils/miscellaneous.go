@@ -17,13 +17,15 @@ package utils
 import (
 	"fmt"
 
+	gardenercore "github.com/gardener/gardener/pkg/apis/core"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-// GetProject returns the Project resource the passed Shoot is assigned to.
-func GetProject(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister) (*garden.Project, error) {
+// GetShootProject returns the Project resource the passed Shoot is assigned to.
+func GetShootProject(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister) (*garden.Project, error) {
 	projects, err := projectLister.List(labels.Everything())
 	if err != nil {
 		return nil, err
@@ -34,4 +36,18 @@ func GetProject(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister) 
 		}
 	}
 	return nil, fmt.Errorf("no project for shoot namespace %q", shoot.Namespace)
+}
+
+// GetPlantProject returns the Project resource the passed plant is assigned to.
+func GetPlantProject(plant *gardenercore.Plant, projectLister gardenlisters.ProjectLister) (*garden.Project, error) {
+	projects, err := projectLister.List(labels.Everything())
+	if err != nil {
+		return nil, err
+	}
+	for _, project := range projects {
+		if project.Spec.Namespace != nil && *project.Spec.Namespace == plant.Namespace {
+			return project, nil
+		}
+	}
+	return nil, fmt.Errorf("no project for plant namespace %q", plant.Namespace)
 }

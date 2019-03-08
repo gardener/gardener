@@ -151,7 +151,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced seed: %+v", err.Error()))
 	}
 
-	project, err := admissionutils.GetProject(shoot, v.projectLister)
+	project, err := admissionutils.GetShootProject(shoot, v.projectLister)
 	if err != nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
