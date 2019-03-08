@@ -2,6 +2,7 @@ global:
   # Gardener API server configuration values
   apiserver:
     enabled: true
+    serviceEnabled: true
     replicaCount: 1
     serviceAccountName: gardener-apiserver
     image:
