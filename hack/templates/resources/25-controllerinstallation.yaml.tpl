@@ -38,4 +38,4 @@ spec:
   seedRef:
     apiVersion: core.gardener.cloud/v1alpha1
     kind: Seed
-    name: aws
+    name: my-seed
