@@ -41,7 +41,8 @@ spec:
       - name: init-{{ $index }}
         image: {{ $ctr.image }}
         {{- if $ctr.command }}
-        command: {{ $ctr.command }}
+        command:
+{{ toYaml $ctr.command | indent 8 }}
         {{- end }}
         volumeMounts:
         - name: shared-init-config
