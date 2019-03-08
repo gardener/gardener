@@ -40,7 +40,7 @@ spec:
       {{- range $index, $ctr := .Values.initContainers }}
       - name: init-{{ $index }}
         image: {{ $ctr.image }}
-        {{- if $ctr | .command }}
+        {{- if $ctr.command }}
         command: {{ $ctr.command }}
         {{- end }}
         volumeMounts:
