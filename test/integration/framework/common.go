@@ -30,8 +30,8 @@ import (
 var (
 	decoder = serializer.NewCodecFactory(kubernetes.GardenScheme).UniversalDecoder()
 
-	// GuestBookTemplateDir relative path for guestbook app template dir
-	GuestBookTemplateDir = filepath.Join("..", "..", "resources", "templates")
+	// TemplateDir relative path for helm templates dir
+	TemplateDir = filepath.Join("..", "..", "resources", "templates")
 )
 
 const (
