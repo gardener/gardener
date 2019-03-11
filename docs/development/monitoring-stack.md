@@ -6,7 +6,7 @@ Please ensure that you have understood the basic principles of [Prometheus](http
 :bangbang: **The purpose of the monitoring stack is to observe the behaviour of the control plane and the system components deployed by Gardener onto the worker nodes. Monitoring of custom workloads running in the cluster is out of scope.**
 
 ## Overview
-![Monitoring Architecture](monitoring-architecture.png)
+![Monitoring Architecture](content/monitoring-architecture.png)
 
 Each Shoot cluster comes with its own monitoring stack. The following components are deployed into the seed and shoot:
 * Seed
@@ -57,6 +57,29 @@ allowedMetrics:
 The alert definitons are located in `charts/seed-monitoring/charts/prometheus/rules`. There are two approaches for adding new alerts.
 1. Adding additional alerts for a component which already has a set of alerts. In this case you have to extend the existing rule file for the component.
 2. Adding alerts for a new component. In this case a new rule file with name scheme `example-component.rules.yaml` needs to be added.
+3. Add the new alert to `alertInhibitionGraph.dot`, add any required inhibition flows and render the new graph. To render the graph run:
+```bash
+$ dot -Tpng ./content/alertInhibitionGraph.dot -o ./content/alertInhibitionGraph.png
+```
+4. Create a test for the new alert. See `Alert Tests`.
+
+Example alert:
+```yaml
+groups:
+- name: example.rules
+  rules:
+  - alert: ExampleAlert
+    expr: absent(up{job="exampleJob"} == 1)
+    for: 20m
+    labels:
+      service: example
+      severity: critical # How severe is the alert? (blocker|critical|info|warning)
+      type: shoot # For which topology is the alert relevant? (seed|shoot)
+      visibility: all # Who should receive the alerts? (all|operator|owner)
+    annotations:
+      description: A longer description of the example alert that should also explain the impact of the alert.
+      summary: Short summary of an example alert.
+```
 
 If the deployment of component is optional then the alert definitions needs to be added to `charts/seed-monitoring/charts/prometheus/optional-rules` instead. Furthermore the alerts for component need to be activatable in `charts/seed-monitoring/charts/prometheus/values.yaml` via `rules.optional.example-component.enabled`. The default should be `true`.
 
@@ -69,18 +92,26 @@ Central Seed Alertmanager
 ```
 ∟ main route (all alerts for all shoots on the seed will enter)
   ∟ group by project and shoot name
-    ∟ group by severity "blocker" and "critical" → route to Garden operators
-    ∟ group by severity "warning" (dropped)
+    ∟ group by visibility "all" and "operator"
+      ∟ group by severity "blocker", "critical", and "info" → route to Garden operators
+      ∟ group by severity "warning" (dropped)
+    ∟ group by visibility "owner" (dropped)
 ```
 
 Shoot Alertmanager
 ```
 ∟ main route (only alerts for one Shoot will enter)
-  ∟ group by severity "blocker" and "critical" → route to cluster alert receiver
-  ∟ group by severity "warning" (dropped, will change soon → route to cluster alert receiver)
+  ∟ group by visibility "all" and "owner"
+    ∟ group by severity "blocker", "critical", and "info" → route to cluster alert receiver
+    ∟ group by severity "warning" (dropped, will change soon → route to cluster alert receiver)
+  ∟ group by visibility "operator" (dropped)
 ```
 
-All alerts related to components running on the Shoot workers are inhibited in case of an issue with the vpn connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives.
+### Alert Inhibition
+
+All alerts related to components running on the Shoot workers are inhibited in case of an issue with the vpn connection, because those components can't be scraped anymore and Prometheus will fire alerts in consequence. The components running on the workers are probably healthy and the alerts are presumably false positives. The inhibition flow is shown in the figure below. If you add a new alert make sure to add it to the diagram.
+
+![alertDiagram](content/alertInhibitionGraph.png)
 
 ### Alert Attributes
 Each alert rule definition has to contain the following annotations:
@@ -96,7 +127,27 @@ In addtion each alert must contain the following labels:
 - **severity**
   - `blocker`: All issues which make the cluster entirely unusable e.g. `KubeAPIServerDown` or `KubeSchedulerDown`
   - `critical`: All issues which affect single functionalities/components but not affect the cluster in its core functionality e.g. `VPNDown` or `KubeletDown`.
+  - `info`: All issues that do not affect the cluster or its core functionality, but if this component is down we cannot determine if a blocker alert is firing. (i.e. A component with an info level severity is a dependency for a component with a blocker severity)
   - `warning`: No current existing issue, rather a hint for situations which could lead to real issue in the close future e.g. `HighLatencyApiServerToWorkers` or `ApiServerResponseSlow`.
+
+### Alert Tests
+
+Execute the tests in `$GARDENERHOME/.ci/test` or if you want to only test the Prometheus alerts:
+```bash
+$ # Install promtool
+$ go get -u github.com/prometheus/prometheus/cmd/promtool
+
+$ # Move to seed-monitoring/prometheus chart
+$ cd $GARDENERHOME/charts/seed-monitoring/charts/prometheus/
+
+$ # Execute tests
+$ promtool test rules rules-tests/*test.yaml
+```
+
+If you want to add alert tests:
+1. Create a new file in `rules-tests` in the form `<alert-group-name>.rules.test.yaml` or if the alerts are for an existing component with existing tests, simply add the tests to the appropriate files.
+
+2. Make sure that newly added tests succeed. See above.
 
 ## Adding Grafana Dashboards
 The dashboard definition files are located in `charts/seed-monitoring/charts/grafana/dashboards`. Every dashboard needs its own file.

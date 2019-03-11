@@ -1,0 +1,40 @@
+rule_files:
+- ../rules/node-exporter.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'kube_node_status_condition{condition="OutOfDisk", status="true", node="node1"}'
+    values: '1+0x30'
+  - series: 'node_filesystem_free{mountpoint="/", instance="instance1"}'
+    values: '512+0x120'
+  alert_rule_test:
+  - eval_time: 10m
+    alertname: K8SNodeOutOfDisk
+    exp_alerts:
+    - exp_labels:
+        service: node-exporter
+        severity: critical
+        type: shoot
+        visibility: all
+        condition: OutOfDisk
+        status: true
+        node: node1
+      exp_annotations:
+        summary: Node ran out of disk space.
+        description: Node node1 has run out of disk space.
+  - eval_time: 1h
+    alertname: VMRootfsFull
+    exp_alerts:
+    - exp_labels:
+        service: node-exporter
+        severity: critical
+        type: shoot
+        visibility: all
+        instance: instance1
+        mountpoint: /
+      exp_annotations:
+        description: Root filesystem device on instance instance1 is almost full!
+        summary: Node's root filesystem is almost full

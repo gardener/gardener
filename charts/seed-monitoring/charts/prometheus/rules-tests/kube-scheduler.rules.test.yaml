@@ -1,0 +1,22 @@
+rule_files:
+- ../rules/kube-scheduler.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="kube-scheduler"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: KubeSchedulerDown
+    exp_alerts:
+    - exp_labels:
+        service: kube-scheduler
+        severity: critical
+        type: seed
+        visibility: all
+      exp_annotations:
+        description: New pods are not being assigned to nodes.
+        summary: Kube Scheduler is down.

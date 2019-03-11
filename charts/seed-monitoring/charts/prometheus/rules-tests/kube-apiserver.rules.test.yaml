@@ -1,0 +1,64 @@
+rule_files:
+- ../rules/kube-apiserver.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'probe_success{instance="api.example.com/healthz", job="blackbox-apiserver"}'
+    values: '0+0x10'
+  - series: 'up{job="kube-apiserver"}'
+    values: '0+0x10'
+  - series: 'process_open_fds{job="kube-apiserver", instance="instance"}'
+    values: '81+0x60'
+  - series: 'process_max_fds{job="kube-apiserver", instance="instance"}'
+    values: '100+0x60'
+  alert_rule_test:
+  - eval_time: 5m
+    alertname: ApiServerNotReachable
+    exp_alerts:
+    - exp_labels:
+        service: kube-apiserver
+        severity: blocker
+        type: seed
+        instance: api.example.com/healthz
+        job: blackbox-apiserver
+        visibility: all
+      exp_annotations:
+        description: "API server not reachable via external endpoint: api.example.com/healthz."
+        summary: API server not reachable (externally).
+  - eval_time: 5m
+    alertname: KubeApiserverDown
+    exp_alerts:
+    - exp_labels:
+        service: kube-apiserver
+        severity: blocker
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: All API server replicas are down/unreachable, or all API server could not be found.
+        summary: API server unreachable.
+  - eval_time: 30m
+    alertname: KubeApiServerTooManyOpenFileDescriptors
+    exp_alerts:
+    - exp_labels:
+        service: kube-apiserver
+        severity: warning
+        type: seed
+        job: kube-apiserver
+        instance: instance
+      exp_annotations:
+        description: 'The API server (instance) is using 81% of the available file/socket descriptors.'
+        summary: 'The API server has too many open file descriptors'
+    - exp_labels:
+        service: kube-apiserver
+        severity: critical
+        type: seed
+        job: kube-apiserver
+        instance: instance
+        visibility: owner
+      exp_annotations:
+        description: 'The API server (instance) is using 81% of the available file/socket descriptors.'
+        summary: 'The API server has too many open file descriptors'
+

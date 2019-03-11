@@ -3,14 +3,12 @@ groups:
   rules:
   - alert: CloudControllerManagerDown
     expr: absent(up{job="cloud-controller-manager"} == 1)
-    for: 7m
+    for: 15m
     labels:
-      job: cloud-controller-manager
       service: cloud-controller-manager
       severity: critical
       type: seed
+      visibility: all
     annotations:
-      description: |
-        There is no running K8S cloud controller manager. Cloud specific resources
-        such as loadbalancers and persistent volumes are not reconcilded.
-      summary: Cloud controller manager is down
+      description: All infrastruture specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
+      summary: Cloud controller manager is down.

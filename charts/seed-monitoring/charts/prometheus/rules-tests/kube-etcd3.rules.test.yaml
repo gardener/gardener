@@ -1,0 +1,61 @@
+rule_files:
+- ../rules/kube-etcd3.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="kube-etcd3",role="main"}'
+    values: '0+0x20'
+  - series: 'up{job="kube-etcd3",role="events"}'
+    values: '0+0x30'
+  - series: 'etcd_server_has_leader{job="kube-etcd3",role="main"}'
+    values: '0+0x20'
+  - series: 'etcd_server_has_leader{job="kube-etcd3",role="events"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 5m
+    alertname: KubeEtcdMainDown
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: blocker
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd3 cluster main is unavailable or cannot be scraped. As long as etcd3 main is down the cluster is unreachable.
+        summary: Etcd3 main cluster down.
+  - eval_time: 15m
+    alertname: KubeEtcdEventsDown
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd3 cluster events is unavailable or cannot be scraped. Cluster events cannot be collected.
+        summary: Etcd3 events cluster down.
+  - eval_time: 10m
+    alertname: KubeEtcd3MainNoLeader
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd3 main has no leader. No communication with etcd main possible. Apiserver is read only.
+        summary: Etcd3 main has no leader.
+  - eval_time: 15m
+    alertname: KubeEtcd3EventsNoLeader
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Etcd3 events has no leader. No communication with etcd events possible. New cluster events cannot be collected. Events can only be read.
+        summary: Etcd3 events has no leader.

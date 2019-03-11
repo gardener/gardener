@@ -1,0 +1,50 @@
+rule_files:
+- ../rules/kube-state-metrics.rules.yaml
+
+evaluation_interval: 30s
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="kube-state-metrics", type="shoot"}'
+    values: '0+0x20'
+  - series: 'up{job="kube-state-metrics", type="seed"}'
+    values: '0+0x20'
+  - series: 'kube_node_spec_unschedulable'
+    values: '2+0x20'
+  - series: 'kube_node_spec_unschedulable'
+    values: '1+0x50'
+  - series: 'kube_node_info'
+    values: '1+0x50'
+  alert_rule_test:
+  - eval_time: 5m
+    alertname: KubeStateMetricsShootDown
+    exp_alerts:
+    - exp_labels:
+        service: kube-state-metrics-shoot
+        severity: info
+        visibility: operator
+        type: seed
+      exp_annotations:
+        summary: Kube-state-metrics for shoot cluster metrics is down.
+        description: There are no running kube-state-metric pods for the shoot cluster. No kubernetes resource metrics can be scraped.
+  - eval_time: 5m
+    alertname: KubeStateMetricsSeedDown
+    exp_alerts:
+    - exp_labels:
+        service: kube-state-metrics-seed
+        severity: critical
+        visibility: operator
+        type: seed
+      exp_annotations:
+        summary: Kube-state-metrics for seed cluster metrics is down.
+        description: There are no running kube-state-metric pods for the seed cluster. No kubernetes resource metrics can be scraped.
+  - eval_time: 25m
+    alertname: NoWorkerNodes
+    exp_alerts:
+    - exp_labels:
+        service: nodes
+        severity: blocker
+        visibility: all
+      exp_annotations:
+        summary: No nodes available. Possibly all workloads down.
+        description: There are no worker nodes in the cluster or all of the worker nodes in the cluster are not schedulable.

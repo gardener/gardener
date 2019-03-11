@@ -4,47 +4,62 @@ groups:
   # alert if main etcd is down
   - alert: KubeEtcdMainDown
     expr: sum(up{job="kube-etcd3",role="main"}) < 1
-    for: 3m
+    for: 5m
     labels:
       service: etcd
       severity: blocker
       type: seed
+      visibility: operator
     annotations:
-      description: etcd3 cluster {{ $labels.role }} is unavailable or cannot be scrapped
-      summary: etcd3 main cluster down
+      description: Etcd3 cluster main is unavailable or cannot be scraped. As long as etcd3 main is down the cluster is unreachable.
+      summary: Etcd3 main cluster down.
   # alert if events etcd is down
   - alert: KubeEtcdEventsDown
     expr: sum(up{job="kube-etcd3",role="events"}) < 1
-    for: 3m
+    for: 15m
     labels:
       service: etcd
       severity: critical
       type: seed
+      visibility: operator
     annotations:
-      description: etcd3 cluster {{ $labels.role }} is unavailable or cannot be scrapped
-      summary: etcd3 events cluster down
+      description: Etcd3 cluster events is unavailable or cannot be scraped. Cluster events cannot be collected.
+      summary: Etcd3 events cluster down.
   # etcd leader alerts
-  - alert: KubeEtcd3NoLeader
-    expr: etcd_server_has_leader{job="kube-etcd3"} == 0
-    for: 1m
+  - alert: KubeEtcd3MainNoLeader
+    expr: sum(etcd_server_has_leader{job="kube-etcd3",role="main"}) < count(etcd_server_has_leader{job="kube-etcd3",role="main"})
+    for: 10m
     labels:
       service: etcd
       severity: critical
       type: seed
+      visibility: operator
     annotations:
-      description: etcd3 member {{ $labels.pod }} has no leader
-      summary: etcd3 member has no leader
+      description: Etcd3 main has no leader. No communication with etcd main possible. Apiserver is read only.
+      summary: Etcd3 main has no leader.
+  - alert: KubeEtcd3EventsNoLeader
+    expr: sum(etcd_server_has_leader{job="kube-etcd3",role="events"}) < count(etcd_server_has_leader{job="kube-etcd3",role="events"})
+    for: 15m
+    labels:
+      service: etcd
+      severity: critical
+      type: seed
+      visibility: operator
+    annotations:
+      description: Etcd3 events has no leader. No communication with etcd events possible. New cluster events cannot be collected. Events can only be read.
+      summary: Etcd3 events has no leader.
   # alert if there are lots of leader changes
   - alert: KubeEtcd3HighNumberOfLeaderChanges
-    expr: increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[1h]) > 3
+    expr: increase(etcd_server_leader_changes_seen_total{job="kube-etcd3"}[1h]) > 5
+    for: 30m
     labels:
       service: etcd
       severity: warning
       type: seed
+      visibility: operator
     annotations:
-      description: etcd3 pod {{ $labels.pod }} has seen {{ $value }} leader changes
-        within the last hour
-      summary: a high number of leader changes within the etcd3 cluster are happening
+      description: Etcd3 pod {{ $labels.pod }} has seen {{ $value }} leader changes within the last hour
+      summary: A high number of leader changes within the etcd3 cluster are happening
   ### GRPC requests alerts ###
   - record: etcd3:failed_client_requests_ratio:sum
     expr: sum by(grpc_method) (rate(etcd_grpc_requests_failed_total{job="kube-etcd3"}[5m])) / sum by(grpc_method) (rate(etcd_grpc_total{job="kube-etcd3"}[5m]))
@@ -65,7 +80,7 @@ groups:
     for: 5m
     labels:
       service: etcd
-      severity: critical
+      severity: warning
       type: seed
     annotations:
       description: '{{ $value }}% of requests for {{ $labels.grpc_method }} failed on etcd3 pod {{ $labels.pod }}'

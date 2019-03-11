@@ -1,28 +1,18 @@
 groups:
 - name: prometheus.rules
   rules:
-  - alert: PrometheusDown
-    expr: absent(up{job="prometheus"} == 1)
-    for: 5m
-    labels:
-      job: prometheus
-      service: prometheus
-      severity: critical
-      type: seed
-    annotations:
-      description: Prometheus is down or can't be scraped
-      summary: Prometheus is down
   - alert: PrometheusCantScrape
-    # Alert only if job no samples are collected and job is not down
+    # Alert only if there are jobs but no samples scraped.
     expr: scrape_samples_scraped == 0 and on(job) up == 1
-    for: 10m
+    for: 1h
     labels:
       service: prometheus
       severity: warning
       type: seed
+      visibility: operator
     annotations:
       description: Prometheus failed to scrape metrics. Instance {{ $labels.instance}}, job {{ $labels.job }}.
-      summary: No metrics are scraped from target
+      summary: No metrics are scraped from any target.
   - alert: PrometheusConfigurationFailure
     expr: prometheus_config_last_reload_successful == 0
     for: 10m
@@ -30,6 +20,7 @@ groups:
       service: prometheus
       severity: warning
       type: seed
+      visibility: operator
     annotations:
-      description: Latest Prometheus configuration is broken and Prometheus is using the previous one
+      description: Latest Prometheus configuration is broken and Prometheus is using the previous one.
       summary: Prometheus is misconfigured
