@@ -1,14 +1,14 @@
-{{- if .Values.vpa.enabled -}}
-apiVersion: "autoscaling.k8s.io/v1beta1"
+{{ if .Values.vpa.enabled }}
+apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
   name: prometheus-vpa
   namespace: {{ .Release.Namespace }}
 spec:
-  selector:
-    matchLabels:
-      app: prometheus
-      role: monitoring
+  targetRef:
+    apiVersion: {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: prometheus
   updatePolicy:
     updateMode: "Off"
 {{ end }}

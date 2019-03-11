@@ -1,3 +1,4 @@
+---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
@@ -166,7 +167,7 @@ subjects:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  name: system:controllers-reader
+  name: system:vpa-target-reader
   labels:
 {{ toYaml .Values.vpa.labels | indent 4 }}
 rules:
@@ -181,8 +182,18 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - statefulsets
+  - daemonsets
+  - deployments
   - replicasets
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
   verbs:
   - get
   - list
@@ -191,14 +202,20 @@ rules:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: system:vpa-updater-controllers-reader-binding
+  name: system:vpa-target-reader-binding
   labels:
 {{ toYaml .Values.vpa.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: system:controllers-reader
+  name: system:vpa-target-reader
 subjects:
+- kind: ServiceAccount
+  name: vpa-recommender
+  namespace: garden
+- kind: ServiceAccount
+  name: vpa-admission-controller
+  namespace: garden
 - kind: ServiceAccount
   name: vpa-updater
   namespace: garden
@@ -216,6 +233,12 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-updater
+  namespace: garden
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-admission-controller
   namespace: garden
 ---
 apiVersion: {{ include "rbacversion" . }}

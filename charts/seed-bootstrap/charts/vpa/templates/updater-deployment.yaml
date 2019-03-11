@@ -30,7 +30,7 @@ spec:
       containers:
       - name: updater
         image: {{ index .Values.global.images "vpa-updater" }}
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         resources:
           limits:
             cpu: 200m
