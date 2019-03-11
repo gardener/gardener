@@ -34,7 +34,7 @@
     kubernetesVersion="1.13.4"
   elif cloud == "alicloud":
     region="cn-beijing"
-    kubernetesVersion="1.11.8"
+    kubernetesVersion="1.13.4"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
     kubernetesVersion="1.13.4"

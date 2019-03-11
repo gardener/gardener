@@ -1,4 +1,62 @@
 {{- if .Values.enabled }}
+{{- if semverCompare ">= 1.13" .Values.kubernetesVersion -}}
+kind: Deployment
+apiVersion: {{ include "deploymentversion" . }}
+metadata:
+  name: csi-attacher
+  namespace: kube-system
+  labels:
+    origin: gardener
+    app: csi-attacher
+    garden.sapcloud.io/role: system-component
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-attacher
+  template:
+    metadata:
+      labels:
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+        app: csi-attacher
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: csi-attacher
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+        - name: csi-attacher
+          image: {{ index .Values.images "csi-attacher" }}
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+            - "--leader-election"
+            - "--leader-election-namespace=$(MY_NAMESPACE)"
+            - "--leader-election-identity=$(MY_NAME)"
+          env:
+            - name: MY_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ADDRESS
+              value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+            type: DirectoryOrCreate
+{{- else -}}
 kind: Deployment
 apiVersion: {{ include "deploymentversion" . }}
 metadata:
@@ -61,4 +119,5 @@ spec:
           hostPath:
             path: /var/lib/kubelet/plugins/csi-diskplugin
             type: DirectoryOrCreate
+{{- end -}}
 {{- end -}}

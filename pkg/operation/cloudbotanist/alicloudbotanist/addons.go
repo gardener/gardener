@@ -16,6 +16,7 @@ package alicloudbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // DeployKube2IAMResources - Not needed on Alicloud
@@ -46,15 +47,33 @@ func (b *AlicloudBotanist) GenerateNginxIngressConfig() (map[string]interface{},
 
 // GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
 func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
+	lessV1_13, err := utils.CompareVersions(b.ShootVersion(), "<", "v1.13.0")
+	if err != nil || lessV1_13 {
+		return map[string]interface{}{
+			"StorageClasses": []map[string]interface{}{
+				{
+					"Name":           "default",
+					"IsDefaultClass": true,
+					"Provisioner":    "csi-diskplugin",
+					"Parameters": map[string]interface{}{
+						"regionId": b.Shoot.Info.Spec.Cloud.Region,
+						"zoneId":   b.Shoot.Info.Spec.Cloud.Alicloud.Zones[0],
+						"fsType":   "ext4",
+						"type":     "cloud_ssd",
+						"readOnly": "false",
+					},
+				},
+			},
+		}, nil
+	}
+
 	return map[string]interface{}{
 		"StorageClasses": []map[string]interface{}{
 			{
 				"Name":           "default",
 				"IsDefaultClass": true,
-				"Provisioner":    "csi-diskplugin",
+				"Provisioner":    "diskplugin.csi.alibabacloud.com",
 				"Parameters": map[string]interface{}{
-					"regionId": b.Shoot.Info.Spec.Cloud.Region,
-					"zoneId":   b.Shoot.Info.Spec.Cloud.Alicloud.Zones[0],
 					"fsType":   "ext4",
 					"type":     "cloud_ssd",
 					"readOnly": "false",
@@ -62,4 +81,5 @@ func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{
 			},
 		},
 	}, nil
+
 }

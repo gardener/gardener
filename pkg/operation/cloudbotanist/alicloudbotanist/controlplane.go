@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 type cloudConfig struct {
@@ -28,8 +29,6 @@ type cloudConfig struct {
 		UID                  string `json:"uid"`
 		VpcID                string `json:"vpcid"`
 		Region               string `json:"region"`
-		ZoneID               string `json:"zoneid"`
-		VswitchID            string `json:"vswitchid"`
 
 		AccessKeyID     string `json:"accessKeyID"`
 		AccessKeySecret string `json:"accessKeySecret"`
@@ -58,8 +57,6 @@ func (b *AlicloudBotanist) GenerateCloudProviderConfig() (string, error) {
 	cfg := &cloudConfig{}
 	cfg.Global.KubernetesClusterTag = b.Shoot.SeedNamespace
 	cfg.Global.VpcID = stateVariables[vpcID]
-	cfg.Global.ZoneID = b.Shoot.Info.Spec.Cloud.Alicloud.Zones[0]
-	cfg.Global.VswitchID = stateVariables[vswitchID]
 	cfg.Global.AccessKeyID = key
 	cfg.Global.AccessKeySecret = secret
 	cfg.Global.Region = b.Shoot.Info.Spec.Cloud.Region
@@ -120,14 +117,24 @@ func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
 			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
 		},
-		"enabled": true,
+		"kubernetesVersion": b.Operation.ShootVersion(),
+		"enabled":           true,
 	}
-
-	return b.InjectImages(conf, b.SeedVersion(), b.ShootVersion(),
+	lessV1_13, _ := utils.CompareVersions(b.ShootVersion(), "<", "v1.13.0")
+	if lessV1_13 {
+		return b.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
+			common.CSIAttacherImageName,
+			common.CSIDriverRegistrarImageName,
+			common.CSIPluginAlicloudImageName,
+			common.CSIProvisionerImageName,
+		)
+	}
+	return b.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
 		common.CSIAttacherImageName,
-		common.CSIDriverRegistrarImageName,
 		common.CSIPluginAlicloudImageName,
 		common.CSIProvisionerImageName,
+		common.CSISnapshotterImageName,
+		common.CSINodeDriverRegistrarImageName,
 	)
 }
 

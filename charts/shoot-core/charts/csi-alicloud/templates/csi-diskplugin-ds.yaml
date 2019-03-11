@@ -1,4 +1,103 @@
 {{- if .Values.enabled }}
+{{- if semverCompare ">= 1.13" .Values.kubernetesVersion -}}
+kind: DaemonSet
+apiVersion: {{ include "daemonsetversion" . }}
+metadata:
+  name: csi-disk-plugin-alicloud
+  namespace: kube-system
+  labels:
+    origin: gardener
+    garden.sapcloud.io/role: system-component
+    app: csi-disk-plugin-alicloud
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  selector:
+    matchLabels:
+      app: csi-disk-plugin-alicloud
+  template:
+    metadata:
+      annotations:
+        checksum/secret-csi-diskplugin-alicloud: {{ include (print $.Template.BasePath "/credential-secret.yaml") . | sha256sum }}
+      labels:
+        app: csi-disk-plugin-alicloud
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+    spec:
+      priorityClassName: system-node-critical
+      hostNetwork: true
+      serviceAccount: csi-disk-plugin-alicloud
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+        - name: driver-registrar
+          image: {{ index .Values.images "csi-node-driver-registrar" }} 
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/bin/sh", "-c", "rm -rf /registration/diskplugin.csi.alibabacloud.com /registration/diskplugin.csi.alibabacloud.com-reg.sock"]
+          args:
+            - "--v=5"
+            - "--csi-address=/csi/csi.sock"
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+          env:
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+        - name: csi-diskplugin
+          securityContext:
+            privileged: true
+            capabilities:
+              add: ["SYS_ADMIN"]
+            allowPrivilegeEscalation: true
+          image: {{ index .Values.images "csi-plugin-alicloud" }}
+          args :
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--v=5"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix://var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+            - name: ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: csi-diskplugin-alicloud
+                  key: accessKeyID
+            - name: ACCESS_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: csi-diskplugin-alicloud
+                  key: accessKeySecret
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: pods-mount-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: "Bidirectional"
+            - mountPath: /dev
+              name: host-dev
+              mountPropagation: "HostToContainer"
+      volumes:
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: DirectoryOrCreate
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+            type: DirectoryOrCreate
+        - name: pods-mount-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: host-dev
+          hostPath:
+            path: /dev
+{{- else -}}
 kind: DaemonSet
 apiVersion: {{ include "daemonsetversion" . }}
 metadata:
@@ -58,14 +157,9 @@ spec:
             allowPrivilegeEscalation: true
           image: {{ index .Values.images "csi-plugin-alicloud" }}
           args :
-            - "--nodeid=$(NODE_ID)"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--v=5"
           env:
-            - name: NODE_ID
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
             - name: CSI_ENDPOINT
               value: unix://var/lib/kubelet/plugins/csi-diskplugin/csi.sock
             - name: ACCESS_KEY_ID
@@ -127,4 +221,5 @@ spec:
         - name: lib-modules
           hostPath:
             path: /lib/modules
+{{- end -}}
 {{- end -}}

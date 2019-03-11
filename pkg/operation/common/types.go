@@ -472,8 +472,14 @@ const (
 	// CSIDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/driver-registrar
 	CSIDriverRegistrarImageName = "csi-driver-registrar"
 
+	// CSINodeDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/node-driver-registrar
+	CSINodeDriverRegistrarImageName = "csi-node-driver-registrar"
+
 	// CSIProvisionerImageName is the name of csi provisioner - https://github.com/kubernetes-csi/external-provisioner
 	CSIProvisionerImageName = "csi-provisioner"
+
+	// CSISnapshotterImageName is the name of csi plugin for Alicloud - https://github.com/kubernetes-csi/external-snapshotter
+	CSISnapshotterImageName = "csi-snapshotter"
 
 	// CSIPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
 	CSIPluginAlicloudImageName = "csi-plugin-alicloud"

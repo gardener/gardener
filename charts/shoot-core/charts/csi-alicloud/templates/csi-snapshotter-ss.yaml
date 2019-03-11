@@ -1,0 +1,50 @@
+{{- if .Values.enabled }}
+{{- if semverCompare ">= 1.13" .Values.kubernetesVersion -}}
+kind: StatefulSet
+apiVersion: {{ include "statefulsetversion" . }}
+metadata:
+  name: csi-snapshotter
+  namespace: kube-system
+  labels:
+    app: csi-snapshotter
+    origin: gardener
+    garden.sapcloud.io/role: system-component
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  serviceName: csi-snapshotter
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-snapshotter
+  template:
+    metadata:
+      labels:
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+        app: csi-snapshotter
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: csi-snapshotter
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+        - name: csi-snapshotter
+          image: {{ index .Values.images "csi-snapshotter" }}
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--connection-timeout=15s"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+            type: DirectoryOrCreate
+{{- end -}}
+{{- end -}}

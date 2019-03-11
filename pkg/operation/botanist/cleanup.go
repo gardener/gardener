@@ -56,6 +56,7 @@ var (
 		},
 		kubernetes.StatefulSets: {
 			fmt.Sprintf("%s/csi-provisioner", metav1.NamespaceSystem): true,
+			fmt.Sprintf("%s/csi-snapshotter", metav1.NamespaceSystem): true,
 		},
 		kubernetes.Namespaces: {
 			metav1.NamespacePublic:  true,
