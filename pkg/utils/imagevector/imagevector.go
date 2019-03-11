@@ -55,6 +55,9 @@ func ReadImageVector() (ImageVector, error) {
 	var out ImageVector
 	for _, image := range vector {
 		if overwritten, ok := overwrittenImages[image.Name]; ok {
+			if len(overwritten.Tag) == 0 && len(image.Tag) > 0 {
+				overwritten.Tag = image.Tag
+			}
 			out = append(out, overwritten)
 			continue
 		}
