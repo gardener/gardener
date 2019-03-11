@@ -38,6 +38,10 @@ spec:
           value: "true"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
+          value: "false"
+        - name: GF_ALERTING_ENABLED
+          value: "false"
         volumeMounts:
         - name: grafana-storage
           mountPath: /var/grafana-storage
