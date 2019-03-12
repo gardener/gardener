@@ -147,7 +147,7 @@ var _ = Describe("Shoot application testing", func() {
 			"app":  "kubernetes",
 			"role": "apiserver",
 		}))
-		guestBooktpl = template.Must(template.ParseFiles(filepath.Join(GuestBookTemplateDir, GuestBookTemplateName)))
+		guestBooktpl = template.Must(template.ParseFiles(filepath.Join(TemplateDir, GuestBookTemplateName)))
 	}, InitializationTimeout)
 
 	CAfterSuite(func(ctx context.Context) {

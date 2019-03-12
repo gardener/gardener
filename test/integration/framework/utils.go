@@ -156,8 +156,8 @@ func shootCreationCompleted(newStatus *v1beta1.ShootStatus) bool {
 			}
 		}
 	}
-	return true
 
+	return true
 }
 
 func getObjectFromSecret(ctx context.Context, k8sClient kubernetes.Interface, namespace, secretName, objectKey string) (string, error) {

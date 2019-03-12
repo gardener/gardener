@@ -173,9 +173,6 @@ shootTestYamlPath    = flag.String("shootpath", "", "the path to the shoot yaml 
 logLevel             = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 logsCount            = flag.Uint64("logsCount", 10000, "the logs count to be logged by the logger application")
 
-// If specified the test will skip the feature gate check
-skipFeatureGateCheck = flag.Bool("skipFeatureGateCheck", false, "whether to skip the feature gate check or not")
-
 // If specified the test will clean up the created shoot
 cleanup              = flag.Bool("cleanup", false, "deletes the newly created test shoot after the test suite is done")
 ```

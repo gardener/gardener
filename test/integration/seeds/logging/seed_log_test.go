@@ -18,15 +18,13 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"fmt"
 	"html/template"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/logger"
 	. "github.com/gardener/gardener/test/integration/framework"
 	. "github.com/gardener/gardener/test/integration/shoots"
@@ -34,29 +32,23 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/yaml"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var (
-	kubeconfig           = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
-	shootName            = flag.String("shootName", "", "the name of the shoot we want to test")
-	shootNamespace       = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
-	testShootsPrefix     = flag.String("prefix", "", "prefix to use for test shoots")
-	shootTestYamlPath    = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
-	logLevel             = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
-	logsCount            = flag.Uint64("logsCount", 10000, "the logs count to be logged by the logger application")
-	skipFeatureGateCheck = flag.Bool("skipFeatureGateCheck", false, "whether to skip the feature gate check or not")
-	cleanup              = flag.Bool("cleanup", false, "deletes the newly created / existing test shoot after the test suite is done")
+	kubeconfig        = flag.String("kubeconfig", "", "the path to the kubeconfig of Garden cluster that will be used for integration tests")
+	shootName         = flag.String("shootName", "", "the name of the shoot we want to test")
+	shootNamespace    = flag.String("shootNamespace", "", "the namespace name that the shoot resides in")
+	testShootsPrefix  = flag.String("prefix", "", "prefix to use for test shoots")
+	shootTestYamlPath = flag.String("shootpath", "", "the path to the shoot yaml that will be used for testing")
+	logLevel          = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
+	logsCount         = flag.Uint64("logsCount", 10000, "the logs count to be logged by the logger application")
+	cleanup           = flag.Bool("cleanup", false, "deletes the newly created / existing test shoot after the test suite is done")
 )
-
-var LoggingAppTemplateDir = filepath.Join("..", "..", "resources", "templates")
 
 const (
 	LoggingAppTemplateName = "logger-app.yaml.tpl"
@@ -66,9 +58,10 @@ const (
 	KibanaAvailableTimeout          = 10 * time.Second
 	GetLogsFromElasticsearchTimeout = 5 * time.Minute
 
-	Logger                     = "logger"
-	ControllerManagerConfigMap = "gardener-controller-manager-configmap"
-	Garden                     = "garden"
+	FluentBit = "fluent-bit"
+	Fluentd   = "fluentd-es"
+	Garden    = "garden"
+	Logger    = "logger"
 )
 
 func validateFlags() {
@@ -112,30 +105,27 @@ var _ = Describe("Seed logging testing", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		if !*skipFeatureGateCheck {
-			// Checks whether controller manager <feature> is enabled
-			isFeatureEnabled := func(ctx context.Context, k8sGardenClient kubernetes.Interface, feature utilfeature.Feature) (bool, error) {
-				cmConfigMap := &corev1.ConfigMap{}
-				if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: Garden, Name: ControllerManagerConfigMap}, cmConfigMap); err != nil {
-					return false, err
-				}
-
-				cmConfig := &config.ControllerManagerConfiguration{}
-				reader := strings.NewReader(cmConfigMap.Data["config.yaml"])
-				decoder := yaml.NewYAMLOrJSONDecoder(reader, 1024)
-				if err := decoder.Decode(cmConfig); err != nil {
-					return false, err
-				}
-
-				return cmConfig.FeatureGates[string(feature)], nil
+		// Checks whether required logging resources are present.
+		// If not, probably the logging feature gate is not enabled.
+		hasRequiredResources := func(ctx context.Context, k8sSeedClient kubernetes.Interface) (bool, error) {
+			fluentBit := &appsv1.DaemonSet{}
+			if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: Garden, Name: FluentBit}, fluentBit); err != nil {
+				return false, err
 			}
 
-			By("Check feature gate")
-			isLoggingEnabled, err := isFeatureEnabled(ctx, k8sGardenClient, features.Logging)
-			Expect(err).NotTo(HaveOccurred())
+			fluentd := &appsv1.StatefulSet{}
+			if err := k8sSeedClient.Client().Get(ctx, client.ObjectKey{Namespace: Garden, Name: Fluentd}, fluentd); err != nil {
+				return false, err
+			}
 
+			return true, nil
+		}
+
+		checkRequiredResources := func(ctx context.Context, k8sSeedClient kubernetes.Interface) {
+			isLoggingEnabled, err := hasRequiredResources(ctx, k8sSeedClient)
 			if !isLoggingEnabled {
-				Fail("Logging feature gate is not enabled")
+				message := fmt.Sprintf("Error occurred checking for required logging resources in the seed %s namespace. Ensure that the logging feature gate is enabled: %s", Garden, err.Error())
+				Fail(message)
 			}
 		}
 
@@ -145,6 +135,17 @@ var _ = Describe("Seed logging testing", func() {
 			// parse shoot yaml into shoot object and generate random test names for shoots
 			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix)
 			Expect(err).NotTo(HaveOccurred())
+
+			seed := &v1beta1.Seed{}
+			err = k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: *shootObject.Spec.Cloud.Seed}, seed)
+			Expect(err).NotTo(HaveOccurred())
+
+			seedSecretRef := seed.Spec.SecretRef
+			seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Checking for required logging resources")
+			checkRequiredResources(ctx, seedClient)
 
 			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, shootObject, seedLogTestLogger)
 			Expect(err).NotTo(HaveOccurred())
@@ -160,6 +161,9 @@ var _ = Describe("Seed logging testing", func() {
 			shoot := &v1beta1.Shoot{ObjectMeta: metav1.ObjectMeta{Namespace: *shootNamespace, Name: *shootName}}
 			gardenTestOperation, err = NewGardenTestOperation(ctx, k8sGardenClient, seedLogTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
+
+			By("Checking for required logging resources")
+			checkRequiredResources(ctx, gardenTestOperation.SeedClient)
 		}
 
 		shootSeedNamespace = gardenTestOperation.ShootSeedNamespace()
@@ -174,18 +178,20 @@ var _ = Describe("Seed logging testing", func() {
 			return err
 		}
 
-		By("Cleaning up logger app resources")
-		loggerDeploymentToDelete := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: shootSeedNamespace,
-				Name:      Logger,
-			},
+		if shootSeedNamespace != "" {
+			By("Cleaning up logger app resources")
+			loggerDeploymentToDelete := &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: shootSeedNamespace,
+					Name:      Logger,
+				},
+			}
+
+			err := deleteResource(ctx, loggerDeploymentToDelete)
+			Expect(err).NotTo(HaveOccurred())
 		}
 
-		err := deleteResource(ctx, loggerDeploymentToDelete)
-		Expect(err).NotTo(HaveOccurred())
-
-		if StringSet(*shootTestYamlPath) && *cleanup {
+		if StringSet(*shootTestYamlPath) && *cleanup && shootGardenerTest != nil {
 			By("Cleaning up test shoot")
 			err := shootGardenerTest.DeleteShoot(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -206,7 +212,7 @@ var _ = Describe("Seed logging testing", func() {
 
 		By("Deploy the logger application")
 		var loggingAppTpl *template.Template
-		loggingAppTpl = template.Must(template.ParseFiles(filepath.Join(LoggingAppTemplateDir, LoggingAppTemplateName)))
+		loggingAppTpl = template.Must(template.ParseFiles(filepath.Join(TemplateDir, LoggingAppTemplateName)))
 
 		loggerParams := struct {
 			HelmDeployNamespace string
