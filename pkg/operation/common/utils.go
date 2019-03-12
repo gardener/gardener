@@ -444,6 +444,62 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
 }
 
+// DeleteVpa delete all resources required for the vertical pod autoscaler in the given namespace.
+func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
+	if k8sClient == nil {
+		return fmt.Errorf("require kubernetes client")
+	}
+
+	listOptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", GardenRole, GardenRoleVpa),
+	}
+
+	// Delete all Crds with label "garden.sapcloud.io/role=vpa"
+	if err := k8sClient.APIExtension().ApiextensionsV1beta1().CustomResourceDefinitions().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all Deployments with label "garden.sapcloud.io/role=vpa"
+	deletePropagation := metav1.DeletePropagationForeground
+	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
+		&metav1.DeleteOptions{
+			PropagationPolicy: &deletePropagation,
+		}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all ClusterRoles with label "garden.sapcloud.io/role=vpa"
+	if err := k8sClient.Kubernetes().RbacV1().ClusterRoles().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all ClusterRoleBindings with label "garden.sapcloud.io/role=vpa"
+	if err := k8sClient.Kubernetes().Rbac().ClusterRoleBindings().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all ServiceAccounts with label "garden.sapcloud.io/role=vpa"
+	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete Service
+	if err := k8sClient.Client().Delete(context.TODO(), &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "vpa-webhook"}}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete Secret
+	if err := k8sClient.Client().Delete(context.TODO(), &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "vpa-tls-certs"}}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	return nil
+}
+
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
 func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error {
 	if k8sClient == nil {

@@ -67,6 +67,9 @@ global:
     kibana-oss: image-repository:image-tag
     pause-container: image-repository:image-tag
     prometheus: image-repository:image-tag
+    vpa-admission-controller: image-repository:image-tag
+    vpa-recommender: image-repository:image-tag
+    vpa-updater: image-repository:image-tag
 
   elasticsearchPorts:
     db: 9200
@@ -91,4 +94,7 @@ alertmanager:
   storage: 1Gi
 
 cert-manager:
+  enabled: true
+
+vpa:
   enabled: true

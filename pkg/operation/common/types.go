@@ -149,6 +149,9 @@ const (
 	// GardenRoleCertificateManagement is the value of GardenRole key indicating type 'certificate-management'.
 	GardenRoleCertificateManagement = "certificate-management"
 
+	// GardenRoleVpa is the value of GardenRole key indecating type 'vpa'.
+	GardenRoleVpa = "vpa"
+
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "garden.sapcloud.io/createdBy"
@@ -522,6 +525,15 @@ const (
 
 	// RegistrationSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	RegistrationSpecHash = "registration-spec-hash"
+
+	// VpaAdmissionControllerImageName is the name of the vpa-admission-controller image
+	VpaAdmissionControllerImageName = "vpa-admission-controller"
+
+	// VpaRecommenderImageName is the name of the vpa-recommender image
+	VpaRecommenderImageName = "vpa-recommender"
+
+	// VpaUpdaterImageName is the name of the vpa-updater image
+	VpaUpdaterImageName = "vpa-updater"
 )
 
 var (

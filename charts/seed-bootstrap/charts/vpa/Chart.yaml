@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A helm chart to bootstrap the vpa
+name: vpa
+version: 0.1.0
