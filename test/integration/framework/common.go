@@ -54,9 +54,7 @@ func CreateShootTestArtifacts(shootTestYamlPath, prefix string) (string, *v1beta
 	}
 
 	shoot.Name = integrationTestName
-	shootToReturnDomain := integrationTestName + ".shoot.dev.k8s-hana.ondemand.com"
-	shoot.Spec.DNS.Domain = &shootToReturnDomain
-
+	shoot.Spec.DNS.Domain = nil
 	return integrationTestName, shoot, nil
 }
 
