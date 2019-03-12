@@ -111,6 +111,8 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+	defer ctx.Done()
 	gardenerConfigPath := fmt.Sprintf("%s/gardener.config", kubeconfigPath)
 
 	shootGardenerTest, err := framework.NewShootGardenerTest(gardenerConfigPath, nil, testLogger)
@@ -136,18 +138,18 @@ func main() {
 
 	testLogger.Infof("Create shoot %s in namespace %s", shootName, projectNamespace)
 	shootGardenerTest.Shoot = shootObject
-	shootObject, err = shootGardenerTest.CreateShoot(context.TODO())
+	shootObject, err = shootGardenerTest.CreateShoot(ctx)
 	if err != nil {
 		testLogger.Fatalf("Cannot create shoot %s: %s", shootName, err.Error())
 	}
 	testLogger.Infof("Successfully created shoot %s", shootName)
 
-	shootTestOperations, err := framework.NewGardenTestOperation(context.TODO(), shootGardenerTest.GardenClient, testLogger, shootObject)
+	shootTestOperations, err := framework.NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, testLogger, shootObject)
 	if err != nil {
 		testLogger.Fatalf("Cannot create shoot %s: %s", shootName, err.Error())
 	}
 
-	err = shootTestOperations.DownloadKubeconfig(context.TODO(), shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), gardenv1beta1.GardenerName, fmt.Sprintf("%s/shoot.config", kubeconfigPath))
+	err = shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), gardenv1beta1.GardenerName, fmt.Sprintf("%s/shoot.config", kubeconfigPath))
 	if err != nil {
 		testLogger.Fatalf("Cannot download shoot kubeconfig: %s", err.Error())
 	}
