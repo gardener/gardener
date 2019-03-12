@@ -24,7 +24,7 @@ spec:
         publisher: CoreOS
         offer: CoreOS
         sku: Stable
-        version: 1911.5.0
+        version: 2023.5.0
       machineTypes:
       - name: Standard_DS2_v2
         cpu: "2"

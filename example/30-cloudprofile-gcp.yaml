@@ -21,7 +21,7 @@ spec:
         - 1.10.13
       machineImages:
       - name: coreos
-        image: projects/coreos-cloud/global/images/coreos-stable-1911-5-0-v20181219
+        image: projects/coreos-cloud/global/images/coreos-stable-2023-5-0-v20190312
       machineTypes:
       - name: n1-standard-2
         cpu: "2"
