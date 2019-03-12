@@ -219,6 +219,10 @@ images:
   sourceRepository: github.com/justwatchcom/elasticsearch_exporter
   repository: justwatch/elasticsearch_exporter
   tag: "1.0.2"
+- name: elasticsearch-searchguard-oss
+  sourceRepository: github.com/floragunncom/search-guard
+  repository: floragunncom/sg-elasticsearch
+  tag: "6.7.1-oss-25.0"
 - name: curator-es
   sourceRepository: github.com/gardener/logging
   repository: eu.gcr.io/gardener-project/gardener/curator-es
@@ -227,6 +231,10 @@ images:
   sourceRepository: github.com/elastic/kibana-docker
   repository: docker.elastic.co/kibana/kibana-oss
   tag: "6.7.1"
+- name: sg-sgadmin
+  sourceRepository: github.com/floragunncom/search-guard
+  repository: floragunncom/sg-sgadmin
+  tag: "6.7.1-25.0"
 
 # VPA
 - name: vpa-admission-controller

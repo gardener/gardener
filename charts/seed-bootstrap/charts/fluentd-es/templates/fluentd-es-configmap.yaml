@@ -49,8 +49,12 @@ data:
       ignore_exceptions ["Faraday::ClientError", "Elasticsearch::Transport::Transport::ServerError"]
       exception_backup false
 
+      logstash_prefix logstash-${type}
+      user {{ .Values.fluentd.sgUsername }}
+      password {{ .Values.fluentd.sgPassword }}
+
       @include /etc/fluent/config.d/es_plugin.options
-      <buffer tag, time>
+      <buffer tag, time, type>
         @type file
         # Limit the number of queued chunks
         queued_chunks_limit_size 4096
@@ -115,7 +119,7 @@ data:
     time_key time
     # remove tag from the log content
     include_tag_key false
-    remove_keys _hash, time
+    remove_keys _hash, time, type
 
   buffer.options: |-
     chunk_limit_size 50MB                                # the max size of each chunks

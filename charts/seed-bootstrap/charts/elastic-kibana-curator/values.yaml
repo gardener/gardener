@@ -4,7 +4,9 @@ global:
     curator-es: image-repository:image-tag
     elasticsearch-oss: image-repository:image-tag
     elasticsearch-metrics-exporter: image-repository:image-tag
+    elasticsearch-searchguard-oss: image-repository:image-tag
     kibana-oss: image-repository:image-tag
+    sg-sgadmin: image-repository:image-tag
   elasticsearchPorts:
     db: 9200
     transport: 9300
@@ -56,11 +58,6 @@ elasticsearch:
         perObject: 89
         weight: 5
         unit: Mi
-  livenessProbe:
-    tcpSocket:
-      port: transport
-    initialDelaySeconds: 20
-    periodSeconds: 10
   readinessProbe:
     httpGet:
       path: /_cluster/health
@@ -104,6 +101,84 @@ elasticsearch:
         port: metrics
       initialDelaySeconds: 10
       timeoutSeconds: 10
+    httpAuth: YWRtaW46YWRtaW4K
+    
+  sgadmin:
+    resources:
+      requests:
+        cpu:
+          base: 700
+          perObject: 1
+          weight: 5
+          unit: m
+        memory:
+          base: 2050
+          perObject: 84
+          weight: 5
+          unit: Mi
+      limits:
+        cpu:
+          base: 2300
+          perObject: 1
+          weight: 5
+          unit: m
+        memory:
+          base: 2300
+          perObject: 89
+          weight: 5
+          unit: Mi
+
+searchguard:
+  enabled: false
+  # Configure additional users (maps to sg_internal_users.yml)
+  users:
+    fluentd:
+      hash: password-hash
+      roles:
+        - admin
+
+    kibanaserver:
+      hash: password-hash
+      roles:
+        - admin
+
+    curator:
+      hash: password-hash
+      roles:
+        - admin
+
+    admin:
+      hash: password-hash
+      roles:
+        - admin
+
+    user:
+      hash: password-hash
+
+  # Configure additional rolemappings (maps to sg_roles_mapping.yml)
+  rolesmapping:
+    sg_user:
+      readall: true
+      users:
+        - user
+
+    sg_kibana_user:
+      readall: true
+      users:
+        - user
+
+  # Configure additional role (maps to sg_roles.yml)
+  roles:
+    sg_user:
+      readonly: true
+      cluster:
+        - CLUSTER_MONITOR
+        - CLUSTER_COMPOSITE_OPS_RO
+        - indices:data/read/scroll
+      indices:
+        'logstash-user*':
+          '*':
+           - READ
 
 kibana:
   replicaCount: 1

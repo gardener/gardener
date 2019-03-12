@@ -65,11 +65,15 @@ const (
 	InitializationTimeout     = 600 * time.Second
 	FinalizationTimeout       = 1800 * time.Second
 
-	GuestBook             = "guestbook"
-	RedisMaster           = "redis-master"
-	RedisSalve            = "redis-slave"
-	APIServer             = "kube-apiserver"
-	GuestBookTemplateName = "guestbook-app.yaml.tpl"
+	GuestBook                 = "guestbook"
+	RedisMaster               = "redis-master"
+	RedisSalve                = "redis-slave"
+	APIServer                 = "kube-apiserver"
+	Kibana                    = "kibana-logging"
+	loggingUserName           = "admin"
+	loggingIngressCredentials = "logging-ingress-credentials"
+	passwordKey               = "password"
+	GuestBookTemplateName     = "guestbook-app.yaml.tpl"
 
 	helmDeployNamespace = metav1.NamespaceDefault
 	RedisChart          = "stable/redis"

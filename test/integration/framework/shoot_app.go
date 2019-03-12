@@ -49,6 +49,7 @@ import (
 const (
 	defaultPollInterval  = 5 * time.Second
 	dashboardUserName    = "admin"
+	loggingUserName      = "admin"
 	elasticsearchLogging = "elasticsearch-logging"
 	elasticsearchPort    = 9200
 )
@@ -114,7 +115,7 @@ func (o *GardenerTestOperation) ShootSeedNamespace() string {
 
 // DownloadKubeconfig downloads the shoot Kubeconfig
 func (o *GardenerTestOperation) DownloadKubeconfig(ctx context.Context, client kubernetes.Interface, namespace, name, downloadPath string) error {
-	kubeconfig, err := getObjectFromSecret(ctx, client, namespace, name, kubeconfig)
+	kubeconfig, err := GetObjectFromSecret(ctx, client, namespace, name, kubeconfig)
 	if err != nil {
 		return err
 	}
@@ -398,8 +399,14 @@ func (o *GardenerTestOperation) GetElasticsearchLogs(ctx context.Context, elasti
 	}))
 
 	now := time.Now()
-	index := fmt.Sprintf("logstash-%d.%02d.%02d", now.Year(), now.Month(), now.Day())
-	command := fmt.Sprintf("curl http://localhost:%d/%s/_search?q=kubernetes.pod_name:%s", elasticsearchPort, index, podName)
+	index := fmt.Sprintf("logstash-admin-%d.%02d.%02d", now.Year(), now.Month(), now.Day())
+	loggingPassword, err := o.getLoggingPassword(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	command := fmt.Sprintf("curl http://localhost:%d/%s/_search?q=kubernetes.pod_name:%s --user %s:%s", elasticsearchPort, index, podName, loggingUserName, loggingPassword)
 	reader, err := o.PodExecByLabel(ctx, elasticsearchLabels, elasticsearchLogging,
 		command, elasticsearchNamespace, client)
 	if err != nil {

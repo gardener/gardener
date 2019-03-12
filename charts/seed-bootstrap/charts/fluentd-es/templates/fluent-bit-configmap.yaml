@@ -261,6 +261,26 @@ data:
         tls.verify          Off
 
     [FILTER]
+        Name record_modifier
+        Match *
+        Record type admin
+
+    [FILTER]
+        Name record_modifier
+        Match *kube-apiserver*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *kube-controller-manager*
+        Record type user
+
+    [FILTER]
+        Name record_modifier
+        Match *cloud-controller-manager*
+        Record type user
+
+    [FILTER]
         Name                lua
         Match               kubernetes.*
         script              modify_severity.lua

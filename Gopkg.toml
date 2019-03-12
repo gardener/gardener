@@ -154,6 +154,10 @@ ignored = [
   name = "github.com/golang/mock"
   version = "1.2.0"
 
+[[constraint]]
+  name = "golang.org/x/crypto"
+  revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
+
 # use the same version that is referenced by k8s.io, mainly required by Helm
 # https://github.com/kubernetes/kubernetes/blob/v1.13.1/Godeps/Godeps.json#L2996
 [[override]]
@@ -174,3 +178,4 @@ ignored = [
     name = "k8s.io/kube-openapi"
     unused-packages = false
     non-go = false
+

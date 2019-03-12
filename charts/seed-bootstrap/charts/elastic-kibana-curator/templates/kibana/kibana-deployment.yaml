@@ -18,6 +18,7 @@ spec:
       annotations:
         checksum/kibana-objects-registration-config: {{ include (print $.Template.BasePath "/kibana/kibana-objects-registration-config.yaml") . | sha256sum }}
         checksum/kibana-saved-objects-config: {{ include (print $.Template.BasePath "/kibana/kibana-saved-objects-config.yaml") . | sha256sum }}
+        checksum/kibana-config: {{ include (print $.Template.BasePath "/kibana/kibana-configmap.yaml") . | sha256sum }}
       labels:
         garden.sapcloud.io/role: logging
         app: kibana-logging
@@ -25,6 +26,9 @@ spec:
         networking.gardener.cloud/to-dns: allowed
         networking.gardener.cloud/to-elasticsearch: allowed
     spec:
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       containers:
       - name: kibana-logging
         image: {{ index .Values.global.images "kibana-oss" }}
@@ -34,16 +38,28 @@ spec:
         - name: ui
           containerPort: {{ .Values.kibana.service.internalPort }}
           protocol: TCP
+{{- if .Values.kibana.readinessProbe.enabled }}
         readinessProbe:
-          {{- toYaml .Values.kibana.readinessProbe | nindent 10 }}
-        resources:
-          {{- toYaml .Values.kibana.resources | nindent 10 }}
-      - name: sidecar
-        image: {{ index .Values.global.images "kibana-oss" }}
+          httpGet:
+            path: /api/status
+            port: {{ .Values.kibana.service.internalPort }}
+          initialDelaySeconds: {{ .Values.kibana.readinessProbe.initialDelaySeconds }}
+          timeoutSeconds: {{ .Values.kibana.readinessProbe.timeoutSeconds }}
+          periodSeconds: {{ .Values.kibana.readinessProbe.periodSeconds }}
+          successThreshold: {{ .Values.kibana.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.kibana.readinessProbe.failureThreshold }}
+{{- end }}
+        volumeMounts:
+        - name: kibana-config
+          mountPath: /opt/kibana/config/
+      - image: {{ index .Values.global.images "kibana-oss" }}
+        name: auto-create-objects
         command:
         - /bin/sh
         - /gardener/register/register
         volumeMounts:
+        - name: kibana-config
+          mountPath: /opt/kibana/config/
         - name: register
           mountPath: /gardener/register
         - name: saved-objects
@@ -57,3 +73,6 @@ spec:
       - name: saved-objects
         configMap:
           name: kibana-saved-objects
+      - name: kibana-config
+        configMap:
+          name: kibana-configmap
