@@ -10,8 +10,6 @@ import (
 type Interface interface {
 	// Clusters returns a ClusterInformer.
 	Clusters() ClusterInformer
-	// Generics returns a GenericInformer.
-	Generics() GenericInformer
 	// Infrastructures returns a InfrastructureInformer.
 	Infrastructures() InfrastructureInformer
 	// OperatingSystemConfigs returns a OperatingSystemConfigInformer.
@@ -34,11 +32,6 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 // Clusters returns a ClusterInformer.
 func (v *version) Clusters() ClusterInformer {
 	return &clusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
-}
-
-// Generics returns a GenericInformer.
-func (v *version) Generics() GenericInformer {
-	return &genericInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Infrastructures returns a InfrastructureInformer.

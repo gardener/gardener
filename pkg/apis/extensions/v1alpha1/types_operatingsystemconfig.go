@@ -27,17 +27,11 @@ const OperatingSystemConfigResource = "OperatingSystemConfig"
 
 // OperatingSystemConfig is a specification for a OperatingSystemConfig resource
 type OperatingSystemConfig struct {
-	metav1.TypeMeta `json:",inline"`
-	// +optional
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   OperatingSystemConfigSpec   `json:"spec"`
 	Status OperatingSystemConfigStatus `json:"status"`
-}
-
-// GetExtensionType returns the type of this OperatingSystemConfig resource.
-func (o *OperatingSystemConfig) GetExtensionType() string {
-	return o.Spec.Type
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -45,8 +39,7 @@ func (o *OperatingSystemConfig) GetExtensionType() string {
 // OperatingSystemConfigList is a list of OperatingSystemConfig resources.
 type OperatingSystemConfigList struct {
 	metav1.TypeMeta `json:",inline"`
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 
 	// Items is the list of OperatingSystemConfigs.
 	Items []OperatingSystemConfig `json:"items"`

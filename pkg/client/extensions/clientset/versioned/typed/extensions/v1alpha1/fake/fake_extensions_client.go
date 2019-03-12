@@ -16,10 +16,6 @@ func (c *FakeExtensionsV1alpha1) Clusters(namespace string) v1alpha1.ClusterInte
 	return &FakeClusters{c, namespace}
 }
 
-func (c *FakeExtensionsV1alpha1) Generics(namespace string) v1alpha1.GenericInterface {
-	return &FakeGenerics{c, namespace}
-}
-
 func (c *FakeExtensionsV1alpha1) Infrastructures(namespace string) v1alpha1.InfrastructureInterface {
 	return &FakeInfrastructures{c, namespace}
 }

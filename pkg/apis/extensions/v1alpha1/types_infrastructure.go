@@ -25,17 +25,11 @@ import (
 
 // Infrastructure is a specification for cloud provider infrastructure.
 type Infrastructure struct {
-	metav1.TypeMeta `json:",inline"`
-	// +optional
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   InfrastructureSpec   `json:"spec"`
 	Status InfrastructureStatus `json:"status"`
-}
-
-// GetExtensionType returns the type of this Infrastructure resource.
-func (i *Infrastructure) GetExtensionType() string {
-	return i.Spec.Type
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -43,8 +37,7 @@ func (i *Infrastructure) GetExtensionType() string {
 // InfrastructureList is a list of Infrastructure resources.
 type InfrastructureList struct {
 	metav1.TypeMeta `json:",inline"`
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 
 	// Items is the list of Infrastructures.
 	Items []Infrastructure `json:"items"`

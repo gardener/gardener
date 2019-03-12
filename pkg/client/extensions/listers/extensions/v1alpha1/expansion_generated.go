@@ -10,14 +10,6 @@ type ClusterListerExpansion interface{}
 // ClusterNamespaceLister.
 type ClusterNamespaceListerExpansion interface{}
 
-// GenericListerExpansion allows custom methods to be added to
-// GenericLister.
-type GenericListerExpansion interface{}
-
-// GenericNamespaceListerExpansion allows custom methods to be added to
-// GenericNamespaceLister.
-type GenericNamespaceListerExpansion interface{}
-
 // InfrastructureListerExpansion allows custom methods to be added to
 // InfrastructureLister.
 type InfrastructureListerExpansion interface{}

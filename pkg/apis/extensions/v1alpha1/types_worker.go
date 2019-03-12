@@ -26,17 +26,11 @@ import (
 
 // Worker is a specification for a Worker resource.
 type Worker struct {
-	metav1.TypeMeta `json:",inline"`
-	// +optional
+	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   WorkerSpec   `json:"spec"`
 	Status WorkerStatus `json:"status"`
-}
-
-// GetExtensionType returns the type of this Worker resource.
-func (w *Worker) GetExtensionType() string {
-	return w.Spec.Type
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -44,8 +38,7 @@ func (w *Worker) GetExtensionType() string {
 // WorkerList is a list of Worker resources.
 type WorkerList struct {
 	metav1.TypeMeta `json:",inline"`
-	// +optional
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 
 	// Items is the list of Worker.
 	Items []Worker `json:"items"`
