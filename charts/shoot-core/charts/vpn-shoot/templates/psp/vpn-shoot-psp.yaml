@@ -8,6 +8,7 @@ spec:
   privileged: true
   volumes:
   - secret
+  - emptyDir
   allowedCapabilities:
   - NET_ADMIN
   runAsUser:

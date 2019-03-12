@@ -35,6 +35,20 @@ spec:
       tolerations:
       - key: CriticalAddonsOnly
         operator: Exists
+{{- if .Values.initContainers }}
+      initContainers:
+      {{- range $index, $ctr := .Values.initContainers }}
+      - name: init-{{ $index }}
+        image: {{ $ctr.image }}
+        {{- if $ctr.command }}
+        command:
+{{ toYaml $ctr.command | indent 8 }}
+        {{- end }}
+        volumeMounts:
+        - name: shared-init-config
+          mountPath: /init-config
+      {{- end }}
+{{- end }}
       containers:
       - name: vpn-shoot
         image: {{ index .Values.images "vpn-shoot" }}
@@ -65,6 +79,8 @@ spec:
           name: vpn-shoot-tlsauth
         - mountPath: /srv/secrets/dh
           name: vpn-shoot-dh
+        - name: shared-init-config
+          mountPath: /init-config
       volumes:
       - name: vpn-shoot
         secret:
@@ -75,3 +91,5 @@ spec:
       - name: vpn-shoot-dh
         secret:
           secretName: vpn-shoot-dh
+      - name: shared-init-config
+        emptyDir: {}
