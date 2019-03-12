@@ -78,12 +78,13 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if machineImages != []:
       ${yaml.dump(machineImages, width=10000)}
       % else:
+      # Keep in sync with https://coreos.com/dist/aws/aws-stable.json (HVM-based)
       - name: coreos
         regions:
         - name: eu-west-1
-          ami: ami-030d1bab626c90e46
+          ami: ami-01f5fbceb7a9fa4d0
         - name: us-east-1
-          ami: ami-0b1db01d775d666c2
+          ami: ami-08e58b93705fb503f
       % endif
       machineTypes:<% machineTypes=value("spec.aws.constraints.machineTypes", []) %>
       % if machineTypes != []:
@@ -187,7 +188,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         publisher: CoreOS
         offer: CoreOS
         sku: Stable
-        version: 1911.5.0
+        version: 2023.5.0
       % endif
       machineTypes:<% machineTypes=value("spec.azure.constraints.machineTypes", []) %>
         % if machineTypes != []:
@@ -285,7 +286,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000)}
       % else:
       - name: coreos
-        image: projects/coreos-cloud/global/images/coreos-stable-1911-5-0-v20181219
+        image: projects/coreos-cloud/global/images/coreos-stable-2023-5-0-v20190312
       % endif
       machineTypes:<% machineTypes=value("spec.gcp.constraints.machineTypes", []) %>
       % if machineTypes != []:
@@ -467,7 +468,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000)}
       % else:
       - name: coreos
-        image: coreos-1911.5.0
+        image: coreos-2023.5.0
       % endif
       machineTypes:<% machineTypes=value("spec.openstack.constraints.machineTypes", []) %>
       % if machineTypes != []:

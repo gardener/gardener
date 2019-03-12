@@ -20,12 +20,13 @@ spec:
         - 1.11.8
         - 1.10.13
       machineImages:
+      # Keep in sync with https://coreos.com/dist/aws/aws-stable.json (HVM-based)
       - name: coreos
         regions:
         - name: eu-west-1
-          ami: ami-030d1bab626c90e46
+          ami: ami-01f5fbceb7a9fa4d0
         - name: us-east-1
-          ami: ami-0b1db01d775d666c2
+          ami: ami-08e58b93705fb503f
       machineTypes:
       - name: m4.large
         cpu: "2"

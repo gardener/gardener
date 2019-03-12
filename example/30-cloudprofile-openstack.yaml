@@ -25,7 +25,7 @@ spec:
       - name: haproxy
       machineImages:
       - name: coreos
-        image: coreos-1911.5.0
+        image: coreos-2023.5.0
       machineTypes:
       - name: medium_2_4
         cpu: "2"
