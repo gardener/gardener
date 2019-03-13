@@ -41,7 +41,7 @@ images:
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed
-  tag: "0.13.0"
+  tag: "0.14.0"
 - name: aws-lb-readvertiser
   sourceRepository: github.com/gardener/aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
@@ -97,7 +97,7 @@ images:
 - name: vpn-shoot
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot
-  tag: "0.13.0"
+  tag: "0.14.0"
 - name: coredns
   sourceRepository: github.com/coredns/coredns
   repository: coredns/coredns
