@@ -56,7 +56,7 @@ spec:
   secretRef:
     name: ${value("spec.secretRef.name", "seed-" + cloud)}
     namespace: ${value("spec.secretRef.namespace", "garden")}
-  ingressDomain: ${value("spec.ingressDomain", "dev." + cloud + ".seed.example.com") if cloud != "local" else "<minikube-ip>.nip.io"}
+  ingressDomain: ${value("spec.ingressDomain", "dev." + cloud + ".seed.example.com") if cloud != "local" else "<local-kubernetes-ip>.nip.io"}
   networks: # Seed and Shoot networks must be disjunct
     nodes: ${value("spec.networks.nodes", "10.240.0.0/16") if cloud != "local" else "192.168.99.100/25"}
     pods: ${value("spec.networks.pods", "10.241.128.0/17") if cloud != "local" else "172.17.0.0/16"}

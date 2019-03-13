@@ -76,7 +76,7 @@ spec:
   #     SomeKubernetesFeature: true
   dns:
     provider: unmanaged
-    domain: <minikube-ip>.nip.io
+    domain: <local-kubernetes-ip>.nip.io
 # hibernation:
 #   enabled: false
 #   schedules:

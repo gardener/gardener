@@ -16,13 +16,59 @@
 
 source $(dirname "${0}")/common
 
+function __expose_docker_api_server() {
+    local _docker_api_server_secure_port="6443"
+    local _docker_kube_apiserver_service="kube-apiserver-docker-desktop"
+    kubectl -n kube-system get services ${_docker_kube_apiserver_service} &>/dev/null || \
+      kubectl -n kube-system expose pod ${_docker_kube_apiserver_service} --type=NodePort --name=${_docker_kube_apiserver_service} --port=${_docker_api_server_secure_port} &>/dev/null
+    local _exposed_apiserver_port=$(kubectl -n kube-system get service ${_docker_kube_apiserver_service} -o jsonpath="{.spec.ports[?(.port == ${_docker_api_server_secure_port})].nodePort}")
+    echo ${_exposed_apiserver_port}
+}
+
+function __generate_docker_client_cert_files() {
+    local _cert=${1}
+    local _key=${2}
+    local _docker_user=$(k8s_username)
+    kubectl config view --raw --flatten -o jsonpath="{.users[?(.name == \"${_docker_user}\")].user.client-certificate-data}" | base64 -d > ${_cert}
+    kubectl config view --raw --flatten -o jsonpath="{.users[?(.name == \"${_docker_user}\")].user.client-key-data}" | base64 -d > ${_key}
+}
+
 DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
-MINIKUBE_IP=$(minikube ip)
-MINIKUBE_IP_DASHES=$(echo ${MINIKUBE_IP} | tr '.' '-')
 IP_ROUTE=$(ip route get 1)
 IP_ADDRESS=$(echo ${IP_ROUTE#*src} | awk '{print $1}')
-MINIKUBE_SEED_KUBECONFIG=${DEV_DIR}/minikube-seed-kubeconfig
+
+mkdir -p ${DEV_DIR}
+
+kubernetes_env="$(k8s_env)"
+
+case "${kubernetes_env}" in
+    $DOCKER_FOR_DESKTOP)
+        echo "Found Docker Kubernetes ..."
+        LOCAL_K8S_HOST_IP=$IP_ADDRESS
+        API_SERVER_SECURE_PORT="$(__expose_docker_api_server)"
+        TLS_VERIFICATION="--insecure-skip-tls-verify=true --embed-certs=false"
+        docker_client_cert="${DEV_DIR}/docker-k8s-client.crt"
+        docker_client_key="${DEV_DIR}/docker-k8s-client.key"
+        __generate_docker_client_cert_files ${docker_client_cert} ${docker_client_key}
+        CLIENT_CERTIFICATE="${docker_client_cert}"
+        CLIENT_KEY="${docker_client_key}"
+        ;;
+    $MINIKUBE)
+        echo "Found Minikube ..."
+        LOCAL_K8S_HOST_IP="$(minikube ip)"
+        TLS_VERIFICATION="--certificate-authority=${HOME}/.minikube/ca.crt --embed-certs=true"
+        CLIENT_CERTIFICATE="${HOME}/.minikube/client.crt"
+        CLIENT_KEY="${HOME}/.minikube/client.key"
+        ;;
+    *)
+        echo "Unsupported k8s environment for local seed: ${kubernetes_env}"
+        exit 1
+        ;;
+esac
+
+LOCAL_K8S_HOST_IP_DASHES=$(echo ${LOCAL_K8S_HOST_IP} | tr '.' '-')
+LOCAL_SEED_KUBECONFIG=${DEV_DIR}/local-seed-kubeconfig
 
 kubectl apply -f ${EXAMPLE_DIR}/00-namespace-garden-dev.yaml
 kubectl apply -f ${EXAMPLE_DIR}/05-project-dev.yaml
@@ -31,38 +77,37 @@ kubectl apply -f ${EXAMPLE_DIR}/70-secret-cloudprovider-local.yaml
 kubectl apply -f ${EXAMPLE_DIR}/80-secretbinding-cloudprovider-local.yaml
 
 kubectl config set-cluster gardener-dev \
-  --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
-  --certificate-authority $HOME/.minikube/ca.crt \
-  --server https://${MINIKUBE_IP}:$API_SERVER_SECURE_PORT \
-  --embed-certs=true
+  --kubeconfig ${LOCAL_SEED_KUBECONFIG} \
+  ${TLS_VERIFICATION} \
+  --server https://${LOCAL_K8S_HOST_IP}:$API_SERVER_SECURE_PORT \
 
 kubectl config set-credentials gardener-dev \
-  --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
-  --client-certificate $HOME/.minikube/client.crt \
-  --client-key $HOME/.minikube/client.key \
+  --kubeconfig ${LOCAL_SEED_KUBECONFIG} \
+  --client-certificate ${CLIENT_CERTIFICATE} \
+  --client-key ${CLIENT_KEY} \
   --embed-certs=true
 
 kubectl config set-context gardener-dev \
-  --kubeconfig ${MINIKUBE_SEED_KUBECONFIG} \
+  --kubeconfig ${LOCAL_SEED_KUBECONFIG} \
   --cluster gardener-dev \
   --user gardener-dev
 
 kubectl config use-context gardener-dev \
-  --kubeconfig ${MINIKUBE_SEED_KUBECONFIG}
+  --kubeconfig ${LOCAL_SEED_KUBECONFIG}
 
 # Different base64 implementations have different flags
-MINIKUBE_SEED_KUBECONFIG_B64=$(base64 ${MINIKUBE_SEED_KUBECONFIG} | tr -d '\r\n')
+LOCAL_SEED_KUBECONFIG_B64=$(base64 ${LOCAL_SEED_KUBECONFIG} | tr -d '\r\n')
 
 sed -e "s/name: my-seed/name: local/g" example/25-controllerinstallation.yaml | \
   kubectl apply -f -
 
-sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${MINIKUBE_SEED_KUBECONFIG_B64}/g" example/40-secret-seed-local.yaml | \
+sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${LOCAL_SEED_KUBECONFIG_B64}/g" example/40-secret-seed-local.yaml | \
   kubectl apply -f -
 
-sed -e "s/ingressDomain: <minikube-ip>.nip.io/ingressDomain: ${MINIKUBE_IP_DASHES}.nip.io/g" example/50-seed-local.yaml | \
+sed -e "s/ingressDomain: <local-kubernetes-ip>.nip.io/ingressDomain: ${LOCAL_K8S_HOST_IP_DASHES}.nip.io/g" example/50-seed-local.yaml | \
   kubectl apply -f -
 
-sed -e "s/domain: <minikube-ip>.nip.io/domain: ${MINIKUBE_IP_DASHES}.nip.io/g" example/90-shoot-local.yaml | \
+sed -e "s/domain: <local-kubernetes-ip>.nip.io/domain: ${LOCAL_K8S_HOST_IP_DASHES}.nip.io/g" example/90-shoot-local.yaml | \
   sed -e "s/endpoint: localhost:3777/endpoint: ${IP_ADDRESS}:3777/g" | \
   sed -e "s/name: johndoe-local/name: local/g" >${DEV_DIR}/90-shoot-local.yaml
 

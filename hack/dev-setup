@@ -20,10 +20,10 @@ DEV_DIR=$(dirname "${0}")/../dev
 EXAMPLE_DIR=$(dirname "${0}")/../example
 
 source $(dirname "${0}")/common
-env="$(k8s_env)"
+kubernetes_env="$(k8s_env)"
 
 # test if we are running against a Minikube, Docker or kind Kubernetes local setup
-case "$env" in
+case "${kubernetes_env}" in
     $KIND)
         echo "Found kind ..."
         LOCAL_K8S_HOST_IP=localhost
