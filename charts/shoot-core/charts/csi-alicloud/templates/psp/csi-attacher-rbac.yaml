@@ -40,7 +40,7 @@ rules:
     resources: ["events"]
     verbs: ["create", "patch", "update"]
   - apiGroups: ["policy", "extensions"]
-    resourceNames: ["gardener.kube-system.attacher"]
+    resourceNames: ["gardener.kube-system.csi-attacher"]
     resources: ["podsecuritypolicies"]
     verbs: ["use"]
 

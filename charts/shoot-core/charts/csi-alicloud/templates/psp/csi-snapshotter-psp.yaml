@@ -2,7 +2,7 @@
 apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
-  name: gardener.kube-system.csi-provisioner
+  name: gardener.kube-system.csi-snapshotter
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 spec:
@@ -11,11 +11,7 @@ spec:
   - hostPath
   hostNetwork: false
   allowedHostPaths:
-{{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
   - pathPrefix: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
-{{- else }}
-  - pathPrefix: /var/lib/kubelet/plugins/csi-diskplugin
-{{- end }}
   runAsUser:
     rule: RunAsAny
   seLinux:

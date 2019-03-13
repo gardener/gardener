@@ -70,8 +70,8 @@ spec:
         {{- end }}
         {{- if not .Values.enableCSI}}
         - --external-cloud-volume-plugin={{ .Values.cloudProvider }}
-        {{- end }}
         - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        {{- end }}
         - --cluster-cidr={{ .Values.podNetwork }}
         - --cluster-name={{ .Values.clusterName }}
         - --cluster-signing-cert-file=/srv/kubernetes/ca/ca.crt

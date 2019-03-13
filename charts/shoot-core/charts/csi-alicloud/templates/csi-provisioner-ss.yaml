@@ -1,4 +1,53 @@
 {{- if .Values.enabled }}
+{{- if semverCompare ">= 1.13" .Values.kubernetesVersion -}}
+kind: StatefulSet
+apiVersion: {{ include "statefulsetversion" . }}
+metadata:
+  name: csi-provisioner
+  namespace: kube-system
+  labels:
+    app: csi-provisioner
+    origin: gardener
+    garden.sapcloud.io/role: system-component
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  serviceName: csi-provisioner
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-provisioner
+  template:
+    metadata:
+      labels:
+        origin: gardener
+        garden.sapcloud.io/role: system-component
+        app: csi-provisioner
+    spec:
+      priorityClassName: system-cluster-critical
+      serviceAccount: csi-provisioner
+      tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      containers:
+        - name: csi-provisioner
+          image: {{ index .Values.images "csi-provisioner" }}
+          args:
+            - "--provisioner=diskplugin.csi.alibabacloud.com"
+            - "--csi-address=$(ADDRESS)"
+            - "--feature-gates=Topology=True"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+          imagePullPolicy: "IfNotPresent"
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+            type: DirectoryOrCreate
+{{- else -}}
 kind: StatefulSet
 apiVersion: {{ include "statefulsetversion" . }}
 metadata:
@@ -51,4 +100,5 @@ spec:
           hostPath:
             path: /var/lib/kubelet/plugins/csi-diskplugin
             type: DirectoryOrCreate
+{{- end -}}
 {{- end -}}

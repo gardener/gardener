@@ -149,22 +149,48 @@ images:
   sourceRepository: https://github.com/kubernetes-csi/external-attacher
   repository: quay.io/k8scsi/csi-attacher
   tag: v0.3.0
-  version: 1.11.x
+  versions: 1.11.x
 - name: csi-driver-registrar
   sourceRepository: https://github.com/kubernetes-csi/driver-registrar
   repository: quay.io/k8scsi/driver-registrar
   tag: v0.3.0
-  version: 1.11.x
+  versions: 1.11.x
 - name: csi-provisioner
   sourceRepository: https://github.com/kubernetes-csi/external-provisioner
   repository: quay.io/k8scsi/csi-provisioner
   tag: v0.3.0
-  version: 1.11.x
+  versions: 1.11.x
 - name: csi-plugin-alicloud
   sourceRepository: https://github.com/AliyunContainerService/csi-plugin
   repository: jerryjxj/csi-plugin-alicloud
-  tag: v0.3.0
-  version: 1.11.x
+  tag: v0.3.1
+  versions: 1.11.x
+
+- name: csi-attacher
+  sourceRepository: https://github.com/kubernetes-csi/external-attacher
+  repository: quay.io/k8scsi/csi-attacher
+  tag: v1.0.1
+  versions: 1.13.x
+- name: csi-node-driver-registrar
+  sourceRepository: https://github.com/kubernetes-csi/node-driver-registrar
+  repository: quay.io/k8scsi/csi-node-driver-registrar
+  tag: v1.0.1
+  versions: 1.13.x
+- name: csi-provisioner
+  sourceRepository: https://github.com/kubernetes-csi/external-provisioner
+  repository: quay.io/k8scsi/csi-provisioner
+  tag: v1.0.1
+  versions: 1.13.x
+- name: csi-snapshotter
+  sourceRepository: https://github.com/kubernetes-csi/external-snapshotter
+  repository: quay.io/k8scsi/csi-snapshotter
+  tag: v1.0.1
+  versions: 1.13.x
+- name: csi-plugin-alicloud
+  sourceRepository: https://github.com/AliyunContainerService/csi-plugin
+  repository: jerryjxj/csi-plugin-alicloud
+  tag: v1.0.0
+  versions: 1.13.x
 
 # Logging
 - name: fluentd-es

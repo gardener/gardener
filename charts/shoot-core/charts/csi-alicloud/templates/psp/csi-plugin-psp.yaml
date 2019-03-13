@@ -13,6 +13,10 @@ spec:
   - secret
   hostNetwork: true
   allowedHostPaths:
+{{- if semverCompare ">= 1.13" .Values.kubernetesVersion }}
+  - pathPrefix: /var/lib/kubelet
+  - pathPrefix: /dev
+{{- else }}
   - pathPrefix: /var/lib/kubelet/plugins/csi-diskplugin
   - pathPrefix: /var/lib/kubelet/plugins/kubernetes.io/csi/pv
   - pathPrefix: /var/lib/kubelet/pods
@@ -20,6 +24,7 @@ spec:
   - pathPrefix: /run/dbus
   - pathPrefix: /sys
   - pathPrefix: /lib/modules
+{{- end -}}
   runAsUser:
     rule: RunAsAny
   seLinux:
