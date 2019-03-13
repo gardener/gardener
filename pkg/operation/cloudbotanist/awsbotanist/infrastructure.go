@@ -39,7 +39,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 		vpcID = *b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID
 		igwID, err := b.AWSClient.GetInternetGateway(vpcID)
 		if err != nil {
-			return err
+			return common.DetermineError(err.Error())
 		}
 		internetGatewayID = igwID
 	} else if b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR != nil {
@@ -85,7 +85,10 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 		f = g.Compile()
 	)
 
-	return f.Run(flow.Opts{Logger: b.Logger})
+	if err := f.Run(flow.Opts{Logger: b.Logger}); err != nil {
+		return flow.Causes(err)
+	}
+	return nil
 }
 
 // generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
