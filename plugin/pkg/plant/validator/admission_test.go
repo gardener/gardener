@@ -22,7 +22,6 @@ import (
 
 	. "github.com/gardener/gardener/plugin/pkg/plant/validator"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/testing"
 
@@ -109,28 +108,6 @@ var _ = Describe("validator", func() {
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("another plant resource already exists"))
-		})
-
-		It("should reject Plant resources not fulfilling length constraints", func() {
-			tooLongName := "too-long-namespace"
-			project.ObjectMeta = metav1.ObjectMeta{
-				Name: tooLongName,
-			}
-			plant.ObjectMeta = metav1.ObjectMeta{
-				Name:      "too-long-name",
-				Namespace: namespaceName,
-			}
-
-			err := gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-			Expect(err).NotTo(HaveOccurred())
-
-			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-			err = admissionHandler.Validate(attrs)
-
-			Expect(err).To(HaveOccurred())
-			Expect(apierrors.IsBadRequest(err)).To(BeTrue())
-			Expect(err.Error()).To(ContainSubstring("name must not exceed"))
-
 		})
 		It("should do nothing because the resource is not a Plant", func() {
 			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", plant.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, false, nil)

@@ -11,6 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//go:generate mockgen -package v1 -destination=mocks.go k8s.io/client-go/kubernetes/typed/core/v1 PodInterface
+//go:generate mockgen -package v1 -destination=mocks.go k8s.io/client-go/kubernetes/typed/core/v1 PodInterface,NodeInterface
 
 package v1

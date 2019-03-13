@@ -21,6 +21,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -69,6 +70,17 @@ func generateRandomShootName(prefix string) (string, error) {
 	}
 
 	return IntegrationTestPrefix + strings.ToLower(randomString), nil
+}
+
+// CreatePlantTestArtifacts creates a plant object which is read from the resources directory
+func CreatePlantTestArtifacts(plantTestYamlPath string) (*gardencorev1alpha1.Plant, error) {
+
+	plant := &gardencorev1alpha1.Plant{}
+	if err := ReadObject(plantTestYamlPath, plant); err != nil {
+		return nil, err
+	}
+
+	return plant, nil
 }
 
 // ReadObject loads the contents of file and decodes it as a

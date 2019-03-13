@@ -94,11 +94,10 @@ func NewController(k8sGardenClient kubernetes.Interface,
 	}
 
 	controller.plantSynced = plantInformer.Informer().HasSynced
-
 	plantInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    controller.PlantAdd,
-		UpdateFunc: controller.PlantUpdate,
-		DeleteFunc: controller.PlantDelete,
+		AddFunc:    controller.plantAdd,
+		UpdateFunc: controller.plantUpdate,
+		DeleteFunc: controller.plantDelete,
 	})
 
 	return controller
@@ -118,7 +117,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 			select {
 			case res := <-c.workerCh:
 				c.numberOfRunningWorkers += res
-				logger.Logger.Debugf("Current number of running ControllerInstallation workers is %d", c.numberOfRunningWorkers)
+				logger.Logger.Debugf("Current number of running Plant workers is %d", c.numberOfRunningWorkers)
 			}
 		}
 	}()
@@ -152,9 +151,9 @@ func (c *Controller) RunningWorkers() int {
 
 // CollectMetrics implements gardenmetrics.ControllerMetricsCollector interface
 func (c *Controller) CollectMetrics(ch chan<- prometheus.Metric) {
-	metric, err := prometheus.NewConstMetric(gardenmetrics.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "controllerinstallation")
+	metric, err := prometheus.NewConstMetric(gardenmetrics.ControllerWorkerSum, prometheus.GaugeValue, float64(c.RunningWorkers()), "plant")
 	if err != nil {
-		gardenmetrics.ScrapeFailures.With(prometheus.Labels{"kind": "controllerinstallation-controller"}).Inc()
+		gardenmetrics.ScrapeFailures.With(prometheus.Labels{"kind": "plant-controller"}).Inc()
 		return
 	}
 	ch <- metric

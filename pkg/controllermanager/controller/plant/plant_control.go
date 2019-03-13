@@ -16,11 +16,9 @@ package plant
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
-	"time"
 
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,6 +35,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -49,8 +48,8 @@ import (
 
 const kubeconfigChecksumAnnotationKey = "kubeconfig.secret.checksum/value"
 
-// PlantAdd adds the plant resource
-func (c *Controller) PlantAdd(obj interface{}) {
+// plantAdd adds the plant resource
+func (c *Controller) updateClients(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
@@ -59,29 +58,28 @@ func (c *Controller) PlantAdd(obj interface{}) {
 	c.plantQueue.Add(key)
 }
 
-// PlantUpdate updates the plant resource
-func (c *Controller) PlantUpdate(oldObj, newObj interface{}) {
-	oldPlant, ok1 := oldObj.(*gardencorev1alpha1.Plant)
-	newPlant, ok2 := newObj.(*gardencorev1alpha1.Plant)
+// plantAdd adds the plant resource
+func (c *Controller) plantAdd(obj interface{}) {
+	key, err := cache.MetaNamespaceKeyFunc(obj)
+	if err != nil {
+		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		return
+	}
+	c.plantQueue.Add(key)
+}
+
+// plantUpdate updates the plant resource
+func (c *Controller) plantUpdate(oldObj, newObj interface{}) {
+	_, ok1 := oldObj.(*gardencorev1alpha1.Plant)
+	_, ok2 := newObj.(*gardencorev1alpha1.Plant)
 	if !ok1 || !ok2 {
 		return
 	}
-	oldPlantJSON, _ := json.Marshal(oldPlant)
-	newPlantJSON, _ := json.Marshal(newPlant)
-	plantLogger := logger.NewShootLogger(logger.Logger, newPlant.ObjectMeta.Name, newPlant.ObjectMeta.Namespace, "")
 
-	plantLogger.Debugf(string(oldPlantJSON))
-	plantLogger.Debugf(string(newPlantJSON))
-
-	//if newPlant.Generation == *newPlant.Status.ObservedGeneration {
-	//	plantLogger.Debug("Do not need to do anything as the Update event occurred due to .status field changes")
-	//	return
-	//}
-
-	c.PlantAdd(newObj)
+	c.plantAdd(newObj)
 }
 
-func (c *Controller) PlantDelete(obj interface{}) {
+func (c *Controller) plantDelete(obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
 		logger.Logger.Errorf("Couldn't get key for object %+v: %v", obj, err)
@@ -105,7 +103,7 @@ func (c *Controller) reconcilePlantKey(ctx context.Context, key string) error {
 		logger.Logger.Infof("[PLANT RECONCILE] %s - unable to retrieve object from store: %v", key, err)
 		return err
 	}
-	if err := c.plantControl.Reconcile(ctx, plant); err != nil {
+	if err := c.plantControl.Reconcile(ctx, plant, key); err != nil {
 		return err
 	}
 
@@ -118,7 +116,7 @@ func (c *Controller) reconcilePlantKey(ctx context.Context, key string) error {
 // ControlInterface implements the control logic for updating Plants. It is implemented as an interface to allow
 // for extensions that provide different semantics. Currently, there is only one implementation.
 type ControlInterface interface {
-	Reconcile(context.Context, *gardencorev1alpha1.Plant) error
+	Reconcile(context.Context, *gardencorev1alpha1.Plant, string) error
 }
 
 // NewDefaultPlantControl returns a new instance of the default implementation ControlInterface that
@@ -127,6 +125,9 @@ type ControlInterface interface {
 func NewDefaultPlantControl(k8sGardenClient kubernetes.Interface, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, plantsLister gardencorelisters.PlantLister, secretLister kubecorev1listers.SecretLister) ControlInterface {
 	return &defaultPlantControl{
 		k8sGardenClient: k8sGardenClient,
+		plantClient:     make(map[string]client.Client),
+		discoveryClient: make(map[string]*kubernetesclientset.Clientset),
+		healthChecker:   make(map[string]*HealthChecker),
 		plantLister:     plantsLister,
 		secretsLister:   secretLister,
 		recorder:        recorder,
@@ -134,7 +135,7 @@ func NewDefaultPlantControl(k8sGardenClient kubernetes.Interface, recorder recor
 	}
 }
 
-func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1alpha1.Plant) error {
+func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1alpha1.Plant, key string) error {
 	var (
 		plant  = obj.DeepCopy()
 		logger = logger.NewFieldLogger(logger.Logger, "plant", plant.Name)
@@ -144,15 +145,7 @@ func (c *defaultPlantControl) Reconcile(ctx context.Context, obj *gardencorev1al
 		return c.delete(plant, logger)
 	}
 
-	return c.reconcile(ctx, plant, logger)
-}
-
-func (c *defaultPlantControl) conditionThresholdsToProgressingMapping() map[gardencorev1alpha1.ConditionType]time.Duration {
-	out := make(map[gardencorev1alpha1.ConditionType]time.Duration)
-	for _, threshold := range c.config.Controllers.ShootCare.ConditionThresholds {
-		out[gardencorev1alpha1.ConditionType(threshold.Type)] = threshold.Duration.Duration
-	}
-	return out
+	return c.reconcile(ctx, plant, key, logger)
 }
 
 func (c *defaultPlantControl) updatePlantConditions(plant *gardencorev1alpha1.Plant, conditions ...gardencorev1alpha1.Condition) (*gardencorev1alpha1.Plant, error) {
@@ -165,7 +158,7 @@ func (c *defaultPlantControl) updatePlantConditions(plant *gardencorev1alpha1.Pl
 	return newPlant, err
 }
 
-func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1alpha1.Plant, logger logrus.FieldLogger) error {
+func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1alpha1.Plant, key string, logger logrus.FieldLogger) error {
 	_, err := kutil.TryUpdatePlantStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, plant.ObjectMeta,
 		func(p *gardencorev1alpha1.Plant) (*gardencorev1alpha1.Plant, error) {
 			if finalizers := sets.NewString(p.Finalizers...); !finalizers.Has(FinalizerName) {
@@ -175,29 +168,6 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 			return p, nil
 		}, func(cur, updated *gardencorev1alpha1.Plant) bool {
 			return sets.NewString(cur.Finalizers...).Has(FinalizerName)
-		})
-	if err != nil {
-		return err
-	}
-
-	kubeconfigSecret, err := c.secretsLister.Secrets(plant.Spec.SecretRef.Namespace).Get(plant.Spec.SecretRef.Name)
-	if err != nil {
-		return err
-	}
-	kubeconfig, ok := kubeconfigSecret.Data["kubeconfig"]
-	if !ok {
-		return fmt.Errorf("plant secretRef needs to contain a valid kubeconfig")
-	}
-
-	secretChecksum := utils.ComputeSHA256Hex([]byte(strings.TrimSpace(string(kubeconfig))))
-	_, err = kutil.TryUpdatePlantWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, plant.ObjectMeta,
-		func(p *gardencorev1alpha1.Plant) (*gardencorev1alpha1.Plant, error) {
-			if len(p.Annotations[kubeconfigChecksumAnnotationKey]) == 0 || p.Annotations[kubeconfigChecksumAnnotationKey] != secretChecksum {
-				p.Annotations[kubeconfigChecksumAnnotationKey] = secretChecksum
-			}
-			return p, nil
-		}, func(cur, updated *gardencorev1alpha1.Plant) bool {
-			return equality.Semantic.DeepEqual(cur, updated)
 		})
 	if err != nil {
 		return err
@@ -215,22 +185,50 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 		}
 	}()
 
+	kubeconfigSecret, err := c.secretsLister.Secrets(plant.Spec.SecretRef.Namespace).Get(plant.Spec.SecretRef.Name)
+	if err != nil {
+		return err
+	}
+	kubeconfig, ok := kubeconfigSecret.Data["kubeconfig"]
+	if !ok {
+		message := "Plant secret needs to contain a kubeconfig key."
+		conditionAPIServerAvailable = helper.UpdatedCondition(conditionAPIServerAvailable, corev1.ConditionFalse, "APIServerDown", message)
+		conditionEveryNodeReady = helper.UpdatedCondition(conditionEveryNodeReady, corev1.ConditionFalse, "Nodes not reachable", message)
+		resetClients(c, key)
+
+		return c.updateStatus(plant, &StatusCloudInfo{}, conditionAPIServerAvailable, conditionEveryNodeReady)
+	}
+
+	secretChecksum := utils.ComputeSHA256Hex([]byte(strings.TrimSpace(string(kubeconfig))))
+	_, err = kutil.TryUpdatePlantWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, plant.ObjectMeta,
+		func(p *gardencorev1alpha1.Plant) (*gardencorev1alpha1.Plant, error) {
+			if !metav1.HasAnnotation(p.ObjectMeta, kubeconfigChecksumAnnotationKey) || p.Annotations[kubeconfigChecksumAnnotationKey] != secretChecksum {
+				metav1.SetMetaDataAnnotation(&p.ObjectMeta, kubeconfigChecksumAnnotationKey, secretChecksum)
+			}
+			return p, nil
+		}, func(cur, updated *gardencorev1alpha1.Plant) bool {
+			return equality.Semantic.DeepEqual(cur, updated)
+		})
+	if err != nil {
+		return err
+	}
+
 	// only initialize / re-initialize the clients in-case the kubeconfig for the Plant cluster changes
-	if err := c.intializeClientsWithUpdateFunc(plant, kubeconfig, func() bool {
+	if err := c.intializeClientsWithUpdateFunc(plant, key, kubeconfig, func() bool {
 		return plant.Annotations[kubeconfigChecksumAnnotationKey] != utils.ComputeSHA256Hex([]byte(strings.TrimSpace(string(kubeconfig))))
 	}); err != nil {
 		message := fmt.Sprintf("Could not initialize Plant clients for health check: %+v", err)
-		logger.Error(message)
 		conditionAPIServerAvailable = helper.UpdatedCondition(conditionAPIServerAvailable, corev1.ConditionFalse, "APIServerDown", "Could not reach API server during client initialization.")
 		conditionEveryNodeReady = helper.UpdatedConditionUnknownErrorMessage(conditionEveryNodeReady, message)
+		resetClients(c, key)
 
-		return fmt.Errorf("%v:%v", c.updateStatus(plant, &plantStatusInfo{}, conditionAPIServerAvailable, conditionEveryNodeReady), err)
+		return fmt.Errorf("%v:%v", c.updateStatus(plant, &StatusCloudInfo{}, conditionAPIServerAvailable, conditionEveryNodeReady), err)
 	}
 
-	conditionAPIServerAvailable, conditionEveryNodeReady = c.healthChecks(ctx, logger, conditionAPIServerAvailable, conditionEveryNodeReady)
-
 	// Trigger health check
-	cloudInfo, err := FetchCloudInfo(ctx, c.plantClient, c.discoveryClient, plant, logger)
+	conditionAPIServerAvailable, conditionEveryNodeReady = c.healthChecks(ctx, key, logger, conditionAPIServerAvailable, conditionEveryNodeReady)
+
+	cloudInfo, err := FetchCloudInfo(ctx, c.plantClient[key], c.discoveryClient[key], logger)
 	if err != nil {
 		return err
 	}
@@ -238,12 +236,16 @@ func (c *defaultPlantControl) reconcile(ctx context.Context, plant *gardencorev1
 	return c.updateStatus(plant, cloudInfo, conditionAPIServerAvailable, conditionEveryNodeReady)
 }
 
-func (c *defaultPlantControl) updateStatus(plant *gardencorev1alpha1.Plant, cloudInfo *plantStatusInfo, conditions ...gardencorev1alpha1.Condition) error {
+func (c *defaultPlantControl) updateStatus(plant *gardencorev1alpha1.Plant, cloudInfo *StatusCloudInfo, conditions ...gardencorev1alpha1.Condition) error {
 	_, err := kutil.TryUpdatePlantStatusWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, plant.ObjectMeta,
 		func(p *gardencorev1alpha1.Plant) (*gardencorev1alpha1.Plant, error) {
-			p.Status.ClusterInfo.Cloud.Type = cloudInfo.cloudType
-			p.Status.ClusterInfo.Cloud.Region = cloudInfo.region
-			p.Status.ClusterInfo.Kubernetes.Version = cloudInfo.k8sVersion
+			if p.Status.ClusterInfo == nil {
+				p.Status.ClusterInfo = &gardencorev1alpha1.ClusterInfo{}
+			}
+
+			p.Status.ClusterInfo.Cloud.Type = cloudInfo.CloudType
+			p.Status.ClusterInfo.Cloud.Region = cloudInfo.Region
+			p.Status.ClusterInfo.Kubernetes.Version = cloudInfo.K8sVersion
 			p.Status.Conditions = conditions
 			return p, nil
 		}, func(cur, updated *gardencorev1alpha1.Plant) bool {
@@ -275,17 +277,25 @@ func (c *defaultPlantControl) updateConditions(plant *gardencorev1alpha1.Plant, 
 	)
 }
 
-func (c *defaultPlantControl) intializeClientsWithUpdateFunc(plant *gardencorev1alpha1.Plant, kubeconfig []byte, needsClientUpdate func() bool) error {
-	if c.discoveryClient == nil || c.plantClient == nil || needsClientUpdate() {
-		return c.initializePlantClients(plant, kubeconfig)
+func (c *defaultPlantControl) intializeClientsWithUpdateFunc(plant *gardencorev1alpha1.Plant, key string, kubeconfig []byte, needsClientsUpdate func() bool) error {
+	if c.discoveryClient[key] == nil || c.plantClient[key] == nil || needsClientsUpdate() {
+		if err := c.initializePlantClients(plant, key, kubeconfig); err != nil {
+			return err
+		}
+		c.initializeHealthChecker(key)
+		return nil
 	}
 	return nil
 }
 
-func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.Plant, kubeconfigSecretValue []byte) error {
+func (c *defaultPlantControl) initializeHealthChecker(key string) {
+	c.healthChecker[key] = NewHealthCheker(c.plantClient[key], c.discoveryClient[key])
+}
+
+func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.Plant, key string, kubeconfigSecretValue []byte) error {
 	config, err := clientcmd.RESTConfigFromKubeConfig(kubeconfigSecretValue)
 	if err != nil {
-		return err
+		return fmt.Errorf("%v:%v", "invalid kubconfig supplied resulted in: ", err)
 	}
 	plantClusterClient, err := kubernetes.NewRuntimeClientForConfig(config, client.Options{
 		Scheme: kubernetes.PlantScheme,
@@ -296,16 +306,16 @@ func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.P
 		return err
 	}
 
-	c.plantClient = plantClusterClient
-	c.discoveryClient = discoveryClient
+	c.plantClient[key] = plantClusterClient
+	c.discoveryClient[key] = discoveryClient
 
 	return nil
 }
 
-func (c *defaultPlantControl) healthChecks(ctx context.Context, logger logrus.FieldLogger, apiserverAvailability, healthyNodes gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
+func (c *defaultPlantControl) healthChecks(ctx context.Context, key string, logger logrus.FieldLogger, apiserverAvailability, healthyNodes gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
 	var (
 		wg      sync.WaitGroup
-		checker = NewHealthCheker(c.plantClient, c.discoveryClient)
+		checker = c.healthChecker[key]
 	)
 
 	wg.Add(2)

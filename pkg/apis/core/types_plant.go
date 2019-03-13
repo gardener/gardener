@@ -1,7 +1,20 @@
+// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package core
 
 import (
-	"github.com/gardener/gardener/pkg/apis/garden"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,7 +39,6 @@ type Plant struct {
 type PlantList struct {
 	metav1.TypeMeta
 	// Standard list object metadata.
-	// +optional
 	metav1.ListMeta
 	// Items is the list of Plants.
 	Items []Plant
@@ -45,11 +57,9 @@ type PlantSpec struct {
 	// clusters to be added to Gardener.
 	SecretRef corev1.SecretReference
 	// Monitoring is the configuration for the plant monitoring
-	// +optional
-	Monitoring Monitoring
+	Monitoring *Monitoring
 	// Logging is the configuration for the plant logging
-	// +optional
-	Logging Logging
+	Logging *Logging
 }
 
 // Monitoring is the configuration for the plant monitoring
@@ -66,8 +76,8 @@ type Logging struct {
 type Endpoint struct {
 	// Name is the name of the endpoint
 	Name string
-	// Url is the url of the endpoint
-	Url string
+	// URL is the url of the endpoint
+	URL string
 }
 
 // PlantStatus is th	e status of a Plant.
@@ -78,17 +88,23 @@ type PlantStatus struct {
 	// Plant's generation, which is updated on mutation by the API Server.
 	ObservedGeneration *int64
 	// ClusterInfo is additional computed information about the newly added cluster (Plant)
-	ClusterInfo ClusterInfo
+	ClusterInfo *ClusterInfo
 }
 
 // ClusterInfo information about the Plant cluster
 type ClusterInfo struct {
 	Cloud      Cloud
-	Kubernetes garden.Kubernetes
+	Kubernetes Kubernetes
 }
 
 // Cloud information about the cloud
 type Cloud struct {
 	Type   string
 	Region string
+}
+
+// Kubernetes contains the version and configuration variables for the Plant cluster.
+type Kubernetes struct {
+	// Version is the semantic Kubernetes version to use for the Plant cluster.
+	Version string
 }

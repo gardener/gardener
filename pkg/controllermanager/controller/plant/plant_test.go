@@ -14,11 +14,18 @@
 package plant_test
 
 import (
-	"fmt"
+	"context"
 	"io"
 	"net/http"
 	"net/url"
 	"testing"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/gardener/gardener/pkg/logger"
+
+	"k8s.io/apimachinery/pkg/version"
 
 	"k8s.io/client-go/rest"
 
@@ -40,21 +47,31 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type testStruct struct {
+	version string
+}
+
+func (t testStruct) String() string {
+	return t.version
+}
+
 func TestPlant(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Plant Test Suite")
 }
 
-func makeNodeWithProvider(provider string) *corev1.Node {
-	return &corev1.Node{
+func makeNodeWithProvider(provider string, withLabels map[string]string) corev1.Node {
+	return corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "testNode",
+			Name:   "testNode",
+			Labels: withLabels,
 		},
 		Spec: corev1.NodeSpec{
-			ProviderID: fmt.Sprintf("%s://zone/id", provider),
+			ProviderID: provider,
 		},
 	}
 }
+
 func hasConditonTrue(cond *gardencorev1alpha1.Condition) bool {
 	return cond.Status == corev1.ConditionTrue
 }
@@ -64,24 +81,50 @@ var _ = Describe("Plant", func() {
 		ctrl     *gomock.Controller
 		baseNode *corev1.Node
 	)
-
-	BeforeSuite(func() {
-
-	})
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 	})
 	AfterEach(func() {
 		ctrl.Finish()
 	})
-
 	Context("Utils", func() {
-		It("should fetch cloud provider")
+		const (
+			labelZoneRegion = plant.LabelZoneRegion
+			unKnown         = "<unknown>"
+			k8sVersion      = "1.13.1"
+			region          = "eu-west-1"
+		)
+		DescribeTable("should fetch cloud Info", func(mockNode corev1.Node, errMatcher types.GomegaMatcher, expectedInfo *plant.StatusCloudInfo) {
+			var (
+				discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
+				runtimeClient       = mockclient.NewMockClient(ctrl)
+				testLogger          = logger.NewFieldLogger(logger.NewLogger("info"), "test", "test-plant")
+			)
+
+			runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, options *client.ListOptions, list runtime.Object) error {
+				Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
+				list.(*corev1.NodeList).Items = []corev1.Node{mockNode}
+				return nil
+			})
+
+			discoveryMockclient.EXPECT().ServerVersion().Return(&version.Info{GitVersion: "1.13.1"}, nil).AnyTimes()
+
+			statusInfo, err := plant.FetchCloudInfo(context.TODO(), runtimeClient, discoveryMockclient, testLogger)
+			Expect(err).To(errMatcher)
+			Expect(statusInfo).To(Equal(expectedInfo))
+		},
+			Entry("It should return unknown if provider is not listed",
+				makeNodeWithProvider("", map[string]string{labelZoneRegion: region}), BeNil(), &plant.StatusCloudInfo{CloudType: unKnown, K8sVersion: k8sVersion, Region: region}),
+			Entry("It should return the provider successfully",
+				makeNodeWithProvider("aws://zones.something", map[string]string{labelZoneRegion: region}), BeNil(), &plant.StatusCloudInfo{CloudType: "aws", K8sVersion: k8sVersion, Region: region}),
+			Entry("It should fail if return an error if region label is not set",
+				makeNodeWithProvider("", map[string]string{}), Not(BeNil()), nil),
+		)
 	})
 	Context("HealthChecker", func() {
 		var (
 			healthChecker *plant.HealthChecker
-			c             = mockclient.NewMockClient(ctrl)
+			runtimeClient = mockclient.NewMockClient(ctrl)
 		)
 
 		DescribeTable("checkAPIServerAvailablility", func(response *http.Response, matcher types.GomegaMatcher) {
@@ -91,7 +134,7 @@ var _ = Describe("Plant", func() {
 				restMockClient      = mockrest.NewMockInterface(ctrl)
 				httpMockClient      = mockrest.NewMockHTTPClient(ctrl)
 				body                = mockio.NewMockReadCloser(ctrl)
-				healthChecker       = plant.NewHealthCheker(c, discoveryMockclient)
+				healthChecker       = plant.NewHealthCheker(runtimeClient, discoveryMockclient)
 
 				request = rest.NewRequest(httpMockClient, http.MethodGet, &url.URL{}, "", rest.ContentConfig{}, rest.Serializers{}, nil, nil, 0)
 			)
@@ -121,7 +164,7 @@ var _ = Describe("Plant", func() {
 					discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
 				)
 
-				healthChecker = plant.NewHealthCheker(c, discoveryMockclient)
+				healthChecker = plant.NewHealthCheker(runtimeClient, discoveryMockclient)
 				nodeLister.EXPECT().List(gomock.Any()).Return([]*corev1.Node{
 					node,
 				}, nil)

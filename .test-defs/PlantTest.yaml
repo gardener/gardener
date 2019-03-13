@@ -1,0 +1,22 @@
+kind: TestDefinition
+metadata:
+  name: plant-test
+spec:
+  owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com # OutputQualification DL
+  description: Tests the creation of a plant.
+
+  activeDeadlineSeconds: 600
+  labels: ["default"]
+
+  command: [bash, -c]
+  args:
+    - >-
+      /tm/setup github.com/gardener gardener &&
+      go test $GOPATH/src/github.com/gardener/gardener/test/integration/plants
+      -ginkgo.v -ginkgo.progress
+      -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+      -shootName=$SHOOT_NAME
+      -shootNamespace=$PROJECT_NAMESPACE
+      -plantpath=example/100-plant-gcp.yaml
+
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0

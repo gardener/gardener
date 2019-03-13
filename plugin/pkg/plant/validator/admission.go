@@ -112,8 +112,6 @@ func (v *ValidatePlant) Validate(a admission.Attributes) error {
 	}
 
 	// Ignore all kinds other than Plant.
-	// TODO: in future the Kinds should be configurable
-	// https://v1-9.docs.kubernetes.io/docs/admin/admission-controllers/#imagepolicywebhook
 	if a.GetKind().GroupKind() != core.Kind("Plant") {
 		return nil
 	}
@@ -128,15 +126,11 @@ func (v *ValidatePlant) Validate(a admission.Attributes) error {
 		return err
 	}
 
-	project, err := admissionutils.GetPlantProject(plant, v.projectLister)
+	project, err := admissionutils.GetProject(plant.Namespace, v.projectLister)
 	if err != nil {
 		return apierrors.NewBadRequest(fmt.Sprintf("could not find referenced project: %+v", err.Error()))
 	}
 
-	var lengthLimit = 21
-	if len(project.Name+plant.Name) > lengthLimit {
-		return apierrors.NewBadRequest(fmt.Sprintf("the length of the plant name and the project name must not exceed %d characters (project: %s; plant: %s)", lengthLimit, project.Name, plant.Name))
-	}
 	// We don't want new Plants to be created in Projects which were already marked for deletion.
 	if project.DeletionTimestamp != nil {
 		return admission.NewForbidden(a, fmt.Errorf("cannot create plant '%s' in project '%s' already marked for deletion", plant.Name, project.Name))

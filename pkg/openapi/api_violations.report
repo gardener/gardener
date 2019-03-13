@@ -1,3 +1,4 @@
+API rule violation: names_match,github.com/gardener/gardener/pkg/apis/core/v1alpha1,Kubernetes,Version
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Addons,ClusterAutoscaler
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Addons,Kube2IAM
 API rule violation: names_match,github.com/gardener/gardener/pkg/apis/garden/v1beta1,Addons,KubeLego

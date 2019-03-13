@@ -98,7 +98,7 @@ func NewClientFromSecret(k8sClient Interface, namespace, secretName string, opts
 }
 
 // NewClientFromSecretObject creates a new Client struct for a given Kubernetes Secret object. The Secret must
-// contain a field "kubeconfig" which wi	ll be used.
+// contain a field "kubeconfig" which will be used.
 func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Interface, error) {
 	if kubeconfig, ok := secret.Data[KubeConfig]; ok {
 		return NewClientFromBytes(kubeconfig, opts)

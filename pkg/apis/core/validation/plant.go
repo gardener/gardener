@@ -23,11 +23,10 @@ import (
 )
 
 // ValidatePlant validates a Plant object.
-func ValidatePlant(Plant *core.Plant) field.ErrorList {
+func ValidatePlant(plant *core.Plant) field.ErrorList {
 	allErrs := field.ErrorList{}
-
-	// allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&Plant.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
-	allErrs = append(allErrs, ValidatePlantSpec(&Plant.Spec, field.NewPath("spec"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMeta(&plant.ObjectMeta, true, apivalidation.NameIsDNSLabel, field.NewPath("metadata"))...)
+	allErrs = append(allErrs, ValidatePlantSpec(&plant.Spec, field.NewPath("spec"))...)
 
 	return allErrs
 }
@@ -47,15 +46,13 @@ func ValidatePlantUpdate(new, old *core.Plant) field.ErrorList {
 func ValidatePlantSpec(spec *core.PlantSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	registrationRefPath := fldPath.Child("SecretRef")
+	registrationRefPath := fldPath.Child("secretRef")
 	if len(spec.SecretRef.Name) == 0 {
 		allErrs = append(allErrs, field.Required(registrationRefPath.Child("name"), "field is required"))
 	}
 	if len(spec.SecretRef.Namespace) == 0 {
 		allErrs = append(allErrs, field.Required(registrationRefPath.Child("namespace"), "field is required"))
 	}
-
-	//TODO Monitoring checks and Loggin Checks
 
 	return allErrs
 }
@@ -69,7 +66,6 @@ func ValidatePlantSpecUpdate(new, old *core.PlantSpec, deletionTimestampSet bool
 		return allErrs
 	}
 
-	//TODO
 	return allErrs
 }
 

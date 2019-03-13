@@ -597,8 +597,6 @@ func Convert_config_LeaderElectionConfiguration_To_v1alpha1_LeaderElectionConfig
 
 func autoConvert_v1alpha1_PlantConfiguration_To_config_PlantConfiguration(in *PlantConfiguration, out *config.PlantConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RetryDuration = in.RetryDuration
-	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }
@@ -610,8 +608,6 @@ func Convert_v1alpha1_PlantConfiguration_To_config_PlantConfiguration(in *PlantC
 
 func autoConvert_config_PlantConfiguration_To_v1alpha1_PlantConfiguration(in *config.PlantConfiguration, out *PlantConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
-	out.RetryDuration = in.RetryDuration
-	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
 	out.SyncPeriod = in.SyncPeriod
 	return nil
 }

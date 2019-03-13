@@ -5,9 +5,6 @@
   if context.get("values", "") != "":
     values=yaml.load(open(context.get("values", "")))
 
-  if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
-
   def value(path, default):
     keys=str.split(path, ".")
     root=values
@@ -27,7 +24,7 @@
 apiVersion: core.gardener.cloud/v1alpha1
 kind: Plant
 metadata:
-  name: ${value("metadata.name", "johndoe-" + cloud)}
+  name:  ${value("metadata.name", "example-plant")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
   namespace: ${value("metadata.namespace", "garden-dev")}
   % if annotations != {}:
   annotations: ${yaml.dump(annotations, width=1000)}

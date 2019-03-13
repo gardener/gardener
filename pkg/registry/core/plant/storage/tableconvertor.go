@@ -38,11 +38,12 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "Type", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["type"]},
-			{Name: "Region", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["region"]},
-			{Name: "Version", Type: "date", Description: swaggerMetadataDescriptions["version"]},
-			{Name: "APIServer", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["apiserver"]},
-			{Name: "Nodes", Type: "date", Description: swaggerMetadataDescriptions["nodes"]},
+			{Name: "Type", Type: "string", Description: swaggerMetadataDescriptions["type"]},
+			{Name: "Region", Type: "string", Description: swaggerMetadataDescriptions["region"]},
+			{Name: "Version", Type: "string", Description: swaggerMetadataDescriptions["version"]},
+			{Name: "APIServer", Type: "string", Description: swaggerMetadataDescriptions["apiserver"]},
+			{Name: "Nodes", Type: "string", Description: swaggerMetadataDescriptions["nodes"]},
+			{Name: "Age", Type: "date", Description: swaggerMetadataDescriptions["creationTimestamp"]},
 		},
 	}
 }
@@ -99,6 +100,9 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 		} else {
 			cells = append(cells, "<unknown>")
 		}
+
+		cells = append(cells, metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
+
 		return cells, nil
 	})
 

@@ -119,13 +119,6 @@ type PlantConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
-	// RetryDuration is the maximum duration how often a reconciliation will be retried
-	// in case of errors.
-	RetryDuration metav1.Duration
-	// RetrySyncPeriod is the duration how fast Plants with an erroneous operation are
-	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	// +optional
-	RetrySyncPeriod *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
 }
