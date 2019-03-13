@@ -1,0 +1,16 @@
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.audit.policy }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-audit-policy-config
+  namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  audit-policy.yaml: |-
+{{ .Values.global.apiserver.audit.policy | indent 4 }}
+{{- end }}
