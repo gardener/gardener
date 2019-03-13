@@ -340,7 +340,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef != nil {
 			auditPolicy, err := b.getAuditPolicy(apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, b.Shoot.Info.Namespace)
 			if err != nil {
-				return err
+				return fmt.Errorf("Retrieving audit policy from the ConfigMap '%v' failed with reason '%v'", apiServerConfig.AuditConfig.AuditPolicy.ConfigMapRef.Name, err)
 			}
 			defaultValues["auditConfig"] = map[string]interface{}{
 				"auditPolicy": auditPolicy,
@@ -411,7 +411,7 @@ func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) 
 	}
 	auditPolicyObj, schemaVersion, err := decoder.Decode([]byte(auditPolicy), nil, nil)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("Failed to decode the provided audit policy err=%v", err)
 	}
 	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
 	if !ok {
