@@ -39,7 +39,9 @@ var _ = Describe("validation", func() {
 					{
 					  "kubernetesClusterTag":"my-k8s-test",
 					  "vpcid":"vpc-2zehpnv9w5escf1hfqjsg",
+					  "zoneID":"cn-beijing-f",
 					  "region":"cn-beijing",
+					  "vswitchid":"vsw-2ze3a4pi0j4wbt39g8r8i",
 					  "accessKeyID":"ABC",
 					  "accessKeySecret":"ABCD"
 					}
@@ -65,7 +67,7 @@ var _ = Describe("validation", func() {
 
 		It("should refresh OK", func() {
 			m2 := b.RefreshCloudProviderConfig(curMap)
-			expected := `{"Global":{"KubernetesClusterTag":"my-k8s-test","uid":"","vpcid":"vpc-2zehpnv9w5escf1hfqjsg","region":"cn-beijing","accessKeyID":"MTIz","accessKeySecret":"MTIzNA=="}}`
+			expected := `{"Global":{"KubernetesClusterTag":"my-k8s-test","uid":"","vpcid":"vpc-2zehpnv9w5escf1hfqjsg","region":"cn-beijing","zoneid":"cn-beijing-f","vswitchid":"vsw-2ze3a4pi0j4wbt39g8r8i","accessKeyID":"MTIz","accessKeySecret":"MTIzNA=="}}`
 			Expect(m2[common.CloudProviderConfigMapKey]).To(Equal(expected))
 		})
 	})

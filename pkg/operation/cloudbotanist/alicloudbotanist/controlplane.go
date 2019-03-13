@@ -29,6 +29,8 @@ type cloudConfig struct {
 		UID                  string `json:"uid"`
 		VpcID                string `json:"vpcid"`
 		Region               string `json:"region"`
+		ZoneID               string `json:"zoneid"`
+		VswitchID            string `json:"vswitchid"`
 
 		AccessKeyID     string `json:"accessKeyID"`
 		AccessKeySecret string `json:"accessKeySecret"`
@@ -57,6 +59,8 @@ func (b *AlicloudBotanist) GenerateCloudProviderConfig() (string, error) {
 	cfg := &cloudConfig{}
 	cfg.Global.KubernetesClusterTag = b.Shoot.SeedNamespace
 	cfg.Global.VpcID = stateVariables[vpcID]
+	cfg.Global.ZoneID = b.Shoot.Info.Spec.Cloud.Alicloud.Zones[0]
+	cfg.Global.VswitchID = stateVariables[vswitchID]
 	cfg.Global.AccessKeyID = key
 	cfg.Global.AccessKeySecret = secret
 	cfg.Global.Region = b.Shoot.Info.Spec.Cloud.Region
