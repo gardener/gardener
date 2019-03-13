@@ -86,6 +86,9 @@ global:
           - system:kube-proxy
           - system:apiserver
           - system:apiserver
+          - system:serviceaccount:garden:gardener-controller-manager
+          - system:serviceaccount:garden:gardener-metrics-exporter
+          - system:serviceaccount:kube-system:generic-garbage-collector
           - garden.sapcloud.io:monitoring
           - garden.sapcloud.io:monitoring:prometheus
           - garden.sapcloud.io:monitoring:kube-state-metrics
@@ -99,7 +102,7 @@ global:
           - group: ""
             resources: ["events"]
         - level: None
-          verbs: ["get"]
+          verbs: ["get", "list", "watch"]
         - level: Metadata
       webhook: {}
  #      batchBufferSize: 10000
