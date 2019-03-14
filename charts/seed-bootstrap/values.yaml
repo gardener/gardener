@@ -28,7 +28,7 @@ prometheus:
         unit: m
       memory:
         base: 200
-        perObject: 36
+        perObject: 64
         weight: 5
         unit: Mi
 
