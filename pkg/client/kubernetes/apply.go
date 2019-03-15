@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"sort"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -42,8 +43,8 @@ var NewControllerClient = newControllerClient
 // NewApplierInternal constructs a new Applier from the given config and DiscoveryInterface.
 // This method should only be used for testing.
 // TODO(AC): Once https://github.com/kubernetes/kubernetes/issues/68865 is resolved,
-// this should be adapted to use the updated RESTMapper and not do the invalidation / checks
-// on its own (depending on whether the controller-runtime/client might even automatically
+// this should be adapted to use the updated RESTMapper (https://github.com/kubernetes/kubernetes/issues/75383)
+// and not do the invalidation / checks on its own (depending on whether the controller-runtime/client might even automatically
 // use this updated mapper then).
 func NewApplierInternal(config *rest.Config, discoveryClient discovery.CachedDiscoveryInterface) (*Applier, error) {
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)
@@ -156,11 +157,18 @@ func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeF
 // all concatenated in a byte slice, and sends them one after the other to the API server. If a resource
 // already exists at the API server, it will update it. It returns an error as soon as the first error occurs.
 func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, options ApplierOptions) error {
+	var manifests []*unstructured.Unstructured
 	for obj, err := r.Read(); err == nil; obj, err = r.Read() {
 		if obj == nil {
 			continue
 		}
-		if err := c.applyObject(ctx, obj, options); err != nil {
+		manifests = append(manifests, obj)
+	}
+
+	sort.Sort(newKindOrder(manifests))
+
+	for _, manifest := range manifests {
+		if err := c.applyObject(ctx, manifest, options); err != nil {
 			return err
 		}
 	}
@@ -181,7 +189,8 @@ func NewManifestReader(manifest []byte) UnstructuredReader {
 
 // manifestReader is an unstructured reader that contains a JSONDecoder
 type manifestReader struct {
-	decoder *yaml.YAMLOrJSONDecoder
+	decoder          *yaml.YAMLOrJSONDecoder
+	orderedManifests []unstructured.Unstructured
 }
 
 // Read decodes yaml data into an unstructured object
@@ -225,4 +234,57 @@ func (n *namespaceSettingReader) Read() (*unstructured.Unstructured, error) {
 	readObj.SetNamespace(n.namespace)
 
 	return readObj, nil
+}
+
+func newKindOrder(manifests []*unstructured.Unstructured) *kindOrder {
+	var kindToIndex = make(map[string]int)
+	for i, v := range ApplyOrder {
+		kindToIndex[v] = i
+	}
+
+	return &kindOrder{
+		manifests: manifests,
+		ordering:  kindToIndex,
+	}
+}
+
+type kindOrder struct {
+	manifests []*unstructured.Unstructured
+	ordering  map[string]int
+}
+
+func (k *kindOrder) Len() int {
+	return len(k.manifests)
+}
+
+func (k *kindOrder) Swap(i, j int) { k.manifests[i], k.manifests[j] = k.manifests[j], k.manifests[i] }
+
+func (k *kindOrder) Less(i, j int) bool {
+	a := k.manifests[i]
+	b := k.manifests[j]
+	first, aok := k.ordering[a.GetKind()]
+	second, bok := k.ordering[b.GetKind()]
+
+	if !aok && !bok {
+		// if both are unknown then sort alphabetically by kind and name
+		if a.GetKind() != b.GetKind() {
+			return a.GetKind() < b.GetKind()
+		}
+		return a.GetName() < b.GetName()
+	}
+
+	// unknown kind is last
+	if !aok {
+		return false
+	}
+	if !bok {
+		return true
+	}
+
+	// if same kind sub sort alphanumeric
+	if first == second {
+		return a.GetName() < b.GetName()
+	}
+	// sort different kinds
+	return first < second
 }
