@@ -51,9 +51,9 @@ type Operation struct {
 	K8sGardenInformers   gardeninformers.Interface
 	K8sSeedClient        kubernetes.Interface
 	K8sShootClient       kubernetes.Interface
-	ChartGardenRenderer  chartrenderer.ChartRenderer
-	ChartSeedRenderer    chartrenderer.ChartRenderer
-	ChartShootRenderer   chartrenderer.ChartRenderer
+	ChartGardenRenderer  chartrenderer.Interface
+	ChartSeedRenderer    chartrenderer.Interface
+	ChartShootRenderer   chartrenderer.Interface
 	APIServerIngresses   []corev1.LoadBalancerIngress
 	APIServerAddress     string
 	SeedNamespaceObject  *corev1.Namespace

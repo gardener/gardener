@@ -294,7 +294,7 @@ func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm
 
 // DeployChart deploys it on the test shoot
 func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, chartRepoDestination, chartNameToDeploy string) error {
-	renderer, err := chartrenderer.New(o.ShootClient.Kubernetes())
+	renderer, err := chartrenderer.NewForConfig(o.ShootClient.RESTConfig())
 	if err != nil {
 		return err
 	}
