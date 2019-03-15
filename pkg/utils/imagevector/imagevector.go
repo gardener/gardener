@@ -14,73 +14,94 @@
 
 package imagevector
 
-// ReadImageVector reads the image vector yaml file in the charts directory, unmarshals the content
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
-// ReadImageVector reads the image.yaml in the chart directory, unmarshals it
-// into a []*ImageSource type and returns it.
-func ReadImageVector() (ImageVector, error) {
-	path := filepath.Join(common.ChartPath, "images.yaml")
+// OverrideEnv is the name of the image vector override environment variable.
+const OverrideEnv = "IMAGEVECTOR_OVERWRITE"
 
-	vector, err := readImageVector(path)
-	if err != nil {
-		return nil, err
-	}
-
-	overwritePath := os.Getenv("IMAGEVECTOR_OVERWRITE")
-	if len(overwritePath) == 0 {
-		return vector, nil
-	}
-
-	overwrite, err := readImageVector(overwritePath)
-	if err != nil {
-		return nil, err
-	}
-
-	overwrittenImages := make(map[string]*ImageSource, len(overwrite))
-	for _, image := range overwrite {
-		overwrittenImages[image.Name] = image
-	}
-
-	var out ImageVector
-	for _, image := range vector {
-		if overwritten, ok := overwrittenImages[image.Name]; ok {
-			if len(overwritten.Tag) == 0 && len(image.Tag) > 0 {
-				overwritten.Tag = image.Tag
-			}
-			out = append(out, overwritten)
-			continue
-		}
-		out = append(out, image)
-	}
-	return out, nil
-}
-
-func readImageVector(filePath string) (ImageVector, error) {
+// Read reads an ImageVector from the given io.Reader.
+func Read(r io.Reader) (ImageVector, error) {
 	vector := struct {
 		Images ImageVector `json:"images" yaml:"images"`
 	}{}
 
-	bytes, err := ioutil.ReadFile(filePath)
+	if err := yaml.NewDecoder(r).Decode(&vector); err != nil {
+		return nil, err
+	}
+	return vector.Images, nil
+}
+
+// ReadFile reads an ImageVector from the file with the given name.
+func ReadFile(name string) (ImageVector, error) {
+	file, err := os.Open(name)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	return Read(file)
+}
+
+// mergeImageSources merges the two given ImageSources.
+//
+// If the tag of the override is non-empty, it immediately returns the override.
+// Otherwise, the override is copied, gets the tag of the old source and is returned.
+func mergeImageSources(old, override *ImageSource) *ImageSource {
+	if len(override.Tag) != 0 {
+		return override
+	}
+	merged := *override
+	merged.Tag = old.Tag
+	return &merged
+}
+
+// Merge merges the given ImageVectors into one.
+//
+// Images of ImageVectors that are later in the given sequence with the same name override
+// previous images.
+func Merge(vectors ...ImageVector) ImageVector {
+	var (
+		out              ImageVector
+		imageNameToIndex = make(map[string]int)
+	)
+
+	for _, vector := range vectors {
+		for _, image := range vector {
+			if idx, ok := imageNameToIndex[image.Name]; ok {
+				out[idx] = mergeImageSources(out[idx], image)
+				continue
+			}
+
+			imageNameToIndex[image.Name] = len(out)
+			out = append(out, image)
+		}
+	}
+	return out
+}
+
+// WithEnvOverride checks if an environment variable with the key IMAGEVECTOR_OVERWRITE is set.
+// If yes, it reads the ImageVector at the value of the variable and merges it with the given one.
+// Otherwise, it returns the unmodified ImageVector.
+func WithEnvOverride(vector ImageVector) (ImageVector, error) {
+	overwritePath := os.Getenv(OverrideEnv)
+	if len(overwritePath) == 0 {
+		return vector, nil
+	}
+
+	override, err := ReadFile(overwritePath)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := yaml.Unmarshal(bytes, &vector); err != nil {
-		return nil, err
-	}
-
-	return vector.Images, nil
+	return Merge(vector, override), nil
 }
 
 func checkConstraintMatchesK8sVersion(constraint, k8sVersion string) (bool, error) {
