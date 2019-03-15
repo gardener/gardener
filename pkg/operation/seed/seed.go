@@ -370,13 +370,14 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	}
 
 	var (
-		applierOptions     = kubernetes.DefaultApplierOptions
-		clusterIssuerMerge = func(new, old *unstructured.Unstructured) {
-			// Apply status from old ClusterIssuer to retain the issuer's readiness state.
+		applierOptions          = kubernetes.DefaultApplierOptions
+		retainStatusInformation = func(new, old *unstructured.Unstructured) {
+			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
 	)
-	applierOptions.MergeFuncs["ClusterIssuer"] = clusterIssuerMerge
+	applierOptions.MergeFuncs["ClusterIssuer"] = retainStatusInformation
+	applierOptions.MergeFuncs["VerticalPodAutoscaler"] = retainStatusInformation
 
 	return common.ApplyChartWithOptions(k8sSeedClient, chartRenderer, filepath.Join("charts", chartName), chartName, common.GardenNamespace, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
