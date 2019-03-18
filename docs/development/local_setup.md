@@ -8,7 +8,7 @@ Further details could be found in
 1. [Kubernetes Development Guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
 1. [Architecture of the Garden](https://github.com/gardener/documentation/wiki/Architecture)
 
-This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kubernetes cluster running on a single node.
+This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kubernetes cluster running on a single node. Docker Desktop Edge is also supported.
 
 ## Installing Golang environment
 
@@ -222,7 +222,7 @@ validatingwebhookconfiguration.admissionregistration.k8s.io/validate-namespace-d
 Optionally, you can switch off the `Logging` feature gate of Gardener Controller Manager to save resources:
 
 ```bash
-$ sed -e 's/Logging: true/Logging: false/g' -i dev/20-componentconfig-gardener-controller-manager.yaml
+$ sed -i -e 's/Logging: true/Logging: false/g' dev/20-componentconfig-gardener-controller-manager.yaml
 ```
 
 The Gardener exposes the API servers of Shoot clusters via Kubernetes services of type `LoadBalancer`. In order to establish stable endpoints (robust against changes of the load balancer address), it creates DNS records pointing to these load balancer addresses. They are used internally and by all cluster components to communicate.
@@ -345,7 +345,7 @@ $ kubectl apply -f dev/90-shoot-local.yaml
 shoot "local" created
 ```
 
-Wait until the 2 secrets `osc-result-cloud-config-local-*` appear in the Shoot cluster namespace and then copy `cloud_config` from the secret `osc-result-cloud-config-local-xxxxx-downloader` to the local file `dev/user-data`. This file is used to pass the downloader configuration to the Vagrant machine, which triggers the mechanism that configures the machine properly and causes it to join the Shoot cluster as a node. 
+Wait until the 2 secrets `osc-result-cloud-config-local-*` appear in the Shoot cluster namespace and then copy `cloud_config` from the secret `osc-result-cloud-config-local-xxxxx-downloader` to the local file `dev/user-data`. This file is used to pass the downloader configuration to the Vagrant machine, which triggers the mechanism that configures the machine properly and causes it to join the Shoot cluster as a node.
 
 ```bash
 $ kubectl get secrets -n shoot--dev--local | grep osc-result-cloud-config-local
