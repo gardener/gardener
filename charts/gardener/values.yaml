@@ -85,10 +85,10 @@ global:
           - system:kube-aggregator
           - system:kube-proxy
           - system:apiserver
-          - system:apiserver
           - system:serviceaccount:garden:gardener-controller-manager
           - system:serviceaccount:garden:gardener-metrics-exporter
           - system:serviceaccount:kube-system:generic-garbage-collector
+          - system:serviceaccount:kube-system:namespace-controller
           - garden.sapcloud.io:monitoring
           - garden.sapcloud.io:monitoring:prometheus
           - garden.sapcloud.io:monitoring:kube-state-metrics
