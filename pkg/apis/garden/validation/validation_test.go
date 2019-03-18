@@ -1913,7 +1913,7 @@ var _ = Describe("validation", func() {
 		})
 	})
 
-	Describe("#ValidateSeed", func() {
+	Describe("#ValidateSeed, #ValidateSeedUpdate", func() {
 		var seed *garden.Seed
 
 		BeforeEach(func() {
@@ -2040,6 +2040,23 @@ var _ = Describe("validation", func() {
 				"Field":  Equal("spec.networks.services"),
 				"Detail": Equal(`must not be a subset of "spec.networks.pods" ("10.0.1.0/24")`),
 			}))
+		})
+
+		It("should fail updating immutable fields", func() {
+			newSeed := prepareSeedForUpdate(seed)
+			newSeed.Spec.Networks = garden.SeedNetworks{
+				Nodes:    garden.CIDR("10.1.0.0/16"),
+				Pods:     garden.CIDR("10.2.0.0/16"),
+				Services: garden.CIDR("10.3.1.64/26"),
+			}
+			errorList := ValidateSeedUpdate(newSeed, seed)
+
+			Expect(errorList).To(ConsistOfFields(Fields{
+				"Type":   Equal(field.ErrorTypeInvalid),
+				"Field":  Equal("spec.networks"),
+				"Detail": Equal(`field is immutable`),
+			}))
+
 		})
 	})
 
@@ -5311,6 +5328,12 @@ func makeFloat64Pointer(f float64) *float64 {
 
 func prepareShootForUpdate(shoot *garden.Shoot) *garden.Shoot {
 	s := shoot.DeepCopy()
+	s.ResourceVersion = "1"
+	return s
+}
+
+func prepareSeedForUpdate(seed *garden.Seed) *garden.Seed {
+	s := seed.DeepCopy()
 	s.ResourceVersion = "1"
 	return s
 }
