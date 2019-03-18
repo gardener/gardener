@@ -122,6 +122,11 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	if err != nil {
 		return nil, err
 	}
+	vpnShootCloudSpecific, err := b.ShootCloudBotanist.GenerateVPNShootConfig()
+	if err != nil {
+		return nil, err
+	}
+	vpnShoot = utils.MergeMaps(vpnShoot, vpnShootCloudSpecific)
 
 	nodeExporter, err := b.Botanist.InjectImages(nodeExporterConfig, b.ShootVersion(), b.ShootVersion(), common.NodeExporterImageName)
 	if err != nil {

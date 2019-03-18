@@ -83,3 +83,8 @@ func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{
 	}, nil
 
 }
+
+// GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for alicloud
+func (b *AlicloudBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
+	return nil, nil
+}

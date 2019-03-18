@@ -78,3 +78,8 @@ func (b *AzureBotanist) GenerateStorageClassesConfig() (map[string]interface{}, 
 func (b *AzureBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
+
+// GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for aws
+func (b *AzureBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
