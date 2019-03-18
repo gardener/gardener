@@ -214,7 +214,7 @@ func (b *HybridBotanist) DeployKubeAPIServerService() error {
 		defaultValues = map[string]interface{}{}
 	)
 
-	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerServiceConfig()
+	cloudSpecificValues, err := b.SeedCloudBotanist.GenerateKubeAPIServerServiceConfig()
 	if err != nil {
 		return err
 	}
