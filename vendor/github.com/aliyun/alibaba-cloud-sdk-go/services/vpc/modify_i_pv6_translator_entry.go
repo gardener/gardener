@@ -77,13 +77,16 @@ func (client *Client) ModifyIPv6TranslatorEntryWithCallback(request *ModifyIPv6T
 type ModifyIPv6TranslatorEntryRequest struct {
 	*requests.RpcRequest
 	BackendIpv4Port       requests.Integer `position:"Query" name:"BackendIpv4Port"`
+	AclId                 string           `position:"Query" name:"AclId"`
 	ResourceOwnerId       requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	Ipv6TranslatorEntryId string           `position:"Query" name:"Ipv6TranslatorEntryId"`
 	ResourceOwnerAccount  string           `position:"Query" name:"ResourceOwnerAccount"`
 	EntryName             string           `position:"Query" name:"EntryName"`
 	OwnerAccount          string           `position:"Query" name:"OwnerAccount"`
 	OwnerId               requests.Integer `position:"Query" name:"OwnerId"`
+	AclStatus             string           `position:"Query" name:"AclStatus"`
 	EntryBandwidth        requests.Integer `position:"Query" name:"EntryBandwidth"`
+	AclType               string           `position:"Query" name:"AclType"`
 	AllocateIpv6Port      requests.Integer `position:"Query" name:"AllocateIpv6Port"`
 	EntryDescription      string           `position:"Query" name:"EntryDescription"`
 	BackendIpv4Addr       string           `position:"Query" name:"BackendIpv4Addr"`

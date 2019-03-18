@@ -77,6 +77,7 @@ func (client *Client) CreateRouteEntryWithCallback(request *CreateRouteEntryRequ
 type CreateRouteEntryRequest struct {
 	*requests.RpcRequest
 	ResourceOwnerId      requests.Integer               `position:"Query" name:"ResourceOwnerId"`
+	RouteEntryName       string                         `position:"Query" name:"RouteEntryName"`
 	ResourceOwnerAccount string                         `position:"Query" name:"ResourceOwnerAccount"`
 	ClientToken          string                         `position:"Query" name:"ClientToken"`
 	DestinationCidrBlock string                         `position:"Query" name:"DestinationCidrBlock"`

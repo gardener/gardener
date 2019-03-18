@@ -91,12 +91,14 @@ type DescribeVSwitchAttributesResponse struct {
 	VpcId                   string                                    `json:"VpcId" xml:"VpcId"`
 	Status                  string                                    `json:"Status" xml:"Status"`
 	CidrBlock               string                                    `json:"CidrBlock" xml:"CidrBlock"`
+	Ipv6CidrBlock           string                                    `json:"Ipv6CidrBlock" xml:"Ipv6CidrBlock"`
 	ZoneId                  string                                    `json:"ZoneId" xml:"ZoneId"`
 	AvailableIpAddressCount int                                       `json:"AvailableIpAddressCount" xml:"AvailableIpAddressCount"`
 	Description             string                                    `json:"Description" xml:"Description"`
 	VSwitchName             string                                    `json:"VSwitchName" xml:"VSwitchName"`
 	CreationTime            string                                    `json:"CreationTime" xml:"CreationTime"`
 	IsDefault               bool                                      `json:"IsDefault" xml:"IsDefault"`
+	ResourceGroupId         string                                    `json:"ResourceGroupId" xml:"ResourceGroupId"`
 	RouteTable              RouteTable                                `json:"RouteTable" xml:"RouteTable"`
 	CloudResources          CloudResourcesInDescribeVSwitchAttributes `json:"CloudResources" xml:"CloudResources"`
 }

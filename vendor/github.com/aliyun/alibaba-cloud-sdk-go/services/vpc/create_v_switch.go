@@ -79,13 +79,14 @@ type CreateVSwitchRequest struct {
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	ClientToken          string           `position:"Query" name:"ClientToken"`
-	VpcId                string           `position:"Query" name:"VpcId"`
-	VSwitchName          string           `position:"Query" name:"VSwitchName"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
-	CidrBlock            string           `position:"Query" name:"CidrBlock"`
-	ZoneId               string           `position:"Query" name:"ZoneId"`
 	Description          string           `position:"Query" name:"Description"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
+	Ipv6CidrBlock        requests.Integer `position:"Query" name:"Ipv6CidrBlock"`
+	VpcId                string           `position:"Query" name:"VpcId"`
+	VSwitchName          string           `position:"Query" name:"VSwitchName"`
+	CidrBlock            string           `position:"Query" name:"CidrBlock"`
+	ZoneId               string           `position:"Query" name:"ZoneId"`
 }
 
 // CreateVSwitchResponse is the response struct for api CreateVSwitch

@@ -83,6 +83,7 @@ type ModifyVSwitchAttributeRequest struct {
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	Description          string           `position:"Query" name:"Description"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
+	Ipv6CidrBlock        requests.Integer `position:"Query" name:"Ipv6CidrBlock"`
 }
 
 // ModifyVSwitchAttributeResponse is the response struct for api ModifyVSwitchAttribute

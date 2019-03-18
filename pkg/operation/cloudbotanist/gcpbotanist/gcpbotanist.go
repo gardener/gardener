@@ -16,10 +16,12 @@ package gcpbotanist
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/client/gcp"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
@@ -27,6 +29,7 @@ import (
 // New takes an operation object <o> and creates a new GCPBotanist object.
 func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
 	var cloudProvider gardenv1beta1.CloudProvider
+
 	switch purpose {
 	case common.CloudPurposeShoot:
 		cloudProvider = o.Shoot.CloudProvider
@@ -68,9 +71,15 @@ func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
 		return nil, err
 	}
 
+	client, err := gcp.NewClient(context.TODO(), serviceAccountJSON, project)
+	if err != nil {
+		return nil, err
+	}
+
 	return &GCPBotanist{
 		Operation:              o,
 		CloudProviderName:      "gce",
+		GCPClient:              client,
 		VPCName:                vpcName,
 		Project:                project,
 		MinifiedServiceAccount: minifiedServiceAccount,

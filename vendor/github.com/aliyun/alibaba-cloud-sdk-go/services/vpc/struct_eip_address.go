@@ -19,6 +19,7 @@ package vpc
 type EipAddress struct {
 	RegionId                      string                               `json:"RegionId" xml:"RegionId"`
 	IpAddress                     string                               `json:"IpAddress" xml:"IpAddress"`
+	PrivateIpAddress              string                               `json:"PrivateIpAddress" xml:"PrivateIpAddress"`
 	AllocationId                  string                               `json:"AllocationId" xml:"AllocationId"`
 	Status                        string                               `json:"Status" xml:"Status"`
 	InstanceId                    string                               `json:"InstanceId" xml:"InstanceId"`
@@ -42,6 +43,8 @@ type EipAddress struct {
 	ReservationInternetChargeType string                               `json:"ReservationInternetChargeType" xml:"ReservationInternetChargeType"`
 	ReservationActiveTime         string                               `json:"ReservationActiveTime" xml:"ReservationActiveTime"`
 	ReservationOrderType          string                               `json:"ReservationOrderType" xml:"ReservationOrderType"`
+	Mode                          string                               `json:"Mode" xml:"Mode"`
 	AvailableRegions              AvailableRegions                     `json:"AvailableRegions" xml:"AvailableRegions"`
 	OperationLocks                OperationLocksInDescribeEipAddresses `json:"OperationLocks" xml:"OperationLocks"`
+	Tags                          TagsInDescribeEipAddresses           `json:"Tags" xml:"Tags"`
 }

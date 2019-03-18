@@ -77,6 +77,7 @@ func (client *Client) DescribeIPv6TranslatorEntriesWithCallback(request *Describ
 type DescribeIPv6TranslatorEntriesRequest struct {
 	*requests.RpcRequest
 	BackendIpv4Port       requests.Integer `position:"Query" name:"BackendIpv4Port"`
+	AclId                 string           `position:"Query" name:"AclId"`
 	ResourceOwnerId       requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	Ipv6TranslatorEntryId string           `position:"Query" name:"Ipv6TranslatorEntryId"`
 	ResourceOwnerAccount  string           `position:"Query" name:"ResourceOwnerAccount"`
@@ -85,7 +86,9 @@ type DescribeIPv6TranslatorEntriesRequest struct {
 	ClientToken           string           `position:"Query" name:"ClientToken"`
 	OwnerAccount          string           `position:"Query" name:"OwnerAccount"`
 	OwnerId               requests.Integer `position:"Query" name:"OwnerId"`
+	AclStatus             string           `position:"Query" name:"AclStatus"`
 	PageNumber            requests.Integer `position:"Query" name:"PageNumber"`
+	AclType               string           `position:"Query" name:"AclType"`
 	AllocateIpv6Port      requests.Integer `position:"Query" name:"AllocateIpv6Port"`
 	PageSize              requests.Integer `position:"Query" name:"PageSize"`
 	BackendIpv4Addr       string           `position:"Query" name:"BackendIpv4Addr"`

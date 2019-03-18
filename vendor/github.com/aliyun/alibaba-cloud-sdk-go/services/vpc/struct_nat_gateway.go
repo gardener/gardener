@@ -24,6 +24,8 @@ type NatGateway struct {
 	VpcId               string                                   `json:"VpcId" xml:"VpcId"`
 	Spec                string                                   `json:"Spec" xml:"Spec"`
 	InstanceChargeType  string                                   `json:"InstanceChargeType" xml:"InstanceChargeType"`
+	ExpiredTime         string                                   `json:"ExpiredTime" xml:"ExpiredTime"`
+	AutoPay             bool                                     `json:"AutoPay" xml:"AutoPay"`
 	BusinessStatus      string                                   `json:"BusinessStatus" xml:"BusinessStatus"`
 	CreationTime        string                                   `json:"CreationTime" xml:"CreationTime"`
 	Status              string                                   `json:"Status" xml:"Status"`

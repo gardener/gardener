@@ -79,6 +79,7 @@ type ModifyForwardEntryRequest struct {
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	IpProtocol           string           `position:"Query" name:"IpProtocol"`
+	ForwardEntryName     string           `position:"Query" name:"ForwardEntryName"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	ForwardTableId       string           `position:"Query" name:"ForwardTableId"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`

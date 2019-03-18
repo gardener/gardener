@@ -17,13 +17,16 @@ package vpc
 
 // RouteEntry is a nested struct in vpc response
 type RouteEntry struct {
-	RouteTableId         string   `json:"RouteTableId" xml:"RouteTableId"`
-	DestinationCidrBlock string   `json:"DestinationCidrBlock" xml:"DestinationCidrBlock"`
-	Type                 string   `json:"Type" xml:"Type"`
-	Status               string   `json:"Status" xml:"Status"`
-	InstanceId           string   `json:"InstanceId" xml:"InstanceId"`
-	NextHopType          string   `json:"NextHopType" xml:"NextHopType"`
-	NextHopRegionId      string   `json:"NextHopRegionId" xml:"NextHopRegionId"`
-	PrivateIpAddress     string   `json:"PrivateIpAddress" xml:"PrivateIpAddress"`
-	NextHops             NextHops `json:"NextHops" xml:"NextHops"`
+	RouteTableId             string   `json:"RouteTableId" xml:"RouteTableId"`
+	DestinationCidrBlock     string   `json:"DestinationCidrBlock" xml:"DestinationCidrBlock"`
+	Type                     string   `json:"Type" xml:"Type"`
+	Status                   string   `json:"Status" xml:"Status"`
+	InstanceId               string   `json:"InstanceId" xml:"InstanceId"`
+	NextHopType              string   `json:"NextHopType" xml:"NextHopType"`
+	NextHopRegionId          string   `json:"NextHopRegionId" xml:"NextHopRegionId"`
+	NextHopOppsiteType       string   `json:"NextHopOppsiteType" xml:"NextHopOppsiteType"`
+	NextHopOppsiteInstanceId string   `json:"NextHopOppsiteInstanceId" xml:"NextHopOppsiteInstanceId"`
+	NextHopOppsiteRegionId   string   `json:"NextHopOppsiteRegionId" xml:"NextHopOppsiteRegionId"`
+	PrivateIpAddress         string   `json:"PrivateIpAddress" xml:"PrivateIpAddress"`
+	NextHops                 NextHops `json:"NextHops" xml:"NextHops"`
 }

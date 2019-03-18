@@ -78,6 +78,7 @@ type DeleteRouteEntryRequest struct {
 	*requests.RpcRequest
 	ResourceOwnerId      requests.Integer               `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string                         `position:"Query" name:"ResourceOwnerAccount"`
+	RouteEntryId         string                         `position:"Query" name:"RouteEntryId"`
 	DestinationCidrBlock string                         `position:"Query" name:"DestinationCidrBlock"`
 	OwnerAccount         string                         `position:"Query" name:"OwnerAccount"`
 	NextHopId            string                         `position:"Query" name:"NextHopId"`

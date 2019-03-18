@@ -76,16 +76,23 @@ func (client *Client) DescribeVpcsWithCallback(request *DescribeVpcsRequest, cal
 // DescribeVpcsRequest is the request struct for api DescribeVpcs
 type DescribeVpcsRequest struct {
 	*requests.RpcRequest
-	VpcName              string           `position:"Query" name:"VpcName"`
-	ResourceGroupId      string           `position:"Query" name:"ResourceGroupId"`
-	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
-	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
-	VpcId                string           `position:"Query" name:"VpcId"`
-	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
-	PageSize             requests.Integer `position:"Query" name:"PageSize"`
-	IsDefault            requests.Boolean `position:"Query" name:"IsDefault"`
-	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
-	PageNumber           requests.Integer `position:"Query" name:"PageNumber"`
+	ResourceOwnerId      requests.Integer   `position:"Query" name:"ResourceOwnerId"`
+	ResourceOwnerAccount string             `position:"Query" name:"ResourceOwnerAccount"`
+	OwnerAccount         string             `position:"Query" name:"OwnerAccount"`
+	OwnerId              requests.Integer   `position:"Query" name:"OwnerId"`
+	PageNumber           requests.Integer   `position:"Query" name:"PageNumber"`
+	VpcName              string             `position:"Query" name:"VpcName"`
+	ResourceGroupId      string             `position:"Query" name:"ResourceGroupId"`
+	VpcId                string             `position:"Query" name:"VpcId"`
+	PageSize             requests.Integer   `position:"Query" name:"PageSize"`
+	Tag                  *[]DescribeVpcsTag `position:"Query" name:"Tag"  type:"Repeated"`
+	IsDefault            requests.Boolean   `position:"Query" name:"IsDefault"`
+}
+
+// DescribeVpcsTag is a repeated param struct in DescribeVpcsRequest
+type DescribeVpcsTag struct {
+	Value string `name:"Value"`
+	Key   string `name:"Key"`
 }
 
 // DescribeVpcsResponse is the response struct for api DescribeVpcs

@@ -79,6 +79,7 @@ type ModifySnatEntryRequest struct {
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
+	SnatEntryName        string           `position:"Query" name:"SnatEntryName"`
 	SnatTableId          string           `position:"Query" name:"SnatTableId"`
 	SnatEntryId          string           `position:"Query" name:"SnatEntryId"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`

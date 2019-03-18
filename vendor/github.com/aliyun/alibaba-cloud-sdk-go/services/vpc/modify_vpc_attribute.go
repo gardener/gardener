@@ -82,6 +82,7 @@ type ModifyVpcAttributeRequest struct {
 	VpcId                string           `position:"Query" name:"VpcId"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	CidrBlock            string           `position:"Query" name:"CidrBlock"`
+	EnableIPv6           requests.Boolean `position:"Query" name:"EnableIPv6"`
 	Description          string           `position:"Query" name:"Description"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
 }

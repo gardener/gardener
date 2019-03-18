@@ -76,25 +76,33 @@ func (client *Client) DescribeEipAddressesWithCallback(request *DescribeEipAddre
 // DescribeEipAddressesRequest is the request struct for api DescribeEipAddresses
 type DescribeEipAddressesRequest struct {
 	*requests.RpcRequest
-	ResourceOwnerId        requests.Integer `position:"Query" name:"ResourceOwnerId"`
-	ResourceOwnerAccount   string           `position:"Query" name:"ResourceOwnerAccount"`
-	Filter2Value           string           `position:"Query" name:"Filter.2.Value"`
-	OwnerAccount           string           `position:"Query" name:"OwnerAccount"`
-	AllocationId           string           `position:"Query" name:"AllocationId"`
-	Filter1Value           string           `position:"Query" name:"Filter.1.Value"`
-	Filter2Key             string           `position:"Query" name:"Filter.2.Key"`
-	OwnerId                requests.Integer `position:"Query" name:"OwnerId"`
-	IncludeReservationData requests.Boolean `position:"Query" name:"IncludeReservationData"`
-	EipAddress             string           `position:"Query" name:"EipAddress"`
-	PageNumber             requests.Integer `position:"Query" name:"PageNumber"`
-	ResourceGroupId        string           `position:"Query" name:"ResourceGroupId"`
-	LockReason             string           `position:"Query" name:"LockReason"`
-	Filter1Key             string           `position:"Query" name:"Filter.1.Key"`
-	AssociatedInstanceType string           `position:"Query" name:"AssociatedInstanceType"`
-	PageSize               requests.Integer `position:"Query" name:"PageSize"`
-	ChargeType             string           `position:"Query" name:"ChargeType"`
-	AssociatedInstanceId   string           `position:"Query" name:"AssociatedInstanceId"`
-	Status                 string           `position:"Query" name:"Status"`
+	ResourceOwnerId        requests.Integer           `position:"Query" name:"ResourceOwnerId"`
+	ResourceOwnerAccount   string                     `position:"Query" name:"ResourceOwnerAccount"`
+	Filter2Value           string                     `position:"Query" name:"Filter.2.Value"`
+	ISP                    string                     `position:"Query" name:"ISP"`
+	OwnerAccount           string                     `position:"Query" name:"OwnerAccount"`
+	AllocationId           string                     `position:"Query" name:"AllocationId"`
+	Filter1Value           string                     `position:"Query" name:"Filter.1.Value"`
+	Filter2Key             string                     `position:"Query" name:"Filter.2.Key"`
+	OwnerId                requests.Integer           `position:"Query" name:"OwnerId"`
+	IncludeReservationData requests.Boolean           `position:"Query" name:"IncludeReservationData"`
+	EipAddress             string                     `position:"Query" name:"EipAddress"`
+	PageNumber             requests.Integer           `position:"Query" name:"PageNumber"`
+	ResourceGroupId        string                     `position:"Query" name:"ResourceGroupId"`
+	LockReason             string                     `position:"Query" name:"LockReason"`
+	Filter1Key             string                     `position:"Query" name:"Filter.1.Key"`
+	AssociatedInstanceType string                     `position:"Query" name:"AssociatedInstanceType"`
+	PageSize               requests.Integer           `position:"Query" name:"PageSize"`
+	Tag                    *[]DescribeEipAddressesTag `position:"Query" name:"Tag"  type:"Repeated"`
+	ChargeType             string                     `position:"Query" name:"ChargeType"`
+	AssociatedInstanceId   string                     `position:"Query" name:"AssociatedInstanceId"`
+	Status                 string                     `position:"Query" name:"Status"`
+}
+
+// DescribeEipAddressesTag is a repeated param struct in DescribeEipAddressesRequest
+type DescribeEipAddressesTag struct {
+	Value string `name:"Value"`
+	Key   string `name:"Key"`
 }
 
 // DescribeEipAddressesResponse is the response struct for api DescribeEipAddresses

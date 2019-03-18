@@ -79,11 +79,15 @@ type DescribeSnatTableEntriesRequest struct {
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
-	PageSize             requests.Integer `position:"Query" name:"PageSize"`
+	SourceCIDR           string           `position:"Query" name:"SourceCIDR"`
 	SnatTableId          string           `position:"Query" name:"SnatTableId"`
-	SnatEntryId          string           `position:"Query" name:"SnatEntryId"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
+	SnatIp               string           `position:"Query" name:"SnatIp"`
 	PageNumber           requests.Integer `position:"Query" name:"PageNumber"`
+	SourceVSwitchId      string           `position:"Query" name:"SourceVSwitchId"`
+	SnatEntryName        string           `position:"Query" name:"SnatEntryName"`
+	PageSize             requests.Integer `position:"Query" name:"PageSize"`
+	SnatEntryId          string           `position:"Query" name:"SnatEntryId"`
 }
 
 // DescribeSnatTableEntriesResponse is the response struct for api DescribeSnatTableEntries
