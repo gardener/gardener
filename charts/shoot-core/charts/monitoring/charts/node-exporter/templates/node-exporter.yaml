@@ -101,7 +101,7 @@ spec:
             memory: 10Mi
           limits:
             cpu: 15m
-            memory: 50Mi
+            memory: 100Mi
         volumeMounts:
         - name: proc
           readOnly:  true
