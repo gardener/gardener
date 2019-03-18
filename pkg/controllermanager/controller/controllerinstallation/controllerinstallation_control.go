@@ -349,7 +349,10 @@ func (c *defaultControllerInstallationControl) isResponsible(controllerInstallat
 		return false, err
 	}
 
-	return controllerRegistration.Spec.Deployment.Type == installationTypeHelm, nil
+	if deployment := controllerRegistration.Spec.Deployment; deployment != nil {
+		return deployment.Type == installationTypeHelm, nil
+	}
+	return false, nil
 }
 
 func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient kubernetes.Interface, controllerInstallation *gardencorev1alpha1.ControllerInstallation, newResourcesSet sets.String) (bool, error) {
