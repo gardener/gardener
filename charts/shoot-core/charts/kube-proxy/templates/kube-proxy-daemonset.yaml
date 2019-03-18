@@ -72,7 +72,7 @@ spec:
             memory: 64Mi
           limits:
             cpu: 900m
-            memory: 200Mi
+            memory: 400Mi
         volumeMounts:
         - name: kubeconfig
           mountPath: /var/lib/kube-proxy
