@@ -49,3 +49,8 @@ func (b *LocalBotanist) GenerateStorageClassesConfig() (map[string]interface{}, 
 func (b *LocalBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
+
+// GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for local
+func (b *LocalBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
+	return nil, nil
+}

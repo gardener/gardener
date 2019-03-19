@@ -59,3 +59,8 @@ func (b *GCPBotanist) GenerateStorageClassesConfig() (map[string]interface{}, er
 func (b *GCPBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
+
+// GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for gcp
+func (b *GCPBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
+	return nil, nil
+}

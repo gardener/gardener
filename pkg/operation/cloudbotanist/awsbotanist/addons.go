@@ -164,3 +164,8 @@ func (b *AWSBotanist) GenerateNginxIngressConfig() (map[string]interface{}, erro
 		},
 	}, b.Shoot.NginxIngressEnabled()), nil
 }
+
+// GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for aws
+func (b *AWSBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
+	return nil, nil
+}

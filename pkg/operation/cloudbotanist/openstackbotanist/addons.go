@@ -61,3 +61,8 @@ func (b *OpenStackBotanist) GenerateStorageClassesConfig() (map[string]interface
 func (b *OpenStackBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
+
+// GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for openstack
+func (b *OpenStackBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
+	return nil, nil
+}
