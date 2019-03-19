@@ -10,6 +10,14 @@ type ClusterListerExpansion interface{}
 // ClusterNamespaceLister.
 type ClusterNamespaceListerExpansion interface{}
 
+// ControlPlaneListerExpansion allows custom methods to be added to
+// ControlPlaneLister.
+type ControlPlaneListerExpansion interface{}
+
+// ControlPlaneNamespaceListerExpansion allows custom methods to be added to
+// ControlPlaneNamespaceLister.
+type ControlPlaneNamespaceListerExpansion interface{}
+
 // GenericListerExpansion allows custom methods to be added to
 // GenericLister.
 type GenericListerExpansion interface{}

@@ -1,0 +1,5 @@
+type: local
+region: local
+secretRef:
+  name: local
+  namespace: default
