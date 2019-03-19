@@ -25,7 +25,9 @@ import (
 
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/engine"
+	"k8s.io/helm/pkg/manifest"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
+	"k8s.io/helm/pkg/tiller"
 	"k8s.io/helm/pkg/timeconv"
 )
 
@@ -56,6 +58,7 @@ func New(client kubernetes.Interface) (ChartRenderer, error) {
 
 // Render loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
+// The manifests of in the ChartRelease object are ordered by their Kinds.
 func (r *DefaultChartRenderer) Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.Load(chartPath)
 	if err != nil {
@@ -66,37 +69,13 @@ func (r *DefaultChartRenderer) Render(chartPath, releaseName, namespace string, 
 
 // RenderArchive loads the chart from the given location <chartPath> and calls the Render() function
 // to convert it into a ChartRelease object.
+// The manifests of in the ChartRelease object are ordered by their Kinds.
 func (r *DefaultChartRenderer) RenderArchive(archive []byte, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
 	chart, err := chartutil.LoadArchive(bytes.NewReader(archive))
 	if err != nil {
 		return nil, fmt.Errorf("can't create load chart from archive: %s", err)
 	}
 	return r.renderRelease(chart, releaseName, namespace, values)
-}
-
-// Manifest returns the manifest of the rendered chart as byte array.
-func (c *RenderedChart) Manifest() []byte {
-	// Aggregate all valid manifests into one big doc.
-	b := bytes.NewBuffer(nil)
-
-	for k, v := range c.Files {
-		b.WriteString("\n---\n# Source: " + k + "\n")
-		b.WriteString(v)
-	}
-	return b.Bytes()
-}
-
-// ManifestAsString returns the manifest of the rendered chart as string.
-func (c *RenderedChart) ManifestAsString() string {
-	return string(c.Manifest())
-}
-
-// FileContent returns explicitly the content of the provided <filename>.
-func (c *RenderedChart) FileContent(filename string) string {
-	if content, ok := c.Files[fmt.Sprintf("%s/templates/%s", c.ChartName, filename)]; ok {
-		return content
-	}
-	return ""
 }
 
 func (r *DefaultChartRenderer) renderRelease(chart *chartapi.Chart, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
@@ -148,8 +127,11 @@ func (r *DefaultChartRenderer) renderResources(ch *chartapi.Chart, values chartu
 		}
 	}
 
+	manifests := manifest.SplitManifests(files)
+	manifests = tiller.SortByKind(manifests)
+
 	return &RenderedChart{
 		ChartName: ch.Metadata.Name,
-		Files:     files,
+		Manifests: manifests,
 	}, nil
 }
