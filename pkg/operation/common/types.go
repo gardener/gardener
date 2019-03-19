@@ -490,9 +490,6 @@ const (
 	// PauseContainerImageName is the name of the PauseContainer image.
 	PauseContainerImageName = "pause-container"
 
-	// GardenerExternalAdmissionControllerImageName is the name of the GardenerExternalAdmissionController image.
-	GardenerExternalAdmissionControllerImageName = "gardener-external-admission-controller"
-
 	// TerraformerImageName is the name of the Terraformer image.
 	TerraformerImageName = "terraformer"
 

@@ -193,7 +193,7 @@ data:
         Name                parser
         Match               kubernetes.coredns*coredns*
         Key_Name            log
-        Parser              corednsParser 
+        Parser              corednsParser
         Parser              kubeapiserverParser
         Reserve_Data        True
 
@@ -209,13 +209,6 @@ data:
         Match               kubernetes.*curator*
         Key_Name            log
         Parser              curatorParser
-        Reserve_Data        True
-
-    [FILTER]
-        Name                parser
-        Match               kubernetes.gardener-external-admission-controller*gardener-external-admission-controller*
-        Key_Name            log
-        Parser              geacParser
         Reserve_Data        True
 
     [FILTER]

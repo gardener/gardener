@@ -41,7 +41,10 @@ spec:
         - /hyperkube
         - apiserver
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
+        {{- if .Values.enableCSI }}
+        # Needed due to https://github.com/kubernetes/kubernetes/pull/73102
         - --disable-admission-plugins=PersistentVolumeLabel
+        {{- end }}
         - --admission-control-config-file={{ include "kube-apiserver.admissionPluginConfigFileDir" . }}/admission-configuration.yaml
         {{- if .Values.advertiseAddress }}
         - --advertise-address={{ .Values.advertiseAddress }}
@@ -55,6 +58,11 @@ spec:
         - --authorization-mode=Node,RBAC
         - --basic-auth-file=/srv/kubernetes/auth/basic_auth.csv
         - --client-ca-file=/srv/kubernetes/ca/ca.crt
+        {{- if and (not .Values.enableCSI) (ne .Values.cloudProvider "") }}
+        # Needed due to https://github.com/kubernetes/kubernetes/pull/73102
+        - --cloud-provider={{ .Values.cloudProvider }}
+        - --cloud-config=/etc/kubernetes/cloudprovider/cloudprovider.conf
+        {{- end }}
         - --enable-aggregator-routing=true
         - --enable-bootstrap-token-auth=true
         - --http2-max-streams-per-connection=1000
@@ -90,6 +98,8 @@ spec:
 {{- range $index, $param := $.Values.additionalParameters }}
         - {{ $param }}
 {{- end }}
+        env:
+{{ toYaml .Values.environment | indent 10 }}
         livenessProbe:
           httpGet:
             scheme: HTTPS
@@ -101,7 +111,7 @@ spec:
           successThreshold: 1
           failureThreshold: 3
           initialDelaySeconds: 15
-          periodSeconds: 30
+          periodSeconds: 10
           timeoutSeconds: 15
         readinessProbe:
           httpGet:
@@ -114,7 +124,7 @@ spec:
           successThreshold: 1
           failureThreshold: 3
           initialDelaySeconds: 10
-          periodSeconds: 30
+          periodSeconds: 10
           timeoutSeconds: 15
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
@@ -162,6 +172,13 @@ spec:
         - name: ssl-certs-hosts
           mountPath: /usr/share/ca-certificates
           readOnly: true
+        {{- if not .Values.enableCSI }}
+        # Needed due to https://github.com/kubernetes/kubernetes/pull/73102
+        - name: cloud-provider-config
+          mountPath: /etc/kubernetes/cloudprovider
+        - name: cloudprovider
+          mountPath: /srv/cloudprovider
+        {{- end }}
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -272,3 +289,12 @@ spec:
       - name: blackbox-exporter-config-apiserver
         configMap:
           name: blackbox-exporter-config-apiserver
+      {{- if not .Values.enableCSI }}
+      # Needed due to https://github.com/kubernetes/kubernetes/pull/73102
+      - name: cloud-provider-config
+        configMap:
+          name: cloud-provider-config
+      - name: cloudprovider
+        secret:
+          secretName: cloudprovider
+      {{- end }}

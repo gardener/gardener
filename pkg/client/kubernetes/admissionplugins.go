@@ -30,19 +30,23 @@ var (
 		{Name: "ServiceAccount"},
 		{Name: "NodeRestriction"},
 		{Name: "DefaultStorageClass"},
-		{Name: "Initializers"},
 		{Name: "DefaultTolerationSeconds"},
 		{Name: "ResourceQuota"},
 		{Name: "StorageObjectInUseProtection"},
 		{Name: "MutatingAdmissionWebhook"},
 		{Name: "ValidatingAdmissionWebhook"},
 	}
+	defaultPluginsWithInitializers = append(defaultPlugins, gardenv1beta1.AdmissionPlugin{Name: "Initializers"})
 
 	lowestSupportedKubernetesVersionMajorMinor = "1.10"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardenv1beta1.AdmissionPlugin{
-		"1.10": defaultPlugins,
+		"1.10": defaultPluginsWithInitializers,
+		"1.11": defaultPluginsWithInitializers,
+		"1.12": defaultPluginsWithInitializers,
+		"1.13": defaultPluginsWithInitializers,
+		"1.14": defaultPlugins,
 	}
 )
 

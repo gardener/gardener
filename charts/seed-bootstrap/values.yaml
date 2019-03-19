@@ -63,7 +63,6 @@ global:
     curator-es: image-repository:image-tag
     elasticsearch-oss: image-repository:image-tag
     fluentd-es: image-repository:image-tag
-    gardener-external-admission-controller: image-repository:image-tag
     kibana-oss: image-repository:image-tag
     pause-container: image-repository:image-tag
     prometheus: image-repository:image-tag

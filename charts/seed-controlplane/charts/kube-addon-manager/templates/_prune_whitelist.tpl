@@ -1,5 +1,4 @@
 {{- define "prune.whitelist" -}}
-{{ include "initializeradmissionregistrationversion" . }}/InitializerConfiguration
 {{ include "webhookadmissionregistration" . }}/MutatingWebhookConfiguration
 {{ include "webhookadmissionregistration" . }}/ValidatingWebhookConfiguration
 {{ include "apiserviceversion" . }}/APIService

@@ -14,7 +14,9 @@
 {{- if semverCompare "< 1.11" .Values.kubernetesVersion }}
 - --runtime-config=scheduling.k8s.io/v1alpha1=true
 {{- end }}
+{{- if semverCompare "< 1.14" .Values.kubernetesVersion }}
 - --runtime-config=admissionregistration.k8s.io/v1alpha1
+{{- end }}
 {{- end -}}
 
 {{- define "kube-apiserver.oidcConfig" }}

@@ -233,7 +233,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		common.ElasticsearchImageName,
 		common.FluentBitImageName,
 		common.FluentdEsImageName,
-		common.GardenerExternalAdmissionControllerImageName,
 		common.KibanaImageName,
 		common.PauseContainerImageName,
 		common.PrometheusImageName,
@@ -335,6 +334,17 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		if err := common.DeleteVpa(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
+	}
+
+	// Cleanup legacy external admission controller (no longer needed).
+	if err := k8sSeedClient.DeleteService(common.GardenNamespace, "gardener-external-admission-controller"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sSeedClient.DeleteDeployment(common.GardenNamespace, "gardener-external-admission-controller"); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	if err := k8sSeedClient.DeleteSecret(common.GardenNamespace, "gardener-external-admission-controller-tls"); err != nil && !apierrors.IsNotFound(err) {
+		return err
 	}
 
 	// AlertManager configuration

@@ -9,10 +9,6 @@ images:
   sourceRepository: github.com/kubernetes/kubernetes/blob/master/build/pause/Dockerfile
   repository: gcr.io/google_containers/pause-amd64
   tag: "3.1"
-- name: gardener-external-admission-controller
-  sourceRepository: github.com/gardener/gardener
-  repository: eu.gcr.io/gardener-project/gardener/external-admission-controller
-  tag: "v3"
 
 # Seed controlplane
 - name: etcd
