@@ -113,39 +113,6 @@ var (
 		GracePeriodSeconds: &zero,
 		PropagationPolicy:  &backgroundDeletion,
 	}
-
-	// ApplyOrder is a list of Kinds specifying am ideal apply order.
-	// For example, a Namespace manifest may be applied before a manifest belonging to that Namespace.
-	// See Helm counterpart: https://github.com/helm/helm/blob/release-2.13/pkg/tiller/kind_sorter.go
-	ApplyOrder = []string{
-		"Namespace",
-		"ResourceQuota",
-		"LimitRange",
-		"PodSecurityPolicy",
-		"PodDisruptionBudget",
-		"Secret",
-		"ConfigMap",
-		"StorageClass",
-		"PersistentVolume",
-		"PersistentVolumeClaim",
-		"ServiceAccount",
-		"CustomResourceDefinition",
-		"ClusterRole",
-		"ClusterRoleBinding",
-		"Role",
-		"RoleBinding",
-		"Service",
-		"DaemonSet",
-		"Pod",
-		"ReplicationController",
-		"ReplicaSet",
-		"Deployment",
-		"StatefulSet",
-		"Job",
-		"CronJob",
-		"Ingress",
-		"APIService",
-	}
 )
 
 func init() {

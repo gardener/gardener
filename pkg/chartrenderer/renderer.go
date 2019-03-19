@@ -14,6 +14,13 @@
 
 package chartrenderer
 
+import (
+	"bytes"
+	"fmt"
+
+	"k8s.io/helm/pkg/manifest"
+)
+
 // ChartRenderer is an interface for rendering Helm Charts from path, name, namespace and values.
 type ChartRenderer interface {
 	Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error)
@@ -24,5 +31,36 @@ type ChartRenderer interface {
 // rendered template as value.
 type RenderedChart struct {
 	ChartName string
-	Files     map[string]string
+	Manifests []manifest.Manifest
+}
+
+// Manifest returns the manifest of the rendered chart as byte array.
+func (c *RenderedChart) Manifest() []byte {
+	// Aggregate all valid manifests into one big doc.
+	b := bytes.NewBuffer(nil)
+
+	for _, mf := range c.Manifests {
+		b.WriteString("\n---\n# Source: " + mf.Name + "\n")
+		b.WriteString(mf.Content)
+	}
+	return b.Bytes()
+}
+
+// Files returns all rendered manifests mapping their names to their content.
+func (c *RenderedChart) Files() map[string]string {
+	var files = make(map[string]string)
+	for _, manifest := range c.Manifests {
+		files[manifest.Name] = manifest.Content
+	}
+	return files
+}
+
+// FileContent returns explicitly the content of the provided <filename>.
+func (c *RenderedChart) FileContent(filename string) string {
+	for _, mf := range c.Manifests {
+		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
+			return mf.Content
+		}
+	}
+	return ""
 }

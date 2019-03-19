@@ -134,6 +134,12 @@ ignored = [
   name = "github.com/golang/mock"
   version = "1.2.0"
 
+# use the same version that is referenced by k8s.io, mainly required by Helm
+# https://github.com/kubernetes/kubernetes/blob/v1.13.1/Godeps/Godeps.json#L2996
+[[override]]
+  name = "github.com/russross/blackfriday"
+  revision = "300106c228d52c8941d4b3de6054a6062a86dda3"
+
 [prune]
   unused-packages = true
   go-tests = true
