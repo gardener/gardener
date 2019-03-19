@@ -173,7 +173,7 @@ func GetMachineImageNameFromShoot(cloudProvider gardenv1beta1.CloudProvider, sho
 	case gardenv1beta1.CloudProviderPacket:
 		return shoot.Spec.Cloud.Packet.MachineImage.Name
 	case gardenv1beta1.CloudProviderLocal:
-		return "coreos"
+		return shoot.Spec.Cloud.Local.MachineImage.Name
 	}
 	return ""
 }

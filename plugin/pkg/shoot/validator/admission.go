@@ -270,15 +270,16 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 		}
 		allErrs = validateGCP(validationContext)
 
-	case garden.CloudProviderPacket:
-		if shoot.Spec.Cloud.Packet.MachineImage == nil {
-			image, err := getPacketMachineImage(shoot, cloudProfile)
+	case garden.CloudProviderLocal:
+		if shoot.Spec.Cloud.Local.MachineImage == nil {
+			image, err := getLocalMachineImage(shoot, cloudProfile)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
-			shoot.Spec.Cloud.Packet.MachineImage = image
+			shoot.Spec.Cloud.Local.MachineImage = image
 		}
-		allErrs = validatePacket(validationContext)
+		// No further validations for local shoots
+		allErrs = field.ErrorList{}
 
 	case garden.CloudProviderOpenStack:
 		if shoot.Spec.Cloud.OpenStack.MachineImage == nil {
@@ -289,6 +290,16 @@ func (v *ValidateShoot) Admit(a admission.Attributes) error {
 			shoot.Spec.Cloud.OpenStack.MachineImage = image
 		}
 		allErrs = validateOpenStack(validationContext)
+
+	case garden.CloudProviderPacket:
+		if shoot.Spec.Cloud.Packet.MachineImage == nil {
+			image, err := getPacketMachineImage(shoot, cloudProfile)
+			if err != nil {
+				return apierrors.NewBadRequest(err.Error())
+			}
+			shoot.Spec.Cloud.Packet.MachineImage = image
+		}
+		allErrs = validatePacket(validationContext)
 
 	case garden.CloudProviderAlicloud:
 		if shoot.Spec.Cloud.Alicloud.MachineImage == nil {
@@ -970,6 +981,14 @@ func validateGCPMachineImagesConstraints(constraints []garden.GCPMachineImage, i
 	}
 
 	return false, validValues
+}
+
+func getLocalMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.LocalMachineImage, error) {
+	machineImages := cloudProfile.Spec.Local.Constraints.MachineImages
+	if len(machineImages) != 1 {
+		return nil, errors.New("must provide a value for .spec.cloud.local.machineImage as the referenced cloud profile contains more than one")
+	}
+	return &machineImages[0], nil
 }
 
 func getPacketMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.PacketMachineImage, error) {
