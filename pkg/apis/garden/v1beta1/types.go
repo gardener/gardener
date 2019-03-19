@@ -1037,6 +1037,7 @@ type Addons struct {
 	// +optional
 	KubernetesDashboard *KubernetesDashboard `json:"kubernetes-dashboard,omitempty"`
 	// NginxIngress holds configuration settings for the nginx-ingress addon.
+	// DEPRECATED: This field will be removed in a future version.
 	// +optional
 	NginxIngress *NginxIngress `json:"nginx-ingress,omitempty"`
 

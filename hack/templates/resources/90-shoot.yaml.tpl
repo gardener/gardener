@@ -317,8 +317,11 @@ spec:
     maximum: ${value("backup.maximum", "7")}
   % endif
   addons:
+    # nginx-ingress addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy your own ingress controller
+    # instead of enabling it here. You should not use this field anymore.
     nginx-ingress:
-      enabled: ${value("spec.addons.nginx-ingress.enabled", "true")}
+      enabled: ${value("spec.addons.nginx-ingress.enabled", "false")}
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
     kubernetes-dashboard:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
@@ -372,7 +375,7 @@ spec:
     # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
     # instead of enabling it here. You should not use this field anymore.
     kube-lego:
-      enabled: ${value("spec.addons.kube-lego.enabled", "true")}
+      enabled: ${value("spec.addons.kube-lego.enabled", "false")}
       email: ${value("spec.addons.kube-lego.email", "john.doe@example.com")}
     # Monocular addon is deprecated and no longer supported.
     # This field will be removed in the future and is only kept for API compatibility reasons. It is not

@@ -106,8 +106,11 @@ spec:
     schedule: "0 */24 * * *"
     maximum: 7
   addons:
+    # nginx-ingress addon is still supported but deprecated.
+    # This field will be removed in the future. You should deploy your own ingress controller
+    # instead of enabling it here. You should not use this field anymore.
     nginx-ingress:
-      enabled: true
+      enabled: false
       loadBalancerSourceRanges: []
     kubernetes-dashboard:
       enabled: true
@@ -127,7 +130,7 @@ spec:
     # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
     # instead of enabling it here. You should not use this field anymore.
     kube-lego:
-      enabled: true
+      enabled: false
       email: john.doe@example.com
     # Monocular addon is deprecated and no longer supported.
     # This field will be removed in the future and is only kept for API compatibility reasons. It is not
