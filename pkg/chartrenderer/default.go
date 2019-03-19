@@ -18,14 +18,17 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"path"
 	"strings"
 
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
+
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/engine"
+	"k8s.io/helm/pkg/manifest"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
+	"k8s.io/helm/pkg/tiller"
 	"k8s.io/helm/pkg/timeconv"
 )
 
@@ -66,7 +69,7 @@ func New(engine *engine.Engine, capabilities *chartutil.Capabilities) Interface 
 	}
 }
 
-// DiscoverCapabilities disocvers the capabilities required for chart renderers using the given
+// DiscoverCapabilities discovers the capabilities required for chart renderers using the given
 // DiscoveryInterface.
 func DiscoverCapabilities(disc discovery.DiscoveryInterface) (*chartutil.Capabilities, error) {
 	sv, err := disc.ServerVersion()
@@ -95,31 +98,6 @@ func (r *chartRenderer) RenderArchive(archive []byte, releaseName, namespace str
 		return nil, fmt.Errorf("can't create load chart from archive: %s", err)
 	}
 	return r.renderRelease(chart, releaseName, namespace, values)
-}
-
-// Manifest returns the manifest of the rendered chart as byte array.
-func (c *RenderedChart) Manifest() []byte {
-	// Aggregate all valid manifests into one big doc.
-	b := bytes.NewBuffer(nil)
-
-	for k, v := range c.Files {
-		b.WriteString("\n---\n# Source: " + k + "\n")
-		b.WriteString(v)
-	}
-	return b.Bytes()
-}
-
-// ManifestAsString returns the manifest of the rendered chart as string.
-func (c *RenderedChart) ManifestAsString() string {
-	return string(c.Manifest())
-}
-
-// FileContent returns explicitly the content of the provided <filename>.
-func (c *RenderedChart) FileContent(filename string) string {
-	if content, ok := c.Files[fmt.Sprintf("%s/templates/%s", c.ChartName, filename)]; ok {
-		return content
-	}
-	return ""
 }
 
 func (r *chartRenderer) renderRelease(chart *chartapi.Chart, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error) {
@@ -171,8 +149,42 @@ func (r *chartRenderer) renderResources(ch *chartapi.Chart, values chartutil.Val
 		}
 	}
 
+	manifests := manifest.SplitManifests(files)
+	manifests = tiller.SortByKind(manifests)
+
 	return &RenderedChart{
 		ChartName: ch.Metadata.Name,
-		Files:     files,
+		Manifests: manifests,
 	}, nil
+}
+
+// Manifest returns the manifest of the rendered chart as byte array.
+func (c *RenderedChart) Manifest() []byte {
+	// Aggregate all valid manifests into one big doc.
+	b := bytes.NewBuffer(nil)
+
+	for _, mf := range c.Manifests {
+		b.WriteString("\n---\n# Source: " + mf.Name + "\n")
+		b.WriteString(mf.Content)
+	}
+	return b.Bytes()
+}
+
+// Files returns all rendered manifests mapping their names to their content.
+func (c *RenderedChart) Files() map[string]string {
+	var files = make(map[string]string)
+	for _, manifest := range c.Manifests {
+		files[manifest.Name] = manifest.Content
+	}
+	return files
+}
+
+// FileContent returns explicitly the content of the provided <filename>.
+func (c *RenderedChart) FileContent(filename string) string {
+	for _, mf := range c.Manifests {
+		if mf.Name == fmt.Sprintf("%s/templates/%s", c.ChartName, filename) {
+			return mf.Content
+		}
+	}
+	return ""
 }

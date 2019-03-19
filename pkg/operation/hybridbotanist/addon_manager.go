@@ -43,10 +43,10 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 	}
 
 	defaultValues := map[string]interface{}{
-		"cloudConfigContent":    cloudConfig.Files,
-		"storageClassesContent": storageClasses.Files,
-		"coreAddonsContent":     coreAddons.Files,
-		"optionalAddonsContent": optionalAddons.Files,
+		"cloudConfigContent":    cloudConfig.Files(),
+		"storageClassesContent": storageClasses.Files(),
+		"coreAddonsContent":     coreAddons.Files(),
+		"optionalAddonsContent": optionalAddons.Files(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-addon-manager": b.CheckSums[name],
 		},
