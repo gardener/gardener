@@ -1283,7 +1283,7 @@ func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.
 					},
 					"nginx-ingress": {
 						SchemaProps: spec.SchemaProps{
-							Description: "NginxIngress holds configuration settings for the nginx-ingress addon.",
+							Description: "NginxIngress holds configuration settings for the nginx-ingress addon. DEPRECATED: This field will be removed in a future version.",
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress"),
 						},
 					},
@@ -3633,8 +3633,9 @@ func schema_pkg_apis_garden_v1beta1_KubeProxyConfig(ref common.ReferenceCallback
 					},
 					"mode": {
 						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
+							Description: "Mode specifies which proxy mode to use. defaults to IPTables.",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},
