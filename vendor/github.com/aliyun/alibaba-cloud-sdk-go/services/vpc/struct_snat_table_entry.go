@@ -23,4 +23,5 @@ type SnatTableEntry struct {
 	SourceCIDR      string `json:"SourceCIDR" xml:"SourceCIDR"`
 	SnatIp          string `json:"SnatIp" xml:"SnatIp"`
 	Status          string `json:"Status" xml:"Status"`
+	SnatEntryName   string `json:"SnatEntryName" xml:"SnatEntryName"`
 }

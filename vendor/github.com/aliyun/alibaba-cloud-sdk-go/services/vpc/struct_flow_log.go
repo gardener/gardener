@@ -19,7 +19,7 @@ package vpc
 type FlowLog struct {
 	FlowLogId    string `json:"FlowLogId" xml:"FlowLogId"`
 	FlowLogName  string `json:"FlowLogName" xml:"FlowLogName"`
-	Descripthon  string `json:"Descripthon" xml:"Descripthon"`
+	Description  string `json:"Description" xml:"Description"`
 	CreationTime string `json:"CreationTime" xml:"CreationTime"`
 	ResourceType string `json:"ResourceType" xml:"ResourceType"`
 	ResourceId   string `json:"ResourceId" xml:"ResourceId"`
@@ -27,4 +27,5 @@ type FlowLog struct {
 	LogStoreName string `json:"LogStoreName" xml:"LogStoreName"`
 	Status       string `json:"Status" xml:"Status"`
 	TrafficType  string `json:"TrafficType" xml:"TrafficType"`
+	RegionId     string `json:"RegionId" xml:"RegionId"`
 }

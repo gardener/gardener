@@ -94,11 +94,11 @@ type DescribeRouterInterfacesFilter struct {
 // DescribeRouterInterfacesResponse is the response struct for api DescribeRouterInterfaces
 type DescribeRouterInterfacesResponse struct {
 	*responses.BaseResponse
-	RequestId          string                                       `json:"RequestId" xml:"RequestId"`
-	PageNumber         int                                          `json:"PageNumber" xml:"PageNumber"`
-	PageSize           int                                          `json:"PageSize" xml:"PageSize"`
-	TotalCount         int                                          `json:"TotalCount" xml:"TotalCount"`
-	RouterInterfaceSet RouterInterfaceSetInDescribeRouterInterfaces `json:"RouterInterfaceSet" xml:"RouterInterfaceSet"`
+	RequestId          string             `json:"RequestId" xml:"RequestId"`
+	PageNumber         int                `json:"PageNumber" xml:"PageNumber"`
+	PageSize           int                `json:"PageSize" xml:"PageSize"`
+	TotalCount         int                `json:"TotalCount" xml:"TotalCount"`
+	RouterInterfaceSet RouterInterfaceSet `json:"RouterInterfaceSet" xml:"RouterInterfaceSet"`
 }
 
 // CreateDescribeRouterInterfacesRequest creates a request to invoke DescribeRouterInterfaces API

@@ -15,12 +15,20 @@
 package sdk
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
+
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/provider"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
@@ -39,6 +47,8 @@ func init() {
 
 // Version this value will be replaced while build: -ldflags="-X sdk.version=x.x.x"
 var Version = "0.0.1"
+var defaultConnectTimeout = 5 * time.Second
+var defaultReadTimeout = 10 * time.Second
 
 var DefaultUserAgent = fmt.Sprintf("AlibabaCloud (%s; %s) Golang/%s Core/%s", runtime.GOOS, runtime.GOARCH, strings.Trim(runtime.Version(), "go"), Version)
 
@@ -48,12 +58,15 @@ var hookDo = func(fn func(req *http.Request) (*http.Response, error)) func(req *
 
 // Client the type Client
 type Client struct {
+	isInsecure     bool
 	regionId       string
 	config         *Config
 	userAgent      map[string]string
 	signer         auth.Signer
 	httpClient     *http.Client
 	asyncTaskQueue chan func()
+	readTimeout    time.Duration
+	connectTimeout time.Duration
 
 	debug     bool
 	isRunning bool
@@ -63,6 +76,27 @@ type Client struct {
 
 func (client *Client) Init() (err error) {
 	panic("not support yet")
+}
+
+func (client *Client) SetHTTPSInsecure(isInsecure bool) {
+	client.isInsecure = isInsecure
+}
+
+func (client *Client) GetHTTPSInsecure() bool {
+	return client.isInsecure
+}
+
+// InitWithProviderChain will get credential from the providerChain,
+// the RsaKeyPairCredential Only applicable to regionID `ap-northeast-1`,
+// if your providerChain may return a credential type with RsaKeyPairCredential,
+// please ensure your regionID is `ap-northeast-1`.
+func (client *Client) InitWithProviderChain(regionId string, provider provider.Provider) (err error) {
+	config := client.InitClientConfig()
+	credential, err := provider.Resolve()
+	if err != nil {
+		return
+	}
+	return client.InitWithOptions(regionId, config, credential)
 }
 
 func (client *Client) InitWithOptions(regionId string, config *Config, credential auth.Credential) (err error) {
@@ -87,6 +121,43 @@ func (client *Client) InitWithOptions(regionId string, config *Config, credentia
 	client.signer, err = auth.NewSignerWithCredential(credential, client.ProcessCommonRequestWithSigner)
 
 	return
+}
+
+func (client *Client) SetReadTimeout(readTimeout time.Duration) {
+	client.readTimeout = readTimeout
+}
+
+func (client *Client) SetConnectTimeout(connectTimeout time.Duration) {
+	client.connectTimeout = connectTimeout
+}
+
+func (client *Client) GetReadTimeout() time.Duration {
+	return client.readTimeout
+}
+
+func (client *Client) GetConnectTimeout() time.Duration {
+	return client.connectTimeout
+}
+
+func getHttpProxy(scheme string) *url.URL {
+	var proxy *url.URL
+	if scheme == "https" {
+		if rawurl := os.Getenv("HTTPS_PROXY"); rawurl != "" {
+			proxy, _ = url.Parse(rawurl)
+		}
+		if rawurl := os.Getenv("https_proxy"); rawurl != "" && proxy == nil {
+			proxy, _ = url.Parse(rawurl)
+		}
+	} else {
+		if rawurl := os.Getenv("HTTP_PROXY"); rawurl != "" {
+			proxy, _ = url.Parse(rawurl)
+		}
+		if rawurl := os.Getenv("http_proxy"); rawurl != "" && proxy == nil {
+			proxy, _ = url.Parse(rawurl)
+		}
+	}
+
+	return proxy
 }
 
 // EnableAsync enable the async task queue
@@ -132,6 +203,18 @@ func (client *Client) InitWithRamRoleArn(regionId, accessKeyId, accessKeySecret,
 		AccessKeySecret: accessKeySecret,
 		RoleArn:         roleArn,
 		RoleSessionName: roleSessionName,
+	}
+	return client.InitWithOptions(regionId, config, credential)
+}
+
+func (client *Client) InitWithRamRoleArnAndPolicy(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy string) (err error) {
+	config := client.InitClientConfig()
+	credential := &credentials.RamRoleArnCredential{
+		AccessKeyId:     accessKeyId,
+		AccessKeySecret: accessKeySecret,
+		RoleArn:         roleArn,
+		RoleSessionName: roleSessionName,
+		Policy:          policy,
 	}
 	return client.InitWithOptions(regionId, config, credential)
 }
@@ -260,11 +343,83 @@ func (client *Client) BuildRequestWithSigner(request requests.AcsRequest, signer
 	return
 }
 
+func (client *Client) getTimeout(request requests.AcsRequest) (time.Duration, time.Duration) {
+	readTimeout := defaultReadTimeout
+	connectTimeout := defaultConnectTimeout
+
+	reqReadTimeout := request.GetReadTimeout()
+	reqConnectTimeout := request.GetConnectTimeout()
+	if reqReadTimeout != 0*time.Millisecond {
+		readTimeout = reqReadTimeout
+	} else if client.readTimeout != 0*time.Millisecond {
+		readTimeout = client.readTimeout
+	}
+
+	if reqConnectTimeout != 0*time.Millisecond {
+		connectTimeout = reqConnectTimeout
+	} else if client.connectTimeout != 0*time.Millisecond {
+		connectTimeout = client.connectTimeout
+	}
+	return readTimeout, connectTimeout
+}
+
+func Timeout(connectTimeout, readTimeout time.Duration) func(cxt context.Context, net, addr string) (c net.Conn, err error) {
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		conn, err := (&net.Dialer{
+			Timeout:   connectTimeout,
+			KeepAlive: 0 * time.Second,
+			DualStack: true,
+		}).DialContext(ctx, network, address)
+
+		if err == nil {
+			conn.SetDeadline(time.Now().Add(readTimeout))
+		}
+
+		return conn, err
+	}
+}
+
+func (client *Client) setTimeout(request requests.AcsRequest) {
+	readTimeout, connectTimeout := client.getTimeout(request)
+	if trans, ok := client.httpClient.Transport.(*http.Transport); ok && trans != nil {
+		trans.DialContext = Timeout(connectTimeout, readTimeout)
+		client.httpClient.Transport = trans
+	} else {
+		client.httpClient.Transport = &http.Transport{
+			DialContext: Timeout(connectTimeout, readTimeout),
+		}
+	}
+}
+
+func (client *Client) getHTTPSInsecure(request requests.AcsRequest) (insecure bool) {
+	if request.GetHTTPSInsecure() != nil {
+		insecure = *request.GetHTTPSInsecure()
+	} else {
+		insecure = client.GetHTTPSInsecure()
+	}
+	return insecure
+}
+
 func (client *Client) DoActionWithSigner(request requests.AcsRequest, response responses.AcsResponse, signer auth.Signer) (err error) {
 	httpRequest, err := client.buildRequestWithSigner(request, signer)
 	if err != nil {
 		return
 	}
+	client.setTimeout(request)
+	proxy := getHttpProxy(httpRequest.URL.Scheme)
+
+	// Set whether to ignore certificate validation.
+	// Default InsecureSkipVerify is false.
+	if trans, ok := client.httpClient.Transport.(*http.Transport); ok && trans != nil {
+		trans.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: client.getHTTPSInsecure(request),
+		}
+		if proxy != nil {
+			trans.Proxy = http.ProxyURL(proxy)
+		}
+		client.httpClient.Transport = trans
+	}
+
 	var httpResponse *http.Response
 	for retryTimes := 0; retryTimes <= client.config.MaxRetryTime; retryTimes++ {
 		debug("> %s %s %s", httpRequest.Method, httpRequest.URL.RequestURI(), httpRequest.Proto)
@@ -287,13 +442,19 @@ func (client *Client) DoActionWithSigner(request requests.AcsRequest, response r
 				return
 			} else if retryTimes >= client.config.MaxRetryTime {
 				// timeout but reached the max retry times, return
-				timeoutErrorMsg := fmt.Sprintf(errors.TimeoutErrorMessage, strconv.Itoa(retryTimes+1), strconv.Itoa(retryTimes+1))
+				var timeoutErrorMsg string
+				if strings.Contains(err.Error(), "read tcp") {
+					timeoutErrorMsg = fmt.Sprintf(errors.TimeoutErrorMessage, strconv.Itoa(retryTimes+1), strconv.Itoa(retryTimes+1)) + " Read timeout. Please set a valid ReadTimeout."
+				} else {
+					timeoutErrorMsg = fmt.Sprintf(errors.TimeoutErrorMessage, strconv.Itoa(retryTimes+1), strconv.Itoa(retryTimes+1)) + " Connect timeout. Please set a valid ConnectTimeout."
+				}
 				err = errors.NewClientError(errors.TimeoutErrorCode, timeoutErrorMsg, err)
 				return
 			}
 		}
 		//  if status code >= 500 or timeout, will trigger retry
 		if client.config.AutoRetry && (err != nil || isServerError(httpResponse)) {
+			client.setTimeout(request)
 			// rewrite signatureNonce and signature
 			httpRequest, err = client.buildRequestWithSigner(request, signer)
 			// buildHttpRequest(request, finalSigner, regionId)
@@ -304,6 +465,7 @@ func (client *Client) DoActionWithSigner(request requests.AcsRequest, response r
 		}
 		break
 	}
+
 	err = responses.Unmarshal(response, httpResponse, request.GetAcceptFormat())
 	// wrap server errors
 	if serverErr, ok := err.(*errors.ServerError); ok {
@@ -368,6 +530,18 @@ func NewClient() (client *Client, err error) {
 	return
 }
 
+func NewClientWithProvider(regionId string, providers ...provider.Provider) (client *Client, err error) {
+	client = &Client{}
+	var pc provider.Provider
+	if len(providers) == 0 {
+		pc = provider.DefaultChain
+	} else {
+		pc = provider.NewProviderChain(providers)
+	}
+	err = client.InitWithProviderChain(regionId, pc)
+	return
+}
+
 func NewClientWithOptions(regionId string, config *Config, credential auth.Credential) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithOptions(regionId, config, credential)
@@ -392,6 +566,12 @@ func NewClientWithRamRoleArn(regionId string, accessKeyId, accessKeySecret, role
 	return
 }
 
+func NewClientWithRamRoleArnAndPolicy(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy string) (client *Client, err error) {
+	client = &Client{}
+	err = client.InitWithRamRoleArnAndPolicy(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName, policy)
+	return
+}
+
 func NewClientWithEcsRamRole(regionId string, roleName string) (client *Client, err error) {
 	client = &Client{}
 	err = client.InitWithEcsRamRole(regionId, roleName)
@@ -402,16 +582,6 @@ func NewClientWithRsaKeyPair(regionId string, publicKeyId, privateKey string, se
 	client = &Client{}
 	err = client.InitWithRsaKeyPair(regionId, publicKeyId, privateKey, sessionExpiration)
 	return
-}
-
-// Deprecated: Use NewClientWithRamRoleArn in this package instead.
-func NewClientWithStsRoleArn(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName string) (client *Client, err error) {
-	return NewClientWithRamRoleArn(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName)
-}
-
-// Deprecated: Use NewClientWithEcsRamRole in this package instead.
-func NewClientWithStsRoleNameOnEcs(regionId string, roleName string) (client *Client, err error) {
-	return NewClientWithEcsRamRole(regionId, roleName)
 }
 
 func (client *Client) ProcessCommonRequest(request *requests.CommonRequest) (response *responses.CommonResponse, err error) {
@@ -439,4 +609,14 @@ func (client *Client) Shutdown() {
 		close(client.asyncTaskQueue)
 	}
 	client.isRunning = false
+}
+
+// Deprecated: Use NewClientWithRamRoleArn in this package instead.
+func NewClientWithStsRoleArn(regionId string, accessKeyId, accessKeySecret, roleArn, roleSessionName string) (client *Client, err error) {
+	return NewClientWithRamRoleArn(regionId, accessKeyId, accessKeySecret, roleArn, roleSessionName)
+}
+
+// Deprecated: Use NewClientWithEcsRamRole in this package instead.
+func NewClientWithStsRoleNameOnEcs(regionId string, roleName string) (client *Client, err error) {
+	return NewClientWithEcsRamRole(regionId, roleName)
 }

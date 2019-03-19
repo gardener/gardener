@@ -78,12 +78,18 @@ type DescribeForwardTableEntriesRequest struct {
 	*requests.RpcRequest
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
-	ForwardEntryId       string           `position:"Query" name:"ForwardEntryId"`
+	IpProtocol           string           `position:"Query" name:"IpProtocol"`
+	ForwardEntryName     string           `position:"Query" name:"ForwardEntryName"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
 	ForwardTableId       string           `position:"Query" name:"ForwardTableId"`
-	PageSize             requests.Integer `position:"Query" name:"PageSize"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
+	InternalIp           string           `position:"Query" name:"InternalIp"`
 	PageNumber           requests.Integer `position:"Query" name:"PageNumber"`
+	ForwardEntryId       string           `position:"Query" name:"ForwardEntryId"`
+	InternalPort         string           `position:"Query" name:"InternalPort"`
+	PageSize             requests.Integer `position:"Query" name:"PageSize"`
+	ExternalIp           string           `position:"Query" name:"ExternalIp"`
+	ExternalPort         string           `position:"Query" name:"ExternalPort"`
 }
 
 // DescribeForwardTableEntriesResponse is the response struct for api DescribeForwardTableEntries

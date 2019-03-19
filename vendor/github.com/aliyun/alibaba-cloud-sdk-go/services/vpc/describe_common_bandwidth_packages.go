@@ -76,6 +76,7 @@ func (client *Client) DescribeCommonBandwidthPackagesWithCallback(request *Descr
 // DescribeCommonBandwidthPackagesRequest is the request struct for api DescribeCommonBandwidthPackages
 type DescribeCommonBandwidthPackagesRequest struct {
 	*requests.RpcRequest
+	ResourceGroupId        string           `position:"Query" name:"ResourceGroupId"`
 	ResourceOwnerId        requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	BandwidthPackageId     string           `position:"Query" name:"BandwidthPackageId"`
 	ResourceOwnerAccount   string           `position:"Query" name:"ResourceOwnerAccount"`

@@ -80,11 +80,14 @@ type CreateCommonBandwidthPackageRequest struct {
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	ClientToken          string           `position:"Query" name:"ClientToken"`
 	Bandwidth            requests.Integer `position:"Query" name:"Bandwidth"`
-	InternetChargeType   string           `position:"Query" name:"InternetChargeType"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
-	Name                 string           `position:"Query" name:"Name"`
+	ISP                  string           `position:"Query" name:"ISP"`
 	Description          string           `position:"Query" name:"Description"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
+	ResourceGroupId      string           `position:"Query" name:"ResourceGroupId"`
+	Zone                 string           `position:"Query" name:"Zone"`
+	InternetChargeType   string           `position:"Query" name:"InternetChargeType"`
+	Name                 string           `position:"Query" name:"Name"`
 	Ratio                requests.Integer `position:"Query" name:"Ratio"`
 }
 
@@ -93,6 +96,7 @@ type CreateCommonBandwidthPackageResponse struct {
 	*responses.BaseResponse
 	RequestId          string `json:"RequestId" xml:"RequestId"`
 	BandwidthPackageId string `json:"BandwidthPackageId" xml:"BandwidthPackageId"`
+	ResourceGroupId    string `json:"ResourceGroupId" xml:"ResourceGroupId"`
 }
 
 // CreateCreateCommonBandwidthPackageRequest creates a request to invoke CreateCommonBandwidthPackage API

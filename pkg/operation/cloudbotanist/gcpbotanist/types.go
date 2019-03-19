@@ -14,12 +14,16 @@
 
 package gcpbotanist
 
-import "github.com/gardener/gardener/pkg/operation"
+import (
+	"github.com/gardener/gardener/pkg/client/gcp"
+	"github.com/gardener/gardener/pkg/operation"
+)
 
 // GCPBotanist is a struct which has methods that perform GCP cloud-specific operations for a Shoot cluster.
 type GCPBotanist struct {
 	*operation.Operation
 	CloudProviderName      string
+	GCPClient              gcp.ClientInterface
 	VPCName                string
 	Project                string
 	MinifiedServiceAccount string

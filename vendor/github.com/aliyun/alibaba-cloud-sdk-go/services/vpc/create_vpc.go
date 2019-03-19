@@ -76,16 +76,18 @@ func (client *Client) CreateVpcWithCallback(request *CreateVpcRequest, callback 
 // CreateVpcRequest is the request struct for api CreateVpc
 type CreateVpcRequest struct {
 	*requests.RpcRequest
-	VpcName              string           `position:"Query" name:"VpcName"`
-	ResourceGroupId      string           `position:"Query" name:"ResourceGroupId"`
 	ResourceOwnerId      requests.Integer `position:"Query" name:"ResourceOwnerId"`
 	ResourceOwnerAccount string           `position:"Query" name:"ResourceOwnerAccount"`
 	ClientToken          string           `position:"Query" name:"ClientToken"`
 	OwnerAccount         string           `position:"Query" name:"OwnerAccount"`
-	CidrBlock            string           `position:"Query" name:"CidrBlock"`
+	EnableIpv6           requests.Boolean `position:"Query" name:"EnableIpv6"`
 	Description          string           `position:"Query" name:"Description"`
-	UserCidr             string           `position:"Query" name:"UserCidr"`
 	OwnerId              requests.Integer `position:"Query" name:"OwnerId"`
+	Ipv6CidrBlock        string           `position:"Query" name:"Ipv6CidrBlock"`
+	VpcName              string           `position:"Query" name:"VpcName"`
+	ResourceGroupId      string           `position:"Query" name:"ResourceGroupId"`
+	CidrBlock            string           `position:"Query" name:"CidrBlock"`
+	UserCidr             string           `position:"Query" name:"UserCidr"`
 }
 
 // CreateVpcResponse is the response struct for api CreateVpc

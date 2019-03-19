@@ -28,5 +28,8 @@ type Ipv6TranslatorEntry struct {
 	EntryDescription      string `json:"EntryDescription" xml:"EntryDescription"`
 	EntryName             string `json:"EntryName" xml:"EntryName"`
 	EntryStatus           string `json:"EntryStatus" xml:"EntryStatus"`
+	AclStatus             string `json:"AclStatus" xml:"AclStatus"`
+	AclType               string `json:"AclType" xml:"AclType"`
+	AclId                 string `json:"AclId" xml:"AclId"`
 	RegionId              string `json:"RegionId" xml:"RegionId"`
 }

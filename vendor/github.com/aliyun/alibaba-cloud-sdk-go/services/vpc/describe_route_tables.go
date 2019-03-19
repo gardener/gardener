@@ -84,6 +84,7 @@ type DescribeRouteTablesRequest struct {
 	Type                 string           `position:"Query" name:"Type"`
 	PageNumber           requests.Integer `position:"Query" name:"PageNumber"`
 	RouterType           string           `position:"Query" name:"RouterType"`
+	ResourceGroupId      string           `position:"Query" name:"ResourceGroupId"`
 	RouteTableName       string           `position:"Query" name:"RouteTableName"`
 	RouterId             string           `position:"Query" name:"RouterId"`
 	PageSize             requests.Integer `position:"Query" name:"PageSize"`

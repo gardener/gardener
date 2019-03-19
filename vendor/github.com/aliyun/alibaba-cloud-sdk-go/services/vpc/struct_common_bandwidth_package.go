@@ -29,10 +29,12 @@ type CommonBandwidthPackage struct {
 	ExpiredTime                   string                                             `json:"ExpiredTime" xml:"ExpiredTime"`
 	Status                        string                                             `json:"Status" xml:"Status"`
 	Ratio                         int                                                `json:"Ratio" xml:"Ratio"`
+	ResourceGroupId               string                                             `json:"ResourceGroupId" xml:"ResourceGroupId"`
 	HasReservationData            string                                             `json:"HasReservationData" xml:"HasReservationData"`
 	ReservationBandwidth          string                                             `json:"ReservationBandwidth" xml:"ReservationBandwidth"`
 	ReservationInternetChargeType string                                             `json:"ReservationInternetChargeType" xml:"ReservationInternetChargeType"`
 	ReservationActiveTime         string                                             `json:"ReservationActiveTime" xml:"ReservationActiveTime"`
 	ReservationOrderType          string                                             `json:"ReservationOrderType" xml:"ReservationOrderType"`
+	ISP                           string                                             `json:"ISP" xml:"ISP"`
 	PublicIpAddresses             PublicIpAddressesInDescribeCommonBandwidthPackages `json:"PublicIpAddresses" xml:"PublicIpAddresses"`
 }
