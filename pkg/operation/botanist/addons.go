@@ -26,7 +26,7 @@ func (b *Botanist) EnsureIngressDNSRecord() error {
 		return b.DestroyIngressDNSRecord()
 	}
 
-	loadBalancerIngress, _, err := common.GetLoadBalancerIngress(b.K8sShootClient, metav1.NamespaceSystem, "addons-nginx-ingress-controller")
+	loadBalancerIngress, err := common.GetLoadBalancerIngress(b.K8sShootClient, metav1.NamespaceSystem, "addons-nginx-ingress-controller")
 	if err != nil {
 		return err
 	}

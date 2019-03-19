@@ -203,7 +203,7 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 // GetLoadBalancerIngress takes a K8SClient, a namespace and a service name. It queries for a load balancer's technical name
 // (ip address or hostname). It returns the value of the technical name whereby it always prefers the IP address (if given)
 // over the hostname. It also returns the list of all load balancer ingresses.
-func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string) (string, []corev1.LoadBalancerIngress, error) {
+func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string) (string, error) {
 	var (
 		loadBalancerIngress  string
 		serviceStatusIngress []corev1.LoadBalancerIngress
@@ -211,13 +211,13 @@ func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string)
 
 	service, err := client.GetService(namespace, name)
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
 	serviceStatusIngress = service.Status.LoadBalancer.Ingress
 	length := len(serviceStatusIngress)
 	if length == 0 {
-		return "", nil, errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)")
+		return "", errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)")
 	}
 
 	if serviceStatusIngress[length-1].IP != "" {
@@ -225,9 +225,9 @@ func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string)
 	} else if serviceStatusIngress[length-1].Hostname != "" {
 		loadBalancerIngress = serviceStatusIngress[length-1].Hostname
 	} else {
-		return "", nil, errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")
+		return "", errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")
 	}
-	return loadBalancerIngress, serviceStatusIngress, nil
+	return loadBalancerIngress, nil
 }
 
 // GenerateTerraformVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which

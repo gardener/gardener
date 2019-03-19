@@ -36,14 +36,13 @@ import (
 func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady() error {
 	var e error
 	if err := wait.Poll(5*time.Second, 600*time.Second, func() (bool, error) {
-		loadBalancerIngress, serviceStatusIngress, err := common.GetLoadBalancerIngress(b.K8sSeedClient, b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+		loadBalancerIngress, err := common.GetLoadBalancerIngress(b.K8sSeedClient, b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
 		if err != nil {
 			e = err
 			b.Logger.Info("Waiting until the kube-apiserver service is ready...")
 			return false, nil
 		}
 		b.Operation.APIServerAddress = loadBalancerIngress
-		b.Operation.APIServerIngresses = serviceStatusIngress
 		return true, nil
 	}); err != nil {
 		return e
