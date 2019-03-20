@@ -16,10 +16,10 @@ They are enabled by default in `1.11`. We allow `1.10` but users must make sure 
 
 ## Shoot cluster versions
 
-| Cloud provider | Kubernetes 1.10 | Kubernetes 1.11 | Kubernetes 1.12 | Kubernetes 1.13 |
-| -------------- | --------------- | --------------- | --------------- | --------------- |
-| AWS            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
-| Azure          | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
-| GCP            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
-| OpenStack      | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         |
-| Alicloud       | unsupported     | unsupported     | unsupported     | 1.13.0+         |
+| Cloud provider | Kubernetes 1.10 | Kubernetes 1.11 | Kubernetes 1.12 | Kubernetes 1.13 | Kubernetes 1.14 |
+| -------------- | --------------- | --------------- | --------------- | --------------- | --------------- |
+| AWS            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         |
+| Azure          | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         |
+| GCP            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         |
+| OpenStack      | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         |
+| Alicloud       | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         |
