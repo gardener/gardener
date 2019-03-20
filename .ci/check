@@ -39,7 +39,7 @@ fi
 if ! which helm 1>/dev/null; then
   echo -n "Installing helm... "
   install_helm_path="./get_helm.sh"
-  curl https://raw.githubusercontent.com/helm/helm/v2.9.1/scripts/get > "${install_helm_path}"
+  curl https://raw.githubusercontent.com/helm/helm/master/scripts/get > "${install_helm_path}"
   chmod 700 "${install_helm_path}"
   bash "${install_helm_path}"
   rm ./"${install_helm_path}"
