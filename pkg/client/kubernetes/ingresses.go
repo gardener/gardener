@@ -14,7 +14,17 @@
 
 package kubernetes
 
+import "github.com/gardener/gardener/pkg/utils"
+
 // DeleteIngress deletes an Ingress object.
 func (c *Clientset) DeleteIngress(namespace, name string) error {
-	return c.kubernetes.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &defaultDeleteOptions)
+	k8sVersionLessThan114, err := utils.CompareVersions(c.Version(), "<", "1.14")
+	if err != nil {
+		return err
+	}
+
+	if k8sVersionLessThan114 {
+		return c.kubernetes.ExtensionsV1beta1().Ingresses(namespace).Delete(name, &defaultDeleteOptions)
+	}
+	return c.kubernetes.NetworkingV1beta1().Ingresses(namespace).Delete(name, &defaultDeleteOptions)
 }

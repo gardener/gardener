@@ -1,4 +1,4 @@
-apiVersion: extensions/v1beta1
+apiVersion: {{ include "ingressversion" . }}
 kind: Ingress
 metadata:
   annotations:
