@@ -637,7 +637,7 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 	return allErrs
 }
 
-func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider, oldProvider garden.DNSProvider) (bool, []string) {
+func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider, oldProvider garden.DNSProviderDeprecated) (bool, []string) {
 	if provider == oldProvider {
 		return true, nil
 	}

@@ -86,7 +86,7 @@ var _ = Describe("validation", func() {
 
 			invalidDNSProviders = []garden.DNSProviderConstraint{
 				{
-					Name: garden.DNSProvider("some-unsupported-provider"),
+					Name: garden.DNSProviderDeprecated("some-unsupported-provider"),
 				},
 			}
 			invalidKubernetes  = []string{"1.11"}
@@ -5072,7 +5072,7 @@ var _ = Describe("validation", func() {
 
 		Context("dns section", func() {
 			It("should forbid unsupported dns providers", func() {
-				shoot.Spec.DNS.Provider = garden.DNSProvider("does-not-exist")
+				shoot.Spec.DNS.Provider = garden.DNSProviderDeprecated("does-not-exist")
 
 				errorList := ValidateShoot(shoot)
 

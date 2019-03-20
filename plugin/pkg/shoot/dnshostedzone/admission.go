@@ -197,9 +197,9 @@ func assignDefaultDomain(shoot *garden.Shoot, projectLister gardenlisters.Projec
 	)
 
 	for _, secret := range secrets {
-		if shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProvider]) {
-			defaultDomain = secret.Annotations[common.DNSDomain]
-			zoneID = secret.Annotations[common.DNSHostedZoneID]
+		if shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProviderDeprecated]) {
+			defaultDomain = secret.Annotations[common.DNSDomainDeprecated]
+			zoneID = secret.Annotations[common.DNSHostedZoneIDDeprecated]
 			break
 		}
 	}
@@ -221,8 +221,8 @@ func verifyHostedZoneID(shoot *garden.Shoot, secretBindingLister gardenlisters.S
 
 	// If the dns domain matches a default domain then the specified hosted zone id must also match.
 	for _, secret := range secrets {
-		if strings.HasSuffix(*(shoot.Spec.DNS.Domain), secret.Annotations[common.DNSDomain]) && shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProvider]) {
-			if *shoot.Spec.DNS.HostedZoneID == secret.Annotations[common.DNSHostedZoneID] {
+		if strings.HasSuffix(*(shoot.Spec.DNS.Domain), secret.Annotations[common.DNSDomainDeprecated]) && shoot.Spec.DNS.Provider == garden.DNSProviderDeprecated(secret.Annotations[common.DNSProviderDeprecated]) {
+			if *shoot.Spec.DNS.HostedZoneID == secret.Annotations[common.DNSHostedZoneIDDeprecated] {
 				return nil
 			}
 			return errors.New("specified dns domain matches a default domain but the specified hosted zone id is incorrect")
@@ -288,8 +288,8 @@ func determineHostedZoneID(shoot *garden.Shoot, secretLister kubecorev1listers.S
 	}
 
 	for _, secret := range secrets {
-		if strings.HasSuffix(*(shoot.Spec.DNS.Domain), secret.Annotations[common.DNSDomain]) && shoot.Spec.DNS.Provider == garden.DNSProvider(secret.Annotations[common.DNSProvider]) {
-			return secret.Annotations[common.DNSHostedZoneID], nil
+		if strings.HasSuffix(*(shoot.Spec.DNS.Domain), secret.Annotations[common.DNSDomainDeprecated]) && shoot.Spec.DNS.Provider == garden.DNSProviderDeprecated(secret.Annotations[common.DNSProviderDeprecated]) {
+			return secret.Annotations[common.DNSHostedZoneIDDeprecated], nil
 		}
 	}
 
@@ -311,7 +311,7 @@ func getDefaultDomainSecrets(secretLister kubecorev1listers.SecretLister) ([]cor
 
 	for _, secret := range secrets {
 		metadata := secret.ObjectMeta
-		if !metav1.HasAnnotation(metadata, common.DNSHostedZoneID) || !metav1.HasAnnotation(metadata, common.DNSProvider) || !metav1.HasAnnotation(metadata, common.DNSDomain) {
+		if !metav1.HasAnnotation(metadata, common.DNSHostedZoneIDDeprecated) || !metav1.HasAnnotation(metadata, common.DNSProviderDeprecated) || !metav1.HasAnnotation(metadata, common.DNSDomainDeprecated) {
 			continue
 		}
 		defaultDomainSecrets = append(defaultDomainSecrets, *secret)

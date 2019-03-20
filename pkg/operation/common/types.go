@@ -69,17 +69,28 @@ const (
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
 
+	// DNSProviderDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
+	// DNS provider.
+	// deprecated
+	DNSProviderDeprecated = "dns.garden.sapcloud.io/provider"
+
+	// DNSDomainDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
+	// domain name.
+	// deprecated
+	DNSDomainDeprecated = "dns.garden.sapcloud.io/domain"
+
+	// DNSHostedZoneIDDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
+	// DNS Hosted Zone.
+	// deprecated
+	DNSHostedZoneIDDeprecated = "dns.garden.sapcloud.io/hostedZoneID"
+
 	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
-	DNSProvider = "dns.garden.sapcloud.io/provider"
+	DNSProvider = "dns.gardener.cloud/provider"
 
 	// DNSDomain is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// domain name.
-	DNSDomain = "dns.garden.sapcloud.io/domain"
-
-	// DNSHostedZoneID is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
-	// DNS Hosted Zone.
-	DNSHostedZoneID = "dns.garden.sapcloud.io/hostedZoneID"
+	DNSDomain = "dns.gardener.cloud/domain"
 
 	// EtcdRoleMain is the constant defining the role for main etcd storing data about objects in Shoot.
 	EtcdRoleMain = "main"
@@ -146,7 +157,7 @@ const (
 	// GardenRoleCertificateManagement is the value of GardenRole key indicating type 'certificate-management'.
 	GardenRoleCertificateManagement = "certificate-management"
 
-	// GardenRoleVpa is the value of GardenRole key indecating type 'vpa'.
+	// GardenRoleVpa is the value of GardenRole key indicating type 'vpa'.
 	GardenRoleVpa = "vpa"
 
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
@@ -292,8 +303,9 @@ const (
 	// TerraformerPurposeInfra is a constant for the complete Terraform setup with purpose 'infrastructure'.
 	TerraformerPurposeInfra = "infra"
 
-	// TerraformerPurposeInternalDNS is a constant for the complete Terraform setup with purpose 'internal cluster domain'
-	TerraformerPurposeInternalDNS = "internal-dns"
+	// TerraformerPurposeInternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'internal cluster domain'
+	// deprecated
+	TerraformerPurposeInternalDNSDeprecated = "internal-dns"
 
 	// TerraformerPurposeExternalDNS is a constant for the complete Terraform setup with purpose 'external cluster domain'.
 	TerraformerPurposeExternalDNS = "external-dns"

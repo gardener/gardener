@@ -79,7 +79,7 @@ func newOperation(
 		secrets[k] = v
 	}
 
-	gardenObj, err := garden.New(k8sGardenInformers.Projects().Lister(), namespace)
+	gardenObj, err := garden.New(k8sGardenInformers.Projects().Lister(), namespace, secrets[common.GardenRoleInternalDomain])
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func newOperation(
 	}
 
 	if shoot != nil {
-		internalDomain := constructInternalDomain(shoot.Name, gardenObj.Project.Name, secretsMap[common.GardenRoleInternalDomain].Annotations[common.DNSDomain])
+		internalDomain := constructInternalDomain(shoot.Name, gardenObj.Project.Name, secretsMap[common.GardenRoleInternalDomain].Annotations[common.DNSDomainDeprecated])
 		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.Project.Name, internalDomain)
 		if err != nil {
 			return nil, err

@@ -14,9 +14,18 @@
 
 package garden
 
-import gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+import (
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+)
 
 // Garden is an object containing Garden cluster specific data.
 type Garden struct {
-	Project *gardenv1beta1.Project
+	Project        *gardenv1beta1.Project
+	InternalDomain *InternalDomain
+}
+
+type InternalDomain struct {
+	Domain     string
+	Provider   string
+	SecretData map[string][]byte
 }

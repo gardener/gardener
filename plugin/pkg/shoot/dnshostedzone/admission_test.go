@@ -97,9 +97,9 @@ var _ = Describe("quotavalidator", func() {
 						common.GardenRole: common.GardenRoleDefaultDomain,
 					},
 					Annotations: map[string]string{
-						common.DNSDomain:       domain,
-						common.DNSHostedZoneID: hostedZoneID,
-						common.DNSProvider:     string(garden.DNSAWSRoute53),
+						common.DNSDomainDeprecated:       domain,
+						common.DNSHostedZoneIDDeprecated: hostedZoneID,
+						common.DNSProviderDeprecated:     string(garden.DNSAWSRoute53),
 					},
 				},
 				Data: map[string][]byte{},

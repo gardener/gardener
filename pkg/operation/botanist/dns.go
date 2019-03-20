@@ -297,9 +297,9 @@ func (b *Botanist) generateTerraformAlicloudDNSConfig(domain, targetType string,
 	}, nil
 }
 
-func (b *Botanist) determineDNSProvider(purposeInternalDomain bool) gardenv1beta1.DNSProvider {
+func (b *Botanist) determineDNSProvider(purposeInternalDomain bool) gardenv1beta1.DNSProviderDeprecated {
 	if purposeInternalDomain {
-		return gardenv1beta1.DNSProvider(b.Secrets[common.GardenRoleInternalDomain].Annotations[common.DNSProvider])
+		return gardenv1beta1.DNSProviderDeprecated(b.Secrets[common.GardenRoleInternalDomain].Annotations[common.DNSProviderDeprecated])
 	}
 	return b.Shoot.Info.Spec.DNS.Provider
 }
@@ -333,9 +333,9 @@ func (b *Botanist) getDomainCredentials(purposeInternalDomain bool, requiredKeys
 func (b *Botanist) getHostedZoneID(purposeInternalDomain bool) (string, error) {
 	switch {
 	case purposeInternalDomain:
-		return b.Secrets[common.GardenRoleInternalDomain].Annotations[common.DNSHostedZoneID], nil
+		return b.Secrets[common.GardenRoleInternalDomain].Annotations[common.DNSHostedZoneIDDeprecated], nil
 	case b.DefaultDomainSecret != nil:
-		return b.DefaultDomainSecret.Annotations[common.DNSHostedZoneID], nil
+		return b.DefaultDomainSecret.Annotations[common.DNSHostedZoneIDDeprecated], nil
 	case b.Shoot.Info.Spec.DNS.HostedZoneID != nil:
 		return *b.Shoot.Info.Spec.DNS.HostedZoneID, nil
 	}

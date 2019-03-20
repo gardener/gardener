@@ -30,14 +30,60 @@ import (
 )
 
 // New creates a new Garden object (based on a Shoot object).
-func New(projectLister gardenlisters.ProjectLister, namespace string) (*Garden, error) {
+func New(projectLister gardenlisters.ProjectLister, namespace string, internalDomainSecret *corev1.Secret) (*Garden, error) {
 	project, err := common.ProjectForNamespace(projectLister, namespace)
 	if err != nil {
 		return nil, err
 	}
 
+	internalDomain, err := getInternalDomain(internalDomainSecret)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Garden{
-		Project: project,
+		Project:        project,
+		InternalDomain: internalDomain,
+	}, nil
+}
+
+func getInternalDomain(internalDomainSecret *corev1.Secret) (*InternalDomain, error) {
+	var (
+		annotations = internalDomainSecret.Annotations
+
+		provider string
+		domain   string
+	)
+
+	if annotations == nil {
+		return nil, fmt.Errorf("internal domain secret has no annotations")
+	}
+
+	if providerAnnotation, ok := annotations[common.DNSProviderDeprecated]; ok {
+		provider = providerAnnotation
+	}
+	if providerAnnotation, ok := annotations[common.DNSProvider]; ok {
+		provider = providerAnnotation
+	}
+
+	if domainAnnotation, ok := annotations[common.DNSDomainDeprecated]; ok {
+		domain = domainAnnotation
+	}
+	if domainAnnotation, ok := annotations[common.DNSDomain]; ok {
+		domain = domainAnnotation
+	}
+
+	if len(domain) == 0 {
+		return nil, fmt.Errorf("missing dns domain annotation on internal domain secret")
+	}
+	if len(provider) == 0 {
+		return nil, fmt.Errorf("missing dns provider annotation on internal domain secret")
+	}
+
+	return &InternalDomain{
+		Domain:     domain,
+		Provider:   provider,
+		SecretData: internalDomainSecret.Data,
 	}, nil
 }
 
@@ -155,7 +201,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 // VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
 // existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
 func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
-	currentDomain := internalDomainSecret.Annotations[common.DNSDomain]
+	currentDomain := internalDomainSecret.Annotations[common.DNSDomainDeprecated]
 
 	internalConfigMap, err := k8sGardenClient.GetConfigMap(common.GardenNamespace, common.ControllerManagerInternalConfigMapName)
 	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
@@ -193,21 +239,21 @@ func BootstrapCluster(k8sGardenClient kubernetes.Interface, gardenNamespace stri
 }
 
 func extractDomain(annotations map[string]string) (string, error) {
-	dnsProvider, ok := annotations[common.DNSProvider]
+	dnsProvider, ok := annotations[common.DNSProviderDeprecated]
 	if !ok {
-		return "", fmt.Errorf("no annotation %s found", common.DNSProvider)
+		return "", fmt.Errorf("no annotation %s found", common.DNSProviderDeprecated)
 	}
 
 	// Alicloud DNS does not support a hosted zone ID
 	if dnsProvider != string(garden.DNSAlicloud) {
-		if _, ok = annotations[common.DNSHostedZoneID]; !ok {
-			return "", fmt.Errorf("no annotation %s found", common.DNSHostedZoneID)
+		if _, ok = annotations[common.DNSHostedZoneIDDeprecated]; !ok {
+			return "", fmt.Errorf("no annotation %s found", common.DNSHostedZoneIDDeprecated)
 		}
 	}
 
-	domain, ok := annotations[common.DNSDomain]
+	domain, ok := annotations[common.DNSDomainDeprecated]
 	if !ok {
-		return "", fmt.Errorf("no annotation %s found", common.DNSDomain)
+		return "", fmt.Errorf("no annotation %s found", common.DNSDomainDeprecated)
 	}
 
 	return domain, nil

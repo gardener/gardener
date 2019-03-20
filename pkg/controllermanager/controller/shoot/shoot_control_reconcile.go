@@ -61,7 +61,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		return formatError("Failed to create a HybridBotanist", err)
 	}
 
-	if err := botanist.RequiredExtensionsExist(o.Shoot.Info); err != nil {
+	if err := botanist.RequiredExtensionsExist(); err != nil {
 		return formatError("Failed to check whether all required extensions exist", err)
 	}
 

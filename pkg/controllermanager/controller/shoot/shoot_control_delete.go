@@ -61,7 +61,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		return formatError("Failed to create a Botanist", err)
 	}
 
-	if err := botanist.RequiredExtensionsExist(o.Shoot.Info); err != nil {
+	if err := botanist.RequiredExtensionsExist(); err != nil {
 		return formatError("Failed to check whether all required extensions exist", err)
 	}
 

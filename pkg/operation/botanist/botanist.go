@@ -32,6 +32,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -162,16 +164,13 @@ func (b *Botanist) UnregisterAsSeed() error {
 }
 
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
-func (b *Botanist) RequiredExtensionsExist(shoot *gardenv1beta1.Shoot) error {
+func (b *Botanist) RequiredExtensionsExist() error {
 	controllerInstallationList := &corev1alpha1.ControllerInstallationList{}
 	if err := b.K8sGardenClient.Client().List(context.TODO(), nil, controllerInstallationList); err != nil {
 		return err
 	}
 
-	requiredExtensions := map[string]string{
-		// At the moment we do only support `OperatingSystemConfig` resources, so we check for that:
-		extensionsv1alpha1.OperatingSystemConfigResource: string(b.Shoot.GetMachineImageName()),
-	}
+	requiredExtensions := b.computeRequiredExtensions()
 
 	for _, controllerInstallation := range controllerInstallationList.Items {
 		if controllerInstallation.Spec.SeedRef.Name != b.Seed.Info.Name {
@@ -195,4 +194,18 @@ func (b *Botanist) RequiredExtensionsExist(shoot *gardenv1beta1.Shoot) error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) computeRequiredExtensions() map[string]string {
+	requiredExtensions := map[string]string{
+		extensionsv1alpha1.OperatingSystemConfigResource: string(b.Shoot.GetMachineImageName()),
+		dnsv1alpha1.DNSProviderKind:                      b.Garden.InternalDomain.Provider,
+	}
+
+	// TODO: this is only for external domain!
+	if provider := b.Shoot.Info.Spec.DNS.Provider; provider != gardenv1beta1.DNSUnmanaged {
+		requiredExtensions[dnsv1alpha1.DNSProviderKind] = string(provider)
+	}
+
+	return requiredExtensions
 }
