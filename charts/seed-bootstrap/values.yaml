@@ -36,6 +36,8 @@ allowedMetrics:
   cAdvisor:
   - container_cpu_cfs_periods_total
   - container_cpu_usage_seconds_total
+  - container_fs_reads_bytes_total
+  - container_fs_writes_bytes_total
   - container_fs_inodes_total
   - container_fs_limit_bytes
   - container_fs_usage_bytes
