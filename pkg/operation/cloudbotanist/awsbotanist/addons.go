@@ -156,13 +156,7 @@ func (b *AWSBotanist) GenerateStorageClassesConfig() (map[string]interface{}, er
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AWSBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(map[string]interface{}{
-		"controller": map[string]interface{}{
-			"config": map[string]interface{}{
-				"use-proxy-protocol": "true",
-			},
-		},
-	}, b.Shoot.NginxIngressEnabled()), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
 
 // GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for aws

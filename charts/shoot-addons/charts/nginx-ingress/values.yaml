@@ -12,7 +12,7 @@ controller:
 
   config:
     server-name-hash-bucket-size: "256"
-    use-proxy-protocol: "false"
+    use-proxy-protocol: "true"
     worker-processes: "2"
 
   # Required for use with CNI based kubernetes installations (such as ones set up by kubeadm),
@@ -81,6 +81,8 @@ controller:
   service:
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: '*'
+      nginx.ingress.kubernetes.io/auth-snippet: |
+        proxy_set_input_header X-Real-IP $remote_addr; proxy_set_input_header X-Forwarded-For $remote_addr;
     clusterIP: ""
 
     ## List of IP addresses at which the controller services are available
@@ -94,7 +96,7 @@ controller:
     ## Set external traffic policy to: "Local" to preserve source IP on
     ## providers supporting it
     ## Ref: https://kubernetes.io/docs/tutorials/services/source-ip/#source-ip-for-services-with-typeloadbalancer
-    externalTrafficPolicy: ""
+    externalTrafficPolicy: "Local"
 
     targetPorts:
       http: 80

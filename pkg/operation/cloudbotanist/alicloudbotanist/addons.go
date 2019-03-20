@@ -36,13 +36,7 @@ func (b *AlicloudBotanist) GenerateKube2IAMConfig() (map[string]interface{}, err
 
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AlicloudBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(map[string]interface{}{
-		"controller": map[string]interface{}{
-			"config": map[string]interface{}{
-				"use-proxy-protocol": "false",
-			},
-		},
-	}, b.Shoot.NginxIngressEnabled()), nil
+	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
 }
 
 // GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
