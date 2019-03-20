@@ -1,4 +1,4 @@
-{{- if semverCompare ">= 1.13" .Values.global.kubernetesVersion }}
+{{- if semverCompare "= 1.13" .Values.global.kubernetesVersion }}
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:

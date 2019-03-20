@@ -30,7 +30,7 @@ spec:
         app: kubernetes
         role: proxy
     spec:
-{{- if .Values.enableIPVS }}
+{{- if and .Values.enableIPVS (semverCompare "< 1.14" .Values.kubernetesVersion) }}
       # Temporary fix until https://github.com/kubernetes/kubernetes/issues/70113
       # is fixed in 1.13, 1.12 and 1.11
       initContainers:
