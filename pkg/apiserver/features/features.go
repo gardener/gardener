@@ -22,7 +22,7 @@ var (
 	// FeatureGate is a shared global FeatureGate for Gardener APIServer flags.
 	// right now the Generic API server uses this feature gate as default
 	// TODO change it once it moves to ComponentConfig
-	FeatureGate  = utilfeature.DefaultFeatureGate
+	FeatureGate  = utilfeature.DefaultMutableFeatureGate
 	featureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{}
 )
 

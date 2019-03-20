@@ -20,11 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	apiconfig "k8s.io/apimachinery/pkg/apis/config"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"strings"
 	"time"
@@ -51,14 +46,20 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/discovery"
+	diskcache "k8s.io/client-go/discovery/cached/disk"
 	"k8s.io/client-go/informers"
 	kubeinformers "k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
+	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -229,7 +230,7 @@ type Gardener struct {
 	LeaderElection         *leaderelection.LeaderElectionConfig
 }
 
-func restConfigFromClientConnectionConfiguration(cfg apiconfig.ClientConnectionConfiguration) (*rest.Config, error) {
+func restConfigFromClientConnectionConfiguration(cfg componentbaseconfig.ClientConnectionConfiguration) (*rest.Config, error) {
 	restConfig, err := clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
 	if err != nil {
 		return nil, err
@@ -264,7 +265,7 @@ func discoveryFromControllerManagerConfiguration(cfg *config.ControllerManagerCo
 		ttl = discoveryCfg.TTL.Duration
 	}
 
-	return discovery.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, ttl)
+	return diskcache.NewCachedDiscoveryClientForConfig(restConfig, discoveryCacheDir, httpCacheDir, ttl)
 }
 
 // NewGardener is the main entry point of instantiating a new Gardener controller manager.
@@ -416,10 +417,12 @@ func makeLeaderElectionConfig(cfg config.LeaderElectionConfiguration, client k8s
 		return nil, fmt.Errorf("unable to get hostname: %v", err)
 	}
 
-	lock, err := resourcelock.New(cfg.ResourceLock,
+	lock, err := resourcelock.New(
+		cfg.ResourceLock,
 		cfg.LockObjectNamespace,
 		cfg.LockObjectName,
 		client.CoreV1(),
+		client.CoordinationV1(),
 		resourcelock.ResourceLockConfig{
 			Identity:      hostname,
 			EventRecorder: recorder,

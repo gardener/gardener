@@ -14,51 +14,55 @@ ignored = [
 
 [[override]]
   name = "k8s.io/api"
-  version = "kubernetes-1.13.1"
-
-[[override]]
-  name = "github.com/jmespath/go-jmespath"
-  revision = "c2b33e84"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/apiserver"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/client-go"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/apiextensions-apiserver"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/cluster-bootstrap"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
+
+[[override]]
+  name = "k8s.io/component-base"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/kube-aggregator"
-  version = "kubernetes-1.13.1"
-
-[[override]]
-  name = "sigs.k8s.io/controller-runtime"
-  version = "0.1.10"
+  version = "kubernetes-1.14.0"
 
 [[override]]
   name = "k8s.io/code-generator"
-  version = "kubernetes-1.13.1"
+  version = "kubernetes-1.14.0"
+
+[[override]]
+  name = "k8s.io/kube-openapi"
+  revision = "5e45bb682580c9be5ffa4d27d367f0eeba125c7b" # kubernetes-1.14.0
 
 [[override]]
   name = "k8s.io/klog"
   version = "v0.1.0"
 
 [[override]]
-  name = "k8s.io/kube-openapi"
-  revision = "0317810137be915b9cf888946c6e115c1bfac693" # kubernetes-1.13.1
+  name = "sigs.k8s.io/controller-runtime"
+  version = "0.1.10"
+
+[[override]]
+  name = "github.com/jmespath/go-jmespath"
+  revision = "c2b33e84"
 
 [[override]]
   name = "github.com/coreos/etcd"
@@ -110,8 +114,12 @@ ignored = [
 
 # use the same version that is referenced by k8s.io/apiserver
 [[override]]
-  name = "github.com/docker/docker"
-  revision = "a9fbbdc8dd8794b20af358382ab780559bca589d"
+  name = "github.com/evanphx/json-patch"
+  revision = "5858425f75500d40c52783dce87d085a483ce135"
+
+[[override]]
+  name = "sigs.k8s.io/structured-merge-diff"
+  revision = "e85c7b244fd2cc57bb829d73a061f93a441e63ce"
 
 [[constraint]]
   name = "github.com/hashicorp/go-multierror"

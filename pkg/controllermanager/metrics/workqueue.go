@@ -32,13 +32,23 @@ var (
 		Help: "Count of item additions to a workqueue.",
 	}, workqueueLabels)
 
-	workqueueLatency = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+	workqueueLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "garden_cm_workqueue_latency_milliseconds",
 		Help: "Time in milliseconds an item remains in the workqueue before it get processed.",
 	}, workqueueLabels)
 
-	workqueueDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+	deprecatedWorkqueueLatency = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Name: "garden_cm_workqueue_latency_milliseconds_deprecated",
+		Help: "Time in milliseconds an item remains in the workqueue before it get processed.",
+	}, workqueueLabels)
+
+	workqueueDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "garden_cm_workqueue_duration_milliseconds",
+		Help: "Processing duration in milliseconds of an workqueue item.",
+	}, workqueueLabels)
+
+	deprecatedWorkqueueDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Name: "garden_cm_workqueue_duration_milliseconds_deprecated",
 		Help: "Processing duration in milliseconds of an workqueue item.",
 	}, workqueueLabels)
 
@@ -64,28 +74,56 @@ func (p workqueueMetricProvider) NewDepthMetric(name string) workqueue.GaugeMetr
 	return workqueueLength.With(prometheus.Labels{"queue": name})
 }
 
+func (p workqueueMetricProvider) NewDeprecatedDepthMetric(name string) workqueue.GaugeMetric {
+	return p.NewDepthMetric(name)
+}
+
 func (p workqueueMetricProvider) NewAddsMetric(name string) workqueue.CounterMetric {
 	return workqueueAdds.With(prometheus.Labels{"queue": name})
 }
 
-func (p workqueueMetricProvider) NewLatencyMetric(name string) workqueue.SummaryMetric {
+func (p workqueueMetricProvider) NewDeprecatedAddsMetric(name string) workqueue.CounterMetric {
+	return p.NewAddsMetric(name)
+}
+
+func (p workqueueMetricProvider) NewLatencyMetric(name string) workqueue.HistogramMetric {
 	return workqueueLatency.With(prometheus.Labels{"queue": name})
 }
 
-func (p workqueueMetricProvider) NewWorkDurationMetric(name string) workqueue.SummaryMetric {
+func (p workqueueMetricProvider) NewDeprecatedLatencyMetric(name string) workqueue.SummaryMetric {
+	return deprecatedWorkqueueLatency.With(prometheus.Labels{"queue": name})
+}
+
+func (p workqueueMetricProvider) NewWorkDurationMetric(name string) workqueue.HistogramMetric {
 	return workqueueDuration.With(prometheus.Labels{"queue": name})
+}
+
+func (p workqueueMetricProvider) NewDeprecatedWorkDurationMetric(name string) workqueue.SummaryMetric {
+	return deprecatedWorkqueueDuration.With(prometheus.Labels{"queue": name})
 }
 
 func (p workqueueMetricProvider) NewRetriesMetric(name string) workqueue.CounterMetric {
 	return workqueueRetries.With(prometheus.Labels{"queue": name})
 }
 
+func (p workqueueMetricProvider) NewDeprecatedRetriesMetric(name string) workqueue.CounterMetric {
+	return p.NewRetriesMetric(name)
+}
+
 func (p workqueueMetricProvider) NewUnfinishedWorkSecondsMetric(name string) workqueue.SettableGaugeMetric {
 	return workqueueUnfinishedWork.With(prometheus.Labels{"queue": name})
 }
 
-func (p workqueueMetricProvider) NewLongestRunningProcessorMicrosecondsMetric(name string) workqueue.SettableGaugeMetric {
+func (p workqueueMetricProvider) NewDeprecatedUnfinishedWorkSecondsMetric(name string) workqueue.SettableGaugeMetric {
+	return p.NewUnfinishedWorkSecondsMetric(name)
+}
+
+func (p workqueueMetricProvider) NewLongestRunningProcessorSecondsMetric(name string) workqueue.SettableGaugeMetric {
 	return workqueueLongestRunningProcessorMicroseconds.With(prometheus.Labels{"queue": name})
+}
+
+func (p workqueueMetricProvider) NewDeprecatedLongestRunningProcessorMicrosecondsMetric(name string) workqueue.SettableGaugeMetric {
+	return p.NewLongestRunningProcessorSecondsMetric(name)
 }
 
 // RegisterWorkqueMetrics creates and register a provider for workqueue metrics
@@ -95,7 +133,9 @@ func RegisterWorkqueMetrics() {
 	prometheus.MustRegister(workqueueLength)
 	prometheus.MustRegister(workqueueAdds)
 	prometheus.MustRegister(workqueueLatency)
+	prometheus.MustRegister(deprecatedWorkqueueLatency)
 	prometheus.MustRegister(workqueueDuration)
+	prometheus.MustRegister(deprecatedWorkqueueDuration)
 	prometheus.MustRegister(workqueueRetries)
 	prometheus.MustRegister(workqueueUnfinishedWork)
 	prometheus.MustRegister(workqueueLongestRunningProcessorMicroseconds)

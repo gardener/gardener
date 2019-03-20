@@ -45,20 +45,16 @@ var _ = Describe("ToSelectableFields", func() {
 
 var _ = Describe("GetAttrs", func() {
 	It("should return error when object is not Shoot", func() {
-		_, _, _, err := strategy.GetAttrs(&garden.Seed{})
+		_, _, err := strategy.GetAttrs(&garden.Seed{})
 		Expect(err).To(HaveOccurred())
 	})
 
 	It("should return correct result", func() {
-		ls, fs, uninitialized, err := strategy.GetAttrs(newShoot("foo"))
+		ls, fs, err := strategy.GetAttrs(newShoot("foo"))
 
 		Expect(ls).To(HaveLen(1))
 		Expect(ls.Get("foo")).To(Equal("bar"))
-
 		Expect(fs.Get(garden.ShootSeedName)).To(Equal("foo"))
-
-		Expect(uninitialized).To(BeFalse())
-
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

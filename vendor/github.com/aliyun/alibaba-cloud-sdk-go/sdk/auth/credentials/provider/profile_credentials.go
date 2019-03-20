@@ -122,7 +122,6 @@ func (p *ProfileProvider) Resolve() (auth.Credential, error) {
 			data += scan.Text() + "\n"
 		}
 		return credentials.NewRsaKeyPairCredential(privateKey, value1.String(), 3600), nil
-
 	default:
 		return nil, errors.New("ERROR: Failed to get credential")
 	}

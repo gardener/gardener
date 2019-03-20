@@ -5,13 +5,133 @@
    "version": "1.0"
   },
   "paths": {
-   "/test": {
+   "/test/dummytype/bar": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func2",
+     "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/dummytype.Bar"
+       }
+      },
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   },
+   "/test/dummytype/baz": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func3",
+     "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/dummytype.Baz"
+       }
+      },
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   },
+   "/test/dummytype/foo": {
     "get": {
      "schemes": [
       "https"
      ],
      "operationId": "func1",
      "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/dummytype.Foo"
+       }
+      },
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   },
+   "/test/dummytype/waldo": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func4",
+     "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/dummytype.Waldo"
+       }
+      },
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   },
+   "/test/listtype/atomiclist": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func5",
+     "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/listtype.AtomicList"
+       }
+      },
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   },
+   "/test/listtype/maplist": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func6",
+     "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/listtype.MapList"
+       }
+      },
+      "404": {
+       "$ref": "#/responses/NotFound"
+      }
+     }
+    }
+   },
+   "/test/listtype/setlist": {
+    "get": {
+     "schemes": [
+      "https"
+     ],
+     "operationId": "func7",
+     "responses": {
+      "200": {
+       "description": "OK",
+       "schema": {
+        "$ref": "#/definitions/listtype.SetList"
+       }
+      },
       "404": {
        "$ref": "#/responses/NotFound"
       }
@@ -21,6 +141,7 @@
   },
   "definitions": {
    "dummytype.Bar": {
+    "type": "object",
     "required": [
      "ViolationBehind",
      "Violation"
@@ -35,6 +156,7 @@
     }
    },
    "dummytype.Baz": {
+    "type": "object",
     "required": [
      "Violation",
      "ViolationBehind"
@@ -49,6 +171,7 @@
     }
    },
    "dummytype.Foo": {
+    "type": "object",
     "required": [
      "Second",
      "First"
@@ -64,6 +187,7 @@
     }
    },
    "dummytype.Waldo": {
+    "type": "object",
     "required": [
      "First",
      "Second"
@@ -79,6 +203,7 @@
     }
    },
    "listtype.AtomicList": {
+    "type": "object",
     "required": [
      "Field"
     ],
@@ -93,6 +218,7 @@
     }
    },
    "listtype.Item": {
+    "type": "object",
     "required": [
      "Protocol",
      "Port"
@@ -120,6 +246,7 @@
     }
    },
    "listtype.MapList": {
+    "type": "object",
     "required": [
      "Field"
     ],
@@ -135,6 +262,7 @@
     }
    },
    "listtype.SetList": {
+    "type": "object",
     "required": [
      "Field"
     ],

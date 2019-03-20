@@ -83,7 +83,7 @@ func (r *Resources) ValidateInitialization() error {
 // Validate makes admissions decisions based on the resources specified in a ControllerRegistration object.
 // It does reject the request if there is any other existing ControllerRegistration object in the system that
 // specifies the same resource kind/type combination like the incoming object.
-func (r *Resources) Validate(a admission.Attributes) error {
+func (r *Resources) Validate(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if r.readyFunc == nil {
 		r.AssignReadyFunc(func() bool {

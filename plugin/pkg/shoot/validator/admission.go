@@ -110,7 +110,7 @@ func (v *ValidateShoot) ValidateInitialization() error {
 }
 
 // Admit validates the Shoot details against the referenced CloudProfile.
-func (v *ValidateShoot) Admit(a admission.Attributes) error {
+func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if v.readyFunc == nil {
 		v.AssignReadyFunc(func() bool {

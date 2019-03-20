@@ -21,19 +21,18 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
 
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
-
-	"k8s.io/client-go/rest"
-
 	"github.com/gardener/gardener/pkg/utils"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/tools/remotecommand"
 	"k8s.io/client-go/transport/spdy"
@@ -179,7 +178,7 @@ func (c *Clientset) setupForwardPodPort(namespace, name string, local, remote in
 		localPort int
 	)
 
-	u := c.kubernetes.Core().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("portforward").URL()
+	u := c.kubernetes.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("portforward").URL()
 
 	transport, upgrader, err := spdy.RoundTripperFor(c.config)
 	if err != nil {

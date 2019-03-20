@@ -68,7 +68,7 @@ var _ = Describe("resources", func() {
 		It("should do nothing because the resource is not ControllerRegistration", func() {
 			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", controllerRegistration.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, false, nil)
 
-			err := admissionHandler.Validate(attrs)
+			err := admissionHandler.Validate(attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -76,7 +76,7 @@ var _ = Describe("resources", func() {
 		It("should allow the object because no other resource in the system uses the kind/type combination", func() {
 			attrs = admission.NewAttributesRecord(&controllerRegistration, nil, core.Kind("ControllerRegistration").WithVersion("version"), "", controllerRegistration.Name, core.Resource("controllerregistrations").WithVersion("version"), "", admission.Create, false, nil)
 
-			err := admissionHandler.Validate(attrs)
+			err := admissionHandler.Validate(attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -90,7 +90,7 @@ var _ = Describe("resources", func() {
 				}, nil
 			})
 
-			err := admissionHandler.Validate(attrs)
+			err := admissionHandler.Validate(attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -107,7 +107,7 @@ var _ = Describe("resources", func() {
 				}, nil
 			})
 
-			err := admissionHandler.Validate(attrs)
+			err := admissionHandler.Validate(attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(apierrors.IsForbidden(err)).To(BeTrue())
