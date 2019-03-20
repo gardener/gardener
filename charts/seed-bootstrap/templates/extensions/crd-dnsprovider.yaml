@@ -1,0 +1,96 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: dnsproviders.dns.gardener.cloud
+spec:
+  group: dns.gardener.cloud
+  scope: Namespaced
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  conversion:
+    strategy: None
+  subresources:
+    status: {}
+  names:
+    kind: DNSProvider
+    listKind: DNSProviderList
+    plural: dnsproviders
+    shortNames:
+    - dnspr
+    singular: dnsprovider
+  additionalPrinterColumns:
+  - JSONPath: .spec.type
+    description: Provider type
+    name: TYPE
+    type: string
+  - JSONPath: .status.state
+    description: Status of DNS provider
+    name: STATUS
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: AGE
+    type: date
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            domains:
+              properties:
+                exclude:
+                  items:
+                    type: string
+                  type: array
+                include:
+                  items:
+                    type: string
+                  type: array
+              type: object
+            providerConfig:
+              type: object
+            secretRef:
+              type: object
+            type:
+              type: string
+          type: object
+        status:
+          properties:
+            domains:
+              properties:
+                excluded:
+                  items:
+                    type: string
+                  type: array
+                included:
+                  items:
+                    type: string
+                  type: array
+              type: object
+            message:
+              type: string
+            state:
+              type: string
+          required:
+          - state
+          - domains
+          type: object
+{{- if semverCompare ">= 1.11-0" .Capabilities.KubeVersion.GitVersion }}
+      required:
+        - spec
+{{- end }}

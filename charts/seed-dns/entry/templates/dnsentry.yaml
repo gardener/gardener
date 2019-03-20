@@ -1,0 +1,16 @@
+---
+apiVersion: dns.gardener.cloud/v1alpha1
+kind: DNSEntry
+metadata:
+  name: {{ .Values.name }}
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if .Values.ownerId }}
+  ownerId: {{ .Values.ownerId }}
+  {{- end }}
+  dnsName: {{ .Values.dnsName | quote }}
+  ttl: {{ .Values.ttl }}
+  targets:
+{{- range $idx, $target := .Values.targets }}
+  - {{ $target | quote }}
+{{- end -}}

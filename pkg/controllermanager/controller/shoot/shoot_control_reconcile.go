@@ -96,7 +96,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server service has reported readiness",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).DoIf(isCloud),
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).DoIf(isCloud),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServerService),
 		})
 		deploySecrets = g.Add(flow.Task{
@@ -106,12 +106,12 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.SimpleTaskFn(botanist.DeployInternalDomainDNSRecord),
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
-			Fn:           flow.SimpleTaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedDNS),
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedDNS),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployInfrastructure = g.Add(flow.Task{
@@ -210,7 +210,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
-			Fn:           flow.SimpleTaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployKubeAddonManager),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{

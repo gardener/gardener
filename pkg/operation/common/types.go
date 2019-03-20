@@ -307,8 +307,13 @@ const (
 	// deprecated
 	TerraformerPurposeInternalDNSDeprecated = "internal-dns"
 
-	// TerraformerPurposeExternalDNS is a constant for the complete Terraform setup with purpose 'external cluster domain'.
-	TerraformerPurposeExternalDNS = "external-dns"
+	// TerraformerPurposeExternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'external cluster domain'.
+	// deprecated
+	TerraformerPurposeExternalDNSDeprecated = "external-dns"
+
+	// TerraformerPurposeIngressDNSDeprecated is a constant for the complete Terraform setup with purpose 'ingress domain'.
+	// deprecated
+	TerraformerPurposeIngressDNSDeprecated = "ingress"
 
 	// TerraformerPurposeBackup is a constant for the complete Terraform setup with purpose 'etcd backup'.
 	TerraformerPurposeBackup = "backup"

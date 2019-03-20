@@ -116,7 +116,7 @@ func (t *Terraformer) Destroy() error {
 	if err := t.execute(context.TODO(), "destroy"); err != nil {
 		return err
 	}
-	return t.cleanupConfiguration(context.TODO())
+	return t.CleanupConfiguration(context.TODO())
 }
 
 // execute creates a Terraform Job which runs the provided scriptName (apply or destroy), waits for the Job to be completed

@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"context"
 
+	dnsscheme "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme"
 	gardencoreclientset "github.com/gardener/gardener/pkg/client/core/clientset/versioned"
 	gardencorescheme "github.com/gardener/gardener/pkg/client/core/clientset/versioned/scheme"
 	gardenextensionsscheme "github.com/gardener/gardener/pkg/client/extensions/clientset/versioned/scheme"
@@ -128,6 +129,7 @@ func init() {
 	seedSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
 		machinescheme.AddToScheme,
+		dnsscheme.AddToScheme,
 		gardenextensionsscheme.AddToScheme,
 	)
 

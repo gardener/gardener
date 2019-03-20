@@ -1,0 +1,4 @@
+apiVersion: v1
+description: DNSEntry extension resource for creating an actual DNS record.
+name: entry
+version: 0.1.0
