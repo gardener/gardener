@@ -15,6 +15,7 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
+        - 1.14.0
         - 1.13.4
       machineImages:
       - name: coreos-alicloud

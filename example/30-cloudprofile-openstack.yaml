@@ -17,6 +17,7 @@ spec:
       - name: MY-FLOATING-POOL
       kubernetes:
         versions:
+        - 1.14.0
         - 1.13.4
         - 1.12.6
         - 1.11.8
