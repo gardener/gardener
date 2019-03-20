@@ -82,8 +82,8 @@
     "services/vpc",
   ]
   pruneopts = "NUT"
-  revision = "e14bf122513a30e2e883c48f4a6b66f396bd62db"
-  version = "1.53.74"
+  revision = "98404a78c00958136b80f788088f00d358950d2b"
+  version = "1.53.72"
 
 [[projects]]
   digest = "1:b28f9249808d9e7f593589c55e08416dedd312df32f3fb1f94f0f45af780a33b"
@@ -212,7 +212,37 @@
   name = "github.com/evanphx/json-patch"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "5858425f75500d40c52783dce87d085a483ce135"
+  revision = "72bf35d0ff611848c1dc9df0f976c81192392fa5"
+  version = "v4.1.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:680a28683152e2a3f523c8610fd2bbe6c9ac9d6f4245f9013d03800a3e9a4c32"
+  name = "github.com/gardener/controller-manager-library"
+  packages = [
+    "pkg/clientsets",
+    "pkg/ctxutil",
+    "pkg/fieldpath",
+    "pkg/informerfactories",
+    "pkg/kutil",
+    "pkg/logger",
+    "pkg/resources",
+    "pkg/utils",
+  ]
+  pruneopts = "NUT"
+  revision = "16ea0c20f4228fa53e6af84f05b83f52449c8e6a"
+
+[[projects]]
+  digest = "1:1a39eed9705758f621f4fc435f32dccece308026bfc5087d62389dd09d7a829a"
+  name = "github.com/gardener/external-dns-management"
+  packages = [
+    "pkg/apis/dns",
+    "pkg/apis/dns/v1alpha1",
+    "pkg/client/dns/clientset/versioned/scheme",
+  ]
+  pruneopts = "NUT"
+  revision = "b4bbb5832a03a0354bcd945917ea11f9e709f9db"
+  version = "0.1.0"
 
 [[projects]]
   digest = "1:b678acaf8766b6df36723a4adefc3302191a34c22b7a38b0abaf5f6d3dd24090"
@@ -693,7 +723,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "55ae3d9d557340b5bc24cd8aa5f6fa2c2ab31352"
+  revision = "40f3c57fb1983891f95378042bd0bfd590f52384"
 
 [[projects]]
   digest = "1:9dfe20a82800ffcf0a2bde15beba44cc6d6f6cf1d003420ecc8ad0ac78300d70"
@@ -838,7 +868,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:da7f24c62ef576a81db469d684dd29848c492193f3bf7c546c1a45077ee955db"
+  digest = "1:5c578e2cde3d3f0c533803727e62143b731b78c80008a7fb3e3b5919a3938465"
   name = "golang.org/x/net"
   packages = [
     "bpf",
@@ -860,7 +890,7 @@
     "websocket",
   ]
   pruneopts = "NUT"
-  revision = "15845e8f865bdabdefb6e7da65b4d9e8de5e94ef"
+  revision = "1272bf9dcd53ea65c09668fb4c76e65deb740072"
 
 [[projects]]
   branch = "master"
@@ -878,7 +908,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5b81966854749f5c4846f643e6c97162c1b74fe97c06139857ad50db8bb3b505"
+  digest = "1:74081a965540de6794a48feb3d091c27fc3fffab6a76c5860dde15b01f21cacc"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -886,7 +916,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "f49334f85ddcf0f08d7fb6dd7363e9e6d6b777eb"
+  revision = "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771"
 
 [[projects]]
   digest = "1:2c4e3b27329379d7b5f889038b48086140ea60708fb92e4b19d6a775926ea30b"
@@ -950,7 +980,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "1d95b17f1b046c395bb6a29c453b501d267151d3"
+  revision = "3f1ed9edd1b43b011064eb59e5c9e73f5537ddd9"
 
 [[projects]]
   digest = "1:1dd7f1d3b8aefd8d0277234fd7aebc7b57f97ba01ab689f09dbfa287a72f3300"
@@ -1712,6 +1742,8 @@
     "github.com/aws/aws-sdk-go/service/ec2",
     "github.com/aws/aws-sdk-go/service/elb",
     "github.com/aws/aws-sdk-go/service/sts",
+    "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1",
+    "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme",
     "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",
