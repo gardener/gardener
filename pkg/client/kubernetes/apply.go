@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
@@ -156,15 +157,22 @@ func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeF
 // all concatenated in a byte slice, and sends them one after the other to the API server. If a resource
 // already exists at the API server, it will update it. It returns an error as soon as the first error occurs.
 func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, options ApplierOptions) error {
-	for obj, err := r.Read(); err == nil; obj, err = r.Read() {
+	for {
+		obj, err := r.Read()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
 		if obj == nil {
 			continue
 		}
+
 		if err := c.applyObject(ctx, obj, options); err != nil {
 			return err
 		}
 	}
-	return nil
 }
 
 // UnstructuredReader an interface that all manifest readers should implement
@@ -175,30 +183,36 @@ type UnstructuredReader interface {
 // NewManifestReader initializes a reader for yaml manifests
 func NewManifestReader(manifest []byte) UnstructuredReader {
 	return &manifestReader{
-		decoder: yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 1024),
+		decoder:  yaml.NewYAMLOrJSONDecoder(bytes.NewReader(manifest), 1024),
+		manifest: manifest,
 	}
 }
 
 // manifestReader is an unstructured reader that contains a JSONDecoder
 type manifestReader struct {
-	decoder *yaml.YAMLOrJSONDecoder
+	decoder  *yaml.YAMLOrJSONDecoder
+	manifest []byte
 }
 
 // Read decodes yaml data into an unstructured object
 func (m *manifestReader) Read() (*unstructured.Unstructured, error) {
-	var (
-		data map[string]interface{}
-		err  error
-	)
-
 	// loop for skipping empty yaml objects
-	for err = m.decoder.Decode(&data); err == nil; err = m.decoder.Decode(&data) {
+	for {
+		var data map[string]interface{}
+
+		err := m.decoder.Decode(&data)
+		if err == io.EOF {
+			return nil, err
+		}
+		if err != nil {
+			return nil, fmt.Errorf("error '%+v' decoding manifest: %s", err, string(m.manifest))
+		}
 		if data == nil {
 			continue
 		}
+
 		return &unstructured.Unstructured{Object: data}, nil
 	}
-	return nil, err
 }
 
 // NewNamespaceSettingReader initializes a reader for yaml manifests with support for setting the namespace
