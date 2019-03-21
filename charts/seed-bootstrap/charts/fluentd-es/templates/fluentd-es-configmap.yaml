@@ -40,10 +40,15 @@ data:
 
     # Match shoot namespace.
     <match shoot**>
-      @id elasticsearch_dynamic_fault_tolerant
-      @type elasticsearch_dynamic_fault_tolerant
+      @id elasticsearch_dynamic
+      @type elasticsearch
       @log_level warn
-      host elasticsearch-logging.${record['kubernetes']['namespace_name']}.svc
+      host elasticsearch-logging.${tag}.svc
+
+      # Drop chunks failed with the following errors
+      ignore_exceptions ["Faraday::ClientError", "Elasticsearch::Transport::Transport::ServerError"]
+      exception_backup false
+
       @include /etc/fluent/config.d/es_plugin.options
       <buffer tag, time>
         @type file
