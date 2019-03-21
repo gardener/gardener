@@ -63,6 +63,27 @@ data:
       - source_labels: [ pod_name ]
         regex: ^.+\.tf-pod.+$
         action: drop
+      # Collect addional filesystem metrics for etcd containers. We have to rename
+      # the metrics names for the matching etcd samples to a temporary metric name.
+      # After that we drop all the not matching filesystem metrics and rename the
+      # etcd samples back to the origin name.
+      - target_label: __name__
+        source_labels:
+        - container_name
+        - __name__
+        regex: etcd;(container_fs_writes_bytes_total|container_fs_reads_bytes_total)
+        replacement: 'GARDEN_TMP_${1}'
+        action: replace
+      # Drop all filesystem metrics which are not related to etcd.
+      - source_labels: [ __name__ ]
+        regex: (container_fs_writes_bytes_total|container_fs_reads_bytes_total)
+        action: drop
+      # Rename all the tmp metric names back to their origin names.
+      - target_label: __name__
+        source_labels: [ __name__ ]
+        regex: GARDEN_TMP_(.*)
+        replacement: $1
+        action: replace
 
     - job_name: kubelet
       honor_labels: false
