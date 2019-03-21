@@ -28,13 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	// Following labels come from k8s.io/kubernetes/pkg/kubelet/apis
-
-	// LabelZoneRegion zone Region label
-	LabelZoneRegion = "failure-domain.beta.kubernetes.io/region"
-)
-
 func newConditionOrError(oldCondition, newCondition gardencorev1alpha1.Condition, err error) gardencorev1alpha1.Condition {
 	if err != nil {
 		return helper.UpdatedConditionUnknownError(oldCondition, err)
@@ -44,10 +37,6 @@ func newConditionOrError(oldCondition, newCondition gardencorev1alpha1.Condition
 
 // FetchCloudInfo deduces the cloud info from the plant cluster
 func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryClient discovery.DiscoveryInterface, logger logrus.FieldLogger) (*StatusCloudInfo, error) {
-	if plantClient == nil || discoveryClient == nil {
-		return nil, fmt.Errorf("plant clients need to be initialized first")
-	}
-
 	cloudInfo, err := getClusterInfo(ctx, plantClient, logger)
 	if err != nil {
 		return nil, err
@@ -64,10 +53,8 @@ func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryCli
 
 // getClusterInfo gets the kubernetes cluster zones and Region by inspecting labels on nodes in the cluster.
 func getClusterInfo(ctx context.Context, cl client.Client, logger logrus.FieldLogger) (*StatusCloudInfo, error) {
-	var nodes = &corev1.NodeList{}
-	err := cl.List(ctx, &client.ListOptions{}, nodes)
-	if err != nil {
-		logger.Errorf("Failed to list nodes while getting cluster Info: %v", err)
+	nodes := &corev1.NodeList{}
+	if err := cl.List(ctx, &client.ListOptions{}, nodes); err != nil {
 		return nil, err
 	}
 
@@ -100,14 +87,13 @@ func getCloudProviderForNode(providerID string) string {
 func getRegionNameForNode(node corev1.Node) (string, error) {
 	for key, value := range node.Labels {
 		// TODO: replace LabelZoneRegion const with corev1.LabelZoneRegion which will be availbale in 1.14
-		if key == LabelZoneRegion {
+		if key == corev1.LabelZoneRegion {
 			return value, nil
 		}
 	}
-	return "", errors.Errorf("Region name for node %s not found. No label with key %s", node.Name, LabelZoneRegion)
+	return "", errors.Errorf("Region name for node %s not found. No label with key %s", node.Name, corev1.LabelZoneRegion)
 }
 
-func resetClients(plantControl *defaultPlantControl, key string) {
-	plantControl.plantClient[key] = nil
-	plantControl.discoveryClient[key] = nil
+func isPlantSecret(plant *gardencorev1alpha1.Plant, secretKey client.ObjectKey) bool {
+	return plant.Spec.SecretRef.Name == secretKey.Name && plant.Namespace == secretKey.Namespace
 }

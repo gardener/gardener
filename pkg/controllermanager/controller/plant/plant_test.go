@@ -37,7 +37,6 @@ import (
 	mockdiscovery "github.com/gardener/gardener/pkg/mock/client-go/discovery"
 	mockrest "github.com/gardener/gardener/pkg/mock/client-go/rest"
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
-	mocknodelister "github.com/gardener/gardener/pkg/mock/gardener/utils/kubernetes"
 	mockio "github.com/gardener/gardener/pkg/mock/go/io"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -46,14 +45,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-type testStruct struct {
-	version string
-}
-
-func (t testStruct) String() string {
-	return t.version
-}
 
 func TestPlant(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -73,7 +64,7 @@ func makeNodeWithProvider(provider string, withLabels map[string]string) corev1.
 }
 
 func hasConditonTrue(cond *gardencorev1alpha1.Condition) bool {
-	return cond.Status == corev1.ConditionTrue
+	return cond.Status == gardencorev1alpha1.ConditionTrue
 }
 
 var _ = Describe("Plant", func() {
@@ -89,7 +80,7 @@ var _ = Describe("Plant", func() {
 	})
 	Context("Utils", func() {
 		const (
-			labelZoneRegion = plant.LabelZoneRegion
+			labelZoneRegion = corev1.LabelZoneRegion
 			unKnown         = "<unknown>"
 			k8sVersion      = "1.13.1"
 			region          = "eu-west-1"
@@ -134,7 +125,7 @@ var _ = Describe("Plant", func() {
 				restMockClient      = mockrest.NewMockInterface(ctrl)
 				httpMockClient      = mockrest.NewMockHTTPClient(ctrl)
 				body                = mockio.NewMockReadCloser(ctrl)
-				healthChecker       = plant.NewHealthCheker(runtimeClient, discoveryMockclient)
+				healthChecker       = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
 
 				request = rest.NewRequest(httpMockClient, http.MethodGet, &url.URL{}, "", rest.ContentConfig{}, rest.Serializers{}, nil, nil, 0)
 			)
@@ -160,16 +151,18 @@ var _ = Describe("Plant", func() {
 			func(node *corev1.Node, errMatcher, caseMatcher types.GomegaMatcher) {
 				var (
 					healthyNodes        = helper.InitCondition(gardencorev1alpha1.PlantEveryNodeReady)
-					nodeLister          = mocknodelister.NewMockNodeLister(ctrl)
 					discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
+					runtimeClient       = mockclient.NewMockClient(ctrl)
 				)
 
-				healthChecker = plant.NewHealthCheker(runtimeClient, discoveryMockclient)
-				nodeLister.EXPECT().List(gomock.Any()).Return([]*corev1.Node{
-					node,
-				}, nil)
+				healthChecker = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
+				runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, options *client.ListOptions, list runtime.Object) error {
+					Expect(list).To(BeAssignableToTypeOf(&corev1.NodeList{}))
+					list.(*corev1.NodeList).Items = []corev1.Node{*node}
+					return nil
+				})
 
-				actual, err := healthChecker.CheckPlantClusterNodes(&healthyNodes, nodeLister)
+				actual, err := healthChecker.CheckPlantClusterNodes(context.TODO(), &healthyNodes)
 				Expect(err).To(errMatcher)
 				Expect(hasConditonTrue(actual)).To(caseMatcher)
 			},

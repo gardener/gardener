@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/client-go/util/retry"
+
 	"k8s.io/api/core/v1"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -27,17 +29,21 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
-// NewPlantTest creates a new shootGardenerTest object, given an already created shoot (created after parsing a shoot YAML)
-func NewPlantTest(kubeconfig string, plant *gardencorev1alpha1.Plant, shoot *v1beta1.Shoot, logger *logrus.Logger) (*PlantTest, error) {
+// NewPlantTest creates a new plantGardenerTest object, given an already created plant (created after parsing a plant YAML) and a path to a kubeconfig of an external cluster
+func NewPlantTest(kubeconfig string, kubeconfigPathExternalCluster string, plant *gardencorev1alpha1.Plant, logger *logrus.Logger) (*PlantTest, error) {
 	if len(kubeconfig) == 0 {
 		return nil, fmt.Errorf("Please specify the kubeconfig path correctly")
+	}
+
+	if len(kubeconfigPathExternalCluster) == 0 {
+		return nil, fmt.Errorf("Please specify the kubeconfig path for the external cluster correctly")
 	}
 
 	k8sGardenClient, err := kubernetes.NewClientFromFile("", kubeconfig, client.Options{
@@ -48,75 +54,45 @@ func NewPlantTest(kubeconfig string, plant *gardencorev1alpha1.Plant, shoot *v1b
 	}
 
 	return &PlantTest{
-		GardenClient: k8sGardenClient,
-		Plant:        plant,
-		Shoot:        shoot,
-		Logger:       logger,
+		GardenClient:                  k8sGardenClient,
+		Plant:                         plant,
+		kubeconfigPathExternalCluster: kubeconfigPathExternalCluster,
+		Logger:                        logger,
 	}, nil
 }
 
 // CreatePlantSecret creates a new Secret for the Plant
-func (s *PlantTest) CreatePlantSecret(ctx context.Context) error {
-
-	if s.Shoot == nil {
-		return fmt.Errorf("Shoot to use as Plant cluster is unavailable ")
-	}
-	// Retrieve Shoot Secret
-	secret := &v1.Secret{}
-
-	// Name of the shoot secret in the shoot namespace in the garden cluster
-	shootKubeconfigSecretName := s.Shoot.ObjectMeta.Name + ".kubeconfig"
-	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
-		Namespace: s.Shoot.ObjectMeta.Namespace,
-		Name:      shootKubeconfigSecretName,
-	}, secret)
-
-	if err != nil {
-		s.Logger.Errorf("Unable to retrieve the secret of the shoot that should be used as a plant secret. Namespace: '%s' , Secret Name: '%s'", s.Shoot.ObjectMeta.Namespace, shootKubeconfigSecretName)
-		return err
+func (s *PlantTest) CreatePlantSecret(ctx context.Context, kubeConfigContent []byte) (*v1.Secret, error) {
+	if len(s.kubeconfigPathExternalCluster) == 0 {
+		return nil, fmt.Errorf("Path to kubeconfig of external cluster not set")
 	}
 
-	kubeconfig, ok := secret.Data["kubeconfig"]
-	if !ok {
-		s.Logger.Errorf("Shoot secret in namespace: '%s' and name: '%s' that should be used as a plant secret does not contain a valid kubeconfig", s.Shoot.ObjectMeta.Namespace, shootKubeconfigSecretName)
-		return err
-	}
+	plantSecret := &v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: s.Plant.Namespace}}
+	plantSecret.ObjectMeta.GenerateName = "test-secret-plant-"
 
-	plantSecretName := "plant-test-" + secret.Name
-	plantSecret := v1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: s.Plant.Namespace, Name: plantSecretName}}
 	plantSecret.Data = make(map[string][]byte)
-	plantSecret.Data["kubeconfig"] = kubeconfig
+	plantSecret.Data["kubeconfig"] = kubeConfigContent
 
-	err = s.GardenClient.Client().Create(ctx, &plantSecret)
-
+	err := s.GardenClient.Client().Create(ctx, plantSecret)
 	if err != nil {
-		s.Logger.Errorf("Unable to create the plant secret as a copy of the shoot secret in namespace: '%s' and name: '%s'", s.Shoot.ObjectMeta.Namespace, shootKubeconfigSecretName)
-		return err
+		return nil, err
 	}
 
-	s.PlantSecret = &plantSecret
-	return nil
-}
-
-// DeletePlantSecret deletes the Secret of the Plant
-func (s *PlantTest) DeletePlantSecret(ctx context.Context) error {
-	err := s.GardenClient.Client().Delete(ctx, s.PlantSecret)
-
-	if err != nil {
-		return err
-	}
-	return nil
+	return plantSecret, nil
 }
 
 // UpdatePlantSecret updates the Secret of the Plant
 func (s *PlantTest) UpdatePlantSecret(ctx context.Context, updatedPlantSecret *v1.Secret) error {
-	err := s.GardenClient.Client().Update(ctx, updatedPlantSecret)
-
-	if err != nil {
+	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() (err error) {
+		existingSecret := &v1.Secret{}
+		if err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: updatedPlantSecret.Namespace, Name: updatedPlantSecret.Name}, existingSecret); err != nil {
+			return err
+		}
+		existingSecret.Data = updatedPlantSecret.Data
+		return s.GardenClient.Client().Update(ctx, existingSecret)
+	}); err != nil {
 		return err
 	}
-
-	s.PlantSecret = updatedPlantSecret
 	return nil
 }
 
@@ -124,7 +100,7 @@ func (s *PlantTest) UpdatePlantSecret(ctx context.Context, updatedPlantSecret *v
 func (s *PlantTest) GetPlantSecret(ctx context.Context) (*v1.Secret, error) {
 	secret := &v1.Secret{}
 	err := s.GardenClient.Client().Get(ctx, client.ObjectKey{
-		Namespace: s.Plant.Spec.SecretRef.Namespace,
+		Namespace: s.Plant.Namespace,
 		Name:      s.Plant.Spec.SecretRef.Name,
 	}, secret)
 
@@ -149,35 +125,29 @@ func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1alpha1.Plant, er
 }
 
 // CreatePlant Creates a plant from a plant Object
-func (s *PlantTest) CreatePlant(ctx context.Context) (*gardencorev1alpha1.Plant, error) {
-	_, err := s.GetPlant(ctx)
-	if !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
-	plant := s.Plant
-
-	// Secret has been already created in a previous test step
-	plant.Spec.SecretRef.Namespace = s.PlantSecret.Namespace
-	plant.Spec.SecretRef.Name = s.PlantSecret.Name
-
-	err = s.GardenClient.Client().Create(ctx, s.Plant)
+func (s *PlantTest) CreatePlant(ctx context.Context, secret *v1.Secret) error {
+	fmt.Println(secret.Name)
+	plantToBeCreated := s.Plant.DeepCopy()
+	plantToBeCreated.ObjectMeta.GenerateName = "test-plant-"
+	plantToBeCreated.Spec.SecretRef.Name = secret.Name
+	err := s.GardenClient.Client().Create(ctx, plantToBeCreated)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
+	s.Plant.Name = plantToBeCreated.Name
 
 	err = s.WaitForPlantToBeCreated(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	s.Logger.Infof("Plant %s was created!", plant.Name)
-	return plant, nil
+	s.Logger.Infof("Plant %s was created!", s.Plant.Name)
+	return nil
 }
 
 // DeletePlant deletes the test plant
 func (s *PlantTest) DeletePlant(ctx context.Context) error {
-
 	err := s.GardenClient.Client().Delete(ctx, s.Plant)
 	if err != nil {
 		return err
@@ -188,11 +158,11 @@ func (s *PlantTest) DeletePlant(ctx context.Context) error {
 		return err
 	}
 
-	s.Logger.Infof("Plant %s was deleted successfully!", s.Shoot.ObjectMeta.Name)
+	s.Logger.Infof("Plant %s was deleted successfully!", s.Plant.ObjectMeta.Name)
 	return nil
 }
 
-// WaitForPlantToBeCreated waits for the shoot to be created
+// WaitForPlantToBeCreated waits for the plant to be created
 func (s *PlantTest) WaitForPlantToBeCreated(ctx context.Context) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		plant := &gardencorev1alpha1.Plant{}
@@ -210,14 +180,14 @@ func (s *PlantTest) WaitForPlantToBeCreated(ctx context.Context) error {
 func (s *PlantTest) WaitForPlantToBeDeleted(ctx context.Context) error {
 	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		plant := &gardencorev1alpha1.Plant{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.ObjectMeta.Namespace, Name: s.Shoot.ObjectMeta.Name}, plant)
+		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.ObjectMeta.Namespace, Name: s.Plant.ObjectMeta.Name}, plant)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
 			return false, err
 		}
-		s.Logger.Infof("Waiting for plant %s to be deleted", s.Shoot.ObjectMeta.Name)
+		s.Logger.Infof("Waiting for plant %s to be deleted", s.Plant.ObjectMeta.Name)
 		return false, nil
 
 	}, ctx.Done())
@@ -225,7 +195,7 @@ func (s *PlantTest) WaitForPlantToBeDeleted(ctx context.Context) error {
 
 // WaitForPlantToBeReconciledSuccessfully waits for the plant to be reconciled with a status indicating success
 func (s *PlantTest) WaitForPlantToBeReconciledSuccessfully(ctx context.Context) error {
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		plant := &gardencorev1alpha1.Plant{}
 		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
@@ -243,7 +213,7 @@ func (s *PlantTest) WaitForPlantToBeReconciledSuccessfully(ctx context.Context) 
 
 // WaitForPlantToBeReconciledWithUnknownStatus waits for the plant to be reconciled, setting the expected status 'unknown'
 func (s *PlantTest) WaitForPlantToBeReconciledWithUnknownStatus(ctx context.Context) error {
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
 		plant := &gardencorev1alpha1.Plant{}
 		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {

@@ -147,7 +147,7 @@ func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error 
 // and sets it in the shoot resource in the `spec.dns.domain` field.
 // If for any reason no domain can be generated, no domain is assigned to the Shoot.
 func assignDefaultDomainIfNeeded(shoot *garden.Shoot, projectLister gardenlisters.ProjectLister, secretLister kubecorev1listers.SecretLister) {
-	project, err := admissionutils.GetProject(shoot, projectLister)
+	project, err := admissionutils.GetProject(shoot.Namespace, projectLister)
 	if err != nil {
 		return
 	}

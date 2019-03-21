@@ -50,9 +50,6 @@ func ValidatePlantSpec(spec *core.PlantSpec, fldPath *field.Path) field.ErrorLis
 	if len(spec.SecretRef.Name) == 0 {
 		allErrs = append(allErrs, field.Required(registrationRefPath.Child("name"), "field is required"))
 	}
-	if len(spec.SecretRef.Namespace) == 0 {
-		allErrs = append(allErrs, field.Required(registrationRefPath.Child("namespace"), "field is required"))
-	}
 
 	return allErrs
 }

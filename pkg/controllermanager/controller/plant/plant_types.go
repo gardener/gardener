@@ -15,21 +15,16 @@
 package plant
 
 import (
+	kubecorev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/record"
+
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
-	kubernetesclientset "k8s.io/client-go/kubernetes"
-
-	kubecorev1listers "k8s.io/client-go/listers/core/v1"
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type defaultPlantControl struct {
 	k8sGardenClient kubernetes.Interface
-	plantClient     map[string]client.Client
-	discoveryClient map[string]*kubernetesclientset.Clientset
-	healthChecker   map[string]*HealthChecker
 	plantLister     gardencorelisters.PlantLister
 	secretsLister   kubecorev1listers.SecretLister
 	recorder        record.EventRecorder

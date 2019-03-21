@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validator_test
+package plant_test
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
-	"github.com/gardener/gardener/pkg/client/core/clientset/internalversion/fake"
+	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/internalversion"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"k8s.io/apiserver/pkg/authentication/user"
 
-	. "github.com/gardener/gardener/plugin/pkg/plant/validator"
+	. "github.com/gardener/gardener/plugin/pkg/plant"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/testing"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 
@@ -32,15 +31,15 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("validator", func() {
+var _ = Describe("Admission", func() {
 	Describe("#Admit", func() {
 		var (
-			plant                 core.Plant
-			project               garden.Project
-			attrs                 admission.Attributes
-			admissionHandler      *ValidatePlant
-			coreClient            *fake.Clientset
-			gardenInformerFactory gardeninformers.SharedInformerFactory
+			plant                     core.Plant
+			project                   garden.Project
+			attrs                     admission.Attributes
+			admissionHandler          *AdmitPlant
+			gardenInformerFactory     gardeninformers.SharedInformerFactory
+			gardencoreInformerFactory gardencoreinformers.SharedInformerFactory
 
 			namespaceName = "garden-my-project"
 			projectName   = "my-project"
@@ -58,26 +57,42 @@ var _ = Describe("validator", func() {
 		BeforeEach(func() {
 			admissionHandler, _ = New()
 			admissionHandler.AssignReadyFunc(func() bool { return true })
-			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
 
-			coreClient = &fake.Clientset{}
-			admissionHandler.SetInternalCoreClientset(coreClient)
+			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
+			gardencoreInformerFactory = gardencoreinformers.NewSharedInformerFactory(nil, 0)
+
+			admissionHandler.SetInternalCoreInformerFactory(gardencoreInformerFactory)
 			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
 
 			project = projectBase
+
 			plant = core.Plant{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "dummyPlant",
 				},
 				Spec: core.PlantSpec{
-					SecretRef: corev1.SecretReference{
-						Name:      "test",
-						Namespace: "test",
+					SecretRef: corev1.LocalObjectReference{
+						Name: "test",
 					},
 				},
 			}
 		})
-		It("should reject Plant resources references same kubeconfig secret", func() {
+		It("should add the created-by annotation", func() {
+			var (
+				defaultUserName = "test-user"
+				defaultUserInfo = &user.DefaultInfo{Name: defaultUserName}
+			)
+
+			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, garden.Resource("plants").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
+
+			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+
+			err := admissionHandler.Admit(attrs)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
+		})
+		It("should reject Plant resources referencing same kubeconfig secret", func() {
 			project.ObjectMeta = metav1.ObjectMeta{
 				Namespace: namespaceName,
 			}
@@ -88,20 +103,16 @@ var _ = Describe("validator", func() {
 					Namespace: namespaceName,
 				},
 				Spec: core.PlantSpec{
-					SecretRef: corev1.SecretReference{
-						Name:      "test",
-						Namespace: "test",
+					SecretRef: corev1.LocalObjectReference{
+						Name: "test",
 					},
 				},
 			}
 			err := gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 			Expect(err).NotTo(HaveOccurred())
 
-			coreClient.AddReactor("list", "plants", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &core.PlantList{
-					Items: []core.Plant{existingPlant},
-				}, nil
-			})
+			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&existingPlant)
+			Expect(err).NotTo(HaveOccurred())
 
 			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, false, nil)
 			err = admissionHandler.Validate(attrs)
@@ -125,11 +136,8 @@ var _ = Describe("validator", func() {
 			Expect(err).NotTo(HaveOccurred())
 			attrs = admission.NewAttributesRecord(&plant, &plant, core.Kind("Plant").WithVersion("version"), "", plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Update, false, nil)
 
-			coreClient.AddReactor("list", "plants", func(action testing.Action) (bool, runtime.Object, error) {
-				return true, &core.PlantList{
-					Items: []core.Plant{},
-				}, nil
-			})
+			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})
+			Expect(err).NotTo(HaveOccurred())
 
 			err = admissionHandler.Validate(attrs)
 			Expect(err).NotTo(HaveOccurred())

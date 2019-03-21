@@ -17,7 +17,6 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -336,33 +335,9 @@ func (b *HealthChecker) FailedCondition(condition gardencorev1alpha1.Condition, 
 
 // checkAPIServerAvailability checks if the API server of a Shoot cluster is reachable and measure the response time.
 func (b *Botanist) checkAPIServerAvailability(checker *HealthChecker, condition gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
-	// Try to reach the Shoot API server and measure the response time.
-	now := Now()
-	response := b.K8sShootClient.RESTClient().Get().AbsPath("/healthz").Do()
-	responseDurationText := fmt.Sprintf("[response_time:%dms]", Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
-	if response.Error() != nil {
-		message := fmt.Sprintf("Request to Shoot API server /healthz endpoint failed. %s (%s)", responseDurationText, response.Error().Error())
-		return checker.FailedCondition(condition, "HealthzRequestFailed", message)
-	}
-
-	// Determine the status code of the response.
-	var statusCode int
-	response.StatusCode(&statusCode)
-
-	if statusCode != http.StatusOK {
-		var body string
-		bodyRaw, err := response.Raw()
-		if err != nil {
-			body = fmt.Sprintf("Could not parse response body: %s", err.Error())
-		} else {
-			body = string(bodyRaw)
-		}
-		message := fmt.Sprintf("Shoot API server /healthz endpoint endpoint check returned a non ok status code %d. %s (%s)", statusCode, responseDurationText, body)
-		return checker.FailedCondition(condition, "HealthzRequestError", message)
-	}
-
-	message := fmt.Sprintf("Shoot API server /healthz endpoint responded with success status code. %s", responseDurationText)
-	return gardencorev1alpha1helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, "HealthzRequestSucceeded", message)
+	return health.CheckAPIServerAvailability(condition, b.K8sShootClient.RESTClient(), func(conditionType, message string) gardencorev1alpha1.Condition {
+		return checker.FailedCondition(condition, conditionType, message)
+	})
 }
 
 const (

@@ -19,8 +19,16 @@ import (
 
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apiserver/pkg/admission"
 )
+
+// SkipVerification is a common function to skip object verification during admission
+func SkipVerification(operation admission.Operation, metadata metav1.ObjectMeta) bool {
+	return operation == admission.Update && metadata.DeletionTimestamp != nil
+}
 
 // GetProject retrieves the project with the corresponding namespace
 func GetProject(namespace string, projectLister gardenlisters.ProjectLister) (*garden.Project, error) {

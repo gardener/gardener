@@ -57,13 +57,10 @@ const (
 type PlantSpec struct {
 	// SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes
 	// clusters to be added to Gardener.
-	SecretRef corev1.SecretReference `json:"secretRef"`
-	// Monitoring is the configuration for the plant monitoring
+	SecretRef corev1.LocalObjectReference `json:"secretRef"`
+	// Endpoints is the configuration plant endpoints
 	// +optional
-	Monitoring *Monitoring `json:"monitoring,omitempty"`
-	// Logging is the configuration for the plant logging
-	// +optional
-	Logging *Logging `json:"logging,omitempty"`
+	Endpoints []Endpoint `json:"endpoints,omitempty"`
 }
 
 // PlantStatus is the status of a Plant.
@@ -74,42 +71,39 @@ type PlantStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the
 	// Plant's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration *int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 	// ClusterInfo is additional computed information about the newly added cluster (Plant)
 	ClusterInfo *ClusterInfo `json:"clusterInfo,omitempty"`
 }
 
-// Monitoring is the configuration for the plant monitoring
-type Monitoring struct {
-	Endpoints []Endpoint `json:"endpoints"`
-}
-
-type Logging struct {
-	Endpoints []Endpoint `json:"endpoints"`
-}
-
-// Endpoint is an endpoint for monitoring and logging
+// Endpoint is an endpoint for monitoring, logging and other services around the plant.
 type Endpoint struct {
 	// Name is the name of the endpoint
 	Name string `json:"name"`
 	// URL is the url of the endpoint
 	URL string `json:"url"`
+	// Purpose is the purpose of the endpoint
+	Purpose string `json:"purpose"`
 }
 
-// ClusterInfo information about the Plant cluster
+// ClusterInfo contains information about the Plant cluster
 type ClusterInfo struct {
-	Cloud      Cloud      `json:"cloud"`
+	// Cloud describes the cloud information
+	Cloud Cloud `json:"cloud"`
+	// Kubernetes describes kubernetes meta information (e.g., version)
 	Kubernetes Kubernetes `json:"kubernetes"`
 }
 
-// Cloud information about the cloud
+// Cloud contains information about the cloud
 type Cloud struct {
-	Type   string `json:"type"`
+	// Type is the cloud type
+	Type string `json:"type"`
+	// Region is the cloud region
 	Region string `json:"region"`
 }
 
 // Kubernetes contains the version and configuration variables for the Plant cluster.
 type Kubernetes struct {
 	// Version is the semantic Kubernetes version to use for the Plant cluster.
-	Version string
+	Version string `json:"version"`
 }

@@ -34,15 +34,11 @@ metadata:
   % endif
 spec:
   secretRef:
-    name: my-external-cluster
-    namespace: my-namespace
-  monitoring:
-    endpoints:
-    - name: Kubernetes Dashboard
-      url: https://...
-    - name: Prometheus
-      url: https://...
-  logging:
-    endpoints:
-    - name: Kibana
-      url: https://...
+    name: my-external-cluster-secret
+  endpoints:
+  - name: Kibana Dashboard
+    url: https://...
+    purpose: logging
+  - name: Prometheus Dashboard
+    url: https://...
+    purpose: monitoring

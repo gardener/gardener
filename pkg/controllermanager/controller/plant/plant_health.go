@@ -17,26 +17,23 @@ package plant
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"sync"
-	"time"
-
 	"k8s.io/client-go/discovery"
+	"sync"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"k8s.io/apimachinery/pkg/labels"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 )
 
-// NewHealthCheker creates a new health checker.
-func NewHealthCheker(plantClient client.Client, discoveryClient discovery.DiscoveryInterface) *HealthChecker {
+// NewHealthChecker creates a new health checker.
+func NewHealthChecker(plantClient client.Client, discoveryClient discovery.DiscoveryInterface) *HealthChecker {
 	return &HealthChecker{
 		plantClient:     plantClient,
 		discoveryClient: discoveryClient,
@@ -50,60 +47,32 @@ type HealthChecker struct {
 }
 
 // CheckPlantClusterNodes checks whether cluster nodes in the given listers are complete and healthy.
-func (h *HealthChecker) CheckPlantClusterNodes(condition *gardencorev1alpha1.Condition, nodeLister kutil.NodeLister) (*gardencorev1alpha1.Condition, error) {
-	nodeList, err := nodeLister.List(labels.Everything())
+func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition *gardencorev1alpha1.Condition) (*gardencorev1alpha1.Condition, error) {
+	nodeList := &corev1.NodeList{}
+	err := h.plantClient.List(ctx, &client.ListOptions{}, nodeList)
 	if err != nil {
 		return nil, err
 	}
+
 	if exitCondition := h.checkNodes(*condition, nodeList); exitCondition != nil {
 		return exitCondition, nil
 	}
 
-	updatedCondition := helper.UpdatedCondition(*condition, corev1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready")
-
+	updatedCondition := helper.UpdatedCondition(*condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready")
 	return &updatedCondition, nil
 }
 
 // CheckAPIServerAvailability checks if the API server of a Plant cluster is reachable and measure the response time.
 func (h *HealthChecker) CheckAPIServerAvailability(condition gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
-	// Try to reach the Plant API server and measure the response time.
-	now := time.Now()
-	discoveryClient, ok := h.discoveryClient.(discovery.DiscoveryInterface)
-	if !ok {
-		message := fmt.Sprintf("discoveryClient does not implement discovery interface")
-		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "HealthzRequestFailed", message)
-	}
-	response := discoveryClient.RESTClient().Get().AbsPath("/healthz").Do()
-	responseDurationText := fmt.Sprintf("[response_time:%dms]", time.Now().Sub(now).Nanoseconds()/time.Millisecond.Nanoseconds())
-	if response.Error() != nil {
-		message := fmt.Sprintf("Request to Plant API server /healthz endpoint failed. %s (%s)", responseDurationText, response.Error().Error())
-		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "HealthzRequestFailed", message)
-	}
-
-	// Determine the status code of the response.
-	var statusCode int
-	response.StatusCode(&statusCode)
-
-	if statusCode != http.StatusOK {
-		var body string
-		bodyRaw, err := response.Raw()
-		if err != nil {
-			body = fmt.Sprintf("Could not parse response body: %s", err.Error())
-		} else {
-			body = string(bodyRaw)
-		}
-		message := fmt.Sprintf("Plant API server /healthz endpoint endpoint check returned a non ok status code %d. %s (%s)", statusCode, responseDurationText, body)
-		return helper.UpdatedCondition(condition, corev1.ConditionFalse, "HealthzRequestError", message)
-	}
-
-	message := fmt.Sprintf("Plant API server /healthz endpoint responded with success status code. %s", responseDurationText)
-	return helper.UpdatedCondition(condition, corev1.ConditionTrue, "HealthzRequestSucceeded", message)
+	return health.CheckAPIServerAvailability(condition, h.discoveryClient.RESTClient(), func(conditionType, message string) gardencorev1alpha1.Condition {
+		return helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, conditionType, message)
+	})
 }
 
-func (h *HealthChecker) checkNodes(condition gardencorev1alpha1.Condition, objects []*corev1.Node) *gardencorev1alpha1.Condition {
-	for _, object := range objects {
-		if err := health.CheckNode(object); err != nil {
-			failedCondition := helper.UpdatedCondition(condition, corev1.ConditionFalse, "NodesUnhealthy", fmt.Sprintf("Node %s is unhealthy: %v", object.Name, err))
+func (h *HealthChecker) checkNodes(condition gardencorev1alpha1.Condition, nodeList *corev1.NodeList) *gardencorev1alpha1.Condition {
+	for _, object := range nodeList.Items {
+		if err := health.CheckNode(&object); err != nil {
+			failedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, "NodesUnhealthy", fmt.Sprintf("Node %s is unhealthy: %v", object.Name, err))
 			return &failedCondition
 		}
 	}

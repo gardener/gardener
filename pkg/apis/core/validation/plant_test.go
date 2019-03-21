@@ -36,9 +36,8 @@ var _ = Describe("validation", func() {
 				Namespace: "test-namespace",
 			},
 			Spec: core.PlantSpec{
-				SecretRef: v1.SecretReference{
-					Name:      "test",
-					Namespace: "test-namespace",
+				SecretRef: v1.LocalObjectReference{
+					Name: "test",
 				},
 			},
 		}
@@ -60,9 +59,6 @@ var _ = Describe("validation", func() {
 			})), PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.secretRef.name"),
-			})), PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.secretRef.namespace"),
 			}))))
 		})
 

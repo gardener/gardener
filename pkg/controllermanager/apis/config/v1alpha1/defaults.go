@@ -128,6 +128,9 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 	if obj.Controllers.Plant == nil {
 		obj.Controllers.Plant = &PlantConfiguration{
 			ConcurrentSyncs: 5,
+			SyncPeriod: metav1.Duration{
+				Duration: 30 * time.Second,
+			},
 		}
 	}
 

@@ -55,32 +55,22 @@ const (
 type PlantSpec struct {
 	// SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes
 	// clusters to be added to Gardener.
-	SecretRef corev1.SecretReference
-	// Monitoring is the configuration for the plant monitoring
-	Monitoring *Monitoring
-	// Logging is the configuration for the plant logging
-	Logging *Logging
-}
-
-// Monitoring is the configuration for the plant monitoring
-type Monitoring struct {
+	SecretRef corev1.LocalObjectReference
+	// Endpoints is the configuration plant endpoints
 	Endpoints []Endpoint
 }
 
-// Logging is the configuration for the plant logging
-type Logging struct {
-	Endpoints []Endpoint
-}
-
-// Endpoint is an endpoint for monitoring and logging
+// Endpoint is an endpoint for monitoring, logging and other services around the plant.
 type Endpoint struct {
 	// Name is the name of the endpoint
 	Name string
 	// URL is the url of the endpoint
 	URL string
+	// Purpose is the purpose of the endpoint
+	Purpose string
 }
 
-// PlantStatus is th	e status of a Plant.
+// PlantStatus is the status of a Plant.
 type PlantStatus struct {
 	// Conditions represents the latest available observations of a Plant's current state.
 	Conditions []Condition
@@ -91,15 +81,19 @@ type PlantStatus struct {
 	ClusterInfo *ClusterInfo
 }
 
-// ClusterInfo information about the Plant cluster
+// ClusterInfo contains information about the Plant cluster
 type ClusterInfo struct {
-	Cloud      Cloud
+	// Cloud describes the cloud information
+	Cloud Cloud
+	// Kubernetes describes kubernetes meta information (e.g., version)
 	Kubernetes Kubernetes
 }
 
-// Cloud information about the cloud
+// Cloud contains information about the cloud
 type Cloud struct {
-	Type   string
+	// Type is the cloud type
+	Type string
+	// Region is the cloud region
 	Region string
 }
 

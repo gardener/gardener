@@ -1,0 +1,17 @@
+# Plant cluster registration manifest through which an external kubernetes cluster will be mapped
+---
+apiVersion: core.gardener.cloud/v1alpha1
+kind: Plant
+metadata:
+  name:  example-plant
+  namespace: garden-dev
+spec:
+  secretRef:
+    name: my-external-cluster-secret
+  endpoints:
+  - name: Kibana Dashboard
+    url: https://...
+    purpose: logging
+  - name: Prometheus Dashboard
+    url: https://...
+    purpose: monitoring

@@ -37,20 +37,20 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-// FinalizerName is the name of the ControllerInstallation finalizer.
+// FinalizerName is the name of the Plant finalizer.
 const FinalizerName = "core.gardener.cloud/plant"
 
-// Controller controls ControllerInstallation.
+// Controller controls Plant.
 type Controller struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
-	K8sInformers           kubeinformers.SharedInformerFactory
+	k8sInformers           kubeinformers.SharedInformerFactory
 	config                 *config.ControllerManagerConfiguration
-
-	controllerInstallationControl ControlInterface
 
 	recorder record.EventRecorder
 
 	secretLister kubecorev1listers.SecretLister
+	secretSynced cache.InformerSynced
+
 	plantControl ControlInterface
 	plantLister  gardencorelisters.PlantLister
 	plantSynced  cache.InformerSynced
@@ -61,7 +61,7 @@ type Controller struct {
 	numberOfRunningWorkers int
 }
 
-// NewController instantiates a new ControllerInstallation controller.
+// NewController instantiates a new Plant controller.
 func NewController(k8sGardenClient kubernetes.Interface,
 	gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory,
 	kubeInformerFactory kubeinformers.SharedInformerFactory,
@@ -74,13 +74,14 @@ func NewController(k8sGardenClient kubernetes.Interface,
 		plantInformer = gardenCoreInformer.Plants()
 		plantLister   = plantInformer.Lister()
 
-		secretLister = kubeInfomer.Secrets().Lister()
+		secretInformer = kubeInfomer.Secrets()
+		secretLister   = secretInformer.Lister()
 
 		plantQueue = workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "plant")
 	)
 
 	controller := &Controller{
-		K8sInformers: kubeInformerFactory,
+		k8sInformers: kubeInformerFactory,
 
 		config:   config,
 		recorder: recorder,
@@ -100,6 +101,13 @@ func NewController(k8sGardenClient kubernetes.Interface,
 		DeleteFunc: controller.plantDelete,
 	})
 
+	controller.secretSynced = secretInformer.Informer().HasSynced
+	secretInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    controller.reconcilePlantForMatchingSecret,
+		UpdateFunc: controller.plantSecretUpdate,
+		DeleteFunc: controller.reconcilePlantForMatchingSecret,
+	})
+
 	return controller
 }
 
@@ -107,7 +115,7 @@ func NewController(k8sGardenClient kubernetes.Interface,
 func (c *Controller) Run(ctx context.Context, workers int) {
 	var waitGroup sync.WaitGroup
 
-	if !cache.WaitForCacheSync(ctx.Done(), c.plantSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), c.plantSynced, c.secretSynced) {
 		logger.Logger.Error("Timed out waiting for caches to sync")
 		return
 	}
@@ -134,7 +142,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	for {
 		if c.plantQueue.Len() == 0 && c.numberOfRunningWorkers == 0 {
-			logger.Logger.Debug("No running Plant worker and no items left in the queues. Terminated Plant controller...")
+			logger.Logger.Debug("No running Plant worker and no items left in the queues. Terminating Plant controller...")
 			break
 		}
 		logger.Logger.Debugf("Waiting for %d Plant worker(s) to finish (%d item(s) left in the queues)...", c.numberOfRunningWorkers, c.plantQueue.Len())

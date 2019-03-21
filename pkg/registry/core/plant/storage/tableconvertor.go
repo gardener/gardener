@@ -75,21 +75,22 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 		)
 
 		cells = append(cells, obj.Name)
-		if len(obj.Status.ClusterInfo.Cloud.Type) != 0 {
-			cells = append(cells, obj.Status.ClusterInfo.Cloud.Type)
+		if clusterInfo := obj.Status.ClusterInfo; clusterInfo != nil && len(clusterInfo.Cloud.Type) > 0 {
+			cells = append(cells, clusterInfo.Cloud.Type)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
-		if len(obj.Status.ClusterInfo.Cloud.Region) != 0 {
-			cells = append(cells, obj.Status.ClusterInfo.Cloud.Region)
+		if clusterInfo := obj.Status.ClusterInfo; clusterInfo != nil && len(clusterInfo.Cloud.Region) > 0 {
+			cells = append(cells, clusterInfo.Cloud.Region)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
-		if len(obj.Status.ClusterInfo.Kubernetes.Version) != 0 {
-			cells = append(cells, obj.Status.ClusterInfo.Kubernetes.Version)
+		if clusterInfo := obj.Status.ClusterInfo; clusterInfo != nil && len(obj.Status.ClusterInfo.Kubernetes.Version) > 0 {
+			cells = append(cells, clusterInfo.Kubernetes.Version)
 		} else {
 			cells = append(cells, "<unknown>")
 		}
+
 		if cond := helper.GetCondition(obj.Status.Conditions, core.PlantAPIServerAvailable); cond != nil {
 			cells = append(cells, cond.Status)
 		} else {
@@ -100,7 +101,6 @@ func (c *convertor) ConvertToTable(ctx context.Context, o runtime.Object, tableO
 		} else {
 			cells = append(cells, "<unknown>")
 		}
-
 		cells = append(cells, metatable.ConvertToHumanReadableDateType(obj.CreationTimestamp))
 
 		return cells, nil

@@ -32,7 +32,7 @@ import (
 	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 )
 
-// KubeConfig is the key to the keyconfig
+// KubeConfig is the key to the kubeconfig
 const KubeConfig = "kubeconfig"
 
 // NewRuntimeClientFromSecret creates a new controller runtime Client struct for a given secret.
@@ -55,11 +55,7 @@ func NewRuntimeClientFromBytes(kubeconfig []byte, opts client.Options) (client.C
 
 // NewRuntimeClientForConfig returns a new controller runtime client from a config.
 func NewRuntimeClientForConfig(config *rest.Config, opts client.Options) (client.Client, error) {
-	runtimeClient, err := client.New(config, opts)
-	if err != nil {
-		return nil, err
-	}
-	return runtimeClient, nil
+	return client.New(config, opts)
 }
 
 // NewClientFromFile creates a new Client struct for a given kubeconfig. The kubeconfig will be

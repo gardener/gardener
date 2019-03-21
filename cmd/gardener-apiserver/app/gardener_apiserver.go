@@ -32,7 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/openapi"
 	"github.com/gardener/gardener/pkg/version"
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
-	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant/validator"
+	plantvalidator "github.com/gardener/gardener/plugin/pkg/plant"
 
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"

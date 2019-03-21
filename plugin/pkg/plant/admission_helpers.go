@@ -12,16 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validator_test
+package plant
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"errors"
 
-	"testing"
+	"k8s.io/apiserver/pkg/admission"
 )
 
-func TestValidator(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission PlantValidator Suite")
+func (a AdmitPlant) waitUntilReady(attrs admission.Attributes) error {
+	// Wait until the caches have been synced
+	if a.readyFunc == nil {
+		a.AssignReadyFunc(func() bool {
+			for _, readyFunc := range readyFuncs {
+				if !readyFunc() {
+					return false
+				}
+			}
+			return true
+		})
+	}
+	if !a.WaitForReady() {
+		return admission.NewForbidden(attrs, errors.New("not yet ready to handle request"))
+	}
+	return nil
 }
