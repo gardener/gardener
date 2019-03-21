@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Chart for Designate DNS records
-name: openstack-designate
-version: 0.1.0

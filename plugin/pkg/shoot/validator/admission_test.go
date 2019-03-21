@@ -1121,7 +1121,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid dns provider", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				provider := "some-provider"
+				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

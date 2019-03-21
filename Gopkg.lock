@@ -66,7 +66,7 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:b73a6816cb41ff2580f5d67f0415500fd9ca3046f15d4e92c3819d6a07f3aecd"
+  digest = "1:6aad43233d080a5d9b7ce2c36bedfc458cd4648c494d60f416e535cc051afcd1"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
     "sdk",
@@ -82,8 +82,8 @@
     "services/vpc",
   ]
   pruneopts = "NUT"
-  revision = "98404a78c00958136b80f788088f00d358950d2b"
-  version = "1.53.72"
+  revision = "5887fb5d0027ac89d8f5e7765e35042af300aa00"
+  version = "1.53.82"
 
 [[projects]]
   digest = "1:b28f9249808d9e7f593589c55e08416dedd312df32f3fb1f94f0f45af780a33b"
@@ -197,27 +197,26 @@
   version = "v0.0.1"
 
 [[projects]]
-  digest = "1:65f589a8c25bd5e056f43e059df08cc4f21ce383f20fedd3bd2d8f973da2dc6c"
+  digest = "1:308d57c0e8401e52787cb1bc97001f4d9b16e38aa3fa9060415f8419aded43a5"
   name = "github.com/emicklei/go-restful"
   packages = [
     ".",
     "log",
   ]
   pruneopts = "NUT"
-  revision = "e64cccdfee8896c036b8a88d560c5e3ae15d904d"
-  version = "v2.9.1"
+  revision = "9515831d76ca49d15259dccc9765695125d1127e"
+  version = "v2.9.2"
 
 [[projects]]
   digest = "1:db115eee0ae265dab922fecbb7966c3fcdc4eae3c2e9caae302fdcba3ba422c7"
   name = "github.com/evanphx/json-patch"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "72bf35d0ff611848c1dc9df0f976c81192392fa5"
-  version = "v4.1.0"
+  revision = "5858425f75500d40c52783dce87d085a483ce135"
 
 [[projects]]
   branch = "master"
-  digest = "1:680a28683152e2a3f523c8610fd2bbe6c9ac9d6f4245f9013d03800a3e9a4c32"
+  digest = "1:fa8bb7e197bc4648472ce76d7f9d68141b048cea5c348d5c99cbd97968213800"
   name = "github.com/gardener/controller-manager-library"
   packages = [
     "pkg/clientsets",
@@ -230,7 +229,7 @@
     "pkg/utils",
   ]
   pruneopts = "NUT"
-  revision = "16ea0c20f4228fa53e6af84f05b83f52449c8e6a"
+  revision = "d42fde1a420ac5c296d92f5657bb7ff85e27c6dd"
 
 [[projects]]
   digest = "1:1a39eed9705758f621f4fc435f32dccece308026bfc5087d62389dd09d7a829a"
@@ -545,14 +544,6 @@
   version = "v3.1.1"
 
 [[projects]]
-  digest = "1:e68c51f73a9fa89a6cfbd25f24543b37f96a7ac142dcf4e2adcadad6fec230e3"
-  name = "github.com/miekg/dns"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "cc8cd02140663157ce797c6650488d6c8563f31f"
-  version = "v1.1.6"
-
-[[projects]]
   digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -660,15 +651,15 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:ed0716cbfa65d10a68d062ecbf9fae082d78cdcbe18bc3acb44c42e52edb0f9a"
+  digest = "1:122724025b9505074138089f78f543f643ae3a8fab6d5b9edf72cce4dd49cc91"
   name = "github.com/pierrec/lz4"
   packages = [
     ".",
     "internal/xxh32",
   ]
   pruneopts = "NUT"
-  revision = "062282ea0dcff40c9fb8525789eef9644b1fbd6e"
-  version = "v2.1.0"
+  revision = "315a67e90e415bcdaff33057da191569bf4d8479"
+  version = "v2.1.1"
 
 [[projects]]
   digest = "1:89fa4c7ac713710640c83ec0461b78fc21c2eda6deca064fe461eef1b8bca303"
@@ -723,7 +714,7 @@
     "xfs",
   ]
   pruneopts = "NUT"
-  revision = "40f3c57fb1983891f95378042bd0bfd590f52384"
+  revision = "55ae3d9d557340b5bc24cd8aa5f6fa2c2ab31352"
 
 [[projects]]
   digest = "1:9dfe20a82800ffcf0a2bde15beba44cc6d6f6cf1d003420ecc8ad0ac78300d70"
@@ -868,10 +859,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5c578e2cde3d3f0c533803727e62143b731b78c80008a7fb3e3b5919a3938465"
+  digest = "1:3dbfa5a9f1956d6e3cd78403b9e1a1e2b9e64ed15f2b82d697e77344425e475e"
   name = "golang.org/x/net"
   packages = [
-    "bpf",
     "context",
     "context/ctxhttp",
     "html",
@@ -881,16 +871,12 @@
     "http2",
     "http2/hpack",
     "idna",
-    "internal/iana",
-    "internal/socket",
     "internal/timeseries",
-    "ipv4",
-    "ipv6",
     "trace",
     "websocket",
   ]
   pruneopts = "NUT"
-  revision = "1272bf9dcd53ea65c09668fb4c76e65deb740072"
+  revision = "63eda1eb0650888965ead1296efd04d0b2b61128"
 
 [[projects]]
   branch = "master"
@@ -908,7 +894,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:74081a965540de6794a48feb3d091c27fc3fffab6a76c5860dde15b01f21cacc"
+  digest = "1:5b81966854749f5c4846f643e6c97162c1b74fe97c06139857ad50db8bb3b505"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -916,7 +902,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "6c81ef8f67ca3f42fc9cd71dfbd5f35b0c4b5771"
+  revision = "f49334f85ddcf0f08d7fb6dd7363e9e6d6b777eb"
 
 [[projects]]
   digest = "1:2c4e3b27329379d7b5f889038b48086140ea60708fb92e4b19d6a775926ea30b"
@@ -964,7 +950,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:92a62ac3265d8e416ef00d9129d046a7a884b69a8766a159c0644b3b4775d0f6"
+  digest = "1:40229fb45632bffd6a9404c890601cfb7266f829539b69153a13793aa0c05d85"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -980,7 +966,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "3f1ed9edd1b43b011064eb59e5c9e73f5537ddd9"
+  revision = "8f05a32dce9ff80c9bf11baeb89d26b410f39281"
 
 [[projects]]
   digest = "1:1dd7f1d3b8aefd8d0277234fd7aebc7b57f97ba01ab689f09dbfa287a72f3300"
@@ -1025,7 +1011,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "e79c0c59cdb5e117ef82a6f885294df3d74065d5"
+  revision = "d831d65fe17df2e52bcc4316d4a9f7a418701f43"
 
 [[projects]]
   digest = "1:2e7dd27ea7dcc06208eb8d813658f561f8ea1dd2719773fb4da023e034b63cef"
@@ -1606,7 +1592,7 @@
     "types",
   ]
   pruneopts = "NUT"
-  revision = "bc9033e9ec9e0cec1552e9af7c079cb878dfc511"
+  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
 
 [[projects]]
   digest = "1:00ceadc47fa3b1dc3fffc56c8a61e0e8203922b17171cc824ae8f887b1c43d34"
@@ -1752,7 +1738,6 @@
     "github.com/hashicorp/go-multierror",
     "github.com/json-iterator/go",
     "github.com/mholt/archiver",
-    "github.com/miekg/dns",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/gomega",

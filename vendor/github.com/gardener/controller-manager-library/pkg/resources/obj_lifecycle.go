@@ -149,3 +149,11 @@ func (this *_object) delete(client restclient.Interface) error {
 func (this *_object) Delete() error {
 	return this.delete(this.resource.getClient())
 }
+
+func (this *_object) UpdateFromCache() error {
+	obj, err := this.resource.GetCached(this.ObjectName())
+	if err == nil {
+		this.ObjectData = obj.Data()
+	}
+	return err
+}

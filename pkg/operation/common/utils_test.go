@@ -31,28 +31,8 @@ import (
 
 var _ = Describe("common", func() {
 	Describe("utils", func() {
-		Describe("#IdentifyAddressType", func() {
-			It("should return a tuple with first value equals hostname", func() {
-				address := "example.com"
-
-				addrType, addr := IdentifyAddressType(address)
-
-				Expect(addrType).To(Equal("hostname"))
-				Expect(addr).To(BeNil())
-			})
-
-			It("should return a tuple with first value equals ip", func() {
-				address := "127.0.0.1"
-
-				addrType, addr := IdentifyAddressType(address)
-
-				Expect(addrType).To(Equal("ip"))
-				Expect(addr).NotTo(BeNil())
-			})
-		})
-
 		Describe("#DistributePercentOverZones", func() {
-			It("should return unmodified percentage if total is evenly divisble", func() {
+			It("should return unmodified percentage if total is evenly dividable", func() {
 				var (
 					total      = 6
 					noOfZones  = 3
@@ -66,7 +46,7 @@ var _ = Describe("common", func() {
 				Expect(percentages).To(Equal([]string{percentage, percentage, percentage}))
 			})
 
-			It("should return correct percentage if total is not evenly divisble", func() {
+			It("should return correct percentage if total is not evenly dividable", func() {
 				var (
 					total      = 7
 					noOfZones  = 3

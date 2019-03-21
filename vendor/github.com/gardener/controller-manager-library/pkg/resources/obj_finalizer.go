@@ -39,7 +39,7 @@ func (this *_object) HasFinalizer(key string) bool {
 func (this *_object) SetFinalizer(key string) error {
 	f := func(obj ObjectData) (bool, error) {
 		if !hasFinalizer(key, obj) {
-			logger.Infof("setting finalizer %q for %q", key, this.Description())
+			logger.Infof("setting finalizer %q for %q (%s)", key, this.Description(), this.GetResourceVersion())
 			obj.SetFinalizers(append(obj.GetFinalizers(), key))
 			return true, nil
 		}
@@ -54,7 +54,7 @@ func (this *_object) RemoveFinalizer(key string) error {
 		list := obj.GetFinalizers()
 		for i, name := range list {
 			if name == key {
-				logger.Infof("removing finalizer %q for %q", key, this.Description())
+				logger.Infof("removing finalizer %q for %q (%s)", key, this.Description(), this.GetResourceVersion())
 				obj.SetFinalizers(append(list[:i], list[i+1:]...))
 				return true, nil
 			}

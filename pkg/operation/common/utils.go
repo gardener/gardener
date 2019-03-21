@@ -114,19 +114,6 @@ func DistributePositiveIntOrPercent(zoneIndex int, intOrPercent intstr.IntOrStri
 	return intstr.FromInt(DistributeOverZones(zoneIndex, int(intOrPercent.IntVal), zoneSize))
 }
 
-// IdentifyAddressType takes a string containing an address (hostname or IP) and tries to parse it
-// to an IP address in order to identify whether it is a DNS name or not.
-// It returns a tuple whereby the first element is either "ip" or "hostname", and the second the
-// parsed IP address of type net.IP (in case the loadBalancer is an IP address, otherwise it is nil).
-func IdentifyAddressType(address string) (string, net.IP) {
-	addr := net.ParseIP(address)
-	addrType := "hostname"
-	if addr != nil {
-		addrType = "ip"
-	}
-	return addrType, addr
-}
-
 // ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
 // For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
 func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {

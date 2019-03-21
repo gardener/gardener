@@ -113,6 +113,7 @@ type Object interface {
 	Modify(modifier Modifier) (bool, error)
 	ModifyStatus(modifier Modifier) (bool, error)
 	CreateOrModify(modifier Modifier) (bool, error)
+	UpdateFromCache() error
 
 	Description() string
 	HasFinalizer(key string) bool

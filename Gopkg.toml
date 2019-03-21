@@ -143,10 +143,6 @@ ignored = [
   version = "~1.4.0"
 
 [[constraint]]
-  name = "github.com/miekg/dns"
-  version = "1.0.15"
-
-[[constraint]]
   name = "github.com/golang/mock"
   version = "1.2.0"
 
