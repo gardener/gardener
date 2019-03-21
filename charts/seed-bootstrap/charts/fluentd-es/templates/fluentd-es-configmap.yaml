@@ -16,18 +16,30 @@ data:
     </source>
 
   output.conf: |-
+    # Decide which is shoot record and which is not
+    <match kubernetes.**>
+      @id rewrite_tag_filter
+      @type rewrite_tag_filter
+      @log_level warn
+      <rule>
+        key $.kubernetes.namespace_name
+        pattern ^(shoot.*)
+        tag $1
+      </rule>
+      <rule>
+        key $.kubernetes.namespace_name
+        pattern ^shoot.*
+        invert true
+        tag seed
+      </rule>
+    </match>
+
     <filter **>
       @type elasticsearch_genid
     </filter>
 
     # Match shoot namespace.
-    #
-    # The tag is in format kubernetes.<file-name> where <file-name> is the file name in /var/log/containers/.
-    # <file-name> is in format <pod-name>_<namespace_name>_<container-name>-<container-id>.log, for example:
-    #
-    #   coredns-67df79bbdd-lhg4s_kube-system_coredns-6d439ffb30c628d2261895247d18b49434c3e6d0c6a728f3fa5952f7cd1da6b4.log
-    #
-    <match kubernetes.*_shoot-*_*.**>
+    <match shoot**>
       @id elasticsearch_dynamic_fault_tolerant
       @type elasticsearch_dynamic_fault_tolerant
       @log_level warn
