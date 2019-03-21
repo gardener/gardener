@@ -59,9 +59,11 @@ rules:
   - get
 - apiGroups:
   - extensions
+  - apps
   resources:
   - daemonsets
   - replicasets
+  - statefulsets
   verbs:
   - watch
   - list
@@ -73,14 +75,6 @@ rules:
   verbs:
   - watch
   - list
-- apiGroups:
-  - apps
-  resources:
-  - statefulsets
-  verbs:
-  - watch
-  - list
-  - get
 - apiGroups:
   - storage.k8s.io
   resources:
