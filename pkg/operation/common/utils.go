@@ -503,3 +503,33 @@ func DeleteAlertmanager(k8sClient kubernetes.Interface, namespace string) error 
 	}
 	return nil
 }
+
+// GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the give annotations.
+func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, err error) {
+	if annotations == nil {
+		return "", "", fmt.Errorf("domain secret has no annotations")
+	}
+
+	if providerAnnotation, ok := annotations[DNSProviderDeprecated]; ok {
+		provider = providerAnnotation
+	}
+	if providerAnnotation, ok := annotations[DNSProvider]; ok {
+		provider = providerAnnotation
+	}
+
+	if domainAnnotation, ok := annotations[DNSDomainDeprecated]; ok {
+		domain = domainAnnotation
+	}
+	if domainAnnotation, ok := annotations[DNSDomain]; ok {
+		domain = domainAnnotation
+	}
+
+	if len(domain) == 0 {
+		return "", "", fmt.Errorf("missing dns domain annotation on domain secret")
+	}
+	if len(provider) == 0 {
+		return "", "", fmt.Errorf("missing dns provider annotation on domain secret")
+	}
+
+	return
+}

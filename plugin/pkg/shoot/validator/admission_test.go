@@ -51,9 +51,10 @@ var _ = Describe("validator", func() {
 				Nodes:    &nodesCIDR,
 			}
 
-			seedName      = "seed"
-			namespaceName = "garden-my-project"
-			projectName   = "my-project"
+			seedName             = "seed"
+			namespaceName        = "garden-my-project"
+			projectName          = "my-project"
+			unmanagedDNSProvider = garden.DNSUnmanaged
 
 			seedPodsCIDR     = gardencore.CIDR("10.241.128.0/17")
 			seedServicesCIDR = gardencore.CIDR("10.241.0.0/17")
@@ -100,7 +101,7 @@ var _ = Describe("validator", func() {
 						},
 					},
 					DNS: garden.DNS{
-						Provider: garden.DNSUnmanaged,
+						Provider: &unmanagedDNSProvider,
 						Domain:   makeStrPointer("shoot.example.com"),
 					},
 					Kubernetes: garden.Kubernetes{
@@ -397,7 +398,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid dns provider", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				provider := "some-provider"
+				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -692,7 +694,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid dns provider", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				provider := "some-provider"
+				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -922,7 +925,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid dns provider", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				provider := "some-provider"
+				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1343,7 +1347,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid dns provider", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				provider := "some-provider"
+				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
@@ -1587,7 +1592,8 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid dns provider", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				provider := "some-provider"
+				shoot.Spec.DNS.Provider = &provider
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)

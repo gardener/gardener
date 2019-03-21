@@ -238,7 +238,7 @@ func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) s
 		return common.KubeAPIServerDeploymentName
 	}
 
-	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider == gardenv1beta1.DNSUnmanaged || (dnsProvider != gardenv1beta1.DNSUnmanaged && useInternalClusterDomain) {
+	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider != nil && *dnsProvider == gardenv1beta1.DNSUnmanaged || (*dnsProvider != gardenv1beta1.DNSUnmanaged && useInternalClusterDomain) {
 		return s.InternalClusterDomain
 	}
 
@@ -296,21 +296,30 @@ func constructExternalDomain(ctx context.Context, client client.Client, shoot *g
 		return nil, nil
 	}
 
-	externalDomain := &ExternalDomain{
-		Domain:   *shoot.Spec.DNS.Domain,
-		Provider: string(shoot.Spec.DNS.Provider),
-	}
+	var (
+		externalDomain = &ExternalDomain{Domain: *shoot.Spec.DNS.Domain}
+		defaultDomain  = shootUsesDefaultDomain(*externalClusterDomain, defaultDomains)
+	)
 
-	if shoot.Spec.DNS.SecretName != nil {
+	switch {
+	case shoot.Spec.DNS.SecretName != nil && shoot.Spec.DNS.Provider != nil:
 		secret := &corev1.Secret{}
 		if err := client.Get(ctx, kutil.Key(shoot.Namespace, *shoot.Spec.DNS.SecretName), secret); err != nil {
 			return nil, err
 		}
 		externalDomain.SecretData = secret.Data
-	} else if defaultDomain := shootUsesDefaultDomain(*externalClusterDomain, defaultDomains); defaultDomain != nil {
+		externalDomain.Provider = *shoot.Spec.DNS.Provider
+
+	case defaultDomain != nil:
 		externalDomain.SecretData = defaultDomain.SecretData
-	} else {
+		externalDomain.Provider = defaultDomain.Provider
+
+	case shoot.Spec.DNS.Provider != nil && shoot.Spec.DNS.SecretName == nil:
 		externalDomain.SecretData = shootSecret.Data
+		externalDomain.Provider = *shoot.Spec.DNS.Provider
+
+	default:
+		return nil, fmt.Errorf("unable to figure out which secret should be used for dns")
 	}
 
 	return externalDomain, nil

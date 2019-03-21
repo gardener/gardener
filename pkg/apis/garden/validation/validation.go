@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
+
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/apis/garden/helper"
@@ -44,21 +45,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-var availableDNS, availableProxyMode sets.String
-
-func init() {
-	availableDNS = sets.NewString(
-		string(garden.DNSUnmanaged),
-		string(garden.DNSAWSRoute53),
-		string(garden.DNSGoogleCloudDNS),
-		string(garden.DNSAlicloud),
-		string(garden.DNSOpenstackDesignate),
-	)
-	availableProxyMode = sets.NewString(
-		string(garden.ProxyModeIPTables),
-		string(garden.ProxyModeIPVS),
-	)
-}
+var availableProxyMode = sets.NewString(
+	string(garden.ProxyModeIPTables),
+	string(garden.ProxyModeIPVS),
+)
 
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
 func ValidateName(name string, prefix bool) []string {
@@ -140,7 +130,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	}
 
 	if spec.AWS != nil {
-		allErrs = append(allErrs, validateDNSProviders(spec.AWS.Constraints.DNSProviders, fldPath.Child("aws", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.AWS.Constraints.Kubernetes, fldPath.Child("aws", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateAWSMachineImages(spec.AWS.Constraints.MachineImages, fldPath.Child("aws", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.AWS.Constraints.MachineTypes, fldPath.Child("aws", "constraints", "machineTypes"))...)
@@ -149,7 +138,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	}
 
 	if spec.Azure != nil {
-		allErrs = append(allErrs, validateDNSProviders(spec.Azure.Constraints.DNSProviders, fldPath.Child("azure", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Azure.Constraints.Kubernetes, fldPath.Child("azure", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateAzureMachineImages(spec.Azure.Constraints.MachineImages, fldPath.Child("azure", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Azure.Constraints.MachineTypes, fldPath.Child("azure", "constraints", "machineTypes"))...)
@@ -159,7 +147,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	}
 
 	if spec.GCP != nil {
-		allErrs = append(allErrs, validateDNSProviders(spec.GCP.Constraints.DNSProviders, fldPath.Child("gcp", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.GCP.Constraints.Kubernetes, fldPath.Child("gcp", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateGCPMachineImages(spec.GCP.Constraints.MachineImages, fldPath.Child("gcp", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.GCP.Constraints.MachineTypes, fldPath.Child("gcp", "constraints", "machineTypes"))...)
@@ -168,7 +155,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	}
 
 	if spec.Alicloud != nil {
-		allErrs = append(allErrs, validateDNSProviders(spec.Alicloud.Constraints.DNSProviders, fldPath.Child("alicloud", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Alicloud.Constraints.Kubernetes, fldPath.Child("alicloud", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateAlicloudMachineImages(spec.Alicloud.Constraints.MachineImages, fldPath.Child("alicloud", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateAlicloudMachineTypeConstraints(spec.Alicloud.Constraints.MachineTypes, spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "machineTypes"))...)
@@ -177,7 +163,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	}
 
 	if spec.Packet != nil {
-		allErrs = append(allErrs, validateDNSProviders(spec.Packet.Constraints.DNSProviders, fldPath.Child("packet", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.Packet.Constraints.Kubernetes, fldPath.Child("packet", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validatePacketMachineImages(spec.Packet.Constraints.MachineImages, fldPath.Child("packet", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Packet.Constraints.MachineTypes, fldPath.Child("packet", "constraints", "machineTypes"))...)
@@ -186,7 +171,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	}
 
 	if spec.OpenStack != nil {
-		allErrs = append(allErrs, validateDNSProviders(spec.OpenStack.Constraints.DNSProviders, fldPath.Child("openstack", "constraints", "dnsProviders"))...)
 		allErrs = append(allErrs, validateKubernetesConstraints(spec.OpenStack.Constraints.Kubernetes, fldPath.Child("openstack", "constraints", "kubernetes"))...)
 		allErrs = append(allErrs, validateOpenStackMachineImages(spec.OpenStack.Constraints.MachineImages, fldPath.Child("openstack", "constraints", "machineImages"))...)
 		allErrs = append(allErrs, validateOpenStackMachineTypeConstraints(spec.OpenStack.Constraints.MachineTypes, fldPath.Child("openstack", "constraints", "machineTypes"))...)
@@ -236,23 +220,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		_, err := utils.DecodeCertificate([]byte(*(spec.CABundle)))
 		if err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("caBundle"), *(spec.CABundle), "caBundle is not a valid PEM-encoded certificate"))
-		}
-	}
-
-	return allErrs
-}
-
-func validateDNSProviders(providers []garden.DNSProviderConstraint, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(providers) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one DNS provider"))
-	}
-
-	for i, provider := range providers {
-		idxPath := fldPath.Index(i)
-		if !availableDNS.Has(string(provider.Name)) {
-			allErrs = append(allErrs, field.NotSupported(idxPath, provider.Name, availableDNS.List()))
 		}
 	}
 
@@ -1020,15 +987,6 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
 
-	if spec.DNS.Provider == garden.DNSUnmanaged {
-		if spec.DNS.HostedZoneID != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "hostedZoneID"), spec.DNS.HostedZoneID, fmt.Sprintf("`.spec.dns.hostedZoneID` must not be set when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
-		}
-		if spec.DNS.SecretName != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("dns", "secretName"), spec.DNS.SecretName, fmt.Sprintf("`.spec.dns.secretName` must not be set when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
-		}
-	}
-
 	return allErrs
 }
 
@@ -1606,24 +1564,19 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 
 func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if !availableDNS.Has(string(dns.Provider)) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("provider"), dns.Provider, availableDNS.List()))
-	}
 
-	if dns.Provider == garden.DNSAlicloud {
-		if dns.HostedZoneID != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("hostedZoneID"), dns.HostedZoneID, "hosted zone id should be empty for alicloud-dns"))
-		}
-	} else if dns.HostedZoneID != nil {
-		if len(*dns.HostedZoneID) == 0 {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("hostedZoneID"), dns.HostedZoneID, "hosted zone id cannot be empty when key is provided"))
-		}
-	}
-
-	if dns.Domain == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("domain"), "domain cannot be empty"))
-	} else {
+	if dns.Domain != nil {
 		allErrs = append(allErrs, validateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
+	}
+
+	if provider := dns.Provider; provider != nil && *provider == garden.DNSUnmanaged {
+		if dns.SecretName != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("secretName"), dns.SecretName, fmt.Sprintf("`.spec.dns.secretName` must not be set when `.spec.dns.provider` is '%s'", garden.DNSUnmanaged)))
+		}
+	}
+
+	if dns.SecretName != nil && dns.Provider == nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("provider"), "`.spec.dns.provider` must be set when `.spec.dns.provider` is set"))
 	}
 
 	return allErrs

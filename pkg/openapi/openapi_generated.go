@@ -2904,7 +2904,7 @@ func schema_pkg_apis_garden_v1beta1_DNS(ref common.ReferenceCallback) common.Ope
 					},
 					"hostedZoneID": {
 						SchemaProps: spec.SchemaProps{
-							Description: "HostedZoneID is the ID of an existing DNS Hosted Zone used to create the DNS records in.",
+							Description: "HostedZoneID is the ID of an existing DNS Hosted Zone used to create the DNS records in. deprecated",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -2918,13 +2918,12 @@ func schema_pkg_apis_garden_v1beta1_DNS(ref common.ReferenceCallback) common.Ope
 					},
 					"secretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretName is a name of a secret containing credentials for the stated HostedZoneID and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behaviour, i.e. forcing the Gardener to only look into the given secret.",
+							Description: "SecretName is a name of a secret containing credentials for the stated HostedZoneID and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
 				},
-				Required: []string{"provider"},
 			},
 		},
 	}

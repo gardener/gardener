@@ -47,11 +47,6 @@ var _ = Describe("validation", func() {
 			metadata = metav1.ObjectMeta{
 				Name: "profile",
 			}
-			dnsProviderConstraint = []garden.DNSProviderConstraint{
-				{
-					Name: garden.DNSUnmanaged,
-				},
-			}
 			kubernetesVersionConstraint = garden.KubernetesConstraints{
 				Versions: []string{"1.11.4"},
 			}
@@ -84,11 +79,6 @@ var _ = Describe("validation", func() {
 				},
 			}
 
-			invalidDNSProviders = []garden.DNSProviderConstraint{
-				{
-					Name: garden.DNSProviderDeprecated("some-unsupported-provider"),
-				},
-			}
 			invalidKubernetes  = []string{"1.11"}
 			invalidMachineType = garden.MachineType{
 				Name:   "",
@@ -151,8 +141,7 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						AWS: &garden.AWSProfile{
 							Constraints: garden.AWSConstraints{
-								DNSProviders: dnsProviderConstraint,
-								Kubernetes:   kubernetesVersionConstraint,
+								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.AWSMachineImageMapping{
 									{
 										Name: garden.MachineImageName("some-machineimage"),
@@ -189,32 +178,6 @@ var _ = Describe("validation", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.caBundle"),
 				}))
-			})
-
-			Context("dns provider constraints", func() {
-				It("should enforce that at least one provider has been defined", func() {
-					awsCloudProfile.Spec.AWS.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
-					}))
-				})
-
-				It("should forbid unsupported providers", func() {
-					awsCloudProfile.Spec.AWS.Constraints.DNSProviders = invalidDNSProviders
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
-					}))
-				})
 			})
 
 			Context("kubernetes version constraints", func() {
@@ -492,8 +455,7 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						Azure: &garden.AzureProfile{
 							Constraints: garden.AzureConstraints{
-								DNSProviders: dnsProviderConstraint,
-								Kubernetes:   kubernetesVersionConstraint,
+								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.AzureMachineImage{
 									{
 										Name:      garden.MachineImageName("some-machineimage"),
@@ -521,32 +483,6 @@ var _ = Describe("validation", func() {
 						},
 					},
 				}
-			})
-
-			Context("dns provider constraints", func() {
-				It("should enforce that at least one provider has been defined", func() {
-					azureCloudProfile.Spec.Azure.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
-
-					errorList := ValidateCloudProfile(azureCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
-					}))
-				})
-
-				It("should forbid unsupported providers", func() {
-					azureCloudProfile.Spec.Azure.Constraints.DNSProviders = invalidDNSProviders
-
-					errorList := ValidateCloudProfile(azureCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
-					}))
-				})
 			})
 
 			Context("kubernetes version constraints", func() {
@@ -823,8 +759,7 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						GCP: &garden.GCPProfile{
 							Constraints: garden.GCPConstraints{
-								DNSProviders: dnsProviderConstraint,
-								Kubernetes:   kubernetesVersionConstraint,
+								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.GCPMachineImage{
 									{
 										Name:  garden.MachineImageName("some-machineimage"),
@@ -838,32 +773,6 @@ var _ = Describe("validation", func() {
 						},
 					},
 				}
-			})
-
-			Context("dns provider constraints", func() {
-				It("should enforce that at least one provider has been defined", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
-
-					errorList := ValidateCloudProfile(gcpCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
-					}))
-				})
-
-				It("should forbid unsupported providers", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.DNSProviders = invalidDNSProviders
-
-					errorList := ValidateCloudProfile(gcpCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
-					}))
-				})
 			})
 
 			Context("kubernetes version constraints", func() {
@@ -1083,7 +992,6 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						OpenStack: &garden.OpenStackProfile{
 							Constraints: garden.OpenStackConstraints{
-								DNSProviders: dnsProviderConstraint,
 								FloatingPools: []garden.OpenStackFloatingPool{
 									{
 										Name: "MY-POOL",
@@ -1109,32 +1017,6 @@ var _ = Describe("validation", func() {
 						},
 					},
 				}
-			})
-
-			Context("dns provider constraints", func() {
-				It("should enforce that at least one provider has been defined", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
-
-					errorList := ValidateCloudProfile(openStackCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
-					}))
-				})
-
-				It("should forbid unsupported providers", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.DNSProviders = invalidDNSProviders
-
-					errorList := ValidateCloudProfile(openStackCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
-					}))
-				})
 			})
 
 			Context("floating pools constraints", func() {
@@ -1419,8 +1301,7 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						Alicloud: &garden.AlicloudProfile{
 							Constraints: garden.AlicloudConstraints{
-								DNSProviders: dnsProviderConstraint,
-								Kubernetes:   kubernetesVersionConstraint,
+								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.AlicloudMachineImage{
 									{
 										Name: garden.MachineImageName("some-machineimage"),
@@ -1474,32 +1355,6 @@ var _ = Describe("validation", func() {
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.caBundle"),
 				}))
-			})
-
-			Context("dns provider constraints", func() {
-				It("should enforce that at least one provider has been defined", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
-					}))
-				})
-
-				It("should forbid unsupported providers", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.DNSProviders = invalidDNSProviders
-
-					errorList := ValidateCloudProfile(alicloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
-					}))
-				})
 			})
 
 			Context("kubernetes version constraints", func() {
@@ -1756,7 +1611,6 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						Packet: &garden.PacketProfile{
 							Constraints: garden.PacketConstraints{
-								DNSProviders: dnsProviderConstraint,
 								Kubernetes:   kubernetesVersionConstraint,
 								MachineImages: []garden.PacketMachineImage{
 									{
@@ -1789,30 +1643,6 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.caBundle"),
 				}))))
 
-			})
-
-			Context("dns provider constraints", func() {
-				It("should enforce that at least one provider has been defined", func() {
-					packetProfile.Spec.Packet.Constraints.DNSProviders = []garden.DNSProviderConstraint{}
-
-					errorList := ValidateCloudProfile(packetProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders", fldPath)),
-					}))))
-				})
-
-				It("should forbid unsupported providers", func() {
-					packetProfile.Spec.Packet.Constraints.DNSProviders = invalidDNSProviders
-
-					errorList := ValidateCloudProfile(packetProfile)
-
-					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeNotSupported),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.dnsProviders[0]", fldPath)),
-					}))))
-				})
 			})
 
 			Context("kubernetes version constraints", func() {
@@ -2613,8 +2443,8 @@ var _ = Describe("validation", func() {
 		var (
 			shoot *garden.Shoot
 
-			hostedZoneID = "ABCDEF1234"
-			domain       = "my-cluster.example.com"
+			domain      = "my-cluster.example.com"
+			dnsProvider = "some-provider"
 
 			nodeCIDR    = gardencore.CIDR("10.250.0.0/16")
 			podCIDR     = gardencore.CIDR("100.96.0.0/11")
@@ -2743,9 +2573,8 @@ var _ = Describe("validation", func() {
 						},
 					},
 					DNS: garden.DNS{
-						Provider:     garden.DNSAWSRoute53,
-						HostedZoneID: &hostedZoneID,
-						Domain:       &domain,
+						Provider: &dnsProvider,
+						Domain:   &domain,
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.11.2",
@@ -5071,107 +4900,41 @@ var _ = Describe("validation", func() {
 		})
 
 		Context("dns section", func() {
-			It("should forbid unsupported dns providers", func() {
-				shoot.Spec.DNS.Provider = garden.DNSProviderDeprecated("does-not-exist")
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.dns.provider"),
-				}))
-			})
-
-			It("should forbid empty hosted zone ids or domains", func() {
-				shoot.Spec.DNS.HostedZoneID = makeStringPointer("")
-				shoot.Spec.DNS.Domain = makeStringPointer("")
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(2))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.hostedZoneID"),
-				}))
-				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.domain"),
-				}))
-			})
-
-			It("should forbid specifying no domain", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
-				shoot.Spec.DNS.Domain = nil
-
-				errorList := ValidateShoot(shoot)
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeRequired),
-					"Field": Equal("spec.dns.domain"),
-				}))
-			})
-
-			It("should forbid specifying empty domain", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
-				shoot.Spec.DNS.Domain = makeStringPointer("")
-
-				errorList := ValidateShoot(shoot)
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.domain"),
-				}))
-			})
-
 			It("should forbid specifying invalid domain", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAWSRoute53
+				shoot.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
 
 				errorList := ValidateShoot(shoot)
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.domain"),
-				}))
+				}))))
 			})
 
 			It("should forbid specifying a secret name when provider equals 'unmanaged'", func() {
-				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
-				shoot.Spec.DNS.HostedZoneID = nil
+				provider := garden.DNSUnmanaged
+				shoot.Spec.DNS.Provider = &provider
 				shoot.Spec.DNS.SecretName = makeStringPointer("")
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.secretName"),
-				}))
+				}))))
 			})
 
-			It("should forbid specifying a hosted zone id when provider equals 'unmanaged'", func() {
-				shoot.Spec.DNS.Provider = garden.DNSUnmanaged
+			It("should require a provider if a secret name is given", func() {
+				shoot.Spec.DNS.Provider = nil
+				shoot.Spec.DNS.SecretName = makeStringPointer("")
 
 				errorList := ValidateShoot(shoot)
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.hostedZoneID"),
-				}))
-			})
-
-			It("should forbid specifying a hosted zone id when provider equals 'alicloud-dns'", func() {
-				shoot.Spec.DNS.Provider = garden.DNSAlicloud
-
-				errorList := ValidateShoot(shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.hostedZoneID"),
-				}))
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.dns.provider"),
+				}))))
 			})
 
 			It("should forbid updating the dns domain", func() {
@@ -5180,46 +4943,32 @@ var _ = Describe("validation", func() {
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.domain"),
-				}))
-			})
-
-			It("should forbid updating the dns hosted zone id", func() {
-				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.HostedZoneID = makeStringPointer("another-hosted-zone")
-
-				errorList := ValidateShootUpdate(newShoot, shoot)
-
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeInvalid),
-					"Field": Equal("spec.dns.hostedZoneID"),
-				}))
+				}))))
 			})
 
 			It("should forbid updating the dns provider", func() {
 				newShoot := prepareShootForUpdate(shoot)
-				newShoot.Spec.DNS.Provider = garden.DNSGoogleCloudDNS
+				provider := "some-other-provider"
+				newShoot.Spec.DNS.Provider = &provider
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(1))
-				Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.dns.provider"),
-				}))
+				}))))
 			})
 
-			It("should allow updating the dns domain", func() {
+			It("should allow updating the dns secret name", func() {
 				newShoot := prepareShootForUpdate(shoot)
 				newShoot.Spec.DNS.SecretName = makeStringPointer("my-dns-secret")
 
 				errorList := ValidateShootUpdate(newShoot, shoot)
 
-				Expect(len(errorList)).To(Equal(0))
+				Expect(errorList).To(HaveLen(0))
 			})
 		})
 

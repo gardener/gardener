@@ -202,9 +202,8 @@ func (b *Botanist) computeRequiredExtensions() map[string]string {
 		dnsv1alpha1.DNSProviderKind:                      b.Garden.InternalDomain.Provider,
 	}
 
-	// TODO: this is only for external domain!
-	if provider := b.Shoot.Info.Spec.DNS.Provider; provider != gardenv1beta1.DNSUnmanaged {
-		requiredExtensions[dnsv1alpha1.DNSProviderKind] = string(provider)
+	if b.Shoot.ExternalDomain != nil {
+		requiredExtensions[dnsv1alpha1.DNSProviderKind] = b.Shoot.ExternalDomain.Provider
 	}
 
 	return requiredExtensions

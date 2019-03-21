@@ -312,7 +312,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		allErrs = validateAlicloud(validationContext)
 	}
 
-	dnsErrors, err := validateDNSConfiguration(v.shootLister, shoot.Name, shoot.Spec.DNS)
+	dnsErrors, err := validateDNSDomainUniqueness(v.shootLister, shoot.Name, shoot.Spec.DNS)
 	if err != nil {
 		return apierrors.NewInternalError(err)
 	}
@@ -637,8 +637,12 @@ func validateAlicloud(c *validationContext) field.ErrorList {
 	return allErrs
 }
 
-func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider, oldProvider garden.DNSProviderDeprecated) (bool, []string) {
-	if provider == oldProvider {
+func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider, oldProvider *string) (bool, []string) {
+	if apiequality.Semantic.DeepEqual(provider, oldProvider) {
+		return true, nil
+	}
+
+	if provider == nil {
 		return true, nil
 	}
 
@@ -646,7 +650,7 @@ func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider
 
 	for _, p := range constraints {
 		validValues = append(validValues, string(p.Name))
-		if p.Name == provider {
+		if p.Name == *provider {
 			return true, nil
 		}
 	}
@@ -654,7 +658,7 @@ func validateDNSConstraints(constraints []garden.DNSProviderConstraint, provider
 	return false, validValues
 }
 
-func validateDNSConfiguration(shootLister listers.ShootLister, name string, dns garden.DNS) (field.ErrorList, error) {
+func validateDNSDomainUniqueness(shootLister listers.ShootLister, name string, dns garden.DNS) (field.ErrorList, error) {
 	var (
 		allErrs = field.ErrorList{}
 		dnsPath = field.NewPath("spec", "dns", "domain")

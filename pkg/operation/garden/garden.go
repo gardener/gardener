@@ -58,7 +58,7 @@ func getDefaultDomains(secrets map[string]*corev1.Secret) ([]*DefaultDomain, err
 
 	for key, secret := range secrets {
 		if strings.HasPrefix(key, common.GardenRoleDefaultDomain) {
-			provider, domain, err := getDomainInfoFromAnnotations(secret.Annotations)
+			provider, domain, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				return nil, fmt.Errorf("error getting information out of default domain secret: %+v", err)
 			}
@@ -77,7 +77,7 @@ func getDefaultDomains(secrets map[string]*corev1.Secret) ([]*DefaultDomain, err
 func getInternalDomain(secrets map[string]*corev1.Secret) (*InternalDomain, error) {
 	internalDomainSecret := secrets[common.GardenRoleInternalDomain]
 
-	provider, domain, err := getDomainInfoFromAnnotations(internalDomainSecret.Annotations)
+	provider, domain, err := common.GetDomainInfoFromAnnotations(internalDomainSecret.Annotations)
 	if err != nil {
 		return nil, fmt.Errorf("error getting information out of internal domain secret: %+v", err)
 	}
@@ -87,40 +87,6 @@ func getInternalDomain(secrets map[string]*corev1.Secret) (*InternalDomain, erro
 		Provider:   provider,
 		SecretData: internalDomainSecret.Data,
 	}, nil
-}
-
-func getDomainInfoFromAnnotations(annotations map[string]string) (string, string, error) {
-	var (
-		provider string
-		domain   string
-	)
-
-	if annotations == nil {
-		return "", "", fmt.Errorf("domain secret has no annotations")
-	}
-
-	if providerAnnotation, ok := annotations[common.DNSProviderDeprecated]; ok {
-		provider = providerAnnotation
-	}
-	if providerAnnotation, ok := annotations[common.DNSProvider]; ok {
-		provider = providerAnnotation
-	}
-
-	if domainAnnotation, ok := annotations[common.DNSDomainDeprecated]; ok {
-		domain = domainAnnotation
-	}
-	if domainAnnotation, ok := annotations[common.DNSDomain]; ok {
-		domain = domainAnnotation
-	}
-
-	if len(domain) == 0 {
-		return "", "", fmt.Errorf("missing dns domain annotation on domain secret")
-	}
-	if len(provider) == 0 {
-		return "", "", fmt.Errorf("missing dns provider annotation on domain secret")
-	}
-
-	return provider, domain, nil
 }
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.
@@ -146,7 +112,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 		// Retrieving default domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role default-domain.
 		if secret.Labels[common.GardenRole] == common.GardenRoleDefaultDomain {
-			_, domain, err := getDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of default domain secret %s: %+v", secret.Name, err)
 				continue
@@ -159,7 +125,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 		// Retrieving internal domain secrets based on all secrets in the Garden namespace which have
 		// a label indicating the Garden role internal-domain.
 		if secret.Labels[common.GardenRole] == common.GardenRoleInternalDomain {
-			_, domain, err := getDomainInfoFromAnnotations(secret.Annotations)
+			_, domain, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
 			if err != nil {
 				logger.Logger.Warnf("error getting information out of internal domain secret %s: %+v", secret.Name, err)
 				continue
@@ -232,7 +198,7 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 // VerifyInternalDomainSecret verifies that the internal domain secret matches to the internal domain secret used for
 // existing Shoot clusters. It is not allowed to change the internal domain secret if there are existing Shoot clusters.
 func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfShoots int, internalDomainSecret *corev1.Secret) error {
-	_, currentDomain, err := getDomainInfoFromAnnotations(internalDomainSecret.Annotations)
+	_, currentDomain, err := common.GetDomainInfoFromAnnotations(internalDomainSecret.Annotations)
 	if err != nil {
 		return fmt.Errorf("error getting information out of current internal domain secret: %+v", err)
 	}

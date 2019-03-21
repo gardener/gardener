@@ -79,11 +79,6 @@ const (
 	// deprecated
 	DNSDomainDeprecated = "dns.garden.sapcloud.io/domain"
 
-	// DNSHostedZoneIDDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
-	// DNS Hosted Zone.
-	// deprecated
-	DNSHostedZoneIDDeprecated = "dns.garden.sapcloud.io/hostedZoneID"
-
 	// DNSProvider is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
 	DNSProvider = "dns.gardener.cloud/provider"

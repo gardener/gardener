@@ -34,7 +34,7 @@ import (
 	controllerregistrationresources "github.com/gardener/gardener/plugin/pkg/controllerregistration/resources"
 	"github.com/gardener/gardener/plugin/pkg/global/deletionconfirmation"
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
-	shootdnshostedzone "github.com/gardener/gardener/plugin/pkg/shoot/dnshostedzone"
+	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
 	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
@@ -127,13 +127,13 @@ func (o *Options) complete() error {
 	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
 	shootseedmanager.Register(o.Recommended.Admission.Plugins)
-	shootdnshostedzone.Register(o.Recommended.Admission.Plugins)
+	shootdns.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
 	controllerregistrationresources.Register(o.Recommended.Admission.Plugins)
 
 	allOrderedPlugins := []string{
 		resourcereferencemanager.PluginName,
-		shootdnshostedzone.PluginName,
+		shootdns.PluginName,
 		shootquotavalidator.PluginName,
 		shootseedmanager.PluginName,
 		shootvalidator.PluginName,

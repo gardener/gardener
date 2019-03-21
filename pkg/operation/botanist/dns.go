@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -94,7 +95,7 @@ func (b *Botanist) deployDNSProvider(ctx context.Context, name, provider string,
 		},
 	}
 
-	if err := common.ApplyChart(b.K8sSeedClient, b.ChartSeedRenderer, filepath.Join(dnsChartPath, "provider"), name, b.Shoot.SeedNamespace, nil, values); err != nil {
+	if err := b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(dnsChartPath, "provider"), b.Shoot.SeedNamespace, name, nil, values); err != nil {
 		return err
 	}
 
@@ -125,7 +126,7 @@ func (b *Botanist) waitUntilDNSProviderReady(ctx context.Context, name string) e
 		b.Logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", name, status, message)
 		return false, nil
 	}); err != nil {
-		return common.DetermineError(fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
 	}
 
 	return nil
@@ -145,7 +146,7 @@ func (b *Botanist) deployDNSEntry(ctx context.Context, name, dnsName, target str
 		"targets": []string{target},
 	}
 
-	if err := common.ApplyChart(b.K8sSeedClient, b.ChartSeedRenderer, filepath.Join(dnsChartPath, "entry"), name, b.Shoot.SeedNamespace, nil, values); err != nil {
+	if err := b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(dnsChartPath, "entry"), b.Shoot.SeedNamespace, name, nil, values); err != nil {
 		return err
 	}
 
@@ -176,7 +177,7 @@ func (b *Botanist) waitUntilDNSEntryReady(ctx context.Context, name string) erro
 		b.Logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", name, status, message)
 		return false, nil
 	}); err != nil {
-		return common.DetermineError(fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
 	}
 
 	return nil

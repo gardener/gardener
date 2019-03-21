@@ -68,7 +68,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	var (
 		defaultTimeout                  = 30 * time.Second
 		defaultInterval                 = 5 * time.Second
-		managedDNS                      = o.Shoot.Info.Spec.DNS.Provider != gardenv1beta1.DNSUnmanaged
+		managedDNS                      = o.Shoot.ExternalDomain != nil
 		isCloud                         = o.Shoot.Info.Spec.Cloud.Local == nil
 		creationPhase                   = operationType == gardencorev1alpha1.LastOperationTypeCreate
 		requireInfrastructureDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
