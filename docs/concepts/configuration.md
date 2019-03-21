@@ -37,7 +37,7 @@ The Gardener requires some secrets in order to work properly. These secrets are:
 * *Cloud provider secrets*, contains the credentials of the cloud provider account in which Shoot clusters can be deployed, please see [this](../../example/70-secret-cloudprovider-aws.yaml) for an example.
   * For each Shoot cluster, the Gardener needs to create infrastructure (networks, security groups, technical users, ...) and worker nodes in the desired cloud provider account.
 
-The described secrets are expected to be stored in the so-called **Garden namespace**. In case the Gardener runs inside a Kubernetes cluster, the Garden namespace is the namespace the Gardener is deployed in (default, can be overwritten). In case it runs outside (local development), the Garden namespace must be specified via a command line flag (see below).
+The described secrets are expected to be stored in the so-called **Garden namespace**. In case the Gardener runs inside a Kubernetes cluster, the Garden namespace is the namespace the Gardener is deployed in. In case it runs outside (local development), the Garden namespace must be specified via a command line flag (see below).
 The secrets are determined based on labels with key `garden.sapcloud.io/role`. Please take a look on the above linked examples.
 
 The Seed cluster which is used to deploy the control plane of a Shoot cluster can be specified by the user in the Shoot manifest (see [here](../../example/90-shoot-azure.yaml#L10)). If it is not specified, the Gardener will try to find an adequate Seed cluster (one deployed in the same region at the same cloud provider) automatically.

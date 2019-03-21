@@ -65,7 +65,6 @@ global:
   controller:
     internalDomain:
       provider: unmanaged
-      hostedZoneID: ABCDEFGHIJ
       domain: nip.io
     config:
       server:

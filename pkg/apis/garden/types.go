@@ -1219,7 +1219,7 @@ type DNS struct {
 	// Domain is the external available domain of the Shoot cluster.
 	// +optional
 	Domain *string
-	// SecretName is a name of a secret containing credentials for the stated HostedZoneID and the
+	// SecretName is a name of a secret containing credentials for the stated domain and the
 	// provider. When not specified, the Gardener will use the cloud provider credentials referenced
 	// by the Shoot and try to find respective credentials there. Specifying this field may override
 	// this behavior, i.e. forcing the Gardener to only look into the given secret.

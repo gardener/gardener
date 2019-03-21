@@ -258,9 +258,8 @@ global:
       hostedZoneID: ${HOSTED_ZONE_ID}
       domain: ${HOSTED_ZONE_DOMAIN}
       credentials:
-        # for aws-route53 we need 'accessKeyID' and 'secretAccessKey'
-        accessKeyID: ${ACCESS_KEY_ID}
-        secretAccessKey: ${SECRET_ACCESS_KEY}
+        AWS_ACCESS_KEY_ID: ${ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${SECRET_ACCESS_KEY}
 EOF
 ```
 

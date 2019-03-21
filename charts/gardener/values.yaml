@@ -138,47 +138,15 @@ global:
         cpu: 750m
         memory: 512Mi
     internalDomain:
-      provider: aws-route53 # aws-route53, google-clouddns, alicloud-dns or openstack-designate
-      hostedZoneID: Z3ABCDE1FGHIJK
+      provider: aws-route53 # depends on the DNS extension of your choice
       domain: example.com
-      credentials:
-        # for aws-route53 we need to provide the following keys:
-        accessKeyID: access-key-id-with-route53-privileges
-        secretAccessKey: secret-access-key-with-route53-privileges
-        #
-        # for google-clouddns we need to provide the following keys:
-        # serviceaccount.json: '{"type": "service_account", "project_id": "...", ...}'
-        #
-        # for alicloud-dns we need to provide the following keys:
-        # accessKeyID: access-key-id-with-aliclouddns-privileges
-        # accessKeySecret: access-key-secret-with-aliclouddns-privileges
-        #
-        # for openstack-designate we need to provide the following keys:
-        # authURL: my-keystone-url
-        # domainName: my-domain
-        # tenantName: my-tenant
-        # userDomainName: my-user-domain
-        # username: my-user-name
-        # password: my-password
+      credentials: {}
+        # actual keys here depend on the DNS extension of your choice
     defaultDomains: []
     # - domain: example.com
-    #   provider: aws-route53 # aws-route53, google-clouddns or openstack-designate
-    #   hostedZoneID: Z3ABCDE1FGHIJK
-    #   credentials:
-    #     # for aws-route53 we need to provide the following keys:
-    #     accessKeyID: access-key-id-with-route53-privileges
-    #     secretAccessKey: secret-access-key-with-route53-privileges
-    #
-    #     # for google-clouddns we need to provide the following keys:
-    #     serviceaccount.json: '{"type": "service_account", "project_id": "...", ...}'
-    #
-    #     # for openstack-designate we need to provide the following keys:
-    #     authURL: my-keystone-url
-    #     domainName: my-domain
-    #     tenantName: my-tenant
-    #     userDomainName: my-user-domain
-    #     username: my-user-name
-    #     password: my-password
+    #   provider: aws-route53 # depends on the DNS extension of your choice
+    #   credentials: {}
+    #     # actual keys here depend on the DNS extension of your choice
     alertingSMTP: []
     # - to: email-address-to-send-alerts-to
     #   from: email-address-to-send-alerts-from

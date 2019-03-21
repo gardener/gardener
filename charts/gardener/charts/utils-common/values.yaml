@@ -67,7 +67,6 @@ global:
         memory: 512Mi
     internalDomain:
       provider: aws-route53 # aws-route53, google-clouddns, alicloud-dns or openstack-designate
-      hostedZoneID: Z3ABCDE1FGHIJK
       domain: example.com
       credentials:
         # for aws-route53 we need to provide the following keys:
@@ -91,7 +90,6 @@ global:
     defaultDomains: []
     # - domain: example.com
     #   provider: aws-route53 # aws-route53, google-clouddns or openstack-designate
-    #   hostedZoneID: Z3ABCDE1FGHIJK
     #   credentials:
     #     # for aws-route53 we need to provide the following keys:
     #     accessKeyID: access-key-id-with-route53-privileges

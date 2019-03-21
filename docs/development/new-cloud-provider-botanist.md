@@ -23,15 +23,13 @@ The implementation consists of several parts:
     2. Create a machine class template for the cloud provider as `<provider>-machineclass/templates/<provider>-machineclass.yaml`
     3. Create default values for the cloud provider as `<provider>-machineclass/values.yaml`
 4. Create config files for the seed terraformer charts in [charts/seed-terraformer/charts/](../../charts/seed-terraformer/charts/):
-    1. If your provider supports DNS and you want to implement it in Gardener, create the template in `<provider>-dns/templates/_main.tf`
-    2. If DNS is available, create the default values in `<provider>-dns/values.yaml`
-    3. Create common infrastructure chart as `<provider>-infra/Chart.yaml`
-    4. Create the main infrastructure template as `<provider>-infra/templates/_main.tf`
-    5. Create terraform values template as `<provider>-infra/templates/_terraform.tfvars`
-    6. Create the terraform variables template as `<provider>-infra/templates/_variables.tf`
-    7. Create the `config.yaml` to include the common config as `<provider>-infra/templates/config.yaml`
-    8. Create the default values as `<provider>-infra/values.yaml`
-    9. Add a symlink from `<provider>-infra/charts/terraformer-common` to `../../terraformer-common`
+    1. Create common infrastructure chart as `<provider>-infra/Chart.yaml`
+    2. Create the main infrastructure template as `<provider>-infra/templates/_main.tf`
+    3. Create terraform values template as `<provider>-infra/templates/_terraform.tfvars`
+    4. Create the terraform variables template as `<provider>-infra/templates/_variables.tf`
+    5. Create the `config.yaml` to include the common config as `<provider>-infra/templates/config.yaml`
+    6. Create the default values as `<provider>-infra/values.yaml`
+    7. Add a symlink from `<provider>-infra/charts/terraformer-common` to `../../terraformer-common`
 5. If your cloud provider's volume provisioner is not in-tree for Kubernetes, and thus requires usage of a container storage interface (CSI) provider, perform this step:
     1. Create a CSI chart for your cloud provider in [charts/shoot-core/charts/](../../charts/shoot-core/charts/) named `csi-<provider>`
     2. Populate the chart with the `yaml` files necessary to use CSI for your cloud provider. See existing examples. You must provide the _entire_ CSI uplift, including the common attacher and provisioner, as well as your cloud provider's specific plugin.

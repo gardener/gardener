@@ -1517,9 +1517,6 @@ func validateDNSUpdate(new, old garden.DNS, fldPath *field.Path) field.ErrorList
 	if new.Provider != old.Provider {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Provider, old.Provider, fldPath.Child("provider"))...)
 	}
-	if new.HostedZoneID != old.HostedZoneID {
-		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.HostedZoneID, old.HostedZoneID, fldPath.Child("hostedZoneID"))...)
-	}
 	if new.Domain != old.Domain {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(new.Domain, old.Domain, fldPath.Child("domain"))...)
 	}

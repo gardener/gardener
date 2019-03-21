@@ -63,7 +63,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if dnsProviders != []:
       ${yaml.dump(dnsProviders, width=10000)}
       % else:
-      - name: aws-route53
       - name: unmanaged
       % endif
       kubernetes:
@@ -170,7 +169,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if dnsProviders != []:
       ${yaml.dump(dnsProviders, width=10000)}
       % else:
-      - name: aws-route53
       - name: unmanaged
       % endif
       kubernetes:
@@ -272,7 +270,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if dnsProviders != []:
       ${yaml.dump(dnsProviders, width=10000)}
       % else:
-      - name: aws-route53
       - name: unmanaged
       % endif
       kubernetes:
@@ -523,7 +520,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if dnsProviders != []:
       ${yaml.dump(dnsProviders, width=10000)}
       % else:
-      - name: aws-route53
       - name: unmanaged
       % endif
       floatingPools:<% floatingPools=value("spec.openstack.constraints.floatingPools", []) %>

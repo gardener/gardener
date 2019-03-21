@@ -142,11 +142,9 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 			"cloudProvider": cloudProvider,
 			"kubernetes": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
-				// TODO: resolve conformance test issue before changing:
-				// https://github.com/kubernetes/kubernetes/blob/master/test/e2e/network/dns.go#L44
-				"domain":  gardenv1beta1.DefaultDomain,
-				"kubelet": kubelet,
-				"version": b.Shoot.Info.Spec.Kubernetes.Version,
+				"domain":     gardenv1beta1.DefaultDomain,
+				"kubelet":    kubelet,
+				"version":    b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		}
 	)
