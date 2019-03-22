@@ -1,4 +1,4 @@
-{{- if .Values.global.deployment.virtualGarden.enabled }}
+{{- if and .Values.global.deployment.virtualGarden.enabled .Values.global.deployment.virtualGarden.createNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:

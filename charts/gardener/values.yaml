@@ -268,3 +268,4 @@ global:
     virtualGarden:
       enabled: false
       clusterIP: 1.2.3.4
+      createNamespace: true
