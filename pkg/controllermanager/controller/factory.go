@@ -16,6 +16,8 @@ package controller
 
 import (
 	"context"
+	"k8s.io/apimachinery/pkg/util/runtime"
+	"path/filepath"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
@@ -104,26 +106,20 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	}
 
 	secrets, err := garden.ReadGardenSecrets(f.k8sInformers)
-	if err != nil {
-		panic(err)
-	}
+	runtime.Must(err)
+
 	shootList, err := f.k8sGardenInformers.Garden().V1beta1().Shoots().Lister().List(labels.Everything())
-	if err != nil {
-		panic(err)
-	}
-	if err := garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secrets[common.GardenRoleInternalDomain]); err != nil {
-		panic(err)
-	}
+	runtime.Must(err)
 
-	imageVector, err := imagevector.ReadImageVector()
-	if err != nil {
-		panic(err)
-	}
+	runtime.Must(garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secrets[common.GardenRoleInternalDomain]))
 
-	if err := garden.BootstrapCluster(f.k8sGardenClient, common.GardenNamespace, secrets); err != nil {
-		logger.Logger.Errorf("Failed to bootstrap the Garden cluster: %s", err.Error())
-		return
-	}
+	globalImageVector, err := imagevector.ReadFile(filepath.Join(common.ChartPath, "images.yaml"))
+	runtime.Must(err)
+
+	imageVector, err := imagevector.WithEnvOverride(globalImageVector)
+	runtime.Must(err)
+
+	runtime.Must(garden.BootstrapCluster(f.k8sGardenClient, common.GardenNamespace, secrets))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
 
 	// Initialize the workqueue metrics collection.

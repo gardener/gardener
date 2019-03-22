@@ -16,6 +16,9 @@ package imagevector_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"strings"
 
 	. "github.com/gardener/gardener/pkg/utils/imagevector"
 
@@ -23,12 +26,163 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func WithTempFile(pattern string, data []byte) (*os.File, func()) {
+	tmpFile, err := ioutil.TempFile("", pattern)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(ioutil.WriteFile(tmpFile.Name(), data, os.ModePerm)).To(Succeed())
+
+	return tmpFile, func() {
+		if err := tmpFile.Close(); err != nil {
+			GinkgoT().Logf("Could not close temp file %q: %v", tmpFile.Name(), err)
+		}
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			GinkgoT().Logf("Could not delete temp file %q: %v", tmpFile.Name(), err)
+		}
+	}
+}
+
+func WithEnvVar(key, value string) func() {
+	tmp := os.Getenv(key)
+	Expect(os.Setenv(key, value)).To(Succeed())
+
+	return func() {
+		if tmp == "" {
+			Expect(os.Unsetenv(key)).To(Succeed())
+			return
+		}
+
+		Expect(os.Setenv(key, tmp)).To(Succeed())
+	}
+}
+
 var _ = Describe("imagevector", func() {
+
 	Describe("> ImageVector", func() {
-		var vector ImageVector
+		var (
+			testImageName       string
+			testImageRepository string
+			testImageTag        string
+			testImageVersions   string
+
+			testImage           *ImageSource
+			testImageVectorJSON string
+			testImageVectorYAML string
+
+			vector          ImageVector
+			testImageVector ImageVector
+		)
 
 		BeforeEach(func() {
 			vector = ImageVector{}
+
+			testImageName = "foo"
+			testImageRepository = "repo"
+			testImageTag = "v0.0.1"
+			testImageVersions = "v1.13.1"
+
+			testImage = &ImageSource{
+				Name:       testImageName,
+				Repository: testImageRepository,
+				Tag:        testImageTag,
+				Versions:   testImageVersions,
+			}
+
+			testImageVector = ImageVector{testImage}
+
+			testImageVectorJSON = fmt.Sprintf(`
+{
+	"images": [
+		{
+			"name": "%s",
+			"repository": "%s",
+			"tag": "%s",
+			"versions": "%s"
+		}
+	]
+}`, testImageName, testImageRepository, testImageTag, testImageVersions)
+
+			testImageVectorYAML = fmt.Sprintf(`
+images:
+  - name: %s
+    repository: %s
+    tag: %s
+    versions: %s`, testImageName, testImageRepository, testImageTag, testImageVersions)
+
+		})
+
+		Describe("#Read", func() {
+			It("should successfully read a JSON image vector", func() {
+				vector, err := Read(strings.NewReader(testImageVectorJSON))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vector).To(Equal(testImageVector))
+			})
+
+			It("should successfully read a YAML image vector", func() {
+				vector, err := Read(strings.NewReader(testImageVectorYAML))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vector).To(Equal(testImageVector))
+			})
+		})
+
+		Describe("#ReadFile", func() {
+			It("should successfully read the file and close it", func() {
+				tmpFile, cleanup := WithTempFile("imagevector", []byte(testImageVectorJSON))
+				defer cleanup()
+
+				vector, err := ReadFile(tmpFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(vector).To(Equal(testImageVector))
+			})
+		})
+
+		Describe("#Merge", func() {
+			It("should override more recent images, add new ones and keep existing ones", func() {
+				var (
+					i1         = &ImageSource{Name: "foo", Repository: "foorepo"}
+					i2         = &ImageSource{Name: "bar", Repository: "barrepo"}
+					i3         = &ImageSource{Name: "qux", Repository: "quxrepo"}
+					i1Override = &ImageSource{Name: "foo", Repository: "foooverriderepo"}
+
+					v1 = ImageVector{i1, i2}
+					v2 = ImageVector{i1Override, i3}
+				)
+
+				merged := Merge(v1, v2)
+
+				Expect(merged).To(Equal(ImageVector{i1Override, i2, i3}))
+			})
+
+			It("should keep the old tag if the override doesn't have one", func() {
+				var (
+					i1         = &ImageSource{Name: "foo", Tag: "v0.0.1", Repository: "foorepo"}
+					i1Override = &ImageSource{Name: "foo", Repository: "foooverriderepo"}
+
+					v1 = ImageVector{i1}
+					v2 = ImageVector{i1Override}
+				)
+
+				merged := Merge(v1, v2)
+
+				Expect(merged).To(Equal(ImageVector{&ImageSource{Name: "foo", Tag: "v0.0.1", Repository: "foooverriderepo"}}))
+			})
+		})
+
+		Describe("#WithEnvOverride", func() {
+			It("should override the ImageVector with the settings of the env variable", func() {
+				var (
+					i      = &ImageSource{Name: testImageName, Repository: fmt.Sprintf("%s-base", testImageRepository)}
+					vector = ImageVector{i}
+				)
+				file, cleanup := WithTempFile("imagevector", []byte(testImageVectorJSON))
+				defer cleanup()
+				defer WithEnvVar(OverrideEnv, file.Name())()
+
+				Expect(WithEnvOverride(vector)).To(Equal(testImageVector))
+			})
+
+			It("should keep the vector as-is if the env variable is not set", func() {
+				Expect(WithEnvOverride(testImageVector)).To(Equal(testImageVector))
+			})
 		})
 
 		Describe("#FindImage", func() {
