@@ -87,7 +87,7 @@ func newOperation(
 		return nil, err
 	}
 
-	chartRenderer, err := chartrenderer.New(k8sGardenClient.Kubernetes())
+	chartRenderer, err := chartrenderer.NewForConfig(k8sGardenClient.RESTConfig())
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (o *Operation) InitializeSeedClients() error {
 	}
 
 	o.K8sSeedClient = k8sSeedClient
-	o.ChartSeedRenderer, err = chartrenderer.New(k8sSeedClient.Kubernetes())
+	o.ChartSeedRenderer, err = chartrenderer.NewForConfig(k8sSeedClient.RESTConfig())
 	if err != nil {
 		return err
 	}
@@ -169,7 +169,7 @@ func (o *Operation) InitializeShootClients() error {
 	}
 
 	o.K8sShootClient = k8sShootClient
-	o.ChartShootRenderer, err = chartrenderer.New(k8sShootClient.Kubernetes())
+	o.ChartShootRenderer, err = chartrenderer.NewForConfig(k8sShootClient.RESTConfig())
 	if err != nil {
 		return err
 	}
@@ -359,11 +359,6 @@ func (o *Operation) NewShootTerraformer(purpose string) (*terraformer.Terraforme
 // ChartInitializer initializes a terraformer based on the given chart and values.
 func (o *Operation) ChartInitializer(chartName string, values map[string]interface{}) terraformer.Initializer {
 	return func(config *terraformer.InitializerConfig) error {
-		chartRenderer, err := chartrenderer.New(o.K8sSeedClient.Kubernetes())
-		if err != nil {
-			return err
-		}
-
 		values["names"] = map[string]interface{}{
 			"configuration": config.ConfigurationName,
 			"variables":     config.VariablesName,
@@ -372,7 +367,7 @@ func (o *Operation) ChartInitializer(chartName string, values map[string]interfa
 		values["initializeEmptyState"] = config.InitializeState
 
 		return utils.Retry(5*time.Second, 30*time.Second, func() (bool, bool, error) {
-			if err := common.ApplyChart(o.K8sSeedClient, chartRenderer, filepath.Join(common.TerraformerChartPath, chartName), chartName, config.Namespace, nil, values); err != nil {
+			if err := common.ApplyChart(o.K8sSeedClient, o.ChartSeedRenderer, filepath.Join(common.TerraformerChartPath, chartName), chartName, config.Namespace, nil, values); err != nil {
 				return false, false, nil
 			}
 			return true, false, nil
