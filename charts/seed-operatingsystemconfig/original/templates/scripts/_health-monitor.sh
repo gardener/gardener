@@ -128,13 +128,6 @@
               last_kubelet_ready_state="$status"
             fi
 
-            # Check whether kubelet reports "PLEG not healthy" too often within the last 10 minutes and reboot VM if necessary.
-            if count_pleg_not_healthy="$(journalctl --since="$(date --date '-10min' "+%Y-%m-%d %T")" -u kubelet | grep "PLEG is not healthy" | wc -l)"; then
-              if [[ $count_pleg_not_healthy -ge 10 ]]; then
-                sudo reboot
-              fi
-            fi
-
             sleep $SLEEP_SECONDS
           done
         }
