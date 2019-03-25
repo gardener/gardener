@@ -28,7 +28,7 @@ data:
         DB                /var/log/flb_kube.db
         Mem_Buf_Limit     12MB
         Refresh_Interval  10
-        ignore_older      1800s
+        Ignore_Older      1800s
 
   input-systemd.conf: |-
     [INPUT]
@@ -37,24 +37,28 @@ data:
         Path            /var/log/journal/
         Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=docker.service
+
     [INPUT]
         Name            systemd
         Tag             journald.kubelet
         Path            /var/log/journal/
         Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=kubelet.service
+
     [INPUT]
         Name            systemd
         Tag             journald.cloud-config-downloader
         Path            /var/log/journal/
         Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=cloud-config-downloader.service
+
     [INPUT]
         Name            systemd
         Tag             journald.docker-monitor
         Path            /var/log/journal/
         Read_From_Tail  True
         Systemd_Filter  _SYSTEMD_UNIT=docker-monitor.service
+
     [INPUT]
         Name            systemd
         Tag             journald.kubelet-monitor
@@ -251,6 +255,7 @@ data:
         Match               kubernetes.*
         Kube_URL            https://kubernetes.default.svc.cluster.local:443
         Buffer_Size         1M
+        Labels              Off
         Annotations         Off
         tls.verify          Off
 
@@ -291,7 +296,6 @@ data:
         Regex       ^(?<time>\d{4}-\d{2}-\d{2}\s+[^ ]*)\s+(?<severity>\w+)\s+\|\s+(?<source>[^ :]*):\s+(?<log>.*)
         Time_Key    time
         Time_Format %Y-%m-%d %H:%M:%S.%L
-
 
     [PARSER]
         Name        caliconodeParser
@@ -377,23 +381,13 @@ data:
 
   modify_severity.lua: |-
     function cb_modify(tag, timestamp, record)
-      local removed_labels = cb_modify_remove_labels(record)
       local unified_severity = cb_modify_unify_severity(record)
 
-      if (not removed_labels) and (not unified_severity) then
+      if not unified_severity then
         return 0, 0, 0
       end
 
       return 1, timestamp, record
-    end
-
-    function cb_modify_remove_labels(record)
-      if record["kubernetes"] == nil or record["kubernetes"]["labels"] == nil then
-        return false
-      end
-
-      record["kubernetes"]["labels"] = nil
-      return true
     end
 
     function cb_modify_unify_severity(record)
