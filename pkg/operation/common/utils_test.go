@@ -242,16 +242,6 @@ var _ = Describe("common", func() {
 		})
 	})
 
-	DescribeTable("#HasInitializer",
-		func(initializers *metav1.Initializers, name string, expected bool) {
-			Expect(HasInitializer(initializers, name)).To(Equal(expected))
-		},
-
-		Entry("nil initializers", nil, "foo", false),
-		Entry("no matching initializer", &metav1.Initializers{Pending: []metav1.Initializer{{Name: "bar"}}}, "foo", false),
-		Entry("matching initializer", &metav1.Initializers{Pending: []metav1.Initializer{{Name: "foo"}}}, "foo", true),
-	)
-
 	DescribeTable("#ReplaceCloudProviderConfigKey",
 		func(key, oldValue, newValue string) {
 			var (

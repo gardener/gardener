@@ -378,19 +378,6 @@ func MergeOwnerReferences(references []metav1.OwnerReference, newReferences ...m
 	return references
 }
 
-// HasInitializer checks whether the passed name is part of the pending initializers.
-func HasInitializer(initializers *metav1.Initializers, name string) bool {
-	if initializers == nil {
-		return false
-	}
-	for _, initializer := range initializers.Pending {
-		if initializer.Name == name {
-			return true
-		}
-	}
-	return false
-}
-
 // ReadLeaderElectionRecord returns the leader election record for a given lock type and a namespace/name combination.
 func ReadLeaderElectionRecord(k8sClient kubernetes.Interface, lock, namespace, name string) (*resourcelock.LeaderElectionRecord, error) {
 	var (

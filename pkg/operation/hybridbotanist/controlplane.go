@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -311,6 +312,11 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		admissionPlugins = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
 	)
 
+	// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
+	if !b.Shoot.UsesCSI() {
+		admissionPlugins = append(admissionPlugins, gardenv1beta1.AdmissionPlugin{Name: "PersistentVolumeLabel"})
+	}
+
 	if apiServerConfig != nil {
 		defaultValues["featureGates"] = apiServerConfig.FeatureGates
 		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
@@ -361,6 +367,11 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		if featureGates != nil {
 			defaultValues["featureGates"] = featureGates
 		}
+	} else {
+		// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
+		defaultValues["cloudProvider"] = b.ShootCloudBotanist.GetCloudProviderName()
+		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-cloudprovider"] = b.CheckSums[common.CloudProviderSecretName]
+		defaultValues["podAnnotations"].(map[string]interface{})["checksum/configmap-cloud-provider-config"] = b.CheckSums[common.CloudProviderConfigName]
 	}
 
 	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(),

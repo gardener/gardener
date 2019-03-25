@@ -162,7 +162,7 @@ func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
 	if !ok {
 		return nil, nil, false, fmt.Errorf("not a shoot")
 	}
-	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), shoot.Initializers != nil, nil
+	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), false, nil
 }
 
 // SeedTriggerFunc matches correct seed when watching.

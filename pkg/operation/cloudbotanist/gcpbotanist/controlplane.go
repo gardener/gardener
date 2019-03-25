@@ -94,7 +94,9 @@ func (b *GCPBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{
 // GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
 // Deployment manifest of the kube-apiserver properly.
 func (b *GCPBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
-	return nil, nil
+	return map[string]interface{}{
+		"environment": getGCPCredentialsEnvironment(),
+	}, nil
 }
 
 // GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to

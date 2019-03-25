@@ -37,14 +37,3 @@ COPY charts /charts
 WORKDIR /
 
 ENTRYPOINT ["/gardener-controller-manager"]
-
-############# external-admission-controller #############
-FROM alpine:3.8 AS external-admission-controller
-
-RUN apk add --update bash curl
-
-COPY --from=builder /go/bin/gardener-external-admission-controller /gardener-external-admission-controller
-
-WORKDIR /
-
-ENTRYPOINT ["/gardener-external-admission-controller"]

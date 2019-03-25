@@ -364,7 +364,6 @@ var _ = Describe("Shoot application testing", func() {
 		)
 
 		ItShouldAllowTrafficTo("seed apiserver/external connection", "kubernetes.default", "443")
-		ItShouldAllowTrafficTo("seed gardener-external-admission-controller", "gardener-external-admission-controller.garden", "443")
 		ItShouldAllowTrafficTo("shoot etcd-main", "etcd-main-client", "2379")
 		ItShouldAllowTrafficTo("shoot etcd-events", "etcd-events-client", "2379")
 
