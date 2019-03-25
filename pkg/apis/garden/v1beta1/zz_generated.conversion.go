@@ -3142,6 +3142,7 @@ func autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(in *KubeletConfig
 	if err := Convert_v1beta1_KubernetesConfig_To_garden_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
+	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	return nil
 }
 
@@ -3154,6 +3155,7 @@ func autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.Kubele
 	if err := Convert_garden_KubernetesConfig_To_v1beta1_KubernetesConfig(&in.KubernetesConfig, &out.KubernetesConfig, s); err != nil {
 		return err
 	}
+	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
 	return nil
 }
 

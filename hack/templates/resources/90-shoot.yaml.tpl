@@ -286,6 +286,7 @@ spec:
     kubelet: ${yaml.dump(kubelet, width=10000)}
     % else:
   # kubelet:
+  #   podPidsLimit: 10
   #   featureGates:
   #     SomeKubernetesFeature: true
   % endif
