@@ -38,9 +38,11 @@ var (
 	k8sVersion        string
 
 	// optional parameters
-	machineType   string
-	autoScalerMin *int
-	autoScalerMax *int
+	shootArtifactPath string
+	dnsProvider       gardenv1beta1.DNSProvider
+	machineType       string
+	autoScalerMin     *int
+	autoScalerMax     *int
 
 	// required for openstack
 	floatingPoolName string
@@ -88,6 +90,11 @@ func init() {
 		testLogger.Fatalf("EnvVar 'K8S_VERSION' needs to be specified")
 	}
 
+	shootArtifactPath = os.Getenv("SHOOT_ARTIFACT_PATH")
+	if shootArtifactPath == "" {
+		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
+	}
+	dnsProvider = gardenv1beta1.DNSProvider(os.Getenv("DNS_PROVIDER"))
 	machineType = os.Getenv("MACHINE_TYPE")
 	if autoScalerMinEnv := os.Getenv("AUTOSCALER_MIN"); autoScalerMinEnv != "" {
 		autoScalerMinInt, err := strconv.Atoi(autoScalerMinEnv)
@@ -120,7 +127,7 @@ func main() {
 		testLogger.Fatalf("Cannot create ShootGardenerTest %s", err.Error())
 	}
 
-	_, shootObject, err := framework.CreateShootTestArtifacts(fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider), "")
+	_, shootObject, err := framework.CreateShootTestArtifacts(shootArtifactPath, "")
 	if err != nil {
 		testLogger.Fatalf("Cannot create shoot artifact %s", err.Error())
 	}
@@ -135,6 +142,16 @@ func main() {
 	updateMachineType(shootObject, cloudprovider, machineType)
 	updateAutoscalerMinMax(shootObject, cloudprovider, autoScalerMin, autoScalerMax)
 	updateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
+	if dnsProvider != "" {
+		shootObject.Spec.DNS.Provider = dnsProvider
+	}
+
+	// TODO: tests need to be adopted when nginx gets removed.
+	shootObject.Spec.Addons.NginxIngress = &gardenv1beta1.NginxIngress{
+		Addon: gardenv1beta1.Addon{
+			Enabled: true,
+		},
+	}
 
 	testLogger.Infof("Create shoot %s in namespace %s", shootName, projectNamespace)
 	shootGardenerTest.Shoot = shootObject
