@@ -96,7 +96,8 @@ global:
           nonResourceURLs:
           - /healthz*
           - /version
-          - /swagger*
+          - /openapi/*
+          - /swagger* # Swagger endpoint is deprecated with https://github.com/kubernetes/kubernetes/pull/73148
         - level: None
           resources:
           - group: ""
