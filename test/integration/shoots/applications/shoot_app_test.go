@@ -109,6 +109,7 @@ var _ = Describe("Shoot application testing", func() {
 		targetTestShoot     *v1beta1.Shoot
 		resourcesDir        = filepath.Join("..", "..", "resources")
 		chartRepo           = filepath.Join(resourcesDir, "charts")
+		manifestsDir        = filepath.Join(resourcesDir, "manifests")
 	)
 
 	CBeforeSuite(func(ctx context.Context) {
@@ -246,6 +247,16 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("redis and the guestbook app have been cleaned up!")
+
+		By("Cleaning up security resources")
+		err = deleteResource(ctx, &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "default",
+				Name:      "pctp-test-pod",
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		By("security resources have been cleaned up")
 
 		if *cleanup {
 			By("Cleaning up test shoot")
@@ -385,5 +396,24 @@ var _ = Describe("Shoot application testing", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ExecNCOnAPIServer(ctx, nodeIP, "10250")).NotTo(HaveOccurred())
 		}, NetworkPolicyTimeout)
+	})
+
+	Context("Security", func() {
+		CIt("should not be vulnerable to the pctp vulnerability", func(ctx context.Context) {
+			podNamespace := "default"
+			podName := "pctp-test-pod"
+
+			podManifest, err := ioutil.ReadFile(filepath.Join(manifestsDir, "pctp-test.yaml"))
+			Expect(err).ToNot(HaveOccurred())
+
+			manifestReader := kubernetes.NewManifestReader(podManifest)
+			err = shootTestOperations.ShootClient.Applier().ApplyManifest(ctx, manifestReader, kubernetes.DefaultApplierOptions)
+			Expect(err).ToNot(HaveOccurred())
+
+			podPhase, err := shootTestOperations.WaitUntilPodIsCompleted(ctx, podName, podNamespace, shootTestOperations.ShootClient)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(podPhase).To(Equal(corev1.PodSucceeded))
+		}, 1*time.Minute)
 	})
 })

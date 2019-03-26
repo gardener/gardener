@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pctp-test-pod
+  namespace: default
+spec:
+  containers:
+  - name: pctp-test-container
+    image: alpine:3.9
+    command:
+    - sh
+    args:
+    - "-c"
+    - "chroot /host bash -c 'modprobe sctp; R=$(lsmod | grep sctp) ; echo \"Output from lsmod (should be empty for successful test): $R\" ; [[ -z $R ]] '"
+    securityContext:
+      privileged: true
+    volumeMounts:
+    - name: host-root-volume
+      mountPath: /host
+      readOnly: false
+  volumes:
+  - name: host-root-volume
+    hostPath:
+      path: /
+  restartPolicy: Never

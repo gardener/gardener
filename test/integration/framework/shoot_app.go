@@ -220,6 +220,30 @@ func (o *GardenerTestOperation) WaitUntilDeploymentsWithLabelsIsReady(ctx contex
 	}, ctx.Done())
 }
 
+// WaitUntilPodIsCompleted waits until the pod with <podName> is completed and returns the phase of the completed pod
+func (o *GardenerTestOperation) WaitUntilPodIsCompleted(ctx context.Context, podName, podNamespace string, c kubernetes.Interface) (corev1.PodPhase, error) {
+	var podPhase corev1.PodPhase
+	err := wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
+		pod := &corev1.Pod{}
+		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: podNamespace, Name: podName}, pod); err != nil {
+			return false, err
+		}
+
+		if pod.Status.Phase == corev1.PodSucceeded || pod.Status.Phase == corev1.PodFailed {
+			podPhase = pod.Status.Phase
+			return true, nil
+		}
+		return false, nil
+
+	}, ctx.Done())
+
+	if err != nil {
+		return "", err
+	}
+
+	return podPhase, nil
+}
+
 // WaitUntilGuestbookAppIsAvailable waits until the guestbook app is available and ready to serve requests
 func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Context, guestbookAppUrls []string) error {
 	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
