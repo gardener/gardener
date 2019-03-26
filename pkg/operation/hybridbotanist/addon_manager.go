@@ -43,10 +43,10 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 	}
 
 	defaultValues := map[string]interface{}{
-		"cloudConfigContent":    cloudConfig.Files,
-		"storageClassesContent": storageClasses.Files,
-		"coreAddonsContent":     coreAddons.Files,
-		"optionalAddonsContent": optionalAddons.Files,
+		"cloudConfigContent":    cloudConfig.Files(),
+		"storageClassesContent": storageClasses.Files(),
+		"coreAddonsContent":     coreAddons.Files(),
+		"optionalAddonsContent": optionalAddons.Files(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-addon-manager": b.CheckSums[name],
 		},
@@ -61,10 +61,10 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 		},
 	}
 
-	values, err := b.Botanist.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.KubeAddonManagerImageName)
+	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.KubeAddonManagerImageName)
 	if err != nil {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), name, b.Shoot.SeedNamespace, values, nil)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, values, nil)
 }

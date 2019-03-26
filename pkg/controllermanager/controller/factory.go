@@ -16,8 +16,9 @@ package controller
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/util/runtime"
 	"path/filepath"
+
+	"k8s.io/apimachinery/pkg/util/runtime"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"

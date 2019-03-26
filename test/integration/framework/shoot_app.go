@@ -32,7 +32,9 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	shootop "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	"github.com/sirupsen/logrus"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -40,6 +42,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/helm/pkg/repo"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -298,9 +301,14 @@ func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, char
 	if err != nil {
 		return err
 	}
+	applier, err := kubernetes.NewApplierForConfig(o.ShootClient.RESTConfig())
+	if err != nil {
+		return err
+	}
+	chartApplier := kubernetes.NewChartApplier(renderer, applier)
 
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
-	return common.ApplyChartInNamespace(ctx, o.ShootClient, renderer, chartPathToRender, chartNameToDeploy, namespace, nil, nil)
+	return chartApplier.ApplyChartInNamespace(ctx, chartPathToRender, namespace, chartNameToDeploy, nil, nil)
 }
 
 // EnsureDirectories creates the repository directory which holds the repositories.yaml config file

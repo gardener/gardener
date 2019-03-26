@@ -17,8 +17,10 @@ package azurebotanist
 import (
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
 )
 
@@ -80,7 +82,7 @@ func (b *AzureBotanist) DestroyInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"CLIENT_ID":     ClientID,
 		"CLIENT_SECRET": ClientSecret,
 	})
@@ -88,7 +90,7 @@ func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() map[string]
 
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, createVNet bool, resourceGroupName, vnetName string, vnetCIDR gardenv1beta1.CIDR, countUpdateDomains, countFaultDomains gardenv1beta1.AzureDomainCount) map[string]interface{} {
+func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, createVNet bool, resourceGroupName, vnetName string, vnetCIDR gardencorev1alpha1.CIDR, countUpdateDomains, countFaultDomains gardenv1beta1.AzureDomainCount) map[string]interface{} {
 	return map[string]interface{}{
 		"azure": map[string]interface{}{
 			"subscriptionID":     string(b.Shoot.Secret.Data[SubscriptionID]),
@@ -142,7 +144,7 @@ func (b *AzureBotanist) DestroyBackupInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AzureBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"CLIENT_ID":     ClientID,
 		"CLIENT_SECRET": ClientSecret,
 	})

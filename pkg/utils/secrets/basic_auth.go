@@ -33,6 +33,10 @@ const (
 
 	// DataKeyCSV is the key in a secret data holding the CSV format of a secret.
 	DataKeyCSV = "basic_auth.csv"
+	// DataKeyUserName is the key in a secret data holding the username.
+	DataKeyUserName = "username"
+	// DataKeyPassword is the key in a secret data holding the password.
+	DataKeyPassword = "password"
 )
 
 // BasicAuthSecretConfig contains the specification a to-be-generated basic authentication secret.
@@ -59,9 +63,14 @@ func (s *BasicAuthSecretConfig) GetName() string {
 	return s.Name
 }
 
-// Generate computes a username/password keypair. It uses "admin" as username and generates a
-// random password of length 32.
+// Generate implements ConfigInterface.
 func (s *BasicAuthSecretConfig) Generate() (Interface, error) {
+	return s.GenerateBasicAuth()
+}
+
+// GenerateBasicAuth computes a username/password keypair. It uses "admin" as username and generates a
+// random password of length 32.
+func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
 	password, err := utils.GenerateRandomString(s.PasswordLength)
 	if err != nil {
 		return nil, err
@@ -82,8 +91,8 @@ func (b *BasicAuth) SecretData() map[string][]byte {
 
 	switch b.Format {
 	case BasicAuthFormatNormal:
-		data["username"] = []byte(b.Username)
-		data["password"] = []byte(b.Password)
+		data[DataKeyUserName] = []byte(b.Username)
+		data[DataKeyPassword] = []byte(b.Password)
 		fallthrough
 
 	case BasicAuthFormatCSV:

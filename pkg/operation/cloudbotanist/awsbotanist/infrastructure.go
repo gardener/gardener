@@ -18,9 +18,12 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils/flow"
+	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -39,7 +42,7 @@ func (b *AWSBotanist) DeployInfrastructure() error {
 		vpcID = *b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.ID
 		igwID, err := b.AWSClient.GetInternetGateway(vpcID)
 		if err != nil {
-			return common.DetermineError(err.Error())
+			return gardencorev1alpha1helper.DetermineError(err.Error())
 		}
 		internetGatewayID = igwID
 	} else if b.Shoot.Info.Spec.Cloud.AWS.Networks.VPC.CIDR != nil {
@@ -95,7 +98,7 @@ func (b *AWSBotanist) DestroyInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"SECRET_ACCESS_KEY": SecretAccessKey,
 	})
@@ -132,7 +135,7 @@ func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, intern
 		"create": map[string]interface{}{
 			"vpc": createVPC,
 		},
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
+		"sshPublicKey": string(sshSecret.Data[secrets.DataKeySSHAuthorizedKeys]),
 		"vpc": map[string]interface{}{
 			"id":                vpcID,
 			"cidr":              vpcCIDR,
@@ -221,7 +224,7 @@ func (b *AWSBotanist) DestroyBackupInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AWSBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"SECRET_ACCESS_KEY": SecretAccessKey,
 	})

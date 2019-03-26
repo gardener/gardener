@@ -27,25 +27,32 @@ const OperatingSystemConfigResource = "OperatingSystemConfig"
 
 // OperatingSystemConfig is a specification for a OperatingSystemConfig resource
 type OperatingSystemConfig struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   OperatingSystemConfigSpec   `json:"spec"`
 	Status OperatingSystemConfigStatus `json:"status"`
 }
 
+// GetExtensionType returns the type of this OperatingSystemConfig resource.
+func (o *OperatingSystemConfig) GetExtensionType() string {
+	return o.Spec.Type
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// OperatingSystemConfigList is a list of OperatingSystemConfig resources
+// OperatingSystemConfigList is a list of OperatingSystemConfig resources.
 type OperatingSystemConfigList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
+	// +optional
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is the list of OperatingSystemConfigs.
 	Items []OperatingSystemConfig `json:"items"`
 }
 
-// OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource
+// OperatingSystemConfigSpec is the spec for a OperatingSystemConfig resource.
 type OperatingSystemConfigSpec struct {
 	// DefaultSpec is a structure containing common fields used by all extension resources.
 	DefaultSpec `json:",inline"`
@@ -137,7 +144,7 @@ type FileContentInline struct {
 	Data string `json:"data"`
 }
 
-// OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource
+// OperatingSystemConfigStatus is the status for a OperatingSystemConfig resource.
 type OperatingSystemConfigStatus struct {
 	// DefaultStatus is a structure containing common fields used by all extension resources.
 	DefaultStatus `json:",inline"`

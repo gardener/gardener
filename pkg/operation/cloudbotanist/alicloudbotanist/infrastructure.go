@@ -16,6 +16,8 @@ package alicloudbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -94,7 +96,7 @@ func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
 // are required to validate/apply/destroy the Terraform configuration. These environment must contain
 // Terraform variables which are prefixed with TF_VAR_.
 func (b *AlicloudBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Shoot.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"ACCESS_KEY_SECRET": AccessKeySecret,
 	})
@@ -131,13 +133,13 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, n
 			"snatTableID":  snatTableID,
 		},
 		"clusterName":  b.Shoot.SeedNamespace,
-		"sshPublicKey": string(sshSecret.Data["id_rsa.pub"]),
+		"sshPublicKey": string(sshSecret.Data[secrets.DataKeySSHAuthorizedKeys]),
 		"zones":        zones,
 	}
 }
 
 func (b *AlicloudBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {
-	return common.GenerateTerraformVariablesEnvironment(b.Seed.Secret, map[string]string{
+	return terraformer.GenerateVariablesEnvironment(b.Seed.Secret, map[string]string{
 		"ACCESS_KEY_ID":     AccessKeyID,
 		"ACCESS_KEY_SECRET": AccessKeySecret,
 	})

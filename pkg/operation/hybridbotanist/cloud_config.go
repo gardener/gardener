@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -28,6 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -35,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -128,7 +131,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		}
 
 		kubelet = map[string]interface{}{
-			"caCert":             string(b.Secrets["ca-kubelet"].Data[secrets.DataKeyCertificateCA]),
+			"caCert":             string(b.Secrets[gardencorev1alpha1.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
 			"parameters":         userDataConfig.KubeletParameters,
 			"hostnameOverride":   userDataConfig.HostnameOverride,
 			"enableCSI":          userDataConfig.EnableCSI,
@@ -187,7 +190,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		originalConfig["caBundle"] = *caBundle
 	}
 
-	return b.InjectImages(originalConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName, common.PauseContainerImageName)
+	return b.ImageVector.InjectImages(originalConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
 func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName gardenv1beta1.MachineImageName, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
@@ -224,7 +227,7 @@ func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []g
 func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
 	var result *shoot.CloudConfigData
 
-	if err := common.ApplyChart(b.K8sSeedClient, b.ChartSeedRenderer, chartPath, name, b.Shoot.SeedNamespace, values, nil); err != nil {
+	if err := b.ApplyChartSeed(chartPath, b.Shoot.SeedNamespace, name, values, nil); err != nil {
 		return nil, err
 	}
 
@@ -234,7 +237,7 @@ func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, na
 			return false, err
 		}
 
-		if osc.Status.ObservedGeneration == osc.Generation && osc.Status.LastOperation.State == extensionsv1alpha1.LastOperationStateSucceeded && osc.Status.CloudConfig != nil {
+		if osc.Status.ObservedGeneration == osc.Generation && osc.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded && osc.Status.CloudConfig != nil {
 			var secret corev1.Secret
 			if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: osc.Status.CloudConfig.SecretRef.Name, Namespace: osc.Status.CloudConfig.SecretRef.Namespace}, &secret); err != nil {
 				return false, err
@@ -287,12 +290,12 @@ func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.Ren
 		"workers":        workers,
 	}
 
-	config, err = b.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	config, err = b.ImageVector.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	return b.ChartShootRenderer.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
+	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-cloud-config"), "shoot-cloud-config-execution", metav1.NamespaceSystem, config)
 }
 
 func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err error) {

@@ -23,15 +23,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+
 	jsoniter "github.com/json-iterator/go"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,42 +43,6 @@ import (
 )
 
 var json = jsoniter.ConfigFastest
-
-// ApplyChart takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
-// release's namespace <namespace> and two maps <defaultValues>, <additionalValues>, and renders the template
-// based on the merged result of both value maps. The resulting manifest will be applied to the cluster the
-// Kubernetes client has been created for.
-func ApplyChart(k8sClient kubernetes.Interface, renderer chartrenderer.Interface, chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
-	return ApplyChartWithOptions(k8sClient, renderer, chartPath, name, namespace, defaultValues, additionalValues, kubernetes.DefaultApplierOptions)
-}
-
-// ApplyChartWithOptions takes a Kubernetes client <k8sClient>, chartRender <renderer>, path to a chart <chartPath>, name of the release <name>,
-// release's namespace <namespace> and two maps <defaultValues>, <additionalValues>, and renders the template
-// based on the merged result of both value maps. The resulting manifest will be applied to the cluster the
-// Kubernetes client has been created for.
-// <options> determines how the apply logic is executed.
-func ApplyChartWithOptions(k8sClient kubernetes.Interface, renderer chartrenderer.Interface, chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}, options kubernetes.ApplierOptions) error {
-	release, err := renderer.Render(chartPath, name, namespace, utils.MergeMaps(defaultValues, additionalValues))
-	if err != nil {
-		return err
-	}
-	manifestReader := kubernetes.NewManifestReader(release.Manifest())
-
-	return k8sClient.Applier().ApplyManifest(context.Background(), manifestReader, options)
-}
-
-// ApplyChartInNamespace is the same as ApplyChart except that it forces the namespace for chart objects when applying the chart, this is because sometimes native chart
-// objects do not come with a Release.Namespace option and leave the namespace field empty.
-func ApplyChartInNamespace(ctx context.Context, k8sClient kubernetes.Interface, renderer chartrenderer.Interface, chartPath, name, namespace string, defaultValues, additionalValues map[string]interface{}) error {
-	release, err := renderer.Render(chartPath, name, namespace, utils.MergeMaps(defaultValues, additionalValues))
-	if err != nil {
-		return err
-	}
-
-	manifestReader := kubernetes.NewManifestReader(release.Manifest())
-	nameSpaceSettingsReader := kubernetes.NewNamespaceSettingReader(manifestReader, namespace)
-	return k8sClient.Applier().ApplyManifest(ctx, nameSpaceSettingsReader, kubernetes.DefaultApplierOptions)
-}
 
 // GetSecretKeysWithPrefix returns a list of keys of the given map <m> which are prefixed with <kind>.
 func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string {
@@ -161,7 +126,7 @@ func IdentifyAddressType(address string) (string, net.IP) {
 
 // ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
 // For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
-func ComputeClusterIP(cidr gardenv1beta1.CIDR, lastByte byte) string {
+func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {
 	ip, _, _ := net.ParseCIDR(string(cidr))
 	ip = ip.To4()
 	ip[3] = lastByte
@@ -230,17 +195,6 @@ func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string)
 	return loadBalancerIngress, nil
 }
 
-// GenerateTerraformVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
-// can be injected into the Terraformer job/pod manifest. The keys of the <keyValueMap> will be prefixed with
-// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
-func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
-	out := make(map[string]string)
-	for key, value := range keyValueMap {
-		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
-	}
-	return out
-}
-
 // ExtractShootName returns Shoot resource name extracted from provided <backupInfrastructureName>.
 func ExtractShootName(backupInfrastructureName string) string {
 	tokens := strings.Split(backupInfrastructureName, "-")
@@ -271,56 +225,6 @@ func IsFollowingNewNamingConvention(seedNamespace string) bool {
 func ReplaceCloudProviderConfigKey(cloudProviderConfig, separator, key, value string) string {
 	keyValueRegexp := regexp.MustCompile(fmt.Sprintf(`(\Q%s\E%s)([^\n]*)`, key, separator))
 	return keyValueRegexp.ReplaceAllString(cloudProviderConfig, fmt.Sprintf(`${1}%q`, strings.Replace(value, `$`, `$$`, -1)))
-}
-
-type errorWithCode struct {
-	code    gardenv1beta1.ErrorCode
-	message string
-}
-
-// NewErrorWithCode creates a new error that additionally exposes the given code via the Coder interface.
-func NewErrorWithCode(code gardenv1beta1.ErrorCode, message string) error {
-	return &errorWithCode{code, message}
-}
-
-func (e *errorWithCode) Code() gardenv1beta1.ErrorCode {
-	return e.code
-}
-
-func (e *errorWithCode) Error() string {
-	return e.message
-}
-
-var (
-	unauthorizedRegexp           = regexp.MustCompile(`(?i)(Unauthorized|InvalidClientTokenId|SignatureDoesNotMatch|Authentication failed|AuthFailure|AuthorizationFailed|invalid character|invalid_grant|invalid_client|Authorization Profile was not found|cannot fetch token|no active subscriptions|InvalidAccessKeyId|InvalidSecretAccessKey)`)
-	quotaExceededRegexp          = regexp.MustCompile(`(?i)(LimitExceeded|Quota)`)
-	insufficientPrivilegesRegexp = regexp.MustCompile(`(?i)(AccessDenied|Forbidden|deny|denied)`)
-	dependenciesRegexp           = regexp.MustCompile(`(?i)(PendingVerification|Access Not Configured|accessNotConfigured|DependencyViolation|OptInRequired|DeleteConflict|Conflict|inactive billing state)`)
-)
-
-func determineErrorCode(message string) gardenv1beta1.ErrorCode {
-	switch {
-	case unauthorizedRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraUnauthorized
-	case quotaExceededRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraQuotaExceeded
-	case insufficientPrivilegesRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraInsufficientPrivileges
-	case dependenciesRegexp.MatchString(message):
-		return gardenv1beta1.ErrorInfraDependencies
-	default:
-		return ""
-	}
-}
-
-// DetermineError determines the Garden error code for the given error message.
-func DetermineError(message string) error {
-	code := determineErrorCode(message)
-	if code == "" {
-		return errors.New(message)
-	}
-
-	return &errorWithCode{code, message}
 }
 
 // ProjectForNamespace returns the project object responsible for a given <namespace>. It tries to identify the project object by looking for the namespace

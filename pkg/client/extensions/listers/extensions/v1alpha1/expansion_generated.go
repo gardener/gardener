@@ -2,6 +2,38 @@
 
 package v1alpha1
 
+// ClusterListerExpansion allows custom methods to be added to
+// ClusterLister.
+type ClusterListerExpansion interface{}
+
+// ClusterNamespaceListerExpansion allows custom methods to be added to
+// ClusterNamespaceLister.
+type ClusterNamespaceListerExpansion interface{}
+
+// ControlPlaneListerExpansion allows custom methods to be added to
+// ControlPlaneLister.
+type ControlPlaneListerExpansion interface{}
+
+// ControlPlaneNamespaceListerExpansion allows custom methods to be added to
+// ControlPlaneNamespaceLister.
+type ControlPlaneNamespaceListerExpansion interface{}
+
+// ExtensionListerExpansion allows custom methods to be added to
+// ExtensionLister.
+type ExtensionListerExpansion interface{}
+
+// ExtensionNamespaceListerExpansion allows custom methods to be added to
+// ExtensionNamespaceLister.
+type ExtensionNamespaceListerExpansion interface{}
+
+// InfrastructureListerExpansion allows custom methods to be added to
+// InfrastructureLister.
+type InfrastructureListerExpansion interface{}
+
+// InfrastructureNamespaceListerExpansion allows custom methods to be added to
+// InfrastructureNamespaceLister.
+type InfrastructureNamespaceListerExpansion interface{}
+
 // OperatingSystemConfigListerExpansion allows custom methods to be added to
 // OperatingSystemConfigLister.
 type OperatingSystemConfigListerExpansion interface{}
@@ -9,3 +41,11 @@ type OperatingSystemConfigListerExpansion interface{}
 // OperatingSystemConfigNamespaceListerExpansion allows custom methods to be added to
 // OperatingSystemConfigNamespaceLister.
 type OperatingSystemConfigNamespaceListerExpansion interface{}
+
+// WorkerListerExpansion allows custom methods to be added to
+// WorkerLister.
+type WorkerListerExpansion interface{}
+
+// WorkerNamespaceListerExpansion allows custom methods to be added to
+// WorkerNamespaceLister.
+type WorkerNamespaceListerExpansion interface{}

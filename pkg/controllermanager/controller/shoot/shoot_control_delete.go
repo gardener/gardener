@@ -18,8 +18,9 @@ import (
 	"context"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
@@ -40,7 +41,7 @@ import (
 
 // deleteShoot deletes a Shoot cluster entirely.
 // It receives a Garden object <garden> which stores the Shoot object.
-func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.LastError {
+func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1.LastError {
 	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
 	// cluster. This implies that there can not be any resource which we have to delete. We accept the deletion.
 	if len(o.Shoot.Info.Status.UID) == 0 {
@@ -281,9 +282,9 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardenv1beta1.Last
 	if err != nil {
 		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.Info.Name, err)
 
-		return &gardenv1beta1.LastError{
-			Codes:       helper.ExtractErrorCodes(flow.Causes(err)),
-			Description: helper.FormatLastErrDescription(err),
+		return &gardencorev1alpha1.LastError{
+			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err)),
+			Description: gardencorev1alpha1helper.FormatLastErrDescription(err),
 		}
 	}
 
@@ -299,7 +300,7 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-			if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardenv1beta1.ShootLastOperationTypeDelete) {
+			if status.RetryCycleStartTime == nil || (status.LastOperation != nil && status.LastOperation.Type != gardencorev1alpha1.LastOperationTypeDelete) {
 				shoot.Status.RetryCycleStartTime = &now
 			}
 			if len(status.TechnicalID) == 0 {
@@ -308,9 +309,9 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 
 			shoot.Status.Gardener = *o.GardenerInfo
 			shoot.Status.ObservedGeneration = o.Shoot.Info.Generation
-			shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
-				Type:           gardenv1beta1.ShootLastOperationTypeDelete,
-				State:          gardenv1beta1.ShootLastOperationStateProcessing,
+			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
+				Type:           gardencorev1alpha1.LastOperationTypeDelete,
+				State:          gardencorev1alpha1.LastOperationStateProcessing,
 				Progress:       1,
 				Description:    "Deletion of Shoot cluster in progress.",
 				LastUpdateTime: now,
@@ -328,9 +329,9 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
 			shoot.Status.LastError = nil
-			shoot.Status.LastOperation = &gardenv1beta1.LastOperation{
-				Type:           gardenv1beta1.ShootLastOperationTypeDelete,
-				State:          gardenv1beta1.ShootLastOperationStateSucceeded,
+			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
+				Type:           gardencorev1alpha1.LastOperationTypeDelete,
+				State:          gardencorev1alpha1.LastOperationStateSucceeded,
 				Progress:       100,
 				Description:    "Shoot cluster has been successfully deleted.",
 				LastUpdateTime: metav1.Now(),
@@ -363,16 +364,16 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 			return false, err
 		}
 		lastOperation := shoot.Status.LastOperation
-		if !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardenv1beta1.ShootLastOperationTypeDelete && lastOperation.State == gardenv1beta1.ShootLastOperationStateSucceeded {
+		if !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1alpha1.LastOperationTypeDelete && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
 			return true, nil
 		}
 		return false, nil
 	})
 }
 
-func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, lastError *gardenv1beta1.LastError) (gardenv1beta1.ShootLastOperationState, error) {
+func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, lastError *gardencorev1alpha1.LastError) (gardencorev1alpha1.LastOperationState, error) {
 	var (
-		state       = gardenv1beta1.ShootLastOperationStateFailed
+		state       = gardencorev1alpha1.LastOperationStateFailed
 		description = lastError.Description
 	)
 
@@ -380,14 +381,14 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			if !utils.TimeElapsed(shoot.Status.RetryCycleStartTime, c.config.Controllers.Shoot.RetryDuration.Duration) {
 				description += " Operation will be retried."
-				state = gardenv1beta1.ShootLastOperationStateError
+				state = gardencorev1alpha1.LastOperationStateError
 			} else {
 				shoot.Status.RetryCycleStartTime = nil
 			}
 
 			shoot.Status.Gardener = *o.GardenerInfo
 			shoot.Status.LastError = lastError
-			shoot.Status.LastOperation.Type = gardenv1beta1.ShootLastOperationTypeDelete
+			shoot.Status.LastOperation.Type = gardencorev1alpha1.LastOperationTypeDelete
 			shoot.Status.LastOperation.State = state
 			shoot.Status.LastOperation.Description = description
 			shoot.Status.LastOperation.LastUpdateTime = metav1.Now()

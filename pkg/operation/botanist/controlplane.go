@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -30,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -112,7 +114,7 @@ func (b *Botanist) deleteNamespace(name string) error {
 // DeployCloudMetadataServiceNetworkPolicy creates a global network policy that allows access to the meta-data service only from
 // the cloud-controller-manager and the kube-controller-manager
 func (b *Botanist) DeployCloudMetadataServiceNetworkPolicy() error {
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cloud-metadata-service"), "cloud-metadata-service", b.Shoot.SeedNamespace, nil, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cloud-metadata-service"), b.Shoot.SeedNamespace, "cloud-metadata-service", nil, nil)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
@@ -149,7 +151,7 @@ func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
 // DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure() error {
-	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), "backup-infrastructure", b.Operation.Shoot.Info.Namespace, nil, map[string]interface{}{
+	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), b.Shoot.Info.Namespace, "backup-infrastructure", nil, map[string]interface{}{
 		"backupInfrastructure": map[string]interface{}{
 			"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
 		},
@@ -214,12 +216,12 @@ func (b *Botanist) DeployMachineControllerManager() error {
 		}
 	}
 
-	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
+	values, err := b.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.MachineControllerManagerImageName)
 	if err != nil {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, nil, values)
 }
 
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
@@ -229,11 +231,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		return b.DeleteClusterAutoscaler()
 	}
 
-	var (
-		name        = "cluster-autoscaler"
-		workerPools = []map[string]interface{}{}
-	)
-
+	var workerPools []map[string]interface{}
 	for _, worker := range b.MachineDeployments {
 		// Skip worker pools for which min=0. Auto scaler cannot handle worker pools having a min count of 0.
 		if worker.Minimum == 0 {
@@ -249,7 +247,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cluster-autoscaler": b.CheckSums[name],
+			"checksum/secret-cluster-autoscaler": b.CheckSums[gardencorev1alpha1.DeploymentNameClusterAutoscaler],
 		},
 		"namespace": map[string]interface{}{
 			"uid": b.SeedNamespaceObject.UID,
@@ -258,17 +256,17 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		"workerPools": workerPools,
 	}
 
-	values, err := b.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.ClusterAutoscalerImageName)
+	values, err := b.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.ClusterAutoscalerImageName)
 	if err != nil {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), name, b.Shoot.SeedNamespace, nil, values)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, nil, values)
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteClusterAutoscaler() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.ClusterAutoscalerDeploymentName)
+	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
@@ -280,7 +278,7 @@ func (b *Botanist) DeleteClusterAutoscaler() error {
 func (b *Botanist) DeploySeedMonitoring() error {
 	var (
 		credentials      = b.Secrets["monitoring-ingress-credentials"]
-		basicAuth        = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
+		basicAuth        = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name)
 		prometheusHost   = b.ComputePrometheusIngressFQDN()
@@ -351,15 +349,15 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"replicas": b.Shoot.GetReplicas(1),
 		}
 	)
-	alertManager, err := b.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
+	alertManager, err := b.ImageVector.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
 	if err != nil {
 		return err
 	}
-	grafana, err := b.InjectImages(grafanaConfig, b.SeedVersion(), b.ShootVersion(), common.GrafanaImageName, common.BusyboxImageName)
+	grafana, err := b.ImageVector.InjectImages(grafanaConfig, b.SeedVersion(), b.ShootVersion(), common.GrafanaImageName, common.BusyboxImageName)
 	if err != nil {
 		return err
 	}
-	prometheus, err := b.InjectImages(prometheusConfig, b.SeedVersion(), b.ShootVersion(),
+	prometheus, err := b.ImageVector.InjectImages(prometheusConfig, b.SeedVersion(), b.ShootVersion(),
 		common.PrometheusImageName,
 		common.ConfigMapReloaderImageName,
 		common.VPNSeedImageName,
@@ -368,11 +366,11 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsSeed, err := b.InjectImages(kubeStateMetricsSeedConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
+	kubeStateMetricsSeed, err := b.ImageVector.InjectImages(kubeStateMetricsSeedConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
 	}
-	kubeStateMetricsShoot, err := b.InjectImages(kubeStateMetricsShootConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
+	kubeStateMetricsShoot, err := b.ImageVector.InjectImages(kubeStateMetricsShootConfig, b.SeedVersion(), b.ShootVersion(), common.KubeStateMetricsImageName)
 	if err != nil {
 		return err
 	}
@@ -412,7 +410,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		}
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), b.Shoot.SeedNamespace, nil, values); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), nil, values); err != nil {
 		return err
 	}
 	return nil
@@ -474,11 +472,11 @@ func (b *Botanist) DeploySeedLogging() error {
 
 	var (
 		credentials = b.Secrets["logging-ingress-credentials"]
-		basicAuth   = utils.CreateSHA1Secret(credentials.Data["username"], credentials.Data["password"])
+		basicAuth   = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 	)
 
-	images, err := b.InjectImages(map[string]interface{}{}, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
+	images, err := b.ImageVector.InjectImages(map[string]interface{}{}, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(),
 		common.ElasticsearchImageName,
 		common.CuratorImageName,
 		common.KibanaImageName,
@@ -514,7 +512,7 @@ func (b *Botanist) DeploySeedLogging() error {
 		"global": images,
 	}
 
-	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), fmt.Sprintf("%s-logging", b.Operation.Shoot.SeedNamespace), b.Operation.Shoot.SeedNamespace, nil, elasticKibanaCurator)
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), nil, elasticKibanaCurator)
 }
 
 // DeployCertBroker deploys the Cert-Broker to the Shoot namespace in the Seed.
@@ -558,12 +556,12 @@ func (b *Botanist) DeployCertBroker() error {
 		},
 	}
 
-	certBroker, err := b.InjectImages(certBrokerConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(), common.CertBrokerImageName)
+	certBroker, err := b.ImageVector.InjectImages(certBrokerConfig, b.K8sSeedClient.Version(), b.K8sSeedClient.Version(), common.CertBrokerImageName)
 	if err != nil {
 		return nil
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cert-broker"), "cert-broker", b.Shoot.SeedNamespace, nil, certBroker)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CertBrokerResourceName), b.Shoot.SeedNamespace, common.CertBrokerResourceName, nil, certBroker)
 }
 
 func createDNSProviderValuesForDomain(config certmanagement.DNSProviderConfig, shootDomain string) []interface{} {

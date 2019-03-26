@@ -42,8 +42,8 @@ var NewControllerClient = newControllerClient
 // NewApplierInternal constructs a new Applier from the given config and DiscoveryInterface.
 // This method should only be used for testing.
 // TODO(AC): Once https://github.com/kubernetes/kubernetes/issues/68865 is resolved,
-// this should be adapted to use the updated RESTMapper and not do the invalidation / checks
-// on its own (depending on whether the controller-runtime/client might even automatically
+// this should be adapted to use the updated RESTMapper (https://github.com/kubernetes/kubernetes/issues/75383)
+// and not do the invalidation / checks on its own (depending on whether the controller-runtime/client might even automatically
 // use this updated mapper then).
 func NewApplierInternal(config *rest.Config, discoveryClient discovery.CachedDiscoveryInterface) (*Applier, error) {
 	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoveryClient)

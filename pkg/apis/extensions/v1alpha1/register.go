@@ -43,9 +43,24 @@ var (
 // Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
+		&Cluster{},
+		&ClusterList{},
+		&Extension{},
+		&ExtensionList{},
+		&Infrastructure{},
+		&InfrastructureList{},
 		&OperatingSystemConfig{},
 		&OperatingSystemConfigList{},
+		&Worker{},
+		&WorkerList{},
+		&ControlPlane{},
+		&ControlPlaneList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
+}
+
+// ExtensionType is an interface for Gardener extensions API types.
+type ExtensionType interface {
+	GetExtensionType() string
 }

@@ -14,6 +14,10 @@
 
 package chartrenderer
 
+import (
+	"k8s.io/helm/pkg/manifest"
+)
+
 // Interface is an interface for rendering Helm Charts from path, name, namespace and values.
 type Interface interface {
 	Render(chartPath, releaseName, namespace string, values map[string]interface{}) (*RenderedChart, error)
@@ -24,5 +28,5 @@ type Interface interface {
 // rendered template as value.
 type RenderedChart struct {
 	ChartName string
-	Files     map[string]string
+	Manifests []manifest.Manifest
 }

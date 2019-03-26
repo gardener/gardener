@@ -18,39 +18,19 @@ import (
 	"fmt"
 	"strings"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/operation/common"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"errors"
-
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("common", func() {
 	Describe("utils", func() {
-		Describe("#DetermineError", func() {
-			DescribeTable("appropriate error should be determined",
-				func(msg string, expectedErr error) {
-					err := DetermineError(msg)
-					Expect(err).To(Equal(expectedErr))
-				},
-				Entry("no code to extract", "foo", errors.New("foo")),
-				Entry("unauthorized", "unauthorized",
-					NewErrorWithCode(gardenv1beta1.ErrorInfraUnauthorized, "unauthorized")),
-				Entry("quota exceeded", "limitexceeded",
-					NewErrorWithCode(gardenv1beta1.ErrorInfraQuotaExceeded, "limitexceeded")),
-				Entry("insufficient privileges", "accessdenied",
-					NewErrorWithCode(gardenv1beta1.ErrorInfraInsufficientPrivileges, "accessdenied")),
-				Entry("infrastructure dependencies", "pendingverification",
-					NewErrorWithCode(gardenv1beta1.ErrorInfraDependencies, "pendingverification")),
-			)
-		})
-
 		Describe("#IdentifyAddressType", func() {
 			It("should return a tuple with first value equals hostname", func() {
 				address := "example.com"
@@ -105,7 +85,7 @@ var _ = Describe("common", func() {
 			It("should return a cluster IP as string", func() {
 				var (
 					ip   = "100.64.0.0"
-					cidr = gardenv1beta1.CIDR(ip + "/13")
+					cidr = gardencorev1alpha1.CIDR(ip + "/13")
 				)
 
 				result := ComputeClusterIP(cidr, 10)
