@@ -475,6 +475,15 @@ func getShootWorkerResources(shoot garden.Shoot, cloudProvider garden.CloudProvi
 			workers[idx].VolumeType = aliWorker.VolumeType
 			workers[idx].VolumeSize = resource.MustParse(aliWorker.VolumeSize)
 		}
+
+	case garden.CloudProviderPacket:
+		workers = make([]quotaWorker, len(shoot.Spec.Cloud.Packet.Workers))
+
+		for idx, packetWorker := range shoot.Spec.Cloud.Packet.Workers {
+			workers[idx].Worker = packetWorker.Worker
+			workers[idx].VolumeType = packetWorker.VolumeType
+			workers[idx].VolumeSize = resource.MustParse(packetWorker.VolumeSize)
+		}
 	}
 	return workers
 }
@@ -488,6 +497,8 @@ func getMachineTypes(provider garden.CloudProvider, cloudProfile garden.CloudPro
 		machineTypes = cloudProfile.Spec.Azure.Constraints.MachineTypes
 	case garden.CloudProviderGCP:
 		machineTypes = cloudProfile.Spec.GCP.Constraints.MachineTypes
+	case garden.CloudProviderPacket:
+		machineTypes = cloudProfile.Spec.Packet.Constraints.MachineTypes
 	case garden.CloudProviderOpenStack:
 		machineTypes = make([]garden.MachineType, 0)
 		for _, element := range cloudProfile.Spec.OpenStack.Constraints.MachineTypes {
@@ -511,6 +522,8 @@ func getVolumeTypes(provider garden.CloudProvider, cloudProfile garden.CloudProf
 		volumeTypes = cloudProfile.Spec.Azure.Constraints.VolumeTypes
 	case garden.CloudProviderGCP:
 		volumeTypes = cloudProfile.Spec.GCP.Constraints.VolumeTypes
+	case garden.CloudProviderPacket:
+		volumeTypes = cloudProfile.Spec.Packet.Constraints.VolumeTypes
 	case garden.CloudProviderOpenStack:
 		volumeTypes = make([]garden.VolumeType, 0)
 		contains := func(types []garden.VolumeType, volumeType string) bool {
@@ -605,6 +618,21 @@ func quotaVerificationNeeded(new, old garden.Shoot, provider garden.CloudProvide
 		for _, worker := range new.Spec.Cloud.GCP.Workers {
 			oldHasWorker := false
 			for _, oldWorker := range old.Spec.Cloud.GCP.Workers {
+				if worker.Name == oldWorker.Name {
+					oldHasWorker = true
+					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
+						return true
+					}
+				}
+			}
+			if !oldHasWorker {
+				return true
+			}
+		}
+	case garden.CloudProviderPacket:
+		for _, worker := range new.Spec.Cloud.Packet.Workers {
+			oldHasWorker := false
+			for _, oldWorker := range old.Spec.Cloud.Packet.Workers {
 				if worker.Name == oldWorker.Name {
 					oldHasWorker = true
 					if hasWorkerDiff(worker.Worker, oldWorker.Worker) || worker.VolumeType != oldWorker.VolumeType || worker.VolumeSize != oldWorker.VolumeSize {
