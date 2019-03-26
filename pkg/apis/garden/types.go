@@ -74,6 +74,9 @@ type CloudProfileSpec struct {
 	// Alicloud is the profile specification for the Alibaba cloud.
 	// +optional
 	Alicloud *AlicloudProfile
+	// Packet is the profile specification for the Packet cloud.
+	// +optional
+	Packet *PacketProfile
 	// Local is the profile specification for the Local provider.
 	// +optional
 	Local *LocalProfile
@@ -300,6 +303,36 @@ type AlicloudMachineType struct {
 type AlicloudVolumeType struct {
 	VolumeType
 	Zones []string
+}
+
+// PacketProfile defines constraints and definitions in Packet Cloud environment.
+type PacketProfile struct {
+	// Constraints is an object containing constraints for certain values in the Shoot specification.
+	Constraints PacketConstraints
+}
+
+// PacketConstraints is an object containing constraints for certain values in the Shoot specification
+type PacketConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint
+	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+	Kubernetes KubernetesConstraints
+	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+	MachineImages []PacketMachineImage
+	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
+	MachineTypes []MachineType
+	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
+	VolumeTypes []VolumeType
+	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
+	Zones []Zone
+}
+
+// PacketMachineImage defines the machine image for Packet.
+type PacketMachineImage struct {
+	// Name is the name of the image.
+	Name MachineImageName
+	// ID is the ID of the image.
+	ID string
 }
 
 // LocalProfile defines constraints and definitions for the local development.
@@ -764,6 +797,9 @@ type Cloud struct {
 	// Alicloud contains the Shoot specification for the Alibaba cloud.
 	// +optional
 	Alicloud *Alicloud
+	// PacketCloud contains the Shoot specification for the Packet cloud.
+	// +optional
+	Packet *PacketCloud
 	// Local contains the Shoot specification for the Local local provider.
 	// +optional
 	Local *Local
@@ -866,6 +902,35 @@ type AlicloudNetworks struct {
 
 // AlicloudWorker is the definition of a worker group.
 type AlicloudWorker struct {
+	Worker
+	// VolumeType is the type of the root volumes.
+	VolumeType string
+	// VolumeSize is the size of the root volume.
+	VolumeSize string
+}
+
+// PacketCloud contains the Shoot specification for Packet cloud
+type PacketCloud struct {
+	// MachineImage holds information about the machine image to use for all workers.
+	// It will default to the first image stated in the referenced CloudProfile if no
+	// value has been provided.
+	// +optional
+	MachineImage *PacketMachineImage
+	// Networks holds information about the Kubernetes and infrastructure networks.
+	Networks PacketNetworks
+	// Workers is a list of worker groups.
+	Workers []PacketWorker
+	// Zones is a list of availability zones to deploy the Shoot cluster to, currently, only one is supported.
+	Zones []string
+}
+
+// PacketNetworks holds information about the Kubernetes and infrastructure networks.
+type PacketNetworks struct {
+	K8SNetworks
+}
+
+// PacketWorker is the definition of a worker group.
+type PacketWorker struct {
 	Worker
 	// VolumeType is the type of the root volumes.
 	VolumeType string
@@ -1189,6 +1254,8 @@ const (
 	CloudProviderOpenStack CloudProvider = "openstack"
 	// CloudProviderAlicloud is a constant for the Alibaba cloud provider.
 	CloudProviderAlicloud CloudProvider = "alicloud"
+	// CloudProviderPacket is a constant for the Packet cloud provider.
+	CloudProviderPacket CloudProvider = "packet"
 	// CloudProviderLocal is a constant for the local development provider.
 	CloudProviderLocal CloudProvider = "local"
 )

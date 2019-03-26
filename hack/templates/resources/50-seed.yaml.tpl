@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -35,6 +35,8 @@
     annotations["persistentvolume.garden.sapcloud.io/minimumSize"] = "20Gi"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
+  elif cloud == "packet":
+    region="EWR1"
   elif cloud == "local":
     region="local"
 %># Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.

@@ -973,6 +973,66 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*PacketCloud)(nil), (*garden.PacketCloud)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_PacketCloud_To_garden_PacketCloud(a.(*PacketCloud), b.(*garden.PacketCloud), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.PacketCloud)(nil), (*PacketCloud)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_PacketCloud_To_v1beta1_PacketCloud(a.(*garden.PacketCloud), b.(*PacketCloud), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PacketConstraints)(nil), (*garden.PacketConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_PacketConstraints_To_garden_PacketConstraints(a.(*PacketConstraints), b.(*garden.PacketConstraints), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.PacketConstraints)(nil), (*PacketConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_PacketConstraints_To_v1beta1_PacketConstraints(a.(*garden.PacketConstraints), b.(*PacketConstraints), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PacketMachineImage)(nil), (*garden.PacketMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_PacketMachineImage_To_garden_PacketMachineImage(a.(*PacketMachineImage), b.(*garden.PacketMachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.PacketMachineImage)(nil), (*PacketMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_PacketMachineImage_To_v1beta1_PacketMachineImage(a.(*garden.PacketMachineImage), b.(*PacketMachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PacketNetworks)(nil), (*garden.PacketNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_PacketNetworks_To_garden_PacketNetworks(a.(*PacketNetworks), b.(*garden.PacketNetworks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.PacketNetworks)(nil), (*PacketNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_PacketNetworks_To_v1beta1_PacketNetworks(a.(*garden.PacketNetworks), b.(*PacketNetworks), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PacketProfile)(nil), (*garden.PacketProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_PacketProfile_To_garden_PacketProfile(a.(*PacketProfile), b.(*garden.PacketProfile), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.PacketProfile)(nil), (*PacketProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_PacketProfile_To_v1beta1_PacketProfile(a.(*garden.PacketProfile), b.(*PacketProfile), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*PacketWorker)(nil), (*garden.PacketWorker)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_PacketWorker_To_garden_PacketWorker(a.(*PacketWorker), b.(*garden.PacketWorker), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.PacketWorker)(nil), (*PacketWorker)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_PacketWorker_To_v1beta1_PacketWorker(a.(*garden.PacketWorker), b.(*PacketWorker), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Project)(nil), (*garden.Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_Project_To_garden_Project(a.(*Project), b.(*garden.Project), scope)
 	}); err != nil {
@@ -2302,6 +2362,15 @@ func autoConvert_v1beta1_Cloud_To_garden_Cloud(in *Cloud, out *garden.Cloud, s c
 	} else {
 		out.Alicloud = nil
 	}
+	if in.Packet != nil {
+		in, out := &in.Packet, &out.Packet
+		*out = new(garden.PacketCloud)
+		if err := Convert_v1beta1_PacketCloud_To_garden_PacketCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Packet = nil
+	}
 	out.Local = (*garden.Local)(unsafe.Pointer(in.Local))
 	return nil
 }
@@ -2360,6 +2429,15 @@ func autoConvert_garden_Cloud_To_v1beta1_Cloud(in *garden.Cloud, out *Cloud, s c
 		}
 	} else {
 		out.Alicloud = nil
+	}
+	if in.Packet != nil {
+		in, out := &in.Packet, &out.Packet
+		*out = new(PacketCloud)
+		if err := Convert_garden_PacketCloud_To_v1beta1_PacketCloud(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Packet = nil
 	}
 	out.Local = (*Local)(unsafe.Pointer(in.Local))
 	return nil
@@ -2448,6 +2526,7 @@ func autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudPr
 	out.GCP = (*garden.GCPProfile)(unsafe.Pointer(in.GCP))
 	out.OpenStack = (*garden.OpenStackProfile)(unsafe.Pointer(in.OpenStack))
 	out.Alicloud = (*garden.AlicloudProfile)(unsafe.Pointer(in.Alicloud))
+	out.Packet = (*garden.PacketProfile)(unsafe.Pointer(in.Packet))
 	out.Local = (*garden.LocalProfile)(unsafe.Pointer(in.Local))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
@@ -2464,6 +2543,7 @@ func autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.
 	out.GCP = (*GCPProfile)(unsafe.Pointer(in.GCP))
 	out.OpenStack = (*OpenStackProfile)(unsafe.Pointer(in.OpenStack))
 	out.Alicloud = (*AlicloudProfile)(unsafe.Pointer(in.Alicloud))
+	out.Packet = (*PacketProfile)(unsafe.Pointer(in.Packet))
 	out.Local = (*LocalProfile)(unsafe.Pointer(in.Local))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
@@ -3868,6 +3948,188 @@ func autoConvert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker(in *garden.Op
 // Convert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker is an autogenerated conversion function.
 func Convert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker(in *garden.OpenStackWorker, out *OpenStackWorker, s conversion.Scope) error {
 	return autoConvert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker(in, out, s)
+}
+
+func autoConvert_v1beta1_PacketCloud_To_garden_PacketCloud(in *PacketCloud, out *garden.PacketCloud, s conversion.Scope) error {
+	out.MachineImage = (*garden.PacketMachineImage)(unsafe.Pointer(in.MachineImage))
+	if err := Convert_v1beta1_PacketNetworks_To_garden_PacketNetworks(&in.Networks, &out.Networks, s); err != nil {
+		return err
+	}
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]garden.PacketWorker, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_PacketWorker_To_garden_PacketWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
+	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
+	return nil
+}
+
+// Convert_v1beta1_PacketCloud_To_garden_PacketCloud is an autogenerated conversion function.
+func Convert_v1beta1_PacketCloud_To_garden_PacketCloud(in *PacketCloud, out *garden.PacketCloud, s conversion.Scope) error {
+	return autoConvert_v1beta1_PacketCloud_To_garden_PacketCloud(in, out, s)
+}
+
+func autoConvert_garden_PacketCloud_To_v1beta1_PacketCloud(in *garden.PacketCloud, out *PacketCloud, s conversion.Scope) error {
+	out.MachineImage = (*PacketMachineImage)(unsafe.Pointer(in.MachineImage))
+	if err := Convert_garden_PacketNetworks_To_v1beta1_PacketNetworks(&in.Networks, &out.Networks, s); err != nil {
+		return err
+	}
+	if in.Workers != nil {
+		in, out := &in.Workers, &out.Workers
+		*out = make([]PacketWorker, len(*in))
+		for i := range *in {
+			if err := Convert_garden_PacketWorker_To_v1beta1_PacketWorker(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Workers = nil
+	}
+	out.Zones = *(*[]string)(unsafe.Pointer(&in.Zones))
+	return nil
+}
+
+// Convert_garden_PacketCloud_To_v1beta1_PacketCloud is an autogenerated conversion function.
+func Convert_garden_PacketCloud_To_v1beta1_PacketCloud(in *garden.PacketCloud, out *PacketCloud, s conversion.Scope) error {
+	return autoConvert_garden_PacketCloud_To_v1beta1_PacketCloud(in, out, s)
+}
+
+func autoConvert_v1beta1_PacketConstraints_To_garden_PacketConstraints(in *PacketConstraints, out *garden.PacketConstraints, s conversion.Scope) error {
+	out.DNSProviders = *(*[]garden.DNSProviderConstraint)(unsafe.Pointer(&in.DNSProviders))
+	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+		return err
+	}
+	out.MachineImages = *(*[]garden.PacketMachineImage)(unsafe.Pointer(&in.MachineImages))
+	out.MachineTypes = *(*[]garden.MachineType)(unsafe.Pointer(&in.MachineTypes))
+	out.VolumeTypes = *(*[]garden.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
+	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
+	return nil
+}
+
+// Convert_v1beta1_PacketConstraints_To_garden_PacketConstraints is an autogenerated conversion function.
+func Convert_v1beta1_PacketConstraints_To_garden_PacketConstraints(in *PacketConstraints, out *garden.PacketConstraints, s conversion.Scope) error {
+	return autoConvert_v1beta1_PacketConstraints_To_garden_PacketConstraints(in, out, s)
+}
+
+func autoConvert_garden_PacketConstraints_To_v1beta1_PacketConstraints(in *garden.PacketConstraints, out *PacketConstraints, s conversion.Scope) error {
+	out.DNSProviders = *(*[]DNSProviderConstraint)(unsafe.Pointer(&in.DNSProviders))
+	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
+		return err
+	}
+	out.MachineImages = *(*[]PacketMachineImage)(unsafe.Pointer(&in.MachineImages))
+	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
+	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
+	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
+	return nil
+}
+
+// Convert_garden_PacketConstraints_To_v1beta1_PacketConstraints is an autogenerated conversion function.
+func Convert_garden_PacketConstraints_To_v1beta1_PacketConstraints(in *garden.PacketConstraints, out *PacketConstraints, s conversion.Scope) error {
+	return autoConvert_garden_PacketConstraints_To_v1beta1_PacketConstraints(in, out, s)
+}
+
+func autoConvert_v1beta1_PacketMachineImage_To_garden_PacketMachineImage(in *PacketMachineImage, out *garden.PacketMachineImage, s conversion.Scope) error {
+	out.Name = garden.MachineImageName(in.Name)
+	out.ID = in.ID
+	return nil
+}
+
+// Convert_v1beta1_PacketMachineImage_To_garden_PacketMachineImage is an autogenerated conversion function.
+func Convert_v1beta1_PacketMachineImage_To_garden_PacketMachineImage(in *PacketMachineImage, out *garden.PacketMachineImage, s conversion.Scope) error {
+	return autoConvert_v1beta1_PacketMachineImage_To_garden_PacketMachineImage(in, out, s)
+}
+
+func autoConvert_garden_PacketMachineImage_To_v1beta1_PacketMachineImage(in *garden.PacketMachineImage, out *PacketMachineImage, s conversion.Scope) error {
+	out.Name = MachineImageName(in.Name)
+	out.ID = in.ID
+	return nil
+}
+
+// Convert_garden_PacketMachineImage_To_v1beta1_PacketMachineImage is an autogenerated conversion function.
+func Convert_garden_PacketMachineImage_To_v1beta1_PacketMachineImage(in *garden.PacketMachineImage, out *PacketMachineImage, s conversion.Scope) error {
+	return autoConvert_garden_PacketMachineImage_To_v1beta1_PacketMachineImage(in, out, s)
+}
+
+func autoConvert_v1beta1_PacketNetworks_To_garden_PacketNetworks(in *PacketNetworks, out *garden.PacketNetworks, s conversion.Scope) error {
+	if err := Convert_v1beta1_K8SNetworks_To_garden_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1beta1_PacketNetworks_To_garden_PacketNetworks is an autogenerated conversion function.
+func Convert_v1beta1_PacketNetworks_To_garden_PacketNetworks(in *PacketNetworks, out *garden.PacketNetworks, s conversion.Scope) error {
+	return autoConvert_v1beta1_PacketNetworks_To_garden_PacketNetworks(in, out, s)
+}
+
+func autoConvert_garden_PacketNetworks_To_v1beta1_PacketNetworks(in *garden.PacketNetworks, out *PacketNetworks, s conversion.Scope) error {
+	if err := Convert_garden_K8SNetworks_To_v1beta1_K8SNetworks(&in.K8SNetworks, &out.K8SNetworks, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_garden_PacketNetworks_To_v1beta1_PacketNetworks is an autogenerated conversion function.
+func Convert_garden_PacketNetworks_To_v1beta1_PacketNetworks(in *garden.PacketNetworks, out *PacketNetworks, s conversion.Scope) error {
+	return autoConvert_garden_PacketNetworks_To_v1beta1_PacketNetworks(in, out, s)
+}
+
+func autoConvert_v1beta1_PacketProfile_To_garden_PacketProfile(in *PacketProfile, out *garden.PacketProfile, s conversion.Scope) error {
+	if err := Convert_v1beta1_PacketConstraints_To_garden_PacketConstraints(&in.Constraints, &out.Constraints, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_v1beta1_PacketProfile_To_garden_PacketProfile is an autogenerated conversion function.
+func Convert_v1beta1_PacketProfile_To_garden_PacketProfile(in *PacketProfile, out *garden.PacketProfile, s conversion.Scope) error {
+	return autoConvert_v1beta1_PacketProfile_To_garden_PacketProfile(in, out, s)
+}
+
+func autoConvert_garden_PacketProfile_To_v1beta1_PacketProfile(in *garden.PacketProfile, out *PacketProfile, s conversion.Scope) error {
+	if err := Convert_garden_PacketConstraints_To_v1beta1_PacketConstraints(&in.Constraints, &out.Constraints, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Convert_garden_PacketProfile_To_v1beta1_PacketProfile is an autogenerated conversion function.
+func Convert_garden_PacketProfile_To_v1beta1_PacketProfile(in *garden.PacketProfile, out *PacketProfile, s conversion.Scope) error {
+	return autoConvert_garden_PacketProfile_To_v1beta1_PacketProfile(in, out, s)
+}
+
+func autoConvert_v1beta1_PacketWorker_To_garden_PacketWorker(in *PacketWorker, out *garden.PacketWorker, s conversion.Scope) error {
+	if err := Convert_v1beta1_Worker_To_garden_Worker(&in.Worker, &out.Worker, s); err != nil {
+		return err
+	}
+	out.VolumeType = in.VolumeType
+	out.VolumeSize = in.VolumeSize
+	return nil
+}
+
+// Convert_v1beta1_PacketWorker_To_garden_PacketWorker is an autogenerated conversion function.
+func Convert_v1beta1_PacketWorker_To_garden_PacketWorker(in *PacketWorker, out *garden.PacketWorker, s conversion.Scope) error {
+	return autoConvert_v1beta1_PacketWorker_To_garden_PacketWorker(in, out, s)
+}
+
+func autoConvert_garden_PacketWorker_To_v1beta1_PacketWorker(in *garden.PacketWorker, out *PacketWorker, s conversion.Scope) error {
+	if err := Convert_garden_Worker_To_v1beta1_Worker(&in.Worker, &out.Worker, s); err != nil {
+		return err
+	}
+	out.VolumeType = in.VolumeType
+	out.VolumeSize = in.VolumeSize
+	return nil
+}
+
+// Convert_garden_PacketWorker_To_v1beta1_PacketWorker is an autogenerated conversion function.
+func Convert_garden_PacketWorker_To_v1beta1_PacketWorker(in *garden.PacketWorker, out *PacketWorker, s conversion.Scope) error {
+	return autoConvert_garden_PacketWorker_To_v1beta1_PacketWorker(in, out, s)
 }
 
 func autoConvert_v1beta1_Project_To_garden_Project(in *Project, out *garden.Project, s conversion.Scope) error {

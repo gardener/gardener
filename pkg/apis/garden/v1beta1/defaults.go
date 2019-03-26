@@ -103,6 +103,15 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 	}
 
+	if cloud.Packet != nil {
+		if cloud.Packet.Networks.Pods == nil {
+			obj.Spec.Cloud.Packet.Networks.Pods = &defaultPodCIDR
+		}
+		if cloud.Packet.Networks.Services == nil {
+			obj.Spec.Cloud.Packet.Networks.Services = &defaultServiceCIDR
+		}
+	}
+
 	if cloud.Local != nil {
 		if cloud.Local.Networks.Pods == nil {
 			obj.Spec.Cloud.Local.Networks.Pods = &defaultPodCIDR

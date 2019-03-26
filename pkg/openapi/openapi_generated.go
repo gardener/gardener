@@ -141,6 +141,12 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile":              schema_pkg_apis_garden_v1beta1_OpenStackProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackRouter":               schema_pkg_apis_garden_v1beta1_OpenStackRouter(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker":               schema_pkg_apis_garden_v1beta1_OpenStackWorker(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketCloud":                   schema_pkg_apis_garden_v1beta1_PacketCloud(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketConstraints":             schema_pkg_apis_garden_v1beta1_PacketConstraints(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketMachineImage":            schema_pkg_apis_garden_v1beta1_PacketMachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketNetworks":                schema_pkg_apis_garden_v1beta1_PacketNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile":                 schema_pkg_apis_garden_v1beta1_PacketProfile(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketWorker":                  schema_pkg_apis_garden_v1beta1_PacketWorker(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Project":                       schema_pkg_apis_garden_v1beta1_Project(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProjectList":                   schema_pkg_apis_garden_v1beta1_ProjectList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProjectSpec":                   schema_pkg_apis_garden_v1beta1_ProjectSpec(ref),
@@ -2502,6 +2508,12 @@ func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud"),
 						},
 					},
+					"packet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Packet contains the Shoot specification for the Packet cloud.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketCloud"),
+						},
+					},
 					"local": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Local contains the Shoot specification for the Local local provider.",
@@ -2513,7 +2525,7 @@ func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "k8s.io/api/core/v1.LocalObjectReference"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketCloud", "k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -2668,6 +2680,12 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile"),
 						},
 					},
+					"packet": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Packet is the profile specification for the Packet cloud.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"),
+						},
+					},
 					"local": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Local is the profile specification for the Local provider.",
@@ -2685,7 +2703,7 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
 	}
 }
 
@@ -4803,6 +4821,298 @@ func schema_pkg_apis_garden_v1beta1_OpenStackWorker(ref common.ReferenceCallback
 					},
 				},
 				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax"},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_PacketCloud(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketCloud contains the Shoot specification for Packet cloud",
+				Properties: map[string]spec.Schema{
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketMachineImage"),
+						},
+					},
+					"networks": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Networks holds information about the Kubernetes and infrastructure networks.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketNetworks"),
+						},
+					},
+					"workers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Workers is a list of worker groups.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketWorker"),
+									},
+								},
+							},
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones is a list of availability zones to deploy the Shoot cluster to, currently, only one is supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"networks", "workers", "zones"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketWorker"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_PacketConstraints(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketConstraints is an object containing constraints for certain values in the Shoot specification",
+				Properties: map[string]spec.Schema{
+					"dnsProviders": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"),
+									},
+								},
+							},
+						},
+					},
+					"kubernetes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints"),
+						},
+					},
+					"machineImages": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketMachineImage"),
+									},
+								},
+							},
+						},
+					},
+					"machineTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType"),
+									},
+								},
+							},
+						},
+					},
+					"volumeTypes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType"),
+									},
+								},
+							},
+						},
+					},
+					"zones": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"dnsProviders", "kubernetes", "machineImages", "machineTypes", "volumeTypes", "zones"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_PacketMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketMachineImage defines the machine image for Packet.",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"id": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ID is the ID of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "id"},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_PacketNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketNetworks holds information about the Kubernetes and infrastructure networks.",
+				Properties: map[string]spec.Schema{
+					"nodes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Nodes is the CIDR of the node network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"pods": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Pods is the CIDR of the pod network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"services": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Services is the CIDR of the service network.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_PacketProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketProfile defines constraints and definitions in Packet Cloud environment.",
+				Properties: map[string]spec.Schema{
+					"constraints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Constraints is an object containing constraints for certain values in the Shoot specification.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketConstraints"),
+						},
+					},
+				},
+				Required: []string{"constraints"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketConstraints"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_PacketWorker(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PacketWorker is the definition of a worker group.",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the worker group.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"machineType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineType is the machine type of the worker group.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"autoScalerMin": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoScalerMin is the minimum number of VMs to create.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"autoScalerMax": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AutoScalerMin is the maximum number of VMs to create.",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"maxSurge": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxSurge is maximum number of VMs that are created during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"maxUnavailable": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MaxUnavailable is the maximum number of VMs that can be unavailable during an update.",
+							Ref:         ref("k8s.io/apimachinery/pkg/util/intstr.IntOrString"),
+						},
+					},
+					"volumeType": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeType is the type of the root volumes.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"volumeSize": {
+						SchemaProps: spec.SchemaProps{
+							Description: "VolumeSize is the size of the root volume.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "machineType", "autoScalerMin", "autoScalerMax", "volumeType", "volumeSize"},
 			},
 		},
 		Dependencies: []string{

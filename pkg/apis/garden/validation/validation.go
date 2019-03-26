@@ -132,7 +132,7 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 	allErrs := field.ErrorList{}
 
 	if _, err := helper.DetermineCloudProviderInProfile(*spec); err != nil {
-		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/alicloud/openstack/local"), "cloud profile must only contain exactly one field of aws/azure/gcp/alicloud/openstack/local"))
+		allErrs = append(allErrs, field.Forbidden(fldPath.Child("aws/azure/gcp/alicloud/openstack/packet/local"), "cloud profile must only contain exactly one field of aws/azure/gcp/alicloud/openstack/packet/local"))
 		return allErrs
 	}
 
@@ -171,6 +171,15 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		allErrs = append(allErrs, validateAlicloudMachineTypeConstraints(spec.Alicloud.Constraints.MachineTypes, spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "machineTypes"))...)
 		allErrs = append(allErrs, validateAlicloudVolumeTypeConstraints(spec.Alicloud.Constraints.VolumeTypes, spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "volumeTypes"))...)
 		allErrs = append(allErrs, validateZones(spec.Alicloud.Constraints.Zones, fldPath.Child("alicloud", "constraints", "zones"))...)
+	}
+
+	if spec.Packet != nil {
+		allErrs = append(allErrs, validateDNSProviders(spec.Packet.Constraints.DNSProviders, fldPath.Child("packet", "constraints", "dnsProviders"))...)
+		allErrs = append(allErrs, validateKubernetesConstraints(spec.Packet.Constraints.Kubernetes, fldPath.Child("packet", "constraints", "kubernetes"))...)
+		allErrs = append(allErrs, validatePacketMachineImages(spec.Packet.Constraints.MachineImages, fldPath.Child("packet", "constraints", "machineImages"))...)
+		allErrs = append(allErrs, validateMachineTypeConstraints(spec.Packet.Constraints.MachineTypes, fldPath.Child("packet", "constraints", "machineTypes"))...)
+		allErrs = append(allErrs, validateVolumeTypeConstraints(spec.Packet.Constraints.VolumeTypes, fldPath.Child("packet", "constraints", "volumeTypes"))...)
+		allErrs = append(allErrs, validateZones(spec.Packet.Constraints.Zones, fldPath.Child("packet", "constraints", "zones"))...)
 	}
 
 	if spec.OpenStack != nil {
@@ -438,6 +447,23 @@ func validateAlicloudMachineImages(machineImages []garden.AlicloudMachineImage, 
 		}
 	}
 
+	return allErrs
+}
+
+func validatePacketMachineImages(machineImages []garden.PacketMachineImage, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	machineImageNames := []garden.MachineImageName{}
+	for i, image := range machineImages {
+		machineImageNames = append(machineImageNames, image.Name)
+		idxPath := fldPath.Index(i)
+
+		if len(image.ID) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("id"), image.ID))
+		}
+	}
+
+	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
 	return allErrs
 }
 
@@ -980,7 +1006,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 
 	cloudPath := fldPath.Child("cloud")
 	if _, err := helper.DetermineCloudProviderInShoot(spec.Cloud); err != nil {
-		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/alicloud/openstack/local"), "cloud section must only contain exactly one field of aws/azure/gcp/alicloud/openstack/local"))
+		allErrs = append(allErrs, field.Forbidden(cloudPath.Child("aws/azure/gcp/alicloud/openstack/packet/local"), "cloud section must only contain exactly one field of aws/azure/gcp/alicloud/openstack/packet/local"))
 		return allErrs
 	}
 
@@ -1417,6 +1443,36 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 
 	}
 
+	packet := cloud.Packet
+	packetPath := fldPath.Child("packet")
+	if packet != nil {
+		zoneCount := len(packet.Zones)
+		if zoneCount == 0 {
+			allErrs = append(allErrs, field.Required(packetPath.Child("zones"), "must specify at least one zone"))
+			return allErrs
+		}
+
+		_, _, _, networkErrors := transformK8SNetworks(packet.Networks.K8SNetworks, packetPath.Child("networks"))
+		allErrs = append(allErrs, networkErrors...)
+
+		if len(packet.Workers) == 0 {
+			allErrs = append(allErrs, field.Required(packetPath.Child("workers"), "must specify at least one worker"))
+			return allErrs
+		}
+		for i, worker := range packet.Workers {
+			idxPath := packetPath.Child("workers").Index(i)
+			allErrs = append(allErrs, ValidateWorker(worker.Worker, idxPath)...)
+			allErrs = append(allErrs, validateWorkerVolumeSize(worker.VolumeSize, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerMinimumVolumeSize(worker.VolumeSize, 20, idxPath.Child("volumeSize"))...)
+			allErrs = append(allErrs, validateWorkerVolumeType(worker.VolumeType, idxPath.Child("volumeType"))...)
+			if workerNames[worker.Name] {
+				allErrs = append(allErrs, field.Duplicate(idxPath, worker.Name))
+			}
+			workerNames[worker.Name] = true
+		}
+
+	}
+
 	return allErrs
 }
 
@@ -1477,6 +1533,15 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	} else if newSpec.Cloud.Alicloud != nil {
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Networks, oldSpec.Cloud.Alicloud.Networks, alicloudPath.Child("networks"))...)
 		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Alicloud.Zones, oldSpec.Cloud.Alicloud.Zones, alicloudPath.Child("zones"))...)
+	}
+
+	packetPath := fldPath.Child("cloud", "packet")
+	if oldSpec.Cloud.Packet != nil && newSpec.Cloud.Packet == nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet, oldSpec.Cloud.Packet, packetPath)...)
+		return allErrs
+	} else if newSpec.Cloud.Packet != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet.Networks, oldSpec.Cloud.Packet.Networks, packetPath.Child("networks"))...)
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Packet.Zones, oldSpec.Cloud.Packet.Zones, packetPath.Child("zones"))...)
 	}
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)

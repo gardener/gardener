@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")))
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local,packet} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -30,6 +30,8 @@
     region="europe-west1"
   elif cloud == "alicloud":
     region="cn-beijing"
+  elif cloud == "packet":
+    region="EWR1"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "local":
@@ -429,6 +431,85 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       - region: cn-beijing
         names:
         - cn-beijing-f  # Avalibility zone
+      % endif
+  % endif
+  % if cloud == "packet":
+  packet:
+    constraints:
+      dnsProviders:<% dnsProviders=value("spec.packet.constraints.dnsProviders", []) %>
+      % if dnsProviders != []:
+      ${yaml.dump(dnsProviders, width=10000)}
+      % else:
+      - name: aws-route53
+      - name: unmanaged
+      % endif
+      kubernetes:<% kubernetesVersions=value("spec.packet.constraints.kubernetes.versions", []) %>
+        % if kubernetesVersions != []:
+        ${yaml.dump(kubernetesVersions, width=10000)}
+        % else:
+        versions:
+        - 1.13.3
+        % endif
+      machineImages:<% machineImages=value("spec.packet.constraints.machineImages", []) %>
+      % if machineImages != []:
+      ${yaml.dump(machineImages, width=10000)}
+      % else:
+      - name: coreos
+        id: d61c3912-8422-4daf-835e-854efa0062e4
+      % endif
+      machineTypes:<% machineTypes=value("spec.packet.constraints.machineTypes", []) %>
+      % if machineTypes != []:
+      ${yaml.dump(machineTypes, width=10000)}
+      % else:
+      - name: t1.small
+        cpu: "4"
+        gpu: "0"
+        memory: 8Gi
+        usable: true
+      - name: c1.small
+        cpu: "4"
+        gpu: "0"
+        memory: 32Gi
+        usable: true
+      - name: c2.medium
+        cpu: "24"
+        gpu: "0"
+        memory: 64Gi
+        usable: true
+      - name: m1.xlarge
+        cpu: "24"
+        gpu: "0"
+        memory: 256Gi
+        usable: true
+      - name: c1.large.arm
+        cpu: "96"
+        gpu: "0"
+        memory: 128Gi
+        usable: true
+      - name: g2.large
+        cpu: "28"
+        gpu: "2"
+        memory: 192Gi
+        usable: true
+      % endif
+      volumeTypes:<% volumeTypes=value("spec.packet.constraints.volumeTypes", []) %>
+      % if volumeTypes != []:
+      ${yaml.dump(volumeTypes, width=10000)}
+      % else:
+      - name: storage_1
+        class: standard
+        usable: true
+      - name: storage_2
+        class: performance
+        usable: true
+      % endif
+      zones:<% zones=value("spec.packet.zones", []) %> # List of availablity zones together with resource contraints in a specific region
+      % if zones != []:
+      ${yaml.dump(zones, width=10000)}
+      % else:
+      - region: EWR1
+        names:
+        - EWR1
       % endif
   % endif
   % if cloud == "openstack" or cloud == "os":

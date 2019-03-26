@@ -75,6 +75,9 @@ type CloudProfileSpec struct {
 	// Alicloud is the profile specification for the Alibaba cloud.
 	// +optional
 	Alicloud *AlicloudProfile `json:"alicloud,omitempty"`
+	// Packet is the profile specification for the Packet cloud.
+	// +optional
+	Packet *PacketProfile `json:"packet,omitempty"`
 	// Local is the profile specification for the Local provider.
 	// +optional
 	Local *LocalProfile `json:"local,omitempty"`
@@ -301,6 +304,36 @@ type AlicloudMachineType struct {
 type AlicloudVolumeType struct {
 	VolumeType `json:",inline"`
 	Zones      []string `json:"zones"`
+}
+
+// PacketProfile defines constraints and definitions in Packet Cloud environment.
+type PacketProfile struct {
+	// Constraints is an object containing constraints for certain values in the Shoot specification.
+	Constraints PacketConstraints `json:"constraints"`
+}
+
+// PacketConstraints is an object containing constraints for certain values in the Shoot specification
+type PacketConstraints struct {
+	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
+	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
+	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
+	Kubernetes KubernetesConstraints `json:"kubernetes"`
+	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+	MachineImages []PacketMachineImage `json:"machineImages"`
+	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
+	MachineTypes []MachineType `json:"machineTypes"`
+	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
+	VolumeTypes []VolumeType `json:"volumeTypes"`
+	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
+	Zones []Zone `json:"zones"`
+}
+
+// PacketMachineImage defines the machine image for Packet.
+type PacketMachineImage struct {
+	// Name is the name of the image.
+	Name MachineImageName `json:"name"`
+	// ID is the ID of the image.
+	ID string `json:"id"`
 }
 
 // LocalProfile defines constraints and definitions for the local development.
@@ -748,6 +781,9 @@ type Cloud struct {
 	// Alicloud contains the Shoot specification for the Alibaba cloud.
 	// +optional
 	Alicloud *Alicloud `json:"alicloud,omitempty"`
+	// Packet contains the Shoot specification for the Packet cloud.
+	// +optional
+	Packet *PacketCloud `json:"packet,omitempty"`
 	// Local contains the Shoot specification for the Local local provider.
 	// +optional
 	Local *Local `json:"local,omitempty"`
@@ -850,6 +886,35 @@ type AlicloudNetworks struct {
 
 // AlicloudWorker is the definition of a worker group.
 type AlicloudWorker struct {
+	Worker `json:",inline"`
+	// VolumeType is the type of the root volumes.
+	VolumeType string `json:"volumeType"`
+	// VolumeSize is the size of the root volume.
+	VolumeSize string `json:"volumeSize"`
+}
+
+// PacketCloud contains the Shoot specification for Packet cloud
+type PacketCloud struct {
+	// MachineImage holds information about the machine image to use for all workers.
+	// It will default to the first image stated in the referenced CloudProfile if no
+	// value has been provided.
+	// +optional
+	MachineImage *PacketMachineImage `json:"machineImage,omitempty"`
+	// Networks holds information about the Kubernetes and infrastructure networks.
+	Networks PacketNetworks `json:"networks"`
+	// Workers is a list of worker groups.
+	Workers []PacketWorker `json:"workers"`
+	// Zones is a list of availability zones to deploy the Shoot cluster to, currently, only one is supported.
+	Zones []string `json:"zones"`
+}
+
+// PacketNetworks holds information about the Kubernetes and infrastructure networks.
+type PacketNetworks struct {
+	K8SNetworks `json:",inline"`
+}
+
+// PacketWorker is the definition of a worker group.
+type PacketWorker struct {
 	Worker `json:",inline"`
 	// VolumeType is the type of the root volumes.
 	VolumeType string `json:"volumeType"`
@@ -1184,6 +1249,8 @@ const (
 	CloudProviderOpenStack CloudProvider = "openstack"
 	// CloudProviderAlicloud is a constant for the Alibaba cloud provider.
 	CloudProviderAlicloud CloudProvider = "alicloud"
+	// CloudProviderPacket is a constant for the Packet cloud provider.
+	CloudProviderPacket CloudProvider = "packet"
 	// CloudProviderLocal is a constant for the development provider.
 	CloudProviderLocal CloudProvider = "local"
 )

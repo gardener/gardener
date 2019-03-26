@@ -62,13 +62,17 @@ func DetermineCloudProviderInProfile(spec gardenv1beta1.CloudProfileSpec) (garde
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderAlicloud
 	}
+	if spec.Packet != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderPacket
+	}
 	if spec.Local != nil {
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderLocal
 	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/local")
+		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/packet/local")
 	}
 	return cloud, nil
 }
@@ -139,6 +143,10 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 		for _, worker := range cloud.OpenStack.Workers {
 			workers = append(workers, worker.Worker)
 		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, worker := range cloud.Packet.Workers {
+			workers = append(workers, worker.Worker)
+		}
 	case gardenv1beta1.CloudProviderLocal:
 		workers = append(workers, gardenv1beta1.Worker{
 			Name:          "local",
@@ -163,6 +171,8 @@ func GetMachineImageNameFromShoot(cloudProvider gardenv1beta1.CloudProvider, sho
 		return shoot.Spec.Cloud.Alicloud.MachineImage.Name
 	case gardenv1beta1.CloudProviderOpenStack:
 		return shoot.Spec.Cloud.OpenStack.MachineImage.Name
+	case gardenv1beta1.CloudProviderPacket:
+		return shoot.Spec.Cloud.Packet.MachineImage.Name
 	case gardenv1beta1.CloudProviderLocal:
 		return "coreos"
 	}
@@ -192,6 +202,8 @@ func GetMachineTypesFromCloudProfile(cloudProvider gardenv1beta1.CloudProvider, 
 		return profile.Spec.Azure.Constraints.MachineTypes
 	case gardenv1beta1.CloudProviderGCP:
 		return profile.Spec.GCP.Constraints.MachineTypes
+	case gardenv1beta1.CloudProviderPacket:
+		return profile.Spec.Packet.Constraints.MachineTypes
 	case gardenv1beta1.CloudProviderOpenStack:
 		for _, openStackMachineType := range profile.Spec.OpenStack.Constraints.MachineTypes {
 			machineTypes = append(machineTypes, openStackMachineType.MachineType)
@@ -233,13 +245,17 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderAlicloud
 	}
+	if cloudObj.Packet != nil {
+		numClouds++
+		cloud = gardenv1beta1.CloudProviderPacket
+	}
 	if cloudObj.Local != nil {
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderLocal
 	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/local")
+		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/packet/local")
 	}
 	return cloud, nil
 }
@@ -375,6 +391,13 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv
 				return true, &ptr, nil
 			}
 		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, image := range cloudProfile.Spec.Packet.Constraints.MachineImages {
+			if image.Name == name {
+				ptr := image
+				return true, &ptr, nil
+			}
+		}
 	default:
 		return false, nil, fmt.Errorf("unknown cloud provider %s", cloudProvider)
 	}
@@ -397,6 +420,9 @@ func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage 
 	case gardenv1beta1.CloudProviderOpenStack:
 		image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
 		return func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = image }
+	case gardenv1beta1.CloudProviderPacket:
+		image := machineImage.(*gardenv1beta1.PacketMachineImage)
+		return func(s *gardenv1beta1.Cloud) { s.Packet.MachineImage = image }
 	case gardenv1beta1.CloudProviderAlicloud:
 		image := machineImage.(*gardenv1beta1.AlicloudMachineImage)
 		return func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = image }
@@ -442,6 +468,10 @@ func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, c
 		}
 	case gardenv1beta1.CloudProviderAlicloud:
 		for _, version := range cloudProfile.Spec.Alicloud.Constraints.Kubernetes.Versions {
+			versions = append(versions, version)
+		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, version := range cloudProfile.Spec.Packet.Constraints.Kubernetes.Versions {
 			versions = append(versions, version)
 		}
 	default:
