@@ -121,6 +121,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard":           schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local":                         schema_pkg_apis_garden_v1beta1_Local(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints":              schema_pkg_apis_garden_v1beta1_LocalConstraints(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage":             schema_pkg_apis_garden_v1beta1_LocalMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks":                 schema_pkg_apis_garden_v1beta1_LocalNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile":                  schema_pkg_apis_garden_v1beta1_LocalProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType":                   schema_pkg_apis_garden_v1beta1_MachineType(ref),
@@ -3905,6 +3906,12 @@ func schema_pkg_apis_garden_v1beta1_Local(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"),
 						},
 					},
+					"machineImage": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage"),
+						},
+					},
 					"endpoint": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Endpoint of the local service.",
@@ -3917,7 +3924,7 @@ func schema_pkg_apis_garden_v1beta1_Local(ref common.ReferenceCallback) common.O
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"},
 	}
 }
 
@@ -3940,12 +3947,46 @@ func schema_pkg_apis_garden_v1beta1_LocalConstraints(ref common.ReferenceCallbac
 							},
 						},
 					},
+					"machineImages": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage"),
+									},
+								},
+							},
+						},
+					},
 				},
-				Required: []string{"dnsProviders"},
+				Required: []string{"dnsProviders", "machineImages"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_LocalMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "LocalMachineImage defines the machine image for Local Provider.",
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{},
 	}
 }
 

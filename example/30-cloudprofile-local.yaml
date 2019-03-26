@@ -12,3 +12,5 @@ spec:
     constraints:
       dnsProviders:
       - name: unmanaged
+      machineImages:
+      - name: coreos

@@ -604,4 +604,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % else:
       - name: unmanaged
       % endif
+      machineImages:
+      - name: coreos
   % endif

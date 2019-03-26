@@ -98,9 +98,6 @@ kubectl config use-context gardener-dev \
 # Different base64 implementations have different flags
 LOCAL_SEED_KUBECONFIG_B64=$(base64 ${LOCAL_SEED_KUBECONFIG} | tr -d '\r\n')
 
-sed -e "s/name: my-seed/name: local/g" example/25-controllerinstallation.yaml | \
-  kubectl apply -f -
-
 sed -e "s/kubeconfig: base64(kubeconfig-for-seed-cluster)/kubeconfig: ${LOCAL_SEED_KUBECONFIG_B64}/g" example/40-secret-seed-local.yaml | \
   kubectl apply -f -
 

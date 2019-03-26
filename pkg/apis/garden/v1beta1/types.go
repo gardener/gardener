@@ -348,6 +348,8 @@ type LocalProfile struct {
 type LocalConstraints struct {
 	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
 	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
+	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
+	MachineImages []LocalMachineImage `json:"machineImages"`
 }
 
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
@@ -356,6 +358,11 @@ type DNSProviderConstraint struct {
 	Name DNSProvider `json:"name"`
 }
 
+// LocalMachineImage defines the machine image for Local Provider.
+type LocalMachineImage struct {
+	// Name is the name of the image.
+	Name MachineImageName `json:"name"`
+}
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 type KubernetesConstraints struct {
 	// Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.13.1).
@@ -1048,6 +1055,11 @@ type OpenStackWorker struct {
 type Local struct {
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks LocalNetworks `json:"networks"`
+	// MachineImage holds information about the machine image to use for all workers.
+	// It will default to the first image stated in the referenced CloudProfile if no
+	// value has been provided.
+	// +optional
+	MachineImage *LocalMachineImage `json:"machineImage,omitempty"`
 	// Endpoint of the local service.
 	Endpoint string `json:"endpoint"`
 }

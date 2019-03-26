@@ -192,11 +192,15 @@ var _ = Describe("helper", func() {
 			&gardenv1beta1.Shoot{
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
-						Local: &gardenv1beta1.Local{},
+						Local:&gardenv1beta1.Local{
+							MachineImage: &gardenv1beta1.LocalMachineImage{
+								Name: gardenv1beta1.MachineImageName("some-machineimage"),
+							},
+						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("coreos"),
+			gardenv1beta1.MachineImageName("some-machineimage"),
 		),
 	)
 
