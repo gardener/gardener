@@ -17,8 +17,6 @@ package localbotanist
 import (
 	"errors"
 
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/gardener/gardener/pkg/operation"
 )
 
@@ -35,7 +33,6 @@ func New(o *operation.Operation) (*LocalBotanist, error) {
 	}
 	vb.APIServerAddress = *o.Shoot.Info.Spec.DNS.Domain
 	vb.Shoot.InternalClusterDomain = *o.Shoot.Info.Spec.DNS.Domain + ":31443"
-	vb.APIServerIngresses = []corev1.LoadBalancerIngress{{Hostname: *o.Shoot.Info.Spec.DNS.Domain}}
 	return vb, nil
 }
 

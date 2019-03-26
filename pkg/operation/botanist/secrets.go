@@ -108,8 +108,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
 
-	apiServerIPAddresses, apiServerCertDNSNames = b.appendLoadBalancerIngresses(apiServerIPAddresses, apiServerCertDNSNames)
-
 	if b.Shoot.ExternalClusterDomain != nil {
 		apiServerCertDNSNames = append(apiServerCertDNSNames, *(b.Shoot.Info.Spec.DNS.Domain), *(b.Shoot.ExternalClusterDomain))
 	}
@@ -893,22 +891,6 @@ func (b *Botanist) deployOpenVPNTLSAuthSecret(existingSecretsMap map[string]*cor
 	}
 	b.Secrets[name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, name, corev1.SecretTypeOpaque, data, false)
 	return err
-}
-
-// appendLoadBalancerIngresses takes a list of IP addresses <ipAddresses> and a list of DNS names <dnsNames>
-// and appends all ingresses of the load balancer pointing to the kube-apiserver to the lists.
-func (b *Botanist) appendLoadBalancerIngresses(ipAddresses []net.IP, dnsNames []string) ([]net.IP, []string) {
-	for _, ingress := range b.APIServerIngresses {
-		switch {
-		case ingress.IP != "":
-			ipAddresses = append([]net.IP{net.ParseIP(ingress.IP)}, ipAddresses...)
-		case ingress.Hostname != "":
-			dnsNames = append([]string{ingress.Hostname}, dnsNames...)
-		default:
-			b.Logger.Warnf("Could not add kube-apiserver ingress '%+v' to the certificate's SANs because it does neither contain an IP nor a hostname.", ingress)
-		}
-	}
-	return ipAddresses, dnsNames
 }
 
 func generateOpenVPNTLSAuth() ([]byte, error) {

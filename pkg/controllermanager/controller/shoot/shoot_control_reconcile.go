@@ -100,7 +100,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		deploySecrets = g.Add(flow.Task{
 			Name:         "Deploying Shoot certificates / keys",
 			Fn:           flow.SimpleTaskFn(botanist.DeploySecrets),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
