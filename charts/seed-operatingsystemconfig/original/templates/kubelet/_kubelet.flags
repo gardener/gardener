@@ -33,4 +33,7 @@
 {{- if semverCompare "< 1.11" .Values.kubernetes.version }}
 --feature-gates=PodPriority=true \
 {{- end }}
+{{- if semverCompare "< 1.14" .Values.kubernetes.version }}
+--feature-gates=SupportPodPidsLimit=true \
+{{- end }}
 {{- end -}}

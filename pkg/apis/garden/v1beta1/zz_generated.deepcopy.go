@@ -1742,6 +1742,11 @@ func (in *KubeSchedulerConfig) DeepCopy() *KubeSchedulerConfig {
 func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 	*out = *in
 	in.KubernetesConfig.DeepCopyInto(&out.KubernetesConfig)
+	if in.PodPIDsLimit != nil {
+		in, out := &in.PodPIDsLimit, &out.PodPIDsLimit
+		*out = new(int64)
+		**out = **in
+	}
 	return
 }
 

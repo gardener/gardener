@@ -3692,6 +3692,13 @@ func schema_pkg_apis_garden_v1beta1_KubeletConfig(ref common.ReferenceCallback) 
 							},
 						},
 					},
+					"podPidsLimit": {
+						SchemaProps: spec.SchemaProps{
+							Description: "PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 			},
 		},

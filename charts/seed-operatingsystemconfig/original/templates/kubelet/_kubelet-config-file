@@ -78,6 +78,9 @@ maxOpenFiles: 1000000
 maxPods: 110
 nodeStatusUpdateFrequency: 10s
 podsPerCore: 0
+{{- if .Values.kubernetes.kubelet.podPIDsLimit }}
+podPIDsLimit: {{ .Values.kubernetes.kubelet.podPIDsLimit }}
+{{- end }}
 readOnlyPort: 0
 registryPullQPS: 5
 registryBurst: 10

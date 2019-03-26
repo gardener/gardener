@@ -1452,6 +1452,9 @@ const (
 // KubeletConfig contains configuration settings for the kubelet.
 type KubeletConfig struct {
 	KubernetesConfig `json:",inline"`
+	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
+	// +optional
+	PodPIDsLimit *int64 `json:"podPidsLimit,omitempty"`
 }
 
 // Maintenance contains information about the time window for maintenance operations and which

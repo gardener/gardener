@@ -22,6 +22,7 @@ kubernetes:
     parameters: []
     enableCSI: false
     providerIDProvided: false
+#   podPIDsLimit: 24
     featureGates: {}
 #     CustomResourceValidation: true
 #     RotateKubeletServerCertificate: false

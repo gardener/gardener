@@ -84,6 +84,7 @@ spec:
   #     SomeKubernetesFeature: true
   #   mode: IPVS
   # kubelet:
+  #   podPidsLimit: 10
   #   featureGates:
   #     SomeKubernetesFeature: true
   dns:
