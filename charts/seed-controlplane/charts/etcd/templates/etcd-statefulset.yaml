@@ -85,11 +85,11 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 500m
-            memory: 1000Mi
+            cpu: 200m
+            memory: 500Mi
           limits:
-            cpu: 2500m
-            memory: 3584Mi
+            cpu: 1000m
+            memory: 2560Mi
         volumeMounts:
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
