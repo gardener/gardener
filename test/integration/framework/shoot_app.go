@@ -254,6 +254,8 @@ func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Con
 		return true, nil
 	}, ctx.Done())
 }
+
+// GetCloudProvider returns the cloud provider for the shoot
 func (o *GardenerTestOperation) GetCloudProvider() (v1beta1.CloudProvider, error) {
 	return helper.DetermineCloudProviderInShoot(o.Shoot.Spec.Cloud)
 }
