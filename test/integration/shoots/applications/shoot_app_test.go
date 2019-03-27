@@ -103,6 +103,7 @@ var _ = Describe("Shoot application testing", func() {
 	var (
 		shootGardenerTest   *ShootGardenerTest
 		shootTestOperations *GardenerTestOperation
+		cloudProvider       v1beta1.CloudProvider
 		shootAppTestLogger  *logrus.Logger
 		apiserverLabels     labels.Selector
 		guestBooktpl        *template.Template
@@ -142,6 +143,9 @@ var _ = Describe("Shoot application testing", func() {
 			shootTestOperations, err = NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, shootAppTestLogger, shoot)
 			Expect(err).NotTo(HaveOccurred())
 		}
+		var err error
+		cloudProvider, err = shootTestOperations.GetCloudProvider()
+		Expect(err).NotTo(HaveOccurred())
 
 		apiserverLabels = labels.SelectorFromSet(labels.Set(map[string]string{
 			"app":  "kubernetes",
@@ -273,8 +277,18 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Applying redis chart")
-		err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis")
-		Expect(err).NotTo(HaveOccurred())
+		if cloudProvider == v1beta1.CloudProviderAlicloud {
+			// AliCloud requires a minimum of 20 GB for its PVCs
+			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", map[string]interface{}{"master": map[string]interface{}{
+				"persistence": map[string]interface{}{
+					"size": "20Gi",
+				},
+			}})
+			Expect(err).NotTo(HaveOccurred())
+		} else {
+			err = shootTestOperations.DeployChart(ctx, helmDeployNamespace, chartRepo, "redis", nil)
+			Expect(err).NotTo(HaveOccurred())
+		}
 
 		err = shootTestOperations.WaitUntilStatefulSetIsRunning(ctx, "redis-master", helmDeployNamespace, shootTestOperations.ShootClient)
 		Expect(err).NotTo(HaveOccurred())
@@ -342,8 +356,7 @@ var _ = Describe("Shoot application testing", func() {
 	Context("Network Policy Testing", func() {
 		var (
 			NetworkPolicyTimeout = 1 * time.Minute
-
-			ExecNCOnAPIServer = func(ctx context.Context, host, port string) error {
+			ExecNCOnAPIServer    = func(ctx context.Context, host, port string) error {
 				_, err := shootTestOperations.PodExecByLabel(ctx, apiserverLabels, APIServer,
 					fmt.Sprintf("apt-get update && apt-get -y install netcat && nc -z -w5 %s %s", host, port), shootTestOperations.ShootSeedNamespace(), shootTestOperations.SeedClient)
 
@@ -367,13 +380,6 @@ var _ = Describe("Shoot application testing", func() {
 		ItShouldAllowTrafficTo("shoot etcd-main", "etcd-main-client", "2379")
 		ItShouldAllowTrafficTo("shoot etcd-events", "etcd-events-client", "2379")
 
-		ItShouldBlockTrafficTo("cloud metadata service", "169.254.169.254", "80")
-		ItShouldBlockTrafficTo("seed kubernetes dashboard", "kubernetes-dashboard.kube-system", "443")
-		ItShouldBlockTrafficTo("shoot grafana", "grafana", "3000")
-		ItShouldBlockTrafficTo("shoot kube-controller-manager", "kube-controller-manager", "10252")
-		ItShouldBlockTrafficTo("shoot cloud-controller-manager", "cloud-controller-manager", "10253")
-		ItShouldBlockTrafficTo("shoot machine-controller-manager", "machine-controller-manager", "10258")
-
 		CIt("should allow traffic to the shoot pod range", func(ctx context.Context) {
 			dashboardIP, err := shootTestOperations.GetDashboardPodIP(ctx)
 			Expect(err).NotTo(HaveOccurred())
@@ -384,6 +390,20 @@ var _ = Describe("Shoot application testing", func() {
 			nodeIP, err := shootTestOperations.GetFirstNodeInternalIP(ctx)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ExecNCOnAPIServer(ctx, nodeIP, "10250")).NotTo(HaveOccurred())
+		}, NetworkPolicyTimeout)
+
+		ItShouldBlockTrafficTo("seed kubernetes dashboard", "kubernetes-dashboard.kube-system", "443")
+		ItShouldBlockTrafficTo("shoot grafana", "grafana", "3000")
+		ItShouldBlockTrafficTo("shoot kube-controller-manager", "kube-controller-manager", "10252")
+		ItShouldBlockTrafficTo("shoot cloud-controller-manager", "cloud-controller-manager", "10253")
+		ItShouldBlockTrafficTo("shoot machine-controller-manager", "machine-controller-manager", "10258")
+
+		CIt("should block traffic to the metadataservice", func(ctx context.Context) {
+			if cloudProvider == v1beta1.CloudProviderAlicloud {
+				Expect(ExecNCOnAPIServer(ctx, "100.100.100.200", "80")).NotTo(HaveOccurred())
+			} else {
+				Expect(ExecNCOnAPIServer(ctx, "169.254.169.254", "80")).NotTo(HaveOccurred())
+			}
 		}, NetworkPolicyTimeout)
 	})
 })
