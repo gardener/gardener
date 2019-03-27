@@ -400,9 +400,9 @@ var _ = Describe("Shoot application testing", func() {
 
 		CIt("should block traffic to the metadataservice", func(ctx context.Context) {
 			if cloudProvider == v1beta1.CloudProviderAlicloud {
-				Expect(ExecNCOnAPIServer(ctx, "100.100.100.200", "80")).NotTo(HaveOccurred())
+				Expect(ExecNCOnAPIServer(ctx, "100.100.100.200", "80")).To(HaveOccurred())
 			} else {
-				Expect(ExecNCOnAPIServer(ctx, "169.254.169.254", "80")).NotTo(HaveOccurred())
+				Expect(ExecNCOnAPIServer(ctx, "169.254.169.254", "80")).To(HaveOccurred())
 			}
 		}, NetworkPolicyTimeout)
 	})
