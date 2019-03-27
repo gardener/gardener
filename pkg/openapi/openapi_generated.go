@@ -3444,6 +3444,13 @@ func schema_pkg_apis_garden_v1beta1_HibernationSchedule(ref common.ReferenceCall
 							Format:      "",
 						},
 					},
+					"location": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Location is the time location in which both start and and shall be evaluated.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

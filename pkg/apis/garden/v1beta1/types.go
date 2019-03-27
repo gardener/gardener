@@ -363,6 +363,7 @@ type LocalMachineImage struct {
 	// Name is the name of the image.
 	Name MachineImageName `json:"name"`
 }
+
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 type KubernetesConstraints struct {
 	// Versions is the list of allowed Kubernetes versions for Shoot clusters (e.g., 1.13.1).
@@ -1275,6 +1276,9 @@ type HibernationSchedule struct {
 	// End is a Cron spec at which time a Shoot will be woken up.
 	// +optional
 	End *string `json:"end,omitempty"`
+	// Location is the time location in which both start and and shall be evaluated.
+	// +optional
+	Location *string `json:"location,omitempty"`
 }
 
 // Kubernetes contains the version and configuration variables for the Shoot control plane.

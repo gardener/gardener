@@ -321,6 +321,7 @@ spec:
 #   schedules:
 #   - start: "0 20 * * *" # Start hibernation every day at 8PM
 #     end: "0 6 * * *"    # Stop hibernation every day at 6AM
+#     location: "America/Los_Angeles" # Specify a location for the cron to run in
   % endif
   maintenance:
     timeWindow:

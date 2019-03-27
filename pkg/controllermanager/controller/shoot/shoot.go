@@ -67,7 +67,7 @@ type Controller struct {
 	secrets                       map[string]*corev1.Secret
 	imageVector                   imagevector.ImageVector
 	scheduler                     reconcilescheduler.Interface
-	shootToHibernationCron        map[string]*cron.Cron
+	shootToHibernationCron        map[string]map[string]*cron.Cron
 
 	seedLister                   gardenlisters.SeedLister
 	shootLister                  gardenlisters.ShootLister
@@ -143,7 +143,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 		secrets:                       secrets,
 		imageVector:                   imageVector,
 		scheduler:                     reconcilescheduler.New(nil),
-		shootToHibernationCron:        make(map[string]*cron.Cron),
+		shootToHibernationCron:        make(map[string]map[string]*cron.Cron),
 
 		seedLister:                   seedLister,
 		shootLister:                  shootLister,
