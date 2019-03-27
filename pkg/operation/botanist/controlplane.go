@@ -362,6 +362,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		common.ConfigMapReloaderImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
+		common.AlpineImageName,
 	)
 	if err != nil {
 		return err

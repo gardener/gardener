@@ -61,6 +61,15 @@ spec:
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
+      initContainers:
+      - name: set-iptable-rules
+        image: {{ index .Values.images "alpine" }}
+        command: ['/bin/sh', '-c', 'apk update && apk add iptables && iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP']
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+          privileged: true
       containers:
       - name: prometheus
         image: {{ index .Values.images "prometheus" }}
