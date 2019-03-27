@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -252,6 +254,9 @@ func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Con
 		return true, nil
 	}, ctx.Done())
 }
+func (o *GardenerTestOperation) GetCloudProvider() (v1beta1.CloudProvider, error) {
+	return helper.DetermineCloudProviderInShoot(o.Shoot.Spec.Cloud)
+}
 
 // DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories
 func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload string) error {
@@ -296,7 +301,7 @@ func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm
 }
 
 // DeployChart deploys it on the test shoot
-func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, chartRepoDestination, chartNameToDeploy string) error {
+func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, chartRepoDestination, chartNameToDeploy string, values map[string]interface{}) error {
 	renderer, err := chartrenderer.NewForConfig(o.ShootClient.RESTConfig())
 	if err != nil {
 		return err
@@ -308,7 +313,7 @@ func (o *GardenerTestOperation) DeployChart(ctx context.Context, namespace, char
 	chartApplier := kubernetes.NewChartApplier(renderer, applier)
 
 	chartPathToRender := filepath.Join(chartRepoDestination, chartNameToDeploy)
-	return chartApplier.ApplyChartInNamespace(ctx, chartPathToRender, namespace, chartNameToDeploy, nil, nil)
+	return chartApplier.ApplyChartInNamespace(ctx, chartPathToRender, namespace, chartNameToDeploy, values, nil)
 }
 
 // EnsureDirectories creates the repository directory which holds the repositories.yaml config file
