@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 type cloudConfig struct {
@@ -127,17 +126,7 @@ func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 		"enabled":           true,
 	}
 
-	lessV1_13, _ := utils.CompareVersions(b.ShootVersion(), "<", "v1.13.0")
-	if lessV1_13 {
-		return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
-			common.CSIAttacherImageName,
-			common.CSIDriverRegistrarImageName,
-			common.CSIPluginAlicloudImageName,
-			common.CSIProvisionerImageName,
-		)
-	}
-
-	return b.ImageVector.InjectImages(conf, b.SeedVersion(), b.ShootVersion(),
+	return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
 		common.CSIAttacherImageName,
 		common.CSIPluginAlicloudImageName,
 		common.CSIProvisionerImageName,
