@@ -67,6 +67,15 @@ func GetCondition(conditions []gardencorev1alpha1.Condition, conditionType garde
 	return nil
 }
 
+// GetOrInitCondition tries to retrieve the condition with the given condition type from the given conditions.
+// If the condition could not be found, it returns an initialized condition of the given type.
+func GetOrInitCondition(conditions []gardencorev1alpha1.Condition, conditionType gardencorev1alpha1.ConditionType) gardencorev1alpha1.Condition {
+	if condition := GetCondition(conditions, conditionType); condition != nil {
+		return *condition
+	}
+	return InitCondition(conditionType)
+}
+
 // UpdatedCondition updates the properties of one specific condition.
 func UpdatedCondition(condition gardencorev1alpha1.Condition, status gardencorev1alpha1.ConditionStatus, reason, message string) gardencorev1alpha1.Condition {
 	newCondition := gardencorev1alpha1.Condition{

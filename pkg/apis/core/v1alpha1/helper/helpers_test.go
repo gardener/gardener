@@ -17,6 +17,7 @@ package helper_test
 import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -140,6 +141,27 @@ var _ = Describe("helper", func() {
 				cond := GetCondition(conditions, conditionType)
 
 				Expect(cond).To(BeNil())
+			})
+		})
+
+		Describe("#GetOrInitCondition", func() {
+			It("should get the existing condition", func() {
+				var (
+					c          = gardencorev1alpha1.Condition{Type: "foo"}
+					conditions = []gardencorev1alpha1.Condition{c}
+				)
+
+				Expect(GetOrInitCondition(conditions, "foo")).To(Equal(c))
+			})
+
+			It("should return a new, initialized condition", func() {
+				tmp := Now
+				Now = func() metav1.Time {
+					return metav1.NewTime(time.Unix(0, 0))
+				}
+				defer func() { Now = tmp }()
+
+				Expect(GetOrInitCondition(nil, "foo")).To(Equal(InitCondition("foo")))
 			})
 		})
 
