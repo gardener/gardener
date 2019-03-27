@@ -20,7 +20,7 @@ spec:
         autoScalerMax: 2
       zones: ['EWR1']
   kubernetes:
-    version: 1.13.3
+    version: 1.14.0
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   featureGates:

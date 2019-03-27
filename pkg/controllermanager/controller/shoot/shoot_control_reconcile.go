@@ -138,15 +138,15 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
-		deployKubeAPIServer = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes API server",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady),
-		})
 		deployCloudProviderConfig = g.Add(flow.Task{
 			Name:         "Deploying cloud provider configuration",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudProviderConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployInfrastructure, deployCloudProviderSecret),
+		})
+		deployKubeAPIServer = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes API server",
+			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -166,17 +166,17 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady),
 		})
 		deployCloudControllerManager = g.Add(flow.Task{
 			Name:         "Deploying cloud controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudControllerManager).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, deployKubeAPIServer, deployCloudProviderConfig),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployCloudProviderConfig),
 		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, deployKubeAPIServer, deployCloudProviderConfig, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployCloudProviderConfig, initializeShootClients),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Syncing shoot access credentials to project namespace in Garden",

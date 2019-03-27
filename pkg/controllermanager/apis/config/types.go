@@ -15,10 +15,8 @@
 package config
 
 import (
-	// TODO: Should be k8s.io/component-base/config in the future.
-	apimachineryconfig "k8s.io/apimachinery/pkg/apis/config"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1" // TODO: Should be k8s.io/component-base/config in the future.
-	apiserverconfig "k8s.io/apiserver/pkg/apis/config"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	componentbaseconfig "k8s.io/component-base/config"
 	"k8s.io/klog"
 )
 
@@ -29,7 +27,7 @@ type ControllerManagerConfiguration struct {
 	metav1.TypeMeta
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the gardener-apiserver.
-	ClientConnection apimachineryconfig.ClientConnectionConfiguration
+	ClientConnection componentbaseconfig.ClientConnectionConfiguration
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration
 	// LeaderElection defines the configuration of leader election client.
@@ -254,7 +252,7 @@ type DiscoveryConfiguration struct {
 // LeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
 type LeaderElectionConfiguration struct {
-	apiserverconfig.LeaderElectionConfiguration
+	componentbaseconfig.LeaderElectionConfiguration
 	// LockObjectNamespace defines the namespace of the lock object.
 	LockObjectNamespace string
 	// LockObjectName defines the lock object name.

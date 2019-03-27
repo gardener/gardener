@@ -15,12 +15,11 @@
 package v1alpha1
 
 import (
-	// TODO: Should be k8s.io/component-base/config/v1alpha1 in the future.
-	apimachineryconfigv1alpha1 "k8s.io/apimachinery/pkg/apis/config/v1alpha1" // TODO: Should be k8s.io/component-base/config/v1alpha1 in the future.
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	apiserverconfigv1alpha1 "k8s.io/apiserver/pkg/apis/config/v1alpha1"
-	"k8s.io/klog"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	componentbaseconfigv1alpha1 "k8s.io/component-base/config/v1alpha1"
+	"k8s.io/klog"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -30,7 +29,7 @@ type ControllerManagerConfiguration struct {
 	metav1.TypeMeta `json:",inline"`
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the apiserver.
-	ClientConnection apimachineryconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection"`
+	ClientConnection componentbaseconfigv1alpha1.ClientConnectionConfiguration `json:"clientConnection"`
 	// Controllers defines the configuration of the controllers.
 	Controllers ControllerManagerControllerConfiguration `json:"controllers"`
 	// LeaderElection defines the configuration of leader election client.
@@ -257,7 +256,7 @@ type DiscoveryConfiguration struct {
 // LeaderElectionConfiguration defines the configuration of leader election
 // clients for components that can run with leader election enabled.
 type LeaderElectionConfiguration struct {
-	apiserverconfigv1alpha1.LeaderElectionConfiguration `json:",inline"`
+	componentbaseconfigv1alpha1.LeaderElectionConfiguration `json:",inline"`
 	// LockObjectNamespace defines the namespace of the lock object.
 	LockObjectNamespace string `json:"lockObjectNamespace"`
 	// LockObjectName defines the lock object name.

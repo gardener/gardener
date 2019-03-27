@@ -26,7 +26,7 @@ import (
 	informers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	listers "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/labels"
@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	quotaMetricNames = [6]v1.ResourceName{
+	quotaMetricNames = [6]corev1.ResourceName{
 		garden.QuotaMetricCPU,
 		garden.QuotaMetricGPU,
 		garden.QuotaMetricMemory,
@@ -127,7 +127,7 @@ func (q *QuotaValidator) ValidateInitialization() error {
 }
 
 // Admit checks that the requested Shoot resources are within the quota limits.
-func (q *QuotaValidator) Admit(a admission.Attributes) error {
+func (q *QuotaValidator) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if q.readyFunc == nil {
 		q.AssignReadyFunc(func() bool {
@@ -256,7 +256,7 @@ func (q *QuotaValidator) Admit(a admission.Attributes) error {
 	return nil
 }
 
-func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]v1.ResourceName, error) {
+func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota) (*[]corev1.ResourceName, error) {
 	allocatedResources, err := q.determineAllocatedResources(quota, shoot)
 	if err != nil {
 		return nil, err
@@ -266,7 +266,7 @@ func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota)
 		return nil, err
 	}
 
-	exceededMetrics := make([]v1.ResourceName, 0)
+	exceededMetrics := make([]corev1.ResourceName, 0)
 	for _, metric := range quotaMetricNames {
 		if _, ok := quota.Spec.Metrics[metric]; !ok {
 			continue
@@ -281,14 +281,14 @@ func (q *QuotaValidator) isQuotaExceeded(shoot garden.Shoot, quota garden.Quota)
 	return nil, nil
 }
 
-func (q *QuotaValidator) determineAllocatedResources(quota garden.Quota, shoot garden.Shoot) (v1.ResourceList, error) {
+func (q *QuotaValidator) determineAllocatedResources(quota garden.Quota, shoot garden.Shoot) (corev1.ResourceList, error) {
 	shoots, err := q.findShootsReferQuota(quota, shoot)
 	if err != nil {
 		return nil, err
 	}
 
 	// Collect the resources which are allocated according to the shoot specs
-	allocatedResources := make(v1.ResourceList)
+	allocatedResources := make(corev1.ResourceList)
 	for _, s := range shoots {
 		shootResources, err := q.getShootResources(s)
 		if err != nil {
@@ -311,7 +311,7 @@ func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.S
 		secretBindings   []garden.SecretBinding
 	)
 
-	namespace := v1.NamespaceAll
+	namespace := corev1.NamespaceAll
 	if quota.Spec.Scope == garden.QuotaScopeProject {
 		namespace = shoot.Namespace
 	}
@@ -344,20 +344,20 @@ func (q *QuotaValidator) findShootsReferQuota(quota garden.Quota, shoot garden.S
 	return shootsReferQuota, nil
 }
 
-func (q *QuotaValidator) determineRequiredResources(allocatedResources v1.ResourceList, shoot garden.Shoot) (v1.ResourceList, error) {
+func (q *QuotaValidator) determineRequiredResources(allocatedResources corev1.ResourceList, shoot garden.Shoot) (corev1.ResourceList, error) {
 	shootResources, err := q.getShootResources(shoot)
 	if err != nil {
 		return nil, err
 	}
 
-	requiredResources := make(v1.ResourceList)
+	requiredResources := make(corev1.ResourceList)
 	for _, metric := range quotaMetricNames {
 		requiredResources[metric] = sumQuantity(allocatedResources[metric], shootResources[metric])
 	}
 	return requiredResources, nil
 }
 
-func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (v1.ResourceList, error) {
+func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (corev1.ResourceList, error) {
 	cloudProfile, err := q.cloudProfileLister.Get(shoot.Spec.Cloud.Profile)
 	if err != nil {
 		return nil, apierrors.NewBadRequest("could not find referenced cloud profile")
@@ -370,7 +370,7 @@ func (q *QuotaValidator) getShootResources(shoot garden.Shoot) (v1.ResourceList,
 
 	var (
 		countLB      int64 = 1
-		resources          = make(v1.ResourceList)
+		resources          = make(corev1.ResourceList)
 		workers            = getShootWorkerResources(shoot, cloudProvider, *cloudProfile)
 		machineTypes       = getMachineTypes(cloudProvider, *cloudProfile)
 		volumeTypes        = getVolumeTypes(cloudProvider, *cloudProfile)

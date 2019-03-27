@@ -367,7 +367,7 @@ func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
 	}
 
 	// Delete all ClusterRoleBindings with label "garden.sapcloud.io/role=vpa"
-	if err := k8sClient.Kubernetes().Rbac().ClusterRoleBindings().DeleteCollection(
+	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}

@@ -63,7 +63,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"allowPrivilegedContainers": *b.Shoot.Info.Spec.Kubernetes.AllowPrivilegedContainers,
 		}
 		kubeProxyConfig = map[string]interface{}{
-			"kubeconfig": kubeProxySecret.Data["kubeconfig"],
+			"kubeconfig":        kubeProxySecret.Data["kubeconfig"],
+			"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			"podAnnotations": map[string]interface{}{
 				"checksum/secret-kube-proxy": b.CheckSums["kube-proxy"],
 			},

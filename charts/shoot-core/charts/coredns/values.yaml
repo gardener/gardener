@@ -47,7 +47,7 @@ configmap:
         fallthrough in-addr.arpa ip6.arpa
     - name: prometheus
       parameters: 0.0.0.0:9153
-    - name: proxy
+    - name: forward
       parameters: . /etc/resolv.conf
     - name: cache
       parameters: 30

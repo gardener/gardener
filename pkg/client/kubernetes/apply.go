@@ -19,17 +19,17 @@ import (
 	"context"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached"
+	memcache "k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/yaml"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func newControllerClient(config *rest.Config, options client.Options) (client.Client, error) {
@@ -62,7 +62,7 @@ func NewApplierForConfig(config *rest.Config) (*Applier, error) {
 		return nil, err
 	}
 
-	cachedDiscoveryClient := cached.NewMemCacheClient(discoveryClient)
+	cachedDiscoveryClient := memcache.NewMemCacheClient(discoveryClient)
 	return NewApplierInternal(config, cachedDiscoveryClient)
 }
 

@@ -253,7 +253,7 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 		// Check if the status indicates that an operation is processing and mark it as "aborted".
 		if shoot.Status.LastOperation != nil && shoot.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateProcessing {
 			newShoot.Status.LastOperation.State = gardencorev1alpha1.LastOperationStateAborted
-			if _, err := c.k8sGardenClient.Garden().Garden().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
+			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Shoots(newShoot.Namespace).UpdateStatus(newShoot); err != nil {
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}

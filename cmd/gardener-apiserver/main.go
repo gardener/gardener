@@ -21,8 +21,9 @@ import (
 
 	"github.com/gardener/gardener/cmd/gardener-apiserver/app"
 	"github.com/gardener/gardener/pkg/apiserver/features"
+
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/apiserver/pkg/util/logs"
+	"k8s.io/component-base/logs"
 )
 
 func init() {

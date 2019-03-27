@@ -112,7 +112,7 @@ func (d *DNSHostedZone) ValidateInitialization() error {
 }
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
-func (d *DNSHostedZone) Admit(a admission.Attributes) error {
+func (d *DNSHostedZone) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if d.readyFunc == nil {
 		d.AssignReadyFunc(func() bool {

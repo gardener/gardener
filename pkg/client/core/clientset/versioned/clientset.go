@@ -12,8 +12,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Core() corev1alpha1.CoreV1alpha1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -25,12 +23,6 @@ type Clientset struct {
 
 // CoreV1alpha1 retrieves the CoreV1alpha1Client
 func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
-	return c.coreV1alpha1
-}
-
-// Deprecated: Core retrieves the default version of CoreClient.
-// Please explicitly pick a version.
-func (c *Clientset) Core() corev1alpha1.CoreV1alpha1Interface {
 	return c.coreV1alpha1
 }
 

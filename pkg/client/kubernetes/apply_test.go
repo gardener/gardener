@@ -25,16 +25,16 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/discovery/cached"
+	memcache "k8s.io/client-go/discovery/cached/memory"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/rest"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -88,7 +88,7 @@ func newTestApplier(c client.Client, discovery discovery.DiscoveryInterface) *ku
 	defer func() {
 		kubernetes.NewControllerClient = tmp
 	}()
-	cachedDiscoveryClient := cached.NewMemCacheClient(discovery)
+	cachedDiscoveryClient := memcache.NewMemCacheClient(discovery)
 	kubernetes.NewControllerClient = func(config *rest.Config, options client.Options) (client.Client, error) {
 		return c, nil
 	}

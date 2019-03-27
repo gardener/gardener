@@ -1,6 +1,7 @@
 global:
   podNetwork: 1.2.3.4/24
 kubeconfig: dummy-b64-data-here
+kubernetesVersion: 1.11.2
 featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false

@@ -59,8 +59,3 @@ var _ clientset.Interface = &Clientset{}
 func (c *Clientset) ExtensionsV1alpha1() extensionsv1alpha1.ExtensionsV1alpha1Interface {
 	return &fakeextensionsv1alpha1.FakeExtensionsV1alpha1{Fake: &c.Fake}
 }
-
-// Extensions retrieves the ExtensionsV1alpha1Client
-func (c *Clientset) Extensions() extensionsv1alpha1.ExtensionsV1alpha1Interface {
-	return &fakeextensionsv1alpha1.FakeExtensionsV1alpha1{Fake: &c.Fake}
-}

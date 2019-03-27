@@ -12,8 +12,6 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	GardenV1beta1() gardenv1beta1.GardenV1beta1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Garden() gardenv1beta1.GardenV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -25,12 +23,6 @@ type Clientset struct {
 
 // GardenV1beta1 retrieves the GardenV1beta1Client
 func (c *Clientset) GardenV1beta1() gardenv1beta1.GardenV1beta1Interface {
-	return c.gardenV1beta1
-}
-
-// Deprecated: Garden retrieves the default version of GardenClient.
-// Please explicitly pick a version.
-func (c *Clientset) Garden() gardenv1beta1.GardenV1beta1Interface {
 	return c.gardenV1beta1
 }
 

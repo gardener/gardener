@@ -59,8 +59,3 @@ var _ clientset.Interface = &Clientset{}
 func (c *Clientset) GardenV1beta1() gardenv1beta1.GardenV1beta1Interface {
 	return &fakegardenv1beta1.FakeGardenV1beta1{Fake: &c.Fake}
 }
-
-// Garden retrieves the GardenV1beta1Client
-func (c *Clientset) Garden() gardenv1beta1.GardenV1beta1Interface {
-	return &fakegardenv1beta1.FakeGardenV1beta1{Fake: &c.Fake}
-}

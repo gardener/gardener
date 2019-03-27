@@ -6,10 +6,10 @@
 core/v1/LimitRange
 core/v1/ResourceQuota
 core/v1/ServiceAccount
-extensions/v1beta1/Ingress
-extensions/v1beta1/PodSecurityPolicy
+{{ include "ingressversion" . }}/Ingress
+{{ include "podsecuritypolicyversion" .}}/PodSecurityPolicy
 {{ include "networkpolicyversion" . }}/NetworkPolicy
-policy/v1beta1/PodDisruptionBudget
+{{ include "poddisruptionbudgetversion" . }}/PodDisruptionBudget
 {{ include "rbacversion" . }}/ClusterRole
 {{ include "rbacversion" . }}/ClusterRoleBinding
 {{ include "rbacversion" . }}/Role

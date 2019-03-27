@@ -200,7 +200,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -219,7 +219,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -233,7 +233,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -245,7 +245,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -256,7 +256,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -268,7 +268,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: "disallowed-user"}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -300,7 +300,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -332,7 +332,7 @@ var _ = Describe("resourcereferencemanager", func() {
 				user := &user.DefaultInfo{Name: allowedUser}
 				attrs := admission.NewAttributesRecord(&secretBinding, nil, garden.Kind("SecretBinding").WithVersion("version"), secretBinding.Namespace, secretBinding.Name, garden.Resource("secretbindings").WithVersion("version"), "", admission.Create, false, user)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -345,7 +345,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -363,7 +363,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -373,7 +373,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -386,7 +386,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&seed, nil, garden.Kind("Seed").WithVersion("version"), "", seed.Name, garden.Resource("seeds").WithVersion("version"), "", admission.Create, false, nil)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -403,7 +403,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				Expect(shoot.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(shoot.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
@@ -417,7 +417,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 			})
@@ -429,7 +429,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -441,7 +441,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -453,7 +453,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -465,7 +465,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).To(HaveOccurred())
 			})
@@ -477,7 +477,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(project.Spec.CreatedBy).To(Equal(&rbacv1.Subject{
@@ -492,7 +492,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(project.Spec.Owner).To(Equal(&rbacv1.Subject{
@@ -507,7 +507,7 @@ var _ = Describe("resourcereferencemanager", func() {
 
 				attrs := admission.NewAttributesRecord(&project, nil, garden.Kind("Project").WithVersion("version"), project.Namespace, project.Name, garden.Resource("projects").WithVersion("version"), "", admission.Create, false, defaultUserInfo)
 
-				err := admissionHandler.Admit(attrs)
+				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(project.Spec.Members).To(ContainElement(Equal(rbacv1.Subject{

@@ -159,12 +159,12 @@ func ToSelectableFields(shoot *garden.Shoot) fields.Set {
 }
 
 // GetAttrs returns labels and fields of a given object for filtering purposes.
-func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, bool, error) {
+func GetAttrs(obj runtime.Object) (labels.Set, fields.Set, error) {
 	shoot, ok := obj.(*garden.Shoot)
 	if !ok {
-		return nil, nil, false, fmt.Errorf("not a shoot")
+		return nil, nil, fmt.Errorf("not a shoot")
 	}
-	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), false, nil
+	return labels.Set(shoot.ObjectMeta.Labels), ToSelectableFields(shoot), nil
 }
 
 // SeedTriggerFunc matches correct seed when watching.

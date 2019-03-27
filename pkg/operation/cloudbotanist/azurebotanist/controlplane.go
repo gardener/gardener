@@ -82,6 +82,17 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 		string(b.Shoot.Secret.Data[ClientSecret]),
 	)
 
+	// https://github.com/kubernetes/kubernetes/pull/70866
+	wantsV2BackoffMode, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.14")
+	if err != nil {
+		return "", err
+	}
+
+	if wantsV2BackoffMode {
+		cloudProviderConfig += fmt.Sprintf(`
+cloudProviderBackoffMode: v2`)
+	}
+
 	return cloudProviderConfig, nil
 }
 

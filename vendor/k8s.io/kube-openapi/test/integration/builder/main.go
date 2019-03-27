@@ -18,14 +18,17 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/emicklei/go-restful"
 	"github.com/go-openapi/spec"
 	"k8s.io/kube-openapi/pkg/builder"
 	"k8s.io/kube-openapi/pkg/common"
+	"k8s.io/kube-openapi/pkg/util"
 	"k8s.io/kube-openapi/test/integration/pkg/generated"
 )
 
@@ -58,16 +61,6 @@ func main() {
 	if serr != nil {
 		log.Fatalf("ERROR: %s", serr.Error())
 	}
-	// Generate the definitions for the passed type names to put in the final spec.
-	// Note that in reality one should run BuildOpenAPISpec to build the entire spec. We
-	// separate the steps of building Paths and building Definitions here, because we
-	// only have a simple WebService which doesn't wire the definitions up.
-	definitionSwagger, err := builder.BuildOpenAPIDefinitionsForResources(config, defNames...)
-	if err != nil {
-		log.Fatalf("ERROR: %s", err.Error())
-	}
-	// Copy the generated definitions into the final swagger.
-	swagger.Definitions = definitionSwagger.Definitions
 
 	// Marshal the swagger spec into JSON, then write it out.
 	specBytes, err := json.MarshalIndent(swagger, " ", " ")
@@ -109,8 +102,34 @@ func createOpenAPIBuilderConfig() *common.Config {
 // for testing.
 func createWebServices() []*restful.WebService {
 	w := new(restful.WebService)
-	// Define a dummy GET /test endpoint
-	w = w.Route(w.GET("test").
-		To(func(*restful.Request, *restful.Response) {}))
+	w.Route(buildRouteForType(w, "dummytype", "Foo"))
+	w.Route(buildRouteForType(w, "dummytype", "Bar"))
+	w.Route(buildRouteForType(w, "dummytype", "Baz"))
+	w.Route(buildRouteForType(w, "dummytype", "Waldo"))
+	w.Route(buildRouteForType(w, "listtype", "AtomicList"))
+	w.Route(buildRouteForType(w, "listtype", "MapList"))
+	w.Route(buildRouteForType(w, "listtype", "SetList"))
 	return []*restful.WebService{w}
+}
+
+// Implements OpenAPICanonicalTypeNamer
+var _ = util.OpenAPICanonicalTypeNamer(&typeNamer{})
+
+type typeNamer struct {
+	pkg  string
+	name string
+}
+
+func (t *typeNamer) OpenAPICanonicalTypeName() string {
+	return fmt.Sprintf("k8s.io/kube-openapi/test/integration/testdata/%s.%s", t.pkg, t.name)
+}
+
+func buildRouteForType(ws *restful.WebService, pkg, name string) *restful.RouteBuilder {
+	namer := typeNamer{
+		pkg:  pkg,
+		name: name,
+	}
+	return ws.GET(fmt.Sprintf("test/%s/%s", pkg, strings.ToLower(name))).
+		To(func(*restful.Request, *restful.Response) {}).
+		Writes(&namer)
 }

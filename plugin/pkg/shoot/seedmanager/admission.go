@@ -98,7 +98,7 @@ func (s *SeedManager) ValidateInitialization() error {
 // Admit tries to find an adequate Seed cluster for the given cloud provider profile and region,
 // and writes the name into the Shoot specification. It also ensures that protected Seeds are
 // only usable by Shoots in the garden namespace.
-func (s *SeedManager) Admit(a admission.Attributes) error {
+func (s *SeedManager) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if s.readyFunc == nil {
 		s.AssignReadyFunc(func() bool {

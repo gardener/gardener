@@ -229,7 +229,7 @@ types:
         scalar: string
     - name: data
       type:
-        namedType: io.k8s.apimachinery.pkg.runtime.RawExtension
+        untyped: {}
     - name: kind
       type:
         scalar: string
@@ -753,7 +753,7 @@ types:
         scalar: string
     - name: data
       type:
-        namedType: io.k8s.apimachinery.pkg.runtime.RawExtension
+        untyped: {}
     - name: kind
       type:
         scalar: string
@@ -1124,7 +1124,7 @@ types:
         scalar: string
     - name: data
       type:
-        namedType: io.k8s.apimachinery.pkg.runtime.RawExtension
+        untyped: {}
     - name: kind
       type:
         scalar: string
@@ -9901,7 +9901,7 @@ types:
     fields:
     - name: object
       type:
-        namedType: io.k8s.apimachinery.pkg.runtime.RawExtension
+        untyped: {}
     - name: type
       type:
         scalar: string

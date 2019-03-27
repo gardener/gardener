@@ -28,7 +28,6 @@ import (
 	"k8s.io/helm/pkg/engine"
 	"k8s.io/helm/pkg/manifest"
 	chartapi "k8s.io/helm/pkg/proto/hapi/chart"
-	"k8s.io/helm/pkg/tiller"
 	"k8s.io/helm/pkg/timeconv"
 )
 
@@ -150,7 +149,7 @@ func (r *chartRenderer) renderResources(ch *chartapi.Chart, values chartutil.Val
 	}
 
 	manifests := manifest.SplitManifests(files)
-	manifests = tiller.SortByKind(manifests)
+	manifests = SortByKind(manifests)
 
 	return &RenderedChart{
 		ChartName: ch.Metadata.Name,

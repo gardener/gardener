@@ -77,7 +77,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   github.com/gardener/gardener/pkg/controllermanager/apis \
   github.com/gardener/gardener/pkg/controllermanager/apis \
   "config:v1alpha1" \
-  --extra-peer-dirs=github.com/gardener/gardener/pkg/controllermanager/apis/config,github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/apis/config,k8s.io/apimachinery/pkg/apis/config/v1alpha1,k8s.io/apiserver/pkg/apis/config,k8s.io/apiserver/pkg/apis/config/v1alpha1 \
+  --extra-peer-dirs=github.com/gardener/gardener/pkg/controllermanager/apis/config,github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1,k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/conversion,k8s.io/apimachinery/pkg/runtime,k8s.io/component-base/config,k8s.io/component-base/config/v1alpha1 \
   -h <(headers)
 
 # Machine API clients
