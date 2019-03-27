@@ -219,8 +219,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	}
 
 	// Initialize conditions based on the current status.
-	newConditions := gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, gardencorev1alpha1helper.InitCondition(gardencorev1alpha1.ControllerInstallationValid), gardencorev1alpha1helper.InitCondition(gardenv1beta1.SeedAvailable))
-	conditionSeedAvailable := newConditions[0]
+	conditionSeedAvailable := gardencorev1alpha1helper.GetOrInitCondition(seed.Status.Conditions, gardenv1beta1.SeedAvailable)
 
 	seedObj, err := seedpkg.New(c.k8sGardenClient, c.k8sGardenInformers.Garden().V1beta1(), seed)
 	if err != nil {
@@ -263,12 +262,13 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	return nil
 }
 
-func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, conditions ...gardencorev1alpha1.Condition) error {
-	if !gardencorev1alpha1helper.ConditionsNeedUpdate(seed.Status.Conditions, conditions) {
+func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, updateConditions ...gardencorev1alpha1.Condition) error {
+	newConditions := gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
+	if !gardencorev1alpha1helper.ConditionsNeedUpdate(seed.Status.Conditions, newConditions) {
 		return nil
 	}
 
-	seed.Status.Conditions = conditions
+	seed.Status.Conditions = newConditions
 
 	_, err := c.updater.UpdateSeedStatus(seed)
 	if err != nil {
