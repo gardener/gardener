@@ -5,10 +5,30 @@ set -e
 # For the test step concourse will set the following environment variables:
 # SOURCE_PATH - path to component repository root directory.
 
+# not all platforms support readlink -f
+# SOURCE_PATH must be set, and treat it as absolute path
+rlink=""
+set +e
+readlink -f /tmp >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+  # do not support readlink -f, so need alternative
+  rlink="readlink -f"
+fi
+set -e
+
+
 if [[ -z "${SOURCE_PATH}" ]]; then
-  export SOURCE_PATH="$(readlink -f "$(dirname ${0})/..")"
+  if [ -z "$rlink" ]; then
+    echo "ERROR: system does not support 'readlink -f' and SOURCE_PATH not set, exiting." >&2
+    exit 1
+  fi
+  export SOURCE_PATH="$($rlink "$(dirname ${0})/..")"
 else
-  export SOURCE_PATH="$(readlink -f "${SOURCE_PATH}")"
+  if [ -z "$rlink" ]; then
+    echo "warning: system does not support 'readlink -f', treating SOURCE_PATH as absolute path with symlinks resolved." >&2
+  else
+    export SOURCE_PATH="$($rlink ${SOURCE_PATH})"
+  fi
 fi
 
 # The `go <cmd>` commands requires to see the target repository to be part of a
