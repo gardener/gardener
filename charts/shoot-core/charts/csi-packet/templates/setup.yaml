@@ -1,0 +1,77 @@
+ikind: ClusterRole
+apiVersion:  {{ include "rbacversion" . }}
+metadata:
+  name: packet.com:csi-node-sa
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "update"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["list", "watch", "create", "update", "patch"]
+  - apiGroups:
+    - policy
+    - extensions
+    resourceNames:
+    - gardener.kube-system.csi-disk-plugin-packet
+    resources:
+    - podsecuritypolicies
+    verbs:
+    - use
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: csi-node-sa
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+
+---
+
+kind: ClusterRoleBinding
+apiVersion: {{ include "rbacversion" . }}
+metadata:
+  name: packet.com:csi-node-sa
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+subjects:
+  - kind: ServiceAccount
+    name: csi-node-sa
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: packet.com:csi-node-sa
+  apiGroup: rbac.authorization.k8s.io
+
+---
+
+apiVersion: {{ include "podsecuritypolicyversion" .}}
+kind: PodSecurityPolicy
+metadata:
+  name: gardener.kube-system.csi-disk-plugin-packet
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+spec:
+  privileged: true
+  allowPrivilegeEscalation: true
+  volumes:
+  - hostPath
+  - secret
+  hostNetwork: true
+  allowedHostPaths:
+  - pathPrefix: /var/lib/kubelet
+  - pathPrefix: /dev
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  readOnlyRootFilesystem: false

@@ -11,7 +11,10 @@ tlsAuth: dummy-b64-data
 # used to generate the nodeNetwork runtime, if it is not available at config time
 # to use, comment out the nodeNetwork key above, and create this
 # it should save the cidr to the file /init-config/nodeNetwork
+# you can pass command, args or both
+# do not forget that they must be in array format
 #initContainers:
 #- image: image-repository:image-tag
 #  command: ["sh","-c", "ip a eth0 > /init-config/nodeNetwork"]
+#  args: ["arg0","arg1"]
 

@@ -464,6 +464,9 @@ const (
 	// AlicloudControllerManagerImageName is the name of the AlicloudControllerManager image.
 	AlicloudControllerManagerImageName = "alicloud-controller-manager"
 
+	// PacketControllerManagerImageName is the name of the PacketControllerManager image.
+	PacketControllerManagerImageName = "packet-controller-manager"
+
 	// CSI Images
 
 	// CSIAttacherImageName is the name of csi attacher - https://github.com/kubernetes-csi/external-attacher
@@ -488,6 +491,11 @@ const (
 	CSIPluginAlicloudImageName = "csi-plugin-alicloud"
 	// CSIPluginAlicloud is the name of Alicloud CSI Plugin
 	CSIPluginAlicloud = "csi-disk-plugin-alicloud"
+
+	// CSIPluginPacketImageName is the name of csi plugin for Packet - https://github.com/packethost/csi-packet
+	CSIPluginPacketImageName = "packet-storage-interface"
+	// CSIPluginPacket is the name of Packet CSI Plugin
+	CSIPluginPacket = "csi-disk-plugin-packet"
 
 	// CSIPluginController is the name of CSI plugin controller
 	CSIPluginController = "csi-plugin-controller"

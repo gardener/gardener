@@ -171,6 +171,8 @@ func (s *Shoot) GetK8SNetworks() *gardencorev1alpha1.K8SNetworks {
 		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderAlicloud:
 		return &s.Info.Spec.Cloud.Alicloud.Networks.K8SNetworks
+	case gardenv1beta1.CloudProviderPacket:
+		return &s.Info.Spec.Cloud.Packet.Networks.K8SNetworks
 	}
 	return nil
 }
@@ -244,6 +246,8 @@ func (s *Shoot) GetZones() []string {
 		return s.Info.Spec.Cloud.OpenStack.Zones
 	case gardenv1beta1.CloudProviderAlicloud:
 		return s.Info.Spec.Cloud.Alicloud.Zones
+	case gardenv1beta1.CloudProviderPacket:
+		return s.Info.Spec.Cloud.Packet.Zones
 	}
 	return nil
 }
@@ -319,7 +323,7 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 
 // UsesCSI returns whether the given shoot uses CSI volume plugins.
 func (s *Shoot) UsesCSI() bool {
-	return s.CloudProvider == gardenv1beta1.CloudProviderAlicloud
+	return s.CloudProvider == gardenv1beta1.CloudProviderAlicloud || s.CloudProvider == gardenv1beta1.CloudProviderPacket
 }
 
 // ComputeAPIServerURL takes a boolean value identifying whether the component connecting to the API server

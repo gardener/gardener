@@ -21,3 +21,4 @@ The reason for that is that we require CRD status subresources for the extension
 | GCP            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         |
 | OpenStack      | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         |
 | Alicloud       | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         |
+| Packet         | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         |

@@ -1,0 +1,8 @@
+images:
+  csi-node-driver-registrar: image-repository:image-tag
+  packet-storage-interface: image-repository:image-tag
+credential:
+  apiToken: apiToken
+  projectID: projectID
+kubernetesVersion: v1.13.0
+enabled: false

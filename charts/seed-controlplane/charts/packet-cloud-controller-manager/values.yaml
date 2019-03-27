@@ -1,0 +1,12 @@
+replicas: 1
+environment: []
+podAnnotations: {}
+images:
+  packet-controller-manager: image-repository
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 300Mi
