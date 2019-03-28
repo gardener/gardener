@@ -37,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/discovery"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -176,15 +177,12 @@ type Applier struct {
 	discovery discovery.CachedDiscoveryInterface
 }
 
-// Kind is a type alias for a k8s Kind of ObjectKind.
-type Kind string
-
 // MergeFunc determines how oldOj is merged into new oldObj.
 type MergeFunc func(newObj, oldObj *unstructured.Unstructured)
 
 // ApplierOptions contains options used by the Applier.
 type ApplierOptions struct {
-	MergeFuncs map[Kind]MergeFunc
+	MergeFuncs map[schema.GroupKind]MergeFunc
 }
 
 // ApplierInterface is an interface which describes declarative operations to apply multiple

@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -386,9 +388,12 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]
 		}
+		vpaGK    = schema.GroupKind{Group: "autoscaling.k8s.io", Kind: "VerticalPodAutoscaler"}
+		issuerGK = schema.GroupKind{Group: "certmanager.k8s.io", Kind: "ClusterIssuer"}
 	)
-	applierOptions.MergeFuncs["ClusterIssuer"] = retainStatusInformation
-	applierOptions.MergeFuncs["VerticalPodAutoscaler"] = retainStatusInformation
+
+	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
+	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
 	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), common.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
