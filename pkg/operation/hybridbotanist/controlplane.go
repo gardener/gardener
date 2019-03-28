@@ -380,6 +380,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		common.HyperkubeImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
+		common.AlpineImageName,
 	)
 	if err != nil {
 		return err
