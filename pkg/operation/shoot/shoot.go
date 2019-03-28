@@ -65,8 +65,8 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 
 		SeedNamespace: ComputeTechnicalID(projectName, shoot),
 
-		InternalClusterDomain: constructInternalClusterDomain(shoot.Name, projectName, internalDomain),
-		ExternalClusterDomain: constructExternalClusterDomain(shoot),
+		InternalClusterDomain: ConstructInternalClusterDomain(shoot.Name, projectName, internalDomain),
+		ExternalClusterDomain: ConstructExternalClusterDomain(shoot),
 
 		IsHibernated:           helper.IsShootHibernated(shoot),
 		WantsClusterAutoscaler: false,
@@ -74,7 +74,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 	shootObj.CloudConfigMap = make(map[string]CloudConfig, len(shootObj.GetWorkerNames()))
 
 	// Determine information about external domain for shoot cluster.
-	externalDomain, err := constructExternalDomain(context.TODO(), k8sGardenClient.Client(), shoot, secret, defaultDomains)
+	externalDomain, err := ConstructExternalDomain(context.TODO(), k8sGardenClient.Client(), shoot, secret, defaultDomains)
 	if err != nil {
 		return nil, err
 	}
@@ -266,22 +266,22 @@ func ComputeTechnicalID(projectName string, shoot *gardenv1beta1.Shoot) string {
 	return fmt.Sprintf("shoot--%s--%s", projectName, shoot.Name)
 }
 
-// constructInternalClusterDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster
+// ConstructInternalClusterDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster
 // which is only used for internal purposes (all kubeconfigs except the one which is received by the
 // user will only talk with the kube-apiserver via this domain). In case the given <internalDomain>
 // already contains "internal", the result is constructed as "api.<shootName>.<shootProject>.<internalDomain>."
 // In case it does not, the word "internal" will be appended, resulting in
 // "api.<shootName>.<shootProject>.internal.<internalDomain>".
-func constructInternalClusterDomain(shootName, shootProject, internalDomain string) string {
+func ConstructInternalClusterDomain(shootName, shootProject, internalDomain string) string {
 	if strings.Contains(internalDomain, common.InternalDomainKey) {
 		return fmt.Sprintf("api.%s.%s.%s", shootName, shootProject, internalDomain)
 	}
 	return fmt.Sprintf("api.%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
 }
 
-// Determine the external Shoot cluster domain, i.e. the domain which will be put into the Kubeconfig handed out
-// to the user.
-func constructExternalClusterDomain(shoot *gardenv1beta1.Shoot) *string {
+// ConstructExternalClusterDomain constructs the external Shoot cluster domain, i.e. the domain which will be put
+// into the Kubeconfig handed out to the user.
+func ConstructExternalClusterDomain(shoot *gardenv1beta1.Shoot) *string {
 	if shoot.Spec.DNS.Domain == nil {
 		return nil
 	}
@@ -290,15 +290,17 @@ func constructExternalClusterDomain(shoot *gardenv1beta1.Shoot) *string {
 	return &domain
 }
 
-func constructExternalDomain(ctx context.Context, client client.Client, shoot *gardenv1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.DefaultDomain) (*ExternalDomain, error) {
-	externalClusterDomain := constructExternalClusterDomain(shoot)
+// ConstructExternalDomain constructs an object containing all relevant information of the external domain that
+// shall be used for a shoot cluster - based on the configuration of the Garden cluster and the shoot itself.
+func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *gardenv1beta1.Shoot, shootSecret *corev1.Secret, defaultDomains []*garden.DefaultDomain) (*ExternalDomain, error) {
+	externalClusterDomain := ConstructExternalClusterDomain(shoot)
 	if externalClusterDomain == nil {
 		return nil, nil
 	}
 
 	var (
 		externalDomain = &ExternalDomain{Domain: *shoot.Spec.DNS.Domain}
-		defaultDomain  = shootUsesDefaultDomain(*externalClusterDomain, defaultDomains)
+		defaultDomain  = garden.DomainIsDefaultDomain(*externalClusterDomain, defaultDomains)
 	)
 
 	switch {
@@ -323,13 +325,4 @@ func constructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	}
 
 	return externalDomain, nil
-}
-
-func shootUsesDefaultDomain(domain string, defaultDomains []*garden.DefaultDomain) *garden.DefaultDomain {
-	for _, defaultDomain := range defaultDomains {
-		if strings.HasSuffix(domain, defaultDomain.Domain) {
-			return defaultDomain
-		}
-	}
-	return nil
 }

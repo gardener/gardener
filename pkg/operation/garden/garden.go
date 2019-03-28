@@ -36,12 +36,12 @@ func New(projectLister gardenlisters.ProjectLister, namespace string, secrets ma
 		return nil, err
 	}
 
-	internalDomain, err := getInternalDomain(secrets)
+	internalDomain, err := GetInternalDomain(secrets)
 	if err != nil {
 		return nil, err
 	}
 
-	defaultDomains, err := getDefaultDomains(secrets)
+	defaultDomains, err := GetDefaultDomains(secrets)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,9 @@ func New(projectLister gardenlisters.ProjectLister, namespace string, secrets ma
 	}, nil
 }
 
-func getDefaultDomains(secrets map[string]*corev1.Secret) ([]*DefaultDomain, error) {
+// GetDefaultDomains finds all the default domain secrets within the given map and returns a list of
+// objects that contains all relevant information about the default domains.
+func GetDefaultDomains(secrets map[string]*corev1.Secret) ([]*DefaultDomain, error) {
 	var defaultDomains []*DefaultDomain
 
 	for key, secret := range secrets {
@@ -74,8 +76,13 @@ func getDefaultDomains(secrets map[string]*corev1.Secret) ([]*DefaultDomain, err
 	return defaultDomains, nil
 }
 
-func getInternalDomain(secrets map[string]*corev1.Secret) (*InternalDomain, error) {
-	internalDomainSecret := secrets[common.GardenRoleInternalDomain]
+// GetInternalDomain finds the internal domain secret within the given map and returns the object
+// that contains all relevant information about the internal domain.
+func GetInternalDomain(secrets map[string]*corev1.Secret) (*InternalDomain, error) {
+	internalDomainSecret, ok := secrets[common.GardenRoleInternalDomain]
+	if !ok {
+		return nil, fmt.Errorf("missing secret with key %s", common.GardenRoleInternalDomain)
+	}
 
 	provider, domain, err := common.GetDomainInfoFromAnnotations(internalDomainSecret.Annotations)
 	if err != nil {
@@ -87,6 +94,16 @@ func getInternalDomain(secrets map[string]*corev1.Secret) (*InternalDomain, erro
 		Provider:   provider,
 		SecretData: internalDomainSecret.Data,
 	}, nil
+}
+
+// DomainIsDefaultDomain identifies whether a the given domain is a default domain.
+func DomainIsDefaultDomain(domain string, defaultDomains []*DefaultDomain) *DefaultDomain {
+	for _, defaultDomain := range defaultDomains {
+		if strings.HasSuffix(domain, defaultDomain.Domain) {
+			return defaultDomain
+		}
+	}
+	return nil
 }
 
 // ReadGardenSecrets reads the Kubernetes Secrets from the Garden cluster which are independent of Shoot clusters.

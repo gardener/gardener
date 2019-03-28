@@ -15,12 +15,16 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -651,6 +655,59 @@ var _ = Describe("kubernetes", func() {
 			Entry("everything", nodes, labels.Everything(), nodes),
 			Entry("nothing", nodes, labels.Nothing(), nil),
 			Entry("a labels", nodes, labels.SelectorFromSet(labels.Set(aLabels)), []*corev1.Node{n1ANode, n2ANode}),
-			Entry("b labels", nodes, labels.SelectorFromSet(labels.Set(bLabels)), []*corev1.Node{n1BNode, n2BNode}))
+			Entry("b labels", nodes, labels.SelectorFromSet(labels.Set(bLabels)), []*corev1.Node{n1BNode, n2BNode}),
+		)
+
+		Describe("#WaitUntilResourceDeleted", func() {
+			var (
+				namespace = "bar"
+				name      = "foo"
+				key       = Key(namespace, name)
+				configMap = &corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: namespace,
+						Name:      name,
+					},
+				}
+			)
+
+			It("should wait until the resource is deleted", func() {
+				ctx := context.TODO()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, key, configMap),
+					c.EXPECT().Get(ctx, key, configMap),
+					c.EXPECT().Get(ctx, key, configMap).Return(apierrors.NewNotFound(schema.GroupResource{}, name)),
+				)
+
+				Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(Succeed())
+			})
+
+			It("should timeout", func() {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				gomock.InOrder(
+					c.EXPECT().Get(ctx, key, configMap),
+					c.EXPECT().Get(ctx, key, configMap).DoAndReturn(func(_ context.Context, _ client.ObjectKey, _ runtime.Object) error {
+						cancel()
+						return nil
+					}),
+				)
+
+				Expect(WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)).To(HaveOccurred())
+			})
+
+			It("return an unexpected error", func() {
+				ctx := context.TODO()
+
+				expectedErr := fmt.Errorf("unexpected")
+				c.EXPECT().Get(ctx, key, configMap).Return(expectedErr)
+
+				err := WaitUntilResourceDeleted(ctx, c, configMap, time.Microsecond)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(BeIdenticalTo(expectedErr))
+			})
+		})
 	})
 })

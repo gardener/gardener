@@ -136,7 +136,11 @@ func (b *Botanist) deleteDNSProvider(ctx context.Context, name string) error {
 	if err := b.K8sSeedClient.Client().Delete(ctx, &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
-	return kutil.WaitUntilResourceDeleted(ctx, b.K8sSeedClient.Client(), &dnsv1alpha1.DNSProvider{}, b.Shoot.SeedNamespace, name, 5*time.Second, 2*time.Minute)
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	return kutil.WaitUntilResourceDeleted(ctx, b.K8sSeedClient.Client(), &dnsv1alpha1.DNSProvider{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}, 5*time.Second)
 }
 
 func (b *Botanist) deployDNSEntry(ctx context.Context, name, dnsName, target string) error {
@@ -187,7 +191,11 @@ func (b *Botanist) deleteDNSEntry(ctx context.Context, name string) error {
 	if err := b.K8sSeedClient.Client().Delete(ctx, &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
-	return kutil.WaitUntilResourceDeleted(ctx, b.K8sSeedClient.Client(), &dnsv1alpha1.DNSEntry{}, b.Shoot.SeedNamespace, name, 5*time.Second, 2*time.Minute)
+
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	return kutil.WaitUntilResourceDeleted(ctx, b.K8sSeedClient.Client(), &dnsv1alpha1.DNSEntry{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: name}}, 5*time.Second)
 }
 
 func (b *Botanist) deleteLegacyTerraformDNSResources(ctx context.Context, purpose string) error {

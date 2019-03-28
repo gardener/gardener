@@ -88,20 +88,28 @@ func ObjectMeta(namespaceOrName string, nameOpt ...string) metav1.ObjectMeta {
 
 // WaitUntilResourceDeleted deletes the given resource and then waits until it has been deleted. It respects the
 // given interval and timeout.
-func WaitUntilResourceDeleted(ctx context.Context, client client.Client, obj runtime.Object, namespace, name string, interval, timeout time.Duration) error {
-	return wait.PollImmediate(interval, timeout, func() (bool, error) {
-		if err := client.Get(ctx, Key(namespace, name), obj); err != nil {
+func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj runtime.Object, interval time.Duration) error {
+	key, err := client.ObjectKeyFromObject(obj)
+	if err != nil {
+		return err
+	}
+
+	return wait.PollImmediateUntil(interval, func() (bool, error) {
+		if err := c.Get(ctx, key, obj); err != nil {
 			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
 			return false, err
 		}
 		return false, nil
-	})
+	}, ctx.Done())
 }
 
 // WaitUntilResourceDeletedWithDefaults deletes the given resource and then waits until it has been deleted. It
 // uses a default interval and timeout
-func WaitUntilResourceDeletedWithDefaults(ctx context.Context, client client.Client, obj runtime.Object, namespace, name string) error {
-	return WaitUntilResourceDeleted(ctx, client, obj, namespace, name, 5*time.Second, 10*time.Minute)
+func WaitUntilResourceDeletedWithDefaults(ctx context.Context, c client.Client, obj runtime.Object) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	return WaitUntilResourceDeleted(ctx, c, obj, 5*time.Second)
 }
