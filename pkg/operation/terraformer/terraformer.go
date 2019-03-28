@@ -336,6 +336,7 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 	)
 
 	activeDeadlineSeconds := int64(1800)
+	terminationGracePeriodSeconds := int64(1800)
 	shCommand := fmt.Sprintf("sh /terraform.sh %s", scriptName)
 	if scriptName != "validate" {
 		shCommand += " 2>&1; [[ -f /success ]] && exit 0 || exit 1"
@@ -373,6 +374,7 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 			},
 		},
 		ServiceAccountName: serviceAccountName,
+		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 		Volumes: []corev1.Volume{
 			{
 				Name: tfVolume,
