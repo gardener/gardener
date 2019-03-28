@@ -114,7 +114,10 @@ func (b *Botanist) deleteNamespace(name string) error {
 // DeployCloudMetadataServiceNetworkPolicy creates a global network policy that allows access to the meta-data service only from
 // the cloud-controller-manager and the kube-controller-manager
 func (b *Botanist) DeployCloudMetadataServiceNetworkPolicy() error {
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cloud-metadata-service"), b.Shoot.SeedNamespace, "cloud-metadata-service", nil, nil)
+	values := map[string]interface{}{
+		"cloudProvider": b.Seed.CloudProvider,
+	}
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "cloud-metadata-service"), b.Shoot.SeedNamespace, "cloud-metadata-service", values, nil)
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.

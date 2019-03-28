@@ -39,7 +39,11 @@ spec:
         - {{ .Values.seedNetworks.pod }}
         - {{ .Values.seedNetworks.node }}
         - {{ .Values.seedNetworks.service }}
+        {{- if eq .Values.cloudProvider "alicloud" }}
+        - 100.100.100.200/32
+        {{- else }}
         - 169.254.169.254/32
+        {{- end }}
   podSelector:
     matchLabels:
       app: kubernetes
