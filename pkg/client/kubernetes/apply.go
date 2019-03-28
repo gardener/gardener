@@ -19,6 +19,8 @@ import (
 	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +30,8 @@ import (
 	memcache "k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+
+	corev1 "k8s.io/api/core/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -76,10 +80,6 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 		return err
 	}
 
-	if !c.discovery.Fresh() {
-		c.discovery.Invalidate()
-	}
-
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(desired.GroupVersionKind())
 	err = c.client.Get(ctx, key, current)
@@ -103,8 +103,8 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 
 // DefaultApplierOptions contains options for common k8s objects, e.g. Service, ServiceAccount.
 var DefaultApplierOptions = ApplierOptions{
-	MergeFuncs: map[Kind]MergeFunc{
-		"Service": func(newObj, oldObj *unstructured.Unstructured) {
+	MergeFuncs: map[schema.GroupKind]MergeFunc{
+		corev1.SchemeGroupVersion.WithKind("Service").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
 			// We do not want to overwrite a Service's `.spec.clusterIP' or '.spec.ports[*].nodePort' values.
 			oldPorts := oldObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
 			newPorts := newObj.Object["spec"].(map[string]interface{})["ports"].([]interface{})
@@ -131,7 +131,7 @@ var DefaultApplierOptions = ApplierOptions{
 			newObj.Object["spec"].(map[string]interface{})["clusterIP"] = oldObj.Object["spec"].(map[string]interface{})["clusterIP"]
 			newObj.Object["spec"].(map[string]interface{})["ports"] = ports
 		},
-		"ServiceAccount": func(newObj, oldObj *unstructured.Unstructured) {
+		corev1.SchemeGroupVersion.WithKind("ServiceAccount").GroupKind(): func(newObj, oldObj *unstructured.Unstructured) {
 			// We do not want to overwrite a ServiceAccount's `.secrets[]` list or `.imagePullSecrets[]`.
 			newObj.Object["secrets"] = oldObj.Object["secrets"]
 			newObj.Object["imagePullSecrets"] = oldObj.Object["imagePullSecrets"]
@@ -139,13 +139,13 @@ var DefaultApplierOptions = ApplierOptions{
 	},
 }
 
-func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeFuncs map[Kind]MergeFunc) error {
+func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeFuncs map[schema.GroupKind]MergeFunc) error {
 	newObj.SetResourceVersion(oldObj.GetResourceVersion())
 
 	// We do not want to overwrite the Finalizers.
 	newObj.Object["metadata"].(map[string]interface{})["finalizers"] = oldObj.Object["metadata"].(map[string]interface{})["finalizers"]
 
-	if merge, ok := mergeFuncs[Kind(newObj.GetKind())]; ok {
+	if merge, ok := mergeFuncs[newObj.GroupVersionKind().GroupKind()]; ok {
 		merge(newObj, oldObj)
 	}
 
