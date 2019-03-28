@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -115,8 +116,8 @@ type ControlInterface interface {
 // implements the documented semantics for ControllerInstallations. updater is the UpdaterInterface used
 // to update the status of ControllerInstallations. You should use an instance returned from NewDefaultControllerInstallationControl() for any
 // scenario other than testing.
-func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardenlisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister) ControlInterface {
-	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister}
+func NewDefaultControllerInstallationControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory, recorder record.EventRecorder, config *config.ControllerManagerConfiguration, seedLister gardenlisters.SeedLister, controllerRegistrationLister gardencorelisters.ControllerRegistrationLister, controllerInstallationLister gardencorelisters.ControllerInstallationLister, gardenNamespace *corev1.Namespace) ControlInterface {
+	return &defaultControllerInstallationControl{k8sGardenClient, k8sGardenInformers, k8sGardenCoreInformers, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace}
 }
 
 type defaultControllerInstallationControl struct {
@@ -128,6 +129,7 @@ type defaultControllerInstallationControl struct {
 	seedLister                   gardenlisters.SeedLister
 	controllerRegistrationLister gardencorelisters.ControllerRegistrationLister
 	controllerInstallationLister gardencorelisters.ControllerInstallationLister
+	gardenNamespace              *corev1.Namespace
 }
 
 func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1alpha1.ControllerInstallation) error {
@@ -183,8 +185,14 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
-	// TODO: Seed controller should maintain a cache of Seed objects and kubernetes clients, chartrenders, whatever is needed
-	k8sSeedClient, err := c.getSeedClient(controllerInstallation)
+	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
+	if err != nil {
+		return err
+	}
+
+	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name, client.Options{
+		Scheme: kubernetes.SeedScheme,
+	})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
@@ -210,7 +218,20 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		return err
 	}
 
-	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, helmDeployment.Values)
+	// Mix-in some standard values for seed.
+	seedValues := map[string]interface{}{
+		"gardener": map[string]interface{}{
+			"garden": map[string]interface{}{
+				"identity": c.gardenNamespace.UID,
+			},
+			"seed": map[string]interface{}{
+				"identity": seed.Name,
+				"region":   seed.Spec.Cloud.Region,
+			},
+		},
+	}
+
+	release, err := chartRenderer.RenderArchive(helmDeployment.Chart, controllerRegistration.Name, namespace.Name, utils.MergeMaps(helmDeployment.Values, seedValues))
 	if err != nil {
 		conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "ChartCannotBeRendered", fmt.Sprintf("Chart rendering process failed: %+v", err))
 		return err
@@ -298,7 +319,14 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		}
 	}()
 
-	k8sSeedClient, err := c.getSeedClient(controllerInstallation)
+	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
+	if err != nil {
+		return err
+	}
+
+	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name, client.Options{
+		Scheme: kubernetes.SeedScheme,
+	})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "SeedNotFound", fmt.Sprintf("Referenced Seed does not exist: %+v", err))
@@ -400,17 +428,6 @@ func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient k
 	}
 
 	return false, nil
-}
-
-func (c *defaultControllerInstallationControl) getSeedClient(controllerInstallation *gardencorev1alpha1.ControllerInstallation) (kubernetes.Interface, error) {
-	// TODO: Seed controller should maintain a cache of Seed objects and kubernetes clients, chartrenders, whatever is needed
-	seed, err := c.seedLister.Get(controllerInstallation.Spec.SeedRef.Name)
-	if err != nil {
-		return nil, err
-	}
-	return kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name, client.Options{
-		Scheme: kubernetes.SeedScheme,
-	})
 }
 
 func objectReferenceToString(o corev1.ObjectReference) string {

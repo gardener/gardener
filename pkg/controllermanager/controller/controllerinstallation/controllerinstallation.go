@@ -29,6 +29,7 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/workqueue"
@@ -67,7 +68,7 @@ type Controller struct {
 }
 
 // NewController instantiates a new ControllerInstallation controller.
-func NewController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+func NewController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, gardenCoreInformerFactory gardencoreinformers.SharedInformerFactory, config *config.ControllerManagerConfiguration, recorder record.EventRecorder, gardenNamespace *corev1.Namespace) *Controller {
 	var (
 		gardenInformer     = gardenInformerFactory.Garden().V1beta1()
 		gardenCoreInformer = gardenCoreInformerFactory.Core().V1alpha1()
@@ -88,7 +89,7 @@ func NewController(k8sGardenClient kubernetes.Interface, gardenInformerFactory g
 		k8sGardenClient:               k8sGardenClient,
 		k8sGardenInformers:            gardenInformerFactory,
 		k8sGardenCoreInformers:        gardenCoreInformerFactory,
-		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenInformerFactory, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister),
+		controllerInstallationControl: NewDefaultControllerInstallationControl(k8sGardenClient, gardenInformerFactory, gardenCoreInformerFactory, recorder, config, seedLister, controllerRegistrationLister, controllerInstallationLister, gardenNamespace),
 		config:                        config,
 		recorder:                      recorder,
 

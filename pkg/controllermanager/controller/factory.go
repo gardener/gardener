@@ -18,8 +18,6 @@ import (
 	"context"
 	"path/filepath"
 
-	"k8s.io/apimachinery/pkg/util/runtime"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
@@ -39,9 +37,12 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/version"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
@@ -116,9 +117,11 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 
 	globalImageVector, err := imagevector.ReadFile(filepath.Join(common.ChartPath, "images.yaml"))
 	runtime.Must(err)
-
 	imageVector, err := imagevector.WithEnvOverride(globalImageVector)
 	runtime.Must(err)
+
+	gardenNamespace := &corev1.Namespace{}
+	runtime.Must(f.k8sGardenClient.Client().Get(context.TODO(), kutil.Key(common.GardenNamespace), gardenNamespace))
 
 	runtime.Must(garden.BootstrapCluster(f.k8sGardenClient, common.GardenNamespace, secrets))
 	logger.Logger.Info("Successfully bootstrapped the Garden cluster.")
@@ -135,7 +138,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		secretBindingController          = secretbindingcontroller.NewSecretBindingController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 		backupInfrastructureController   = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder)
-		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder)
+		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
 	)
 
 	// Initialize the Controller metrics collection.
