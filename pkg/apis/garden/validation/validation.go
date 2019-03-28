@@ -1959,6 +1959,17 @@ func ValidateHibernationCronSpec(seenSpecs sets.String, spec string, fldPath *fi
 	return allErrs
 }
 
+// ValidateHibernationScheduleLocation validates that the location of a HibernationSchedule is correct.
+func ValidateHibernationScheduleLocation(location string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if _, err := time.LoadLocation(location); err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, location, fmt.Sprintf("not a valid location: %v", err)))
+	}
+
+	return allErrs
+}
+
 // ValidateHibernationSchedule validates the correctness of a HibernationSchedule.
 // It checks whether the set start and end time are valid cron specs.
 func ValidateHibernationSchedule(seenSpecs sets.String, schedule *garden.HibernationSchedule, fldPath *field.Path) field.ErrorList {
@@ -1972,6 +1983,9 @@ func ValidateHibernationSchedule(seenSpecs sets.String, schedule *garden.Hiberna
 	}
 	if schedule.End != nil {
 		allErrs = append(allErrs, ValidateHibernationCronSpec(seenSpecs, *schedule.End, fldPath.Child("end"))...)
+	}
+	if schedule.Location != nil {
+		allErrs = append(allErrs, ValidateHibernationScheduleLocation(*schedule.Location, fldPath.Child("location"))...)
 	}
 
 	return allErrs

@@ -1746,7 +1746,7 @@ var _ = Describe("validation", func() {
 		// BEGIN PACKET
 		Context("tests for Packet cloud profiles", func() {
 			var (
-				fldPath         = "packet"
+				fldPath       = "packet"
 				packetProfile *garden.CloudProfile
 			)
 
@@ -1766,7 +1766,7 @@ var _ = Describe("validation", func() {
 								},
 								MachineTypes: machineTypesConstraint,
 								VolumeTypes:  volumeTypesConstraint,
-								Zones: zonesConstraint,
+								Zones:        zonesConstraint,
 							},
 						},
 					},
@@ -2552,6 +2552,19 @@ var _ = Describe("validation", func() {
 		})
 	})
 
+	Describe("#ValidateHibernationScheduleLocation", func() {
+		DescribeTable("validate hibernation schedule location",
+			func(location string, matcher gomegatypes.GomegaMatcher) {
+				Expect(ValidateHibernationScheduleLocation(location, nil)).To(matcher)
+			},
+			Entry("utc location", "UTC", BeEmpty()),
+			Entry("empty location -> utc", "", BeEmpty()),
+			Entry("invalid location", "should not exist", ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type": Equal(field.ErrorTypeInvalid),
+			})))),
+		)
+	})
+
 	Describe("#ValidateHibernationSchedule", func() {
 		DescribeTable("validate schedule",
 			func(seenSpecs sets.String, schedule *garden.HibernationSchedule, matcher gomegatypes.GomegaMatcher) {
@@ -2567,6 +2580,10 @@ var _ = Describe("validation", func() {
 			Entry("invalid end value", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("* * * * *"), End: makeStringPointer("")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal(field.NewPath("end").String()),
+			})))),
+			Entry("invalid location", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("1 * * * *"), End: makeStringPointer("2 * * * *"), Location: makeStringPointer("foo")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal(field.NewPath("location").String()),
 			})))),
 			Entry("equal start and end value", sets.NewString(), &garden.HibernationSchedule{Start: makeStringPointer("* * * * *"), End: makeStringPointer("* * * * *")}, ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeDuplicate),
@@ -4514,8 +4531,8 @@ var _ = Describe("validation", func() {
 		// BEGIN PACKET
 		Context("Packet specific validation", func() {
 			var (
-				fldPath  = "packet"
-				packet *garden.PacketCloud
+				fldPath = "packet"
+				packet  *garden.PacketCloud
 			)
 
 			BeforeEach(func() {

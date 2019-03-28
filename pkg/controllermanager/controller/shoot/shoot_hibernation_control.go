@@ -46,6 +46,28 @@ func getShootHibernationSchedules(shoot *gardenv1beta1.Shoot) []gardenv1beta1.Hi
 	return hibernation.Schedules
 }
 
+// GroupHibernationSchedulesByLocation groups the given HibernationSchedules by their Location.
+//
+// If the Location of a HibernationSchedule is `nil`, it is defaulted to UTC.
+func GroupHibernationSchedulesByLocation(schedules []gardenv1beta1.HibernationSchedule) map[string][]gardenv1beta1.HibernationSchedule {
+	var (
+		locationToSchedules = make(map[string][]gardenv1beta1.HibernationSchedule)
+	)
+
+	for _, schedule := range schedules {
+		var locationID string
+		if schedule.Location != nil {
+			locationID = *schedule.Location
+		} else {
+			locationID = time.UTC.String()
+		}
+
+		locationToSchedules[locationID] = append(locationToSchedules[locationID], schedule)
+	}
+
+	return locationToSchedules
+}
+
 func shootHasHibernationSchedules(shoot *gardenv1beta1.Shoot) bool {
 	return getShootHibernationSchedules(shoot) != nil
 }
@@ -92,8 +114,10 @@ func (c *Controller) shootHibernationDelete(obj interface{}) {
 }
 
 func (c *Controller) deleteShootCron(logger logrus.FieldLogger, key string) {
-	if cr, ok := c.shootToHibernationCron[key]; ok {
-		cr.Stop()
+	if locToCron, ok := c.shootToHibernationCron[key]; ok {
+		for _, cr := range locToCron {
+			cr.Stop()
+		}
 		logger.Debugf("Stopped cron")
 	}
 	delete(c.shootToHibernationCron, key)
@@ -156,29 +180,48 @@ func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key st
 		return nil
 	}
 
-	cr := cron.NewWithLocation(time.UTC)
-	for _, schedule := range schedules {
-		if schedule.Start != nil {
-			start, err := cron.ParseStandard(*schedule.Start)
-			if err != nil {
-				return err
-			}
-
-			cr.Schedule(start, c.shootHibernationJob(logger, client, shoot, true))
+	locationToSchedules := GroupHibernationSchedulesByLocation(schedules)
+	locationIDToCron := make(map[string]*cron.Cron, len(locationToSchedules))
+	for locationID, schedules := range locationToSchedules {
+		location, err := time.LoadLocation(locationID)
+		if err != nil {
+			return err
 		}
 
-		if schedule.End != nil {
-			end, err := cron.ParseStandard(*schedule.End)
-			if err != nil {
-				return err
+		cr := cron.NewWithLocation(location)
+		nowInLocation := time.Now().In(location)
+		cronLogger := logger.WithFields(logrus.Fields{
+			"location":      location,
+			"nowInLocation": nowInLocation.String(),
+		})
+		for _, schedule := range schedules {
+			if schedule.Start != nil {
+				start, err := cron.ParseStandard(*schedule.Start)
+				if err != nil {
+					return err
+				}
+
+				cr.Schedule(start, c.shootHibernationJob(logger, client, shoot, true))
+				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(nowInLocation))
 			}
 
-			cr.Schedule(end, c.shootHibernationJob(logger, client, shoot, false))
-		}
+			if schedule.End != nil {
+				end, err := cron.ParseStandard(*schedule.End)
+				if err != nil {
+					return err
+				}
 
+				cr.Schedule(end, c.shootHibernationJob(logger, client, shoot, false))
+				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(nowInLocation))
+			}
+		}
+		locationIDToCron[locationID] = cr
 	}
-	c.shootToHibernationCron[key] = cr
-	cr.Start()
+	for _, cr := range locationIDToCron {
+		cr.Start()
+	}
+
+	c.shootToHibernationCron[key] = locationIDToCron
 	logger.Debugf("Successfully started hibernation schedule")
 
 	return nil

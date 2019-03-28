@@ -2925,6 +2925,7 @@ func Convert_garden_Hibernation_To_v1beta1_Hibernation(in *garden.Hibernation, o
 func autoConvert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule(in *HibernationSchedule, out *garden.HibernationSchedule, s conversion.Scope) error {
 	out.Start = (*string)(unsafe.Pointer(in.Start))
 	out.End = (*string)(unsafe.Pointer(in.End))
+	out.Location = (*string)(unsafe.Pointer(in.Location))
 	return nil
 }
 
@@ -2936,6 +2937,7 @@ func Convert_v1beta1_HibernationSchedule_To_garden_HibernationSchedule(in *Hiber
 func autoConvert_garden_HibernationSchedule_To_v1beta1_HibernationSchedule(in *garden.HibernationSchedule, out *HibernationSchedule, s conversion.Scope) error {
 	out.Start = (*string)(unsafe.Pointer(in.Start))
 	out.End = (*string)(unsafe.Pointer(in.End))
+	out.Location = (*string)(unsafe.Pointer(in.Location))
 	return nil
 }
 

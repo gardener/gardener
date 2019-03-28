@@ -1460,6 +1460,11 @@ func (in *HibernationSchedule) DeepCopyInto(out *HibernationSchedule) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Location != nil {
+		in, out := &in.Location, &out.Location
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
