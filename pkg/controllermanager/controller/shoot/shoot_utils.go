@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"fmt"
+	"strconv"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -88,7 +89,11 @@ func StatusLabelTransform(status Status) func(*gardenv1beta1.Shoot) (*gardenv1be
 }
 
 func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
-	_, ignore := annotations[common.ShootIgnore]
+	ignore := false
+	if value, ok := annotations[common.ShootIgnore]; ok {
+		ignore, _ = strconv.ParseBool(value)
+	}
+
 	return respectSyncPeriodOverwrite != nil && *respectSyncPeriodOverwrite && ignore
 }
 

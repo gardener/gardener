@@ -161,12 +161,12 @@ var _ = Describe("deleteconfirmation", func() {
 			})
 
 			Context("no ignore annotation", func() {
-				It("should reject if the ignore-shoot annotation is set field", func() {
+				It("should reject if the ignore-shoot annotation is set", func() {
 					attrs = admission.NewAttributesRecord(nil, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Delete, false, nil)
 
 					shoot.Annotations = map[string]string{
 						common.ConfirmationDeletion: "true",
-						common.ShootIgnore:          "",
+						common.ShootIgnore:          "true",
 					}
 					Expect(shootStore.Add(&shoot)).NotTo(HaveOccurred())
 
