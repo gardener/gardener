@@ -24,7 +24,6 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,6 +85,18 @@ func (b *Botanist) WaitUntilEtcdReady() error {
 
 		b.Logger.Info("Waiting until the both etcd statefulsets are ready...")
 		return false, nil
+	})
+}
+
+// WaitUntilEtcdStatefulsetDeleted waits until the etcd statefulsets get deleted.
+func (b *Botanist) WaitUntilEtcdStatefulsetDeleted(role string) error {
+	return wait.Poll(5*time.Second, 300*time.Second, func() (bool, error) {
+		b.Logger.Infof("Waiting until the etcd-%s statefulset get deleted...", role)
+		_, err := b.K8sSeedClient.Kubernetes().AppsV1().StatefulSets(b.Shoot.SeedNamespace).Get(fmt.Sprintf("etcd-%s", role), metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, err
 	})
 }
 

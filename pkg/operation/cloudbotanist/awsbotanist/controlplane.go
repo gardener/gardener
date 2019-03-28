@@ -151,6 +151,18 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 	}
 }
 
+// GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
+func (b *AWSBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"name":        "etcd-fast",
+		"capacity":    "80Gi",
+		"provisioner": "kubernetes.io/aws-ebs",
+		"parameters": map[string]interface{}{
+			"type": "gp2",
+		},
+	}
+}
+
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	bucketName := "bucketName"

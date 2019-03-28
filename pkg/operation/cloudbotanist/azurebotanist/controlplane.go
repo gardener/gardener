@@ -176,6 +176,19 @@ func (b *AzureBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 	return nil, nil
 }
 
+// GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
+func (b *AzureBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"name":        "etcd-fast",
+		"capacity":    "33Gi",
+		"provisioner": "kubernetes.io/azure-disk",
+		"parameters": map[string]interface{}{
+			"storageaccounttype": "Premium_LRS",
+			"kind":               "managed",
+		},
+	}
+}
+
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	var (
