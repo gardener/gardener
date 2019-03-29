@@ -3,15 +3,15 @@ groups:
   rules:
   - alert: KubeSchedulerDown
     expr: absent(up{job="kube-scheduler"} == 1)
-    for: 5m
+    for: 15m
     labels:
-      job: kube-scheduler
       service: kube-scheduler
       severity: critical
       type: seed
+      visibility: all
     annotations:
-      description: There is no running K8S scheduler. New pods are not being assigned to nodes.
-      summary: Scheduler is down
+      description: New pods are not being assigned to nodes.
+      summary: Kube Scheduler is down.
 
   ### Scheduling latency ###
   - record: cluster:scheduler_e2e_scheduling_latency_seconds:quantile

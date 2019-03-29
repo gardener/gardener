@@ -1,49 +1,52 @@
 groups:
-- name: node-explorer.rules
+- name: node-exporter.rules
   rules:
   - alert: NodeExporterDown
     expr: absent(up{job="node-exporter"} == 1)
-    for: 15m
+    for: 1h
     labels:
-      job: node-exporter
       service: node-exporter
       severity: warning
       type: shoot
+      visibility: operator
     annotations:
-      summary: Kubelet node_exporter cannot be scraped
-      description: Prometheus could not scrape a {{ $labels.job }} for more than one
-        hour.
+      summary: Kubelet node_exporter cannot be scraped.
+      description: Prometheus could not scrape a node_exporter for more than one hour.
 
   - alert: K8SNodeOutOfDisk
     expr: kube_node_status_condition{condition="OutOfDisk", status="true"} == 1
+    for: 10m
     labels:
       service: node-exporter
       severity: critical
       type: shoot
+      visibility: all
     annotations:
-      summary: Kube Node ran out of disk space.
+      summary: Node ran out of disk space.
       description: Node {{ $labels.node }} has run out of disk space.
 
   - alert: K8SNodeMemoryPressure
     expr: kube_node_status_condition{condition="MemoryPressure", status="true"} == 1
-    for: 4m
+    for: 10m
     labels:
       service: node-exporter
       severity: warning
       type: shoot
+      visibility: all
     annotations:
-      summary: Kube Node is under memory pressure.
+      summary: Node is under memory pressure.
       description: Node {{ $labels.node }} is under memory pressure.
 
   - alert: K8SNodeDiskPressure
     expr: kube_node_status_condition{condition="DiskPressure", status="true"} == 1
-    for: 4m
+    for: 15m
     labels:
       service: node-exporter
       severity: warning
       type: shoot
+      visibility: all
     annotations:
-      summary: Kube Node is under disk pressure.
+      summary: Node is under disk pressure.
       description: Node {{ $labels.node }} is under disk pressure.
 
   # common metrics
@@ -54,6 +57,8 @@ groups:
   - record: instance:fd_utilization
     expr: process_open_fds / process_max_fds
 
+  # TODO: Remove/ Review alerts below. Maybe change to dashboards?
+
   # alert if the root filesystem will be full in 4 hours
   - alert: VMRootfsFullIn4Hours
     expr: predict_linear(node_filesystem_free{mountpoint="/"}[1h], 4 * 3600) < 1024
@@ -62,23 +67,24 @@ groups:
       service: node-exporter
       severity: warning
       type: shoot
+      visibility: owner
     annotations:
-      description: Root filesystem's device on instance {{ $labels.instance }} will
-        fill in next 4 hours
-      summary: node's root fs is filling up
+      description: Root filesystem's device on instance {{ $labels.instance }} will fill in next 4 hours
+      summary: Node's root fs is filling up
 
   # alert if the root filesystem is full
   - alert: VMRootfsFull
     expr: node_filesystem_free{mountpoint="/"} < 1024
-    for: 5m
+    for: 1h
     labels:
       service: node-exporter
       severity: critical
       type: shoot
+      visibility: all
     annotations:
-      description: Root filesystem's device on instance {{ $labels.instance }} is
-        full!
-      summary: node's root fs is full'
+      description: Root filesystem device on instance {{ $labels.instance }} is almost full!
+      summary: Node's root filesystem is almost full
+
   - alert: VMConntrackTableFull
     expr: instance:conntrack_entries_usage:percent > 50
     for: 10m
@@ -90,6 +96,7 @@ groups:
       description: The nf_conntrack table is {{ $value }}% full.
       summary: Number of tracked connections is near the limit
   - alert: VMConntrackTableFull
+    for: 15m
     expr: instance:conntrack_entries_usage:percent > 90
     labels:
       service: node-exporter
@@ -133,7 +140,7 @@ groups:
     for: 10m
     labels:
       service: node-exporter
-      severity: critical
+      severity: warning
       type: shoot
     annotations:
       description: '{{ $labels.job }} instance {{ $labels.instance }} will exhaust in file descriptors soon'
@@ -157,7 +164,7 @@ groups:
     for: 5m
     labels:
       service: node-exporter
-      severity: severe
+      severity: warning
       type: shoot
     annotations:
       description: instance {{ $labels.instance }} has is using {{ value }}% of its swap memory

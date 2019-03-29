@@ -6,7 +6,7 @@ templates:
 # The root route on which each incoming alert enters.
 route:
   # The labels by which incoming alerts are grouped together.
-  group_by: ['type', 'cluster']
+  group_by: ['cluster']
 
   # When a new group of alerts is created by an incoming alert, wait at
   # least 'group_wait' to send the initial notification.
@@ -21,7 +21,7 @@ route:
 
   # If an alert has successfully been sent, wait 'repeat_interval' to
   # resend them.
-  repeat_interval: 12h
+  repeat_interval: 48h
 
   # Send alerts by default to nowhere
   receiver: dev-null
@@ -29,38 +29,54 @@ route:
   routes:
   # email only for critical and blocker
   - match_re:
-      severity: ^(critical|blocker)$
+      visibility: ^(all|operator)$
+      severity: ^(blocker|critical|info)$
     receiver: email-kubernetes-ops
 
+
 inhibit_rules:
-# Apply inhibition if the alertname is the same.
+# Apply inhibition if the alert name is the same.
 - source_match:
     severity: critical
   target_match:
     severity: warning
   equal: ['alertname', 'service', 'cluster']
+
 # Stop all alerts for type=shoot if there are VPN problems.
 - source_match:
     service: vpn
   target_match_re:
     type: shoot
-    severity: ^(critical|warning)$
   equal: ['type', 'cluster']
-# Stop warning and critical alerts, when there is a blocker -
-# no workers, no etcd main etc.
+
+# Stop warning and critical alerts if there is a blocker - no workers nodes, no etcd main etc.
 - source_match:
     severity: blocker
   target_match_re:
     severity: ^(critical|warning)$
-  equal: ['type', 'cluster']
-# If Kube API Server is down do not fire alerts for apiserver-connectivity-check.
+  equal: ['cluster']
+
+# If the API server is down inhibit no worker nodes alert. No worker nodes depends on kube-state-metrics which depends on the API server.
 - source_match:
     service: kube-apiserver
-    severity: critical
-    job: kube-apiserver
-  target_match:
-    service: apiserver-connectivity-check
-  equal: ['type', 'cluster']
+  target_match_re:
+    service: nodes
+  equal: ['cluster']
+
+# If API server is down inhibit kube-state-metrics alerts.
+- source_match:
+    service: kube-apiserver
+  target_match_re:
+    severity: info
+  equal: ['cluster']
+
+# No Worker nodes depends on kube-state-metrics. Inhibit no worker nodes if kube-state-metrics is down.
+- source_match:
+    service: kube-state-metrics-shoot
+  target_match_re:
+    service: nodes
+  equal: ['cluster']
+
 
 
 receivers:

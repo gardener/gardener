@@ -1,0 +1,65 @@
+digraph gardener {
+    rankdir=LR;
+    graph [fontsize=16, splines=true];
+    labelloc="t";
+    label=<<FONT POINT-SIZE="30">Alert Inhibition Graph</FONT>>;
+
+    subgraph cluster_3 {
+        label = "Legend";
+        color = black;
+        a [style=invis];
+        b [style=invis];
+        a -> b [label="Inhibition Flow", fontsize=14];
+        Blocker [style=filled, fillcolor="#ffcccc"];
+        Critical [style=filled, fillcolor="#ccccff"];
+        Info [style=filled, fillcolor="#cffffc"]
+        Warning [style=filled, fillcolor="#ffffcc"];
+        Blocker -> {Critical, Warning} [label="Inhibits"]
+
+    }
+
+    subgraph cluster_2 {
+        label="Shoot";
+        forcelabels=true;
+        ApiServerUnreachableViaKubernetesService [style=filled, fillcolor="#ccccff"];
+        CoreDNSDown [style=filled, fillcolor="#ccccff"];
+        K8SNodeOutOfDisk [style=filled, fillcolor="#ccccff"];
+        KubeletTooManyOpenFileDescriptorsShoot [style=filled, fillcolor="#ccccff"];
+        NoWorkerNodes[style=filled, fillcolor="#ffcccc"];
+        VMConntrackTableFull [style=filled, fillcolor="#ccccff"];
+        VMFileDescriptorsExhaustionClose [style=filled, fillcolor="#ccccff"];
+        VMRootfsFull [style=filled, fillcolor="#ccccff"];
+        VPNConnectionDown [style=filled, fillcolor="#ccccff"];
+        VPNProbeAPIServerProxyFailed [style=filled, fillcolor="#ccccff"];
+        VPNShootNoPods [style=filled, fillcolor="#ccccff"];
+    }
+
+    subgraph cluster_1 {
+        label="Control Plane";
+        ApiServerNotReachable [style=filled, fillcolor="#ffcccc"];
+        CloudControllerManagerDown [style=filled, fillcolor="#ccccff"];
+        ClusterAutoscallerDown [style=filled, fillcolor="#ccccff"];
+        KubeApiserverDown [style=filled, fillcolor="#ffcccc"];
+        KubeApiServerTooManyOpenFileDescriptors [style=filled, fillcolor="#ccccff"];
+        KubeControllerManagerDown [style=filled, fillcolor="#ccccff"];
+        KubeEtcd3EventsNoLeader [style=filled, fillcolor="#ccccff"];
+        KubeEtcd3MainNoLeader [style=filled, fillcolor="#ccccff"];
+        KubeEtcdEventsDown[style=filled, fillcolor="#ccccff"];
+        KubeEtcdMainDown[style=filled, fillcolor="#ffcccc"];
+        KubePersistentVolumeUsageCritical [style=filled, fillcolor="#ccccff"];
+        KubeSchedulerDown [style=filled, fillcolor="#ccccff"];
+        KubeStateMetricsDownSeed [style=filled, fillcolor="#ccccff" label="KubeStateMetricsSeedDown"];
+        KubeStateMetricsShootDown [style=filled, fillcolor="#cffffc" label="KubeStateMetricsShootDown"];
+        MachineControllerManagerDown [style=filled, fillcolor="#ccccff"];
+        PrometheusDown [style=filled, fillcolor="#ccccff"];
+
+    }
+
+    ApiServerNotReachable -> {KubeStateMetricsShootDown};
+
+    KubeApiserverDown -> {KubeStateMetricsShootDown};
+
+    KubeStateMetricsShootDown -> {NoWorkerNodes};
+
+    VPNConnectionDown -> {ApiServerUnreachableViaKubernetesService,CoreDNSDown,K8SNodeOutOfDisk,VMRootfsFull,KubeletTooManyOpenFileDescriptorsShoot,VMConntrackTableFull,VMFileDescriptorsExhaustionClose,VPNShootNoPods,VPNProbeAPIServerProxyFailed};
+}

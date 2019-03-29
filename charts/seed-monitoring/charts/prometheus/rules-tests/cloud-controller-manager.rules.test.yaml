@@ -1,0 +1,22 @@
+rule_files:
+- ../rules/cloud-controller-manager.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="cloud-controller-manager"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: CloudControllerManagerDown
+    exp_alerts:
+    - exp_labels:
+        service: cloud-controller-manager
+        severity: critical
+        type: seed
+        visibility: all
+      exp_annotations:
+        description: All infrastruture specific operations cannot be completed (e.g. creating loadbalancers or persistent volumes).
+        summary: Cloud controller manager is down.

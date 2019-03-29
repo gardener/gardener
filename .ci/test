@@ -51,6 +51,9 @@ fi
 # Install Ginkgo (test framework) to be able to execute the tests.
 go get -u github.com/onsi/ginkgo/ginkgo
 
+# Install Prometheus mock test tool (promtool)
+go get -u github.com/prometheus/prometheus/cmd/promtool
+
 ###############################################################################
 
 COVER_FLAG=""
@@ -59,3 +62,10 @@ if [[ ! -z "$COVERAGE" ]]; then
 fi
 
 ginkgo ${COVER_FLAG} -r cmd pkg plugin
+
+###############################################################################
+
+echo "Executing Prometheus alert tests"
+pushd $SOURCE_PATH/charts/seed-monitoring/charts/prometheus > /dev/null
+  promtool test rules rules-tests/*test.yaml
+popd > /dev/null

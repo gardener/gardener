@@ -1,0 +1,22 @@
+rule_files:
+- ../rules/coredns.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="coredns"}'
+    values: '0+0x40'
+  alert_rule_test:
+  - eval_time: 20m
+    alertname: CoreDNSDown
+    exp_alerts:
+    - exp_labels:
+        service: kube-dns
+        severity: critical
+        type: shoot
+        visibility: all
+      exp_annotations:
+        description: CoreDNS could not be found. Cluster DNS resolution will not work.
+        summary: CoreDNS is down

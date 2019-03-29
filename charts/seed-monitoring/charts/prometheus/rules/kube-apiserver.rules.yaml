@@ -1,29 +1,29 @@
-#ALERT KubeApiserverNotHA
-#  IF count(up{job="kube-apiserver"}) <= 1
-#  FOR 15m
-#  LABELS {
-#    service = "k8s",
-#    severity = "warning"
-#  }
-#  ANNOTATIONS {
-#    summary = "API server is not HA",
-#    description = "An API server needs to be HA.",
-#  }
-
 groups:
 - name: kube-apiserver.rules
   rules:
+  - alert: ApiServerNotReachable
+    expr: probe_success{job="blackbox-apiserver"} == 0
+    for: 5m
+    labels:
+      service: kube-apiserver
+      severity: blocker
+      type: seed
+      visibility: all
+    annotations:
+      description: "API server not reachable via external endpoint: {{ $labels.instance }}."
+      summary: API server not reachable (externally).
+
   - alert: KubeApiserverDown
     expr: absent(up{job="kube-apiserver"} == 1)
     for: 5m
     labels:
-      job: kube-apiserver
       service: kube-apiserver
-      severity: critical
+      severity: blocker
       type: seed
+      visibility: operator
     annotations:
-      description: Prometheus failed to scrape API server(s), or all API servers have disappeared from service discovery.
-      summary: API server unreachable
+      description: All API server replicas are down/unreachable, or all API server could not be found.
+      summary: API server unreachable.
   # Some verbs excluded because they are expected to be long-lasting:
   # WATCHLIST is long-poll, CONNECT is `kubectl exec`.
   - alert: KubeApiServerLatency
@@ -33,6 +33,7 @@ groups:
       service: kube-apiserver
       severity: warning
       type: seed
+      visibility: owner
     annotations:
       description: 99th percentile Latency for {{ $labels.verb }} requests to the kube-apiserver is higher than 1s.
       summary: Kubernetes apiserver latency is high
@@ -50,23 +51,24 @@ groups:
     labels:
       quantile: "0.5"
   # TODO: DRY?
-  - alert: KubeTooManyOpenFiles
-    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds > 50
-    for: 10m
+  - alert: KubeApiServerTooManyOpenFileDescriptors
+    expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds > 50
+    for: 30m
     labels:
       service: kube-apiserver
       severity: warning
       type: seed
     annotations:
-      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket descriptors.'
-      summary: '{{ $labels.job }} has too many open file descriptors'
-  - alert: KubeTooManyOpenFiles
-    expr: 100 * process_open_fds{job=~"^(?:kube-apiserver)$"} / process_max_fds > 80
-    for: 10m
+      description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
+      summary: 'The API server has too many open file descriptors'
+  - alert: KubeApiServerTooManyOpenFileDescriptors
+    expr: 100 * process_open_fds{job="kube-apiserver"} / process_max_fds{job="kube-apiserver"} > 80
+    for: 30m
     labels:
       service: kube-apiserver
       severity: critical
       type: seed
+      visibility: owner
     annotations:
-      description: '{{ $labels.node }} is using {{ $value }}% of the available file/socket descriptors.'
-      summary: '{{ $labels.job }} has too many open file descriptors'
+      description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
+      summary: 'The API server has too many open file descriptors'

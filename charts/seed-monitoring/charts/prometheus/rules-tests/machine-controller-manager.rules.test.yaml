@@ -1,0 +1,22 @@
+rule_files:
+- ../rules/machine-controller-manager.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  - series: 'up{job="machine-controller-manager"}'
+    values: '0+0x30'
+  alert_rule_test:
+  - eval_time: 15m
+    alertname: MachineControllerManagerDown
+    exp_alerts:
+    - exp_labels:
+        service: machine-controller-manager
+        severity: critical
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: There are no running machine controller manager instances. No shoot nodes can be created/maintained.
+        summary: Machine controller manager is down.
