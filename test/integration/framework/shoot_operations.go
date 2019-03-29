@@ -170,6 +170,9 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 			return true, nil
 		}
 		s.Logger.Infof("Waiting for shoot %s to be created", s.Shoot.Name)
+		if s.Shoot.Status.LastOperation != nil {
+			s.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", s.Shoot.Status.LastOperation.Progress, s.Shoot.Status.LastOperation.State, s.Shoot.Status.LastOperation.Description)
+		}
 		return false, nil
 	}, ctx.Done())
 }
