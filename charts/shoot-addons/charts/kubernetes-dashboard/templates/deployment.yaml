@@ -40,6 +40,9 @@ spec:
         chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
         kubernetes.io/cluster-service: "true"
     spec:
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       serviceAccountName: {{ template "kubernetes-dashboard.fullname" . }}
       containers:
       - name: {{ .Chart.Name }}

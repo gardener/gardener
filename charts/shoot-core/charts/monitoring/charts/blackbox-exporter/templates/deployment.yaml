@@ -23,6 +23,9 @@ spec:
         garden.sapcloud.io/role: system-component
         component: blackbox-exporter
     spec:
+      securityContext:
+        runAsUser: 65534
+        fsGroup: 65534
       containers:
       - name: blackbox-exporter
         image: {{ index .Values.images "blackbox-exporter" }}
@@ -51,4 +54,3 @@ spec:
       - name: blackbox-exporter-config
         configMap:
           name: blackbox-exporter-config
-
