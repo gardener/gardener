@@ -70,34 +70,34 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 	switch {
 	case nodeCount <= 2:
 		cpuRequest = "800m"
-		memoryRequest = "600Mi"
-
-		cpuLimit = "1000m"
-		memoryLimit = "900Mi"
-	case nodeCount <= 10:
-		cpuRequest = "1000m"
 		memoryRequest = "800Mi"
 
+		cpuLimit = "1000m"
+		memoryLimit = "1200Mi"
+	case nodeCount <= 10:
+		cpuRequest = "1000m"
+		memoryRequest = "1100Mi"
+
 		cpuLimit = "1200m"
-		memoryLimit = "1400Mi"
+		memoryLimit = "1900Mi"
 	case nodeCount <= 50:
 		cpuRequest = "1200m"
-		memoryRequest = "1200Mi"
+		memoryRequest = "1600Mi"
 
 		cpuLimit = "1500m"
-		memoryLimit = "3000Mi"
+		memoryLimit = "3900Mi"
 	case nodeCount <= 100:
 		cpuRequest = "2500m"
-		memoryRequest = "4000Mi"
+		memoryRequest = "5200Mi"
 
 		cpuLimit = "3000m"
-		memoryLimit = "4500Mi"
+		memoryLimit = "5900Mi"
 	default:
 		cpuRequest = "3000m"
-		memoryRequest = "4000Mi"
+		memoryRequest = "5200Mi"
 
 		cpuLimit = "4000m"
-		memoryLimit = "6000Mi"
+		memoryLimit = "7800Mi"
 	}
 
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
@@ -555,7 +555,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		defaultValues["resources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
 				"cpu":    "300m",
-				"memory": "350Mi",
+				"memory": "512Mi",
 			},
 		}
 	}
