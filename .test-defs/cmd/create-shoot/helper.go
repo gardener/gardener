@@ -93,9 +93,16 @@ func updateAutoscalerMinMax(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1be
 	}
 }
 
-// updateFloatingPoolName updates the floatingPoolName if a openstack cluster is created.
+// updateFloatingPoolName updates the floatingPoolName if an openstack cluster is created.
 func updateFloatingPoolName(shoot *gardenv1beta1.Shoot, floatingPoolName string, cloudprovider gardenv1beta1.CloudProvider) {
 	if cloudprovider == gardenv1beta1.CloudProviderOpenStack {
 		shoot.Spec.Cloud.OpenStack.FloatingPoolName = floatingPoolName
+	}
+}
+
+// updateLoadBalancerProvider updates the loadBalancerProvider if an openstack cluster is created.
+func updateLoadBalancerProvider(shoot *gardenv1beta1.Shoot, loadBalancerProvider string, cloudprovider gardenv1beta1.CloudProvider) {
+	if cloudprovider == gardenv1beta1.CloudProviderOpenStack && loadBalancerProvider != "" {
+		shoot.Spec.Cloud.OpenStack.LoadBalancerProvider = loadBalancerProvider
 	}
 }
