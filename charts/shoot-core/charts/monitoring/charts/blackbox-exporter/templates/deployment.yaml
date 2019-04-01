@@ -23,6 +23,14 @@ spec:
         garden.sapcloud.io/role: system-component
         component: blackbox-exporter
     spec:
+      tolerations:
+      - effect: NoSchedule
+        operator: Exists
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - effect: NoExecute
+        operator: Exists
+      priorityClassName: system-cluster-critical
       securityContext:
         runAsUser: 65534
         fsGroup: 65534
