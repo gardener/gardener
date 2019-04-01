@@ -68,6 +68,6 @@ configmap:
 horizontalPodAutoScaler:
   spec:
     maxReplicas: 5
-    minReplicas: 1
+    minReplicas: 2
     metrics:
       targetAverageUtilization: 80
