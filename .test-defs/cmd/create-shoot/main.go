@@ -46,6 +46,7 @@ var (
 
 	// required for openstack
 	floatingPoolName string
+	loadBalancerProvider string
 
 	testLogger *logrus.Logger
 )
@@ -111,6 +112,7 @@ func init() {
 		autoScalerMax = &autoScalerMaxInt
 	}
 
+	loadBalancerProvider = os.Getenv("LOADBALANCER_PROVIDER")
 	floatingPoolName = os.Getenv("FLOATING_POOL_NAME")
 	if cloudprovider == gardenv1beta1.CloudProviderOpenStack && floatingPoolName == "" {
 		testLogger.Fatalf("EnvVar 'FLOATING_POOL_NAME' needs to be specified when creating a shoot on openstack")
@@ -142,6 +144,7 @@ func main() {
 	updateMachineType(shootObject, cloudprovider, machineType)
 	updateAutoscalerMinMax(shootObject, cloudprovider, autoScalerMin, autoScalerMax)
 	updateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
+	updateLoadBalancerProvider(shootObject, loadBalancerProvider, cloudprovider)
 	if dnsProvider != "" {
 		shootObject.Spec.DNS.Provider = dnsProvider
 	}
