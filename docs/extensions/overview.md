@@ -136,11 +136,11 @@ We are looking forward to your feedback if you have any!
 We have started implementing GEP-1 and are in the process of getting experience with the first extensions.
 Based on the resources discussed in GEP-1 the following table provides information about which parts of the domain-specific knowledge that is/was in-tree has been moved out already:
 
-| Status             | Resource                | Providers                                                               |
-|--------------------|-------------------------|-------------------------------------------------------------------------|
-| :x:                | `DNS`                   |  alicloud-dns<br>aws-route53<br>azure-dns<br>google-clouddns<br> openstack-designate |
-| :x:                | `BackupInfrastructure`  | aws<br>azure<br>gcp<br>openstack                                        |
-| :x:                | `Generic`               | certmgmt                                                                |
-| :x:                | `Infrastructure`        | alicloud<br>aws<br>azure<br>gcp<br>openstack<br>local (discontinued)    |
-| :white_check_mark: | `OperatingSystemConfig` | coredns                                                                 |
-| :x:                | `WorkerPoolConfig`      | alicloud<br>aws<br>azure<br>gcp<br>openstack                            |
+| Status             | Resource                | Providers                                                                            |
+|--------------------|-------------------------|--------------------------------------------------------------------------------------|
+| :white_check_mark: | `DNS`                   |  alicloud-dns<br>aws-route53<br>azure-dns<br>google-clouddns<br> openstack-designate |
+| :x:                | `BackupInfrastructure`  | aws<br>azure<br>gcp<br>openstack                                                     |
+| :x:                | `Generic`               | cert-service                                                                         |
+| :x:                | `Infrastructure`        | alicloud<br>aws<br>azure<br>gcp<br>openstack<br>local (discontinued/replaced)        |
+| :white_check_mark: | `OperatingSystemConfig` | coreos,coreos-alicloud                                                               |
+| :x:                | `Worker`                | alicloud<br>aws<br>azure<br>gcp<br>openstack                                         |

@@ -1,0 +1,4 @@
+apiVersion: v1
+description: DNSProvider extension resource for declaration of a domain for which DNS entries can be created.
+name: provider
+version: 0.1.0

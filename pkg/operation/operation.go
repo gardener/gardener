@@ -79,7 +79,7 @@ func newOperation(
 		secrets[k] = v
 	}
 
-	gardenObj, err := garden.New(k8sGardenInformers.Projects().Lister(), namespace)
+	gardenObj, err := garden.New(k8sGardenInformers.Projects().Lister(), namespace, secrets)
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,7 @@ func newOperation(
 	}
 
 	if shoot != nil {
-		internalDomain := constructInternalDomain(shoot.Name, gardenObj.Project.Name, secretsMap[common.GardenRoleInternalDomain].Annotations[common.DNSDomain])
-		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.Project.Name, internalDomain)
+		shootObj, err := shootpkg.New(k8sGardenClient, k8sGardenInformers, shoot, gardenObj.Project.Name, gardenObj.InternalDomain.Domain, gardenObj.DefaultDomains)
 		if err != nil {
 			return nil, err
 		}
@@ -370,19 +369,6 @@ func (o *Operation) ChartInitializer(chartName string, values map[string]interfa
 			return true, false, nil
 		})
 	}
-}
-
-// constructInternalDomain constructs the domain pointing to the kube-apiserver of a Shoot cluster
-// which is only used for internal purposes (all kubeconfigs except the one which is received by the
-// user will only talk with the kube-apiserver via this domain). In case the given <internalDomain>
-// already contains "internal", the result is constructed as "api.<shootName>.<shootProject>.<internalDomain>."
-// In case it does not, the word "internal" will be appended, resulting in
-// "api.<shootName>.<shootProject>.internal.<internalDomain>".
-func constructInternalDomain(shootName, shootProject, internalDomain string) string {
-	if strings.Contains(internalDomain, common.InternalDomainKey) {
-		return fmt.Sprintf("api.%s.%s.%s", shootName, shootProject, internalDomain)
-	}
-	return fmt.Sprintf("api.%s.%s.%s.%s", shootName, shootProject, common.InternalDomainKey, internalDomain)
 }
 
 // ContainsName checks whether the <name> is part of the <machineDeployments>

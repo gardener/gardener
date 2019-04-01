@@ -87,7 +87,7 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   dns:
-    provider: aws-route53
+  # provider: aws-route53
     domain: johndoe-openstack.garden-dev.example.com
 # hibernation:
 #   enabled: false

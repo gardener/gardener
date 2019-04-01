@@ -250,19 +250,29 @@ Every Shoot needs two DNS records (or three, depending on whether nginx-ingress 
 
 ```yaml
 ---
-apiVersion: extensions.gardener.cloud/v1alpha1
-kind: DNS
+apiVersion: dns.gardener.cloud/v1alpha1
+kind: DNSProvider
 metadata:
-  name: api-server
-  namespace: shoot--core--aws-01
+  name: alicloud
+  namespace: default
 spec:
-  type: aws-route53
-  dnsType: A # optional, will be determined automatically if not specified
-  domain: api.johndoe-aws.garden-dev.example.com
-  target: 127.0.0.1
-  hostedZoneID: AH7231HCZ82
+  type: alicloud-dns
   secretRef:
-    name: secret-containing-the-route53-credentials
+    name: alicloud-credentials
+  domains:
+    include:
+    - my.own.domain.com
+---
+apiVersion: dns.gardener.cloud/v1alpha1
+kind: DNSEntry
+metadata:
+  name: dns
+  namespace: default
+spec:
+  dnsName: dns.my.own.domain.com
+  ttl: 600
+  targets:
+  - 8.8.8.8
 status:
   observedGeneration: 4
   state: some-state

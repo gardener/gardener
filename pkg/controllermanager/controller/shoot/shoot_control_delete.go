@@ -61,7 +61,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		return formatError("Failed to create a Botanist", err)
 	}
 
-	if err := botanist.RequiredExtensionsExist(o.Shoot.Info); err != nil {
+	if err := botanist.RequiredExtensionsExist(); err != nil {
 		return formatError("Failed to check whether all required extensions exist", err)
 	}
 
@@ -104,12 +104,26 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		kubeAPIServerDeploymentFound = false
 	}
 
+	internalDNSMigrationNeeded, err := c.needsDNSMigration(o, common.TerraformerPurposeInternalDNSDeprecated)
+	if err != nil {
+		return formatError("Failed to check whether internal DNS migration is needed", err)
+	}
+	externalDNSMigrationNeeded, err := c.needsDNSMigration(o, common.TerraformerPurposeExternalDNSDeprecated)
+	if err != nil {
+		return formatError("Failed to check whether external DNS migration is needed", err)
+	}
+	ingressDNSMigrationNeeded, err := c.needsDNSMigration(o, common.TerraformerPurposeIngressDNSDeprecated)
+	if err != nil {
+		return formatError("Failed to check whether ingress DNS migration is needed", err)
+	}
+
 	var (
 		nonTerminatingNamespace = namespace.Status.Phase != corev1.NamespaceTerminating
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
 		isCloud                 = o.Shoot.Info.Spec.Cloud.Local == nil
+		managedDNS              = o.Shoot.ExternalDomain != nil
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -146,13 +160,38 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 			Fn:   flow.TaskFn(botanist.WakeUpControlPlane).DoIf(o.Shoot.IsHibernated && cleanupShootResources),
 		})
 
-		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
-		// resources).
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager, wakeUpControlPlane),
 		})
+
+		// Only needed for migration from in-tree DNS management to out-of-tree mgmt by an extension DNS controller.
+		// If a shoot is already marked for deletion then the new DNSProvider/DNSEntry resources might not exist, so
+		// let's just quickly deploy them. If they already existed then nothing happens, but we can make sure that the
+		// extension DNS controller cleans up. If they did not exist then the resources are just created, and can be
+		// safely deleted by latter steps.
+		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
+			Name: "Waiting until Kubernetes API server service has reported readiness",
+			Fn:   flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).DoIf(isCloud && internalDNSMigrationNeeded),
+		})
+		deployInternalDomainDNSRecord = g.Add(flow.Task{
+			Name:         "Deploying internal domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(internalDNSMigrationNeeded),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
+		})
+		deployExternalDomainDNSRecord = g.Add(flow.Task{
+			Name: "Deploying external domain DNS record",
+			Fn:   flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedDNS && externalDNSMigrationNeeded),
+		})
+		deployIngressDNSRecord = g.Add(flow.Task{
+			Name:         "Ensuring ingress DNS record",
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedDNS && cleanupShootResources && ingressDNSMigrationNeeded).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+
+		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
+		// resources).
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting Shoot monitoring stack in Seed",
 			Fn:           flow.SimpleTaskFn(botanist.DeleteSeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -220,8 +259,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 
 		destroyNginxIngressResources = g.Add(flow.Task{
 			Name:         "Destroying ingress DNS record",
-			Fn:           flow.SimpleTaskFn(botanist.DestroyIngressDNSRecord),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+			Fn:           flow.TaskFn(botanist.DestroyIngressDNSRecord),
+			Dependencies: flow.NewTaskIDs(deployIngressDNSRecord),
 		})
 		destroyKube2IAMResources = g.Add(flow.Task{
 			Name:         "Destroying Kube2IAM resources",
@@ -235,8 +274,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		destroyExternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying external domain DNS record",
-			Fn:           flow.SimpleTaskFn(botanist.DestroyExternalDomainDNSRecord),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
+			Fn:           flow.TaskFn(botanist.DestroyExternalDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, deployExternalDomainDNSRecord, destroyNginxIngressResources),
 		})
 		syncPoint = flow.NewTaskIDs(
 			deleteSeedMonitoring,
@@ -254,8 +293,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.SimpleTaskFn(botanist.DestroyInternalDomainDNSRecord),
-			Dependencies: flow.NewTaskIDs(syncPoint),
+			Fn:           flow.TaskFn(botanist.DestroyInternalDomainDNSRecord),
+			Dependencies: flow.NewTaskIDs(syncPoint, deployInternalDomainDNSRecord),
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting Shoot namespace in Seed",
@@ -405,4 +444,18 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 		o.Shoot.Info = newShootAfterLabel
 	}
 	return state, err
+}
+
+func (c *defaultControl) needsDNSMigration(o *operation.Operation, terraformerPurpose string) (bool, error) {
+	tf, err := o.NewShootTerraformer(terraformerPurpose)
+	if err != nil {
+		return false, err
+	}
+
+	configExists, err := tf.ConfigExists()
+	if err != nil {
+		return false, err
+	}
+
+	return configExists, nil
 }

@@ -66,7 +66,7 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:b73a6816cb41ff2580f5d67f0415500fd9ca3046f15d4e92c3819d6a07f3aecd"
+  digest = "1:6aad43233d080a5d9b7ce2c36bedfc458cd4648c494d60f416e535cc051afcd1"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
     "sdk",
@@ -82,8 +82,8 @@
     "services/vpc",
   ]
   pruneopts = "NUT"
-  revision = "e14bf122513a30e2e883c48f4a6b66f396bd62db"
-  version = "1.53.74"
+  revision = "5887fb5d0027ac89d8f5e7765e35042af300aa00"
+  version = "1.53.82"
 
 [[projects]]
   digest = "1:b28f9249808d9e7f593589c55e08416dedd312df32f3fb1f94f0f45af780a33b"
@@ -197,15 +197,15 @@
   version = "v0.0.1"
 
 [[projects]]
-  digest = "1:65f589a8c25bd5e056f43e059df08cc4f21ce383f20fedd3bd2d8f973da2dc6c"
+  digest = "1:308d57c0e8401e52787cb1bc97001f4d9b16e38aa3fa9060415f8419aded43a5"
   name = "github.com/emicklei/go-restful"
   packages = [
     ".",
     "log",
   ]
   pruneopts = "NUT"
-  revision = "e64cccdfee8896c036b8a88d560c5e3ae15d904d"
-  version = "v2.9.1"
+  revision = "9515831d76ca49d15259dccc9765695125d1127e"
+  version = "v2.9.2"
 
 [[projects]]
   digest = "1:db115eee0ae265dab922fecbb7966c3fcdc4eae3c2e9caae302fdcba3ba422c7"
@@ -213,6 +213,35 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "5858425f75500d40c52783dce87d085a483ce135"
+
+[[projects]]
+  branch = "master"
+  digest = "1:fa8bb7e197bc4648472ce76d7f9d68141b048cea5c348d5c99cbd97968213800"
+  name = "github.com/gardener/controller-manager-library"
+  packages = [
+    "pkg/clientsets",
+    "pkg/ctxutil",
+    "pkg/fieldpath",
+    "pkg/informerfactories",
+    "pkg/kutil",
+    "pkg/logger",
+    "pkg/resources",
+    "pkg/utils",
+  ]
+  pruneopts = "NUT"
+  revision = "d42fde1a420ac5c296d92f5657bb7ff85e27c6dd"
+
+[[projects]]
+  digest = "1:1a39eed9705758f621f4fc435f32dccece308026bfc5087d62389dd09d7a829a"
+  name = "github.com/gardener/external-dns-management"
+  packages = [
+    "pkg/apis/dns",
+    "pkg/apis/dns/v1alpha1",
+    "pkg/client/dns/clientset/versioned/scheme",
+  ]
+  pruneopts = "NUT"
+  revision = "b4bbb5832a03a0354bcd945917ea11f9e709f9db"
+  version = "0.1.0"
 
 [[projects]]
   digest = "1:b678acaf8766b6df36723a4adefc3302191a34c22b7a38b0abaf5f6d3dd24090"
@@ -515,14 +544,6 @@
   version = "v3.1.1"
 
 [[projects]]
-  digest = "1:e68c51f73a9fa89a6cfbd25f24543b37f96a7ac142dcf4e2adcadad6fec230e3"
-  name = "github.com/miekg/dns"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "cc8cd02140663157ce797c6650488d6c8563f31f"
-  version = "v1.1.6"
-
-[[projects]]
   digest = "1:2f42fa12d6911c7b7659738758631bec870b7e9b4c6be5444f963cdcfccc191f"
   name = "github.com/modern-go/concurrent"
   packages = ["."]
@@ -630,15 +651,15 @@
   version = "v2.0.1"
 
 [[projects]]
-  digest = "1:ed0716cbfa65d10a68d062ecbf9fae082d78cdcbe18bc3acb44c42e52edb0f9a"
+  digest = "1:122724025b9505074138089f78f543f643ae3a8fab6d5b9edf72cce4dd49cc91"
   name = "github.com/pierrec/lz4"
   packages = [
     ".",
     "internal/xxh32",
   ]
   pruneopts = "NUT"
-  revision = "062282ea0dcff40c9fb8525789eef9644b1fbd6e"
-  version = "v2.1.0"
+  revision = "315a67e90e415bcdaff33057da191569bf4d8479"
+  version = "v2.1.1"
 
 [[projects]]
   digest = "1:89fa4c7ac713710640c83ec0461b78fc21c2eda6deca064fe461eef1b8bca303"
@@ -838,10 +859,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:da7f24c62ef576a81db469d684dd29848c492193f3bf7c546c1a45077ee955db"
+  digest = "1:3dbfa5a9f1956d6e3cd78403b9e1a1e2b9e64ed15f2b82d697e77344425e475e"
   name = "golang.org/x/net"
   packages = [
-    "bpf",
     "context",
     "context/ctxhttp",
     "html",
@@ -851,16 +871,12 @@
     "http2",
     "http2/hpack",
     "idna",
-    "internal/iana",
-    "internal/socket",
     "internal/timeseries",
-    "ipv4",
-    "ipv6",
     "trace",
     "websocket",
   ]
   pruneopts = "NUT"
-  revision = "15845e8f865bdabdefb6e7da65b4d9e8de5e94ef"
+  revision = "63eda1eb0650888965ead1296efd04d0b2b61128"
 
 [[projects]]
   branch = "master"
@@ -934,7 +950,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:92a62ac3265d8e416ef00d9129d046a7a884b69a8766a159c0644b3b4775d0f6"
+  digest = "1:40229fb45632bffd6a9404c890601cfb7266f829539b69153a13793aa0c05d85"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -950,7 +966,7 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "1d95b17f1b046c395bb6a29c453b501d267151d3"
+  revision = "8f05a32dce9ff80c9bf11baeb89d26b410f39281"
 
 [[projects]]
   digest = "1:1dd7f1d3b8aefd8d0277234fd7aebc7b57f97ba01ab689f09dbfa287a72f3300"
@@ -995,7 +1011,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "e79c0c59cdb5e117ef82a6f885294df3d74065d5"
+  revision = "d831d65fe17df2e52bcc4316d4a9f7a418701f43"
 
 [[projects]]
   digest = "1:2e7dd27ea7dcc06208eb8d813658f561f8ea1dd2719773fb4da023e034b63cef"
@@ -1576,7 +1592,7 @@
     "types",
   ]
   pruneopts = "NUT"
-  revision = "bc9033e9ec9e0cec1552e9af7c079cb878dfc511"
+  revision = "e17681d19d3ac4837a019ece36c2a0ec31ffe985"
 
 [[projects]]
   digest = "1:00ceadc47fa3b1dc3fffc56c8a61e0e8203922b17171cc824ae8f887b1c43d34"
@@ -1712,6 +1728,8 @@
     "github.com/aws/aws-sdk-go/service/ec2",
     "github.com/aws/aws-sdk-go/service/elb",
     "github.com/aws/aws-sdk-go/service/sts",
+    "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1",
+    "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme",
     "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",
@@ -1720,7 +1738,6 @@
     "github.com/hashicorp/go-multierror",
     "github.com/json-iterator/go",
     "github.com/mholt/archiver",
-    "github.com/miekg/dns",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/gomega",

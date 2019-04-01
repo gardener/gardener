@@ -354,7 +354,7 @@ type LocalConstraints struct {
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
 type DNSProviderConstraint struct {
 	// Name is the name of the DNS provider.
-	Name DNSProvider
+	Name string
 }
 
 // LocalMachineImage defines the machine image for Local provider.
@@ -1210,36 +1210,25 @@ type Backup struct {
 // DNS holds information about the provider, the hosted zone id and the domain.
 type DNS struct {
 	// Provider is the DNS provider type for the Shoot.
-	Provider DNSProvider
+	// +optional
+	Provider *string
 	// HostedZoneID is the ID of an existing DNS Hosted Zone used to create the DNS records in.
 	// +optional
+	// deprecated
 	HostedZoneID *string
 	// Domain is the external available domain of the Shoot cluster.
 	// +optional
 	Domain *string
-	// SecretName is a name of a secret containing credentials for the stated HostedZoneID and the
+	// SecretName is a name of a secret containing credentials for the stated domain and the
 	// provider. When not specified, the Gardener will use the cloud provider credentials referenced
 	// by the Shoot and try to find respective credentials there. Specifying this field may override
-	// this behaviour, i.e. forcing the Gardener to only look into the given secret.
+	// this behavior, i.e. forcing the Gardener to only look into the given secret.
 	// +optional
 	SecretName *string
 }
 
-// DNSProvider is a string alias.
-type DNSProvider string
-
-const (
-	// DNSUnmanaged is a constant for the 'unmanaged' DNS provider.
-	DNSUnmanaged DNSProvider = "unmanaged"
-	// DNSAWSRoute53 is a constant for the 'aws-route53' DNS provider.
-	DNSAWSRoute53 DNSProvider = "aws-route53"
-	// DNSGoogleCloudDNS is a constant for the 'google-clouddns' DNS provider.
-	DNSGoogleCloudDNS DNSProvider = "google-clouddns"
-	// DNSOpenstackDesignate is a constant for the designate DNS provider
-	DNSOpenstackDesignate DNSProvider = "openstack-designate"
-	// DNSAlicloud is a constant for Alicloud DNS provider
-	DNSAlicloud DNSProvider = "alicloud-dns"
-)
+// DNSUnmanaged is a constant for the 'unmanaged' DNS provider.
+const DNSUnmanaged string = "unmanaged"
 
 // CloudProvider is a string alias.
 type CloudProvider string

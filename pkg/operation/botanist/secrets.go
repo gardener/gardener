@@ -914,8 +914,6 @@ func dnsNamesForService(name, namespace string) []string {
 		fmt.Sprintf("%s.%s", name, namespace),
 		fmt.Sprintf("%s.%s.svc", name, namespace),
 		fmt.Sprintf("%s.%s.svc.%s", name, namespace, gardenv1beta1.DefaultDomain),
-		// TODO: Determine Seed cluster's domain that is configured for kubelet and kube-dns/coredns
-		// fmt.Sprintf("%s.%s.svc.%s", name, namespace, seed-kube-domain),
 	}
 }
 

@@ -34,10 +34,13 @@ import (
 
 // WaitUntilKubeAPIServerServiceIsReady waits until the external load balancer of the kube-apiserver has
 // been created (i.e., its ingress information has been updated in the service status).
-func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady() error {
+func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
 	var e error
-	if err := wait.Poll(5*time.Second, 600*time.Second, func() (bool, error) {
-		loadBalancerIngress, err := common.GetLoadBalancerIngress(b.K8sSeedClient, b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+		loadBalancerIngress, err := common.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
 		if err != nil {
 			e = err
 			b.Logger.Info("Waiting until the kube-apiserver service is ready...")
@@ -45,7 +48,7 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady() error {
 		}
 		b.Operation.APIServerAddress = loadBalancerIngress
 		return true, nil
-	}); err != nil {
+	}, ctx.Done()); err != nil {
 		return e
 	}
 	return nil

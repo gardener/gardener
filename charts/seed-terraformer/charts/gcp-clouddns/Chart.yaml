@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Google chart for CloudDNS records
-name: gcp-clouddns
-version: 0.1.0

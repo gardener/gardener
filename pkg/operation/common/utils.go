@@ -30,6 +30,7 @@ import (
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	jsoniter "github.com/json-iterator/go"
 
@@ -40,6 +41,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var json = jsoniter.ConfigFastest
@@ -111,19 +114,6 @@ func DistributePositiveIntOrPercent(zoneIndex int, intOrPercent intstr.IntOrStri
 	return intstr.FromInt(DistributeOverZones(zoneIndex, int(intOrPercent.IntVal), zoneSize))
 }
 
-// IdentifyAddressType takes a string containing an address (hostname or IP) and tries to parse it
-// to an IP address in order to identify whether it is a DNS name or not.
-// It returns a tuple whereby the first element is either "ip" or "hostname", and the second the
-// parsed IP address of type net.IP (in case the loadBalancer is an IP address, otherwise it is nil).
-func IdentifyAddressType(address string) (string, net.IP) {
-	addr := net.ParseIP(address)
-	addrType := "hostname"
-	if addr != nil {
-		addrType = "ip"
-	}
-	return addrType, addr
-}
-
 // ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
 // For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
 func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {
@@ -165,34 +155,41 @@ func GenerateAddonConfig(values map[string]interface{}, enabled bool) map[string
 	return v
 }
 
-// GetLoadBalancerIngress takes a K8SClient, a namespace and a service name. It queries for a load balancer's technical name
+// GetLoadBalancerIngress takes a context, a client, a namespace and a service name. It queries for a load balancer's technical name
 // (ip address or hostname). It returns the value of the technical name whereby it always prefers the IP address (if given)
 // over the hostname. It also returns the list of all load balancer ingresses.
-func GetLoadBalancerIngress(client kubernetes.Interface, namespace, name string) (string, error) {
-	var (
-		loadBalancerIngress  string
-		serviceStatusIngress []corev1.LoadBalancerIngress
-	)
-
-	service, err := client.GetService(namespace, name)
-	if err != nil {
+func GetLoadBalancerIngress(ctx context.Context, client client.Client, namespace, name string) (string, error) {
+	service := &corev1.Service{}
+	if err := client.Get(ctx, kutil.Key(namespace, name), service); err != nil {
 		return "", err
 	}
 
-	serviceStatusIngress = service.Status.LoadBalancer.Ingress
-	length := len(serviceStatusIngress)
-	if length == 0 {
+	var (
+		serviceStatusIngress = service.Status.LoadBalancer.Ingress
+		length               = len(serviceStatusIngress)
+	)
+
+	switch {
+	case length == 0:
 		return "", errors.New("`.status.loadBalancer.ingress[]` has no elements yet, i.e. external load balancer has not been created (is your quota limit exceeded/reached?)")
+	case serviceStatusIngress[length-1].IP != "":
+		return serviceStatusIngress[length-1].IP, nil
+	case serviceStatusIngress[length-1].Hostname != "":
+		return serviceStatusIngress[length-1].Hostname, nil
 	}
 
-	if serviceStatusIngress[length-1].IP != "" {
-		loadBalancerIngress = serviceStatusIngress[length-1].IP
-	} else if serviceStatusIngress[length-1].Hostname != "" {
-		loadBalancerIngress = serviceStatusIngress[length-1].Hostname
-	} else {
-		return "", errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")
+	return "", errors.New("`.status.loadBalancer.ingress[]` has an element which does neither contain `.ip` nor `.hostname`")
+}
+
+// GenerateTerraformVariablesEnvironment takes a <secret> and a <keyValueMap> and builds an environment which
+// can be injected into the Terraformer job/pod manifest. The keys of the <keyValueMap> will be prefixed with
+// 'TF_VAR_' and the value will be used to extract the respective data from the <secret>.
+func GenerateTerraformVariablesEnvironment(secret *corev1.Secret, keyValueMap map[string]string) map[string]string {
+	out := make(map[string]string)
+	for key, value := range keyValueMap {
+		out[fmt.Sprintf("TF_VAR_%s", key)] = strings.TrimSpace(string(secret.Data[value]))
 	}
-	return loadBalancerIngress, nil
+	return out
 }
 
 // ExtractShootName returns Shoot resource name extracted from provided <backupInfrastructureName>.
@@ -505,4 +502,34 @@ func DeleteAlertmanager(k8sClient kubernetes.Interface, namespace string) error 
 		}
 	}
 	return nil
+}
+
+// GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the give annotations.
+func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, err error) {
+	if annotations == nil {
+		return "", "", fmt.Errorf("domain secret has no annotations")
+	}
+
+	if providerAnnotation, ok := annotations[DNSProviderDeprecated]; ok {
+		provider = providerAnnotation
+	}
+	if providerAnnotation, ok := annotations[DNSProvider]; ok {
+		provider = providerAnnotation
+	}
+
+	if domainAnnotation, ok := annotations[DNSDomainDeprecated]; ok {
+		domain = domainAnnotation
+	}
+	if domainAnnotation, ok := annotations[DNSDomain]; ok {
+		domain = domainAnnotation
+	}
+
+	if len(domain) == 0 {
+		return "", "", fmt.Errorf("missing dns domain annotation on domain secret")
+	}
+	if len(provider) == 0 {
+		return "", "", fmt.Errorf("missing dns provider annotation on domain secret")
+	}
+
+	return
 }

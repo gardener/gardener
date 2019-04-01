@@ -68,12 +68,29 @@ If `.spec.deployment.type=helm` then Gardener itself will take over the responsi
 It base64-decodes the provided Helm chart (`.spec.deployment.providerConfig.chart`) and deploys it with the provided static configuration (`.spec.deployment.providerConfig.values`).
 The chart and the values can be updated at any time - Gardener will recognize and re-trigger the deployment process.
 
+In order to allow extensions to get information about the garden and the seed cluster Gardener does mix-in certain properties into the values (root level) of every deployed Helm chart:
+
+```yaml
+gardener:
+  garden:
+    identifier: <uuid-of-gardener-installation>
+  seed:
+    identifier: <seed-name>
+    region: europe
+```
+
+Extensions can use this information in their Helm chart in case they require knowledge about the garden and the seed environment.
+The list might be extended in the future.
+
+:information_source: Gardener uses the UUID of the `garden` `Namespace` object in the `.gardener.garden.identifier` property.
+
 ### Scenario 2: Deployed by a (non-human) Kubernetes operator
 
 Some extension controllers might be more complex and require additional domain-specific knowledge wrt. lifecycle or configuration.
 In this case, we encourage to follow the Kubernetes operator pattern and deploy a dedicated operator for this extension into the garden cluster.
 The `ControllerResource`'s `.spec.deployment.type` field would then not be `helm`, and no Helm chart or values need to be provided there.
-Instead, the operator itself knows how to deploy the extension into the seed. It must watch `ControllerInstallation` resources and act one those referencing a `ControllerRegistration` the operator is responsible for.
+Instead, the operator itself knows how to deploy the extension into the seed.
+It must watch `ControllerInstallation` resources and act one those referencing a `ControllerRegistration` the operator is responsible for.
 
 In order to let Gardener know that the extension controller is ready and running in the seed the `ControllerInstallation`'s `.status` field supports two conditions: `RegistrationValid` and `InstallationSuccessful` - both must be provided by the responsible operator:
 

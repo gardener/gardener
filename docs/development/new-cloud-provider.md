@@ -21,12 +21,11 @@ Gardener and its related components integrate with cloud providers at the follow
 
 * Create/destroy/get/list machines for the Shoot
 * Create/destroy/get/list infrastructure components for the Shoot, e.g. VPCs, subnets, routes, etc.
-* Create/destroy/get/list DNS zones and entries for the Shoot
 * Backup/restore etcd for the Seed via writing files to and reading them from object storage
 
 Thus, the integrations you need for your cloud provider depend on whether you want to deploy Shoot clusters to the provider, Seed or both.
 
-* Shoot Only: machine lifecycle management, infrastructure, optional DNS.
+* Shoot Only: machine lifecycle management, infrastructure.
 * Seed: etcd backup/restore
 
 ## Gardener API

@@ -198,9 +198,9 @@ func (t *Terraformer) ConfigExists() (bool, error) {
 	return numberOfExistingResources == numberOfConfigResources, err
 }
 
-// cleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
+// CleanupConfiguration deletes the two ConfigMaps which store the Terraform configuration and state. It also deletes
 // the Secret which stores the Terraform variables.
-func (t *Terraformer) cleanupConfiguration(ctx context.Context) error {
+func (t *Terraformer) CleanupConfiguration(ctx context.Context) error {
 	t.logger.Debugf("Deleting Terraform variables Secret '%s'", t.variablesName)
 	if err := t.client.Delete(ctx, &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: t.variablesName}}); err != nil && !apierrors.IsNotFound(err) {
 		return err

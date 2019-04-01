@@ -2573,7 +2573,7 @@ func Convert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.Cl
 }
 
 func autoConvert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Scope) error {
-	out.Provider = garden.DNSProvider(in.Provider)
+	out.Provider = (*string)(unsafe.Pointer(in.Provider))
 	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
@@ -2586,7 +2586,7 @@ func Convert_v1beta1_DNS_To_garden_DNS(in *DNS, out *garden.DNS, s conversion.Sc
 }
 
 func autoConvert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversion.Scope) error {
-	out.Provider = DNSProvider(in.Provider)
+	out.Provider = (*string)(unsafe.Pointer(in.Provider))
 	out.HostedZoneID = (*string)(unsafe.Pointer(in.HostedZoneID))
 	out.Domain = (*string)(unsafe.Pointer(in.Domain))
 	out.SecretName = (*string)(unsafe.Pointer(in.SecretName))
@@ -2599,7 +2599,7 @@ func Convert_garden_DNS_To_v1beta1_DNS(in *garden.DNS, out *DNS, s conversion.Sc
 }
 
 func autoConvert_v1beta1_DNSProviderConstraint_To_garden_DNSProviderConstraint(in *DNSProviderConstraint, out *garden.DNSProviderConstraint, s conversion.Scope) error {
-	out.Name = garden.DNSProvider(in.Name)
+	out.Name = in.Name
 	return nil
 }
 
@@ -2609,7 +2609,7 @@ func Convert_v1beta1_DNSProviderConstraint_To_garden_DNSProviderConstraint(in *D
 }
 
 func autoConvert_garden_DNSProviderConstraint_To_v1beta1_DNSProviderConstraint(in *garden.DNSProviderConstraint, out *DNSProviderConstraint, s conversion.Scope) error {
-	out.Name = DNSProvider(in.Name)
+	out.Name = in.Name
 	return nil
 }
 

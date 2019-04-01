@@ -86,7 +86,7 @@ spec:
   #   featureGates:
   #     SomeKubernetesFeature: true
   dns:
-    provider: aws-route53
+  # provider: aws-route53
     domain: johndoe-alicloud.garden-dev.example.com
 # hibernation:
 #   enabled: false

@@ -1,0 +1,111 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: dnsentries.dns.gardener.cloud
+spec:
+  scope: Namespaced
+  group: dns.gardener.cloud
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  subresources:
+    status: {}
+  conversion:
+    strategy: None
+  names:
+    kind: DNSEntry
+    listKind: DNSEntryList
+    plural: dnsentries
+    shortNames:
+    - dnse
+    singular: dnsentry
+  additionalPrinterColumns:
+  - JSONPath: .spec.dnsName
+    description: DNS ObjectName
+    name: DNS
+    type: string
+  - JSONPath: .status.providerType
+    description: Provider type
+    name: TYPE
+    type: string
+  - JSONPath: .status.provider
+    description: Provider
+    name: PROVIDER
+    type: string
+  - JSONPath: .status.state
+    description: Status of DNS entry in cloud provider
+    name: STATUS
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: AGE
+    type: date
+  validation:
+    openAPIV3Schema:
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            cnameLookupInterval:
+              format: int64
+              type: integer
+            dnsName:
+              type: string
+            ownerId:
+              type: string
+            targets:
+              items:
+                type: string
+              type: array
+            text:
+              items:
+                type: string
+              type: array
+            ttl:
+              format: int64
+              type: integer
+          required:
+          - dnsName
+          type: object
+        status:
+          properties:
+            message:
+              type: string
+            observedGeneration:
+              format: int64
+              type: integer
+            provider:
+              type: string
+            providerType:
+              type: string
+            state:
+              type: string
+            targets:
+              items:
+                type: string
+              type: array
+            ttl:
+              format: int64
+              type: integer
+            zone:
+              type: string
+          required:
+          - state
+          type: object
+{{- if semverCompare ">= 1.11-0" .Capabilities.KubeVersion.GitVersion }}
+      required:
+        - spec
+{{- end }}

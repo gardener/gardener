@@ -166,9 +166,7 @@ func (client *Client) GetConnectTimeout() time.Duration {
 	return client.connectTimeout
 }
 
-func (client *Client) getHttpProxy(scheme string) (*url.URL, error) {
-	var proxy *url.URL
-	var err error
+func (client *Client) getHttpProxy(scheme string) (proxy *url.URL, err error) {
 	if scheme == "https" {
 		if client.GetHttpsProxy() != "" {
 			proxy, err = url.Parse(client.httpsProxy)
@@ -461,6 +459,7 @@ func (client *Client) DoActionWithSigner(request requests.AcsRequest, response r
 	if err != nil {
 		return err
 	}
+
 	noProxy := client.getNoProxy(httpRequest.URL.Scheme)
 
 	var flag bool
@@ -485,6 +484,11 @@ func (client *Client) DoActionWithSigner(request requests.AcsRequest, response r
 
 	var httpResponse *http.Response
 	for retryTimes := 0; retryTimes <= client.config.MaxRetryTime; retryTimes++ {
+		if proxy != nil && proxy.User != nil{
+			if password, passwordSet := proxy.User.Password(); passwordSet {
+				httpRequest.SetBasicAuth(proxy.User.Username(), password)
+			}
+		}
 		debug("> %s %s %s", httpRequest.Method, httpRequest.URL.RequestURI(), httpRequest.Proto)
 		debug("> Host: %s", httpRequest.Host)
 		for key, value := range httpRequest.Header {

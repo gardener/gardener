@@ -27,15 +27,24 @@ type Shoot struct {
 	CloudProvider gardenv1beta1.CloudProvider
 
 	SeedNamespace               string
-	InternalClusterDomain       string
-	ExternalClusterDomain       *string
 	KubernetesMajorMinorVersion string
+
+	InternalClusterDomain string
+	ExternalClusterDomain *string
+	ExternalDomain        *ExternalDomain
 
 	WantsClusterAutoscaler bool
 	WantsAlertmanager      bool
 	IsHibernated           bool
 
 	CloudConfigMap map[string]CloudConfig
+}
+
+// ExternalDomain contains information for the used external shoot domain.
+type ExternalDomain struct {
+	Domain     string
+	Provider   string
+	SecretData map[string][]byte
 }
 
 // CloudConfig contains a downloader script as well as the original cloud config.
