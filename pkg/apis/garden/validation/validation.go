@@ -1562,17 +1562,17 @@ func validateKubernetesVersionUpdate(new, old string, fldPath *field.Path) field
 func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if dns.Provider != nil && *dns.Provider != garden.DNSUnmanaged && dns.Domain == nil {
-		allErrs = append(allErrs, field.Required(fldPath.Child("domain"), fmt.Sprintf("`.spec.dns.domain` must be set when `.spec.dns.provider` is not set to %q", garden.DNSUnmanaged)))
-	}
-
 	if dns.Domain != nil {
 		allErrs = append(allErrs, validateDNS1123Subdomain(*dns.Domain, fldPath.Child("domain"))...)
 	}
 
-	if provider := dns.Provider; provider != nil && *provider == garden.DNSUnmanaged {
-		if dns.SecretName != nil {
+	if provider := dns.Provider; provider != nil {
+		if *provider == garden.DNSUnmanaged && dns.SecretName != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("secretName"), dns.SecretName, fmt.Sprintf("`.spec.dns.secretName` must not be set when `.spec.dns.provider` is %q", garden.DNSUnmanaged)))
+		}
+
+		if *provider != garden.DNSUnmanaged && dns.Domain == nil {
+			allErrs = append(allErrs, field.Required(fldPath.Child("domain"), fmt.Sprintf("`.spec.dns.domain` must be set when `.spec.dns.provider` is not set to %q", garden.DNSUnmanaged)))
 		}
 	}
 

@@ -677,13 +677,43 @@ func validateDNSDomainUniqueness(shootLister listers.ShootLister, name string, d
 		if shoot.Name == name {
 			continue
 		}
-		if domain := shoot.Spec.DNS.Domain; domain != nil && *domain == *dns.Domain {
+
+		domain := shoot.Spec.DNS.Domain
+		if domain == nil {
+			continue
+		}
+
+		// Prevent that this shoot uses the exact same domain of any other shoot in the system.
+		if *domain == *dns.Domain {
 			allErrs = append(allErrs, field.Duplicate(dnsPath, *dns.Domain))
+			break
+		}
+
+		// Prevent that this shoot uses a subdomain of the domain of any other shoot in the system.
+		if hasDomainIntersection(*domain, *dns.Domain) {
+			allErrs = append(allErrs, field.Forbidden(dnsPath, "the domain is already used by another shoot or it is a subdomain of an already used domain"))
 			break
 		}
 	}
 
 	return allErrs, nil
+}
+
+// hasDomainIntersection checks if domainA is a suffix of domainB or domainB is a suffix of domainA.
+func hasDomainIntersection(domainA, domainB string) bool {
+	if domainA == domainB {
+		return true
+	}
+
+	var short, long string
+	if len(domainA) > len(domainB) {
+		short = domainB
+		long = domainA
+	} else {
+		short = domainA
+		long = domainB
+	}
+	return strings.HasSuffix(long, short)
 }
 
 func validateKubernetesVersionConstraints(constraints []string, version, oldVersion string) (bool, []string) {

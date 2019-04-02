@@ -109,7 +109,7 @@ var _ = Describe("dns", func() {
 				shoot.Spec.DNS.Provider = nil
 			})
 
-			It("should pass because a default domain was generated for the shoot (no provider)", func() {
+			It("should pass because a default domain was generated for the shoot (no domain)", func() {
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
@@ -117,12 +117,13 @@ var _ = Describe("dns", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(*shoot.Spec.DNS.Provider).To(Equal(defaultDomainProvider))
+				Expect(shoot.Spec.DNS.Provider).To(BeNil())
 				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
 			})
 
-			It("should pass because a default domain was generated for the shoot (same provider)", func() {
-				shoot.Spec.DNS.Provider = &defaultDomainProvider
+			It("should pass because a default domain was generated for the shoot (with domain)", func() {
+				shootDomain := fmt.Sprintf("my-shoot.%s", domain)
+				shoot.Spec.DNS.Domain = &shootDomain
 
 				kubeInformerFactory.Core().V1().Secrets().Informer().GetStore().Add(&defaultDomainSecret)
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -131,8 +132,8 @@ var _ = Describe("dns", func() {
 				err := admissionHandler.Admit(attrs, nil)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(*shoot.Spec.DNS.Provider).To(Equal(defaultDomainProvider))
-				Expect(*shoot.Spec.DNS.Domain).To(Equal(fmt.Sprintf("%s.%s.%s", shootName, projectName, domain)))
+				Expect(shoot.Spec.DNS.Provider).To(BeNil())
+				Expect(*shoot.Spec.DNS.Domain).To(Equal(shootDomain))
 			})
 
 			It("should reject because no domain was configured for the shoot and project is missing", func() {

@@ -238,7 +238,11 @@ func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) s
 		return common.KubeAPIServerDeploymentName
 	}
 
-	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider != nil && *dnsProvider == gardenv1beta1.DNSUnmanaged || (*dnsProvider != gardenv1beta1.DNSUnmanaged && useInternalClusterDomain) {
+	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider != nil && *dnsProvider == gardenv1beta1.DNSUnmanaged {
+		return s.InternalClusterDomain
+	}
+
+	if useInternalClusterDomain {
 		return s.InternalClusterDomain
 	}
 
