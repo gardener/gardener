@@ -56,7 +56,7 @@ for extension in `echo "$extensions" | jq -r '.[].name'`; do
   read -p "  > '$extension' will be installed in its latest released version '$latest_tag'. Proceed? (y/n) " response
   [[ ! "$response" =~ ^(yes|y) ]] && echo "    > Installation skipped." && continue
 
-  if [[ ! -z "$example_path" ]] || [[ "$example_path" != "null" ]]; then
+  if [[ ! -z "$example_path" ]] && [[ "$example_path" != "null" ]]; then
     controllerregistration="$path/$example_path"
   else
     controllerregistration="$path/example/controller-registration.yaml"
