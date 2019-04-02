@@ -39,7 +39,6 @@ var (
 
 	// optional parameters
 	shootArtifactPath string
-	dnsProvider       gardenv1beta1.DNSProvider
 	machineType       string
 	autoScalerMin     *int
 	autoScalerMax     *int
@@ -95,7 +94,6 @@ func init() {
 	if shootArtifactPath == "" {
 		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
 	}
-	dnsProvider = gardenv1beta1.DNSProvider(os.Getenv("DNS_PROVIDER"))
 	machineType = os.Getenv("MACHINE_TYPE")
 	if autoScalerMinEnv := os.Getenv("AUTOSCALER_MIN"); autoScalerMinEnv != "" {
 		autoScalerMinInt, err := strconv.Atoi(autoScalerMinEnv)
@@ -145,9 +143,6 @@ func main() {
 	updateAutoscalerMinMax(shootObject, cloudprovider, autoScalerMin, autoScalerMax)
 	updateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
 	updateLoadBalancerProvider(shootObject, loadBalancerProvider, cloudprovider)
-	if dnsProvider != "" {
-		shootObject.Spec.DNS.Provider = dnsProvider
-	}
 
 	// TODO: tests need to be adopted when nginx gets removed.
 	shootObject.Spec.Addons.NginxIngress = &gardenv1beta1.NginxIngress{

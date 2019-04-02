@@ -54,7 +54,7 @@ func CreateShootTestArtifacts(shootTestYamlPath, prefix string) (string, *v1beta
 	}
 
 	shoot.Name = integrationTestName
-	shoot.Spec.DNS.Domain = nil
+	shoot.Spec.DNS = v1beta1.DNS{}
 	return integrationTestName, shoot, nil
 }
 
