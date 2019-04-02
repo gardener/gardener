@@ -27,14 +27,14 @@ spec:
           - image: {{ index .Values.global.images "curator-es" }}
             name: curator
             command: ["/bin/sh","-c"]
-            args: ["extra-deleter --disk_threshold={{ include "curator.disk_threshold" .Values.curator }}; curator --config /etc/config/config.yml /etc/config/action_file.yml"]
+            args: ["curator-es --disk-space-threshold={{ include "curator.disk_threshold" .Values.curator }}; curator --config /etc/config/config.yml /etc/config/action_file.yml"]
             volumeMounts:
             - name: config
               mountPath: /etc/config
             resources:
               limits:
                 cpu: 10m
-                memory: 50Mi
+                memory: 60Mi
               requests:
                 cpu: 10m
                 memory: 30Mi
