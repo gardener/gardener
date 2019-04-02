@@ -690,6 +690,9 @@ func (b *Botanist) DeploySecrets() error {
 		return err
 	}
 
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	for name, secret := range b.Secrets {
 		b.CheckSums[name] = computeSecretCheckSum(secret.Data)
 	}
@@ -719,8 +722,12 @@ func (b *Botanist) DeployCloudProviderSecret() error {
 		return err
 	}
 
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	b.Secrets[common.CloudProviderSecretName] = b.Shoot.Secret
 	b.CheckSums[common.CloudProviderSecretName] = checksum
+
 	return nil
 }
 
@@ -789,6 +796,9 @@ func (b *Botanist) generateCertificateAuthorities(existingSecretsMap map[string]
 		return nil, err
 	}
 
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	for secretName, caSecret := range generatedSecrets {
 		b.Secrets[secretName] = caSecret
 	}
@@ -810,7 +820,11 @@ func (b *Botanist) generateBasicAuthAPIServer(existingSecretsMap map[string]*cor
 			return nil, err
 		}
 
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+
 		b.Secrets[basicAuthSecretAPIServer.Name] = existingSecret
+
 		return basicAuth, nil
 	}
 
@@ -818,6 +832,9 @@ func (b *Botanist) generateBasicAuthAPIServer(existingSecretsMap map[string]*cor
 	if err != nil {
 		return nil, err
 	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
 	b.Secrets[basicAuthSecretAPIServer.Name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, basicAuthSecretAPIServer.Name, corev1.SecretTypeOpaque, basicAuth.SecretData(), false)
 	if err != nil {
@@ -832,6 +849,9 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 	if err != nil {
 		return err
 	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
 
 	for secretName, secret := range deployedClusterSecrets {
 		b.Secrets[secretName] = secret
@@ -866,6 +886,9 @@ func (b *Botanist) SyncShootCredentialsToGarden() error {
 func (b *Botanist) deployOpenVPNTLSAuthSecret(existingSecretsMap map[string]*corev1.Secret) error {
 	name := "vpn-seed-tlsauth"
 	if tlsAuthSecret, ok := existingSecretsMap[name]; ok {
+		b.mutex.Lock()
+		defer b.mutex.Unlock()
+
 		b.Secrets[name] = tlsAuthSecret
 		return nil
 	}
@@ -878,6 +901,10 @@ func (b *Botanist) deployOpenVPNTLSAuthSecret(existingSecretsMap map[string]*cor
 	data := map[string][]byte{
 		"vpn.tlsauth": tlsAuthKey,
 	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
 	b.Secrets[name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, name, corev1.SecretTypeOpaque, data, false)
 	return err
 }

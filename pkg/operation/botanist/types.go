@@ -15,6 +15,8 @@
 package botanist
 
 import (
+	"sync"
+
 	"github.com/gardener/gardener/pkg/operation"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -23,4 +25,5 @@ import (
 type Botanist struct {
 	*operation.Operation
 	DefaultDomainSecret *corev1.Secret
+	mutex               sync.Mutex
 }
