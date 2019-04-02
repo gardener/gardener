@@ -491,6 +491,25 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
+			It("should allow because the specified domain is not a subdomain of a domain already used by another shoot", func() {
+				anotherShoot := shoot.DeepCopy()
+				anotherShoot.Name = "another-shoot"
+
+				anotherDomain := fmt.Sprintf("someprefix%s", *anotherShoot.Spec.DNS.Domain)
+				shoot.Spec.DNS.Domain = &anotherDomain
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(anotherShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(BeNil())
+			})
+
 			It("should reject due to an invalid kubernetes version", func() {
 				shoot.Spec.Kubernetes.Version = "1.2.3"
 

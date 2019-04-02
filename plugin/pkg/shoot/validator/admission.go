@@ -713,6 +713,11 @@ func hasDomainIntersection(domainA, domainB string) bool {
 		short = domainA
 		long = domainB
 	}
+
+	if !strings.HasPrefix(short, ".") {
+		short = fmt.Sprintf(".%s", short)
+	}
+
 	return strings.HasSuffix(long, short)
 }
 
