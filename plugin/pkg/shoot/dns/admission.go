@@ -101,7 +101,7 @@ func (d *DNS) ValidateInitialization() error {
 }
 
 // Admit tries to determine a DNS hosted zone for the Shoot's external domain.
-func (d *DNS) Admit(a admission.Attributes) error {
+func (d *DNS) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
 	if d.readyFunc == nil {
 		d.AssignReadyFunc(func() bool {
@@ -166,11 +166,29 @@ func assignDefaultDomain(shoot *garden.Shoot, projectLister gardenlisters.Projec
 		return
 	}
 
-	_, domain, err := common.GetDomainInfoFromAnnotations(secrets[0].Annotations)
-	if err != nil {
+	var (
+		defaultDomain   string
+		defaultProvider string
+	)
+
+	for _, secret := range secrets {
+		provider, domain, err := common.GetDomainInfoFromAnnotations(secret.Annotations)
+		if err != nil {
+			return
+		}
+
+		if p := shoot.Spec.DNS.Provider; p == nil || (p != nil && *p == provider) {
+			defaultProvider = provider
+			defaultDomain = domain
+			break
+		}
+	}
+
+	if len(defaultProvider) == 0 || len(defaultDomain) == 0 {
 		return
 	}
 
-	generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, domain)
+	generatedDomain := fmt.Sprintf("%s.%s.%s", shoot.Name, project.Name, defaultDomain)
+	shoot.Spec.DNS.Provider = &defaultProvider
 	shoot.Spec.DNS.Domain = &generatedDomain
 }

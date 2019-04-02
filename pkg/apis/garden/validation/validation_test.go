@@ -4900,6 +4900,27 @@ var _ = Describe("validation", func() {
 		})
 
 		Context("dns section", func() {
+			It("should forbid specifying a provider without a domain", func() {
+				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")
+				shoot.Spec.DNS.Provider = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.dns.domain"),
+				}))))
+			})
+
+			It("should allow specifying the 'unmanaged' provider without a domain", func() {
+				shoot.Spec.DNS.Domain = makeStringPointer(garden.DNSUnmanaged)
+				shoot.Spec.DNS.Provider = nil
+
+				errorList := ValidateShoot(shoot)
+
+				Expect(errorList).To(HaveLen(0))
+			})
+
 			It("should forbid specifying invalid domain", func() {
 				shoot.Spec.DNS.Provider = nil
 				shoot.Spec.DNS.Domain = makeStringPointer("foo/bar.baz")

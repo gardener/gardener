@@ -665,7 +665,6 @@ func validateDNSDomainUniqueness(shootLister listers.ShootLister, name string, d
 	)
 
 	if dns.Domain == nil {
-		allErrs = append(allErrs, field.Required(dnsPath, "domain field is required"))
 		return allErrs, nil
 	}
 

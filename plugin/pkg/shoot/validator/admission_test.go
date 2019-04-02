@@ -1361,7 +1361,7 @@ var _ = Describe("validator", func() {
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
 
-			It("should reject due to an undefined dns domain", func() {
+			It("should not reject due to an undefined dns domain", func() {
 				shoot.Spec.DNS.Domain = nil
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -1371,8 +1371,7 @@ var _ = Describe("validator", func() {
 
 				err := admissionHandler.Admit(attrs, nil)
 
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+				Expect(err).To(Succeed())
 			})
 
 			It("should reject due to an invalid floating pool name", func() {

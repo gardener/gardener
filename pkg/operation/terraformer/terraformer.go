@@ -375,7 +375,7 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 				},
 			},
 		},
-		ServiceAccountName: serviceAccountName,
+		ServiceAccountName:            serviceAccountName,
 		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 		Volumes: []corev1.Volume{
 			{
