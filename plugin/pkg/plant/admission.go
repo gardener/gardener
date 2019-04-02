@@ -94,7 +94,7 @@ func (a *AdmitPlant) ValidateInitialization() error {
 }
 
 // Admit ensures that the plant is correctly annotated
-func (a *AdmitPlant) Admit(attrs admission.Attributes) error {
+func (a *AdmitPlant) Admit(attrs admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := a.waitUntilReady(attrs); err != nil {
 		return err
 	}
@@ -124,7 +124,7 @@ func (a *AdmitPlant) Admit(attrs admission.Attributes) error {
 // Validate makes admissions decisions based on the resources specified in a Plant object.
 // It does reject the request if there another plant managing the cluster, if the plant name is invalid
 // or the project that contains the plant resource is deleted
-func (a *AdmitPlant) Validate(attrs admission.Attributes) error {
+func (a *AdmitPlant) Validate(attrs admission.Attributes, o admission.ObjectInterfaces) error {
 	if err := a.waitUntilReady(attrs); err != nil {
 		return err
 	}

@@ -8,7 +8,6 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -689,17 +688,7 @@ func Convert_core_Plant_To_v1alpha1_Plant(in *core.Plant, out *Plant, s conversi
 
 func autoConvert_v1alpha1_PlantList_To_core_PlantList(in *PlantList, out *core.PlantList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]core.Plant, len(*in))
-		for i := range *in {
-			if err := Convert_v1alpha1_Plant_To_core_Plant(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]core.Plant)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
@@ -710,17 +699,7 @@ func Convert_v1alpha1_PlantList_To_core_PlantList(in *PlantList, out *core.Plant
 
 func autoConvert_core_PlantList_To_v1alpha1_PlantList(in *core.PlantList, out *PlantList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	if in.Items != nil {
-		in, out := &in.Items, &out.Items
-		*out = make([]Plant, len(*in))
-		for i := range *in {
-			if err := Convert_core_Plant_To_v1alpha1_Plant(&(*in)[i], &(*out)[i], s); err != nil {
-				return err
-			}
-		}
-	} else {
-		out.Items = nil
-	}
+	out.Items = *(*[]Plant)(unsafe.Pointer(&in.Items))
 	return nil
 }
 
@@ -753,9 +732,7 @@ func Convert_core_PlantSpec_To_v1alpha1_PlantSpec(in *core.PlantSpec, out *Plant
 
 func autoConvert_v1alpha1_PlantStatus_To_core_PlantStatus(in *PlantStatus, out *core.PlantStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]core.Condition)(unsafe.Pointer(&in.Conditions))
-	if err := v1.Convert_int64_To_Pointer_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
-		return err
-	}
+	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
 	out.ClusterInfo = (*core.ClusterInfo)(unsafe.Pointer(in.ClusterInfo))
 	return nil
 }
@@ -767,9 +744,7 @@ func Convert_v1alpha1_PlantStatus_To_core_PlantStatus(in *PlantStatus, out *core
 
 func autoConvert_core_PlantStatus_To_v1alpha1_PlantStatus(in *core.PlantStatus, out *PlantStatus, s conversion.Scope) error {
 	out.Conditions = *(*[]Condition)(unsafe.Pointer(&in.Conditions))
-	if err := v1.Convert_Pointer_int64_To_int64(&in.ObservedGeneration, &out.ObservedGeneration, s); err != nil {
-		return err
-	}
+	out.ObservedGeneration = (*int64)(unsafe.Pointer(in.ObservedGeneration))
 	out.ClusterInfo = (*ClusterInfo)(unsafe.Pointer(in.ClusterInfo))
 	return nil
 }

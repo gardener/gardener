@@ -16,17 +16,19 @@ package plant
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+// Unknown is a constant to be used for unknown cloud info
+const Unknown = "<unknown>"
 
 func newConditionOrError(oldCondition, newCondition gardencorev1alpha1.Condition, err error) gardencorev1alpha1.Condition {
 	if err != nil {
@@ -54,22 +56,23 @@ func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryCli
 // getClusterInfo gets the kubernetes cluster zones and Region by inspecting labels on nodes in the cluster.
 func getClusterInfo(ctx context.Context, cl client.Client, logger logrus.FieldLogger) (*StatusCloudInfo, error) {
 	nodes := &corev1.NodeList{}
-	if err := cl.List(ctx, &client.ListOptions{}, nodes); err != nil {
+	if err := cl.List(ctx, &client.ListOptions{Raw: &metav1.ListOptions{Limit: 1}}, nodes); err != nil {
 		return nil, err
 	}
 
 	if len(nodes.Items) == 0 {
-		return nil, fmt.Errorf("there are no nodes available in this cluster to retrieve zones and regions from")
+		return &StatusCloudInfo{
+			CloudType: Unknown,
+			Region:    Unknown,
+		}, nil
 	}
 
-	// we are only taking the first node because all nodes that
-	firstNode := nodes.Items[0]
-	region, err := getRegionNameForNode(firstNode)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		firstNode = nodes.Items[0]
+		region    = getRegionNameForNode(firstNode)
+		provider  = getCloudProviderForNode(firstNode.Spec.ProviderID)
+	)
 
-	provider := getCloudProviderForNode(firstNode.Spec.ProviderID)
 	return &StatusCloudInfo{
 		Region:    region,
 		CloudType: provider,
@@ -79,19 +82,21 @@ func getClusterInfo(ctx context.Context, cl client.Client, logger logrus.FieldLo
 func getCloudProviderForNode(providerID string) string {
 	provider := strings.Split(providerID, "://")
 	if len(provider) == 1 && len(providerID) == 0 {
-		return "<unknown>"
+		return Unknown
 	}
 	return provider[0]
 }
 
-func getRegionNameForNode(node corev1.Node) (string, error) {
+func getRegionNameForNode(node corev1.Node) string {
 	for key, value := range node.Labels {
-		// TODO: replace LabelZoneRegion const with corev1.LabelZoneRegion which will be availbale in 1.14
 		if key == corev1.LabelZoneRegion {
-			return value, nil
+			return value
+		}
+		if key == corev1.LabelZoneFailureDomain {
+			return value
 		}
 	}
-	return "", errors.Errorf("Region name for node %s not found. No label with key %s", node.Name, corev1.LabelZoneRegion)
+	return Unknown
 }
 
 func isPlantSecret(plant *gardencorev1alpha1.Plant, secretKey client.ObjectKey) bool {

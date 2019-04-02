@@ -22,7 +22,6 @@ import (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// +k8s:openapi-gen=x-kubernetes-print-columns:custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,TYPE:.status.cloudInfo.cloud.type,REGION:.status.cloudInfo.cloud.region,VERSION:.status.cloudInfo.kubernetes.version,APISERVER:.status.conditions[?(@.type == 'APIServerAvailable')].status,NODES:.status.conditions[?(@.type == 'EveryNodeReady')].status
 type Plant struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object metadata.
@@ -71,7 +70,7 @@ type PlantStatus struct {
 	// ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the
 	// Plant's generation, which is updated on mutation by the API Server.
 	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	ObservedGeneration *int64 `json:"observedGeneration,omitempty"`
 	// ClusterInfo is additional computed information about the newly added cluster (Plant)
 	ClusterInfo *ClusterInfo `json:"clusterInfo,omitempty"`
 }

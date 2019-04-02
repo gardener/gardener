@@ -108,8 +108,6 @@ var _ = Describe("Plant", func() {
 				makeNodeWithProvider("", map[string]string{labelZoneRegion: region}), BeNil(), &plant.StatusCloudInfo{CloudType: unKnown, K8sVersion: k8sVersion, Region: region}),
 			Entry("It should return the provider successfully",
 				makeNodeWithProvider("aws://zones.something", map[string]string{labelZoneRegion: region}), BeNil(), &plant.StatusCloudInfo{CloudType: "aws", K8sVersion: k8sVersion, Region: region}),
-			Entry("It should fail if return an error if region label is not set",
-				makeNodeWithProvider("", map[string]string{}), Not(BeNil()), nil),
 		)
 	})
 	Context("HealthChecker", func() {

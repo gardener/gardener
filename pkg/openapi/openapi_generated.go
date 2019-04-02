@@ -1104,11 +1104,6 @@ func schema_pkg_apis_core_v1alpha1_Plant(ref common.ReferenceCallback) common.Op
 					},
 				},
 			},
-			VendorExtensible: spec.VendorExtensible{
-				Extensions: spec.Extensions{
-					"x-kubernetes-print-columns": "custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,TYPE:.status.cloudInfo.cloud.type,REGION:.status.cloudInfo.cloud.region,VERSION:.status.cloudInfo.kubernetes.version,APISERVER:.status.conditions[?(@.type == 'APIServerAvailable')].status,NODES:.status.conditions[?(@.type == 'EveryNodeReady')].status",
-				},
-			},
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},

@@ -87,7 +87,7 @@ var _ = Describe("Admission", func() {
 
 			Expect(plant.Annotations).NotTo(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
 
-			err := admissionHandler.Admit(attrs)
+			err := admissionHandler.Admit(attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(plant.Annotations).To(HaveKeyWithValue(common.GardenCreatedBy, defaultUserName))
@@ -115,14 +115,14 @@ var _ = Describe("Admission", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			attrs := admission.NewAttributesRecord(&plant, nil, core.Kind("Plant").WithVersion("version"), plant.Namespace, plant.Name, core.Resource("plants").WithVersion("version"), "", admission.Create, false, nil)
-			err = admissionHandler.Validate(attrs)
+			err = admissionHandler.Validate(attrs, nil)
 
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("another plant resource already exists"))
 		})
 		It("should do nothing because the resource is not a Plant", func() {
 			attrs = admission.NewAttributesRecord(nil, nil, core.Kind("SomeOtherResource").WithVersion("version"), "", plant.Name, core.Resource("some-other-resource").WithVersion("version"), "", admission.Create, false, nil)
-			err := admissionHandler.Validate(attrs)
+			err := admissionHandler.Validate(attrs, nil)
 
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -139,7 +139,7 @@ var _ = Describe("Admission", func() {
 			err = gardencoreInformerFactory.Core().InternalVersion().Plants().Informer().GetStore().Add(&core.Plant{})
 			Expect(err).NotTo(HaveOccurred())
 
-			err = admissionHandler.Validate(attrs)
+			err = admissionHandler.Validate(attrs, nil)
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
