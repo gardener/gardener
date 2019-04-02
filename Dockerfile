@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
 #############      apiserver     #############
 FROM alpine:3.8 AS apiserver
 
-RUN apk add --update bash curl
+RUN apk add --update bash curl tzdata
 
 COPY --from=builder /go/bin/gardener-apiserver /gardener-apiserver
 
@@ -25,11 +25,7 @@ ENTRYPOINT ["/gardener-apiserver"]
 ############# controller-manager #############
 FROM alpine:3.8 AS controller-manager
 
-RUN apk add --update bash curl openvpn
-
-# https://github.com/golang/go/issues/20969, needed by Alicloud SDK
-ENV ZONEINFO=/zone-info/zoneinfo.zip
-COPY /assets/zoneinfo.zip /zone-info/zoneinfo.zip
+RUN apk add --update bash curl openvpn tzdata
 
 COPY --from=builder /go/bin/gardener-controller-manager /gardener-controller-manager
 COPY charts /charts
