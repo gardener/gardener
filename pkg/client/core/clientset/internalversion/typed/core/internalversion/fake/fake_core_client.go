@@ -20,6 +20,10 @@ func (c *FakeCore) ControllerRegistrations() internalversion.ControllerRegistrat
 	return &FakeControllerRegistrations{c}
 }
 
+func (c *FakeCore) Plants(namespace string) internalversion.PlantInterface {
+	return &FakePlants{c, namespace}
+}
+
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
 func (c *FakeCore) RESTClient() rest.Interface {

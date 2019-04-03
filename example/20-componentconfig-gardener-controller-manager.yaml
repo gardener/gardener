@@ -7,6 +7,9 @@ clientConnection:
   qps: 100
   burst: 130
 controllers:
+  plant:
+    syncPeriod: 10s
+    concurrentSyncs: 5
   shoot:
     concurrentSyncs: 20
     syncPeriod: 1h

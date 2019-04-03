@@ -66,6 +66,9 @@ type ControllerManagerControllerConfiguration struct {
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
 	// +optional
 	ControllerInstallation *ControllerInstallationControllerConfiguration `json:"controllerInstallation,omitempty"`
+	// Plant defines the configuration of the Plant controller.
+	// +optional
+	Plant *PlantConfiguration `json:"plant,omitempty"`
 	// SecretBinding defines the configuration of the SecretBinding controller.
 	// +optional
 	SecretBinding *SecretBindingControllerConfiguration `json:"secretBinding,omitempty"`
@@ -112,6 +115,16 @@ type ControllerInstallationControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int `json:"concurrentSyncs"`
+}
+
+// PlantConfiguration defines the configuration of the
+// PlantConfiguration controller.
+type PlantConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int `json:"concurrentSyncs"`
+	// SyncPeriod is the duration how often the existing resources are reconciled.
+	SyncPeriod metav1.Duration `json:"syncPeriod"`
 }
 
 // SecretBindingControllerConfiguration defines the configuration of the

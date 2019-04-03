@@ -34,6 +34,8 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Cloud":                          schema_pkg_apis_core_v1alpha1_Cloud(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterInfo":                    schema_pkg_apis_core_v1alpha1_ClusterInfo(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition":                      schema_pkg_apis_core_v1alpha1_Condition(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerDeployment":           schema_pkg_apis_core_v1alpha1_ControllerDeployment(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerInstallation":         schema_pkg_apis_core_v1alpha1_ControllerInstallation(ref),
@@ -44,9 +46,15 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationList":     schema_pkg_apis_core_v1alpha1_ControllerRegistrationList(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerRegistrationSpec":     schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ControllerResource":             schema_pkg_apis_core_v1alpha1_ControllerResource(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint":                       schema_pkg_apis_core_v1alpha1_Endpoint(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.K8SNetworks":                    schema_pkg_apis_core_v1alpha1_K8SNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes":                     schema_pkg_apis_core_v1alpha1_Kubernetes(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastError":                      schema_pkg_apis_core_v1alpha1_LastError(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.LastOperation":                  schema_pkg_apis_core_v1alpha1_LastOperation(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Plant":                          schema_pkg_apis_core_v1alpha1_Plant(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantList":                      schema_pkg_apis_core_v1alpha1_PlantList(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec":                      schema_pkg_apis_core_v1alpha1_PlantSpec(ref),
+		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantStatus":                    schema_pkg_apis_core_v1alpha1_PlantStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig":                 schema_pkg_apis_core_v1alpha1_ProviderConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud":                      schema_pkg_apis_garden_v1beta1_AWSCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSConstraints":                schema_pkg_apis_garden_v1beta1_AWSConstraints(ref),
@@ -429,6 +437,62 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 	}
 }
 
+func schema_pkg_apis_core_v1alpha1_Cloud(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Cloud contains information about the cloud",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the cloud type",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is the cloud region",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"type", "region"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_ClusterInfo(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ClusterInfo contains information about the Plant cluster",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"cloud": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Cloud describes the cloud information",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Cloud"),
+						},
+					},
+					"kubernetes": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kubernetes describes kubernetes meta information (e.g., version)",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes"),
+						},
+					},
+				},
+				Required: []string{"cloud", "kubernetes"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Cloud", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Kubernetes"},
+	}
+}
+
 func schema_pkg_apis_core_v1alpha1_Condition(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -771,7 +835,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerRegistrationSpec(ref common.Referen
 				Properties: map[string]spec.Schema{
 					"resources": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Resources is a list of combinations of kinds (DNS, Infrastructure, Generic, ...) and their actual types (aws-route53, gcp, auditlog, ...).",
+							Description: "Resources is a list of combinations of kinds (DNSProvider, Infrastructure, Generic, ...) and their actual types (aws-route53, gcp, auditlog, ...).",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -801,7 +865,7 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ControllerResource is a combination of a kind (DNS, Infrastructure, Generic, ...) and the actual type for this kind (aws-route53, gcp, auditlog, ...).",
+				Description: "ControllerResource is a combination of a kind (DNSProvider, Infrastructure, Generic, ...) and the actual type for this kind (aws-route53, gcp, auditlog, ...).",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
@@ -820,6 +884,41 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 					},
 				},
 				Required: []string{"kind", "type"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Endpoint(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Endpoint is an endpoint for monitoring, logging and other services around the plant.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the endpoint",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"url": {
+						SchemaProps: spec.SchemaProps{
+							Description: "URL is the url of the endpoint",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"purpose": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Purpose is the purpose of the endpoint",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name", "url", "purpose"},
 			},
 		},
 	}
@@ -854,6 +953,27 @@ func schema_pkg_apis_core_v1alpha1_K8SNetworks(ref common.ReferenceCallback) com
 						},
 					},
 				},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Kubernetes(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Kubernetes contains the version and configuration variables for the Plant cluster.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the semantic Kubernetes version to use for the Plant cluster.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"version"},
 			},
 		},
 	}
@@ -941,6 +1061,177 @@ func schema_pkg_apis_core_v1alpha1_LastOperation(ref common.ReferenceCallback) c
 		},
 		Dependencies: []string{
 			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_Plant(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Type: []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+						},
+					},
+					"spec": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Spec contains the specification of this Plant.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec"),
+						},
+					},
+					"status": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Status contains the status of this Plant.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantStatus"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantSpec", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.PlantStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_PlantList(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PlantList is a collection of Plants.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"kind": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"apiVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"metadata": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Standard list object metadata.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"),
+						},
+					},
+					"items": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Items is the list of Plants.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Plant"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"items"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Plant", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_PlantSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PlantSpec is the specification of a Plant.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"secretRef": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SecretRef is a reference to a Secret object containing the Kubeconfig of the external kubernetes clusters to be added to Gardener.",
+							Ref:         ref("k8s.io/api/core/v1.LocalObjectReference"),
+						},
+					},
+					"endpoints": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Endpoints is the configuration plant endpoints",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"secretRef"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Endpoint", "k8s.io/api/core/v1.LocalObjectReference"},
+	}
+}
+
+func schema_pkg_apis_core_v1alpha1_PlantStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "PlantStatus is the status of a Plant.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"conditions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Conditions represents the latest available observations of a Plant's current state.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"),
+									},
+								},
+							},
+						},
+					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this Plant. It corresponds to the Plant's generation, which is updated on mutation by the API Server.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
+					"clusterInfo": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterInfo is additional computed information about the newly added cluster (Plant)",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterInfo"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ClusterInfo", "github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"},
 	}
 }
 
@@ -2918,7 +3209,7 @@ func schema_pkg_apis_garden_v1beta1_DNS(ref common.ReferenceCallback) common.Ope
 					},
 					"secretName": {
 						SchemaProps: spec.SchemaProps{
-							Description: "SecretName is a name of a secret containing credentials for the stated HostedZoneID and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
+							Description: "SecretName is a name of a secret containing credentials for the stated domain and the provider. When not specified, the Gardener will use the cloud provider credentials referenced by the Shoot and try to find respective credentials there. Specifying this field may override this behavior, i.e. forcing the Gardener to only look into the given secret.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
@@ -4042,6 +4333,7 @@ func schema_pkg_apis_garden_v1beta1_LocalMachineImage(ref common.ReferenceCallba
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "LocalMachineImage defines the machine image for Local Provider.",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
@@ -4054,7 +4346,6 @@ func schema_pkg_apis_garden_v1beta1_LocalMachineImage(ref common.ReferenceCallba
 				Required: []string{"name"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 

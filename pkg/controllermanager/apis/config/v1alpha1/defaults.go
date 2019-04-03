@@ -125,6 +125,15 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.BackupInfrastructure.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
 	}
 
+	if obj.Controllers.Plant == nil {
+		obj.Controllers.Plant = &PlantConfiguration{
+			ConcurrentSyncs: 5,
+			SyncPeriod: metav1.Duration{
+				Duration: 30 * time.Second,
+			},
+		}
+	}
+
 	if obj.ShootBackup == nil {
 		obj.ShootBackup = &ShootBackup{
 			Schedule: DefaultETCDBackupSchedule,

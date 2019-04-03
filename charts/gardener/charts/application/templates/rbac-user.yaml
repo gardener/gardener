@@ -136,3 +136,16 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - plants
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch

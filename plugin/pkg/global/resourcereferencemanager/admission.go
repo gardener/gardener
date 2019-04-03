@@ -26,6 +26,7 @@ import (
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/internalversion"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/plugin/pkg/utils"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -160,10 +161,6 @@ func (r *ReferenceManager) ValidateInitialization() error {
 	return nil
 }
 
-func skipVerification(operation admission.Operation, metadata metav1.ObjectMeta) bool {
-	return operation == admission.Update && metadata.DeletionTimestamp != nil
-}
-
 // Admit ensures that referenced resources do actually exist.
 func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInterfaces) error {
 	// Wait until the caches have been synced
@@ -192,7 +189,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into SecretBinding object")
 		}
-		if skipVerification(operation, binding.ObjectMeta) {
+		if utils.SkipVerification(operation, binding.ObjectMeta) {
 			return nil
 		}
 		err = r.ensureSecretBindingReferences(a, binding)
@@ -202,7 +199,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Seed object")
 		}
-		if skipVerification(operation, seed.ObjectMeta) {
+		if utils.SkipVerification(operation, seed.ObjectMeta) {
 			return nil
 		}
 		err = r.ensureSeedReferences(seed)
@@ -212,7 +209,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Shoot object")
 		}
-		if skipVerification(operation, shoot.ObjectMeta) {
+		if utils.SkipVerification(operation, shoot.ObjectMeta) {
 			return nil
 		}
 		// Add createdBy annotation to Shoot
@@ -231,7 +228,7 @@ func (r *ReferenceManager) Admit(a admission.Attributes, o admission.ObjectInter
 		if !ok {
 			return apierrors.NewBadRequest("could not convert resource into Project object")
 		}
-		if skipVerification(operation, project.ObjectMeta) {
+		if utils.SkipVerification(operation, project.ObjectMeta) {
 			return nil
 		}
 		// Set createdBy field in Project

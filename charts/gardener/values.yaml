@@ -170,6 +170,9 @@ global:
         qps: 100
         burst: 130
       controllers:
+        plant:
+          concurrentSyncs: 20
+          syncPeriod: 30s
         shoot:
           concurrentSyncs: 20
           syncPeriod: 1h

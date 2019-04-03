@@ -27,6 +27,7 @@ import (
 	cloudprofilecontroller "github.com/gardener/gardener/pkg/controllermanager/controller/cloudprofile"
 	controllerinstallationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerinstallation"
 	controllerregistrationcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/controllerregistration"
+	plantcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/plant"
 	projectcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/project"
 	quotacontroller "github.com/gardener/gardener/pkg/controllermanager/controller/quota"
 	secretbindingcontroller "github.com/gardener/gardener/pkg/controllermanager/controller/secretbinding"
@@ -86,6 +87,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		backupInfrastructureInformer   = f.k8sGardenInformers.Garden().V1beta1().BackupInfrastructures().Informer()
 		controllerRegistrationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerRegistrations().Informer()
 		controllerInstallationInformer = f.k8sGardenCoreInformers.Core().V1alpha1().ControllerInstallations().Informer()
+		plantInformer                  = f.k8sGardenCoreInformers.Core().V1alpha1().Plants().Informer()
 
 		namespaceInformer = f.k8sInformers.Core().V1().Namespaces().Informer()
 		secretInformer    = f.k8sInformers.Core().V1().Secrets().Informer()
@@ -98,7 +100,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	}
 
 	f.k8sGardenCoreInformers.Start(ctx.Done())
-	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced) {
+	if !cache.WaitForCacheSync(ctx.Done(), controllerRegistrationInformer.HasSynced, controllerInstallationInformer.HasSynced, plantInformer.HasSynced) {
 		panic("Timed out waiting for Garden core caches to sync")
 	}
 
@@ -139,6 +141,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 		backupInfrastructureController   = backupinfrastructurecontroller.NewBackupInfrastructureController(f.k8sGardenClient, f.k8sGardenInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
 		controllerRegistrationController = controllerregistrationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder)
 		controllerInstallationController = controllerinstallationcontroller.NewController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.cfg, f.recorder, gardenNamespace)
+		plantController                  = plantcontroller.NewController(f.k8sGardenClient, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.recorder)
 	)
 
 	// Initialize the Controller metrics collection.
@@ -153,6 +156,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 	go backupInfrastructureController.Run(ctx, f.cfg.Controllers.BackupInfrastructure.ConcurrentSyncs)
 	go controllerRegistrationController.Run(ctx, f.cfg.Controllers.ControllerRegistration.ConcurrentSyncs)
 	go controllerInstallationController.Run(ctx, f.cfg.Controllers.ControllerInstallation.ConcurrentSyncs)
+	go plantController.Run(ctx, f.cfg.Controllers.Plant.ConcurrentSyncs)
 
 	logger.Logger.Infof("Gardener controller manager (version %s) initialized.", version.Get().GitVersion)
 
