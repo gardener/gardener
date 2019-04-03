@@ -7,7 +7,7 @@ metadata:
 spec:
   ports:
     - port: 443
-      targetPort: 8000
+      targetPort: 443
   selector:
     app: vpa-admission-controller
 ---
@@ -46,13 +46,16 @@ spec:
       serviceAccountName: vpa-admission-controller
       containers:
       - name: admission-controller
-        args:
+        command:
         - ./admission-controller
+        args:
         - --v=4
         - --stderrthreshold=info
         - --client-ca-file=/etc/tls-certs/ca.crt
         - --tls-cert-file=/etc/tls-certs/tls.crt
         - --tls-private-key=/etc/tls-certs/tls.key
+        - --address=:8944
+        - --port=443
         image: {{ index .Values.global.images "vpa-admission-controller" }}
         imagePullPolicy: IfNotPresent
         env:
@@ -72,7 +75,7 @@ spec:
             cpu: 50m
             memory: 200Mi
         ports:
-        - containerPort: 8000
+        - containerPort: 443
       volumes:
         - name: vpa-tls-certs
           secret:

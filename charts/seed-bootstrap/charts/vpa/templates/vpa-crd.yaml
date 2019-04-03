@@ -6,7 +6,6 @@ metadata:
 {{ toYaml .Values.vpa.labels | indent 4 }}
 spec:
   group: autoscaling.k8s.io
-  version: v1beta1
   scope: Namespaced
   names:
     plural: verticalpodautoscalers
@@ -48,7 +47,6 @@ metadata:
 {{ toYaml .Values.vpa.labels | indent 4 }}
 spec:
   group: autoscaling.k8s.io
-  version: v1beta1
   scope: Namespaced
   names:
     plural: verticalpodautoscalercheckpoints
