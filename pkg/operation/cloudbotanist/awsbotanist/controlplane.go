@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -135,7 +136,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 			"valueFrom": map[string]interface{}{
 				"secretKeyRef": map[string]interface{}{
 					"key":  AccessKeyID,
-					"name": common.CloudProviderSecretName,
+					"name": gardencorev1alpha1.SecretNameCloudProvider,
 				},
 			},
 		},
@@ -144,7 +145,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 			"valueFrom": map[string]interface{}{
 				"secretKeyRef": map[string]interface{}{
 					"key":  SecretAccessKey,
-					"name": common.CloudProviderSecretName,
+					"name": gardencorev1alpha1.SecretNameCloudProvider,
 				},
 			},
 		},

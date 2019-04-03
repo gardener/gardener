@@ -15,12 +15,14 @@
 package alicloudbotanist
 
 import (
-	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/alicloud"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -137,7 +139,7 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, n
 	}
 
 	var (
-		sshSecret = b.Secrets["ssh-keypair"]
+		sshSecret = b.Secrets[gardencorev1alpha1.SecretNameSSHKeyPair]
 		zones     = []map[string]interface{}{}
 	)
 

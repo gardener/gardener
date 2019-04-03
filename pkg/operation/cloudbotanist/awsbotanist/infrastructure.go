@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
@@ -108,7 +109,7 @@ func (b *AWSBotanist) generateTerraformInfraVariablesEnvironment() map[string]st
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, internetGatewayID, vpcCIDR string) map[string]interface{} {
 	var (
-		sshSecret      = b.Secrets["ssh-keypair"]
+		sshSecret      = b.Secrets[gardencorev1alpha1.SecretNameSSHKeyPair]
 		dhcpDomainName = "ec2.internal"
 		zones          = []map[string]interface{}{}
 	)

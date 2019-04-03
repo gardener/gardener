@@ -17,10 +17,13 @@ package azurebotanist
 import (
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -93,7 +96,7 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, opera
 				"version":   b.Shoot.Info.Spec.Cloud.Azure.MachineImage.Version,
 			},
 			"volumeSize":   common.DiskSize(worker.VolumeSize),
-			"sshPublicKey": string(b.Secrets["ssh-keypair"].Data[secrets.DataKeySSHAuthorizedKeys]),
+			"sshPublicKey": string(b.Secrets[gardencorev1alpha1.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]),
 		}
 
 		var (

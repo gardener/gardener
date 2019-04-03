@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -230,10 +231,10 @@ func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
 		},
 		"podAnnotations": map[string]interface{}{
-			fmt.Sprintf("checksum/%s", common.CSIAttacher):             b.CheckSums[common.CSIAttacher],
-			fmt.Sprintf("checksum/%s", common.CloudProviderSecretName): b.CheckSums[common.CloudProviderSecretName],
-			fmt.Sprintf("checksum/%s", common.CSIProvisioner):          b.CheckSums[common.CSIProvisioner],
-			fmt.Sprintf("checksum/%s", common.CSISnapshotter):          b.CheckSums[common.CSISnapshotter],
+			fmt.Sprintf("checksum/%s", gardencorev1alpha1.SecretNameCloudProvider): b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
+			fmt.Sprintf("checksum/%s", common.CSIAttacher):                         b.CheckSums[common.CSIAttacher],
+			fmt.Sprintf("checksum/%s", common.CSIProvisioner):                      b.CheckSums[common.CSIProvisioner],
+			fmt.Sprintf("checksum/%s", common.CSISnapshotter):                      b.CheckSums[common.CSISnapshotter],
 		},
 		"kubernetesVersion": b.ShootVersion(),
 		"enabled":           true,

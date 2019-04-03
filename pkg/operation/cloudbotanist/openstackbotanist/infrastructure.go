@@ -15,6 +15,7 @@
 package openstackbotanist
 
 import (
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -79,7 +80,7 @@ func (b *OpenStackBotanist) generateTerraformInfraConfig(createRouter bool, rout
 			"router": createRouter,
 		},
 		"dnsServers":   b.Shoot.CloudProfile.Spec.OpenStack.DNSServers,
-		"sshPublicKey": string(b.Secrets["ssh-keypair"].Data[secrets.DataKeySSHAuthorizedKeys]),
+		"sshPublicKey": string(b.Secrets[gardencorev1alpha1.SecretNameSSHKeyPair].Data[secrets.DataKeySSHAuthorizedKeys]),
 		"router": map[string]interface{}{
 			"id": routerID,
 		},

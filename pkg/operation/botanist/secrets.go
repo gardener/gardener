@@ -542,7 +542,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 
 		// Secret definition for ssh-keypair
 		&secrets.RSASecretConfig{
-			Name:       "ssh-keypair",
+			Name:       gardencorev1alpha1.SecretNameSSHKeyPair,
 			Bits:       4096,
 			UsedForSSH: true,
 		},
@@ -747,7 +747,7 @@ func (b *Botanist) DeployCloudProviderSecret() error {
 		checksum = computeSecretCheckSum(b.Shoot.Secret.Data)
 		secret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.CloudProviderSecretName,
+				Name:      gardencorev1alpha1.SecretNameCloudProvider,
 				Namespace: b.Shoot.SeedNamespace,
 				Annotations: map[string]string{
 					"checksum/data": checksum,
@@ -765,8 +765,8 @@ func (b *Botanist) DeployCloudProviderSecret() error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	b.Secrets[common.CloudProviderSecretName] = b.Shoot.Secret
-	b.CheckSums[common.CloudProviderSecretName] = checksum
+	b.Secrets[gardencorev1alpha1.SecretNameCloudProvider] = b.Shoot.Secret
+	b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider] = checksum
 
 	return nil
 }
@@ -778,7 +778,7 @@ func (b *Botanist) DeleteGardenSecrets() error {
 	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "kubeconfig")); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
-	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "ssh-keypair")); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, gardencorev1alpha1.SecretNameSSHKeyPair)); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	return nil
@@ -903,7 +903,7 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 // SyncShootCredentialsToGarden copies the kubeconfig generated for the user as well as the SSH keypair to
 // the project namespace in the Garden cluster.
 func (b *Botanist) SyncShootCredentialsToGarden() error {
-	for key, value := range map[string]string{"kubeconfig": "kubecfg", "ssh-keypair": "ssh-keypair"} {
+	for key, value := range map[string]string{"kubeconfig": "kubecfg", gardencorev1alpha1.SecretNameSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair} {
 		secretObj := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s.%s", b.Shoot.Info.Name, key),

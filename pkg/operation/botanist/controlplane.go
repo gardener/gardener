@@ -463,7 +463,7 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 		{
 			Op:    "replace",
 			Path:  "/spec/template/metadata/annotations/checksum~1secret-cloudprovider",
-			Value: b.CheckSums[common.CloudProviderSecretName],
+			Value: b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
 		},
 		{
 			Op:    "replace",

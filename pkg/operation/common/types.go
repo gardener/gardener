@@ -46,9 +46,6 @@ const (
 	// will be downloaded.
 	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
 
-	// CloudProviderSecretName is the name of the secret containing the cloud provider credentials.
-	CloudProviderSecretName = "cloudprovider"
-
 	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"
 
