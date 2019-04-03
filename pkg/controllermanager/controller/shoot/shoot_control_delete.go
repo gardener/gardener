@@ -128,13 +128,19 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
+		syncClusterResourceToSeed = g.Add(flow.Task{
+			Name: "Syncing shoot cluster information to seed",
+			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
+
 		// We need to ensure that the deployed cloud provider secret is up-to-date. In case it has changed then we
 		// need to redeploy the cloud provider config (containing the secrets for some cloud providers) as well as
 		// restart the components using the secrets (cloud controller, controller manager). We also need to update all
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
-			Name: "Deploying cloud provider account secret",
-			Fn:   flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
+			Name:         "Deploying cloud provider account secret",
+			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		refreshMachineClassSecrets = g.Add(flow.Task{
 			Name:         "Refreshing machine class secrets",
@@ -167,8 +173,9 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 
 		wakeUpControlPlane = g.Add(flow.Task{
-			Name: "Waking up control plane to ensure proper cleanup of resources",
-			Fn:   flow.TaskFn(botanist.WakeUpControlPlane).DoIf(o.Shoot.IsHibernated && cleanupShootResources),
+			Name:         "Waking up control plane to ensure proper cleanup of resources",
+			Fn:           flow.TaskFn(botanist.WakeUpControlPlane).DoIf(o.Shoot.IsHibernated && cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 
 		initializeShootClients = g.Add(flow.Task{
@@ -183,8 +190,9 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		// extension DNS controller cleans up. If they did not exist then the resources are just created, and can be
 		// safely deleted by latter steps.
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
-			Name: "Waiting until Kubernetes API server service has reported readiness",
-			Fn:   flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).DoIf(isCloud && internalDNSMigrationNeeded),
+			Name:         "Waiting until Kubernetes API server service has reported readiness",
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerServiceIsReady).DoIf(isCloud && internalDNSMigrationNeeded),
+			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
@@ -192,8 +200,9 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
-			Name: "Deploying external domain DNS record",
-			Fn:   flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedExternalDNS && externalDNSMigrationNeeded),
+			Name:         "Deploying external domain DNS record",
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedExternalDNS && externalDNSMigrationNeeded),
+			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		deployIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",

@@ -56,6 +56,7 @@ type Controller struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config                        *config.ControllerManagerConfiguration
+	identity                      *gardenv1beta1.Gardener
 	control                       ControlInterface
 	careControl                   CareControlInterface
 	maintenanceControl            MaintenanceControlInterface
@@ -132,6 +133,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
 
 		config:                        config,
+		identity:                      identity,
 		control:                       NewDefaultControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder),
 		careControl:                   NewDefaultCareControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, config),
 		maintenanceControl:            NewDefaultMaintenanceControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, recorder),

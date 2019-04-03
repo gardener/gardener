@@ -12,8 +12,8 @@ type FakeExtensionsV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeExtensionsV1alpha1) Clusters(namespace string) v1alpha1.ClusterInterface {
-	return &FakeClusters{c, namespace}
+func (c *FakeExtensionsV1alpha1) Clusters() v1alpha1.ClusterInterface {
+	return &FakeClusters{c}
 }
 
 func (c *FakeExtensionsV1alpha1) ControlPlanes(namespace string) v1alpha1.ControlPlaneInterface {

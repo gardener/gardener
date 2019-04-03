@@ -75,10 +75,15 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		requireInfrastructureDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
 		requireKube2IAMDeployment       = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource)
 
-		g               = flow.NewGraph("Shoot cluster reconciliation")
+		g                         = flow.NewGraph("Shoot cluster reconciliation")
+		syncClusterResourceToSeed = g.Add(flow.Task{
+			Name: "Syncing shoot cluster information to seed",
+			Fn:   flow.TaskFn(botanist.SyncClusterResourceToSeed).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
 		deployNamespace = g.Add(flow.Task{
-			Name: "Deploying Shoot namespace in Seed",
-			Fn:   flow.SimpleTaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Deploying Shoot namespace in Seed",
+			Fn:           flow.SimpleTaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying cloud metadata service network policy",
