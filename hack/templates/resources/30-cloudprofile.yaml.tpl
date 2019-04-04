@@ -367,7 +367,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000)}
         % else:
         versions:
-        - 1.14.0
         - 1.13.4
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
