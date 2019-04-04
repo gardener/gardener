@@ -128,11 +128,10 @@ func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) err
 
 	// Initialize conditions based on the current status.
 	var (
-		newConditions                    = gardencorev1alpha1helper.MergeConditions(shoot.Status.Conditions, gardencorev1alpha1helper.InitCondition(gardenv1beta1.ShootAPIServerAvailable), gardencorev1alpha1helper.InitCondition(gardenv1beta1.ShootControlPlaneHealthy), gardencorev1alpha1helper.InitCondition(gardenv1beta1.ShootEveryNodeReady), gardencorev1alpha1helper.InitCondition(gardenv1beta1.ShootSystemComponentsHealthy))
-		conditionAPIServerAvailable      = newConditions[0]
-		conditionControlPlaneHealthy     = newConditions[1]
-		conditionEveryNodeReady          = newConditions[2]
-		conditionSystemComponentsHealthy = newConditions[3]
+		conditionAPIServerAvailable      = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootAPIServerAvailable)
+		conditionControlPlaneHealthy     = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootControlPlaneHealthy)
+		conditionEveryNodeReady          = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootEveryNodeReady)
+		conditionSystemComponentsHealthy = gardencorev1alpha1helper.GetOrInitCondition(shoot.Status.Conditions, gardenv1beta1.ShootSystemComponentsHealthy)
 	)
 
 	botanist, err := botanistpkg.New(operation)
