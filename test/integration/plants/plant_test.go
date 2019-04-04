@@ -38,7 +38,7 @@ var (
 	kubeconfigPathExternalCluster = flag.String("kubeconfig-path-externalcluster", "", "the path to the kubeconfig path  of the external cluster that will be registered as a plant")
 	logLevel                      = flag.String("verbose", "", "verbosity level, when set, logging level will be DEBUG")
 	plantTestYamlPath             = flag.String("plant-path", "", "the path to the plant yaml that will be used for testing")
-	cleanup                       = flag.Bool("cleanup", false, "deletes the newly created / existing test plant after the test suite is done")
+	plantTestNamespace            = flag.String("plant-test-namespace", "", "the namespace where the plant will be created")
 )
 
 const (
@@ -56,6 +56,10 @@ func validateFlags() {
 		if !FileExists(*plantTestYamlPath) {
 			Fail("plant yaml path is set but invalid")
 		}
+	}
+
+	if !StringSet(*plantTestNamespace) {
+		Fail("you need to specify the namespace where the plant will be created")
 	}
 
 	if !StringSet(*kubeconfigPath) {
@@ -83,7 +87,8 @@ func cleanPlant(ctx context.Context, plantTest *PlantTest, secret *v1.Secret) er
 
 }
 
-func createPlant(ctx context.Context, plantTest *PlantTest, kubeConfigContent []byte) (*v1.Secret, error) {
+func createPlant(ctx context.Context, plantNamespace string, plantTest *PlantTest, kubeConfigContent []byte) (*v1.Secret, error) {
+	plantTest.Plant.Namespace = plantNamespace
 	secret, err := plantTest.CreatePlantSecret(ctx, kubeConfigContent)
 	if err != nil {
 		return nil, err
@@ -122,7 +127,7 @@ var _ = Describe("Plant testing", func() {
 	}, InitializationTimeout)
 
 	CIt("Should create plant successfully", func(ctx context.Context) {
-		secret, err := createPlant(ctx, plantTest, validKubeConfigContent)
+		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, validKubeConfigContent)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(plantTest.WaitForPlantToBeReconciledSuccessfully(ctx)).NotTo(HaveOccurred())
@@ -133,7 +138,7 @@ var _ = Describe("Plant testing", func() {
 	}, PlantCreationTimeout)
 
 	CIt("Should update Plant Status to 'unknown' due to updated and invalid Plant Secret (kubeconfig invalid)", func(ctx context.Context) {
-		secret, err := createPlant(ctx, plantTest, validKubeConfigContent)
+		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, validKubeConfigContent)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(plantTest.WaitForPlantToBeReconciledSuccessfully(ctx)).NotTo(HaveOccurred())
@@ -158,10 +163,9 @@ var _ = Describe("Plant testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 	}, PlantUpdateSecretTimeout)
-
 	CIt("Should reconcile Plant Status to be successful after Plant Secret update", func(ctx context.Context) {
 		dummyKubeconfigContent := []byte("Here is a string....")
-		secret, err := createPlant(ctx, plantTest, dummyKubeconfigContent)
+		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, dummyKubeconfigContent)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(plantTest.WaitForPlantToBeReconciledWithUnknownStatus(ctx)).NotTo(HaveOccurred())
@@ -182,7 +186,7 @@ var _ = Describe("Plant testing", func() {
 
 	}, PlantUpdateSecretTimeout)
 	CIt("Should update Plant Status to 'unknown' due to updated and invalid Plant Secret (kubeconfig not provided)", func(ctx context.Context) {
-		secret, err := createPlant(ctx, plantTest, validKubeConfigContent)
+		secret, err := createPlant(ctx, *plantTestNamespace, plantTest, validKubeConfigContent)
 		Expect(err).NotTo(HaveOccurred())
 		defer func() {
 			Expect(cleanPlant(ctx, plantTest, secret)).NotTo(HaveOccurred())

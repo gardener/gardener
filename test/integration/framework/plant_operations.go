@@ -128,6 +128,7 @@ func (s *PlantTest) GetPlant(ctx context.Context) (*gardencorev1alpha1.Plant, er
 func (s *PlantTest) CreatePlant(ctx context.Context, secret *v1.Secret) error {
 	fmt.Println(secret.Name)
 	plantToBeCreated := s.Plant.DeepCopy()
+	plantToBeCreated.Name = ""
 	plantToBeCreated.ObjectMeta.GenerateName = "test-plant-"
 	plantToBeCreated.Spec.SecretRef.Name = secret.Name
 	err := s.GardenClient.Client().Create(ctx, plantToBeCreated)
