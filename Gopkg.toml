@@ -5,12 +5,24 @@ required = [
   "k8s.io/code-generator/cmd/client-gen",
   "k8s.io/code-generator/cmd/lister-gen",
   "k8s.io/code-generator/cmd/informer-gen",
-  "k8s.io/kube-openapi/cmd/openapi-gen"
+  "k8s.io/kube-openapi/cmd/openapi-gen",
+
+  "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1",
+  "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1",
+  "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1",
+  "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
+  "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1",
+  "github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1"
 ]
 
 ignored = [
   "github.com/spf13/afero/sftp"
 ]
+
+# Only temporarily needed for migration purposes
+[[constraint]]
+  name = "github.com/gardener/gardener-extensions"
+  revision = "f09dd7bc8d2fee9f4cfff1d95d39e7713728bf81"
 
 [[override]]
   name = "k8s.io/api"

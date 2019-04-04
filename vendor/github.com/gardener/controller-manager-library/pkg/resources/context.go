@@ -37,6 +37,9 @@ type ResourceContext interface {
 
 	Resources() Resources
 	SharedInformerFactory() SharedInformerFactory
+
+	GetPreferred(gk schema.GroupKind) (*Info, error)
+	Get(gvk schema.GroupVersionKind) (*Info, error)
 }
 
 type resourceContext struct {
@@ -96,4 +99,32 @@ func (c *resourceContext) GetGVK(obj runtime.Object) (schema.GroupVersionKind, e
 		}
 	}
 	return empty, fmt.Errorf("non.unique mapping for %T", obj)
+}
+
+// NewSharedInformerFactory constructs a new instance of sharedInformerFactory for all namespaces.
+func (c *resourceContext) SharedInformerFactory() SharedInformerFactory {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.sharedInformerFactory == nil {
+		c.sharedInformerFactory = newSharedInformerFactory(c, c.defaultResync)
+	}
+	return c.sharedInformerFactory
+}
+
+func (c *resourceContext) Resources() Resources {
+	c.SharedInformerFactory()
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	if c.resources == nil {
+		source := "controller"
+		src := c.ctx.Value(ATTR_EVENTSOURCE)
+		if src != nil {
+			source = src.(string)
+		}
+		c.resources = newResources(c, source)
+	}
+	return c.resources
 }

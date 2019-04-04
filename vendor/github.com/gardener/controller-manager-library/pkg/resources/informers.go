@@ -19,13 +19,14 @@ package resources
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sync"
+	"time"
+
 	"github.com/gardener/controller-manager-library/pkg/kutil"
 	"github.com/gardener/controller-manager-library/pkg/logger"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/watch"
-	"reflect"
-	"sync"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,47 +56,49 @@ func (f *genericInformer) Lister() Lister {
 // SharedInformerFactory provides shared informers for resources in all known
 // API group versions.
 type SharedInformerFactory interface {
+	Structured() GenericInformerFactory
+	Unstructured() GenericInformerFactory
+
 	InformerForObject(obj runtime.Object) (GenericInformer, error)
 	InformerFor(gvk schema.GroupVersionKind) (GenericInformer, error)
+	UnstructuredInformerFor(gvk schema.GroupVersionKind) (GenericInformer, error)
 	Start(stopCh <-chan struct{})
-	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
+	WaitForCacheSync(stopCh <-chan struct{})
 }
 
-type sharedInformerFactory struct {
+type GenericInformerFactory interface {
+	InformerFor(gvk schema.GroupVersionKind) (GenericInformer, error)
+	Start(stopCh <-chan struct{})
+	WaitForCacheSync(stopCh <-chan struct{})
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Generic Informer Factory
+
+type genericInformerFactory struct {
 	lock sync.Mutex
 
 	context *resourceContext
 
 	defaultResync time.Duration
-	informers     map[reflect.Type]GenericInformer
+	informers     map[schema.GroupVersionKind]GenericInformer
 	// startedInformers is used for tracking which informers have been started.
 	// This allows Start() to be called multiple times safely.
-	startedInformers map[reflect.Type]bool
+	startedInformers map[schema.GroupVersionKind]bool
 }
 
-// NewSharedInformerFactory constructs a new instance of sharedInformerFactory for all namespaces.
-func (c *resourceContext) SharedInformerFactory() SharedInformerFactory {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if c.sharedInformerFactory == nil {
-		c.sharedInformerFactory = newSharedInformerFactory(c, c.defaultResync)
-	}
-	return c.sharedInformerFactory
-}
-
-func newSharedInformerFactory(rctx *resourceContext, defaultResync time.Duration) *sharedInformerFactory {
-	return &sharedInformerFactory{
+func newGenericInformerFactory(rctx *resourceContext, defaultResync time.Duration) *genericInformerFactory {
+	return &genericInformerFactory{
 		context:       rctx,
 		defaultResync: defaultResync,
 
-		informers:        make(map[reflect.Type]GenericInformer),
-		startedInformers: make(map[reflect.Type]bool),
+		informers:        make(map[schema.GroupVersionKind]GenericInformer),
+		startedInformers: make(map[schema.GroupVersionKind]bool),
 	}
 }
 
 // Start initializes all requested informers.
-func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
+func (f *genericInformerFactory) Start(stopCh <-chan struct{}) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
@@ -108,12 +111,12 @@ func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
 }
 
 // WaitForCacheSync waits for all started informers' cache were synced.
-func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool {
-	informers := func() map[reflect.Type]cache.SharedIndexInformer {
+func (f *genericInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) {
+	informers := func() map[schema.GroupVersionKind]cache.SharedIndexInformer {
 		f.lock.Lock()
 		defer f.lock.Unlock()
 
-		informers := map[reflect.Type]cache.SharedIndexInformer{}
+		informers := map[schema.GroupVersionKind]cache.SharedIndexInformer{}
 		for informerType, informer := range f.informers {
 			if f.startedInformers[informerType] {
 				informers[informerType] = informer
@@ -122,47 +125,16 @@ func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) map[ref
 		return informers
 	}()
 
-	res := map[reflect.Type]bool{}
-	for informType, informer := range informers {
-		res[informType] = cache.WaitForCacheSync(stopCh, informer.HasSynced)
+	for _, informer := range informers {
+		cache.WaitForCacheSync(stopCh, informer.HasSynced)
 	}
-	return res
-}
-func (f *sharedInformerFactory) InformerFor(gvk schema.GroupVersionKind) (GenericInformer, error) {
-	informerType := f.context.KnownTypes(gvk.GroupVersion())[gvk.Kind]
-	if informerType == nil {
-		return nil, fmt.Errorf("%s unknown", gvk)
-	}
-	informer, exists := f.informers[informerType]
-	if exists {
-		return informer, nil
-	}
-	return f.informerFor(informerType, gvk)
 }
 
-func (f *sharedInformerFactory) InformerForObject(obj runtime.Object) (GenericInformer, error) {
-	informerType := reflect.TypeOf(obj)
-	for informerType.Kind() == reflect.Ptr {
-		informerType = informerType.Elem()
-	}
-
-	informer, exists := f.informers[informerType]
-	if exists {
-		return informer, nil
-	}
-
-	gvk, err := f.context.GetGVK(obj)
-	if err != nil {
-		return nil, err
-	}
-	return f.informerFor(informerType, gvk)
-}
-
-func (f *sharedInformerFactory) informerFor(informerType reflect.Type, gvk schema.GroupVersionKind) (GenericInformer, error) {
+func (f *genericInformerFactory) informerFor(informerType reflect.Type, gvk schema.GroupVersionKind) (GenericInformer, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	informer, exists := f.informers[informerType]
+	informer, exists := f.informers[gvk]
 	if exists {
 		return informer, nil
 	}
@@ -182,16 +154,16 @@ func (f *sharedInformerFactory) informerFor(informerType reflect.Type, gvk schem
 		return nil, err
 	}
 	informer = f.newInformer(client, info, informerType, l)
-	f.informers[informerType] = informer
+	f.informers[gvk] = informer
 
 	return informer, nil
 }
 
-func (f *sharedInformerFactory) getClient(gv schema.GroupVersion) (restclient.Interface, error) {
+func (f *genericInformerFactory) getClient(gv schema.GroupVersion) (restclient.Interface, error) {
 	return f.context.GetClient(gv)
 }
 
-func (f *sharedInformerFactory) newInformer(client restclient.Interface, res *Info, elemType reflect.Type, listType reflect.Type) GenericInformer {
+func (f *genericInformerFactory) newInformer(client restclient.Interface, res *Info, elemType reflect.Type, listType reflect.Type) GenericInformer {
 	logger.Infof("new generic informer for %s (%s) %s (%d seconds)", elemType, res.GroupVersionKind(), listType, f.defaultResync/time.Second)
 	indexers := cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
 	informer := cache.NewSharedIndexInformer(
@@ -225,6 +197,84 @@ func (f *sharedInformerFactory) newInformer(client restclient.Interface, res *In
 	)
 	return &genericInformer{informer, res}
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// UnstructuredInformers
+
+type unstructuredSharedInformerFactory struct {
+	*genericInformerFactory
+}
+
+var _ GenericInformerFactory = &unstructuredSharedInformerFactory{}
+
+func (f *unstructuredSharedInformerFactory) InformerFor(gvk schema.GroupVersionKind) (GenericInformer, error) {
+	return f.informerFor(unstructuredType, gvk)
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//  informer factory
+
+type sharedInformerFactory struct {
+	context      *resourceContext
+	structured   *genericInformerFactory
+	unstructured *unstructuredSharedInformerFactory
+}
+
+func newSharedInformerFactory(rctx *resourceContext, defaultResync time.Duration) *sharedInformerFactory {
+	return &sharedInformerFactory{
+		context:      rctx,
+		structured:   newGenericInformerFactory(rctx, defaultResync),
+		unstructured: &unstructuredSharedInformerFactory{newGenericInformerFactory(rctx, defaultResync)},
+	}
+}
+
+func (f *sharedInformerFactory) Structured() GenericInformerFactory {
+	return f
+}
+
+func (f *sharedInformerFactory) Unstructured() GenericInformerFactory {
+	return f.unstructured
+}
+
+// Start initializes all requested informers.
+func (f *sharedInformerFactory) Start(stopCh <-chan struct{}) {
+	f.structured.Start(stopCh)
+	f.unstructured.Start(stopCh)
+}
+
+func (f *sharedInformerFactory) WaitForCacheSync(stopCh <-chan struct{}) {
+	f.structured.WaitForCacheSync(stopCh)
+	f.unstructured.WaitForCacheSync(stopCh)
+}
+
+func (f *sharedInformerFactory) UnstructuredInformerFor(gvk schema.GroupVersionKind) (GenericInformer, error) {
+	return f.unstructured.informerFor(unstructuredType, gvk)
+}
+
+func (f *sharedInformerFactory) InformerFor(gvk schema.GroupVersionKind) (GenericInformer, error) {
+	informerType := f.context.KnownTypes(gvk.GroupVersion())[gvk.Kind]
+	if informerType == nil {
+		return nil, fmt.Errorf("%s unknown", gvk)
+	}
+
+	return f.structured.informerFor(informerType, gvk)
+}
+
+func (f *sharedInformerFactory) InformerForObject(obj runtime.Object) (GenericInformer, error) {
+	informerType := reflect.TypeOf(obj)
+	for informerType.Kind() == reflect.Ptr {
+		informerType = informerType.Elem()
+	}
+
+	gvk, err := f.context.GetGVK(obj)
+	if err != nil {
+		return nil, err
+	}
+	return f.structured.informerFor(informerType, gvk)
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Watch
 
 type watchWrapper struct {
 	ctx        context.Context

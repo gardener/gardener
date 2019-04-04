@@ -24,7 +24,7 @@ import (
 
 const owner_annotation = "resources.gardener.cloud/owners"
 
-func (this *_object) GetOwnerReference() *metav1.OwnerReference {
+func (this *AbstractObject) GetOwnerReference() *metav1.OwnerReference {
 	return metav1.NewControllerRef(this.ObjectData, this.GroupVersionKind())
 }
 
@@ -42,8 +42,8 @@ func GetAnnotatedOwners(data ObjectData) []string {
 	return r
 }
 
-func (this *_object) AddOwner(obj Object) bool {
-	return AddOwner(this, this.GetCluster().GetId(), obj)
+func (this *AbstractObject) AddOwner(obj Object) bool {
+	return AddOwner(this, this.self.GetCluster().GetId(), obj)
 }
 
 func AddOwner(data ObjectData, clusterid string, obj Object) bool {
@@ -65,9 +65,9 @@ func AddOwner(data ObjectData, clusterid string, obj Object) bool {
 	}
 }
 
-func (this *_object) RemoveOwner(obj Object) bool {
+func (this *AbstractObject) RemoveOwner(obj Object) bool {
 	owner := obj.ClusterKey()
-	if owner.Namespace() == this.GetNamespace() && owner.Cluster() == this.cluster.GetId() {
+	if owner.Namespace() == this.GetNamespace() && owner.Cluster() == this.self.GetCluster().GetId() {
 		// remove kubernetes owners reference
 		ref := obj.GetOwnerReference()
 		refs := this.GetOwnerReferences()
@@ -84,7 +84,7 @@ func (this *_object) RemoveOwner(obj Object) bool {
 		return true
 	} else {
 		// maintain foreign references via annotations
-		ref := owner.AsRefFor(this.cluster.GetId())
+		ref := owner.AsRefFor(this.self.GetCluster().GetId())
 		refs := GetAnnotatedOwners(this)
 		new := []string{}
 		for _, r := range refs {
@@ -100,16 +100,16 @@ func (this *_object) RemoveOwner(obj Object) bool {
 	}
 }
 
-func (this *_object) GetOwners(kinds ...schema.GroupKind) ClusterObjectKeySet {
+func (this *AbstractObject) GetOwners(kinds ...schema.GroupKind) ClusterObjectKeySet {
 	result := ClusterObjectKeySet{}
-	cluster := this.cluster.GetId()
+	cluster := this.self.GetCluster().GetId()
 
 	for _, r := range this.GetOwnerReferences() {
 		gv, _ := schema.ParseGroupVersion(r.APIVersion)
 		result.Add(NewClusterKey(cluster, NewGroupKind(gv.Group, r.Kind), this.GetNamespace(), r.Name))
 	}
 	for _, r := range GetAnnotatedOwners(this) {
-		ref, err := ParseClusterObjectKey(this.cluster.GetId(), r)
+		ref, err := ParseClusterObjectKey(this.self.GetCluster().GetId(), r)
 		if err == nil {
 			result.Add(ref)
 		}

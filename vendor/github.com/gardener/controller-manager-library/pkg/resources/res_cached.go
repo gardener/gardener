@@ -24,7 +24,7 @@ import (
 
 func (this *_resource) getCached(namespace, name string) (Object, error) {
 	var obj ObjectData
-	informer, err := this.getInformer()
+	informer, err := this.self.I_getInformer()
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (this *_resource) getCached(namespace, name string) (Object, error) {
 	if err != nil {
 		return nil, err
 	}
-	return this.objectAsResource(obj), nil
+	return this.helper.ObjectAsResource(obj), nil
 }
 
 func (this *_resource) GetCached(obj interface{}) (Object, error) {
@@ -50,10 +50,10 @@ func (this *_resource) GetCached(obj interface{}) (Object, error) {
 	case string:
 		return this.getCached("", o)
 	case ObjectData:
-		if err := this.checkOType(o); err != nil {
+		if err := this.helper.CheckOType(o); err != nil {
 			return nil, err
 		}
-		return this.objectAsResource(o), nil
+		return this.helper.ObjectAsResource(o), nil
 	case ObjectKey:
 		if o.GroupKind() != this.GroupKind() {
 			return nil, fmt.Errorf("%s cannot handle group/kind '%s'", this.gvk, o.GroupKind())
@@ -83,12 +83,15 @@ func (this *_resource) GetCached(obj interface{}) (Object, error) {
 }
 
 func (this *_resource) ListCached(selector labels.Selector) (ret []Object, err error) {
-	informer, err := this.getInformer()
+	informer, err := this.self.I_getInformer()
 	if err != nil {
 		return nil, err
 	}
+	if selector == nil {
+		selector = labels.Everything()
+	}
 	err = informer.Lister().List(selector, func(obj interface{}) {
-		ret = append(ret, this.objectAsResource(obj.(ObjectData)))
+		ret = append(ret, this.helper.ObjectAsResource(obj.(ObjectData)))
 	})
 	return ret, err
 }
@@ -97,7 +100,7 @@ func (this *_resource) ListCached(selector labels.Selector) (ret []Object, err e
 
 func (this *namespacedResource) getLister() (NamespacedLister, error) {
 	if this.lister == nil {
-		informer, err := this.resource.getInformer()
+		informer, err := this.resource.self.I_getInformer()
 		if err != nil {
 			return nil, err
 		}
@@ -116,7 +119,7 @@ func (this *namespacedResource) GetCached(name string) (ret Object, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return this.resource.objectAsResource(obj.(ObjectData)), nil
+	return this.resource.helper.ObjectAsResource(obj.(ObjectData)), nil
 }
 
 func (this *namespacedResource) ListCached(selector labels.Selector) (ret []Object, err error) {
@@ -124,8 +127,11 @@ func (this *namespacedResource) ListCached(selector labels.Selector) (ret []Obje
 	if err != nil {
 		return nil, err
 	}
+	if selector == nil {
+		selector = labels.Everything()
+	}
 	err = lister.List(selector, func(obj interface{}) {
-		ret = append(ret, this.resource.objectAsResource(obj.(ObjectData)))
+		ret = append(ret, this.resource.helper.ObjectAsResource(obj.(ObjectData)))
 	})
 	return ret, err
 }
