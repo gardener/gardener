@@ -300,9 +300,13 @@ func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.P
 	if err != nil {
 		return nil, nil, fmt.Errorf("%v:%v", "invalid kubconfig supplied resulted in: ", err)
 	}
+
 	plantClusterClient, err := kubernetes.NewRuntimeClientForConfig(config, client.Options{
 		Scheme: kubernetes.PlantScheme,
 	})
+	if err != nil {
+		return nil, nil, err
+	}
 
 	discoveryClient, err := kubernetesclientset.NewForConfig(config)
 	if err != nil {
