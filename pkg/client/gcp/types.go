@@ -24,7 +24,9 @@ import (
 // ClientInterface is an interface which must be implemented by GCP clients.
 type ClientInterface interface {
 	ListKubernetesFirewallRulesForNetwork(ctx context.Context, project, networkName string) ([]string, error)
+	ListKubernetesRoutesForNetwork(ctx context.Context, project, networkName, namespace string) ([]string, error)
 	DeleteFirewallRule(ctx context.Context, project, firewallRuleName string) error
+	DeleteRoute(ctx context.Context, project, routeName string) error
 }
 
 const fwNamePrefix string = "k8s"
@@ -45,9 +47,32 @@ func (c *Client) ListKubernetesFirewallRulesForNetwork(ctx context.Context, proj
 	return firewalls, nil
 }
 
+// ListKubernetesRoutesForNetwork returns a list of all routes within the shoot network which have the namespace as prefix.
+func (c *Client) ListKubernetesRoutesForNetwork(ctx context.Context, project, network, namespace string) ([]string, error) {
+	var routes []string
+	if err := c.computeService.Routes.List(project).Pages(ctx, func(page *compute.RouteList) error {
+		for _, route := range page.Items {
+			if strings.HasPrefix(route.Name, namespace) {
+				routes = append(routes, route.Name)
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return routes, nil
+}
+
 // DeleteFirewallRule deletes the firewall rule with the specific name. If it does not exist,
 // no error is returned.
 func (c *Client) DeleteFirewallRule(ctx context.Context, project, firewall string) error {
 	_, err := c.computeService.Firewalls.Delete(project, firewall).Context(ctx).Do()
+	return err
+}
+
+// DeleteRoute deletes the route with the specific name. If it does not exist,
+// no error is returned.
+func (c *Client) DeleteRoute(ctx context.Context, project, route string) error {
+	_, err := c.computeService.Routes.Delete(project, route).Context(ctx).Do()
 	return err
 }
