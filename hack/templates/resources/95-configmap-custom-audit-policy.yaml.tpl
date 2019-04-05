@@ -3,7 +3,7 @@
 
   values={}
   if context.get("values", "") != "":
-    values=yaml.load(open(context.get("values", "")))
+    values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -24,15 +24,15 @@ metadata:
   name: ${value("metadata.name", "auditpolicy")}
   namespace: ${value("metadata.namespace", "garden-dev")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=10000)}
+  annotations: ${yaml.dump(annotations, width=10000, default_flow_style=None)}
   % endif
   % if labels != {}:
-  labels: ${yaml.dump(labels, width=10000)}
+  labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 data:
   policy: |-<% policy=value("data.policy", "") %>
     % if policy != "":
-    ${yaml.dump(policy, width=10000)}
+    ${yaml.dump(policy, width=10000, default_flow_style=None)}
     % else:
     apiVersion: audit.k8s.io/v1beta1
     kind: Policy

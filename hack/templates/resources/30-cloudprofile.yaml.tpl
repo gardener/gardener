@@ -3,7 +3,7 @@
 
   values={}
   if context.get("values", "") != "":
-    values=yaml.load(open(context.get("values", "")))
+    values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
     raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local,packet} flag")
@@ -42,10 +42,10 @@ kind: CloudProfile
 metadata:
   name: ${value("spec.profile", cloud)}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=10000)}
+  annotations: ${yaml.dump(annotations, width=10000, default_flow_style=None)}
   % endif
   % if labels != {}:
-  labels: ${yaml.dump(labels, width=10000)}
+  labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 spec:<% caBundle=value("spec.caBundle", "") %>
   % if caBundle != "":
@@ -61,14 +61,14 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.aws.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: unmanaged
       % endif
       kubernetes:
         versions:<% kubernetesVersions=value("spec.aws.constraints.kubernetes.versions", []) %>
         % if kubernetesVersions != []:
-        ${yaml.dump(kubernetesVersions, width=10000)}
+        ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
         - 1.13.4
@@ -78,7 +78,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
-      ${yaml.dump(machineImages, width=10000)}
+      ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       # Keep in sync with https://coreos.com/dist/aws/aws-stable.json (HVM-based)
       - name: coreos
@@ -90,7 +90,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       machineTypes:<% machineTypes=value("spec.aws.constraints.machineTypes", []) %>
       % if machineTypes != []:
-      ${yaml.dump(machineTypes, width=10000)}
+      ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
       % else:
       - name: m4.large
         cpu: "2"
@@ -137,7 +137,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       volumeTypes:<% volumeTypes=value("spec.aws.constraints.volumeTypes", []) %>
       % if volumeTypes != []:
-      ${yaml.dump(volumeTypes, width=10000)}
+      ${yaml.dump(volumeTypes, width=10000, default_flow_style=None)}
       % else:
       - name: gp2
         class: standard
@@ -148,7 +148,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       zones:<% zones=value("spec.aws.constraints.zones", []) %>
       % if zones != []:
-      ${yaml.dump(zones, width=10000)}
+      ${yaml.dump(zones, width=10000, default_flow_style=None)}
       % else:
       - region: eu-west-1
         names:
@@ -167,14 +167,14 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.azure.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: unmanaged
       % endif
       kubernetes:
         versions:<% kubernetesVersions=value("spec.azure.constraints.kubernetes.versions", []) %>
         % if kubernetesVersions != []:
-        ${yaml.dump(kubernetesVersions, width=10000)}
+        ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
         - 1.13.4
@@ -184,7 +184,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
-        ${yaml.dump(machineImages, width=10000)}
+        ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
         % else:
       - name: coreos
         publisher: CoreOS
@@ -194,7 +194,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       machineTypes:<% machineTypes=value("spec.azure.constraints.machineTypes", []) %>
         % if machineTypes != []:
-        ${yaml.dump(machineTypes, width=10000)}
+        ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
         % else:
       - name: Standard_DS2_v2
         cpu: "2"
@@ -235,7 +235,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       volumeTypes:<% volumeTypes=value("spec.azure.constraints.volumeTypes", []) %>
       % if volumeTypes != []:
-      ${yaml.dump(volumeTypes, width=10000)}
+      ${yaml.dump(volumeTypes, width=10000, default_flow_style=None)}
       % else:
       - name: standard
         class: standard
@@ -246,7 +246,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
     countUpdateDomains:<% countUpdateDomains=value("spec.azure.countUpdateDomains", []) %>
     % if countUpdateDomains != []:
-    ${yaml.dump(countUpdateDomains, width=10000)}
+    ${yaml.dump(countUpdateDomains, width=10000, default_flow_style=None)}
     % else:
     - region: westeurope
       count: 5
@@ -255,7 +255,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     % endif
     countFaultDomains:<% countFaultDomains=value("spec.azure.countFaultDomains", []) %>
     % if countFaultDomains != []:
-    ${yaml.dump(countFaultDomains, width=10000)}
+    ${yaml.dump(countFaultDomains, width=10000, default_flow_style=None)}
     % else:
     - region: westeurope
       count: 2
@@ -268,14 +268,14 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.gcp.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: unmanaged
       % endif
       kubernetes:
         versions:<% kubernetesVersions=value("spec.gcp.constraints.kubernetes.versions", []) %>
         % if kubernetesVersions != []:
-        ${yaml.dump(kubernetesVersions, width=10000)}
+        ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
         - 1.13.4
@@ -285,14 +285,14 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
-      ${yaml.dump(machineImages, width=10000)}
+      ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
         image: projects/coreos-cloud/global/images/coreos-stable-2023-5-0-v20190312
       % endif
       machineTypes:<% machineTypes=value("spec.gcp.constraints.machineTypes", []) %>
       % if machineTypes != []:
-      ${yaml.dump(machineTypes, width=10000)}
+      ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
       % else:
       - name: n1-standard-2
         cpu: "2"
@@ -327,7 +327,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       volumeTypes:<% volumeTypes=value("spec.gcp.constraints.volumeTypes", []) %>
       % if volumeTypes != []:
-      ${yaml.dump(volumeTypes, width=10000)}
+      ${yaml.dump(volumeTypes, width=10000, default_flow_style=None)}
       % else:
       - name: pd-standard
         class: standard
@@ -338,7 +338,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       zones:<% zones=value("spec.gcp.constraints.zones", []) %>
       % if zones != []:
-      ${yaml.dump(zones, width=10000)}
+      ${yaml.dump(zones, width=10000, default_flow_style=None)}
       % else:
       - region: europe-west1
         names:
@@ -357,28 +357,28 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.alicloud.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: alicloud-dns
       - name: unmanaged
       % endif
       kubernetes:<% kubernetesVersions=value("spec.alicloud.constraints.kubernetes.versions", []) %>
         % if kubernetesVersions != []:
-        ${yaml.dump(kubernetesVersions, width=10000)}
+        ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
         - 1.13.4
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
-      ${yaml.dump(machineImages, width=10000)}
+      ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos-alicloud
         id: coreos_1911_5_0_64_30G_alibase_20181219.vhd
       % endif
       machineTypes:<% machineTypes=value("spec.alicloud.constraints.machineTypes", []) %>
       % if machineTypes != []:
-      ${yaml.dump(machineTypes, width=10000)}
+      ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
       % else:
       - name: ecs.sn2ne.large
         cpu: "2"
@@ -411,7 +411,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       volumeTypes:<% volumeTypes=value("spec.alicloud.constraints.volumeTypes", []) %>
       % if volumeTypes != []:
-      ${yaml.dump(volumeTypes, width=10000)}
+      ${yaml.dump(volumeTypes, width=10000, default_flow_style=None)}
       % else:
       - name: cloud_efficiency
         class: standard
@@ -426,7 +426,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       zones:<% zones=value("spec.alicloud.zones", []) %> # List of availablity zones together with resource contraints in a specific region
       % if zones != []:
-      ${yaml.dump(zones, width=10000)}
+      ${yaml.dump(zones, width=10000, default_flow_style=None)}
       % else:
       - region: cn-beijing
         names:
@@ -438,28 +438,28 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.packet.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: aws-route53
       - name: unmanaged
       % endif
       kubernetes:<% kubernetesVersions=value("spec.packet.constraints.kubernetes.versions", []) %>
         % if kubernetesVersions != []:
-        ${yaml.dump(kubernetesVersions, width=10000)}
+        ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
         - 1.13.3
         % endif
       machineImages:<% machineImages=value("spec.packet.constraints.machineImages", []) %>
       % if machineImages != []:
-      ${yaml.dump(machineImages, width=10000)}
+      ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
         id: d61c3912-8422-4daf-835e-854efa0062e4
       % endif
       machineTypes:<% machineTypes=value("spec.packet.constraints.machineTypes", []) %>
       % if machineTypes != []:
-      ${yaml.dump(machineTypes, width=10000)}
+      ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
       % else:
       - name: t1.small
         cpu: "4"
@@ -494,7 +494,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       volumeTypes:<% volumeTypes=value("spec.packet.constraints.volumeTypes", []) %>
       % if volumeTypes != []:
-      ${yaml.dump(volumeTypes, width=10000)}
+      ${yaml.dump(volumeTypes, width=10000, default_flow_style=None)}
       % else:
       - name: storage_1
         class: standard
@@ -505,7 +505,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       zones:<% zones=value("spec.packet.zones", []) %> # List of availablity zones together with resource contraints in a specific region
       % if zones != []:
-      ${yaml.dump(zones, width=10000)}
+      ${yaml.dump(zones, width=10000, default_flow_style=None)}
       % else:
       - region: EWR1
         names:
@@ -517,20 +517,20 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.openstack.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: unmanaged
       % endif
       floatingPools:<% floatingPools=value("spec.openstack.constraints.floatingPools", []) %>
       % if floatingPools != []:
-      ${yaml.dump(floatingPools, width=10000)}
+      ${yaml.dump(floatingPools, width=10000, default_flow_style=None)}
       % else:
       - name: MY-FLOATING-POOL
       % endif
       kubernetes:
         versions:<% kubernetesVersions=value("spec.openstack.constraints.kubernetes.versions", []) %>
         % if kubernetesVersions != []:
-        ${yaml.dump(kubernetesVersions, width=10000)}
+        ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
         - 1.13.4
@@ -540,20 +540,20 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:
-      ${yaml.dump(loadBalancerProviders, width=10000)}
+      ${yaml.dump(loadBalancerProviders, width=10000, default_flow_style=None)}
       % else:
       - name: haproxy
       % endif
       machineImages:<% machineImages=value("spec.openstack.constraints.machineImages", []) %>
       % if machineImages != []:
-      ${yaml.dump(machineImages, width=10000)}
+      ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
         image: coreos-2023.5.0
       % endif
       machineTypes:<% machineTypes=value("spec.openstack.constraints.machineTypes", []) %>
       % if machineTypes != []:
-      ${yaml.dump(machineTypes, width=10000)}
+      ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
       % else:
       - name: medium_2_4
         cpu: "2"
@@ -572,7 +572,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % endif
       zones:<% zones=value("spec.openstack.constraints.zones", []) %>
       % if zones != []:
-      ${yaml.dump(zones, width=10000)}
+      ${yaml.dump(zones, width=10000, default_flow_style=None)}
       % else:
       - region: europe-1
         names:
@@ -600,7 +600,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     constraints:
       dnsProviders:<% dnsProviders=value("spec.local.constraints.dnsProviders", []) %>
       % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000)}
+      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
       % else:
       - name: unmanaged
       % endif
