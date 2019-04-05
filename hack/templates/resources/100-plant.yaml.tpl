@@ -3,7 +3,7 @@
 
   values={}
   if context.get("values", "") != "":
-    values=yaml.load(open(context.get("values", "")))
+    values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -27,10 +27,10 @@ metadata:
   name:  ${value("metadata.name", "example-plant")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
   namespace: ${value("metadata.namespace", "garden-dev")}
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=1000)}
+  annotations: ${yaml.dump(annotations, width=1000, default_flow_style=None)}
   % endif
   % if labels != {}:
-  labels: ${yaml.dump(labels, width=10000)}
+  labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 spec:
   secretRef:

@@ -3,7 +3,7 @@
 
   values={}
   if context.get("values", "") != "":
-    values=yaml.load(open(context.get("values", "")))
+    values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -25,14 +25,14 @@ kind: Project
 metadata:
   name: ${value("metadata.name", "dev")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=10000)}
+  annotations: ${yaml.dump(annotations, width=10000, default_flow_style=None)}
   % endif
   % if labels != {}:
-  labels: ${yaml.dump(labels, width=10000)}
+  labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", ""); namespace = value("spec.namespace", ""); members = value("spec.members", []) %>
   % if owner != {}:
-  owner: ${yaml.dump(owner, width=10000)}
+  owner: ${yaml.dump(owner, width=10000, default_flow_style=None)}
   % else:
   owner:
     apiGroup: rbac.authorization.k8s.io
@@ -40,7 +40,7 @@ spec:<% owner = value("spec.owner", {}); description = value("spec.description",
     name: john.doe@example.com
   % endif
   % if members != []:
-  members: ${yaml.dump(members, width=10000)}
+  members: ${yaml.dump(members, width=10000, default_flow_style=None)}
   % else:
   members:
   - apiGroup: rbac.authorization.k8s.io
