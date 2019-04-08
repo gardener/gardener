@@ -3,7 +3,7 @@
 
   values={}
   if context.get("values", "") != "":
-    values=yaml.load(open(context.get("values", "")))
+    values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
     raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
@@ -46,10 +46,10 @@ kind: Seed
 metadata:
   name: ${value("metadata.name", cloud)}
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=1000)}
+  annotations: ${yaml.dump(annotations, width=1000, default_flow_style=None)}
   % endif
   % if labels != {}:
-  labels: ${yaml.dump(labels, width=10000)}
+  labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
 spec:
   cloud:

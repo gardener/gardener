@@ -3,7 +3,7 @@
 
   values={}
   if context.get("values", "") != "":
-    values=yaml.load(open(context.get("values", "")))
+    values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
     raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
@@ -42,10 +42,10 @@ metadata:
   name: ${value("metadata.name", "core-" + cloud)}
   namespace: ${value("metadata.namespace", "garden-dev")}<% annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {}) %>
   % if annotations != {}:
-  annotations: ${yaml.dump(annotations, width=10000)}
+  annotations: ${yaml.dump(annotations, width=10000, default_flow_style=None)}
   % endif
   % if labels != {}:
-  labels: ${yaml.dump(labels, width=10000)}
+  labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
   labels:
     cloudprofile.garden.sapcloud.io/name: ${cloud} # label is only meaningful for Gardener dashboard
