@@ -15,6 +15,9 @@ webhooks:
     resources:
     - namespaces
   failurePolicy: Fail
+  namespaceSelector:
+    matchLabels:
+      garden.sapcloud.io/role: project
   clientConfig:
     {{- if .Values.global.deployment.virtualGarden.enabled }}
     url: https://gardener-controller-manager.garden/webhooks/validate-namespace-deletion
