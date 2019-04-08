@@ -10,5 +10,5 @@ spec:
     kind: StatefulSet
     name: prometheus
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"
 {{ end }}

@@ -219,4 +219,4 @@ resources:
       unit: Mi
 
 vpa:
-  enabled: false
+  enabled: true

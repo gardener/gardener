@@ -30,6 +30,13 @@ spec:
       containers:
       - name: recommender
         image: {{ index .Values.global.images "vpa-recommender" }}
+        command:
+        - ./recommender
+        args:
+        - --v=2
+        - --stderrthreshold=info
+        - --pod-recommendation-min-cpu-millicores=5
+        - --pod-recommendation-min-memory-mb=10
         imagePullPolicy: IfNotPresent
         resources:
           limits:

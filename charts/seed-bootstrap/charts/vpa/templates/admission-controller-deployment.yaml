@@ -49,7 +49,7 @@ spec:
         command:
         - ./admission-controller
         args:
-        - --v=4
+        - --v=2
         - --stderrthreshold=info
         - --client-ca-file=/etc/tls-certs/ca.crt
         - --tls-cert-file=/etc/tls-certs/tls.crt
