@@ -22,6 +22,9 @@ spec:
         {{- if .Values.global.apiserver.audit.policy }}
         checksum/configmap-gardener-audit-policy-config: {{ include (print $.Template.BasePath "/configmap-apiserver-audit-policy.yaml") . | sha256sum }}
         {{- end }}
+        {{- if .Values.global.apiserver.admissionControlConfig }}
+        checksum/configmap-gardener-apiserver-admissioncontrol-config: {{ include (print $.Template.BasePath "/configmap-gardener-apiserver-admissioncontrol-config.yaml") . | sha256sum }}
+        {{- end }}
         {{- if .Values.global.apiserver.audit.webhook.config }}
         checksum/secret-gardener-audit-webhook-config: {{ include (print $.Template.BasePath "/secret-apiserver-audit-webhook-config.yaml") . | sha256sum }}
         {{- end }}
@@ -99,6 +102,9 @@ spec:
         {{- end }}
         {{- if .Values.global.apiserver.audit.policy }}
         - --audit-policy-file=/etc/gardener-apiserver/audit/audit-policy.yaml
+        {{- end }}
+        {{- if .Values.global.apiserver.admissionControlConfig }}
+        - --admission-control-config-file=/etc/gardener-apiserver/admissioncontrol/admissionconfiguration.yaml
         {{- end }}
         {{- if .Values.global.apiserver.audit.webhook.batchBufferSize }}
         - --audit-webhook-batch-buffer-size={{ .Values.global.apiserver.audit.webhook.batchBufferSize }}
@@ -189,6 +195,10 @@ spec:
         - name: gardener-audit-webhook-config
           mountPath: /etc/gardener-apiserver/auditwebhook
         {{- end }}
+        {{- if .Values.global.apiserver.admissionControlConfig }}
+        - name: gardener-apiserver-admissioncontrol-config
+          mountPath: /etc/gardener-apiserver/admissioncontrol
+        {{- end }}
       {{- if .Values.global.apiserver.etcd.useSidecar }}
       - name: etcd
         image: quay.io/coreos/etcd:v3.3.12
@@ -244,6 +254,11 @@ spec:
       - name: gardener-audit-webhook-config
         secret:
           secretName: gardener-audit-webhook-config
+      {{- end }}
+      {{- if .Values.global.apiserver.admissionControlConfig }}
+      - name: gardener-apiserver-admissioncontrol-config
+        configMap:
+          name: gardener-apiserver-admissioncontrol-config
       {{- end }}
 {{- if .Values.global.apiserver.etcd.useSidecar }}
 ---
