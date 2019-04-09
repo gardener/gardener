@@ -13,7 +13,7 @@ data:
   # essential.
   typha_service_name: "none"
   # Configure the Calico backend to use.
-  calico_backend: "bird"
+  calico_backend: {{ if ne .Values.cloudProvider "azure" }}"bird"{{ else }}"none"{{ end }}
 
   # Configure the MTU to use
   veth_mtu: "1440"

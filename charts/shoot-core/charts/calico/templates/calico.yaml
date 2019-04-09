@@ -201,8 +201,10 @@ spec:
             exec:
               command:
               - /bin/calico-node
-              - -bird-ready
               - -felix-ready
+              {{- if ne .Values.cloudProvider "azure" }}
+              - -bird-ready
+              {{- end }}
             periodSeconds: 10
           volumeMounts:
             - mountPath: /lib/modules
