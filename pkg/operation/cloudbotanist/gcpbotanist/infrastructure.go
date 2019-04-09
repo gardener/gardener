@@ -58,16 +58,22 @@ func (b *GCPBotanist) DestroyInfrastructure() error {
 		return err
 	}
 	var (
-		g                                  = flow.NewGraph("GCP infrastructure destruction")
+		g = flow.NewGraph("GCP infrastructure destruction")
+
 		destroyKubernetesFirewallRulesStep = g.Add(flow.Task{
 			Name: "Destroying Kubernetes firewall rules",
 			Fn:   flow.TaskFn(b.destroyKubernetesFirewallRules).RetryUntilTimeout(10*time.Second, 5*time.Minute).DoIf(configExists),
 		})
 
+		destroyKubernetesRoutesStep = g.Add(flow.Task{
+			Name: "Destroying Kubernetes routes",
+			Fn:   flow.TaskFn(b.destroyKubernetesRoutes).RetryUntilTimeout(10*time.Second, 5*time.Minute).DoIf(configExists),
+		})
+
 		_ = g.Add(flow.Task{
 			Name:         "Destroying Shoot infrastructure",
 			Fn:           flow.SimpleTaskFn(tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).Destroy),
-			Dependencies: flow.NewTaskIDs(destroyKubernetesFirewallRulesStep),
+			Dependencies: flow.NewTaskIDs(destroyKubernetesFirewallRulesStep, destroyKubernetesRoutesStep),
 		})
 
 		f = g.Compile()
@@ -116,29 +122,38 @@ func (b *GCPBotanist) generateTerraformInfraConfig(createVPC bool, vpcName strin
 	}
 }
 
-func (b *GCPBotanist) destroyKubernetesFirewallRules(ctx context.Context) error {
+func (b *GCPBotanist) getVpcName() (string, error) {
 	t, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if _, err := t.GetState(); err != nil {
 		if apierrors.IsNotFound(err) {
-			return nil
+			return "", nil
 		}
-		return err
+		return "", err
 	}
 
 	vpcNameID := "vpc_name"
 	stateVariables, err := t.GetStateOutputVariables(vpcNameID)
+	if err != nil {
+		return "", err
+	}
+	return stateVariables[vpcNameID], nil
+}
+
+func (b *GCPBotanist) destroyKubernetesFirewallRules(ctx context.Context) error {
+	vpcName, err := b.getVpcName()
 	if err != nil {
 		if terraformer.IsVariablesNotFoundError(err) {
 			b.Logger.Infof("Skipping explicit GCP firewall rule deletion because not all variables have been found in the Terraform state.")
 			return nil
 		}
 		return err
+	} else if vpcName == "" {
+		return nil
 	}
-	vpcName := stateVariables[vpcNameID]
 
 	// Find firewall rules which are created by k8s cloudprovider within the shoot network.
 	firewallRuleNames, err := b.GCPClient.ListKubernetesFirewallRulesForNetwork(ctx, b.Project, vpcName)
@@ -149,6 +164,33 @@ func (b *GCPBotanist) destroyKubernetesFirewallRules(ctx context.Context) error 
 	// Destroy firewall rules.
 	for _, firewallRuleName := range firewallRuleNames {
 		if err := b.GCPClient.DeleteFirewallRule(ctx, b.Project, firewallRuleName); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *GCPBotanist) destroyKubernetesRoutes(ctx context.Context) error {
+	vpcName, err := b.getVpcName()
+	if err != nil {
+		if terraformer.IsVariablesNotFoundError(err) {
+			b.Logger.Infof("Skipping explicit GCP route deletion because not all variables have been found in the Terraform state.")
+			return nil
+		}
+		return err
+	} else if vpcName == "" {
+		return nil
+	}
+
+	// Find routes which are created by k8s cloudprovider within the shoot network.
+	routeNames, err := b.GCPClient.ListKubernetesRoutesForNetwork(ctx, b.Project, vpcName, b.Shoot.SeedNamespace)
+	if err != nil {
+		return err
+	}
+
+	// Destroy route entries.
+	for _, routeName := range routeNames {
+		if err := b.GCPClient.DeleteRoute(ctx, b.Project, routeName); err != nil {
 			return err
 		}
 	}
