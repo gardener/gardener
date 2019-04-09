@@ -12,14 +12,3 @@ groups:
         annotations:
           summary: Api server unreachable via the kubernetes service.
           description: The Api server has been unreachable for 3 minutes via the kubernetes service in the shoot.
-      - alert: HighLatencyFromShootToApiServer
-        expr: probe_duration_seconds{job="blackbox-exporter-k8s-service-check"} > 3
-        for: 30m
-        labels:
-          service: apiserver-connectivity-check
-          severity: warning
-          type: shoot
-          visibility: owner
-        annotations:
-          summary: There is a high latency between the shoot and Api server.
-          description: Probes to the Api server from the shoot took longer than 3s for 30m. The seed and shoots are probably in different regions, causing a high latency.

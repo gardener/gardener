@@ -123,6 +123,7 @@ allowedMetrics:
   - kube_pod_info
   - kube_pod_labels
   - kube_pod_status_phase
+  - kube_pod_status_ready
   - kube_statefulset_metadata_generation
   - kube_statefulset_replicas
   - kube_statefulset_status_observed_generation

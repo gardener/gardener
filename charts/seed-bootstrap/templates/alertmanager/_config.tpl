@@ -30,7 +30,6 @@ route:
   # email only for critical and blocker
   - match_re:
       visibility: ^(all|operator)$
-      severity: ^(blocker|critical|info)$
     receiver: email-kubernetes-ops
 
 

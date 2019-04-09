@@ -6,10 +6,13 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # VPNShootNoPods
   - series: 'kube_deployment_status_replicas_available{deployment="vpn-shoot"}'
     values: '0+0x60'
+  # VPNConnectionDown
   - series: 'probe_success{job="vpn-connection"}'
     values: '0+0x20'
+  # VPNProbeAPIServerProxyFailed
   - series: 'probe_http_status_code{job="vpn-probe-apiserver-proxy"}'
     values: '503+0x60'
   alert_rule_test:

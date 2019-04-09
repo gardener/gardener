@@ -6,14 +6,21 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # KubeEtcdMainDown
   - series: 'up{job="kube-etcd3",role="main"}'
     values: '0+0x20'
+  # KubeEtcdEventsDown
   - series: 'up{job="kube-etcd3",role="events"}'
     values: '0+0x30'
+  # KubeEtcd3MainNoLeader
   - series: 'etcd_server_has_leader{job="kube-etcd3",role="main"}'
     values: '0+0x20'
+  # KubeEtcd3EventsNoLeader
   - series: 'etcd_server_has_leader{job="kube-etcd3",role="events"}'
     values: '0+0x30'
+  # KubeEtcd3HighNumberOfFailedProposals
+  - series: 'etcd_server_proposals_failed_total{job="kube-etcd3", pod="etcd"}'
+    values: '0+0x15 1+0x15 2+0x15 3+0x15 4+0x15 5+0x15 6+0x15 7+0x15'
   alert_rule_test:
   - eval_time: 5m
     alertname: KubeEtcdMainDown
@@ -59,3 +66,17 @@ tests:
       exp_annotations:
         description: Etcd3 events has no leader. No communication with etcd events possible. New cluster events cannot be collected. Events can only be read.
         summary: Etcd3 events has no leader.
+  - eval_time: 1h
+    alertname: KubeEtcd3HighNumberOfFailedProposals
+    exp_alerts:
+    - exp_labels:
+        service: etcd
+        severity: warning
+        type: seed
+        visibility: operator
+        pod: etcd
+        job: kube-etcd3
+      exp_annotations:
+        description: Etcd3 pod etcd has seen 7 proposal failures
+          within the last hour.
+        summary: High number of failed etcd proposals

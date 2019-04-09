@@ -6,6 +6,7 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # ApiServerUnreachableViaKubernetesService
   - series: 'probe_success{job="blackbox-exporter-k8s-service-check"}'
     values: '0+0x30'
   alert_rule_test:

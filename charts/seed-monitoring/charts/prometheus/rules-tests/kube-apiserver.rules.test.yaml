@@ -6,13 +6,21 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # ApiServerNotReachable
   - series: 'probe_success{instance="api.example.com/healthz", job="blackbox-apiserver"}'
     values: '0+0x10'
+  # KubeApiserverDown
   - series: 'up{job="kube-apiserver"}'
     values: '0+0x10'
+  # KubeApiServerTooManyOpenFileDescriptors
   - series: 'process_open_fds{job="kube-apiserver", instance="instance"}'
     values: '81+0x60'
   - series: 'process_max_fds{job="kube-apiserver", instance="instance"}'
+    values: '100+0x60'
+  # KubeApiServerLatency
+  - series: 'apiserver_request_latencies_bucket{verb="POST", le="5000000"}'
+    values: '100+0x60'
+  - series: 'apiserver_request_latencies_bucket{verb="POST", le="+Inf"}'
     values: '100+0x60'
   alert_rule_test:
   - eval_time: 5m
@@ -48,6 +56,7 @@ tests:
         type: seed
         job: kube-apiserver
         instance: instance
+        visibility: owner
       exp_annotations:
         description: 'The API server (instance) is using 81% of the available file/socket descriptors.'
         summary: 'The API server has too many open file descriptors'
@@ -61,4 +70,16 @@ tests:
       exp_annotations:
         description: 'The API server (instance) is using 81% of the available file/socket descriptors.'
         summary: 'The API server has too many open file descriptors'
+  - eval_time: 30m
+    alertname: KubeApiServerLatency
+    exp_alerts:
+    - exp_labels:
+        service: kube-apiserver
+        severity: warning
+        type: seed
+        visibility: owner
+        verb: POST
+      exp_annotations:
+        description: Kube API server latency for verb POST is high. This could be because the shoot workers and the control plane are in different regions. 99th percentile of request latency is greater than 3 second.
+        summary: Kubernetes API server latency is high
 

@@ -27,7 +27,6 @@ route:
   # email only for critical and blocker
   - match_re:
       visibility: ^(all|owner)$
-      severity: ^(critical|blocker|info)$
     receiver: email-kubernetes-ops
 
 inhibit_rules:

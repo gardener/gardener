@@ -8,44 +8,20 @@ groups:
       service: kube-kubelet
       severity: warning
       type: shoot
+      visibility: owner
     annotations:
-      description: Prometheus could not scrape a {{ $labels.job }} for more than one hour
-      summary: Kubelet cannot be scraped
+      description: The kubelet {{ $labels.instance }} has been unavailable/unreachable for more than 1 hour. Workloads on the affected node may not be schedulable.
+      summary: Kubelet unavailable
   - alert: KubeKubeletTooManyPods
     expr: kubelet_running_pod_count > 100
-    labels:
-      service: kube-kubelet
-      severity: warning
-    annotations:
-      description: Kubelet {{$labels.instance}} is running {{$value}} pods, close to the limit of 110
-      summary: Kubelet is close to pod limit
-  - alert: KubeKubeletContainerReboot
-    expr: increase(container_last_seen{container_name!="POD"}[1m]) < 50
-    labels:
-      service: kube-kubelet
-      severity: warning
-    annotations:
-      description: '{{ $labels.container_label_io_kubernetes_pod_name }} has been restarted {{ $labels.container_label_io_kubernetes_container_restartCount }} times lately.'
-      summary: High container reboot count
-  - alert: KubeKubeletPodRestartingTooMuch
-    expr: rate(kube_pod_container_status_restarts_total[1m]) > 12
     for: 30m
     labels:
       service: kube-kubelet
       severity: warning
+      visibility: owner
     annotations:
-      description: '{{$labels.namespace}}/{{$labels.pod}} is restarting too much.'
-      summary: pod is restarting too much.
-  # TODO: Expression returns NaN. Mismatch microseconds and miliseconds?
-  - alert: KubeKubeletPodSlowToLaunch
-    expr: rate(kubelet_pod_start_latency_microseconds{quantile="0.99"}[1m]) > 5
-    for: 30m
-    labels:
-      service: kube-kubelet
-      severity: warning
-    annotations:
-      description: Pods are taking longer than 5 milliseconds to launch.
-      summary: Pods are slow to launch.
+      description: Kubelet {{ $labels.instance }} is running {{ $value }} pods, close to the limit of 110
+      summary: Too many pods on node
   - alert: KubeletTooManyOpenFileDescriptorsShoot
     expr: 100 * process_open_fds{job=~"^(?:kube-kubelet)$"} / process_max_fds{job=~"^(?:kube-kubelet)$"} > 50
     for: 30m
@@ -77,13 +53,13 @@ groups:
       type: seed
       visibility: operator
     annotations:
-      description: 'Seed-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors.'
+      description: 'Seed-kubelet ({{ $labels.kubernetes_io_hostname }}) is using {{ $value }}% of the available file/socket descriptors. Kubelet could be under heavy load.'
       summary: 'Seed-kubelet has too many open file descriptors.'
   - alert: KubePersistentVolumeUsageCritical
     expr: 100 * kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes < 5
-    for: 30m
+    for: 1h
     labels:
-      job: kube-kubelet
+      service: kube-kubelet-seed
       severity: critical
       type: seed
       visibility: operator
@@ -91,15 +67,13 @@ groups:
       description: The PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is only {{ printf "%0.2f" $value }}% free.
       summary: PersistentVolume almost full.
   - alert: KubePersistentVolumeFullInFourDays
-    expr: 100 * (kubelet_volume_stats_available_bytes / kubelet_volume_stats_capacity_bytes) < 15 and predict_linear(kubelet_volume_stats_available_bytes[6h], 4 * 24 * 3600) < 0
-    for: 5m
+    expr: 100 * (kubelet_volume_stats_available_bytes{type="seed"} / kubelet_volume_stats_capacity_bytes{type="seed"}) < 15 and predict_linear(kubelet_volume_stats_available_bytes{type="seed"}[30m], 4 * 24 * 3600) <= 0
+    for: 1h
     labels:
-      service: kube-kubelet
+      service: kube-kubelet-seed
       severity: warning
       type: seed
+      visibility: operator
     annotations:
-      description: |
-        Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to
-        fill up within four days.
-        Currently {{ printf "%0.2f" $value }}% is available.
+      description: Based on recent sampling, the PersistentVolume claimed by {{ $labels.persistentvolumeclaim }} is expected to fill up within four days. Currently {{ printf "%0.2f" $value }}% is available.
       summary: PersistentVolume will be full in four days.

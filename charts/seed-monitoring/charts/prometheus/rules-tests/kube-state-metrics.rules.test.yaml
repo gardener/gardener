@@ -5,10 +5,13 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # KubeStateMetricsShootDown
   - series: 'up{job="kube-state-metrics", type="shoot"}'
     values: '0+0x20'
+  # KubeStateMetricsSeedDown
   - series: 'up{job="kube-state-metrics", type="seed"}'
     values: '0+0x20'
+  # NoWorkerNodes
   - series: 'kube_node_spec_unschedulable'
     values: '2+0x20'
   - series: 'kube_node_spec_unschedulable'
