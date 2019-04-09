@@ -140,8 +140,8 @@ func (s *SeedManager) Admit(a admission.Attributes, o admission.ObjectInterfaces
 			return admission.NewForbidden(a, errors.New("forbidden to use a seed marked to be deleted"))
 		}
 
-		if !hasDisjointedNetworks(seed, shoot) {
-			return admission.NewForbidden(a, errors.New("forbidden to deploy a shoot overlapping the network of the seed"))
+		if hasDisjointedNetworks, allErrs := validateDisjointedNetworks(seed, shoot); !hasDisjointedNetworks {
+			return admission.NewForbidden(a, allErrs.ToAggregate())
 		}
 
 		return nil
@@ -189,7 +189,7 @@ func determineSeed(shoot *garden.Shoot, seedLister gardenlisters.SeedLister, sho
 	candidates = nil
 
 	for _, seed := range old {
-		if hasDisjointedNetworks(seed, shoot) {
+		if hasDisjointedNetworks, _ := validateDisjointedNetworks(seed, shoot); hasDisjointedNetworks {
 			candidates = append(candidates, seed)
 		}
 	}
@@ -233,8 +233,9 @@ func verifySeedAvailability(seed *garden.Seed) bool {
 	return false
 }
 
-func hasDisjointedNetworks(seed *garden.Seed, shoot *garden.Shoot) bool {
+func validateDisjointedNetworks(seed *garden.Seed, shoot *garden.Shoot) (bool, field.ErrorList) {
 	// error cannot occur due to our static validation
 	k8sNetworks, _ := gardenhelper.GetK8SNetworks(shoot)
-	return len(admissionutils.ValidateNetworkDisjointedness(seed.Spec.Networks, k8sNetworks, field.NewPath(""))) == 0
+	allErrs := admissionutils.ValidateNetworkDisjointedness(seed.Spec.Networks, k8sNetworks, field.NewPath(""))
+	return len(allErrs) == 0, allErrs
 }
