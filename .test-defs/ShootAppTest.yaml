@@ -5,8 +5,8 @@ spec:
   owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com # OutputQualification DL
   description: Tests the deployment of a guestbook.
 
-  activeDeadlineSeconds: 600
-  labels: ["default"]
+  activeDeadlineSeconds: 1800
+  labels: ["default", "release"]
 
   command: [bash, -c]
   args:

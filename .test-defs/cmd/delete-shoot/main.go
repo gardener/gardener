@@ -35,7 +35,7 @@ var (
 )
 
 func init() {
-	testLogger = logger.NewLogger("info")
+	testLogger = logger.NewLogger("debug")
 
 	shootName = os.Getenv("SHOOT_NAME")
 	if shootName == "" {
