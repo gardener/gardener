@@ -189,7 +189,9 @@ func (s *ShootGardenerTest) WaitForShootToBeDeleted(ctx context.Context) error {
 			return false, err
 		}
 		s.Logger.Infof("waiting for shoot %s to be deleted", s.Shoot.Name)
+		if shoot.Status.LastOperation != nil {
+			s.Logger.Debugf("%d%: Shoot state: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+		}
 		return false, nil
-
 	}, ctx.Done())
 }
