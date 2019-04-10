@@ -1,0 +1,60 @@
+{{ if .Values.vpa.enabled }}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 4 }}
+  name: vpa-exporter
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 6 }}
+  template:
+    metadata:
+      labels:
+        app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 8 }}
+    spec:
+      serviceAccountName: vpa-exporter
+      containers:
+      - command:
+        - /usr/local/bin/vpa-exporter 
+        - --namespace={{ .Release.Namespace }}
+        image: eu.gcr.io/gardener-project/gardener/vpa-exporter:0.1.1
+        imagePullPolicy: Always
+        name: exporter
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+          limits:
+            cpu: 200m
+            memory: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpa-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 4 }}
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  selector:
+    app: vpa-exporter
+  ports:
+  - name: client
+    protocol: TCP
+    port: 8080
+    targetPort: 80
+{{ end }}

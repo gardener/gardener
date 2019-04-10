@@ -363,8 +363,20 @@ func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
 		return err
 	}
 
+	// Delete all Roles with label "garden.sapcloud.io/role=vpa"
+	if err := k8sClient.Kubernetes().RbacV1().Roles(namespace).DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
 	// Delete all ClusterRoleBindings with label "garden.sapcloud.io/role=vpa"
 	if err := k8sClient.Kubernetes().RbacV1().ClusterRoleBindings().DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete all RoleBindings with label "garden.sapcloud.io/role=vpa"
+	if err := k8sClient.Kubernetes().RbacV1().RoleBindings(namespace).DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
@@ -372,6 +384,12 @@ func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
 	// Delete all ServiceAccounts with label "garden.sapcloud.io/role=vpa"
 	if err := k8sClient.Kubernetes().CoreV1().ServiceAccounts(namespace).DeleteCollection(
 		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	// Delete vpa-exporter service
+	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete(VpaExporter,
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 

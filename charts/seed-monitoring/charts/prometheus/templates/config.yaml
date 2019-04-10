@@ -571,3 +571,6 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
 
+    - job_name: 'vpa'
+      static_configs:
+      - targets: ['vpa-exporter:8080']

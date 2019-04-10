@@ -1,0 +1,44 @@
+{{ if .Values.vpa.enabled }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: system:vpa-exporter-role-binding
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: system:vpa-exporter-role
+  namespace: {{ .Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: vpa-exporter
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  namespace: {{ .Release.Namespace }}
+  name: system:vpa-exporter-role
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+rules:
+- apiGroups: 
+  - "autoscaling.k8s.io"
+  resources: 
+  - verticalpodautoscalers
+  verbs: 
+  - get
+  - watch
+  - list
+{{ end }}
