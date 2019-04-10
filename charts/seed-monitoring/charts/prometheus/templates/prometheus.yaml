@@ -107,7 +107,13 @@ spec:
           successThreshold: 1
           timeoutSeconds: 3
         resources:
-{{- include "util-templates.resource-quantity" .Values | indent 10 }}
+{{- if .Values.vpa.enabled }}
+          requests:
+            cpu: 30m
+            memory: 500Mi
+{{- else }}
+{{- include "util-templates.resource-quantity" .Values | indent 10 -}}
+{{ end }}
         volumeMounts:
         - mountPath: /srv/kubernetes/prometheus-kubelet
           name: prometheus-kubelet
