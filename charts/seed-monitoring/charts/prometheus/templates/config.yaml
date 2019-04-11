@@ -572,5 +572,15 @@ data:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
 
     - job_name: 'vpa'
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: vpa-exporter;metrics
       static_configs:
       - targets: ['vpa-exporter:8080']
