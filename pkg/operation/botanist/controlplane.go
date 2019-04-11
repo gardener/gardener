@@ -201,6 +201,9 @@ func (b *Botanist) DeployMachineControllerManager() error {
 			"namespace": map[string]interface{}{
 				"uid": b.SeedNamespaceObject.UID,
 			},
+			"vpa": map[string]interface{}{
+				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+			},
 		}
 	)
 

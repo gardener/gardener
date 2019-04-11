@@ -11,3 +11,6 @@ shootAPIServer:
   Capabilities:
     KubeVersion:
       GitVersion: v1.13
+
+vpa:
+  enabled: true
