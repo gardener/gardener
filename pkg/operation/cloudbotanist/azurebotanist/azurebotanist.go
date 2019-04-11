@@ -16,11 +16,100 @@ package azurebotanist
 
 import (
 	"errors"
+	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	"github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure"
+	azurev1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
+
+// IMPORTANT NOTICE
+// The following part is only temporarily needed until we have completed the Extensibility epic
+// and moved out all provider specifics.
+// IMPORTANT NOTICE
+
+var (
+	scheme  *runtime.Scheme
+	decoder runtime.Decoder
+)
+
+func init() {
+	scheme = runtime.NewScheme()
+
+	// Workaround for incompatible kubernetes dependencies in gardener/gardener and
+	// gardener/gardener-extensions.
+	azureSchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(azure.SchemeGroupVersion, &azure.InfrastructureConfig{}, &azure.InfrastructureStatus{})
+		return nil
+	})
+	azurev1alpha1SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(azurev1alpha1.SchemeGroupVersion, &azurev1alpha1.InfrastructureConfig{}, &azurev1alpha1.InfrastructureStatus{})
+		return nil
+	})
+	schemeBuilder := runtime.NewSchemeBuilder(
+		azurev1alpha1SchemeBuilder.AddToScheme,
+		azureSchemeBuilder.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
+
+	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+}
+
+func infrastructureStatusFromInfrastructure(raw []byte) (*azurev1alpha1.InfrastructureStatus, error) {
+	config := &azurev1alpha1.InfrastructureStatus{}
+	if _, _, err := decoder.Decode(raw, nil, config); err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+func findSubnetByPurpose(subnets []azurev1alpha1.Subnet, purpose azurev1alpha1.Purpose) (*azurev1alpha1.Subnet, error) {
+	for _, subnet := range subnets {
+		if subnet.Purpose == purpose {
+			return &subnet, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find subnet with purpose %q", purpose)
+}
+
+func findSecurityGroupByPurpose(securityGroups []azurev1alpha1.SecurityGroup, purpose azurev1alpha1.Purpose) (*azurev1alpha1.SecurityGroup, error) {
+	for _, securityGroup := range securityGroups {
+		if securityGroup.Purpose == purpose {
+			return &securityGroup, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find security group with purpose %q", purpose)
+}
+
+func findRouteTableByPurpose(routeTables []azurev1alpha1.RouteTable, purpose azurev1alpha1.Purpose) (*azurev1alpha1.RouteTable, error) {
+	for _, routeTable := range routeTables {
+		if routeTable.Purpose == purpose {
+			return &routeTable, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find route table with purpose %q", purpose)
+}
+
+func findAvailabilitySetByPurpose(availabilitySets []azurev1alpha1.AvailabilitySet, purpose azurev1alpha1.Purpose) (*azurev1alpha1.AvailabilitySet, error) {
+	for _, availabilitySet := range availabilitySets {
+		if availabilitySet.Purpose == purpose {
+			return &availabilitySet, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find availability set with purpose %q", purpose)
+}
+
+// IMPORTANT NOTICE
+// The above part is only temporarily needed until we have completed the Extensibility epic
+// and moved out all provider specifics.
+// IMPORTANT NOTICE
 
 // New takes an operation object <o> and creates a new AzureBotanist object.
 func New(o *operation.Operation, purpose string) (*AzureBotanist, error) {

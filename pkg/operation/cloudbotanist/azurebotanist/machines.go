@@ -17,6 +17,7 @@ package azurebotanist
 import (
 	"fmt"
 
+	azurev1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -53,33 +54,36 @@ func (b *AzureBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // MachineDeployments.
 func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
-		resourceGroupName = "resourceGroupName"
-		vnetName          = "vnetName"
-		subnetName        = "subnetName"
-		availabilitySetID = "availabilitySetID"
-		outputVariables   = []string{resourceGroupName, vnetName, subnetName, availabilitySetID}
-		workers           = b.Shoot.Info.Spec.Cloud.Azure.Workers
-
 		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
 	)
 
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have introduced the `Worker` extension. Gardener
+	// will no longer compute the machine config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return nil, nil, fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return nil, nil, err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
+	nodesSubnet, err := findSubnetByPurpose(infrastructureStatus.Networks.Subnets, azurev1alpha1.PurposeNodes)
+	if err != nil {
+		return nil, nil, err
+	}
+	nodesAvailabilitySet, err := findAvailabilitySetByPurpose(infrastructureStatus.AvailabilitySets, azurev1alpha1.PurposeNodes)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	for _, worker := range workers {
+	for _, worker := range b.Shoot.Info.Spec.Cloud.Azure.Workers {
 		machineClassSpec := map[string]interface{}{
 			"region":            b.Shoot.Info.Spec.Cloud.Region,
-			"resourceGroup":     stateVariables[resourceGroupName],
-			"vnetName":          stateVariables[vnetName],
-			"subnetName":        stateVariables[subnetName],
-			"availabilitySetID": stateVariables[availabilitySetID],
+			"resourceGroup":     infrastructureStatus.ResourceGroup.Name,
+			"vnetName":          infrastructureStatus.Networks.VNet.Name,
+			"subnetName":        nodesSubnet.Name,
+			"availabilitySetID": nodesAvailabilitySet.ID,
 			"tags": map[string]interface{}{
 				"Name": b.Shoot.SeedNamespace,
 				fmt.Sprintf("kubernetes.io-cluster-%s", b.Shoot.SeedNamespace): "1",

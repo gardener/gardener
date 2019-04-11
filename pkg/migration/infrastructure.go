@@ -37,6 +37,8 @@ func ShootToInfrastructureConfig(shoot *gardenv1beta1.Shoot) (runtime.Object, er
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		return GardenV1beta1ShootToAWSV1alpha1InfrastructureConfig(shoot)
+	case gardenv1beta1.CloudProviderAzure:
+		return GardenV1beta1ShootToAzureV1alpha1InfrastructureConfig(shoot)
 	case gardenv1beta1.CloudProviderGCP:
 		return GardenV1beta1ShootToGCPV1alpha1InfrastructureConfig(shoot)
 	}
