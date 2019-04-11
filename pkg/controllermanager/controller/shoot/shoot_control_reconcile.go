@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
+	encryptionbotanist "github.com/gardener/gardener/pkg/operation/encryptionbotanist"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -39,6 +40,7 @@ import (
 func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1.LastError {
 	// We create the botanists (which will do the actual work).
 	var botanist *botanistpkg.Botanist
+
 	if err := utils.Retry(10*time.Second, 10*time.Minute, func() (ok, severe bool, err error) {
 		botanist, err = botanistpkg.New(o)
 		if err != nil {
@@ -59,6 +61,10 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
 	if err != nil {
 		return formatError("Failed to create a HybridBotanist", err)
+	}
+	encryptionBotanist, err := encryptionbotanist.New()
+	if err != nil {
+		return formatError("Failed to create a EncryptionBotanist", err)
 	}
 
 	if err := botanist.RequiredExtensionsExist(); err != nil {
@@ -152,6 +158,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Name:         "Waiting until Kubernetes API server reports readiness",
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Start Etcd Encryption",
+			Fn:           flow.SimpleTaskFn(encryptionBotanist.StartEtcdEncryption),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilEtcdReady),
 		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
 			Name:         "Deploying cloud-specific control plane components",
