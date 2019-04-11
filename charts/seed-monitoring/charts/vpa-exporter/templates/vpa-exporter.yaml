@@ -29,6 +29,9 @@ spec:
         imagePullPolicy: Always
         name: exporter
         ports:
+        - name: metrics
+          containerPort: 80
+          protocol: TCP
         - containerPort: 80
           protocol: TCP
         resources:
