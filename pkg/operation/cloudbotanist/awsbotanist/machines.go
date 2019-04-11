@@ -19,7 +19,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -47,47 +50,49 @@ func (b *AWSBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
 func (b *AWSBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
-		iamInstanceProfile = "iamInstanceProfileNodes"
-		keyName            = "keyName"
-		securityGroup      = "security_group_nodes"
-		outputVariables    = []string{iamInstanceProfile, keyName, securityGroup}
-		workers            = b.Shoot.Info.Spec.Cloud.AWS.Workers
-		zones              = b.Shoot.Info.Spec.Cloud.AWS.Zones
-		zoneLen            = len(zones)
+		zones   = b.Shoot.Info.Spec.Cloud.AWS.Zones
+		zoneLen = len(zones)
 
 		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
-
-		tfOutputNameSubnet = func(zoneIndex int) string {
-			return fmt.Sprintf("subnet_nodes_z%d", zoneIndex)
-		}
 	)
 
-	for zoneIndex := range zones {
-		outputVariables = append(outputVariables, tfOutputNameSubnet(zoneIndex))
+	// This code will only exist temporarily until we have introduced the `Worker` extension. Gardener
+	// will no longer compute the machine config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return nil, nil, fmt.Errorf("no infrastructure status found")
 	}
-
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return nil, nil, err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
+	nodesSecurityGroup, err := findSecurityGroupByPurpose(infrastructureStatus.VPC.SecurityGroups, awsv1alpha1.PurposeNodes)
+	if err != nil {
+		return nil, nil, err
+	}
+	nodesInstanceProfile, err := findInstanceProfileByPurpose(infrastructureStatus.IAM.InstanceProfiles, awsv1alpha1.PurposeNodes)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	for zoneIndex := range zones {
-		for _, worker := range workers {
+	for zoneIndex, zone := range zones {
+		nodesSubnet, err := findSubnetByPurposeAndZone(infrastructureStatus.VPC.Subnets, awsv1alpha1.PurposeNodes, zone)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, worker := range b.Shoot.Info.Spec.Cloud.AWS.Workers {
 			machineClassSpec := map[string]interface{}{
 				"ami":                b.Shoot.Info.Spec.Cloud.AWS.MachineImage.AMI,
 				"region":             b.Shoot.Info.Spec.Cloud.Region,
 				"machineType":        worker.MachineType,
-				"iamInstanceProfile": stateVariables[iamInstanceProfile],
-				"keyName":            stateVariables[keyName],
+				"iamInstanceProfile": nodesInstanceProfile.Name,
+				"keyName":            infrastructureStatus.EC2.KeyName,
 				"networkInterfaces": []map[string]interface{}{
 					{
-						"subnetID":         stateVariables[tfOutputNameSubnet(zoneIndex)],
-						"securityGroupIDs": []string{stateVariables[securityGroup]},
+						"subnetID":         nodesSubnet.ID,
+						"securityGroupIDs": []string{nodesSecurityGroup.ID},
 					},
 				},
 				"tags": map[string]string{

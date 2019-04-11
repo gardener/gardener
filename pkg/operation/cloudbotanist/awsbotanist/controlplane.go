@@ -20,6 +20,8 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 )
 
 const cloudProviderConfigTemplate = `
@@ -36,23 +38,25 @@ Zone=%q
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/aws/aws.go
 func (b *AWSBotanist) GenerateCloudProviderConfig() (string, error) {
-	var (
-		vpcID    = "vpc_id"
-		subnetID = "subnet_public_utility_z0"
-	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
+	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return "", fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return "", err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(vpcID, subnetID)
+	publicSubnet, err := findSubnetByPurpose(infrastructureStatus.VPC.Subnets, awsv1alpha1.PurposePublic)
 	if err != nil {
 		return "", err
 	}
 
 	return fmt.Sprintf(
 		cloudProviderConfigTemplate,
-		stateVariables[vpcID],
-		stateVariables[subnetID],
+		infrastructureStatus.VPC.ID,
+		publicSubnet.ID,
 		b.Shoot.SeedNamespace,
 		b.Shoot.SeedNamespace,
 		b.Shoot.Info.Spec.Cloud.AWS.Zones[0],

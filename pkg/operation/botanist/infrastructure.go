@@ -23,6 +23,7 @@ import (
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
+	"github.com/gardener/gardener/pkg/migration"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
@@ -55,6 +56,14 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 		}
 	)
 
+	// In the future the providerConfig will be blindly copied from the core.gardener.cloud/v1alpha1.Shoot
+	// resource. However, until we have completely moved to this resource, we have to compute the needed
+	// configuration ourselves from garden.sapcloud.io/v1beta1.Shoot.
+	providerConfig, err := migration.ShootToInfrastructureConfig(b.Shoot.Info)
+	if err != nil {
+		return err
+	}
+
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), infrastructure, func() error {
 		if requestInfrastructureReconciliation {
 			metav1.SetMetaDataAnnotation(&infrastructure.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
@@ -70,7 +79,9 @@ func (b *Botanist) DeployInfrastructure(ctx context.Context) error {
 				Name:      gardencorev1alpha1.SecretNameCloudProvider,
 				Namespace: infrastructure.Namespace,
 			},
-			ProviderConfig: &runtime.RawExtension{},
+			ProviderConfig: &runtime.RawExtension{
+				Object: providerConfig,
+			},
 		}
 		return nil
 	})
