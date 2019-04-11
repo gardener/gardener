@@ -19,7 +19,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	gcpv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -46,27 +49,30 @@ func (b *GCPBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
 func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
-		serviceAccountEmail = "service_account_email"
-		subnetNodes         = "subnet_nodes"
-		outputVariables     = []string{serviceAccountEmail, subnetNodes}
-		workers             = b.Shoot.Info.Spec.Cloud.GCP.Workers
-		zones               = b.Shoot.Info.Spec.Cloud.GCP.Zones
-		zoneLen             = len(zones)
+		zones   = b.Shoot.Info.Spec.Cloud.GCP.Zones
+		zoneLen = len(zones)
 
 		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
 	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+
+	// This code will only exist temporarily until we have introduced the `Worker` extension. Gardener
+	// will no longer compute the machine config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return nil, nil, fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return nil, nil, err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
+	nodesSubnet, err := findSubnetByPurpose(infrastructureStatus.Networks.Subnets, gcpv1alpha1.PurposeNodes)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for zoneIndex, zone := range zones {
-		for _, worker := range workers {
+		for _, worker := range b.Shoot.Info.Spec.Cloud.GCP.Workers {
 			machineClassSpec := map[string]interface{}{
 				"region":             b.Shoot.Info.Spec.Cloud.Region,
 				"zone":               zone,
@@ -91,7 +97,7 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, operati
 				"machineType": worker.MachineType,
 				"networkInterfaces": []map[string]interface{}{
 					{
-						"subnetwork": stateVariables[subnetNodes],
+						"subnetwork": nodesSubnet.Name,
 					},
 				},
 				"scheduling": map[string]interface{}{
@@ -104,7 +110,7 @@ func (b *GCPBotanist) GenerateMachineConfig() ([]map[string]interface{}, operati
 				},
 				"serviceAccounts": []map[string]interface{}{
 					{
-						"email": stateVariables[serviceAccountEmail],
+						"email": infrastructureStatus.ServiceAccountEmail,
 						"scopes": []string{
 							"https://www.googleapis.com/auth/compute",
 						},
