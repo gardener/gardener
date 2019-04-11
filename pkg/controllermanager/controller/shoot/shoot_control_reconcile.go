@@ -66,14 +66,13 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	}
 
 	var (
-		defaultTimeout                  = 30 * time.Second
-		defaultInterval                 = 5 * time.Second
-		managedExternalDNS              = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		managedInternalDNS              = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
-		isCloud                         = o.Shoot.Info.Spec.Cloud.Local == nil
-		creationPhase                   = operationType == gardencorev1alpha1.LastOperationTypeCreate
-		requireInfrastructureDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
-		requireKube2IAMDeployment       = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource)
+		defaultTimeout            = 30 * time.Second
+		defaultInterval           = 5 * time.Second
+		managedExternalDNS        = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
+		managedInternalDNS        = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
+		isCloud                   = o.Shoot.Info.Spec.Cloud.Local == nil
+		creationPhase             = operationType == gardencorev1alpha1.LastOperationTypeCreate
+		requireKube2IAMDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource)
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -122,8 +121,13 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deployInfrastructure = g.Add(flow.Task{
 			Name:         "Deploying Shoot infrastructure",
-			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployInfrastructure).DoIf(requireInfrastructureDeployment),
+			Fn:           flow.TaskFn(botanist.DeployInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
+		})
+		waitUntilInfrastructureReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot infrastructure has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(deployInfrastructure),
 		})
 		deployBackupInfrastructure = g.Add(flow.Task{
 			Name: "Deploying backup infrastructure",
@@ -151,7 +155,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		deployCloudProviderConfig = g.Add(flow.Task{
 			Name:         "Deploying cloud provider configuration",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudProviderConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployInfrastructure, deployCloudProviderSecret),
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, deployCloudProviderSecret),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
@@ -196,12 +200,12 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		computeShootOSConfig = g.Add(flow.Task{
 			Name:         "Computing operating system specific configuration for shoot workers",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployInfrastructure),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady),
 		})
 		deployKubeAddonManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes addon manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployInfrastructure, computeShootOSConfig),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady, computeShootOSConfig),
 		})
 		deployMachineControllerManager = g.Add(flow.Task{
 			Name:         "Deploying machine controller manager",

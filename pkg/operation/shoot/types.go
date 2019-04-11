@@ -41,9 +41,9 @@ type Shoot struct {
 	IgnoreAlerts           bool
 	IsHibernated           bool
 
-	CloudConfigMap map[string]CloudConfig
-
-	Extensions map[string]Extension
+	CloudConfigMap       map[string]CloudConfig
+	Extensions           map[string]Extension
+	InfrastructureStatus []byte
 }
 
 // ExternalDomain contains information for the used external shoot domain.
