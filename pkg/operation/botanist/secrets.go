@@ -968,8 +968,8 @@ func computeSecretCheckSum(data map[string][]byte) string {
 	return utils.ComputeSHA256Hex(jsonString)
 }
 
-func generateGardenSecretName(shootName, secretName string) string {
-	return fmt.Sprintf("%s.%s", shootName, secretName)
+func gardenEtcdEncryptionSecretName(shootName string) string {
+	return fmt.Sprintf("%s.%s", shootName, common.EtcdEncryptionSecretName)
 }
 
 func dnsNamesForService(name, namespace string) []string {

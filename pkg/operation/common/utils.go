@@ -541,3 +541,8 @@ func GetPersistentVolumeProvider(seed *gardenv1beta1.Seed) string {
 	}
 	return seed.Annotations[AnnotatePersistentVolumeProvider]
 }
+
+// GardenEtcdEncryptionSecretKey is the key to the 'backup' of the etcd encryption secret in the Garden cluster.
+func GardenEtcdEncryptionSecretKey(shootNamespace, shootName string) client.ObjectKey {
+	return kutil.Key(shootNamespace, fmt.Sprintf("%s.%s", shootName, EtcdEncryptionSecretName))
+}

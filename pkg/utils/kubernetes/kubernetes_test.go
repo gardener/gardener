@@ -18,9 +18,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime"
+	"strings"
 	"testing"
 	"time"
+
+	"k8s.io/apimachinery/pkg/runtime"
 
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
@@ -211,6 +213,22 @@ var _ = Describe("kubernetes", func() {
 		Entry("nil labels", nil, "foo", "bar", map[string]string{"foo": "bar"}),
 		Entry("non-nil non-conflicting labels", map[string]string{"bar": "baz"}, "foo", "bar", map[string]string{"bar": "baz", "foo": "bar"}),
 		Entry("non-nil conflicting labels", map[string]string{"foo": "baz"}, "foo", "bar", map[string]string{"foo": "bar"}),
+	)
+
+	DescribeTable("#SetMetaDataAnnotation",
+		func(annotations map[string]string, key, value string, expectedAnnotations map[string]string) {
+			original := &metav1.ObjectMeta{Annotations: annotations}
+			modified := original.DeepCopy()
+
+			SetMetaDataAnnotation(modified, key, value)
+			modifiedWithOriginalAnnotations := modified.DeepCopy()
+			modifiedWithOriginalAnnotations.Annotations = annotations
+			Expect(modifiedWithOriginalAnnotations).To(Equal(original), "not only annotations were modified")
+			Expect(modified.Annotations).To(Equal(expectedAnnotations))
+		},
+		Entry("nil annotations", nil, "foo", "bar", map[string]string{"foo": "bar"}),
+		Entry("non-nil non-conflicting annotations", map[string]string{"bar": "baz"}, "foo", "bar", map[string]string{"bar": "baz", "foo": "bar"}),
+		Entry("non-nil conflicting annotations", map[string]string{"foo": "baz"}, "foo", "bar", map[string]string{"foo": "bar"}),
 	)
 
 	DescribeTable("#HasMetaDataAnnotation",
@@ -731,4 +749,12 @@ var _ = Describe("kubernetes", func() {
 			})
 		})
 	})
+
+	DescribeTable("#TruncateLabelValue",
+		func(s, expected string) {
+			Expect(TruncateLabelValue(s)).To(Equal(expected))
+		},
+		Entry("< 63 chars", "foo", "foo"),
+		Entry("= 63 chars", strings.Repeat("a", 63), strings.Repeat("a", 63)),
+		Entry("> 63 chars", strings.Repeat("a", 64), strings.Repeat("a", 63)))
 })

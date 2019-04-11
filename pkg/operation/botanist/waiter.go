@@ -93,38 +93,33 @@ func (b *Botanist) WaitUntilEtcdReady(ctx context.Context) error {
 // WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.
 func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
-		podList := &corev1.PodList{}
-		err = b.K8sSeedClient.Client().List(ctx, podList,
-			client.InNamespace(b.Shoot.SeedNamespace),
-			client.MatchingLabels(map[string]string{"app": "kubernetes", "role": "apiserver"}))
-		if err != nil {
+
+		deploy := &appsv1.Deployment{}
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), deploy); err != nil {
 			return retry.SevereError(err)
 		}
-		if len(podList.Items) == 0 {
-			return retry.MinorError(fmt.Errorf("kube-apiserver pods have not yet been created"))
+		if deploy.Generation != deploy.Status.ObservedGeneration {
+			return retry.MinorError(fmt.Errorf("kube-apiserver not observed at latest generation (%d/%d)",
+				deploy.Status.ObservedGeneration, deploy.Generation))
 		}
 
-		var ready bool
-		for _, pod := range podList.Items {
-			if pod.DeletionTimestamp != nil {
-				continue
-			}
-
-			ready = false
-			for _, containerStatus := range pod.Status.ContainerStatuses {
-				if containerStatus.Name == common.KubeAPIServerDeploymentName && containerStatus.Ready {
-					ready = true
-					break
-				}
-			}
+		replicas := int32(0)
+		if deploy.Spec.Replicas != nil {
+			replicas = *deploy.Spec.Replicas
+		}
+		if replicas != deploy.Status.UpdatedReplicas {
+			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough updated replicas (%d/%d)",
+				deploy.Status.UpdatedReplicas, replicas))
+		}
+		if replicas != deploy.Status.Replicas {
+			return retry.MinorError(fmt.Errorf("kube-apiserver deployment has outdated replicas"))
+		}
+		if replicas != deploy.Status.AvailableReplicas {
+			return retry.MinorError(fmt.Errorf("kube-apiserver does not have enough available replicas (%d/%d",
+				deploy.Status.AvailableReplicas, replicas))
 		}
 
-		if ready {
-			return retry.Ok()
-		}
-
-		b.Logger.Info("Waiting until the kube-apiserver deployment is ready...")
-		return retry.MinorError(fmt.Errorf("kube-apiserver has unready pods"))
+		return retry.Ok()
 	})
 }
 
