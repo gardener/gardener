@@ -340,6 +340,9 @@ func (b *Botanist) DeploySeedMonitoring() error {
 					"cluster-autoscaler": map[string]interface{}{
 						"enabled": b.Shoot.WantsClusterAutoscaler,
 					},
+					"alertmanager": map[string]interface{}{
+						"enabled": b.Shoot.WantsAlertmanager,
+					},
 				},
 			},
 			"shoot": map[string]interface{}{

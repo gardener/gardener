@@ -188,6 +188,8 @@ rules:
   optional:
     cluster-autoscaler:
       enabled: true
+    alertmanager:
+      enabled: false
 
 # object can be any object you want to scale Prometheus on:
 # - number of Pods
