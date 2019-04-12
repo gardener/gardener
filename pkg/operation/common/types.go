@@ -542,7 +542,7 @@ const (
 	VpaUpdaterImageName = "vpa-updater"
 
 	// VpaExporter is the name of the vpa-exporter image
-	VpaExporter = "vpa-exporter"
+	VpaExporterImageName = "vpa-exporter"
 )
 
 var (

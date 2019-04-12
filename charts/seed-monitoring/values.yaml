@@ -34,14 +34,6 @@ kube-state-metrics-shoot:
   replicas: 1
   images:
     kube-state-metrics: image-repository:image-tag
-vpa-exporter:
-  replicas: 1
-  images:
-    vpa-exporter: image-repository:image-tag
-  vpa:
-    enabled: false
-    labels:
-      garden.sapcloud.io/role: vpa
 global:
   shootKubeVersion:
     gitVersion: v1.7.5

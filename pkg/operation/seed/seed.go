@@ -238,6 +238,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		common.VpaAdmissionControllerImageName,
 		common.VpaRecommenderImageName,
 		common.VpaUpdaterImageName,
+		common.VpaExporterImageName,
 	}, k8sSeedClient.Version(), k8sSeedClient.Version())
 	if err != nil {
 		return err

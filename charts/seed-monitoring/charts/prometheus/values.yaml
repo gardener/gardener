@@ -175,6 +175,10 @@ allowedMetrics:
   vpn:
   - probe_http_status_code
   - probe_success
+  vpa:
+  - vpa_status_recommendation
+  - vpa_spec_container_resource_policy_allowed
+  - vpa_metadata_generation
 
 seed:
   apiserver: https://api.foo.bar

@@ -23,13 +23,13 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -150,6 +150,9 @@ func (b *HybridBotanist) DeployETCD() error {
 			etcd["backup"] = map[string]interface{}{
 				"storageProvider": "", // No storage provider means no backup
 			}
+		}
+		etcd["vpa"] = map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		}
 
 		if b.Shoot.IsHibernated {

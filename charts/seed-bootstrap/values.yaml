@@ -48,6 +48,10 @@ allowedMetrics:
   kubelet:
   - kubelet_volume_stats_available_bytes
   - kubelet_volume_stats_capacity_bytes
+  vpa:
+  - vpa_status_recommendation
+  - vpa_spec_container_resource_policy_allowed
+  - vpa_metadata_generation
 
 reserveExcessCapacity: true
 

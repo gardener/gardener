@@ -289,7 +289,6 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		alertManagerHost = b.Seed.GetIngressFQDN("a", b.Shoot.Info.Name, b.Garden.Project.Name)
 		grafanaHost      = b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name)
 		prometheusHost   = b.ComputePrometheusIngressFQDN()
-		vpaEnabled       = controllermanagerfeatures.FeatureGate.Enabled(features.VPA)
 	)
 
 	var (
@@ -359,12 +358,6 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
 		}
-		vpaExporterConfig = map[string]interface{}{
-			"replicas": b.Shoot.GetReplicas(1),
-			"vpa": map[string]interface{}{
-				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-			},
-		}
 	)
 	alertManager, err := b.ImageVector.InjectImages(alertManagerConfig, b.SeedVersion(), b.ShootVersion(), common.AlertManagerImageName, common.ConfigMapReloaderImageName)
 	if err != nil {
@@ -393,18 +386,12 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		return err
 	}
 
-	vpaExporter, err := b.ImageVector.InjectImages(vpaExporterConfig, b.SeedVersion(), b.ShootVersion(), common.VpaExporter)
-	if err != nil {
-		return err
-	}
-
 	values := map[string]interface{}{
 		"global": map[string]interface{}{
 			"shootKubeVersion": map[string]interface{}{
 				"gitVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 			},
 		},
-		"vpa-exporter":             vpaExporter,
 		"alertmanager":             alertManager,
 		"grafana":                  grafana,
 		"prometheus":               prometheus,
@@ -434,12 +421,6 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		}
 	}
 
-	if !vpaEnabled {
-		if err := common.DeleteVpa(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
-			return err
-		}
-	}
-
 	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), nil, values); err != nil {
 		return err
 	}
@@ -450,20 +431,12 @@ func (b *Botanist) DeploySeedMonitoring() error {
 // during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
 // deleted.
 func (b *Botanist) DeleteSeedMonitoring() error {
-	var (
-		vpaEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.VPA)
-	)
 	err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.AlertManagerStatefulSetName)
 	if apierrors.IsNotFound(err) {
 		return nil
 	}
 	if err != nil {
 		return err
-	}
-	if vpaEnabled {
-		if err := common.DeleteVpa(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
-			return err
-		}
 	}
 	err = b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.PrometheusStatefulSetName)
 	if apierrors.IsNotFound(err) {

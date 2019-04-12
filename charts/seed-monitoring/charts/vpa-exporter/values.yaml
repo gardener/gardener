@@ -1,7 +1,0 @@
-images:
-  vpa-exporter: image-repository:image-tag
-replicas: 1
-vpa:
-  enabled: false
-  labels:
-    garden.sapcloud.io/role: vpa

@@ -210,4 +210,4 @@ images:
 - name: vpa-exporter
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
-  tag: "0.1.2"
+  tag: "0.1.4"

@@ -1,4 +1,0 @@
-apiVersion: v1
-description: A helm chart to deploy the vpa exporter for shoot control-plane
-name: vpa-exporter
-version: 0.1.0

@@ -1,34 +1,30 @@
-{{ if .Values.vpa.enabled }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vpa-exporter
-  namespace: {{ .Release.Namespace }}
+  namespace: garden
   labels:
 {{ toYaml .Values.vpa.labels | indent 4 }}
 ---
 apiVersion: {{ include "rbacversion" . }}
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
   name: system:vpa-exporter-role-binding
-  namespace: {{ .Release.Namespace }}
   labels:
 {{ toYaml .Values.vpa.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
+  kind: ClusterRole
   name: system:vpa-exporter-role
-  namespace: {{ .Release.Namespace }}
 subjects:
 - kind: ServiceAccount
   name: vpa-exporter
-  namespace: {{ .Release.Namespace }}
+  namespace: garden
 ---
 apiVersion: {{ include "rbacversion" . }}
-kind: Role
+kind: ClusterRole
 metadata:
-  namespace: {{ .Release.Namespace }}
   name: system:vpa-exporter-role
   labels:
 {{ toYaml .Values.vpa.labels | indent 4 }}
@@ -41,4 +37,3 @@ rules:
   - get
   - watch
   - list
-{{ end }}
