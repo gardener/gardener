@@ -24,6 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/admission"
 
+	seedmanagerapi "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager/apis/seedmanager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -90,20 +91,26 @@ var _ = Describe("seedmanager", func() {
 					},
 				},
 			}
+
+			defaultAdmissionConfiguration = seedmanagerapi.Configuration{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "seedmanager.admission.config.gardener.cloud/v1alpha1",
+					Kind:       "Configuration",
+				},
+				Strategy: seedmanagerapi.SameRegion,
+			}
 		)
-
-		BeforeEach(func() {
-			admissionHandler, _ = New()
-			admissionHandler.AssignReadyFunc(func() bool { return true })
-			gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
-			admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
-
-			seed = *seedBase.DeepCopy()
-			shoot = *shootBase.DeepCopy()
-		})
 
 		Context("Shoot references a Seed - protection", func() {
 			BeforeEach(func() {
+				admissionHandler, _ = New(&defaultAdmissionConfiguration)
+				admissionHandler.AssignReadyFunc(func() bool { return true })
+				gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
+				admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+
+				seed = *seedBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
+
 				shoot.Spec.Cloud.Seed = &seedName
 			})
 
@@ -176,12 +183,23 @@ var _ = Describe("seedmanager", func() {
 			})
 		})
 
-		Context("Shoot does not reference a Seed - find an adequate one", func() {
+		Context("Shoot does not reference a Seed - find an adequate one using 'Same Region' seed determination strategy", func() {
 			BeforeEach(func() {
+				seedmanagerAdmission := defaultAdmissionConfiguration
+				seedmanagerAdmission.Strategy = seedmanagerapi.SameRegion
+				admissionHandler, _ = New(&seedmanagerAdmission)
+
+				admissionHandler.AssignReadyFunc(func() bool { return true })
+				gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
+				admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+
+				seed = *seedBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
+
 				shoot.Spec.Cloud.Seed = nil
 			})
 
-			It("should find a seed cluster referencing the same profile and region and indicating availability", func() {
+			It("should find a seed cluster 1) 'Same Region' seed determination strategy 2) referencing the same profile 3) same  region 4) indicating availability", func() {
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
 				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
 
@@ -191,7 +209,160 @@ var _ = Describe("seedmanager", func() {
 				Expect(*shoot.Spec.Cloud.Seed).To(Equal(seedName))
 			})
 
-			It("should find the best seed cluster referencing the same profile and region and indicating availability", func() {
+			It("should find the best seed cluster 1) 'Same Region' seed determination strategy 2) referencing the same profile 3) same  region 4) indicating availability", func() {
+				secondSeed := seedBase
+				secondSeed.Name = "seed-2"
+
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&secondSeed)
+
+				secondShoot := shootBase
+				secondShoot.Name = "shoot-2"
+				// first seed references more shoots then seed-2 -> expect seed-2 to be selected
+				secondShoot.Spec.Cloud.Seed = &seed.Name
+
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(&secondShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.Cloud.Seed).To(Equal(secondSeed.Name))
+			})
+
+			It("should fail because it cannot find a seed cluster  1) 'Same Region' seed determination strategy 2) region that no seed supports", func() {
+				shoot.Spec.Cloud.Region = "another-region"
+
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+				Expect(shoot.Spec.Cloud.Seed).To(BeNil())
+			})
+		})
+
+		Context("Shoot does not reference a Seed - find an adequate one using 'Minimal Distance' seed determination strategy", func() {
+			BeforeEach(func() {
+				seedmanagerAdmission := defaultAdmissionConfiguration
+				seedmanagerAdmission.Strategy = seedmanagerapi.MinimalDistance
+				admissionHandler, _ = New(&seedmanagerAdmission)
+
+				admissionHandler.AssignReadyFunc(func() bool { return true })
+				gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
+				admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+
+				seed = *seedBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
+
+				shoot.Spec.Cloud.Seed = nil
+			})
+
+			It("should find a seed cluster 1) referencing the same profile 2) same  region 3) indicating availability", func() {
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.Cloud.Seed).To(Equal(seedName))
+			})
+
+			It("should find a seed cluster  1) referencing the same profile 2) different region 3) indicating availability 4) only one seed existing", func() {
+				anotherRegion := "another-region"
+				shoot.Spec.Cloud.Region = anotherRegion
+
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.Cloud.Seed).To(Equal(seedName))
+				// verify that shoot is in another region than the seed
+				Expect(shoot.Spec.Cloud.Region).NotTo(Equal(seed.Spec.Cloud.Region))
+			})
+
+			It("should find the seed cluster with the minimal distance 1) referencing the same profile 2) different region 3) indicating availability 4) multiple seeds existing", func() {
+				// add 3 seeds with different names and regions
+				seed.Spec.Cloud.Region = "europe-north1"
+
+				secondSeed := seedBase
+				secondSeed.Name = "seed-2"
+				secondSeed.Spec.Cloud.Region = "europe-west1"
+
+				thirdSeed := seedBase
+				thirdSeed.Name = "seed-3"
+				thirdSeed.Spec.Cloud.Region = "asia-south1"
+
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&secondSeed)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&thirdSeed)
+
+				// define shoot to be lexicographically 'closer' to the second seed
+				anotherRegion := "europe-west3"
+				shoot.Spec.Cloud.Region = anotherRegion
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.Cloud.Seed).To(Equal(secondSeed.Name))
+				// verify that shoot is in another region than the chosen seed
+				Expect(shoot.Spec.Cloud.Region).NotTo(Equal(secondSeed.Spec.Cloud.Region))
+			})
+
+			It("should find the best seed cluster 1) referencing the same profile 2) same  region 3) indicating availability 4) multiple seeds existing", func() {
+				secondSeed := seedBase
+				secondSeed.Name = "seed-2"
+
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&secondSeed)
+
+				secondShoot := shootBase
+				secondShoot.Name = "shoot-2"
+				// first seed references more shoots then seed-2 -> expect seed-2 to be selected
+				secondShoot.Spec.Cloud.Seed = &seed.Name
+
+				gardenInformerFactory.Garden().InternalVersion().Shoots().Informer().GetStore().Add(&secondShoot)
+
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.Cloud.Seed).To(Equal(secondSeed.Name))
+			})
+		})
+
+		Context("Shoot does not reference a Seed - find an adequate one using default seed determination strategy", func() {
+			BeforeEach(func() {
+				admissionHandler, _ = New(&defaultAdmissionConfiguration)
+				admissionHandler.AssignReadyFunc(func() bool { return true })
+				gardenInformerFactory = gardeninformers.NewSharedInformerFactory(nil, 0)
+				admissionHandler.SetInternalGardenInformerFactory(gardenInformerFactory)
+
+				seed = *seedBase.DeepCopy()
+				shoot = *shootBase.DeepCopy()
+
+				shoot.Spec.Cloud.Seed = nil
+			})
+
+			It("should find a seed cluster 1) referencing the same profile 2) same  region 3) indicating availability", func() {
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*shoot.Spec.Cloud.Seed).To(Equal(seedName))
+			})
+
+			It("should find the best seed cluster 1) referencing the same profile 2) same  region 3) indicating availability", func() {
 				secondSeed := seedBase
 				secondSeed.Name = "seed-2"
 
@@ -229,7 +400,7 @@ var _ = Describe("seedmanager", func() {
 				Expect(shoot.Spec.Cloud.Seed).To(BeNil())
 			})
 
-			It("should fail because it cannot find a seed cluster due to invalid region", func() {
+			It("should fail because it cannot find a seed cluster due to region that no seed supports", func() {
 				shoot.Spec.Cloud.Region = "another-region"
 
 				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
