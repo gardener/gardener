@@ -29,8 +29,7 @@ data:
         - role: endpoints
           namespaces:
             names:
-            - {{ .Release.Namespace }}
-            - garden
+{{ include "prometheus.alertmanager.namespaces" . | indent 12 }}
         relabel_configs:
         - source_labels: [ __meta_kubernetes_service_label_component ]
           action: keep
@@ -351,6 +350,7 @@ data:
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.machineControllerManager | indent 6 }}
 
+{{- if  (index .Values.rules.optional "alertmanager" ).enabled }}
     - job_name: alertmanager
       honor_labels: false
       kubernetes_sd_configs:
@@ -370,6 +370,7 @@ data:
         target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.alertManager | indent 6 }}
+{{- end }}
 
     - job_name: prometheus
       honor_labels: false
