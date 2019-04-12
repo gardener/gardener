@@ -68,7 +68,8 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	var (
 		defaultTimeout                  = 30 * time.Second
 		defaultInterval                 = 5 * time.Second
-		managedDNS                      = o.Shoot.ExternalDomain != nil
+		managedExternalDNS              = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
+		managedInternalDNS              = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
 		isCloud                         = o.Shoot.Info.Spec.Cloud.Local == nil
 		creationPhase                   = operationType == gardencorev1alpha1.LastOperationTypeCreate
 		requireInfrastructureDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployInfrastructure)
@@ -106,12 +107,12 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord),
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(managedInternalDNS),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying external domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedDNS),
+			Fn:           flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedExternalDNS),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployInfrastructure = g.Add(flow.Task{
@@ -210,7 +211,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
-			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			Dependencies: flow.NewTaskIDs(deployKubeAddonManager),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{

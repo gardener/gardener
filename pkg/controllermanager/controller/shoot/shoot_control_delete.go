@@ -123,7 +123,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
 		isCloud                 = o.Shoot.Info.Spec.Cloud.Local == nil
-		managedDNS              = o.Shoot.ExternalDomain != nil
+		managedExternalDNS      = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
+		managedInternalDNS      = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -177,16 +178,16 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		deployInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Deploying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(internalDNSMigrationNeeded),
+			Fn:           flow.TaskFn(botanist.DeployInternalDomainDNSRecord).DoIf(managedInternalDNS && internalDNSMigrationNeeded),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerServiceIsReady),
 		})
 		deployExternalDomainDNSRecord = g.Add(flow.Task{
 			Name: "Deploying external domain DNS record",
-			Fn:   flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedDNS && externalDNSMigrationNeeded),
+			Fn:   flow.TaskFn(botanist.DeployExternalDomainDNSRecord).DoIf(managedExternalDNS && externalDNSMigrationNeeded),
 		})
 		deployIngressDNSRecord = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
-			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedDNS && cleanupShootResources && ingressDNSMigrationNeeded).RetryUntilTimeout(defaultInterval, 10*time.Minute),
+			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedExternalDNS && cleanupShootResources && ingressDNSMigrationNeeded).RetryUntilTimeout(defaultInterval, 10*time.Minute),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 

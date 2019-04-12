@@ -311,7 +311,11 @@ spec:
   #     SomeKubernetesFeature: true
   % endif
   dns:
-  # provider: ${value("spec.dns.provider", "aws-route53") if cloud != "local" else "unmanaged"}
+  % if cloud != "local":
+  # provider: ${value("spec.dns.provider", "aws-route53")}
+  % else:
+    provider: unmanaged
+  % endif
     domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<local-kubernetes-ip>.nip.io"}<% hibernation = value("spec.hibernation", {}) %>
   % if hibernation != {}:
   hibernation: ${yaml.dump(hibernation, width=10000, default_flow_style=None)}

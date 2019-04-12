@@ -316,9 +316,6 @@ const (
 	// TerraformerPurposeKube2IAM is a constant for the complete Terraform setup with purpose 'kube2iam roles'.
 	TerraformerPurposeKube2IAM = "kube2iam"
 
-	// TerraformerPurposeIngress is a constant for the complete Terraform setup with purpose 'ingress'.
-	TerraformerPurposeIngress = "ingress"
-
 	// ShootExpirationTimestamp is an annotation on a Shoot resource whose value represents the time when the Shoot lifetime
 	// is expired. The lifetime can be extended, but at most by the minimal value of the 'clusterLifetimeDays' property
 	// of referenced quotas.
