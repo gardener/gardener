@@ -19,8 +19,10 @@
 
 * [Extensibility overview](extensions/overview.md)
 * [Extension controller registration](extensions/controllerregistration.md)
+* [`Cluster` resource](extensions/cluster.md)
 * Contracts
   * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
+  * [`Infrastructure` resource](extensions/infrastructure.md)
   * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
 
 ## Deployment
