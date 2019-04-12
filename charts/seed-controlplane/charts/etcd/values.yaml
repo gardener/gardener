@@ -19,6 +19,9 @@ tlsServerSecretName: etcd-server-tls
 tlsClientSecretName: etcd-client-tls
 podAnnotations: {}
 
+vpa:
+  enabled: true
+
 # Aws S3 storage configuration
 # Note: No volumeMounts variable needed
 # storageProvider: "S3"
