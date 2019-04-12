@@ -1,0 +1,49 @@
+kind: Deployment
+apiVersion: {{ include "deploymentversion" . }}
+metadata:
+  name: csi-provisioner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: csi-provisioner
+    garden.sapcloud.io/role: controlplane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: csi-provisioner
+  template:
+    metadata:
+{{- if .Values.podAnnotations.csiProvisioner }}
+      annotations:
+{{ toYaml .Values.podAnnotations.csiProvisioner | indent 8 }}
+{{- end }}      
+      labels:
+        app: kubernetes
+        role: csi-provisioner
+        garden.sapcloud.io/role: controlplane
+    spec:
+      containers:
+        - name: csi-provisioner
+          image: {{ index .Values.images "csi-provisioner" }}
+          args:
+            - "--provisioner=diskplugin.csi.alibabacloud.com"
+            - "--csi-address=csi-plugin-controller:80"
+            - "--kubeconfig=/var/lib/csi-provisioner/kubeconfig"
+            - "--feature-gates=Topology=True"
+            - "--enable-leader-election=true"
+{{- if .Values.provisionerResources }}
+          resources:
+{{ toYaml .Values.provisionerResources | indent 12 }}           
+{{- end }}
+          env:
+          - name: POD_NAMESPACE
+            value: kube-system
+          volumeMounts:
+            - name: csi-provisioner
+              mountPath: /var/lib/csi-provisioner
+      volumes:
+        - name: csi-provisioner
+          secret:
+            secretName: csi-provisioner

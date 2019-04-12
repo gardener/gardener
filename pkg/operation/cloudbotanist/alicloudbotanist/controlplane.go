@@ -115,26 +115,6 @@ func (b *AlicloudBotanist) GenerateCloudControllerManagerConfig() (map[string]in
 	return newConf, chartName, nil
 }
 
-// GenerateCSIConfig generates the configuration for CSI charts
-func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
-	conf := map[string]interface{}{
-		"credential": map[string]interface{}{
-			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
-			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
-		},
-		"kubernetesVersion": b.Operation.ShootVersion(),
-		"enabled":           true,
-	}
-
-	return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
-		common.CSIAttacherImageName,
-		common.CSIPluginAlicloudImageName,
-		common.CSIProvisionerImageName,
-		common.CSISnapshotterImageName,
-		common.CSINodeDriverRegistrarImageName,
-	)
-}
-
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *AlicloudBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
@@ -163,6 +143,40 @@ func (b *AlicloudBotanist) GenerateKubeAPIServerExposeConfig() (map[string]inter
 			fmt.Sprintf("--external-hostname=%s", b.APIServerAddress),
 		},
 	}, nil
+}
+
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	conf := map[string]interface{}{
+		"regionID": b.Shoot.Info.Spec.Cloud.Region,
+		"credential": map[string]interface{}{
+			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
+			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
+		},
+		"podAnnotations": map[string]interface{}{
+			"csiAttacher": map[string]interface{}{
+				fmt.Sprintf("checksum/%s", common.CSIAttacher): b.CheckSums[common.CSIAttacher],
+			},
+			"csiPluginAlicloud": map[string]interface{}{
+				fmt.Sprintf("checksum/%s", common.CloudProviderSecretName): b.CheckSums[common.CloudProviderSecretName],
+			},
+			"csiProvisioner": map[string]interface{}{
+				fmt.Sprintf("checksum/%s", common.CSIProvisioner): b.CheckSums[common.CSIProvisioner],
+			},
+			"csiSnapshotter": map[string]interface{}{
+				fmt.Sprintf("checksum/%s", common.CSISnapshotter): b.CheckSums[common.CSISnapshotter],
+			},
+		},
+		"enabled": true,
+	}
+
+	return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
+		common.CSIAttacherImageName,
+		common.CSIPluginAlicloudImageName,
+		common.CSIProvisionerImageName,
+		common.CSISnapshotterImageName,
+		common.CSINodeDriverRegistrarImageName,
+	)
 }
 
 // GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the

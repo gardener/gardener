@@ -10,7 +10,7 @@ metadata:
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
-  name: garden.sapcloud.io:psp:kube-system:csi-provisioner
+  name: garden.sapcloud.io:kube-system:csi-provisioner
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 rules:
@@ -38,29 +38,20 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
-  - apiGroups:
-    - policy
-    - extensions
-    resourceNames:
-    - gardener.kube-system.csi-provisioner
-    resources:
-    - podsecuritypolicies
-    verbs:
-    - use
 
 ---
 kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
-  name: garden.sapcloud.io:psp:csi-provisioner
+  name: garden.sapcloud.io:csi-provisioner
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 subjects:
-  - kind: ServiceAccount
-    name: csi-provisioner
-    namespace: kube-system
+- kind: User
+  name: system:csi-provisioner
 roleRef:
   kind: ClusterRole
-  name: garden.sapcloud.io:psp:kube-system:csi-provisioner
+  name: garden.sapcloud.io:kube-system:csi-provisioner
   apiGroup: rbac.authorization.k8s.io
+
 {{- end -}}

@@ -1,10 +1,6 @@
 images:
-  csi-attacher: image-repository:image-tag
   csi-driver-registrar: image-repository:image-tag
-  csi-provisioner: image-repository:image-tag
   csi-plugin-alicloud: image-repository:image-tag
-  csi-node-driver-registrar: image-repository:image-tag
-  csi-snapshotter: image-repository:image-tag
 credential:
   accessKeyID: keyID
   accessKeySecret: secret

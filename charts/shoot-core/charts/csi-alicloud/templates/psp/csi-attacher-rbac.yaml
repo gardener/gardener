@@ -20,7 +20,7 @@ metadata:
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
-  name: garden.sapcloud.io:psp:kube-system:csi-attacher
+  name: garden.sapcloud.io:kube-system:csi-attacher
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 rules:
@@ -39,25 +39,20 @@ rules:
   - apiGroups: [""]
     resources: ["events"]
     verbs: ["create", "patch", "update"]
-  - apiGroups: ["policy", "extensions"]
-    resourceNames: ["gardener.kube-system.csi-attacher"]
-    resources: ["podsecuritypolicies"]
-    verbs: ["use"]
 
 ---
 kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
-  name: garden.sapcloud.io:psp:csi-attacher
+  name: garden.sapcloud.io:csi-attacher
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 subjects:
-  - kind: ServiceAccount
-    name: csi-attacher
-    namespace: kube-system
+- kind: User
+  name: system:csi-attacher
 roleRef:
   kind: ClusterRole
-  name: garden.sapcloud.io:psp:kube-system:csi-attacher
+  name: garden.sapcloud.io:kube-system:csi-attacher
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -84,11 +79,11 @@ metadata:
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
 subjects:
-  - kind: ServiceAccount
-    name: csi-attacher
-    namespace: kube-system
+- kind: User
+  name: system:csi-attacher
 roleRef:
   kind: Role
   name: csi-attacher
   apiGroup: rbac.authorization.k8s.io
+
 {{- end -}}
