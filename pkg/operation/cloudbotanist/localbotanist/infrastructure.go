@@ -14,16 +14,6 @@
 
 package localbotanist
 
-// DeployInfrastructure does currently nothing for Local.
-func (b *LocalBotanist) DeployInfrastructure() error {
-	return nil
-}
-
-// DestroyInfrastructure does currently nothing for Local.
-func (b *LocalBotanist) DestroyInfrastructure() error {
-	return nil
-}
-
 // DeployBackupInfrastructure does currently nothing for Local.
 func (b *LocalBotanist) DeployBackupInfrastructure() error {
 	return nil

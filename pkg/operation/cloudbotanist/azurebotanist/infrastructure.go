@@ -17,105 +17,10 @@ package azurebotanist
 import (
 	"fmt"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
 )
-
-// DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
-func (b *AzureBotanist) DeployInfrastructure() error {
-	var (
-		createResourceGroup = true
-		createVNet          = true
-		resourceGroupName   = b.Shoot.SeedNamespace
-		vnetName            = b.Shoot.SeedNamespace
-		vnetCIDR            = b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers
-	)
-
-	// check if we should use an existing ResourceGroup or create a new one
-	if b.Shoot.Info.Spec.Cloud.Azure.ResourceGroup != nil {
-		createResourceGroup = false
-		resourceGroupName = b.Shoot.Info.Spec.Cloud.Azure.ResourceGroup.Name
-	}
-
-	// check if we should use an existing ResourceGroup or create a new one
-	if b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.Name != nil {
-		createVNet = false
-		vnetName = *b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.Name
-	}
-	if b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.CIDR != nil {
-		vnetCIDR = *b.Shoot.Info.Spec.Cloud.Azure.Networks.VNet.CIDR
-	}
-
-	countUpdateDomains, err := findDomainCountForRegion(b.Shoot.Info.Spec.Cloud.Region, b.Shoot.CloudProfile.Spec.Azure.CountUpdateDomains)
-	if err != nil {
-		return err
-	}
-	countFaultDomains, err := findDomainCountForRegion(b.Shoot.Info.Spec.Cloud.Region, b.Shoot.CloudProfile.Spec.Azure.CountFaultDomains)
-	if err != nil {
-		return err
-	}
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
-	if err != nil {
-		return err
-	}
-	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		InitializeWith(b.ChartInitializer("azure-infra", b.generateTerraformInfraConfig(createResourceGroup, createVNet, resourceGroupName, vnetName, vnetCIDR, countUpdateDomains, countFaultDomains))).
-		Apply()
-}
-
-// DestroyInfrastructure kicks off a Terraform job which destroys the infrastructure.
-func (b *AzureBotanist) DestroyInfrastructure() error {
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
-	if err != nil {
-		return err
-	}
-	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		Destroy()
-}
-
-// generateTerraformInfraVariablesEnvironment generates the environment containing the credentials which
-// are required to validate/apply/destroy the Terraform configuration. These environment must contain
-// Terraform variables which are prefixed with TF_VAR_.
-func (b *AzureBotanist) generateTerraformInfraVariablesEnvironment() map[string]string {
-	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
-		"CLIENT_ID":     ClientID,
-		"CLIENT_SECRET": ClientSecret,
-	})
-}
-
-// generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
-// and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *AzureBotanist) generateTerraformInfraConfig(createResourceGroup, createVNet bool, resourceGroupName, vnetName string, vnetCIDR gardencorev1alpha1.CIDR, countUpdateDomains, countFaultDomains gardenv1beta1.AzureDomainCount) map[string]interface{} {
-	return map[string]interface{}{
-		"azure": map[string]interface{}{
-			"subscriptionID":     string(b.Shoot.Secret.Data[SubscriptionID]),
-			"tenantID":           string(b.Shoot.Secret.Data[TenantID]),
-			"region":             b.Shoot.Info.Spec.Cloud.Region,
-			"countUpdateDomains": countUpdateDomains.Count,
-			"countFaultDomains":  countFaultDomains.Count,
-		},
-		"create": map[string]interface{}{
-			"resourceGroup": createResourceGroup,
-			"vnet":          createVNet,
-		},
-		"resourceGroup": map[string]interface{}{
-			"name": resourceGroupName,
-			"vnet": map[string]interface{}{
-				"name": vnetName,
-				"cidr": vnetCIDR,
-			},
-		},
-		"clusterName": b.Shoot.SeedNamespace,
-		"networks": map[string]interface{}{
-			"worker": b.Shoot.Info.Spec.Cloud.Azure.Networks.Workers,
-		},
-	}
-}
 
 // DeployBackupInfrastructure kicks off a Terraform job which creates the infrastructure resources for backup.
 func (b *AzureBotanist) DeployBackupInfrastructure() error {
@@ -175,13 +80,4 @@ func (b *AzureBotanist) generateTerraformBackupConfig() map[string]interface{} {
 		},
 		"clusterName": b.BackupInfrastructure.Name,
 	}
-}
-
-func findDomainCountForRegion(region string, domainCounts []gardenv1beta1.AzureDomainCount) (gardenv1beta1.AzureDomainCount, error) {
-	for _, domainCount := range domainCounts {
-		if domainCount.Region == region {
-			return domainCount, nil
-		}
-	}
-	return gardenv1beta1.AzureDomainCount{}, fmt.Errorf("could not find a domain count for region %s", region)
 }

@@ -20,6 +20,7 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 
 	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 )
@@ -42,7 +43,7 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 	}
 
 	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
+		SetVariablesEnvironment(b.generateTerraformKube2IAMVariablesEnvironment()).
 		InitializeWith(b.ChartInitializer("aws-kube2iam", values)).
 		Apply()
 }
@@ -55,7 +56,7 @@ func (b *AWSBotanist) DestroyKube2IAMResources() error {
 		return err
 	}
 	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
+		SetVariablesEnvironment(b.generateTerraformKube2IAMVariablesEnvironment()).
 		Destroy()
 }
 
@@ -86,6 +87,16 @@ func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1be
 		"nodesRoleARN": nodesRole.ARN,
 		"roles":        roles,
 	}, nil
+}
+
+// generateTerraformKube2IAMVariablesEnvironment generates the environment containing the credentials which
+// are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *AWSBotanist) generateTerraformKube2IAMVariablesEnvironment() map[string]string {
+	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
+		"ACCESS_KEY_ID":     AccessKeyID,
+		"SECRET_ACCESS_KEY": SecretAccessKey,
+	})
 }
 
 // createKube2IAMRoles creates the policy documents for AWS IAM in order to allow applying the respective access

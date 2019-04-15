@@ -16,13 +16,11 @@ package gcpbotanist
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	gcpclient "github.com/gardener/gardener/pkg/client/gcp"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 
@@ -133,15 +131,9 @@ func New(o *operation.Operation, purpose string) (*GCPBotanist, error) {
 		return nil, err
 	}
 
-	client, err := gcpclient.NewClient(context.TODO(), serviceAccountJSON, project)
-	if err != nil {
-		return nil, err
-	}
-
 	return &GCPBotanist{
 		Operation:              o,
 		CloudProviderName:      "gce",
-		GCPClient:              client,
 		VPCName:                vpcName,
 		Project:                project,
 		MinifiedServiceAccount: minifiedServiceAccount,

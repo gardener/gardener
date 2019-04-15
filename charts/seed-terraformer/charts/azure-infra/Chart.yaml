@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Azure chart for main k8s infrastructure
-name: azure-infra
-version: 0.1.0

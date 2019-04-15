@@ -26,8 +26,6 @@ type CloudBotanist interface {
 	GetCloudProviderName() string
 
 	// Infrastructure
-	DeployInfrastructure() error
-	DestroyInfrastructure() error
 	DeployBackupInfrastructure() error
 	DestroyBackupInfrastructure() error
 

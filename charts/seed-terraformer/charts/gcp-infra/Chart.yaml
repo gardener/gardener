@@ -1,4 +1,0 @@
-apiVersion: v1
-description: GCP chart for main k8s infrastructure
-name: gcp-infra
-version: 0.1.0

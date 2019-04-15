@@ -456,7 +456,7 @@ func (c *defaultControl) needsInfrastructureMigration(o *operation.Operation) (b
 			// If it does still exist then we need to migrate. Otherwise there are no infrastructures resources anymore that
 			// need to be deleted, so no migration would be necessary.
 
-			tf, err := o.NewShootTerraformer(common.TerraformerPurposeInfra)
+			tf, err := o.NewShootTerraformer(common.TerraformerPurposeInfraDeprecated)
 			if err != nil {
 				return false, err
 			}

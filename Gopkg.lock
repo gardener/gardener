@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:180876db3ec295bb9f0babec5ca926fe9f2036b747b7c5bfcd13b333023e7cfd"
-  name = "cloud.google.com/go"
-  packages = ["compute/metadata"]
-  pruneopts = "NUT"
-  revision = "767c40d6a2e058483c25fa193e963a22da17236d"
-  version = "v0.18.0"
-
-[[projects]]
   digest = "1:5d72bbcc9c8667b11c3dc3cbe681c5a6f71e5096744c0bf7726ab5c6425d5dc4"
   name = "github.com/BurntSushi/toml"
   packages = ["."]
@@ -66,7 +58,7 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:08ecfb98f990d77a699802b7ff746a5afef78066120a876fc5f99ccb5dff289c"
+  digest = "1:17a840e7058b98a31da6e3775e3ac7b90eae9f5fc76413397cc0b68c9e03a2e2"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
     "sdk",
@@ -734,7 +726,7 @@
   name = "github.com/prometheus/procfs"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "8368d24ba045f26503eb745b624d930cbe214c79"
+  revision = "e22ddced71425e65e388b17b7d0289c5ea77d06e"
 
 [[projects]]
   digest = "1:9dfe20a82800ffcf0a2bde15beba44cc6d6f6cf1d003420ecc8ad0ac78300d70"
@@ -797,31 +789,6 @@
   revision = "48954b6210f8d154cb5f8484d3a3e1f83489309e"
 
 [[projects]]
-  digest = "1:045bc0ab96bb83bdffd2606f019003da03d1c139d3cb8aad13596863e4dd37d6"
-  name = "go.opencensus.io"
-  packages = [
-    ".",
-    "internal",
-    "internal/tagencoding",
-    "metric/metricdata",
-    "metric/metricproducer",
-    "plugin/ochttp",
-    "plugin/ochttp/propagation/b3",
-    "resource",
-    "stats",
-    "stats/internal",
-    "stats/view",
-    "tag",
-    "trace",
-    "trace/internal",
-    "trace/propagation",
-    "trace/tracestate",
-  ]
-  pruneopts = "NUT"
-  revision = "75c0cca22312e51bfd4fafdbe9197ae399e18b38"
-  version = "v0.20.2"
-
-[[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
   name = "go.uber.org/atomic"
   packages = ["."]
@@ -854,7 +821,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6a78526ad2693dcd9c6108e2e4c5501d674d1c978e472218a13eacc1a13ff24a"
+  digest = "1:5b8709c54afe4225c80b5e6668412a23e734fc08eb789e38e7c10f4dbe192843"
   name = "golang.org/x/crypto"
   packages = [
     "cast5",
@@ -877,7 +844,7 @@
     "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "d864b10871cd4370fe574816b489c819c675ccc7"
+  revision = "88737f569e3a9c7ab309cdc09a07fe7fc87233c3"
 
 [[projects]]
   branch = "master"
@@ -898,25 +865,22 @@
     "websocket",
   ]
   pruneopts = "NUT"
-  revision = "afa5a82059c6356159f699d81beff22a81842231"
+  revision = "4a65cf94b67935be46fbc55ddaea48ae3f7a1471"
 
 [[projects]]
   branch = "master"
-  digest = "1:3121d742fbe48670a16d98b6da4693501fc33cd76d69ed6f35850c564f255c65"
+  digest = "1:4d25d388c9ad5169b31c1a6f16cc7bcdb856489958e99f2123d8d8cdf000d7eb"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
-    "google",
     "internal",
-    "jws",
-    "jwt",
   ]
   pruneopts = "NUT"
   revision = "9f3314589c9a9136388751d9adae6b0ed400978a"
 
 [[projects]]
   branch = "master"
-  digest = "1:4dd9493d1182d8afdc4ee8db4c84111e463941d695e00a973b3adf6e195eec12"
+  digest = "1:7ccbdae2081fa5e64af3eb1b9a05c715c9be9f0677659f50dcb61b19931a608c"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -924,7 +888,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "953cdadca894cdc07be76fc99f95b40c28f06623"
+  revision = "16da32be82c5df9a338c27758247c0b7b0bd8fea"
 
 [[projects]]
   digest = "1:2c4e3b27329379d7b5f889038b48086140ea60708fb92e4b19d6a775926ea30b"
@@ -988,37 +952,16 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "fe54fb35175bb1c0c175e2335e23d7fa90ca987a"
+  revision = "681f9ce8ac52c4ba431539a515ecb7f2ab72eca0"
 
 [[projects]]
-  digest = "1:b0d0313c9209e09de225a878c804f368d3846183b2f124c70257476219f9f2f5"
-  name = "google.golang.org/api"
-  packages = [
-    "compute/v1",
-    "gensupport",
-    "googleapi",
-    "googleapi/internal/uritemplates",
-    "googleapi/transport",
-    "internal",
-    "option",
-    "transport/http",
-    "transport/http/internal/propagation",
-  ]
-  pruneopts = "NUT"
-  revision = "0cbcb99a9ea0c8023c794b2693cbe1def82ed4d7"
-  version = "v0.3.2"
-
-[[projects]]
-  digest = "1:a4824d8df1fd1f63c6b3690bf4801d6ff1722adcb3e13c0489196a7e248d868a"
+  digest = "1:372cd8eba449f9b6db06677d0e73fa193ec5b19aaee148f355503ab6127045ca"
   name = "google.golang.org/appengine"
   packages = [
-    ".",
     "internal",
-    "internal/app_identity",
     "internal/base",
     "internal/datastore",
     "internal/log",
-    "internal/modules",
     "internal/remote_api",
     "internal/urlfetch",
     "urlfetch",
@@ -1764,7 +1707,9 @@
     "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1",
     "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws",
     "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure",
     "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp",
     "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1",
     "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack",
     "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
