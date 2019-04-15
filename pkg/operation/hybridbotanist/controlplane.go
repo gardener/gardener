@@ -515,6 +515,9 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 			"checksum/secret-cloudprovider":                   b.CheckSums[common.CloudProviderSecretName],
 			"checksum/configmap-cloud-provider-config":        b.CheckSums[common.CloudProviderConfigName],
 		},
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+		},
 	}
 	cloudSpecificValues, chartName, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()
 	if err != nil {
