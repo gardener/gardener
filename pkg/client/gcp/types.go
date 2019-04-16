@@ -29,7 +29,10 @@ type ClientInterface interface {
 	DeleteRoute(ctx context.Context, project, routeName string) error
 }
 
-const fwNamePrefix string = "k8s"
+const (
+	fwNamePrefix string = "k8s"
+	routePrefix  string = "shoot--"
+)
 
 // ListKubernetesFirewallRulesForNetwork returns a list of all k8s created firewall rules within the shoot network.
 func (c *Client) ListKubernetesFirewallRulesForNetwork(ctx context.Context, project, network string) ([]string, error) {
@@ -52,7 +55,7 @@ func (c *Client) ListKubernetesRoutesForNetwork(ctx context.Context, project, ne
 	var routes []string
 	if err := c.computeService.Routes.List(project).Pages(ctx, func(page *compute.RouteList) error {
 		for _, route := range page.Items {
-			if strings.HasPrefix(route.Name, namespace) {
+			if strings.HasPrefix(route.Name, routePrefix) && route.Network == network {
 				routes = append(routes, route.Name)
 			}
 		}
