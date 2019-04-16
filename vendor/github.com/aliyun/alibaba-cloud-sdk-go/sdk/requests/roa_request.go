@@ -147,6 +147,6 @@ func (request *RoaRequest) initWithCommonRequest(commonRequest *CommonRequest) {
 	request.Headers["x-acs-version"] = commonRequest.Version
 	//request.actionName = commonRequest.ApiName
 	request.pathPattern = commonRequest.PathPattern
-	request.locationServiceCode = ""
+	request.locationServiceCode = commonRequest.ServiceCode
 	request.locationEndpointType = ""
 }

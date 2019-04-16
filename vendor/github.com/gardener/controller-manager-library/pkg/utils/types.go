@@ -28,6 +28,12 @@ func StringValue(s *string) string {
 	}
 	return *s
 }
+func Int64Value(v *int64, def int64) int64 {
+	if v == nil {
+		return def
+	}
+	return *v
+}
 
 func StringEqual(a, b *string) bool {
 	return a == b || (a != nil && b != nil && *a == *b)
