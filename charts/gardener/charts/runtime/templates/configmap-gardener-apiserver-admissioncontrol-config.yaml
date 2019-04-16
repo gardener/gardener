@@ -1,0 +1,16 @@
+{{- if and .Values.global.apiserver.enabled .Values.global.apiserver.admissionControlConfig }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-apiserver-admissioncontrol-config
+  namespace: garden
+  labels:
+    app: gardener
+    role: apiserver
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  admissionconfiguration.yaml: |-
+{{ .Values.global.apiserver.admissionControlConfig | indent 4 }}
+{{- end }}

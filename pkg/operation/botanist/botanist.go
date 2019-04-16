@@ -199,10 +199,13 @@ func (b *Botanist) RequiredExtensionsExist() error {
 func (b *Botanist) computeRequiredExtensions() map[string]string {
 	requiredExtensions := map[string]string{
 		extensionsv1alpha1.OperatingSystemConfigResource: string(b.Shoot.GetMachineImageName()),
-		dnsv1alpha1.DNSProviderKind:                      b.Garden.InternalDomain.Provider,
 	}
 
-	if b.Shoot.ExternalDomain != nil {
+	if b.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged {
+		requiredExtensions[dnsv1alpha1.DNSProviderKind] = b.Garden.InternalDomain.Provider
+	}
+
+	if b.Shoot.ExternalDomain != nil && b.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged {
 		requiredExtensions[dnsv1alpha1.DNSProviderKind] = b.Shoot.ExternalDomain.Provider
 	}
 

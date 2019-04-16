@@ -13,3 +13,6 @@ resources:
   limits:
     cpu: 400m
     memory: 512Mi
+
+vpa:
+  enabled: true

@@ -17,6 +17,8 @@ package hybridbotanist
 import (
 	"path/filepath"
 
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -58,6 +60,9 @@ func (b *HybridBotanist) DeployKubeAddonManager() error {
 					"GitVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 				},
 			},
+		},
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
 	}
 

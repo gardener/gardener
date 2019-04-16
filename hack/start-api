@@ -25,6 +25,7 @@ apiserver_flags="
   --authorization-always-allow-paths=/healthz \
   --kubeconfig $kubeconfig \
   --secure-port=$API_SERVER_SECURE_PORT \
+  --admission-control-config-file=dev/20-admissionconfiguration.yaml \
   --v 2"
 
 ld_flags="$(./hack/get-build-ld-flags)"

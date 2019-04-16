@@ -23,6 +23,8 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
+	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -126,6 +128,9 @@ func (b *HybridBotanist) DeployETCD() error {
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},
 		"storage": b.Seed.GetValidVolumeSize("10Gi"),
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+		},
 	}
 
 	// Some cloud botanists do not yet support backup and won't return backup config data.
@@ -456,6 +461,9 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 			"checksum/configmap-cloud-provider-config":       b.CheckSums[common.CloudProviderConfigName],
 		},
 		"objectCount": b.Shoot.GetNodeCount(),
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+		},
 	}
 	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
 	if err != nil {
@@ -507,6 +515,9 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 			"checksum/secret-cloudprovider":                   b.CheckSums[common.CloudProviderSecretName],
 			"checksum/configmap-cloud-provider-config":        b.CheckSums[common.CloudProviderConfigName],
 		},
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+		},
 	}
 	cloudSpecificValues, chartName, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()
 	if err != nil {
@@ -544,6 +555,9 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-scheduler":        b.CheckSums[common.KubeSchedulerDeploymentName],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
+		},
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
 	}
 	cloudValues, err := b.ShootCloudBotanist.GenerateKubeSchedulerConfig()
