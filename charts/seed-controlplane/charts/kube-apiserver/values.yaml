@@ -82,3 +82,6 @@ targetAverageUtilization: 80
 
 auditConfig:
   auditPolicy: ""
+
+vpa:
+  enabled: true
