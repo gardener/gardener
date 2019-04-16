@@ -4,8 +4,6 @@ alicloud:
 bucket:
   name: invalid.bucket$name#
 
-clusterName: test-namespace
-
 names:
   configuration: shoot.tf-config
   variables: shoot.tf-vars
