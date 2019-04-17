@@ -42,7 +42,9 @@ func SetLevel(name string) error {
 	if err != nil {
 		return err
 	}
+	defaultLogger.Infof("Setting log level to %s", lvl.String())
 	logrus.SetLevel(lvl)
+	defaultLogger.SetLevel(lvl)
 	return nil
 }
 

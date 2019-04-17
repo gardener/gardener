@@ -46,8 +46,24 @@ func Secret(o Object) *SecretObject {
 }
 
 func GetSecret(src ResourcesSource, namespace, name string) (*SecretObject, error) {
-	resources := src.Resources()
-	o, err := resources.GetObjectInto(NewObjectName(namespace, name), &api.Secret{})
+	o, err := src.Resources().GetObjectInto(NewObjectName(namespace, name), &api.Secret{})
+	if err != nil {
+		return nil, err
+	}
+
+	s := Secret(o)
+	if s == nil {
+		return nil, fmt.Errorf("oops, unexpected type for secret: %T", o.Data())
+	}
+	return s, nil
+}
+
+func GetCachedSecret(src ResourcesSource, namespace, name string) (*SecretObject, error) {
+	resource, err := src.Resources().Get(&api.Secret{})
+	if err != nil {
+		return nil, err
+	}
+	o, err := resource.GetCached(NewObjectName(namespace, name))
 	if err != nil {
 		return nil, err
 	}
@@ -63,20 +79,42 @@ func GetSecretByRef(src ResourcesSource, ref *api.SecretReference) (*SecretObjec
 	return GetSecret(src, ref.Namespace, ref.Name)
 }
 
+func GetCachedSecretByRef(src ResourcesSource, ref *api.SecretReference) (*SecretObject, error) {
+	return GetCachedSecret(src, ref.Namespace, ref.Name)
+}
+
 func GetSecretProperties(src ResourcesSource, namespace, name string) (utils.Properties, *SecretObject, error) {
 	secret, err := GetSecret(src, namespace, name)
 	if err != nil {
 		return nil, nil, err
 	}
+	props := GetSecretPropertiesFrom(secret.Secret())
+	return props, secret, nil
+}
+
+func GetCachedSecretProperties(src ResourcesSource, namespace, name string) (utils.Properties, *SecretObject, error) {
+	secret, err := GetCachedSecret(src, namespace, name)
+	if err != nil {
+		return nil, nil, err
+	}
+	props := GetSecretPropertiesFrom(secret.Secret())
+	return props, secret, nil
+}
+
+func GetSecretPropertiesFrom(secret *api.Secret) utils.Properties {
 	props := utils.Properties{}
-	for k, v := range secret.Secret().Data {
+	for k, v := range secret.Data {
 		props[k] = string(v)
 	}
-	return props, secret, nil
+	return props
 }
 
 func GetSecretPropertiesByRef(src ResourcesSource, ref *api.SecretReference) (utils.Properties, *SecretObject, error) {
 	return GetSecretProperties(src, ref.Namespace, ref.Name)
+}
+
+func GetCachedSecretPropertiesByRef(src ResourcesSource, ref *api.SecretReference) (utils.Properties, *SecretObject, error) {
+	return GetCachedSecretProperties(src, ref.Namespace, ref.Name)
 }
 
 func (this *SecretObject) GetData() map[string][]byte {

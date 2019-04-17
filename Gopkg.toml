@@ -146,6 +146,10 @@ ignored = [
   name = "github.com/golang/mock"
   version = "1.2.0"
 
+[[constraint]]
+  name = "github.com/aliyun/aliyun-oss-go-sdk"
+  version = "1.9.5"
+
 # use the same version that is referenced by k8s.io, mainly required by Helm
 # https://github.com/kubernetes/kubernetes/blob/v1.13.1/Godeps/Godeps.json#L2996
 [[override]]

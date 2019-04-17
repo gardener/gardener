@@ -14,11 +14,23 @@ resource "alicloud_oss_bucket" "bucket" {
   acl           = "private"
 }
 
+// Workaround: Providing a null-resource for letting Terraform think that there are
+// differences, enabling the Gardener to start an actual `terraform apply` job.
+resource "null_resource" "outputs" {
+  triggers = {
+    recompute = "outputs"
+  }
+}
+
 //=====================================================================
 //= Output variables
 //=====================================================================
 
 output "bucketName" {
   value = "${alicloud_oss_bucket.bucket.id}"
+}
+
+output "storageEndpoint" {
+  value = "${alicloud_oss_bucket.bucket.extranet_endpoint}"
 }
 {{- end -}}

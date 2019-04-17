@@ -131,7 +131,59 @@ func (b *AlicloudBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	return map[string][]byte{}, map[string]interface{}{}, nil
+	tf, err := b.NewBackupInfrastructureTerraformer()
+	if err != nil {
+		return nil, nil, err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(BucketName, StorageEndpoint)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secretData := map[string][]byte{
+		StorageEndpoint: []byte(stateVariables[StorageEndpoint]),
+		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
+		AccessKeySecret: b.Seed.Secret.Data[AccessKeySecret],
+	}
+
+	backupConfigData := map[string]interface{}{
+		"schedule":         b.ShootBackup.Schedule,
+		"storageProvider":  "OSS",
+		"storageContainer": stateVariables[BucketName],
+		"backupSecret":     common.BackupSecretName,
+		"env": []map[string]interface{}{
+			{
+				"name": "ALICLOUD_ENDPOINT",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  StorageEndpoint,
+					},
+				},
+			},
+			{
+				"name": "ALICLOUD_ACCESS_KEY_ID",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AccessKeyID,
+					},
+				},
+			},
+			{
+				"name": "ALICLOUD_ACCESS_KEY_SECRET",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AccessKeySecret,
+					},
+				},
+			},
+		},
+		"volumeMount": []map[string]interface{}{},
+	}
+
+	return secretData, backupConfigData, nil
 }
 
 // GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver

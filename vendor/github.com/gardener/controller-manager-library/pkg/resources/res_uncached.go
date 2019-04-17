@@ -18,6 +18,7 @@ package resources
 
 import (
 	"fmt"
+	"github.com/gardener/controller-manager-library/pkg/logger"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,6 +26,7 @@ import (
 )
 
 func (this *_resource) _update(data ObjectData) (ObjectData, error) {
+	logger.Infof("UPDATE %s/%s/%s", this.GroupKind(), data.GetNamespace(), data.GetName())
 	result := this.createData()
 	return result, this.objectRequest(this.client.Put(), data).
 		Body(data).
@@ -33,6 +35,7 @@ func (this *_resource) _update(data ObjectData) (ObjectData, error) {
 }
 
 func (this *_resource) _updateStatus(data ObjectData) (ObjectData, error) {
+	logger.Infof("UPDATE STATUS %s/%s/%s", this.GroupKind(), data.GetNamespace(), data.GetName())
 	result := this.createData()
 	return result, this.objectRequest(this.client.Put(), data, "status").
 		Body(data).
