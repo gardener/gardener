@@ -589,3 +589,14 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), b.Shoot.SeedNamespace, common.KubeSchedulerDeploymentName, values, cloudValues)
 }
+
+// DeployCSIControllers deploy CSI controllers into the Shoot namespace in the Seed cluster. They include CSI plugin controller service (Provider specific),
+// CSI external attacher, CSI external provisioner and CSI snapshotter.
+func (b *HybridBotanist) DeployCSIControllers() error {
+	csiPlugin, err := b.ShootCloudBotanist.GenerateCSIConfig()
+	if err != nil {
+		return err
+	}
+	name := fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName())
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, csiPlugin, nil)
+}

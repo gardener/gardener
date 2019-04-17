@@ -148,11 +148,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
-	ccmConfig := map[string]interface{}{}
-	if cfg := b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig(); cfg != nil {
-		ccmConfig["enableCSI"] = cfg.EnableCSI
-	}
-
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-core"), "shoot-core", metav1.NamespaceSystem, map[string]interface{}{
 		"global":              global,
 		"cluster-autoscaler":  clusterAutoscaler,
@@ -167,7 +162,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
 		},
-		"cloud-controller-manager": ccmConfig,
 		"cert-broker": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement),
 		},

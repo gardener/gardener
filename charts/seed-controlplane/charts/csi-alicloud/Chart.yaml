@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Helm chart for kubernetes CIS components including external-attacher, external-provisioner, alicloud-csi-plugin-controller-service, snapshotter
+name: csi-alicloud
+version: 1.0.0

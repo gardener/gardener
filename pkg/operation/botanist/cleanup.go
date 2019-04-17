@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -46,19 +47,15 @@ var (
 			"hostendpoints.crd.projectcalico.org":         true,
 		},
 		kubernetes.DaemonSets: {
-			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem):              true,
-			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):               true,
-			fmt.Sprintf("%s/csi-disk-plugin-alicloud", metav1.NamespaceSystem): true,
+			fmt.Sprintf("%s/calico-node", metav1.NamespaceSystem):                  true,
+			fmt.Sprintf("%s/kube-proxy", metav1.NamespaceSystem):                   true,
+			fmt.Sprintf("%s/%s", metav1.NamespaceSystem, common.CSIPluginAlicloud): true,
 		},
 		kubernetes.Deployments: {
 			fmt.Sprintf("%s/coredns", metav1.NamespaceSystem):        true,
 			fmt.Sprintf("%s/metrics-server", metav1.NamespaceSystem): true,
-			fmt.Sprintf("%s/csi-attacher", metav1.NamespaceSystem):   true,
 		},
-		kubernetes.StatefulSets: {
-			fmt.Sprintf("%s/csi-provisioner", metav1.NamespaceSystem): true,
-			fmt.Sprintf("%s/csi-snapshotter", metav1.NamespaceSystem): true,
-		},
+
 		kubernetes.Namespaces: {
 			metav1.NamespacePublic:    true,
 			metav1.NamespaceSystem:    true,

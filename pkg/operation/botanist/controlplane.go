@@ -638,6 +638,11 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	if b.Shoot.CloudProvider != v1beta1.CloudProviderLocal {
 		controllerManagerDeployments = append(controllerManagerDeployments, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName)
 	}
+
+	if b.Shoot.UsesCSI() {
+		controllerManagerDeployments = append(controllerManagerDeployments, common.CSIPluginController, common.CSIAttacher, common.CSIProvisioner, common.CSISnapshotter)
+	}
+
 	for _, deployment := range controllerManagerDeployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
 			return err
@@ -662,7 +667,11 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	for _, deployment := range []string{common.KubeAddonManagerDeploymentName, common.KubeControllerManagerDeploymentName, common.KubeAPIServerDeploymentName} {
+	deployments := []string{common.KubeAddonManagerDeploymentName, common.KubeControllerManagerDeploymentName, common.KubeAPIServerDeploymentName}
+	if b.Shoot.UsesCSI() {
+		deployments = append(deployments, common.CSIPluginController, common.CSIAttacher, common.CSIProvisioner, common.CSISnapshotter)
+	}
+	for _, deployment := range deployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}

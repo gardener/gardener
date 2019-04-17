@@ -1,0 +1,44 @@
+kind: Deployment
+apiVersion: {{ include "deploymentversion" . }}
+metadata:
+  name: csi-snapshotter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes
+    role: csi-snapshotter
+    garden.sapcloud.io/role: controlplane
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: csi-snapshotter
+  template:
+    metadata:
+{{- if .Values.podAnnotations.csiSnapshotter }}
+      annotations:
+{{ toYaml .Values.podAnnotations.csiSnapshotter | indent 8 }}
+{{- end }}       
+      labels:
+        app: kubernetes
+        role: csi-snapshotter
+        garden.sapcloud.io/role: controlplane
+    spec:
+      containers:
+        - name: csi-snapshotter
+          image: {{ index .Values.images "csi-snapshotter" }}
+          args:
+            - --csi-address=csi-plugin-controller:80
+            - --kubeconfig=/var/lib/csi-snapshotter/kubeconfig
+            - --connection-timeout=15s
+{{- if .Values.snapshotterResources }}
+          resources:
+{{ toYaml .Values.snapshotterResources | indent 12 }}           
+{{- end }}
+          volumeMounts:
+            - name: csi-snapshotter
+              mountPath: /var/lib/csi-snapshotter
+      volumes:
+        - name: csi-snapshotter
+          secret:
+            secretName: csi-snapshotter

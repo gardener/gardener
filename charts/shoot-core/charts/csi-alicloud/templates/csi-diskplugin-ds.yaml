@@ -16,14 +16,13 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/secret-csi-diskplugin-alicloud: {{ include (print $.Template.BasePath "/credential-secret.yaml") . | sha256sum }}
+        checksum/secret-csi-diskplugin-alicloud: {{ include (print $.Template.BasePath "/csi-diskplugin-secret.yaml") . | sha256sum }}
       labels:
         app: csi-disk-plugin-alicloud
         origin: gardener
         garden.sapcloud.io/role: system-component
     spec:
       priorityClassName: system-node-critical
-      hostNetwork: true
       serviceAccount: csi-disk-plugin-alicloud
       tolerations:
       - key: CriticalAddonsOnly
