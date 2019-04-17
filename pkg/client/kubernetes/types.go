@@ -26,14 +26,12 @@ import (
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	machinescheme "github.com/gardener/gardener/pkg/client/machine/clientset/versioned/scheme"
 
-	"github.com/sirupsen/logrus"
-
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -44,10 +42,8 @@ import (
 	kubernetesclientset "k8s.io/client-go/kubernetes"
 	corescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
-	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
-	apiserviceclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
-
+	apiregistrationscheme "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -137,6 +133,8 @@ func init() {
 
 	shootSchemeBuilder := runtime.NewSchemeBuilder(
 		corescheme.AddToScheme,
+		apiextensionsscheme.AddToScheme,
+		apiregistrationscheme.AddToScheme,
 	)
 	utilruntime.Must(shootSchemeBuilder.AddToScheme(ShootScheme))
 
@@ -169,12 +167,9 @@ type Clientset struct {
 	gardenCore      gardencoreclientset.Interface
 	machine         machineclientset.Interface
 	apiextension    apiextensionsclientset.Interface
-	apiregistration apiserviceclientset.Interface
+	apiregistration apiregistrationclientset.Interface
 
-	// Deprecated: Use `restMapper`, `kubernetes.Discovery()` or custom resource API group retriever
-	// via RESTMapper APIs instead.
-	resourceAPIGroups map[string][]string
-	version           string
+	version string
 }
 
 // Applier is a default implementation of the ApplyInterface. It applies objects with
@@ -216,16 +211,6 @@ type Interface interface {
 	Machine() machineclientset.Interface
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
-
-	// Cleanup
-	// Deprecated: Use `RESTMapper()` and utils instead.
-	GetResourceAPIGroups() map[string][]string
-	// Deprecated: Use `Client()` and utils instead.
-	CleanupResources(map[string]map[string]bool, map[string][]string) error
-	// Deprecated: Use `Client()` and utils instead.
-	CleanupAPIGroupResources(map[string]map[string]bool, string, []string) error
-	// Deprecated: Use `Client()` and utils instead.
-	CheckResourceCleanup(*logrus.Entry, map[string]map[string]bool, string, []string) (bool, error)
 
 	// Namespaces
 	// Deprecated: Use `Client()` and utils instead.
@@ -324,21 +309,6 @@ type Interface interface {
 	DeleteClusterRoleBinding(name string) error
 	// Deprecated: Use `Client()` and utils instead.
 	DeleteRoleBinding(namespace, name string) error
-
-	// CustomResourceDefinitions
-	// Deprecated: Use `Client()` and utils instead.
-	ListCRDs(metav1.ListOptions) (*apiextensionsv1beta1.CustomResourceDefinitionList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteCRDForcefully(name string) error
-
-	// APIServices
-	// Deprecated: Use `Client()` and utils instead.
-	ListAPIServices(metav1.ListOptions) (*apiregistrationv1beta1.APIServiceList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteAPIService(name string) error
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteAPIServiceForcefully(name string) error
-	// Deprecated: Use `Client()` and utils instead.
 
 	// ServiceAccounts
 	// Deprecated: Use `Client()` and utils instead.

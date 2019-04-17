@@ -20,6 +20,33 @@ import (
 	"time"
 )
 
+// Timer is an interface for time.Timer.
+type Timer interface {
+	// Stop stops the timer.
+	Stop() bool
+	// C returns the time channel of the timer.
+	C() <-chan time.Time
+}
+
+func newTimer(d time.Duration) Timer {
+	return &timer{time.NewTimer(d)}
+}
+
+type timer struct {
+	timer *time.Timer
+}
+
+func (t *timer) Stop() bool {
+	return t.timer.Stop()
+}
+
+func (t *timer) C() <-chan time.Time {
+	return t.timer.C
+}
+
+// NewTimer returns a new Timer.
+var NewTimer = newTimer
+
 // ConditionFunc is a function that reports whether it completed successfully or
 // whether it had an error. Via the additional <severe> flag, it shows whether the
 // error has been sever enough to cancel a retrying computation.
@@ -106,6 +133,22 @@ func Retry(interval time.Duration, timeout time.Duration, f ConditionFunc) error
 	return RetryUntil(ctx, interval, f)
 }
 
+// Sleep sleeps the given duration and errors and exits early if the context expires.
+func Sleep(ctx context.Context, d time.Duration) error {
+	if d < 0 {
+		return ctx.Err()
+	}
+
+	t := NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C():
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
 // RetryUntil retries <f> until it either succeeds, fails severely or the given channel <stopCh>
 // is closed. Between each tries, it sleeps for <interval>. The function f is guaranteed to
 // be executed at least once. During each execution, f can't be prematurely killed, thus an operation
@@ -132,11 +175,8 @@ func RetryUntil(ctx context.Context, interval time.Duration, f ConditionFunc) er
 			return newTimedOut(waitTime, lastError)
 		}
 
-		time.Sleep(interval)
-
-		if ctx.Err() != nil {
-			waitTime := time.Since(startTime)
-			return newTimedOut(waitTime, lastError)
+		if err := Sleep(ctx, interval); err != nil {
+			return err
 		}
 	}
 }

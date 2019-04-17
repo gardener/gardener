@@ -19,11 +19,12 @@ package flow
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
+	"time"
+
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"io/ioutil"
-	"time"
 )
 
 const (
@@ -205,15 +206,15 @@ func (e *execution) runNode(ctx context.Context, id TaskID) {
 		log := e.log.WithField(logKeyTask, id)
 
 		start := time.Now().UTC()
-		log.Debugf("Started at %s", start)
+		log.Debugf("Started")
 		err := e.flow.nodes[id].fn(ctx)
 		end := time.Now().UTC()
-		log.Debugf("Finished at %s and took %s", end, end.Sub(start))
+		log.Debugf("Finished, took %s", end.Sub(start))
 
 		if err != nil {
-			log.Errorf("Failure: %+v", err)
+			log.WithError(err).Error("Error")
 		} else {
-			log.Infof("Succeeded")
+			log.Info("Succeeded")
 		}
 
 		err = errors.Wrapf(err, "task %q failed", id)

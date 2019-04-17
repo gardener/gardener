@@ -181,23 +181,6 @@ func NewForConfig(config *rest.Config, options client.Options) (Interface, error
 		machine:         machine,
 		apiregistration: apiRegistration,
 		apiextension:    apiExtension,
-
-		resourceAPIGroups: map[string][]string{
-			CronJobs:                  {"apis", "batch", "v1beta1"},
-			CustomResourceDefinitions: {"apis", "apiextensions.k8s.io", "v1beta1"},
-			DaemonSets:                {"apis", "apps", "v1"},
-			Deployments:               {"apis", "apps", "v1"},
-			Ingresses:                 {"apis", "extensions", "v1beta1"},
-			Jobs:                      {"apis", "batch", "v1"},
-			Namespaces:                {"api", "v1"},
-			PersistentVolumeClaims:    {"api", "v1"},
-			PersistentVolumes:         {"api", "v1"},
-			Pods:                      {"api", "v1"},
-			ReplicaSets:               {"apis", "apps", "v1"},
-			ReplicationControllers:    {"api", "v1"},
-			Services:                  {"api", "v1"},
-			StatefulSets:              {"apis", "apps", "v1"},
-		},
 	}
 
 	serverVersion, err := clientSet.kubernetes.Discovery().ServerVersion()
