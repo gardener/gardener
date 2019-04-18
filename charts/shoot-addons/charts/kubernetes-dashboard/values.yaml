@@ -13,6 +13,8 @@ httpsPort: 443
 
 serviceType: ClusterIP
 
+authenticationMode: basic
+
 resources:
   requests:
     cpu: 50m

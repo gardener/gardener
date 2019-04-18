@@ -45,9 +45,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-var availableProxyMode = sets.NewString(
-	string(garden.ProxyModeIPTables),
-	string(garden.ProxyModeIPVS),
+var (
+	availableProxyMode = sets.NewString(
+		string(garden.ProxyModeIPTables),
+		string(garden.ProxyModeIPVS),
+	)
+	availableKubernetesDashboardAuthenticationModes = sets.NewString(
+		"basic",
+		"token",
+	)
 )
 
 // ValidateName is a helper function for validating that a name is a DNS sub domain.
@@ -1048,6 +1054,12 @@ func validateAddons(addons *garden.Addons, fldPath *field.Path) field.ErrorList 
 	if addons.KubeLego != nil && addons.KubeLego.Enabled {
 		if !utils.TestEmail(addons.KubeLego.Mail) {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("kube-lego", "mail"), addons.KubeLego.Mail, "must provide a valid email address when kube-lego is enabled"))
+		}
+	}
+
+	if addons.KubernetesDashboard != nil && addons.KubernetesDashboard.Enabled {
+		if authMode := addons.KubernetesDashboard.AuthenticationMode; authMode != nil && !availableKubernetesDashboardAuthenticationModes.Has(*authMode) {
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("kubernetes-dashboard", "authenticationMode"), *authMode, availableKubernetesDashboardAuthenticationModes.List()))
 		}
 	}
 

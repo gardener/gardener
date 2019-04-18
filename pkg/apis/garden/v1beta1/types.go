@@ -1149,6 +1149,9 @@ type Heapster struct {
 // KubernetesDashboard describes configuration values for the kubernetes-dashboard addon.
 type KubernetesDashboard struct {
 	Addon `json:",inline"`
+	// AuthenticationMode defines the authentication mode for the kubernetes-dashboard.
+	// +optional
+	AuthenticationMode *string `json:"authenticationMode,omitempty"`
 }
 
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.

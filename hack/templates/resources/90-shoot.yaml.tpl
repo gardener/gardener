@@ -351,6 +351,7 @@ spec:
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
     kubernetes-dashboard:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
+    # authenticationMode: basic # allowed values: basic,token
   % if cloud == "aws":
     # kube2iam addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy kube2iam as well as
