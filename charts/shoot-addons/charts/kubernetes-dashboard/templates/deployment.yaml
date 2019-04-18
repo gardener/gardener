@@ -50,7 +50,7 @@ spec:
         imagePullPolicy: {{ .Values.imagePullPolicy }}
         args:
           - --auto-generate-certificates
-          - --authentication-mode=basic
+          - --authentication-mode={{ .Values.authenticationMode }}
 {{- if .Values.extraArgs }}
 {{ toYaml .Values.extraArgs | indent 10 }}
 {{- end }}

@@ -120,6 +120,7 @@ spec:
       loadBalancerSourceRanges: []
     kubernetes-dashboard:
       enabled: true
+    # authenticationMode: basic # allowed values: basic,token
     # kube2iam addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy kube2iam as well as
     # the desired AWS IAM roles on your own instead of enabling it here. Please do not

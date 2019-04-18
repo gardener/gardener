@@ -1611,7 +1611,7 @@ var _ = Describe("validation", func() {
 					Spec: garden.CloudProfileSpec{
 						Packet: &garden.PacketProfile{
 							Constraints: garden.PacketConstraints{
-								Kubernetes:   kubernetesVersionConstraint,
+								Kubernetes: kubernetesVersionConstraint,
 								MachineImages: []garden.PacketMachineImage{
 									{
 										Name: "Container Linux - Stable",
@@ -2683,26 +2683,31 @@ var _ = Describe("validation", func() {
 				},
 			}
 			shoot.Spec.Addons.KubeLego.Mail = "some-invalid-email"
+			shoot.Spec.Addons.KubernetesDashboard.AuthenticationMode = makeStringPointer("does-not-exist")
 
 			errorList := ValidateShoot(shoot)
 
-			Expect(len(errorList)).To(Equal(4))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("spec.addons.kube2iam.roles[0].name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("spec.addons.kube2iam.roles[0].description"),
-			}))
-			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.addons.kube2iam.roles[0].policy"),
-			}))
-			Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.addons.kube-lego.mail"),
-			}))
+			})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.addons.kube2iam.roles[0].description"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.addons.kube2iam.roles[0].policy"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.addons.kube-lego.mail"),
+				})),
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeNotSupported),
+					"Field": Equal("spec.addons.kubernetes-dashboard.authenticationMode"),
+				})),
+			))
 		})
 
 		It("should forbid unsupported cloud specification (provider independent)", func() {

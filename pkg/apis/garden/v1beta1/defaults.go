@@ -193,6 +193,15 @@ func SetDefaults_Project(obj *Project) {
 	}
 }
 
+// SetDefaults_KubernetesDashboard sets default values for KubernetesDashboard objects.
+func SetDefaults_KubernetesDashboard(obj *KubernetesDashboard) {
+	defaultAuthMode := "basic"
+	if obj.AuthenticationMode == nil {
+		obj.AuthenticationMode = &defaultAuthMode
+	}
+}
+
+// SetDefaults_Worker sets default values for Worker objects.
 func SetDefaults_Worker(obj *Worker) {
 	if obj.MaxSurge == nil {
 		obj.MaxSurge = &DefaultWorkerMaxSurge

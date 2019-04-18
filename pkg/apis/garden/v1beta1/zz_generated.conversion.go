@@ -3266,6 +3266,7 @@ func autoConvert_v1beta1_KubernetesDashboard_To_garden_KubernetesDashboard(in *K
 	if err := Convert_v1beta1_Addon_To_garden_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
+	out.AuthenticationMode = (*string)(unsafe.Pointer(in.AuthenticationMode))
 	return nil
 }
 
@@ -3278,6 +3279,7 @@ func autoConvert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *g
 	if err := Convert_garden_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
+	out.AuthenticationMode = (*string)(unsafe.Pointer(in.AuthenticationMode))
 	return nil
 }
 

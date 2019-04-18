@@ -4244,6 +4244,13 @@ func schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref common.ReferenceCall
 							Format:      "",
 						},
 					},
+					"authenticationMode": {
+						SchemaProps: spec.SchemaProps{
+							Description: "AuthenticationMode defines the authentication mode for the kubernetes-dashboard.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

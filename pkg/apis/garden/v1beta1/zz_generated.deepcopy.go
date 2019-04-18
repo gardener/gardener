@@ -280,7 +280,7 @@ func (in *Addons) DeepCopyInto(out *Addons) {
 	if in.KubernetesDashboard != nil {
 		in, out := &in.KubernetesDashboard, &out.KubernetesDashboard
 		*out = new(KubernetesDashboard)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.NginxIngress != nil {
 		in, out := &in.NginxIngress, &out.NginxIngress
@@ -1831,6 +1831,11 @@ func (in *KubernetesConstraints) DeepCopy() *KubernetesConstraints {
 func (in *KubernetesDashboard) DeepCopyInto(out *KubernetesDashboard) {
 	*out = *in
 	out.Addon = in.Addon
+	if in.AuthenticationMode != nil {
+		in, out := &in.AuthenticationMode, &out.AuthenticationMode
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 
