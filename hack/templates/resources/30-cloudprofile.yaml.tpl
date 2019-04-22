@@ -92,35 +92,35 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if machineTypes != []:
       ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
       % else:
-      - name: m4.large
+      - name: m5.large
         cpu: "2"
         gpu: "0"
         memory: 8Gi
         usable: true
-      - name: m4.xlarge
+      - name: m5.xlarge
         cpu: "4"
         gpu: "0"
         memory: 16Gi
         usable: true
-      - name: m4.2xlarge
+      - name: m5.2xlarge
         cpu: "8"
         gpu: "0"
         memory: 32Gi
         usable: true
-      - name: m4.4xlarge
+      - name: m5.4xlarge
         cpu: "16"
         gpu: "0"
         memory: 64Gi
         usable: true
-      - name: m4.10xlarge
-        cpu: "40"
+      - name: m5.12xlarge
+        cpu: "48"
         gpu: "0"
-        memory: 160Gi
+        memory: 192Gi
         usable: true
-      - name: m4.16xlarge
-        cpu: "64"
+      - name: m5.24xlarge
+        cpu: "96"
         gpu: "0"
-        memory: 256Gi
+        memory: 384Gi
         usable: false
       - name: p2.xlarge
         cpu: "4"
@@ -196,25 +196,25 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if machineTypes != []:
         ${yaml.dump(machineTypes, width=10000, default_flow_style=None)}
         % else:
-      - name: Standard_DS2_v2
+      - name: Standard_D2_v3
         cpu: "2"
         gpu: "0"
-        memory: 7Gi
+        memory: 8Gi
         usable: true
-      - name: Standard_DS3_v2
+      - name: Standard_D4_v3
         cpu: "4"
         gpu: "0"
-        memory: 14Gi
+        memory: 16Gi
         usable: true
-      - name: Standard_DS4_v2
+      - name: Standard_D8_v3
         cpu: "8"
         gpu: "0"
-        memory: 28Gi
+        memory: 32Gi
         usable: true
-      - name: Standard_DS5_v2
+      - name: Standard_D16_v3
         cpu: "16"
         gpu: "0"
-        memory: 56Gi
+        memory: 64Gi
         usable: false
       - name: Standard_F2s
         cpu: "2"
