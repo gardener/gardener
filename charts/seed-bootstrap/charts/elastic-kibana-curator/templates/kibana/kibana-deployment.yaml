@@ -26,34 +26,18 @@ spec:
       containers:
       - name: kibana-logging
         image: {{ index .Values.global.images "kibana-oss" }}
-        resources:
-          # need more cpu upon initialization, therefore burstable class
-          limits:
-            cpu: 1000m
-            memory: 300Mi
-          requests:
-            cpu: 100m
-            memory: 200Mi
         env:
-        - name: ELASTICSEARCH_URL
-          value: http://elasticsearch-logging:{{ .Values.global.elasticsearchPorts.db }}
+          {{- toYaml .Values.kibana.env | nindent 10 }}
         ports:
-        - containerPort: {{ .Values.kibana.service.internalPort }}
-          name: ui
+        - name: ui
+          containerPort: {{ .Values.kibana.service.internalPort }}
           protocol: TCP
-{{- if .Values.kibana.readinessProbe.enabled }}
         readinessProbe:
-          httpGet:
-            path: /api/status
-            port: {{ .Values.kibana.service.internalPort }}
-          initialDelaySeconds: {{ .Values.kibana.readinessProbe.initialDelaySeconds }}
-          timeoutSeconds: {{ .Values.kibana.readinessProbe.timeoutSeconds }}
-          periodSeconds: {{ .Values.kibana.readinessProbe.periodSeconds }}
-          successThreshold: {{ .Values.kibana.readinessProbe.successThreshold }}
-          failureThreshold: {{ .Values.kibana.readinessProbe.failureThreshold }}
-{{- end }}
-      - image: {{ index .Values.global.images "kibana-oss" }}
-        name: auto-create-objects
+          {{- toYaml .Values.kibana.readinessProbe | nindent 10 }}
+        resources:
+          {{- toYaml .Values.kibana.resources | nindent 10 }}
+      - name: sidecar
+        image: {{ index .Values.global.images "kibana-oss" }}
         command:
         - /bin/sh
         - /gardener/register/register
@@ -63,12 +47,7 @@ spec:
         - name: saved-objects
           mountPath: /gardener/saved-objects
         resources:
-          limits:
-            cpu: 10m
-            memory: 20Mi
-          requests:
-            cpu: 10m
-            memory: 20Mi
+          {{- toYaml .Values.kibana.sidecar.resources | nindent 10 }}
       volumes:
       - name: register
         configMap:

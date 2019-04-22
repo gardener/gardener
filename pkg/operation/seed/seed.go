@@ -419,8 +419,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 				"baseDiskThreshold": 2 * 1073741824,
 			},
 			"elasticsearch": map[string]interface{}{
-				"objectCount":               nodeCount,
-				"elasticsearchVolumeSizeGB": 100,
+				"objectCount": nodeCount,
+				"persistence": map[string]interface{}{
+					"size": "100Gi",
+				},
 			},
 		},
 		"fluentd-es": map[string]interface{}{
