@@ -15,11 +15,15 @@
 package alicloudbotanist
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	storagev1 "k8s.io/api/storage/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type cloudConfig struct {
@@ -199,6 +203,38 @@ func (b *AlicloudBotanist) GenerateKubeAPIServerExposeConfig() (map[string]inter
 
 // GenerateCSIConfig generates the configuration for CSI charts
 func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	//TODO: This part is just for release 0.21 and will be deleted in release 0.22
+
+	if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, common.CSIPluginController); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSIAttacher); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSIProvisioner); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSISnapshotter); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	storageClass := &storagev1.StorageClass{}
+	if b.K8sShootClient != nil {
+		if err := b.K8sShootClient.Client().Get(context.TODO(), kutil.Key("default"), storageClass); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		} else if _, ok := storageClass.Parameters["fsType"]; ok {
+			if err = b.K8sShootClient.Client().Delete(context.TODO(), storageClass); err != nil && !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		}
+	}
+	// end of previous part
+
 	conf := map[string]interface{}{
 		"regionID": b.Shoot.Info.Spec.Cloud.Region,
 		"credential": map[string]interface{}{
@@ -206,20 +242,13 @@ func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
 		},
 		"podAnnotations": map[string]interface{}{
-			"csiAttacher": map[string]interface{}{
-				fmt.Sprintf("checksum/%s", common.CSIAttacher): b.CheckSums[common.CSIAttacher],
-			},
-			"csiPluginAlicloud": map[string]interface{}{
-				fmt.Sprintf("checksum/%s", common.CloudProviderSecretName): b.CheckSums[common.CloudProviderSecretName],
-			},
-			"csiProvisioner": map[string]interface{}{
-				fmt.Sprintf("checksum/%s", common.CSIProvisioner): b.CheckSums[common.CSIProvisioner],
-			},
-			"csiSnapshotter": map[string]interface{}{
-				fmt.Sprintf("checksum/%s", common.CSISnapshotter): b.CheckSums[common.CSISnapshotter],
-			},
+			fmt.Sprintf("checksum/%s", common.CSIAttacher):             b.CheckSums[common.CSIAttacher],
+			fmt.Sprintf("checksum/%s", common.CloudProviderSecretName): b.CheckSums[common.CloudProviderSecretName],
+			fmt.Sprintf("checksum/%s", common.CSIProvisioner):          b.CheckSums[common.CSIProvisioner],
+			fmt.Sprintf("checksum/%s", common.CSISnapshotter):          b.CheckSums[common.CSISnapshotter],
 		},
-		"enabled": true,
+		"kubernetesVersion": b.ShootVersion(),
+		"enabled":           true,
 	}
 
 	return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),

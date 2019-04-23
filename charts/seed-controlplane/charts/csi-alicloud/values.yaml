@@ -4,11 +4,7 @@ images:
   csi-plugin-alicloud: image-repository:image-tag
   csi-snapshotter: image-repository:image-tag
 regionID: shanghai-cn
-podAnnotations: 
-  csiAttacher: {}
-  csiProvisioner: {}
-  csiPluginAlicloud: {}
-  csiSnapshotter: {}
+podAnnotations: {}
 attacherResources:
   requests:
     cpu: 10m
@@ -37,3 +33,4 @@ diskpluginResources:
   limits:
     cpu: 50m
     memory: 80Mi
+kubernetesVersion: v1.14.0

@@ -32,9 +32,15 @@ rules:
   - apiGroups: ["snapshot.storage.k8s.io"]
     resources: ["volumesnapshotcontents"]
     verbs: ["get", "list"]
+{{- if semverCompare "< 1.14" .Values.kubernetesVersion }}
   - apiGroups: ["csi.storage.k8s.io"]
     resources: ["csinodeinfos"]
     verbs: ["get", "list", "watch"]
+{{- else }}
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["csinodes"]
+    verbs: ["get", "list", "watch"]
+{{- end }}
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
