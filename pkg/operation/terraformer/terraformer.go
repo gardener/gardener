@@ -164,7 +164,6 @@ func (t *Terraformer) execute(ctx context.Context, scriptName string) error {
 	}
 
 	if !skipPod {
-
 		if err := t.deployTerraformerPod(ctx, "validate"); err != nil {
 			return err
 		}
@@ -231,30 +230,43 @@ func (t *Terraformer) execute(ctx context.Context, scriptName string) error {
 }
 
 const (
-	serviceAccountName = "terraformer"
-	roleName           = "garden.sapcloud.io:system:terraformers"
-	roleBindingName    = roleName
+	terraformerName = "terraformer"
+	rbacName        = "gardener.cloud:system:terraformer"
 )
 
 func (t *Terraformer) createOrUpdateServiceAccount(ctx context.Context) error {
-	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: serviceAccountName}}
+	serviceAccount := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: terraformerName}}
 	return kutil.CreateOrUpdate(ctx, t.client, serviceAccount, func() error {
 		return nil
 	})
 }
 
+func (t *Terraformer) createOrUpdateRole(ctx context.Context) error {
+	role := &rbacv1.Role{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
+	return kutil.CreateOrUpdate(ctx, t.client, role, func() error {
+		role.Rules = []rbacv1.PolicyRule{
+			{
+				APIGroups: []string{""},
+				Resources: []string{"configmaps"},
+				Verbs:     []string{"*"},
+			},
+		}
+		return nil
+	})
+}
+
 func (t *Terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
-	roleBinding := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: roleBindingName}}
+	roleBinding := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Namespace: t.namespace, Name: rbacName}}
 	return kutil.CreateOrUpdate(ctx, t.client, roleBinding, func() error {
 		roleBinding.RoleRef = rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
-			Kind:     "ClusterRole",
-			Name:     roleBindingName,
+			Kind:     "Role",
+			Name:     rbacName,
 		}
 		roleBinding.Subjects = []rbacv1.Subject{
 			{
 				Kind:      rbacv1.ServiceAccountKind,
-				Name:      serviceAccountName,
+				Name:      terraformerName,
 				Namespace: t.namespace,
 			},
 		}
@@ -264,6 +276,9 @@ func (t *Terraformer) createOrUpdateRoleBinding(ctx context.Context) error {
 
 func (t *Terraformer) createOrUpdateTerraformerAuth(ctx context.Context) error {
 	if err := t.createOrUpdateServiceAccount(ctx); err != nil {
+		return err
+	}
+	if err := t.createOrUpdateRole(ctx); err != nil {
 		return err
 	}
 	return t.createOrUpdateRoleBinding(ctx)
@@ -338,6 +353,7 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 	)
 
 	activeDeadlineSeconds := int64(1800)
+	terminationGracePeriodSeconds := int64(1800)
 	shCommand := fmt.Sprintf("sh /terraform.sh %s", scriptName)
 	if scriptName != "validate" {
 		shCommand += " 2>&1; [[ -f /success ]] && exit 0 || exit 1"
@@ -374,7 +390,8 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 				},
 			},
 		},
-		ServiceAccountName: serviceAccountName,
+		ServiceAccountName:            terraformerName,
+		TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 		Volumes: []corev1.Volume{
 			{
 				Name: tfVolume,
