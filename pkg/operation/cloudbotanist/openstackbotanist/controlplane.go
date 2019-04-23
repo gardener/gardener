@@ -19,6 +19,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
+	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 )
 
 const cloudProviderConfigTemplate = `
@@ -43,15 +45,17 @@ monitor-max-retries=5
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/openstack/openstack.go
 func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
-	var (
-		floatingNetworkID = "floating_network_id"
-		subnetID          = "subnet_id"
-	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
+	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return "", fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return "", err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(floatingNetworkID, subnetID)
+	nodesSubnet, err := findSubnetByPurpose(infrastructureStatus.Networks.Subnets, openstackv1alpha1.PurposeNodes)
 	if err != nil {
 		return "", err
 	}
@@ -64,8 +68,8 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 		string(b.Shoot.Secret.Data[UserName]),
 		string(b.Shoot.Secret.Data[Password]),
 		b.Shoot.Info.Spec.Cloud.OpenStack.LoadBalancerProvider,
-		stateVariables[floatingNetworkID],
-		stateVariables[subnetID],
+		infrastructureStatus.Networks.FloatingPool.ID,
+		nodesSubnet.ID,
 	)
 
 	// https://github.com/kubernetes/kubernetes/pull/63903#issue-188306465

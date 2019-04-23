@@ -19,7 +19,10 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -51,37 +54,39 @@ func (b *OpenStackBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
 func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
-		networkID         = "network_id"
-		keyName           = "key_name"
-		securityGroupName = "security_group_name"
-		outputVariables   = []string{networkID, keyName, securityGroupName}
-		workers           = b.Shoot.Info.Spec.Cloud.OpenStack.Workers
-		zones             = b.Shoot.Info.Spec.Cloud.OpenStack.Zones
-		zoneLen           = len(zones)
+		zones   = b.Shoot.Info.Spec.Cloud.OpenStack.Zones
+		zoneLen = len(zones)
 
 		machineDeployments = operation.MachineDeployments{}
 		machineClasses     = []map[string]interface{}{}
 	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+
+	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
+	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return nil, nil, fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return nil, nil, err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
+	nodesSecurityGroup, err := findSecurityGroupByPurpose(infrastructureStatus.SecurityGroups, openstackv1alpha1.PurposeNodes)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	for zoneIndex, zone := range zones {
-		for _, worker := range workers {
+		for _, worker := range b.Shoot.Info.Spec.Cloud.OpenStack.Workers {
 			machineClassSpec := map[string]interface{}{
 				"region":           b.Shoot.Info.Spec.Cloud.Region,
 				"availabilityZone": zone,
 				"machineType":      worker.MachineType,
-				"keyName":          stateVariables[keyName],
+				"keyName":          infrastructureStatus.Node.KeyName,
 				"imageName":        b.Shoot.Info.Spec.Cloud.OpenStack.MachineImage.Image,
-				"networkID":        stateVariables[networkID],
+				"networkID":        infrastructureStatus.Networks.ID,
 				"podNetworkCidr":   b.Shoot.GetPodNetwork(),
-				"securityGroups":   []string{stateVariables[securityGroupName]},
+				"securityGroups":   []string{nodesSecurityGroup.Name},
 				"tags": map[string]string{
 					fmt.Sprintf("kubernetes.io-cluster-%s", b.Shoot.SeedNamespace): "1",
 					"kubernetes.io-role-node":                                      "1",

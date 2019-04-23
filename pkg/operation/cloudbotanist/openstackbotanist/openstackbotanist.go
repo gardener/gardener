@@ -16,11 +16,82 @@ package openstackbotanist
 
 import (
 	"errors"
+	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	openstack "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack"
+	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
+
+// IMPORTANT NOTICE
+// The following part is only temporarily needed until we have completed the Extensibility epic
+// and moved out all provider specifics.
+// IMPORTANT NOTICE
+
+var (
+	scheme  *runtime.Scheme
+	decoder runtime.Decoder
+)
+
+func init() {
+	scheme = runtime.NewScheme()
+
+	// Workaround for incompatible kubernetes dependencies in gardener/gardener and
+	// gardener/gardener-extensions.
+	openstackSchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(openstack.SchemeGroupVersion, &openstack.InfrastructureConfig{}, &openstack.InfrastructureStatus{})
+		return nil
+	})
+	openstackv1alpha1SchemeBuilder := runtime.NewSchemeBuilder(func(scheme *runtime.Scheme) error {
+		scheme.AddKnownTypes(openstackv1alpha1.SchemeGroupVersion, &openstackv1alpha1.InfrastructureConfig{}, &openstackv1alpha1.InfrastructureStatus{})
+		return nil
+	})
+	schemeBuilder := runtime.NewSchemeBuilder(
+		openstackv1alpha1SchemeBuilder.AddToScheme,
+		openstackSchemeBuilder.AddToScheme,
+	)
+	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
+
+	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
+}
+
+func infrastructureStatusFromInfrastructure(raw []byte) (*openstackv1alpha1.InfrastructureStatus, error) {
+	config := &openstackv1alpha1.InfrastructureStatus{}
+	if _, _, err := decoder.Decode(raw, nil, config); err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+func findSecurityGroupByPurpose(securityGroups []openstackv1alpha1.SecurityGroup, purpose openstackv1alpha1.Purpose) (*openstackv1alpha1.SecurityGroup, error) {
+	for _, securityGroup := range securityGroups {
+		if securityGroup.Purpose == purpose {
+			return &securityGroup, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find security group with purpose %q", purpose)
+}
+
+func findSubnetByPurpose(subnets []openstackv1alpha1.Subnet, purpose openstackv1alpha1.Purpose) (*openstackv1alpha1.Subnet, error) {
+	for _, subnet := range subnets {
+		if subnet.Purpose == purpose {
+			return &subnet, nil
+		}
+	}
+	return nil, fmt.Errorf("cannot find subnet with purpose %q", purpose)
+}
+
+// IMPORTANT NOTICE
+// The above part is only temporarily needed until we have completed the Extensibility epic
+// and moved out all provider specifics.
+// IMPORTANT NOTICE
 
 // New takes an operation object <o> and creates a new OpenStackBotanist object.
 func New(o *operation.Operation, purpose string) (*OpenStackBotanist, error) {
