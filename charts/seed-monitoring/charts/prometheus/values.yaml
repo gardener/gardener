@@ -136,6 +136,15 @@ allowedMetrics:
   machineControllerManager:
   - process_max_fds
   - process_open_fds
+  - mcm_machine_controller_frozen
+  - mcm_machine_items_total
+  - mcm_machineset_items_total
+  - mcm_machine_set_failed_machines
+  - mcm_machinedeployment_items_total
+  - mcm_machine_deployment_failed_machines
+  - mcm_cloud_api_requests_total
+  - mcm_cloud_api_requests_failed_total
+  - mcm_scrape_failure_total
   nodeExporter:
   - node_load1
   - node_load5
