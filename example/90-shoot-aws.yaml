@@ -20,7 +20,7 @@ spec:
         workers: ['10.250.0.0/19']
       workers:
       - name: cpu-worker
-        machineType: m4.large
+        machineType: m5.large
         volumeType: gp2
         volumeSize: 20Gi
         autoScalerMin: 2
