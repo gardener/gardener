@@ -505,7 +505,7 @@ func (b *Botanist) DeploySeedLogging() error {
 			"host":            kibanaHost,
 		},
 		"elasticsearch": map[string]interface{}{
-			"elasticsearchReplicas": b.Shoot.GetReplicas(1),
+			"replicaCount": b.Shoot.GetReplicas(1),
 		},
 		"kibana": map[string]interface{}{
 			"replicaCount": b.Shoot.GetReplicas(1),

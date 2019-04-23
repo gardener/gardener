@@ -26,8 +26,10 @@ curator:
     suspend: false
     
 elasticsearch:
-  elasticsearchReplicas: 1
-  elasticsearchVolumeSizeGB: 30
+  replicaCount: 1
+  persistence:
+    accessMode: ReadWriteOnce
+    size: 30Gi
   objectCount: 1
   jvmHeapBase: 1280
   resources:
@@ -53,15 +55,50 @@ elasticsearch:
         perObject: 89
         weight: 5
         unit: Mi
+  livenessProbe:
+    tcpSocket:
+      port: transport
+    initialDelaySeconds: 20
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /_cluster/health
+      port: http
+    initialDelaySeconds: 20
+    timeoutSeconds: 5
 
 kibana:
   replicaCount: 1
   service:
     internalPort: 5601
+  # All Kibana configuration options are adjustable via env vars.
+  # To adjust a config option to an env var uppercase + replace `.` with `_`
+  # Ref: https://www.elastic.co/guide/en/kibana/current/settings.html
+  env:
+  - name: ELASTICSEARCH_HOSTS
+    value: http://elasticsearch-logging:9200
   readinessProbe:
-    enabled: true
+    httpGet:
+      path: /api/status
+      port: ui
     initialDelaySeconds: 5
     timeoutSeconds: 10
-    periodSeconds: 10
-    successThreshold: 1
-    failureThreshold: 10
+  resources:
+    # Needs more cpu upon initialization, therefore burstable class.
+    limits:
+      cpu: 1000m
+      memory: 300Mi
+    requests:
+      cpu: 100m
+      memory: 200Mi
+
+  # Kibana sidecar container to interact with the Saved Objects API.
+  # Ref: https://www.elastic.co/guide/en/kibana/current/saved-objects-api.html
+  sidecar:
+    resources:
+      limits:
+        cpu: 10m
+        memory: 20Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
