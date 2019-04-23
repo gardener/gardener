@@ -117,6 +117,9 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 			Name:            b.Shoot.Info.Name,
 			OwnerReferences: ownerReferences,
 			Annotations:     annotations,
+			Labels: map[string]string{
+				common.GardenRole: common.GardenRoleSeed,
+			},
 		},
 		Spec: gardenv1beta1.SeedSpec{
 			Cloud: gardenv1beta1.SeedCloud{
