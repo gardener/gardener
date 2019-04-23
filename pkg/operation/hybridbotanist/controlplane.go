@@ -366,17 +366,16 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	defaultValues["admissionPlugins"] = admissionPlugins
 
 	if b.Shoot.UsesCSI() {
-		var featureGates map[string]interface{}
-		if defaultValues["featureGates"] != nil {
-			featureGates = defaultValues["featureGates"].(map[string]interface{})
+		var existingFeatureGates map[string]bool
+		if fg, ok := defaultValues["featureGates"]; ok {
+			existingFeatureGates = fg.(map[string]bool)
 		}
-		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), featureGates)
+
+		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), existingFeatureGates)
 		if err != nil {
 			return err
 		}
-		if featureGates != nil {
-			defaultValues["featureGates"] = featureGates
-		}
+		defaultValues["featureGates"] = featureGates
 	} else {
 		// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
 		defaultValues["cloudProvider"] = b.ShootCloudBotanist.GetCloudProviderName()

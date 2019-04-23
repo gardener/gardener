@@ -168,20 +168,16 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 	}
 
 	if b.Shoot.UsesCSI() {
-		var existingFeatureGates map[string]interface{}
-		if fg, ok := kubelet["featureGates"]; !ok {
-			existingFeatureGates = nil
-		} else {
-			existingFeatureGates = fg.(map[string]interface{})
+		var existingFeatureGates map[string]bool
+		if fg, ok := kubelet["featureGates"]; ok {
+			existingFeatureGates = fg.(map[string]bool)
 		}
 
 		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), existingFeatureGates)
 		if err != nil {
 			return nil, err
 		}
-		if featureGates != nil {
-			kubelet["featureGates"] = featureGates
-		}
+		kubelet["featureGates"] = featureGates
 	}
 
 	if caBundle := b.Shoot.CloudProfile.Spec.CABundle; caBundle != nil {

@@ -389,7 +389,7 @@ func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
 }
 
 // InjectCSIFeatureGates adds required feature gates for csi when starting Kubelet/Kube-APIServer based on kubernetes version
-func InjectCSIFeatureGates(kubeVersion string, featureGates map[string]interface{}) (map[string]interface{}, error) {
+func InjectCSIFeatureGates(kubeVersion string, featureGates map[string]bool) (map[string]bool, error) {
 	lessV1_13, err := utils.CompareVersions(kubeVersion, "<", "v1.13.0")
 	if err != nil {
 		return featureGates, err
@@ -399,7 +399,7 @@ func InjectCSIFeatureGates(kubeVersion string, featureGates map[string]interface
 	}
 
 	//https://kubernetes-csi.github.io/docs/Setup.html
-	csiFG := map[string]interface{}{
+	csiFG := map[string]bool{
 		"VolumeSnapshotDataSource": true,
 		"KubeletPluginsWatcher":    true,
 		"CSINodeInfo":              true,
