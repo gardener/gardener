@@ -126,7 +126,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/packet/local"),
+				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/packet"),
 			}))
 		})
 
@@ -2759,7 +2759,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 			}))
 		})
 
@@ -3320,7 +3320,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -3732,7 +3732,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -4078,7 +4078,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -4470,7 +4470,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -4694,7 +4694,7 @@ var _ = Describe("validation", func() {
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))))
 			})
 		})
@@ -5012,7 +5012,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})

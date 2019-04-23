@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,local,packet} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -34,8 +34,6 @@
     region="EWR1"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
-  elif cloud == "local":
-    region="local"
 %>---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: CloudProfile
@@ -595,16 +593,4 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     % else:
   # requestTimeout: 180s # Kubernetes OpenStack Cloudprovider Request Timeout
     % endif
-  % endif
-  % if cloud == "local":
-  local:
-    constraints:
-      dnsProviders:<% dnsProviders=value("spec.local.constraints.dnsProviders", []) %>
-      % if dnsProviders != []:
-      ${yaml.dump(dnsProviders, width=10000, default_flow_style=None)}
-      % else:
-      - name: unmanaged
-      % endif
-      machineImages:
-      - name: coreos
   % endif

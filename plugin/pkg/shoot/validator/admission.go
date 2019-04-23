@@ -270,17 +270,6 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 		}
 		allErrs = validateGCP(validationContext)
 
-	case garden.CloudProviderLocal:
-		if shoot.Spec.Cloud.Local.MachineImage == nil {
-			image, err := getLocalMachineImage(shoot, cloudProfile)
-			if err != nil {
-				return apierrors.NewBadRequest(err.Error())
-			}
-			shoot.Spec.Cloud.Local.MachineImage = image
-		}
-		// No further validations for local shoots
-		allErrs = field.ErrorList{}
-
 	case garden.CloudProviderOpenStack:
 		if shoot.Spec.Cloud.OpenStack.MachineImage == nil {
 			image, err := getOpenStackMachineImage(shoot, cloudProfile)
@@ -1019,14 +1008,6 @@ func validateGCPMachineImagesConstraints(constraints []garden.GCPMachineImage, i
 	}
 
 	return false, validValues
-}
-
-func getLocalMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.LocalMachineImage, error) {
-	machineImages := cloudProfile.Spec.Local.Constraints.MachineImages
-	if len(machineImages) != 1 {
-		return nil, errors.New("must provide a value for .spec.cloud.local.machineImage as the referenced cloud profile contains more than one")
-	}
-	return &machineImages[0], nil
 }
 
 func getPacketMachineImage(shoot *garden.Shoot, cloudProfile *garden.CloudProfile) (*garden.PacketMachineImage, error) {

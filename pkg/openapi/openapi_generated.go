@@ -129,11 +129,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConfig":              schema_pkg_apis_garden_v1beta1_KubernetesConfig(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints":         schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard":           schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local":                         schema_pkg_apis_garden_v1beta1_Local(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints":              schema_pkg_apis_garden_v1beta1_LocalConstraints(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage":             schema_pkg_apis_garden_v1beta1_LocalMachineImage(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks":                 schema_pkg_apis_garden_v1beta1_LocalNetworks(ref),
-		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile":                  schema_pkg_apis_garden_v1beta1_LocalProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType":                   schema_pkg_apis_garden_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance":                   schema_pkg_apis_garden_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate":         schema_pkg_apis_garden_v1beta1_MaintenanceAutoUpdate(ref),
@@ -3128,18 +3123,12 @@ func schema_pkg_apis_garden_v1beta1_Cloud(ref common.ReferenceCallback) common.O
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketCloud"),
 						},
 					},
-					"local": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Local contains the Shoot specification for the Local local provider.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local"),
-						},
-					},
 				},
 				Required: []string{"profile", "region", "secretBindingRef"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Local", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketCloud", "k8s.io/api/core/v1.LocalObjectReference"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketCloud", "k8s.io/api/core/v1.LocalObjectReference"},
 	}
 }
 
@@ -3304,12 +3293,6 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"),
 						},
 					},
-					"local": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Local is the profile specification for the Local provider.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile"),
-						},
-					},
 					"caBundle": {
 						SchemaProps: spec.SchemaProps{
 							Description: "CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.",
@@ -3321,7 +3304,7 @@ func schema_pkg_apis_garden_v1beta1_CloudProfileSpec(ref common.ReferenceCallbac
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackProfile", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile"},
 	}
 }
 
@@ -4506,175 +4489,6 @@ func schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref common.ReferenceCall
 				Required: []string{"enabled"},
 			},
 		},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_Local(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "Local contains the Shoot specification for local provider.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"networks": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Networks holds information about the Kubernetes and infrastructure networks.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"),
-						},
-					},
-					"machineImage": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage"),
-						},
-					},
-					"endpoint": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Endpoint of the local service.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"networks", "endpoint"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalNetworks"},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_LocalConstraints(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LocalConstraints is an object containing constraints for certain values in the Shoot specification.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"dnsProviders": {
-						SchemaProps: spec.SchemaProps{
-							Description: "DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint"),
-									},
-								},
-							},
-						},
-					},
-					"machineImages": {
-						SchemaProps: spec.SchemaProps{
-							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage"),
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"dnsProviders", "machineImages"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalMachineImage"},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_LocalMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LocalMachineImage defines the machine image for Local Provider.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"name": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Name is the name of the image.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-				},
-				Required: []string{"name"},
-			},
-		},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_LocalNetworks(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LocalNetworks holds information about the Kubernetes and infrastructure networks.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"nodes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Nodes is the CIDR of the node network.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"pods": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Pods is the CIDR of the pod network.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"services": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Services is the CIDR of the service network.",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"workers": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Workers is a CIDR of a worker subnet (private) to create (used for the VMs).",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-				},
-				Required: []string{"workers"},
-			},
-		},
-	}
-}
-
-func schema_pkg_apis_garden_v1beta1_LocalProfile(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "LocalProfile defines constraints and definitions for the local development.",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"constraints": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Constraints is an object containing constraints for certain values in the Shoot specification.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints"),
-						},
-					},
-				},
-				Required: []string{"constraints"},
-			},
-		},
-		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.LocalConstraints"},
 	}
 }
 

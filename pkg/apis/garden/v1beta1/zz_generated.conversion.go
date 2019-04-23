@@ -745,56 +745,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*Local)(nil), (*garden.Local)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_Local_To_garden_Local(a.(*Local), b.(*garden.Local), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.Local)(nil), (*Local)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_Local_To_v1beta1_Local(a.(*garden.Local), b.(*Local), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LocalConstraints)(nil), (*garden.LocalConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_LocalConstraints_To_garden_LocalConstraints(a.(*LocalConstraints), b.(*garden.LocalConstraints), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.LocalConstraints)(nil), (*LocalConstraints)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_LocalConstraints_To_v1beta1_LocalConstraints(a.(*garden.LocalConstraints), b.(*LocalConstraints), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LocalMachineImage)(nil), (*garden.LocalMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_LocalMachineImage_To_garden_LocalMachineImage(a.(*LocalMachineImage), b.(*garden.LocalMachineImage), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.LocalMachineImage)(nil), (*LocalMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_LocalMachineImage_To_v1beta1_LocalMachineImage(a.(*garden.LocalMachineImage), b.(*LocalMachineImage), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LocalNetworks)(nil), (*garden.LocalNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_LocalNetworks_To_garden_LocalNetworks(a.(*LocalNetworks), b.(*garden.LocalNetworks), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.LocalNetworks)(nil), (*LocalNetworks)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_LocalNetworks_To_v1beta1_LocalNetworks(a.(*garden.LocalNetworks), b.(*LocalNetworks), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*LocalProfile)(nil), (*garden.LocalProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1beta1_LocalProfile_To_garden_LocalProfile(a.(*LocalProfile), b.(*garden.LocalProfile), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*garden.LocalProfile)(nil), (*LocalProfile)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_garden_LocalProfile_To_v1beta1_LocalProfile(a.(*garden.LocalProfile), b.(*LocalProfile), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*MachineType)(nil), (*garden.MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_MachineType_To_garden_MachineType(a.(*MachineType), b.(*garden.MachineType), scope)
 	}); err != nil {
@@ -2393,15 +2343,6 @@ func autoConvert_v1beta1_Cloud_To_garden_Cloud(in *Cloud, out *garden.Cloud, s c
 	} else {
 		out.Packet = nil
 	}
-	if in.Local != nil {
-		in, out := &in.Local, &out.Local
-		*out = new(garden.Local)
-		if err := Convert_v1beta1_Local_To_garden_Local(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Local = nil
-	}
 	return nil
 }
 
@@ -2468,15 +2409,6 @@ func autoConvert_garden_Cloud_To_v1beta1_Cloud(in *garden.Cloud, out *Cloud, s c
 		}
 	} else {
 		out.Packet = nil
-	}
-	if in.Local != nil {
-		in, out := &in.Local, &out.Local
-		*out = new(Local)
-		if err := Convert_garden_Local_To_v1beta1_Local(*in, *out, s); err != nil {
-			return err
-		}
-	} else {
-		out.Local = nil
 	}
 	return nil
 }
@@ -2565,7 +2497,6 @@ func autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudPr
 	out.OpenStack = (*garden.OpenStackProfile)(unsafe.Pointer(in.OpenStack))
 	out.Alicloud = (*garden.AlicloudProfile)(unsafe.Pointer(in.Alicloud))
 	out.Packet = (*garden.PacketProfile)(unsafe.Pointer(in.Packet))
-	out.Local = (*garden.LocalProfile)(unsafe.Pointer(in.Local))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
 }
@@ -2582,7 +2513,6 @@ func autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.
 	out.OpenStack = (*OpenStackProfile)(unsafe.Pointer(in.OpenStack))
 	out.Alicloud = (*AlicloudProfile)(unsafe.Pointer(in.Alicloud))
 	out.Packet = (*PacketProfile)(unsafe.Pointer(in.Packet))
-	out.Local = (*LocalProfile)(unsafe.Pointer(in.Local))
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
 }
@@ -3352,128 +3282,6 @@ func autoConvert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *g
 // Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard is an autogenerated conversion function.
 func Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *garden.KubernetesDashboard, out *KubernetesDashboard, s conversion.Scope) error {
 	return autoConvert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in, out, s)
-}
-
-func autoConvert_v1beta1_Local_To_garden_Local(in *Local, out *garden.Local, s conversion.Scope) error {
-	if err := Convert_v1beta1_LocalNetworks_To_garden_LocalNetworks(&in.Networks, &out.Networks, s); err != nil {
-		return err
-	}
-	out.MachineImage = (*garden.LocalMachineImage)(unsafe.Pointer(in.MachineImage))
-	out.Endpoint = in.Endpoint
-	return nil
-}
-
-// Convert_v1beta1_Local_To_garden_Local is an autogenerated conversion function.
-func Convert_v1beta1_Local_To_garden_Local(in *Local, out *garden.Local, s conversion.Scope) error {
-	return autoConvert_v1beta1_Local_To_garden_Local(in, out, s)
-}
-
-func autoConvert_garden_Local_To_v1beta1_Local(in *garden.Local, out *Local, s conversion.Scope) error {
-	if err := Convert_garden_LocalNetworks_To_v1beta1_LocalNetworks(&in.Networks, &out.Networks, s); err != nil {
-		return err
-	}
-	out.Endpoint = in.Endpoint
-	out.MachineImage = (*LocalMachineImage)(unsafe.Pointer(in.MachineImage))
-	return nil
-}
-
-// Convert_garden_Local_To_v1beta1_Local is an autogenerated conversion function.
-func Convert_garden_Local_To_v1beta1_Local(in *garden.Local, out *Local, s conversion.Scope) error {
-	return autoConvert_garden_Local_To_v1beta1_Local(in, out, s)
-}
-
-func autoConvert_v1beta1_LocalConstraints_To_garden_LocalConstraints(in *LocalConstraints, out *garden.LocalConstraints, s conversion.Scope) error {
-	out.DNSProviders = *(*[]garden.DNSProviderConstraint)(unsafe.Pointer(&in.DNSProviders))
-	out.MachineImages = *(*[]garden.LocalMachineImage)(unsafe.Pointer(&in.MachineImages))
-	return nil
-}
-
-// Convert_v1beta1_LocalConstraints_To_garden_LocalConstraints is an autogenerated conversion function.
-func Convert_v1beta1_LocalConstraints_To_garden_LocalConstraints(in *LocalConstraints, out *garden.LocalConstraints, s conversion.Scope) error {
-	return autoConvert_v1beta1_LocalConstraints_To_garden_LocalConstraints(in, out, s)
-}
-
-func autoConvert_garden_LocalConstraints_To_v1beta1_LocalConstraints(in *garden.LocalConstraints, out *LocalConstraints, s conversion.Scope) error {
-	out.DNSProviders = *(*[]DNSProviderConstraint)(unsafe.Pointer(&in.DNSProviders))
-	out.MachineImages = *(*[]LocalMachineImage)(unsafe.Pointer(&in.MachineImages))
-	return nil
-}
-
-// Convert_garden_LocalConstraints_To_v1beta1_LocalConstraints is an autogenerated conversion function.
-func Convert_garden_LocalConstraints_To_v1beta1_LocalConstraints(in *garden.LocalConstraints, out *LocalConstraints, s conversion.Scope) error {
-	return autoConvert_garden_LocalConstraints_To_v1beta1_LocalConstraints(in, out, s)
-}
-
-func autoConvert_v1beta1_LocalMachineImage_To_garden_LocalMachineImage(in *LocalMachineImage, out *garden.LocalMachineImage, s conversion.Scope) error {
-	out.Name = garden.MachineImageName(in.Name)
-	return nil
-}
-
-// Convert_v1beta1_LocalMachineImage_To_garden_LocalMachineImage is an autogenerated conversion function.
-func Convert_v1beta1_LocalMachineImage_To_garden_LocalMachineImage(in *LocalMachineImage, out *garden.LocalMachineImage, s conversion.Scope) error {
-	return autoConvert_v1beta1_LocalMachineImage_To_garden_LocalMachineImage(in, out, s)
-}
-
-func autoConvert_garden_LocalMachineImage_To_v1beta1_LocalMachineImage(in *garden.LocalMachineImage, out *LocalMachineImage, s conversion.Scope) error {
-	out.Name = MachineImageName(in.Name)
-	return nil
-}
-
-// Convert_garden_LocalMachineImage_To_v1beta1_LocalMachineImage is an autogenerated conversion function.
-func Convert_garden_LocalMachineImage_To_v1beta1_LocalMachineImage(in *garden.LocalMachineImage, out *LocalMachineImage, s conversion.Scope) error {
-	return autoConvert_garden_LocalMachineImage_To_v1beta1_LocalMachineImage(in, out, s)
-}
-
-func autoConvert_v1beta1_LocalNetworks_To_garden_LocalNetworks(in *LocalNetworks, out *garden.LocalNetworks, s conversion.Scope) error {
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
-		return err
-	}
-	out.Workers = *(*[]core.CIDR)(unsafe.Pointer(&in.Workers))
-	return nil
-}
-
-// Convert_v1beta1_LocalNetworks_To_garden_LocalNetworks is an autogenerated conversion function.
-func Convert_v1beta1_LocalNetworks_To_garden_LocalNetworks(in *LocalNetworks, out *garden.LocalNetworks, s conversion.Scope) error {
-	return autoConvert_v1beta1_LocalNetworks_To_garden_LocalNetworks(in, out, s)
-}
-
-func autoConvert_garden_LocalNetworks_To_v1beta1_LocalNetworks(in *garden.LocalNetworks, out *LocalNetworks, s conversion.Scope) error {
-	// TODO: Inefficient conversion - can we improve it?
-	if err := s.Convert(&in.K8SNetworks, &out.K8SNetworks, 0); err != nil {
-		return err
-	}
-	out.Workers = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.Workers))
-	return nil
-}
-
-// Convert_garden_LocalNetworks_To_v1beta1_LocalNetworks is an autogenerated conversion function.
-func Convert_garden_LocalNetworks_To_v1beta1_LocalNetworks(in *garden.LocalNetworks, out *LocalNetworks, s conversion.Scope) error {
-	return autoConvert_garden_LocalNetworks_To_v1beta1_LocalNetworks(in, out, s)
-}
-
-func autoConvert_v1beta1_LocalProfile_To_garden_LocalProfile(in *LocalProfile, out *garden.LocalProfile, s conversion.Scope) error {
-	if err := Convert_v1beta1_LocalConstraints_To_garden_LocalConstraints(&in.Constraints, &out.Constraints, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_v1beta1_LocalProfile_To_garden_LocalProfile is an autogenerated conversion function.
-func Convert_v1beta1_LocalProfile_To_garden_LocalProfile(in *LocalProfile, out *garden.LocalProfile, s conversion.Scope) error {
-	return autoConvert_v1beta1_LocalProfile_To_garden_LocalProfile(in, out, s)
-}
-
-func autoConvert_garden_LocalProfile_To_v1beta1_LocalProfile(in *garden.LocalProfile, out *LocalProfile, s conversion.Scope) error {
-	if err := Convert_garden_LocalConstraints_To_v1beta1_LocalConstraints(&in.Constraints, &out.Constraints, s); err != nil {
-		return err
-	}
-	return nil
-}
-
-// Convert_garden_LocalProfile_To_v1beta1_LocalProfile is an autogenerated conversion function.
-func Convert_garden_LocalProfile_To_v1beta1_LocalProfile(in *garden.LocalProfile, out *LocalProfile, s conversion.Scope) error {
-	return autoConvert_garden_LocalProfile_To_v1beta1_LocalProfile(in, out, s)
 }
 
 func autoConvert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {

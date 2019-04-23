@@ -24,7 +24,6 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -582,11 +581,7 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName}
-	if b.Shoot.CloudProvider != v1beta1.CloudProviderLocal {
-		controllerManagerDeployments = append(controllerManagerDeployments, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName)
-	}
-
+	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName}
 	if b.Shoot.UsesCSI() {
 		controllerManagerDeployments = append(controllerManagerDeployments, common.CSIPluginController)
 	}

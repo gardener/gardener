@@ -65,13 +65,9 @@ func DetermineCloudProviderInProfile(spec gardenv1beta1.CloudProfileSpec) (garde
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderPacket
 	}
-	if spec.Local != nil {
-		numClouds++
-		cloud = gardenv1beta1.CloudProviderLocal
-	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/packet/local")
+		return "", errors.New("cloud profile must only contain exactly one field of alicloud/aws/azure/gcp/openstack/packet")
 	}
 	return cloud, nil
 }
@@ -155,12 +151,6 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 		for _, worker := range cloud.Packet.Workers {
 			workers = append(workers, worker.Worker)
 		}
-	case gardenv1beta1.CloudProviderLocal:
-		workers = append(workers, gardenv1beta1.Worker{
-			Name:          "local",
-			AutoScalerMax: 1,
-			AutoScalerMin: 1,
-		})
 	}
 
 	return workers
@@ -181,8 +171,6 @@ func GetMachineImageNameFromShoot(cloudProvider gardenv1beta1.CloudProvider, sho
 		return shoot.Spec.Cloud.OpenStack.MachineImage.Name
 	case gardenv1beta1.CloudProviderPacket:
 		return shoot.Spec.Cloud.Packet.MachineImage.Name
-	case gardenv1beta1.CloudProviderLocal:
-		return shoot.Spec.Cloud.Local.MachineImage.Name
 	}
 	return ""
 }
@@ -216,10 +204,6 @@ func GetMachineTypesFromCloudProfile(cloudProvider gardenv1beta1.CloudProvider, 
 		for _, openStackMachineType := range profile.Spec.OpenStack.Constraints.MachineTypes {
 			machineTypes = append(machineTypes, openStackMachineType.MachineType)
 		}
-	case gardenv1beta1.CloudProviderLocal:
-		machineTypes = append(machineTypes, gardenv1beta1.MachineType{
-			Name: "local",
-		})
 	}
 
 	return machineTypes
@@ -257,13 +241,9 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 		numClouds++
 		cloud = gardenv1beta1.CloudProviderPacket
 	}
-	if cloudObj.Local != nil {
-		numClouds++
-		cloud = gardenv1beta1.CloudProviderLocal
-	}
 
 	if numClouds != 1 {
-		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/packet/local")
+		return "", errors.New("cloud object must only contain exactly one field of aws/azure/gcp/openstack/packet")
 	}
 	return cloud, nil
 }

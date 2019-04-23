@@ -218,9 +218,6 @@ func computeRequiredControlPlaneDeployments(
 			requiredControlPlaneDeployments.Insert(gardencorev1alpha1.DeploymentNameClusterAutoscaler)
 		}
 	}
-	if seedCloudProvider == gardenv1beta1.CloudProviderLocal {
-		requiredControlPlaneDeployments.Delete(common.MachineControllerManagerDeploymentName, common.CloudControllerManagerDeploymentName)
-	}
 
 	return requiredControlPlaneDeployments, nil
 }

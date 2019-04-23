@@ -80,9 +80,6 @@ type CloudProfileSpec struct {
 	// Packet is the profile specification for the Packet cloud.
 	// +optional
 	Packet *PacketProfile `json:"packet,omitempty"`
-	// Local is the profile specification for the Local provider.
-	// +optional
-	Local *LocalProfile `json:"local,omitempty"`
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
@@ -338,30 +335,10 @@ type PacketMachineImage struct {
 	ID string `json:"id"`
 }
 
-// LocalProfile defines constraints and definitions for the local development.
-type LocalProfile struct {
-	// Constraints is an object containing constraints for certain values in the Shoot specification.
-	Constraints LocalConstraints `json:"constraints"`
-}
-
-// LocalConstraints is an object containing constraints for certain values in the Shoot specification.
-type LocalConstraints struct {
-	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
-	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
-	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []LocalMachineImage `json:"machineImages"`
-}
-
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
 type DNSProviderConstraint struct {
 	// Name is the name of the DNS provider.
 	Name string `json:"name"`
-}
-
-// LocalMachineImage defines the machine image for Local Provider.
-type LocalMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
 }
 
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
@@ -797,9 +774,6 @@ type Cloud struct {
 	// Packet contains the Shoot specification for the Packet cloud.
 	// +optional
 	Packet *PacketCloud `json:"packet,omitempty"`
-	// Local contains the Shoot specification for the Local local provider.
-	// +optional
-	Local *Local `json:"local,omitempty"`
 }
 
 // AWSCloud contains the Shoot specification for AWS.
@@ -1055,26 +1029,6 @@ type OpenStackWorker struct {
 	Worker `json:",inline"`
 }
 
-// Local contains the Shoot specification for local provider.
-type Local struct {
-	// Networks holds information about the Kubernetes and infrastructure networks.
-	Networks LocalNetworks `json:"networks"`
-	// MachineImage holds information about the machine image to use for all workers.
-	// It will default to the first image stated in the referenced CloudProfile if no
-	// value has been provided.
-	// +optional
-	MachineImage *LocalMachineImage `json:"machineImage,omitempty"`
-	// Endpoint of the local service.
-	Endpoint string `json:"endpoint"`
-}
-
-// LocalNetworks holds information about the Kubernetes and infrastructure networks.
-type LocalNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
-	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers []gardencorev1alpha1.CIDR `json:"workers"`
-}
-
 // Worker is the base definition of a worker group.
 type Worker struct {
 	// Name is the name of the worker group.
@@ -1266,8 +1220,6 @@ const (
 	CloudProviderAlicloud CloudProvider = "alicloud"
 	// CloudProviderPacket is a constant for the Packet cloud provider.
 	CloudProviderPacket CloudProvider = "packet"
-	// CloudProviderLocal is a constant for the development provider.
-	CloudProviderLocal CloudProvider = "local"
 )
 
 // Hibernation contains information whether the Shoot is suspended or not.

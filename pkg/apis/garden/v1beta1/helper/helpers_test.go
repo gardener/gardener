@@ -102,10 +102,6 @@ var _ = Describe("helper", func() {
 				},
 			},
 			[]gardenv1beta1.Worker{{Name: "openStack"}}),
-		Entry("Local",
-			gardenv1beta1.CloudProviderLocal,
-			&gardenv1beta1.Shoot{},
-			[]gardenv1beta1.Worker{{Name: "local", AutoScalerMin: 1, AutoScalerMax: 1}}),
 	)
 
 	DescribeTable("#GetMachineImageNameFromShoot",
@@ -179,21 +175,6 @@ var _ = Describe("helper", func() {
 					Cloud: gardenv1beta1.Cloud{
 						Alicloud: &gardenv1beta1.Alicloud{
 							MachineImage: &gardenv1beta1.AlicloudMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
-						},
-					},
-				},
-			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
-		),
-		Entry("Local",
-			gardenv1beta1.CloudProviderLocal,
-			&gardenv1beta1.Shoot{
-				Spec: gardenv1beta1.ShootSpec{
-					Cloud: gardenv1beta1.Cloud{
-						Local:&gardenv1beta1.Local{
-							MachineImage: &gardenv1beta1.LocalMachineImage{
 								Name: gardenv1beta1.MachineImageName("some-machineimage"),
 							},
 						},

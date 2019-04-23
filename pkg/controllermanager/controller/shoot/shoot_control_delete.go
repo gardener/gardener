@@ -115,7 +115,6 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		cleanupShootResources   = nonTerminatingNamespace && kubeAPIServerDeploymentFound
 		defaultInterval         = 5 * time.Second
 		defaultTimeout          = 30 * time.Second
-		isCloud                 = o.Shoot.Info.Spec.Cloud.Local == nil
 
 		g = flow.NewGraph("Shoot cluster deletion")
 
@@ -246,7 +245,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		destroyMachines = g.Add(flow.Task{
 			Name:         "Destroying Shoot workers",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DestroyMachines).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(isCloud),
+			Fn:           flow.SimpleTaskFn(hybridBotanist.DestroyMachines).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
 		})
 		deleteKubeAPIServer = g.Add(flow.Task{

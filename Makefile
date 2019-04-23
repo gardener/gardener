@@ -28,10 +28,6 @@ LD_FLAGS                           := $(shell ./hack/get-build-ld-flags)
 dev-setup:
 	@./hack/dev-setup
 
-.PHONY: dev-setup-local
-dev-setup-local:
-	@./hack/dev-setup-local
-
 .PHONY: dev-setup-extensions
 dev-setup-extensions:
 	@./hack/dev-setup-extensions
@@ -43,10 +39,6 @@ start-api:
 .PHONY: start
 start:
 	@./hack/start
-
-.PHONY: start-local
-start-local:
-	@go run cmd/gardener-local-provider/main.go
 
 #################################################################
 # Rules related to binary build, Docker image build and release #

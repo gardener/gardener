@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -37,8 +37,6 @@
     region="europe-1"
   elif cloud == "packet":
     region="EWR1"
-  elif cloud == "local":
-    region="local"
 %># Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
 ---
 apiVersion: garden.sapcloud.io/v1beta1
@@ -58,8 +56,8 @@ spec:
   secretRef:
     name: ${value("spec.secretRef.name", "seed-" + cloud)}
     namespace: ${value("spec.secretRef.namespace", "garden")}
-  ingressDomain: ${value("spec.ingressDomain", "dev." + cloud + ".seed.example.com") if cloud != "local" else "<local-kubernetes-ip>.nip.io"}
+  ingressDomain: ${value("spec.ingressDomain", "dev." + cloud + ".seed.example.com")}
   networks: # Seed and Shoot networks must be disjunct
-    nodes: ${value("spec.networks.nodes", "10.240.0.0/16") if cloud != "local" else "192.168.99.100/25"}
-    pods: ${value("spec.networks.pods", "10.241.128.0/17") if cloud != "local" else "172.17.0.0/16"}
-    services: ${value("spec.networks.services", "10.241.0.0/17") if cloud != "local" else "10.96.0.0/13"}
+    nodes: ${value("spec.networks.nodes", "10.240.0.0/16")}
+    pods: ${value("spec.networks.pods", "10.241.128.0/17")}
+    services: ${value("spec.networks.services", "10.241.0.0/17")}
