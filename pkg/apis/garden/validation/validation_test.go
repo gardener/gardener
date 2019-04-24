@@ -16,6 +16,7 @@ package validation_test
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
@@ -2296,6 +2297,94 @@ var _ = Describe("validation", func() {
 			// below zero tests
 			Entry("values are not below zero", intstr.FromInt(-1), intstr.FromInt(0), field.ErrorTypeInvalid),
 			Entry("percentage is not less than zero", intstr.FromString("-90%"), intstr.FromString("90%"), field.ErrorTypeInvalid),
+		)
+
+		DescribeTable("reject when labels are invalid",
+			func(labels map[string]string, expectType field.ErrorType) {
+				worker := garden.Worker{
+					Name:           "worker-name",
+					MachineType:    "large",
+					MaxSurge:       intstr.FromInt(1),
+					MaxUnavailable: intstr.FromInt(0),
+					Labels:         labels,
+				}
+				errList := ValidateWorker(worker, nil)
+
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(expectType),
+				}))))
+			},
+
+			// invalid keys
+			Entry("missing prefix", map[string]string{"/foo": "bar"}, field.ErrorTypeInvalid),
+			Entry("too long name", map[string]string{"foo/somethingthatiswaylongerthanthelimitofthiswhichissixtythreecharacters": "baz"}, field.ErrorTypeInvalid),
+			Entry("too many parts", map[string]string{"foo/bar/baz": "null"}, field.ErrorTypeInvalid),
+			Entry("invalid name", map[string]string{"foo/bar%baz": "null"}, field.ErrorTypeInvalid),
+
+			// invalid values
+			Entry("too long", map[string]string{"foo": "somethingthatiswaylongerthanthelimitofthiswhichissixtythreecharacters"}, field.ErrorTypeInvalid),
+			Entry("invalid", map[string]string{"foo": "no/slashes/allowed"}, field.ErrorTypeInvalid),
+		)
+
+		DescribeTable("reject when annotations are invalid",
+			func(annotations map[string]string, expectType field.ErrorType) {
+				worker := garden.Worker{
+					Name:           "worker-name",
+					MachineType:    "large",
+					MaxSurge:       intstr.FromInt(1),
+					MaxUnavailable: intstr.FromInt(0),
+					Annotations:    annotations,
+				}
+				errList := ValidateWorker(worker, nil)
+
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(expectType),
+				}))))
+			},
+
+			// invalid keys
+			Entry("missing prefix", map[string]string{"/foo": "bar"}, field.ErrorTypeInvalid),
+			Entry("too long name", map[string]string{"foo/somethingthatiswaylongerthanthelimitofthiswhichissixtythreecharacters": "baz"}, field.ErrorTypeInvalid),
+			Entry("too many parts", map[string]string{"foo/bar/baz": "null"}, field.ErrorTypeInvalid),
+			Entry("invalid name", map[string]string{"foo/bar%baz": "null"}, field.ErrorTypeInvalid),
+
+			// invalid value
+			Entry("too long", map[string]string{"foo": strings.Repeat("a", 262142)}, field.ErrorTypeTooLong),
+		)
+
+		DescribeTable("reject when taints are invalid",
+			func(taints []corev1.Taint, expectType field.ErrorType) {
+				worker := garden.Worker{
+					Name:           "worker-name",
+					MachineType:    "large",
+					MaxSurge:       intstr.FromInt(1),
+					MaxUnavailable: intstr.FromInt(0),
+					Taints:         taints,
+				}
+				errList := ValidateWorker(worker, nil)
+
+				Expect(errList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type": Equal(expectType),
+				}))))
+			},
+
+			// invalid keys
+			Entry("missing prefix", []corev1.Taint{{Key: "/foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+			Entry("missing prefix", []corev1.Taint{{Key: "/foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+			Entry("too long name", []corev1.Taint{{Key: "foo/somethingthatiswaylongerthanthelimitofthiswhichissixtythreecharacters", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+			Entry("too many parts", []corev1.Taint{{Key: "foo/bar/baz", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+			Entry("invalid name", []corev1.Taint{{Key: "foo/bar%baz", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+
+			// invalid values
+			Entry("too long", []corev1.Taint{{Key: "foo", Value: "somethingthatiswaylongerthanthelimitofthiswhichissixtythreecharacters", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+			Entry("invalid", []corev1.Taint{{Key: "foo", Value: "no/slashes/allowed", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeInvalid),
+
+			// invalid effects
+			Entry("no effect", []corev1.Taint{{Key: "foo", Value: "bar"}}, field.ErrorTypeRequired),
+			Entry("non-existing", []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffect("does-not-exist")}}, field.ErrorTypeNotSupported),
+
+			// uniqueness by key/effect
+			Entry("not unique", []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}, {Key: "foo", Value: "baz", Effect: corev1.TaintEffectNoSchedule}}, field.ErrorTypeDuplicate),
 		)
 	})
 

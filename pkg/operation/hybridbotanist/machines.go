@@ -241,6 +241,11 @@ func (b *HybridBotanist) generateMachineDeploymentConfig(existingMachineDeployme
 				"kind": classKind,
 				"name": deployment.ClassName,
 			},
+			"nodeTemplate": map[string]interface{}{
+				"labels":      deployment.Labels,
+				"annotations": deployment.Annotations,
+				"taints":      deployment.Taints,
+			},
 		}
 		existingMachineDeployment := getExistingMachineDeployment(existingMachineDeployments, deployment.Name)
 

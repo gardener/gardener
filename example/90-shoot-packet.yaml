@@ -18,6 +18,16 @@ spec:
         volumeSize: 30Gi
         autoScalerMin: 1
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       zones: ['EWR1']
   kubernetes:
     version: 1.14.0

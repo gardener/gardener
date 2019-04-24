@@ -110,6 +110,9 @@ func (b *AzureBotanist) GenerateMachineConfig() ([]map[string]interface{}, opera
 			Maximum:        worker.AutoScalerMax,
 			MaxSurge:       *worker.MaxSurge,
 			MaxUnavailable: *worker.MaxUnavailable,
+			Labels:         worker.Labels,
+			Annotations:    worker.Annotations,
+			Taints:         worker.Taints,
 		})
 
 		machineClassSpec["name"] = className
