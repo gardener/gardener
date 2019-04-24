@@ -344,4 +344,44 @@ var _ = Describe("common", func() {
 			DNSDomain:   "foo",
 		}, Equal("bar"), Equal("foo"), Not(HaveOccurred())),
 	)
+
+	Describe("#InjectCSIFeatureGates", func() {
+		csiFG := map[string]bool{
+			"VolumeSnapshotDataSource": true,
+			"KubeletPluginsWatcher":    true,
+			"CSINodeInfo":              true,
+			"CSIDriverRegistry":        true,
+		}
+
+		It("should return nil because version is < 1.13", func() {
+			fg, err := InjectCSIFeatureGates("1.12.1", nil)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(fg).To(BeNil())
+		})
+
+		It("should return the CSI FG because version is >= 1.13", func() {
+			fg, err := InjectCSIFeatureGates("1.13.1", nil)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(fg).To(Equal(csiFG))
+		})
+
+		It("should return the CSI FG because version is >= 1.13 (with other features)", func() {
+			featureGates := map[string]bool{"foo": false, "bar": true}
+
+			result := make(map[string]bool, len(featureGates)+len(csiFG))
+			for k, v := range featureGates {
+				result[k] = v
+			}
+			for k, v := range csiFG {
+				result[k] = v
+			}
+
+			fg, err := InjectCSIFeatureGates("1.13.1", featureGates)
+
+			Expect(err).To(Not(HaveOccurred()))
+			Expect(fg).To(Equal(result))
+		})
+	})
 })
