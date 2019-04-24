@@ -55,7 +55,7 @@ func (c *Client) ListKubernetesRoutesForNetwork(ctx context.Context, project, ne
 	var routes []string
 	if err := c.computeService.Routes.List(project).Pages(ctx, func(page *compute.RouteList) error {
 		for _, route := range page.Items {
-			if strings.HasPrefix(route.Name, routePrefix) && route.Network == network {
+			if strings.HasPrefix(route.Name, routePrefix) && strings.HasSuffix(route.Network, network) {
 				routes = append(routes, route.Name)
 			}
 		}
