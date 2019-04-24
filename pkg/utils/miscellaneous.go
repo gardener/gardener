@@ -15,12 +15,22 @@
 package utils
 
 import (
+	"io/ioutil"
 	"net"
 	"regexp"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// NewNopLogger instantiates a new logger that logs to ioutil.Discard.
+func NewNopLogger() *logrus.Logger {
+	logger := logrus.New()
+	logger.Out = ioutil.Discard
+	return logger
+}
 
 // ValueExists returns true or false, depending on whether the given string <value>
 // is part of the given []string list <list>.
