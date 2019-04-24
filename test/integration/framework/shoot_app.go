@@ -258,7 +258,7 @@ func (o *GardenerTestOperation) GetCloudProvider() (v1beta1.CloudProvider, error
 }
 
 // DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories
-func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload string) error {
+func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload, chartVersionToDownload string) error {
 	exists, err := Exists(chartRepoDestination)
 	if err != nil {
 		return err
@@ -288,7 +288,7 @@ func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm
 	}
 
 	if !chartDownloaded {
-		chartPath, err = downloadChart(ctx, chartNameToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
+		chartPath, err = downloadChart(ctx, chartNameToDownload, chartVersionToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
 			HelmPath: helm,
 		})
 		if err != nil {

@@ -34,7 +34,7 @@ const (
 )
 
 // downloadChart downloads a native chart with <name> to <downloadDestination> from <stableRepoURL>
-func downloadChart(ctx context.Context, name, downloadDestination, stableRepoURL string, helmSettings HelmAccess) (string, error) {
+func downloadChart(ctx context.Context, name, version, downloadDestination, stableRepoURL string, helmSettings HelmAccess) (string, error) {
 	providers := getter.All(environment.EnvSettings{})
 	dl := downloader.ChartDownloader{
 		Getters:  providers,
@@ -48,7 +48,7 @@ func downloadChart(ctx context.Context, name, downloadDestination, stableRepoURL
 	}
 
 	// Download the chart
-	filename, _, err := dl.DownloadTo(name, "", downloadDestination)
+	filename, _, err := dl.DownloadTo(name, version, downloadDestination)
 	if err != nil {
 		return "", err
 	}
