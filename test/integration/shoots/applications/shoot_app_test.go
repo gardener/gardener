@@ -71,8 +71,9 @@ const (
 	APIServer             = "kube-apiserver"
 	GuestBookTemplateName = "guestbook-app.yaml.tpl"
 
-	helmDeployNamespace = metav1.NamespaceSystem
+	helmDeployNamespace = metav1.NamespaceDefault
 	RedisChart          = "stable/redis"
+	RedisChartVersion   = "7.0.0"
 )
 
 func validateFlags() {
@@ -220,7 +221,7 @@ var _ = Describe("Shoot application testing", func() {
 					},
 				}
 
-				redisSlaveDeploymentToDelete = &appsv1.Deployment{
+				redisSlaveStatefulSetToDelete = &appsv1.StatefulSet{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: helmDeployNamespace,
 						Name:      RedisSalve,
@@ -237,7 +238,7 @@ var _ = Describe("Shoot application testing", func() {
 			err = deleteResource(ctx, redisSlaveServiceToDelete)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = deleteResource(ctx, redisSlaveDeploymentToDelete)
+			err = deleteResource(ctx, redisSlaveStatefulSetToDelete)
 			Expect(err).NotTo(HaveOccurred())
 		}
 		cleanupGuestbook()
@@ -273,7 +274,7 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Downloading chart artifacts")
-		err = shootTestOperations.DownloadChartArtifacts(ctx, helm, chartRepo, RedisChart)
+		err = shootTestOperations.DownloadChartArtifacts(ctx, helm, chartRepo, RedisChart, RedisChartVersion)
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Applying redis chart")

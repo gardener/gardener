@@ -53,7 +53,7 @@ var _ = Describe("Framework tests", func() {
 				Logger: logger.AddWriter(logger.NewLogger("info"), GinkgoWriter),
 			}
 
-			err := shootTestOperation.DownloadChartArtifacts(context.TODO(), helm, chartRepo, "stable/redis")
+			err := shootTestOperation.DownloadChartArtifacts(context.TODO(), helm, chartRepo, "stable/redis", "7.0.0")
 			Expect(err).NotTo(HaveOccurred())
 
 			expectedCachePath := filepath.Join(resourcesDir, "repository", "cache", "stable-index.yaml")
