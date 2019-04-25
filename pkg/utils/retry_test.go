@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	errwrap "github.com/pkg/errors"
@@ -41,13 +42,20 @@ var _ = Describe("utils", func() {
 		zeroDuration = time.Duration(0)
 	)
 
-	BeforeSuite(func() {
-		var cancel context.CancelFunc
-		canceledCtx, cancel = context.WithCancel(context.Background())
-		cancel()
-	})
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
+		canceledCtx = func() context.Context {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+
+			for range ctx.Done() {
+			}
+			// Sanity check
+			if err := ctx.Err(); err == nil {
+				GinkgoT().Fatalf("Cancelled context %v does not yield an error: %v", ctx, err)
+			}
+			return ctx
+		}()
 	})
 	AfterEach(func() {
 		ctrl.Finish()
@@ -155,18 +163,18 @@ var _ = Describe("utils", func() {
 	Context("#Sleep", func() {
 		It("should sleep for the zero duration", func() {
 			var (
-				duration   = 0 * time.Second
-				newTimerer = mockutils.NewMockNewTimerer(ctrl)
-				timer      = mockutils.NewMockTimer(ctrl)
-				c          = make(chan time.Time, 1)
+				duration = 0 * time.Second
+				newTimer = mockutils.NewMockNewTimer(ctrl)
+				timer    = mockutils.NewMockTimer(ctrl)
+				c        = make(chan time.Time, 1)
 			)
 			c <- time.Now()
 			defer close(c)
 
-			defer test.RevertableSet(&NewTimer, newTimerer.Do)()
+			defer test.RevertableSet(&NewTimer, newTimer.Do)()
 
 			gomock.InOrder(
-				newTimerer.EXPECT().Do(duration).Return(timer),
+				newTimer.EXPECT().Do(duration).Return(timer),
 				timer.EXPECT().C().Return(c),
 				timer.EXPECT().Stop(),
 			)
@@ -176,18 +184,18 @@ var _ = Describe("utils", func() {
 
 		It("should sleep for the given duration", func() {
 			var (
-				duration   = 10 * time.Second
-				newTimerer = mockutils.NewMockNewTimerer(ctrl)
-				timer      = mockutils.NewMockTimer(ctrl)
-				c          = make(chan time.Time, 1)
+				duration = 10 * time.Second
+				newTimer = mockutils.NewMockNewTimer(ctrl)
+				timer    = mockutils.NewMockTimer(ctrl)
+				c        = make(chan time.Time, 1)
 			)
 			c <- time.Now()
 			defer close(c)
 
-			defer test.RevertableSet(&NewTimer, newTimerer.Do)()
+			defer test.RevertableSet(&NewTimer, newTimer.Do)()
 
 			gomock.InOrder(
-				newTimerer.EXPECT().Do(duration).Return(timer),
+				newTimer.EXPECT().Do(duration).Return(timer),
 				timer.EXPECT().C().Return(c),
 				timer.EXPECT().Stop(),
 			)
@@ -203,17 +211,17 @@ var _ = Describe("utils", func() {
 
 		It("should error with the context's error if the channel does not fire", func() {
 			var (
-				duration   = 10 * time.Second
-				newTimerer = mockutils.NewMockNewTimerer(ctrl)
-				timer      = mockutils.NewMockTimer(ctrl)
-				c          = make(chan time.Time)
+				duration = 10 * time.Second
+				newTimer = mockutils.NewMockNewTimer(ctrl)
+				timer    = mockutils.NewMockTimer(ctrl)
+				c        = make(chan time.Time)
 			)
 			defer close(c)
 
-			defer test.RevertableSet(&NewTimer, newTimerer.Do)()
+			defer test.RevertableSet(&NewTimer, newTimer.Do)()
 
 			gomock.InOrder(
-				newTimerer.EXPECT().Do(duration).Return(timer),
+				newTimer.EXPECT().Do(duration).Return(timer),
 				timer.EXPECT().C().Return(c),
 				timer.EXPECT().Stop(),
 			)
