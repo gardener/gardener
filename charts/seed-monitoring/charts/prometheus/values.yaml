@@ -200,6 +200,8 @@ rules:
     alertmanager:
       enabled: false
 
+ignoreAlerts: false
+
 # object can be any object you want to scale Prometheus on:
 # - number of Pods
 # - number of Nodes

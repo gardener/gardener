@@ -353,6 +353,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			"vpa": map[string]interface{}{
 				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 			},
+			"ignoreAlerts": b.Shoot.IgnoreAlerts,
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),

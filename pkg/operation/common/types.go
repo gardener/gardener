@@ -163,6 +163,10 @@ const (
 	// is used to send alerts to.
 	GardenOperatedBy = "garden.sapcloud.io/operatedBy"
 
+	// GardenIgnoreAlerts is the key for an annotation of a Shoot cluster whose value indicates
+	// if alerts for this cluster should be ignored
+	GardenIgnoreAlerts = "shoot.garden.sapcloud.io/ignore-alerts"
+
 	// IngressPrefix is the part of a FQDN which will be used to construct the domain name for an ingress controller of
 	// a Shoot cluster. For example, when a Shoot specifies domain 'cluster.example.com', the ingress domain would be
 	// '*.<IngressPrefix>.cluster.example.com'.

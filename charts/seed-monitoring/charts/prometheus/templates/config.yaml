@@ -21,6 +21,7 @@ data:
         seed_api: {{ .Values.seed.apiserver }}
         seed_region: {{ .Values.seed.region }}
         seed_profile: {{ .Values.seed.profile }}
+        ignoreAlerts: {{ .Values.ignoreAlerts }}
     rule_files:
     - /etc/prometheus/rules/*.yaml
     alerting:
@@ -40,6 +41,10 @@ data:
         - source_labels: [ __meta_kubernetes_endpoint_port_name ]
           action: keep
           regex: metrics
+      alert_relabel_configs:
+      - source_labels: [ ignoreAlerts ]
+        regex: true
+        action: drop
     scrape_configs:
     - job_name: kube-etcd3
       scheme: https
