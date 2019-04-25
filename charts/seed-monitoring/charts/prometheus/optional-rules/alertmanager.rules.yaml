@@ -1,0 +1,26 @@
+groups:
+- name: alertmanager.rules
+  rules:
+  # TODO: Evaluate if alerts are necessary in the future.
+  - alert: AlertmanagerConfigInconsistent
+    expr: count_values("config_hash", alertmanager_config_hash) / kube_statefulset_replicas{namespace="kube-system",statefulset="alertmanager"} != 1
+    for: 1h
+    labels:
+      service: alertmanager
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      summary: Alertmanager configurations are inconsistent
+      description: The configuration of the instances of the Alertmanager are out of sync. The alertmanager for shoot owners will cannot fire alerts. End users will not receive any alerts.
+  - alert: AlertmanagerFailedReload
+    expr:  alertmanager_config_last_reload_successful == 0
+    for: 1h
+    labels:
+      service: alertmanager
+      severity: warning
+      type: seed
+      visibility: operator
+    annotations:
+      summary: Alertmanager configuration reload has failed
+      description: Reloading Alertmanager's configuration has failed for {{ $labels.pod }}. The alertmanager for shoot owners will cannot fire alerts. End users will not receive any alerts.

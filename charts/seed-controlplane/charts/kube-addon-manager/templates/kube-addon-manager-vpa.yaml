@@ -1,0 +1,14 @@
+{{ if .Values.vpa.enabled }}
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: kube-addon-manager-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: kube-addon-manager
+  updatePolicy:
+    updateMode: "Off"
+{{ end }}

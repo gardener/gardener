@@ -49,6 +49,8 @@ global:
         ...
         -----END RSA PRIVATE KEY-----
     featureGates: {}
+#    admissionControlConfig: |
+#      configuration for the admission plugins. See example/20-admissionconfiguration.yaml
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
       log:

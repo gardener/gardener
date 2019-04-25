@@ -1,0 +1,8 @@
+apiVersion: apiserver.k8s.io/v1alpha1
+kind: AdmissionConfiguration
+plugins:
+  - name: ShootSeedManager
+    configuration:
+      apiVersion: seedmanager.admission.config.gardener.cloud/v1alpha1
+      kind: Configuration
+      candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
