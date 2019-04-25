@@ -114,6 +114,15 @@ func ShootWantsAlertmanager(shoot *gardenv1beta1.Shoot, secrets map[string]*core
 	return false
 }
 
+// ShootIgnoreAlerts checks if the alerts for the annotated shoot cluster should be ignored.
+func ShootIgnoreAlerts(shoot *gardenv1beta1.Shoot) bool {
+	ignore := false
+	if value, ok := shoot.Annotations[common.GardenIgnoreAlerts]; ok {
+		ignore, _ = strconv.ParseBool(value)
+	}
+	return ignore
+}
+
 // GetShootCloudProviderWorkers retrieves the cloud-specific workers of the given Shoot.
 func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) []gardenv1beta1.Worker {
 	var (
