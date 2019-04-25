@@ -19,9 +19,9 @@ package flow
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/hashicorp/go-multierror"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -153,12 +153,6 @@ func InitialStats(all TaskIDs) *Stats {
 	}
 }
 
-func newNopLogger() logrus.FieldLogger {
-	logger := logrus.New()
-	logger.Out = ioutil.Discard
-	return logger
-}
-
 func newExecution(flow *Flow, logger logrus.FieldLogger, reporter ProgressReporter) *execution {
 	all := NewTaskIDs()
 
@@ -167,7 +161,7 @@ func newExecution(flow *Flow, logger logrus.FieldLogger, reporter ProgressReport
 	}
 
 	if logger == nil {
-		logger = newNopLogger()
+		logger = utils.NewNopLogger()
 	}
 	logger = logger.WithField(logKeyFlow, flow.name)
 

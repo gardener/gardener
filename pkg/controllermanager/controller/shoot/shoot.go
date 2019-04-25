@@ -38,8 +38,6 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/robfig/cron"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -67,7 +65,7 @@ type Controller struct {
 	secrets                       map[string]*corev1.Secret
 	imageVector                   imagevector.ImageVector
 	scheduler                     reconcilescheduler.Interface
-	shootToHibernationCron        map[string]map[string]*cron.Cron
+	hibernationScheduleRegistry   HibernationScheduleRegistry
 
 	seedLister                   gardenlisters.SeedLister
 	shootLister                  gardenlisters.ShootLister
@@ -143,7 +141,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 		secrets:                       secrets,
 		imageVector:                   imageVector,
 		scheduler:                     reconcilescheduler.New(nil),
-		shootToHibernationCron:        make(map[string]map[string]*cron.Cron),
+		hibernationScheduleRegistry:   NewHibernationScheduleRegistry(),
 
 		seedLister:                   seedLister,
 		shootLister:                  shootLister,
