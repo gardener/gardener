@@ -176,9 +176,9 @@ func cleanResourceFn(c client.Client, deleteSelector, checkSelector *client.List
 	mkCleaner := func(finalize bool) flow.TaskFn {
 		var opts []client.DeleteOptionFunc
 		if !finalize {
-			opts = []client.DeleteOptionFunc{client.GracePeriodSeconds(60), client.PropagationPolicy(metav1.DeletePropagationForeground)}
+			opts = []client.DeleteOptionFunc{client.GracePeriodSeconds(60)}
 		} else {
-			opts = []client.DeleteOptionFunc{client.GracePeriodSeconds(0), client.PropagationPolicy(metav1.DeletePropagationBackground)}
+			opts = []client.DeleteOptionFunc{client.GracePeriodSeconds(0)}
 		}
 
 		return func(ctx context.Context) error {
