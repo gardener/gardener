@@ -20,7 +20,7 @@ spec:
         workers: 10.250.0.0/19
       workers:
       - name: cpu-worker
-        machineType: Standard_DS2_v2
+        machineType: Standard_D2_v3
         volumeType: standard
         volumeSize: 35Gi # must be at least 35Gi for Azure VMs
         autoScalerMin: 2
@@ -119,6 +119,7 @@ spec:
       loadBalancerSourceRanges: []
     kubernetes-dashboard:
       enabled: true
+    # authenticationMode: basic # allowed values: basic,token
     # Heapster addon is deprecated and no longer supported. Gardener deploys the Kubernetes metrics-server
     # into the kube-system namespace of shoots (cannot be turned off) for fetching metrics and enabling
     # horizontal pod auto-scaling.

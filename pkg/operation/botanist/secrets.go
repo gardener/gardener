@@ -335,6 +335,65 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			},
 		},
 
+		// Secret definition for csi-attacher
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "csi-attacher",
+
+				CommonName:   "system:csi-attacher",
+				Organization: []string{user.SystemPrivilegedGroup},
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
+			},
+
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+			},
+		},
+
+		// Secret definition for csi-provisioner
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "csi-provisioner",
+
+				CommonName:   "system:csi-provisioner",
+				Organization: []string{user.SystemPrivilegedGroup},
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
+			},
+
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+			},
+		},
+
+		// Secret definition for csi-snapshotter
+		&secrets.ControlPlaneSecretConfig{
+			CertificateSecretConfig: &secrets.CertificateSecretConfig{
+				Name: "csi-snapshotter",
+
+				CommonName:   "system:csi-snapshotter",
+				Organization: []string{user.SystemPrivilegedGroup},
+				DNSNames:     nil,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
+			},
+
+			KubeConfigRequest: &secrets.KubeConfigRequest{
+				ClusterName:  b.Shoot.SeedNamespace,
+				APIServerURL: b.Shoot.ComputeAPIServerURL(true, false),
+			},
+		},
 		// Secret definition for kube-proxy
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{

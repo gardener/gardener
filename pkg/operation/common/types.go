@@ -471,21 +471,29 @@ const (
 
 	// CSIAttacherImageName is the name of csi attacher - https://github.com/kubernetes-csi/external-attacher
 	CSIAttacherImageName = "csi-attacher"
-
-	// CSIDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/driver-registrar
-	CSIDriverRegistrarImageName = "csi-driver-registrar"
+	// CSIAttacher is the name of CSI Attacher
+	CSIAttacher = "csi-attacher"
 
 	// CSINodeDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/node-driver-registrar
 	CSINodeDriverRegistrarImageName = "csi-node-driver-registrar"
 
 	// CSIProvisionerImageName is the name of csi provisioner - https://github.com/kubernetes-csi/external-provisioner
 	CSIProvisionerImageName = "csi-provisioner"
+	// CSIProvisioner is the name of CSI Provisioner
+	CSIProvisioner = "csi-provisioner"
 
 	// CSISnapshotterImageName is the name of csi plugin for Alicloud - https://github.com/kubernetes-csi/external-snapshotter
 	CSISnapshotterImageName = "csi-snapshotter"
+	// CSISnapshotter is the name of CSI Snapshotter
+	CSISnapshotter = "csi-snapshotter"
 
 	// CSIPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
 	CSIPluginAlicloudImageName = "csi-plugin-alicloud"
+	// CSIPluginAlicloud is the name of Alicloud CSI Plugin
+	CSIPluginAlicloud = "csi-disk-plugin-alicloud"
+
+	// CSIPluginController is the name of CSI plugin controller
+	CSIPluginController = "csi-plugin-controller"
 
 	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
 	AWSLBReadvertiserImageName = "aws-lb-readvertiser"

@@ -81,7 +81,7 @@ spec:
       ${yaml.dump(workers, width=10000, default_flow_style=None)}
       % else:
       - name: cpu-worker
-        machineType: m4.large
+        machineType: m5.large
         volumeType: gp2
         volumeSize: 20Gi
         autoScalerMin: 2
@@ -115,7 +115,7 @@ spec:
       ${yaml.dump(workers, width=10000, default_flow_style=None)}
       % else:
       - name: cpu-worker
-        machineType: Standard_DS2_v2
+        machineType: Standard_D2_v3
         volumeType: standard
         volumeSize: 35Gi # must be at least 35Gi for Azure VMs
         autoScalerMin: 2
@@ -351,6 +351,7 @@ spec:
       loadBalancerSourceRanges: ${value("spec.addons.nginx-ingress.loadBalancerSourceRanges", [])}
     kubernetes-dashboard:
       enabled: ${value("spec.addons.kubernetes-dashboard.enabled", "true")}
+    # authenticationMode: basic # allowed values: basic,token
   % if cloud == "aws":
     # kube2iam addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy kube2iam as well as

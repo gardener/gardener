@@ -81,14 +81,10 @@ elastic-kibana-curator:
   curator:
     objectCount: 1
   elasticsearch:
-    elasticsearchReplicas: 1
-    elasticsearchVolumeSizeGB: 30
     objectCount: 1
 
 fluentd-es:
   enabled: true
-  images:
-
 
 alertmanager:
   emailConfigs: []

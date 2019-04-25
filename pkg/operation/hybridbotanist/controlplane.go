@@ -260,6 +260,9 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-etcd-ca":                   b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
 		},
+		"vpa": map[string]interface{}{
+			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+		},
 	}
 	cloudSpecificExposeValues, err := b.SeedCloudBotanist.GenerateKubeAPIServerExposeConfig()
 	if err != nil {
@@ -363,17 +366,16 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	defaultValues["admissionPlugins"] = admissionPlugins
 
 	if b.Shoot.UsesCSI() {
-		var featureGates map[string]interface{}
-		if defaultValues["featureGates"] != nil {
-			featureGates = defaultValues["featureGates"].(map[string]interface{})
+		var existingFeatureGates map[string]bool
+		if fg, ok := defaultValues["featureGates"]; ok {
+			existingFeatureGates = fg.(map[string]bool)
 		}
-		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), featureGates)
+
+		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), existingFeatureGates)
 		if err != nil {
 			return err
 		}
-		if featureGates != nil {
-			defaultValues["featureGates"] = featureGates
-		}
+		defaultValues["featureGates"] = featureGates
 	} else {
 		// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
 		defaultValues["cloudProvider"] = b.ShootCloudBotanist.GetCloudProviderName()
@@ -585,4 +587,15 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), b.Shoot.SeedNamespace, common.KubeSchedulerDeploymentName, values, cloudValues)
+}
+
+// DeployCSIControllers deploy CSI controllers into the Shoot namespace in the Seed cluster. They include CSI plugin controller service (Provider specific),
+// CSI external attacher, CSI external provisioner and CSI snapshotter.
+func (b *HybridBotanist) DeployCSIControllers() error {
+	csiPlugin, err := b.ShootCloudBotanist.GenerateCSIConfig()
+	if err != nil {
+		return err
+	}
+	name := fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName())
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, csiPlugin, nil)
 }

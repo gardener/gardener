@@ -210,6 +210,13 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.DeployMachineControllerManager).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
 		})
+
+		deployCSIControllers = g.Add(flow.Task{
+			Name:         "Deploying CSI controllers",
+			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCSIControllers).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.UsesCSI()),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
+		})
+
 		reconcileMachines = g.Add(flow.Task{
 			Name:         "Reconciling Shoot workers",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.ReconcileMachines).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -228,7 +235,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, reconcileMachines),
+			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, reconcileMachines, deployCSIControllers),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",

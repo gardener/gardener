@@ -50,7 +50,7 @@ spec:
         ports:
         - containerPort: {{ .Values.deployment.spec.containers.ports.dns }}
           name: dns-udp
-          protocol:
+          protocol: UDP
         - containerPort: {{ .Values.deployment.spec.containers.ports.dns }}
           name: dns-tcp
           protocol: TCP

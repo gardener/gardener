@@ -31,6 +31,10 @@ const (
 	AccessKeyID = "accessKeyID"
 	// AccessKeySecret is a constant for the key in a cloud provider secret and backup secret that holds the Alicloud access key secret.
 	AccessKeySecret = "accessKeySecret"
-	// UserData is a constant for the key in a cloud provider secret that holds the user data
+	// UserData is a constant for the key in a cloud provider secret that holds the user data.
 	UserData = "userData"
+	// BucketName is a constant for the name of bucket of OSS object storage.
+	BucketName = "bucketName"
+	// StorageEndpoint is a constant for the access endpoint of the Alicloud OSS object storage.
+	StorageEndpoint = "storageEndpoint"
 )

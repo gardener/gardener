@@ -15,11 +15,15 @@
 package alicloudbotanist
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	storagev1 "k8s.io/api/storage/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type cloudConfig struct {
@@ -115,26 +119,6 @@ func (b *AlicloudBotanist) GenerateCloudControllerManagerConfig() (map[string]in
 	return newConf, chartName, nil
 }
 
-// GenerateCSIConfig generates the configuration for CSI charts
-func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
-	conf := map[string]interface{}{
-		"credential": map[string]interface{}{
-			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
-			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
-		},
-		"kubernetesVersion": b.Operation.ShootVersion(),
-		"enabled":           true,
-	}
-
-	return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
-		common.CSIAttacherImageName,
-		common.CSIPluginAlicloudImageName,
-		common.CSIProvisionerImageName,
-		common.CSISnapshotterImageName,
-		common.CSINodeDriverRegistrarImageName,
-	)
-}
-
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
 // render the Deployment manifest of the kube-controller-manager properly.
 func (b *AlicloudBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
@@ -151,7 +135,59 @@ func (b *AlicloudBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
-	return map[string][]byte{}, map[string]interface{}{}, nil
+	tf, err := b.NewBackupInfrastructureTerraformer()
+	if err != nil {
+		return nil, nil, err
+	}
+	stateVariables, err := tf.GetStateOutputVariables(BucketName, StorageEndpoint)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	secretData := map[string][]byte{
+		StorageEndpoint: []byte(stateVariables[StorageEndpoint]),
+		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
+		AccessKeySecret: b.Seed.Secret.Data[AccessKeySecret],
+	}
+
+	backupConfigData := map[string]interface{}{
+		"schedule":         b.ShootBackup.Schedule,
+		"storageProvider":  "OSS",
+		"storageContainer": stateVariables[BucketName],
+		"backupSecret":     common.BackupSecretName,
+		"env": []map[string]interface{}{
+			{
+				"name": "ALICLOUD_ENDPOINT",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  StorageEndpoint,
+					},
+				},
+			},
+			{
+				"name": "ALICLOUD_ACCESS_KEY_ID",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AccessKeyID,
+					},
+				},
+			},
+			{
+				"name": "ALICLOUD_ACCESS_KEY_SECRET",
+				"valueFrom": map[string]interface{}{
+					"secretKeyRef": map[string]interface{}{
+						"name": common.BackupSecretName,
+						"key":  AccessKeySecret,
+					},
+				},
+			},
+		},
+		"volumeMount": []map[string]interface{}{},
+	}
+
+	return secretData, backupConfigData, nil
 }
 
 // GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver
@@ -163,6 +199,65 @@ func (b *AlicloudBotanist) GenerateKubeAPIServerExposeConfig() (map[string]inter
 			fmt.Sprintf("--external-hostname=%s", b.APIServerAddress),
 		},
 	}, nil
+}
+
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	//TODO: This part is just for release 0.21 and will be deleted in release 0.22
+
+	if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, common.CSIPluginController); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSIAttacher); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSIProvisioner); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSISnapshotter); err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	storageClass := &storagev1.StorageClass{}
+	if b.K8sShootClient != nil {
+		if err := b.K8sShootClient.Client().Get(context.TODO(), kutil.Key("default"), storageClass); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		} else if _, ok := storageClass.Parameters["fsType"]; ok {
+			if err = b.K8sShootClient.Client().Delete(context.TODO(), storageClass); err != nil && !apierrors.IsNotFound(err) {
+				return nil, err
+			}
+		}
+	}
+	// end of previous part
+
+	conf := map[string]interface{}{
+		"regionID": b.Shoot.Info.Spec.Cloud.Region,
+		"credential": map[string]interface{}{
+			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
+			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
+		},
+		"podAnnotations": map[string]interface{}{
+			fmt.Sprintf("checksum/%s", common.CSIAttacher):             b.CheckSums[common.CSIAttacher],
+			fmt.Sprintf("checksum/%s", common.CloudProviderSecretName): b.CheckSums[common.CloudProviderSecretName],
+			fmt.Sprintf("checksum/%s", common.CSIProvisioner):          b.CheckSums[common.CSIProvisioner],
+			fmt.Sprintf("checksum/%s", common.CSISnapshotter):          b.CheckSums[common.CSISnapshotter],
+		},
+		"kubernetesVersion": b.ShootVersion(),
+		"enabled":           true,
+	}
+
+	return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
+		common.CSIAttacherImageName,
+		common.CSIPluginAlicloudImageName,
+		common.CSIProvisionerImageName,
+		common.CSISnapshotterImageName,
+		common.CSINodeDriverRegistrarImageName,
+	)
 }
 
 // GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the

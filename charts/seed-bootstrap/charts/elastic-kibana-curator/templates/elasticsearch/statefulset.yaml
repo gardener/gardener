@@ -13,7 +13,7 @@ spec:
     matchLabels:
       app: elasticsearch-logging
       role: logging
-  replicas: {{ .Values.elasticsearch.elasticsearchReplicas }}
+  replicas: {{ .Values.elasticsearch.replicaCount }}
   template:
     metadata:
       annotations:
@@ -66,8 +66,8 @@ spec:
             resourceFieldRef:
               resource: limits.cpu
         resources:
-          # need more cpu upon initialization, therefore burstable class
-{{- include "util-templates.resource-quantity" .Values.elasticsearch | indent 10 }}
+          # Need more cpu upon initialization, therefore burstable class.
+          {{- include "util-templates.resource-quantity" .Values.elasticsearch | nindent 10 }}
         ports:
         - containerPort: {{ .Values.global.elasticsearchPorts.db }}
           name: http
@@ -76,16 +76,9 @@ spec:
           name: transport
           protocol: TCP
         livenessProbe:
-          tcpSocket:
-            port: transport
-          initialDelaySeconds: 20
-          periodSeconds: 10
+          {{- toYaml .Values.elasticsearch.livenessProbe | nindent 10 }}
         readinessProbe:
-          httpGet:
-            path: /_cluster/health
-            port: http
-          initialDelaySeconds: 20
-          timeoutSeconds: 5
+          {{- toYaml .Values.elasticsearch.readinessProbe | nindent 10 }}
         volumeMounts:
         - name: elasticsearch-logging
           mountPath: /data
@@ -108,7 +101,8 @@ spec:
       labels:
         role: logging
     spec:
-      accessModes: [ "ReadWriteOnce" ]
+      accessModes: 
+      - {{ .Values.elasticsearch.persistence.accessMode }}
       resources:
         requests:
-          storage: {{ .Values.elasticsearch.elasticsearchVolumeSizeGB }}Gi
+          storage: {{ .Values.elasticsearch.persistence.size }}

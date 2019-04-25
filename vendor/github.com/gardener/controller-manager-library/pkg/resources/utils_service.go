@@ -62,3 +62,20 @@ func GetService(src ResourcesSource, namespace, name string) (*ServiceObject, er
 	}
 	return s, nil
 }
+
+func GetCachedService(src ResourcesSource, namespace, name string) (*ServiceObject, error) {
+	resource, err := src.Resources().Get(&api.Service{})
+	if err != nil {
+		return nil, err
+	}
+	o, err := resource.GetCached(NewObjectName(namespace, name))
+	if err != nil {
+		return nil, err
+	}
+
+	s := Service(o)
+	if s == nil {
+		return nil, fmt.Errorf("oops, unexpected typo for service: %T", o.Data())
+	}
+	return s, nil
+}

@@ -126,6 +126,11 @@ func SetObjectDefaults_SeedList(in *SeedList) {
 
 func SetObjectDefaults_Shoot(in *Shoot) {
 	SetDefaults_Shoot(in)
+	if in.Spec.Addons != nil {
+		if in.Spec.Addons.KubernetesDashboard != nil {
+			SetDefaults_KubernetesDashboard(in.Spec.Addons.KubernetesDashboard)
+		}
+	}
 	if in.Spec.Cloud.AWS != nil {
 		for i := range in.Spec.Cloud.AWS.Workers {
 			a := &in.Spec.Cloud.AWS.Workers[i]

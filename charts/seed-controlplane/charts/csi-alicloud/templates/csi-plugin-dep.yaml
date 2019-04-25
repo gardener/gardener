@@ -1,0 +1,138 @@
+kind: Deployment
+apiVersion: {{ include "deploymentversion" . }}
+metadata:
+  name: csi-plugin-controller
+  namespace: {{ .Release.Namespace }}
+labels:
+    garden.sapcloud.io/role: controlplane
+    app: kubernetes
+    role: csi-plugin-controller
+spec:
+  selector:
+    matchLabels:
+      app: kubernetes
+      role: csi-plugin-controller
+  template:
+    metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        garden.sapcloud.io/role: controlplane
+        app: kubernetes
+        role: csi-plugin-controller
+    spec:
+      containers:
+        - name: csi-diskplugin
+          image: {{ index .Values.images "csi-plugin-alicloud" }}
+          args :
+          - "--endpoint=$(CSI_ENDPOINT)"
+          - "--nodeid=dummy"
+          - "--run-as-controller=true"
+          - "--v=5"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix://var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+            - name: REGION_ID
+              value: {{ .Values.regionID }}
+            - name: ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: cloudprovider
+                  key: accessKeyID
+            - name: ACCESS_KEY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: cloudprovider
+                  key: accessKeySecret
+          imagePullPolicy: Always
+{{- if .Values.diskpluginResources }}
+          resources:
+{{ toYaml .Values.diskpluginResources | indent 12 }}         
+{{- end }}
+          ports:
+          - containerPort: 80
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
+        - name: csi-attacher
+          image: {{ index .Values.images "csi-attacher" }}
+          args:
+            - "--v=5"
+            - "--csi-address=$(CSI_ENDPOINT)"
+            - "--kubeconfig=/var/lib/csi-attacher/kubeconfig"
+            - "--leader-election"
+{{- if semverCompare ">= 1.14" .Values.kubernetesVersion }}
+            - "--leader-election-type=configmaps"
+{{- else }}
+            - "--leader-election-identity=$(MY_NAME)"
+{{- end }}
+            - "--leader-election-namespace=kube-system"
+          env:
+            - name: CSI_ENDPOINT
+              value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+            - name: MY_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+{{- if .Values.attacherResources }}
+          resources:
+{{ toYaml .Values.attacherResources | indent 12 }}
+{{- end }}
+          volumeMounts:
+          - name: csi-attacher
+            mountPath: /var/lib/csi-attacher
+          - name: socket-dir
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com          
+        - name: csi-provisioner
+          image: {{ index .Values.images "csi-provisioner" }}
+          args:
+            - "--provisioner=diskplugin.csi.alibabacloud.com"
+            - "--csi-address=$(CSI_ENDPOINT)"
+            - "--kubeconfig=/var/lib/csi-provisioner/kubeconfig"
+            - "--feature-gates=Topology=True"
+            - "--enable-leader-election=true"
+{{- if .Values.provisionerResources }}
+          resources:
+{{ toYaml .Values.provisionerResources | indent 12 }}           
+{{- end }}
+          env:
+          - name: CSI_ENDPOINT
+            value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+          - name: POD_NAMESPACE
+            value: kube-system
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com          
+          - name: csi-provisioner
+            mountPath: /var/lib/csi-provisioner
+        - name: csi-snapshotter
+          image: {{ index .Values.images "csi-snapshotter" }}
+          args:
+            - "--csi-address=$(CSI_ENDPOINT)"
+            - "--kubeconfig=/var/lib/csi-snapshotter/kubeconfig"
+          env:
+          - name: CSI_ENDPOINT
+            value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
+{{- if .Values.snapshotterResources}}
+          resources:
+{{ toYaml .Values.snapshotterResources | indent 12 }}           
+{{- end}}
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com          
+          - name: csi-snapshotter
+            mountPath: /var/lib/csi-snapshotter
+      volumes:
+      - name: socket-dir
+        emptyDir: {}
+      - name: csi-attacher
+        secret:
+          secretName: csi-attacher
+      - name: csi-provisioner
+        secret:
+          secretName: csi-provisioner
+      - name: csi-snapshotter
+        secret:
+          secretName: csi-snapshotter

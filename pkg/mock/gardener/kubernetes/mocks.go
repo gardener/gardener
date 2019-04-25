@@ -10,18 +10,15 @@ import (
 	kubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
 	versioned1 "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	gomock "github.com/golang/mock/gomock"
-	logrus "github.com/sirupsen/logrus"
 	v1 "k8s.io/api/apps/v1"
 	v10 "k8s.io/api/batch/v1"
 	v11 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/rbac/v1"
-	v1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	clientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	meta "k8s.io/apimachinery/pkg/api/meta"
 	v13 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubernetes0 "k8s.io/client-go/kubernetes"
 	rest "k8s.io/client-go/rest"
-	v1beta10 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
 	clientset0 "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	reflect "reflect"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,49 +104,6 @@ func (mr *MockInterfaceMockRecorder) CheckForwardPodPort(arg0, arg1, arg2, arg3 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckForwardPodPort", reflect.TypeOf((*MockInterface)(nil).CheckForwardPodPort), arg0, arg1, arg2, arg3)
 }
 
-// CheckResourceCleanup mocks base method
-func (m *MockInterface) CheckResourceCleanup(arg0 *logrus.Entry, arg1 map[string]map[string]bool, arg2 string, arg3 []string) (bool, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckResourceCleanup", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CheckResourceCleanup indicates an expected call of CheckResourceCleanup
-func (mr *MockInterfaceMockRecorder) CheckResourceCleanup(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckResourceCleanup", reflect.TypeOf((*MockInterface)(nil).CheckResourceCleanup), arg0, arg1, arg2, arg3)
-}
-
-// CleanupAPIGroupResources mocks base method
-func (m *MockInterface) CleanupAPIGroupResources(arg0 map[string]map[string]bool, arg1 string, arg2 []string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CleanupAPIGroupResources", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CleanupAPIGroupResources indicates an expected call of CleanupAPIGroupResources
-func (mr *MockInterfaceMockRecorder) CleanupAPIGroupResources(arg0, arg1, arg2 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupAPIGroupResources", reflect.TypeOf((*MockInterface)(nil).CleanupAPIGroupResources), arg0, arg1, arg2)
-}
-
-// CleanupResources mocks base method
-func (m *MockInterface) CleanupResources(arg0 map[string]map[string]bool, arg1 map[string][]string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CleanupResources", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CleanupResources indicates an expected call of CleanupResources
-func (mr *MockInterfaceMockRecorder) CleanupResources(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CleanupResources", reflect.TypeOf((*MockInterface)(nil).CleanupResources), arg0, arg1)
-}
-
 // Client mocks base method
 func (m *MockInterface) Client() client.Client {
 	m.ctrl.T.Helper()
@@ -222,48 +176,6 @@ func (m *MockInterface) CreateSecretObject(arg0 *v11.Secret, arg1 bool) (*v11.Se
 func (mr *MockInterfaceMockRecorder) CreateSecretObject(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecretObject", reflect.TypeOf((*MockInterface)(nil).CreateSecretObject), arg0, arg1)
-}
-
-// DeleteAPIService mocks base method
-func (m *MockInterface) DeleteAPIService(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAPIService", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteAPIService indicates an expected call of DeleteAPIService
-func (mr *MockInterfaceMockRecorder) DeleteAPIService(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAPIService", reflect.TypeOf((*MockInterface)(nil).DeleteAPIService), arg0)
-}
-
-// DeleteAPIServiceForcefully mocks base method
-func (m *MockInterface) DeleteAPIServiceForcefully(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteAPIServiceForcefully", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteAPIServiceForcefully indicates an expected call of DeleteAPIServiceForcefully
-func (mr *MockInterfaceMockRecorder) DeleteAPIServiceForcefully(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAPIServiceForcefully", reflect.TypeOf((*MockInterface)(nil).DeleteAPIServiceForcefully), arg0)
-}
-
-// DeleteCRDForcefully mocks base method
-func (m *MockInterface) DeleteCRDForcefully(arg0 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeleteCRDForcefully", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// DeleteCRDForcefully indicates an expected call of DeleteCRDForcefully
-func (mr *MockInterfaceMockRecorder) DeleteCRDForcefully(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCRDForcefully", reflect.TypeOf((*MockInterface)(nil).DeleteCRDForcefully), arg0)
 }
 
 // DeleteClusterRole mocks base method
@@ -636,20 +548,6 @@ func (mr *MockInterfaceMockRecorder) GetPod(arg0, arg1 interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPod", reflect.TypeOf((*MockInterface)(nil).GetPod), arg0, arg1)
 }
 
-// GetResourceAPIGroups mocks base method
-func (m *MockInterface) GetResourceAPIGroups() map[string][]string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetResourceAPIGroups")
-	ret0, _ := ret[0].(map[string][]string)
-	return ret0
-}
-
-// GetResourceAPIGroups indicates an expected call of GetResourceAPIGroups
-func (mr *MockInterfaceMockRecorder) GetResourceAPIGroups() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetResourceAPIGroups", reflect.TypeOf((*MockInterface)(nil).GetResourceAPIGroups))
-}
-
 // GetSecret mocks base method
 func (m *MockInterface) GetSecret(arg0, arg1 string) (*v11.Secret, error) {
 	m.ctrl.T.Helper()
@@ -692,36 +590,6 @@ func (m *MockInterface) Kubernetes() kubernetes0.Interface {
 func (mr *MockInterfaceMockRecorder) Kubernetes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Kubernetes", reflect.TypeOf((*MockInterface)(nil).Kubernetes))
-}
-
-// ListAPIServices mocks base method
-func (m *MockInterface) ListAPIServices(arg0 v13.ListOptions) (*v1beta10.APIServiceList, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAPIServices", arg0)
-	ret0, _ := ret[0].(*v1beta10.APIServiceList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListAPIServices indicates an expected call of ListAPIServices
-func (mr *MockInterfaceMockRecorder) ListAPIServices(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAPIServices", reflect.TypeOf((*MockInterface)(nil).ListAPIServices), arg0)
-}
-
-// ListCRDs mocks base method
-func (m *MockInterface) ListCRDs(arg0 v13.ListOptions) (*v1beta1.CustomResourceDefinitionList, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListCRDs", arg0)
-	ret0, _ := ret[0].(*v1beta1.CustomResourceDefinitionList)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListCRDs indicates an expected call of ListCRDs
-func (mr *MockInterfaceMockRecorder) ListCRDs(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCRDs", reflect.TypeOf((*MockInterface)(nil).ListCRDs), arg0)
 }
 
 // ListDeployments mocks base method

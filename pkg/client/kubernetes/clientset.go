@@ -20,12 +20,10 @@ import (
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	apiextensionclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	apiregistrationclientset "k8s.io/kube-aggregator/pkg/client/clientset_generated/clientset"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
 
 // Applier returns the applier of this Clientset.
@@ -46,28 +44,6 @@ func (c *Clientset) Client() client.Client {
 // RESTMapper returns the restMapper of this Clientset.
 func (c *Clientset) RESTMapper() meta.RESTMapper {
 	return c.restMapper
-}
-
-// DiscoverAPIGroups will fetch all Kubernetes server resources, i.e. all registered API groups and the
-// associated resources.
-func (c *Clientset) DiscoverAPIGroups() error {
-	restMapper, err := apiutil.NewDiscoveryRESTMapper(c.config)
-	if err != nil {
-		return err
-	}
-
-	c.restMapper = restMapper
-	return nil
-}
-
-// GetAPIResourceList will return the Kubernetes API resource list.
-func (c *Clientset) GetAPIResourceList() []*metav1.APIResourceList {
-	return nil
-}
-
-// GetResourceAPIGroups will return the resourceAPIGroups attribute of the Client object.
-func (c *Clientset) GetResourceAPIGroups() map[string][]string {
-	return c.resourceAPIGroups
 }
 
 // Kubernetes will return the kubernetes attribute of the Client object.

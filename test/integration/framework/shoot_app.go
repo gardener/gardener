@@ -26,17 +26,15 @@ import (
 	"strings"
 	"time"
 
-	helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
-
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
 	shootop "github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
-
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -44,7 +42,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/helm/pkg/repo"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -58,18 +55,18 @@ const (
 // NewGardenTestOperation initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
 func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Interface, logger logrus.FieldLogger, shoot *v1beta1.Shoot) (*GardenerTestOperation, error) {
 	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shoot.Namespace, Name: shoot.Name}, shoot); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get Shoot in Garden cluster")
 	}
 
 	seed := &v1beta1.Seed{}
 	err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: *shoot.Spec.Cloud.Seed}, seed)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get Seed from Shoot in Garden cluster")
 	}
 
 	ns := &corev1.Namespace{}
 	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Namespace}, ns); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get the Shoot namespace in Garden cluster")
 	}
 
 	if ns.Labels == nil {
@@ -82,18 +79,18 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 
 	project := &v1beta1.Project{}
 	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: projectName}, project); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not get Project in Garden cluster")
 	}
 
 	seedSecretRef := seed.Spec.SecretRef
 	seedClient, err := kubernetes.NewClientFromSecret(k8sGardenClient, seedSecretRef.Namespace, seedSecretRef.Name, client.Options{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not construct Seed client")
 	}
 
 	k8sShootClient, err := kubernetes.NewClientFromSecret(seedClient, shootop.ComputeTechnicalID(project.Name, shoot), v1beta1.GardenerName, client.Options{})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "could not construct Shoot client")
 	}
 
 	return &GardenerTestOperation{
@@ -261,7 +258,7 @@ func (o *GardenerTestOperation) GetCloudProvider() (v1beta1.CloudProvider, error
 }
 
 // DownloadChartArtifacts downloads a helm chart from helm stable repo url available in resources/repositories
-func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload string) error {
+func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm Helm, chartRepoDestination, chartNameToDownload, chartVersionToDownload string) error {
 	exists, err := Exists(chartRepoDestination)
 	if err != nil {
 		return err
@@ -291,7 +288,7 @@ func (o *GardenerTestOperation) DownloadChartArtifacts(ctx context.Context, helm
 	}
 
 	if !chartDownloaded {
-		chartPath, err = downloadChart(ctx, chartNameToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
+		chartPath, err = downloadChart(ctx, chartNameToDownload, chartVersionToDownload, chartRepoDestination, stableRepo.URL, HelmAccess{
 			HelmPath: helm,
 		})
 		if err != nil {

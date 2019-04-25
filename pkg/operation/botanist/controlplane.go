@@ -52,8 +52,10 @@ func (b *Botanist) DeployNamespace() error {
 			Annotations: getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID),
 			Name:        b.Shoot.SeedNamespace,
 			Labels: map[string]string{
-				common.GardenRole:      common.GardenRoleShoot,
-				common.ShootHibernated: strconv.FormatBool(b.Shoot.IsHibernated),
+				common.GardenRole:                common.GardenRoleShoot,
+				common.ShootHibernated:           strconv.FormatBool(b.Shoot.IsHibernated),
+				gardencorev1alpha1.SeedProvider:  string(b.Seed.CloudProvider),
+				gardencorev1alpha1.ShootProvider: string(b.Shoot.CloudProvider),
 			},
 		},
 	}, true)
@@ -505,7 +507,7 @@ func (b *Botanist) DeploySeedLogging() error {
 			"host":            kibanaHost,
 		},
 		"elasticsearch": map[string]interface{}{
-			"elasticsearchReplicas": b.Shoot.GetReplicas(1),
+			"replicaCount": b.Shoot.GetReplicas(1),
 		},
 		"kibana": map[string]interface{}{
 			"replicaCount": b.Shoot.GetReplicas(1),
@@ -638,6 +640,11 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	if b.Shoot.CloudProvider != v1beta1.CloudProviderLocal {
 		controllerManagerDeployments = append(controllerManagerDeployments, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName)
 	}
+
+	if b.Shoot.UsesCSI() {
+		controllerManagerDeployments = append(controllerManagerDeployments, common.CSIPluginController)
+	}
+
 	for _, deployment := range controllerManagerDeployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
 			return err
@@ -662,7 +669,11 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	for _, deployment := range []string{common.KubeAddonManagerDeploymentName, common.KubeControllerManagerDeploymentName, common.KubeAPIServerDeploymentName} {
+	deployments := []string{common.KubeAddonManagerDeploymentName, common.KubeControllerManagerDeploymentName, common.KubeAPIServerDeploymentName}
+	if b.Shoot.UsesCSI() {
+		deployments = append(deployments, common.CSIPluginController)
+	}
+	for _, deployment := range deployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}

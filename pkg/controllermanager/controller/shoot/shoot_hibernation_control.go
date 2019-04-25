@@ -15,14 +15,12 @@
 package shoot
 
 import (
-	"fmt"
-	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
-	"github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/client-go/util/retry"
 	"reflect"
 	"time"
+
+	garden "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
+
+	"github.com/sirupsen/logrus"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlogger "github.com/gardener/gardener/pkg/logger"
@@ -46,6 +44,18 @@ func getShootHibernationSchedules(shoot *gardenv1beta1.Shoot) []gardenv1beta1.Hi
 	return hibernation.Schedules
 }
 
+var (
+	// NewCronWithLocation creates a new cron with the given location. Exposed for testing.
+	NewCronWithLocation = newCronWithLocation
+
+	// TimeNow returns the current time. Exposed for testing.
+	TimeNow = time.Now
+)
+
+func newCronWithLocation(location *time.Location) Cron {
+	return cron.NewWithLocation(location)
+}
+
 // GroupHibernationSchedulesByLocation groups the given HibernationSchedules by their Location.
 //
 // If the Location of a HibernationSchedule is `nil`, it is defaulted to UTC.
@@ -66,6 +76,56 @@ func GroupHibernationSchedulesByLocation(schedules []gardenv1beta1.HibernationSc
 	}
 
 	return locationToSchedules
+}
+
+// LocationLogger returns a logger for the given location.
+func LocationLogger(logger logrus.FieldLogger, location *time.Location) logrus.FieldLogger {
+	return logger.WithFields(logrus.Fields{
+		"location": location,
+	})
+}
+
+// ComputeHibernationSchedule computes the HibernationSchedule for the given Shoot.
+func ComputeHibernationSchedule(client garden.Interface, logger logrus.FieldLogger, shoot *gardenv1beta1.Shoot) (HibernationSchedule, error) {
+	var (
+		schedules           = getShootHibernationSchedules(shoot)
+		locationToSchedules = GroupHibernationSchedulesByLocation(schedules)
+		schedule            = make(HibernationSchedule, len(locationToSchedules))
+	)
+
+	for locationID, schedules := range locationToSchedules {
+		location, err := time.LoadLocation(locationID)
+		if err != nil {
+			return nil, err
+		}
+
+		cr := NewCronWithLocation(location)
+		cronLogger := LocationLogger(logger, location)
+		for _, schedule := range schedules {
+			if schedule.Start != nil {
+				start, err := cron.ParseStandard(*schedule.Start)
+				if err != nil {
+					return nil, err
+				}
+
+				cr.Schedule(start, NewHibernationJob(client, cronLogger, shoot, true))
+				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(TimeNow()))
+			}
+
+			if schedule.End != nil {
+				end, err := cron.ParseStandard(*schedule.End)
+				if err != nil {
+					return nil, err
+				}
+
+				cr.Schedule(end, NewHibernationJob(client, cronLogger, shoot, false))
+				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(TimeNow()))
+			}
+		}
+		schedule[locationID] = cr
+	}
+
+	return schedule, nil
 }
 
 func shootHasHibernationSchedules(shoot *gardenv1beta1.Shoot) bool {
@@ -114,13 +174,11 @@ func (c *Controller) shootHibernationDelete(obj interface{}) {
 }
 
 func (c *Controller) deleteShootCron(logger logrus.FieldLogger, key string) {
-	if locToCron, ok := c.shootToHibernationCron[key]; ok {
-		for _, cr := range locToCron {
-			cr.Stop()
-		}
+	if sched, ok := c.hibernationScheduleRegistry.Load(key); ok {
+		sched.Stop()
 		logger.Debugf("Stopped cron")
 	}
-	delete(c.shootToHibernationCron, key)
+	c.hibernationScheduleRegistry.Delete(key)
 	logger.Debugf("Deleted cron")
 }
 
@@ -151,77 +209,20 @@ func (c *Controller) reconcileShootHibernationKey(key string) error {
 	return c.reconcileShootHibernation(logger, key, shoot.DeepCopy())
 }
 
-func (c *Controller) shootHibernationJob(logger logrus.FieldLogger, client garden.Interface, target *gardenv1beta1.Shoot, enabled bool) cron.Job {
-	return cron.FuncJob(func() {
-		_, err := kubernetes.TryUpdateShootHibernation(client, retry.DefaultBackoff, target.ObjectMeta,
-			func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-				if shoot.Spec.Hibernation == nil || !equality.Semantic.DeepEqual(target.Spec.Hibernation.Schedules, shoot.Spec.Hibernation.Schedules) {
-					return nil, fmt.Errorf("shoot %s/%s hibernation schedule changed mid-air", shoot.Namespace, shoot.Name)
-				}
-				shoot.Spec.Hibernation.Enabled = enabled
-				return shoot, nil
-			})
-		if err != nil {
-			logger.Errorf("Could not set hibernation.enabled to %t: %+v", enabled, err)
-			return
-		}
-		logger.Debugf("Successfully set hibernation.enabled to %t", enabled)
-	})
-}
-
 func (c *Controller) reconcileShootHibernation(logger logrus.FieldLogger, key string, shoot *gardenv1beta1.Shoot) error {
-	var (
-		schedules = getShootHibernationSchedules(shoot)
-		client    = c.k8sGardenClient.Garden()
-	)
-
 	c.deleteShootCron(logger, key)
-	if len(schedules) == 0 {
+	if !shootHasHibernationSchedules(shoot) {
 		return nil
 	}
 
-	locationToSchedules := GroupHibernationSchedulesByLocation(schedules)
-	locationIDToCron := make(map[string]*cron.Cron, len(locationToSchedules))
-	for locationID, schedules := range locationToSchedules {
-		location, err := time.LoadLocation(locationID)
-		if err != nil {
-			return err
-		}
-
-		cr := cron.NewWithLocation(location)
-		nowInLocation := time.Now().In(location)
-		cronLogger := logger.WithFields(logrus.Fields{
-			"location":      location,
-			"nowInLocation": nowInLocation.String(),
-		})
-		for _, schedule := range schedules {
-			if schedule.Start != nil {
-				start, err := cron.ParseStandard(*schedule.Start)
-				if err != nil {
-					return err
-				}
-
-				cr.Schedule(start, c.shootHibernationJob(logger, client, shoot, true))
-				cronLogger.Debugf("Next hibernation for spec %q will trigger at %v", *schedule.Start, start.Next(nowInLocation))
-			}
-
-			if schedule.End != nil {
-				end, err := cron.ParseStandard(*schedule.End)
-				if err != nil {
-					return err
-				}
-
-				cr.Schedule(end, c.shootHibernationJob(logger, client, shoot, false))
-				cronLogger.Debugf("Next wakeup for spec %q will trigger at %v", *schedule.End, end.Next(nowInLocation))
-			}
-		}
-		locationIDToCron[locationID] = cr
-	}
-	for _, cr := range locationIDToCron {
-		cr.Start()
+	schedule, err := ComputeHibernationSchedule(c.k8sGardenClient.Garden(), logger, shoot)
+	if err != nil {
+		return err
 	}
 
-	c.shootToHibernationCron[key] = locationIDToCron
+	schedule.Start()
+
+	c.hibernationScheduleRegistry.Store(key, schedule)
 	logger.Debugf("Successfully started hibernation schedule")
 
 	return nil

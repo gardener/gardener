@@ -54,3 +54,20 @@ func GetIngress(src ResourcesSource, namespace, name string) (*IngressObject, er
 	}
 	return s, nil
 }
+
+func GetCachedIngress(src ResourcesSource, namespace, name string) (*IngressObject, error) {
+	resource, err := src.Resources().Get(&api.Ingress{})
+	if err != nil {
+		return nil, err
+	}
+	o, err := resource.GetCached(NewObjectName(namespace, name))
+	if err != nil {
+		return nil, err
+	}
+
+	s := Ingress(o)
+	if s == nil {
+		return nil, fmt.Errorf("oops, unexpected type for ingress: %T", o.Data())
+	}
+	return s, nil
+}

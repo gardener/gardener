@@ -55,7 +55,18 @@ func (b *Botanist) DestroyIngressDNSRecord(ctx context.Context) error {
 // GenerateKubernetesDashboardConfig generates the values which are required to render the chart of
 // the kubernetes-dashboard properly.
 func (b *Botanist) GenerateKubernetesDashboardConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, b.Shoot.KubernetesDashboardEnabled()), nil
+	var (
+		enabled = b.Shoot.KubernetesDashboardEnabled()
+		values  map[string]interface{}
+	)
+
+	if enabled && b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode != nil {
+		values = map[string]interface{}{
+			"authenticationMode": *b.Shoot.Info.Spec.Addons.KubernetesDashboard.AuthenticationMode,
+		}
+	}
+
+	return common.GenerateAddonConfig(values, enabled), nil
 }
 
 // GenerateKubeLegoConfig generates the values which are required to render the chart of
