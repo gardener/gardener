@@ -16,13 +16,21 @@ package flow_test
 
 import (
 	"context"
+	"time"
+
+	mockflow "github.com/gardener/gardener/pkg/mock/gardener/utils/flow"
+	mockcontext "github.com/gardener/gardener/pkg/mock/go/context"
+	"github.com/gardener/gardener/test"
+	"github.com/golang/mock/gomock"
+	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"errors"
-	"github.com/gardener/gardener/pkg/utils/flow"
 	"sync"
 	"testing"
+
+	"github.com/gardener/gardener/pkg/utils/flow"
 )
 
 func TestUtils(t *testing.T) {
@@ -61,6 +69,16 @@ func (a *AtomicStringList) Values() []string {
 var _ = Describe("Flow", func() {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
+
+	var (
+		ctrl *gomock.Controller
+	)
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+	})
+	AfterEach(func() {
+		ctrl.Finish()
+	})
 
 	Describe("#Run", func() {
 		It("should execute in the correct sequence", func() {
@@ -144,6 +162,132 @@ var _ = Describe("Flow", func() {
 			err := f.Run(flow.Opts{Context: ctx})
 			Expect(err).To(HaveOccurred())
 			Expect(flow.WasCanceled(err)).To(BeTrue())
+		})
+	})
+
+	Describe("#Sequential", func() {
+		It("should run the given functions in sequence", func() {
+			var (
+				ctx = context.TODO()
+				f1  = mockflow.NewMockTaskFn(ctrl)
+				f2  = mockflow.NewMockTaskFn(ctrl)
+			)
+
+			gomock.InOrder(
+				f1.EXPECT().Do(ctx),
+				f2.EXPECT().Do(ctx),
+			)
+
+			Expect(flow.Sequential(f1.Do, f2.Do)(ctx)).To(Succeed())
+		})
+
+		It("should error if one of the functions errors", func() {
+			var (
+				ctx         = context.TODO()
+				expectedErr = errors.New("err")
+				f1          = mockflow.NewMockTaskFn(ctrl)
+				f2          = mockflow.NewMockTaskFn(ctrl)
+			)
+
+			f1.EXPECT().Do(ctx).Return(expectedErr)
+
+			err := flow.Sequential(f1.Do, f2.Do)(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeIdenticalTo(expectedErr))
+		})
+
+		It("should cancel the execution in between the calls if the context is expired", func() {
+			var (
+				ctx, cancel = context.WithCancel(context.Background())
+				f1          = mockflow.NewMockTaskFn(ctrl)
+				f2          = mockflow.NewMockTaskFn(ctrl)
+			)
+			defer cancel()
+
+			f1.EXPECT().Do(ctx).Do(func(context.Context) {
+				cancel()
+			})
+
+			err := flow.Sequential(f1.Do, f2.Do)(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(Equal(ctx.Err()))
+		})
+	})
+
+	Describe("#Parallel", func() {
+		It("should execute the functions in parallel", func() {
+			var (
+				ctx = context.TODO()
+				f1  = mockflow.NewMockTaskFn(ctrl)
+				f2  = mockflow.NewMockTaskFn(ctrl)
+				f3  = mockflow.NewMockTaskFn(ctrl)
+			)
+
+			f1.EXPECT().Do(ctx)
+			f2.EXPECT().Do(ctx)
+			f3.EXPECT().Do(ctx)
+
+			Expect(flow.Parallel(f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
+		})
+
+		It("should execute the functions and collect their errors", func() {
+			var (
+				ctx = context.TODO()
+				f1  = mockflow.NewMockTaskFn(ctrl)
+				f2  = mockflow.NewMockTaskFn(ctrl)
+				f3  = mockflow.NewMockTaskFn(ctrl)
+
+				err1 = errors.New("e1")
+				err2 = errors.New("e2")
+			)
+
+			f1.EXPECT().Do(ctx).Return(err1)
+			f2.EXPECT().Do(ctx).Return(err2)
+			f3.EXPECT().Do(ctx)
+
+			err := flow.Parallel(f1.Do, f2.Do, f3.Do)(ctx)
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
+			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
+		})
+	})
+
+	Describe("#SequentialSliced", func() {
+		It("should execute the functions with an equal slice", func() {
+			var (
+				ctx     = context.Background()
+				ctx1    = context.WithValue(ctx, "1", nil)
+				cancel1 = mockcontext.NewMockCancelFunc(ctrl)
+				ctx2    = context.WithValue(ctx1, "2", nil)
+				cancel2 = mockcontext.NewMockCancelFunc(ctrl)
+				ctx3    = context.WithValue(ctx2, "3", nil)
+				cancel3 = mockcontext.NewMockCancelFunc(ctrl)
+
+				withTimeouter = mockcontext.NewMockWithTimeout(ctrl)
+				total         = 9 * time.Second
+				slice         = 3 * time.Second
+
+				f1 = mockflow.NewMockTaskFn(ctrl)
+				f2 = mockflow.NewMockTaskFn(ctrl)
+				f3 = mockflow.NewMockTaskFn(ctrl)
+			)
+			defer test.RevertableSet(&flow.ContextWithTimeout, withTimeouter.Do)()
+
+			gomock.InOrder(
+				withTimeouter.EXPECT().Do(ctx, slice).Return(ctx1, cancel1.Do),
+				f1.EXPECT().Do(ctx1),
+				cancel1.EXPECT().Do(),
+
+				withTimeouter.EXPECT().Do(ctx, slice).Return(ctx2, cancel2.Do),
+				f2.EXPECT().Do(ctx2),
+				cancel2.EXPECT().Do(),
+
+				withTimeouter.EXPECT().Do(ctx, slice).Return(ctx3, cancel3.Do),
+				f3.EXPECT().Do(ctx3),
+				cancel3.EXPECT().Do(),
+			)
+
+			Expect(flow.SequentialSliced(total, f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
 		})
 	})
 })

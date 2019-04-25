@@ -17,7 +17,14 @@ package flow
 import (
 	"context"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/hashicorp/go-multierror"
+	"sync"
 	"time"
+)
+
+var (
+	// ContextWithTimeout is context.WithTimeout. Exposed for testing.
+	ContextWithTimeout = context.WithTimeout
 )
 
 // TaskFn is a payload function of a task.
@@ -91,18 +98,85 @@ func (t TaskFn) ToRecoverFn() RecoverFn {
 func (t TaskFn) Recover(recoverFn RecoverFn) TaskFn {
 	return func(ctx context.Context) error {
 		if err := t(ctx); err != nil {
+			if ctx.Err() != nil {
+				return err
+			}
 			return recoverFn(ctx, err)
 		}
 		return nil
 	}
 }
 
-// RecoverTimeout creates a new TaskFn that recovers an error that satisfies `utils.IsTimedOut` with the given RecoverFn.
-func (t TaskFn) RecoverTimeout(recoverFn RecoverFn) TaskFn {
-	return t.Recover(func(ctx context.Context, err error) error {
-		if utils.IsTimedOut(err) {
-			return recoverFn(ctx, err)
+// SequentialSliced runs the given TaskFns sequentially, each giving an equal share of the given total duration.
+//
+// 'Unused' slices are not added to subsequent functions, i.e. if a function does not use all of its slice,
+// the next TaskFns won't have longer to execute.
+func SequentialSliced(total time.Duration, fns ...TaskFn) TaskFn {
+	slice := total / time.Duration(len(fns))
+
+	return func(ctx context.Context) error {
+		for _, fn := range fns {
+			if err := func(fn TaskFn) error {
+				ctx, cancel := ContextWithTimeout(ctx, slice)
+				defer cancel()
+
+				return fn(ctx)
+			}(fn); err != nil {
+				return err
+			}
+
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 		}
-		return err
-	})
+		return nil
+	}
+}
+
+// Sequential runs the given TaskFns sequentially.
+func Sequential(fns ...TaskFn) TaskFn {
+	return func(ctx context.Context) error {
+		for _, fn := range fns {
+			if err := fn(ctx); err != nil {
+				return err
+			}
+
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+// Parallel runs the given TaskFns in parallel, collecting their errors in a multierror.
+func Parallel(fns ...TaskFn) TaskFn {
+	return func(ctx context.Context) error {
+		var (
+			wg     sync.WaitGroup
+			errors = make(chan error)
+			result error
+		)
+
+		for _, fn := range fns {
+			t := fn
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				errors <- t(ctx)
+			}()
+		}
+
+		go func() {
+			defer close(errors)
+			wg.Wait()
+		}()
+
+		for err := range errors {
+			if err != nil {
+				result = multierror.Append(result, err)
+			}
+		}
+		return result
+	}
 }
