@@ -244,11 +244,6 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(reconcileMachines, deployKubeAddonManager, deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying Cert-Broker",
-			Fn:           flow.SimpleTaskFn(botanist.DeployCertBroker).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
-		})
-		_ = g.Add(flow.Task{
 			Name:         "Deploying Dependency Watchdog",
 			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdog).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),

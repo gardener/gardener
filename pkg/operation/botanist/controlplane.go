@@ -28,7 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -525,55 +524,6 @@ func (b *Botanist) DeploySeedLogging() error {
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), nil, elasticKibanaCurator)
 }
 
-// DeployCertBroker deploys the Cert-Broker to the Shoot namespace in the Seed.
-func (b *Botanist) DeployCertBroker() error {
-	certManagementEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement)
-	if !certManagementEnabled {
-		return b.DeleteCertBroker()
-	}
-
-	certificateManagement, ok := b.Secrets[common.GardenRoleCertificateManagement]
-	if !ok {
-		return fmt.Errorf("certificate management is enabled but no secret with role %s could be found", common.GardenRoleCertificateManagement)
-	}
-	certificateManagementConfig, err := certmanagement.RetrieveCertificateManagementConfig(certificateManagement)
-	if err != nil {
-		return fmt.Errorf("certificate management configuration could not be created %v", err)
-	}
-
-	var dns []interface{}
-	for _, route53Provider := range certificateManagementConfig.Providers.Route53 {
-		route53values := createDNSProviderValuesForDomain(&route53Provider, *b.Shoot.Info.Spec.DNS.Domain)
-		dns = append(dns, route53values...)
-	}
-	for _, cloudDNSProvider := range certificateManagementConfig.Providers.CloudDNS {
-		cloudDNSValues := createDNSProviderValuesForDomain(&cloudDNSProvider, *b.Shoot.Info.Spec.DNS.Domain)
-		dns = append(dns, cloudDNSValues...)
-	}
-
-	certBrokerConfig := map[string]interface{}{
-		"replicas": b.Shoot.GetReplicas(1),
-		"certbroker": map[string]interface{}{
-			"namespace":           b.Shoot.SeedNamespace,
-			"targetClusterSecret": common.CertBrokerResourceName,
-		},
-		"certmanager": map[string]interface{}{
-			"clusterissuer": certificateManagementConfig.ClusterIssuerName,
-			"dns":           dns,
-		},
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cert-broker": b.CheckSums[common.CertBrokerResourceName],
-		},
-	}
-
-	certBroker, err := b.InjectSeedSeedImages(certBrokerConfig, common.CertBrokerImageName)
-	if err != nil {
-		return nil
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CertBrokerResourceName), b.Shoot.SeedNamespace, common.CertBrokerResourceName, nil, certBroker)
-}
-
 // DeployDependencyWatchdog deploys the dependency watchdog to the Shoot namespace in the Seed.
 func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 	dependencyWatchdogConfig := map[string]interface{}{
@@ -594,39 +544,6 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 		return nil
 	}
 	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependancyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependancyWatchdogDeploymentName, nil, dependancyWatchdog)
-}
-
-func createDNSProviderValuesForDomain(config certmanagement.DNSProviderConfig, shootDomain string) []interface{} {
-	var dnsConfig []interface{}
-	for _, domain := range config.DomainNames() {
-		if strings.HasSuffix(shootDomain, domain) {
-			dnsConfig = append(dnsConfig, map[string]interface{}{
-				"domain":   shootDomain,
-				"provider": config.ProviderName(),
-			})
-		}
-	}
-	return dnsConfig
-}
-
-// DeleteCertBroker delete the Cert-Broker deployment if cert-management in disabled.
-func (b *Botanist) DeleteCertBroker() error {
-	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteServiceAccount(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteRoleBinding(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteClusterRole(common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	return nil
 }
 
 // WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:

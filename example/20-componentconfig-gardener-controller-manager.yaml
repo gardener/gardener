@@ -68,7 +68,4 @@ shootBackup:
   schedule: "0 */24 * * *"
 featureGates:
   Logging: true
-  # If enabled you require a proper configuration, please see example/10-secret-certificate-management-config.yaml
-  # and https://gardener.cloud/050-tutorials/content/howto/gardener_certificate_management/.
-  CertificateManagement: false
   VPA: true

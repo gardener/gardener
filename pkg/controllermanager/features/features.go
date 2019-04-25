@@ -23,9 +23,8 @@ var (
 	// FeatureGate is a shared global FeatureGate for Gardener Controller Manager flags.
 	FeatureGate  = utilfeature.NewFeatureGate()
 	featureGates = map[utilfeature.Feature]utilfeature.FeatureSpec{
-		features.Logging:               {Default: false, PreRelease: utilfeature.Alpha},
-		features.CertificateManagement: {Default: false, PreRelease: utilfeature.Alpha},
-		features.VPA:                   {Default: false, PreRelease: utilfeature.Alpha},
+		features.Logging: {Default: false, PreRelease: utilfeature.Alpha},
+		features.VPA:     {Default: false, PreRelease: utilfeature.Alpha},
 	}
 )
 
