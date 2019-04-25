@@ -5,5 +5,5 @@ credential:
   accessKeyID: keyID
   accessKeySecret: secret
 
-kubernetesVersion: v1.13.0
+kubernetesVersion: v1.14.0
 enabled: false

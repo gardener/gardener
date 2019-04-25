@@ -53,7 +53,7 @@ func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{
 				"IsDefaultClass": true,
 				"Provisioner":    "diskplugin.csi.alibabacloud.com",
 				"Parameters": map[string]interface{}{
-					"fsType":   "ext4",
+					"csi.storage.k8s.io/fstype": "ext4",
 					"type":     "cloud_ssd",
 					"readOnly": "false",
 				},
