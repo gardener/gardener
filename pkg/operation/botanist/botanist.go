@@ -231,5 +231,7 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 		requiredExtensions[extensionsv1alpha1.ExtensionResource].Insert(extensionType)
 	}
 
+	requiredExtensions[extensionsv1alpha1.InfrastructureResource] = string(b.Shoot.CloudProvider)
+
 	return requiredExtensions
 }

@@ -335,6 +335,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 			return true, updateErr
 		}
 		if deleteErr := c.deleteShoot(operation); deleteErr != nil {
+			shootLogger.Errorf("Error during execution of the delete operation for shoot: %+v", deleteErr.Description)
 			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "[%s] %s", operationID, deleteErr.Description)
 			if state, updateErr := c.updateShootStatusDeleteError(operation, deleteErr); updateErr != nil {
 				shootLogger.Errorf("Could not update the Shoot status after deletion error: %+v", updateErr)
@@ -366,6 +367,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		return true, updateErr
 	}
 	if reconcileErr := c.reconcileShoot(operation, operationType); reconcileErr != nil {
+		shootLogger.Errorf("Error during reconcile of the delete operation for shoot: %+v", reconcileErr.Description)
 		c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventReconcileError, "[%s] %s", operationID, reconcileErr.Description)
 		if state, updateErr := c.updateShootStatusReconcileError(operation, operationType, reconcileErr); updateErr != nil {
 			shootLogger.Errorf("Could not update the Shoot status after reconciliation error: %+v", updateErr)

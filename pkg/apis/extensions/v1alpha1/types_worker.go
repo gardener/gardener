@@ -21,6 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+// WorkerResource is a constant for the name of the Worker resource.
+const WorkerResource = "Worker"
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
