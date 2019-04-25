@@ -30,7 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	encryptionbotanist "github.com/gardener/gardener/pkg/operation/encryptionbotanist"
+	encryptionbotanistpkg "github.com/gardener/gardener/pkg/operation/encryptionbotanist"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -62,7 +62,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	if err != nil {
 		return formatError("Failed to create a HybridBotanist", err)
 	}
-	encryptionBotanist, err := encryptionbotanist.New()
+	encryptionBotanist, err := encryptionbotanistpkg.New(o)
 	if err != nil {
 		return formatError("Failed to create a EncryptionBotanist", err)
 	}
