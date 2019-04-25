@@ -13,16 +13,17 @@
 // limitations under the License.
 
 //go:generate mockgen -package=utils -destination=mocks.go github.com/gardener/gardener/pkg/utils Timer
-//go:generate mockgen -package=utils -destination=funcs.go github.com/gardener/gardener/pkg/mock/gardener/utils NewTimerer
+//go:generate mockgen -package=utils -destination=funcs.go github.com/gardener/gardener/pkg/mock/gardener/utils NewTimer
 
 package utils
 
 import (
-	"github.com/gardener/gardener/pkg/utils"
 	"time"
+
+	"github.com/gardener/gardener/pkg/utils"
 )
 
-// NewTimerer provides an interface to mock `utils.NewTimer`.
-type NewTimerer interface {
+// NewTimer provides an interface to mock `utils.NewTimer`.
+type NewTimer interface {
 	Do(d time.Duration) utils.Timer
 }
