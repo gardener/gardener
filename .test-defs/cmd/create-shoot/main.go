@@ -138,6 +138,7 @@ func main() {
 	shootObject.Spec.Cloud.Region = region
 	shootObject.Spec.Cloud.SecretBindingRef.Name = secretBindingName
 	shootObject.Spec.Kubernetes.Version = k8sVersion
+	updateAnnotations(shootObject)
 	updateWorkerZone(shootObject, cloudprovider, zone)
 	updateMachineType(shootObject, cloudprovider, machineType)
 	updateAutoscalerMinMax(shootObject, cloudprovider, autoScalerMin, autoScalerMax)
