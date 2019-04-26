@@ -1429,7 +1429,24 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 
 	allErrs = append(allErrs, validateDNSUpdate(newSpec.DNS, oldSpec.DNS, fldPath.Child("dns"))...)
 	allErrs = append(allErrs, validateKubernetesVersionUpdate(newSpec.Kubernetes.Version, oldSpec.Kubernetes.Version, fldPath.Child("kubernetes", "version"))...)
+	allErrs = append(allErrs, validateKubeProxyModeUpdate(newSpec.Kubernetes.KubeProxy, oldSpec.Kubernetes.KubeProxy, newSpec.Kubernetes.Version, fldPath.Child("kubernetes", "kubeProxy"))...)
 
+	return allErrs
+}
+
+func validateKubeProxyModeUpdate(newConfig, oldConfig *garden.KubeProxyConfig, version string, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	newMode := garden.ProxyModeIPTables
+	oldMode := garden.ProxyModeIPTables
+	if newConfig != nil {
+		newMode = *newConfig.Mode
+	}
+	if oldConfig != nil {
+		oldMode = *oldConfig.Mode
+	}
+	if ok, _ := utils.CheckVersionMeetsConstraint(version, ">= 1.14.1"); ok {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newMode, oldMode, fldPath.Child("mode"))...)
+	}
 	return allErrs
 }
 
@@ -1716,14 +1733,12 @@ func validateKubeControllerManager(kubernetesVersion string, kcm *garden.KubeCon
 
 func validateKubeProxy(kp *garden.KubeProxyConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-
 	if kp != nil {
 		if kp.Mode == nil {
 			allErrs = append(allErrs, field.Required(fldPath.Child("mode"), "must be set when .spec.kubernetes.kubeProxy is set"))
 		} else if mode := *kp.Mode; !availableProxyMode.Has(string(mode)) {
 			allErrs = append(allErrs, field.NotSupported(fldPath.Child("mode"), mode, availableProxyMode.List()))
 		}
-
 	}
 	return allErrs
 }
@@ -2036,7 +2051,6 @@ func ValidateBackupInfrastructureUpdate(newBackupInfrastructure, oldBackupInfras
 
 	return allErrs
 }
-
 
 // ValidateBackupInfrastructureSpec validates the specification of a BackupInfrastructure object.
 func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fldPath *field.Path) field.ErrorList {

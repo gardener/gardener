@@ -67,7 +67,6 @@ var _ = Describe("shoot", func() {
 		Describe("#IPVSEnabled", func() {
 			It("should return false when KubeProxy is null", func() {
 				shoot.Info.Spec.Kubernetes.KubeProxy = nil
-
 				Expect(shoot.IPVSEnabled()).To(BeFalse())
 			})
 
