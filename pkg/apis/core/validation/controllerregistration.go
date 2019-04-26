@@ -55,8 +55,8 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		if t, ok := resources[resource.Kind]; ok && t == resource.Type {
 			allErrs = append(allErrs, field.Duplicate(idxPath, fmt.Sprintf("%s/%s", resource.Kind, resource.Type)))
 		}
-		if resource.Required != nil && resource.Kind != v1alpha1.ExtensionResource {
-			allErrs = append(allErrs, field.Forbidden(idxPath.Child("required"), fmt.Sprintf("field must not be set when kind != %s", v1alpha1.ExtensionResource)))
+		if resource.GloballyEnabled != nil && resource.Kind != v1alpha1.ExtensionResource {
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", v1alpha1.ExtensionResource)))
 		}
 
 		resources[resource.Kind] = resource.Type

@@ -253,6 +253,16 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.TaskFn(botanist.HibernateControlPlane).RetryUntilTimeout(defaultInterval, 2*time.Minute).DoIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
+		deployExtensionResource = g.Add(flow.Task{
+			Name:         "Deploying extension resources",
+			Fn:           flow.TaskFn(botanist.DeployExtensionResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Waiting until extension resources are ready",
+			Fn:           flow.TaskFn(botanist.WaitUntilExtensionResourcesReady),
+			Dependencies: flow.NewTaskIDs(deployExtensionResource),
+		})
 		f = g.Compile()
 	)
 

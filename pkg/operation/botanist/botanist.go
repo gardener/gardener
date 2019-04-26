@@ -224,5 +224,12 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 		requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Shoot.ExternalDomain.Provider)
 	}
 
+	for extensionType := range b.Shoot.Extensions {
+		if requiredExtensions[extensionsv1alpha1.ExtensionResource] == nil {
+			requiredExtensions[extensionsv1alpha1.ExtensionResource] = sets.NewString()
+		}
+		requiredExtensions[extensionsv1alpha1.ExtensionResource].Insert(extensionType)
+	}
+
 	return requiredExtensions
 }

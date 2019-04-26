@@ -22,6 +22,10 @@ spec:
     type: string
     description: The type of the Extension resource.
     JSONPath: .spec.type
+  - name: Status
+    type: string
+    description: Status of Extension resource.
+    JSONPath: .status.lastOperation.state
   - name: Age
     type: date
     JSONPath: .metadata.creationTimestamp

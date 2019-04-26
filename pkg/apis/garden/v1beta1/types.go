@@ -1114,11 +1114,9 @@ var (
 type Extension struct {
 	// Type is the type of the extension resource.
 	Type string `json:"type"`
-	// TODO: change to *runtime.RawExtension as soon as Kubectl validation has been fixed.
-	// https://github.com/gardener/gardener/pull/322
 	// ProviderConfig is the configuration passed to extension resource.
 	// +optional
-	ProviderConfig *string `json:"providerConfig,omitempty"`
+	ProviderConfig *gardencorev1alpha1.ProviderConfig `json:"providerConfig,omitempty"`
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.

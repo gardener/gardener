@@ -98,9 +98,9 @@ var _ = Describe("validation", func() {
 
 		It("should allow to set required field for kind Extension", func() {
 			resource := core.ControllerResource{
-				Kind:     v1alpha1.ExtensionResource,
-				Type:     "arbitrary",
-				Required: test.MakeBoolPointer(true),
+				Kind:            v1alpha1.ExtensionResource,
+				Type:            "arbitrary",
+				GloballyEnabled: test.MakeBoolPointer(true),
 			}
 
 			controllerRegistration.Spec.Resources = []core.ControllerResource{resource}
@@ -110,14 +110,14 @@ var _ = Describe("validation", func() {
 		})
 
 		It("should forbid to set required field for kind != Extension", func() {
-			ctrlResource.Required = test.MakeBoolPointer(true)
+			ctrlResource.GloballyEnabled = test.MakeBoolPointer(true)
 			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
 
 			errorList := ValidateControllerRegistration(controllerRegistration)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.resources[0].required"),
+				"Field": Equal("spec.resources[0].globallyEnabled"),
 			}))))
 		})
 	})

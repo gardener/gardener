@@ -1207,8 +1207,8 @@ func (in *Extension) DeepCopyInto(out *Extension) {
 	*out = *in
 	if in.ProviderConfig != nil {
 		in, out := &in.ProviderConfig, &out.ProviderConfig
-		*out = new(string)
-		**out = **in
+		*out = new(v1alpha1.ProviderConfig)
+		(*in).DeepCopyInto(*out)
 	}
 	return
 }

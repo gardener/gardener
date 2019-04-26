@@ -60,9 +60,9 @@ type ControllerResource struct {
 	Kind string `json:"kind"`
 	// Type is the resource type, for example "coreos" or "ubuntu".
 	Type string `json:"type"`
-	// Required determines if this ControllerResource is required by all Shoot clusters.
+	// GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.
 	// +optional
-	Required *bool `json:"required,omitempty"`
+	GloballyEnabled *bool `json:"globallyEnabled,omitempty"`
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	// +optional
 	ReconcileTimeout *metav1.Duration `json:"reconcileTimeout,omitempty"`

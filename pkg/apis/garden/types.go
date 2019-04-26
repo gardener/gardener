@@ -1114,10 +1114,8 @@ type Worker struct {
 type Extension struct {
 	// Type is the type of the extension resource.
 	Type string
-	// TODO: change to *runtime.RawExtension as soon as Kubectl validation has been fixed.
-	// https://github.com/gardener/gardener/pull/322
 	// ProviderConfig is the configuration passed to extension resource.
-	ProviderConfig *string
+	ProviderConfig *gardencore.ProviderConfig
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.

@@ -58,8 +58,8 @@ type ControllerResource struct {
 	Kind string
 	// Type is the resource type.
 	Type string
-	// Required determines if this resource is required by all Shoot clusters.
-	Required *bool
+	// GloballyEnabled determines if this resource is required by all Shoot clusters.
+	GloballyEnabled *bool
 	// ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.
 	ReconcileTimeout *metav1.Duration
 }

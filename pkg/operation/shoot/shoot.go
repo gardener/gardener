@@ -18,10 +18,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 
+	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
@@ -32,6 +35,7 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -58,18 +62,27 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 		return nil, err
 	}
 
+	seedNamespace := ComputeTechnicalID(projectName, shoot)
+
+	extensions, err := calculateExtensions(k8sGardenClient.Client(), shoot, seedNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot calculate required extensions for shoot %s: %v", shoot.Name, err)
+	}
+
 	shootObj := &Shoot{
 		Info:         shoot,
 		Secret:       secret,
 		CloudProfile: cloudProfile,
 
-		SeedNamespace: ComputeTechnicalID(projectName, shoot),
+		SeedNamespace: seedNamespace,
 
 		InternalClusterDomain: ConstructInternalClusterDomain(shoot.Name, projectName, internalDomain),
 		ExternalClusterDomain: ConstructExternalClusterDomain(shoot),
 
 		IsHibernated:           helper.IsShootHibernated(shoot),
 		WantsClusterAutoscaler: false,
+
+		Extensions: extensions,
 	}
 	shootObj.CloudConfigMap = make(map[string]CloudConfig, len(shootObj.GetWorkerNames()))
 
@@ -101,6 +114,14 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 	shootObj.WantsClusterAutoscaler = needsAutoscaler
 
 	return shootObj, nil
+}
+
+func calculateExtensions(gardenClient client.Client, shoot *gardenv1beta1.Shoot, seedNamespace string) (map[string]Extension, error) {
+	var controllerRegistrations = &corev1alpha1.ControllerRegistrationList{}
+	if err := gardenClient.List(context.TODO(), nil, controllerRegistrations); err != nil {
+		return nil, err
+	}
+	return MergeExtensions(controllerRegistrations.Items, shoot.Spec.Extensions, seedNamespace)
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Shoot cluster. The
@@ -329,4 +350,65 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 	}
 
 	return externalDomain, nil
+}
+
+// ExtensionDefaultTimeout is the default timeout and defines how long Gardener should wait
+// for a successful reconcilation of this extension resource.
+const ExtensionDefaultTimeout = 10 * time.Minute
+
+// MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in extensions is also represented in the registration.
+func MergeExtensions(registrations []corev1alpha1.ControllerRegistration, extensions []gardenv1beta1.Extension, namespace string) (map[string]Extension, error) {
+	var (
+		typeToExtension    = make(map[string]Extension)
+		requiredExtensions = make(map[string]Extension)
+	)
+	// Extensions enabled by default for all Shoot clusters.
+	for _, reg := range registrations {
+		for _, res := range reg.Spec.Resources {
+			if res.Kind != extensionsv1alpha1.ExtensionResource {
+				continue
+			}
+
+			var timeout time.Duration
+			if res.ReconcileTimeout != nil {
+				timeout = res.ReconcileTimeout.Duration
+			} else {
+				timeout = ExtensionDefaultTimeout
+			}
+
+			typeToExtension[res.Type] = Extension{
+				Extension: extensionsv1alpha1.Extension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      res.Type,
+						Namespace: namespace,
+					},
+					Spec: extensionsv1alpha1.ExtensionSpec{
+						DefaultSpec: extensionsv1alpha1.DefaultSpec{
+							Type: res.Type,
+						},
+					},
+				},
+				Timeout: timeout,
+			}
+
+			if res.GloballyEnabled != nil && *res.GloballyEnabled {
+				requiredExtensions[res.Type] = typeToExtension[res.Type]
+			}
+		}
+	}
+
+	// Extensions defined in Shoot resource.
+	for _, extension := range extensions {
+		obj, ok := typeToExtension[extension.Type]
+		if ok {
+			if extension.ProviderConfig != nil {
+				providerConfig := extension.ProviderConfig.RawExtension
+				obj.Spec.ProviderConfig = &providerConfig
+			}
+			requiredExtensions[extension.Type] = obj
+			continue
+		}
+	}
+
+	return requiredExtensions, nil
 }

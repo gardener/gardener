@@ -21,6 +21,10 @@ spec:
     type: string
     description: The type of the operating system configuration.
     JSONPath: .spec.type
+  - name: Status
+    type: string
+    description: Status of operating system configuration.
+    JSONPath: .status.lastOperation.state
   - name: Purpose
     type: string
     description: The purpose of the operating system configuration.

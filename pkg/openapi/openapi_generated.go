@@ -883,9 +883,9 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
-					"required": {
+					"globallyEnabled": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Required determines if this ControllerResource is required by all Shoot clusters.",
+							Description: "GloballyEnabled determines if this ControllerResource is required by all Shoot clusters.",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -3403,14 +3403,15 @@ func schema_pkg_apis_garden_v1beta1_Extension(ref common.ReferenceCallback) comm
 					"providerConfig": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ProviderConfig is the configuration passed to extension resource.",
-							Type:        []string{"string"},
-							Format:      "",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
 						},
 					},
 				},
 				Required: []string{"type"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
 	}
 }
 

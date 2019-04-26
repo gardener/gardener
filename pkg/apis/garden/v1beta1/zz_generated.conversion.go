@@ -2630,7 +2630,7 @@ func Convert_garden_DNSProviderConstraint_To_v1beta1_DNSProviderConstraint(in *g
 
 func autoConvert_v1beta1_Extension_To_garden_Extension(in *Extension, out *garden.Extension, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*string)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 
@@ -2641,7 +2641,7 @@ func Convert_v1beta1_Extension_To_garden_Extension(in *Extension, out *garden.Ex
 
 func autoConvert_garden_Extension_To_v1beta1_Extension(in *garden.Extension, out *Extension, s conversion.Scope) error {
 	out.Type = in.Type
-	out.ProviderConfig = (*string)(unsafe.Pointer(in.ProviderConfig))
+	out.ProviderConfig = (*v1alpha1.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
 	return nil
 }
 

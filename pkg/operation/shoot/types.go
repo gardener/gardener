@@ -15,6 +15,9 @@
 package shoot
 
 import (
+	"time"
+
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -39,6 +42,8 @@ type Shoot struct {
 	IsHibernated           bool
 
 	CloudConfigMap map[string]CloudConfig
+
+	Extensions map[string]Extension
 }
 
 // ExternalDomain contains information for the used external shoot domain.
@@ -60,4 +65,10 @@ type CloudConfigData struct {
 	Content string
 	Command *string
 	Units   []string
+}
+
+// Extension contains information about the extension api resouce as well as configuration information.
+type Extension struct {
+	extensionsv1alpha1.Extension
+	Timeout time.Duration
 }

@@ -167,3 +167,36 @@ func Parallel(fns ...TaskFn) TaskFn {
 		return result
 	}
 }
+
+// ParallelExitOnError runs the given TaskFns in parallel and stops execution as soon as one TaskFn returns an error.
+func ParallelExitOnError(fns ...TaskFn) TaskFn {
+	return func(ctx context.Context) error {
+		var (
+			wg             sync.WaitGroup
+			errors         = make(chan error)
+			subCtx, cancel = context.WithCancel(ctx)
+		)
+		defer cancel()
+
+		for _, fn := range fns {
+			t := fn
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				errors <- t(subCtx)
+			}()
+		}
+
+		go func() {
+			defer close(errors)
+			wg.Wait()
+		}()
+
+		for err := range errors {
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
