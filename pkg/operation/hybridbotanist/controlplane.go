@@ -244,9 +244,10 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
-		"maxReplicas":      3,
-		"securePort":       443,
-		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data[secrets.DataKeyUserName], b.Secrets["kubecfg"].Data[secrets.DataKeyPassword]))),
+		"seedCloudProvider": b.Seed.CloudProvider,
+		"maxReplicas":       3,
+		"securePort":        443,
+		"probeCredentials":  utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data[secrets.DataKeyUserName], b.Secrets["kubecfg"].Data[secrets.DataKeyPassword]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
 			"checksum/secret-ca-front-proxy":            b.CheckSums[gardencorev1alpha1.SecretNameCAFrontProxy],
