@@ -1,0 +1,58 @@
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 4 }}
+  name: vpa-exporter
+  namespace: garden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 6 }}
+  template:
+    metadata:
+      labels:
+        app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 8 }}
+    spec:
+      serviceAccountName: vpa-exporter
+      containers:
+      - command:
+        - /usr/local/bin/vpa-exporter
+        image: {{ index .Values.global.images "vpa-exporter" }}
+        imagePullPolicy: IfNotPresent
+        name: exporter
+        ports:
+        - name: metrics
+          containerPort: 9570
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 200Mi
+          limits:
+            cpu: 200m
+            memory: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vpa-exporter
+  namespace: garden
+  labels:
+    app: vpa-exporter
+{{ toYaml .Values.vpa.labels | indent 4 }}
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  selector:
+    app: vpa-exporter
+  ports:
+  - name: metrics
+    protocol: TCP
+    port: 9570
+    targetPort: 9570

@@ -231,3 +231,7 @@ images:
   sourceRepository: github.com/kubernetes/autoscaler
   repository: k8s.gcr.io/vpa-updater
   tag: "0.5.0"
+- name: vpa-exporter
+  sourceRepository: github.com/gardener/vpa-exporter
+  repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
+  tag: "0.1.5"

@@ -239,6 +239,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			common.PauseContainerImageName,
 			common.PrometheusImageName,
 			common.VpaAdmissionControllerImageName,
+			common.VpaExporterImageName,
 			common.VpaRecommenderImageName,
 			common.VpaUpdaterImageName,
 		},

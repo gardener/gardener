@@ -1,0 +1,585 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": false,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "Shows the recommendations that the VPA gives as target usage. The graph also shows the actual usage of each container.",
+      "fill": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 3,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(vpa_status_recommendation{recommendation=\"$recommendation\", resource=\"memory\", targetName=\"$targetName\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "sum recommendation",
+          "refId": "A"
+        },
+        {
+          "expr": "sum (container_memory_working_set_bytes{pod_name=~\"$targetName(.+)\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "sum actual usage",
+          "refId": "B"
+        },
+        {
+          "expr": "container_memory_working_set_bytes{pod_name=~\"$targetName(.+)\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container_name }} actual usage",
+          "refId": "D"
+        },
+        {
+          "expr": "vpa_status_recommendation{recommendation=\"$recommendation\", resource=\"memory\", targetName=\"$targetName\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}-recommendation",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Memory Target vs Memory Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": "Bytes",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "Shows the recommendation of the VPA and compares it to the requests and limits of all containers in a pod. \n\n**Requests and/or limits may not reflect useful values if they are not defined for each container in a pod.",
+      "fill": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 6,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(vpa_status_recommendation{targetName=\"$targetName\", resource=\"memory\", recommendation=~\"$recommendation\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "recommendation",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{pod=~\"$targetName(.+)\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "requests",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(kube_pod_container_resource_limits_memory_bytes{pod=~\"$targetName(.+)\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "limits",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "VPA Memory Recommendations vs Requests and Limits",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": "Bytes",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "Shows the recommendations that the VPA gives as target usage. The graph also shows the actual usage of each container.",
+      "fill": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(vpa_status_recommendation{recommendation=~\"$recommendation\", resource=\"cpu\", targetName=\"$targetName\"})",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "recommendation sum",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(container_cpu_usage_seconds_total{pod_name=~\"$targetName(.+)\"}[1m])) * 1000",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "sum actual usage",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(container_cpu_usage_seconds_total{pod_name=~\"$targetName(.+)\"}[1m]) * 1000",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container_name }} actual usage",
+          "refId": "D"
+        },
+        {
+          "expr": "vpa_status_recommendation{recommendation=~\"$recommendation\", resource=\"cpu\", targetName=\"$targetName\"}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ container }}-recommendation",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "CPU Target vs CPU Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "Millicores",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "description": "Shows the recommendation of the VPA and compares it to the requests and limits of all containers in a pod. \n\n**Requests and/or limits may not reflect useful values if they are not defined for each container in a pod.",
+      "fill": 0,
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "id": 5,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(vpa_status_recommendation{targetName=\"$targetName\", resource=\"cpu\", recommendation=~\"$recommendation\"})",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "recommendation",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{pod=~\"$targetName(.+)\"}) * 1000",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "requests",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(kube_pod_container_resource_limits_cpu_cores{pod=~\"$targetName(.+)\"})* 1000",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "limits",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "VPA CPU Recommendations vs Requests and Limits",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "Millicores",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 18,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "target",
+          "value": "target"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(vpa_status_recommendation, recommendation)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Recommendation",
+        "multi": false,
+        "name": "recommendation",
+        "options": [
+          {
+            "selected": false,
+            "text": "lowerBound",
+            "value": "lowerBound"
+          },
+          {
+            "selected": true,
+            "text": "target",
+            "value": "target"
+          },
+          {
+            "selected": false,
+            "text": "uncappedTarget",
+            "value": "uncappedTarget"
+          },
+          {
+            "selected": false,
+            "text": "upperBound",
+            "value": "upperBound"
+          }
+        ],
+        "query": "label_values(vpa_status_recommendation, recommendation)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "tags": [],
+          "text": "kube-apiserver",
+          "value": "kube-apiserver"
+        },
+        "datasource": "prometheus",
+        "definition": "label_values(vpa_status_recommendation, targetName)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Target",
+        "multi": false,
+        "name": "targetName",
+        "options": [
+          {
+            "selected": false,
+            "text": "etcd-events",
+            "value": "etcd-events"
+          },
+          {
+            "selected": false,
+            "text": "etcd-main",
+            "value": "etcd-main"
+          },
+          {
+            "selected": true,
+            "text": "kube-apiserver",
+            "value": "kube-apiserver"
+          },
+          {
+            "selected": false,
+            "text": "prometheus",
+            "value": "prometheus"
+          },
+          {
+            "selected": false,
+            "text": "cloud-controller-manager",
+            "value": "cloud-controller-manager"
+          },
+          {
+            "selected": false,
+            "text": "kube-addon-manager",
+            "value": "kube-addon-manager"
+          },
+          {
+            "selected": false,
+            "text": "kube-controller-manager",
+            "value": "kube-controller-manager"
+          },
+          {
+            "selected": false,
+            "text": "kube-scheduler",
+            "value": "kube-scheduler"
+          },
+          {
+            "selected": false,
+            "text": "machine-controller-manager",
+            "value": "machine-controller-manager"
+          }
+        ],
+        "query": "label_values(vpa_status_recommendation, targetName)",
+        "refresh": 0,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "",
+  "title": "VPA Recommendations",
+  "uid": "vyrKWTkWk",
+  "version": 1
+}
