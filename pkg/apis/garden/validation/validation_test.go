@@ -2859,6 +2859,30 @@ var _ = Describe("validation", func() {
 			)
 		})
 
+		It("should forbid passing an extension w/o type information", func() {
+			extension := garden.Extension{}
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.extensions[0].type"),
+				}))))
+		})
+
+		It("should allow passing an extension w/ type information", func() {
+			extension := garden.Extension{
+				Type: "arbitrary",
+			}
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
 		Context("AWS specific validation", func() {
 			var (
 				fldPath  = "aws"

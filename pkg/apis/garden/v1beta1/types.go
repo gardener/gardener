@@ -716,6 +716,9 @@ type ShootSpec struct {
 	Cloud Cloud `json:"cloud"`
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS DNS `json:"dns"`
+	// Extensions contain type and provider information for Shoot extensions.
+	// +optional
+	Extensions []Extension `json:"extensions,omitempty"`
 	// Hibernation contains information whether the Shoot is suspended or not.
 	// +optional
 	Hibernation *Hibernation `json:"hibernation,omitempty"`
@@ -1106,6 +1109,17 @@ var (
 	// DefaultWorkerMaxUnavailable is the default value for Worker MaxUnavailable.
 	DefaultWorkerMaxUnavailable = intstr.FromInt(0)
 )
+
+// Extension contains type and provider information for Shoot extensions.
+type Extension struct {
+	// Type is the type of the extension resource.
+	Type string `json:"type"`
+	// TODO: change to *runtime.RawExtension as soon as Kubectl validation has been fixed.
+	// https://github.com/gardener/gardener/pull/322
+	// ProviderConfig is the configuration passed to extension resource.
+	// +optional
+	ProviderConfig *string `json:"providerConfig,omitempty"`
+}
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {

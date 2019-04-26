@@ -990,6 +990,7 @@ func ValidateShootSpec(spec *garden.ShootSpec, fldPath *field.Path) field.ErrorL
 	allErrs = append(allErrs, validateAddons(spec.Addons, fldPath.Child("addons"))...)
 	allErrs = append(allErrs, validateCloud(spec.Cloud, fldPath.Child("cloud"))...)
 	allErrs = append(allErrs, validateDNS(spec.DNS, fldPath.Child("dns"))...)
+	allErrs = append(allErrs, validateExtensions(spec.Extensions, fldPath.Child("extensions"))...)
 	allErrs = append(allErrs, validateKubernetes(spec.Kubernetes, fldPath.Child("kubernetes"))...)
 	allErrs = append(allErrs, validateMaintenance(spec.Maintenance, fldPath.Child("maintenance"))...)
 	allErrs = append(allErrs, ValidateHibernation(spec.Hibernation, fldPath.Child("hibernation"))...)
@@ -1593,6 +1594,16 @@ func validateDNS(dns garden.DNS, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, field.Required(fldPath.Child("provider"), "`.spec.dns.provider` must be set when `.spec.dns.secretName` is set"))
 	}
 
+	return allErrs
+}
+
+func validateExtensions(extensions []garden.Extension, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	for i, extension := range extensions {
+		if extension.Type == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Index(i).Child("type"), "field must not be empty"))
+		}
+	}
 	return allErrs
 }
 

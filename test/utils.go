@@ -16,8 +16,9 @@ package test
 
 import (
 	"fmt"
-	"github.com/onsi/ginkgo"
 	"reflect"
+
+	"github.com/onsi/ginkgo"
 )
 
 // Must errors with `GinkgoT().Fatal` if the error is non-nil.
@@ -66,4 +67,14 @@ func Set(dst, src interface{}) {
 	Must(checkAssignable(srcValue, dstValue))
 
 	dstValue.Elem().Set(srcValue)
+}
+
+// MakeBoolPointer creates and returns a pointer to the passed boolean value.
+func MakeBoolPointer(b bool) *bool {
+	return &b
+}
+
+// MakeStrPointer creates and returns a pointer to the passed string value.
+func MakeStrPointer(s string) *string {
+	return &s
 }

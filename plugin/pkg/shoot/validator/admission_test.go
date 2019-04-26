@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+	test "github.com/gardener/gardener/test"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -105,7 +106,7 @@ var _ = Describe("validator", func() {
 					},
 					DNS: garden.DNS{
 						Provider: &unmanagedDNSProvider,
-						Domain:   makeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
+						Domain:   test.MakeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.6.4",
@@ -1816,8 +1817,3 @@ var _ = Describe("validator", func() {
 		})
 	})
 })
-
-func makeStrPointer(in string) *string {
-	out := in
-	return &out
-}

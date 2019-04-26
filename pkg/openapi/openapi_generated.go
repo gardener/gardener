@@ -101,6 +101,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler":             schema_pkg_apis_garden_v1beta1_ClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS":                           schema_pkg_apis_garden_v1beta1_DNS(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint":         schema_pkg_apis_garden_v1beta1_DNSProviderConstraint(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension":                     schema_pkg_apis_garden_v1beta1_Extension(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPCloud":                      schema_pkg_apis_garden_v1beta1_GCPCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPConstraints":                schema_pkg_apis_garden_v1beta1_GCPConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPMachineImage":               schema_pkg_apis_garden_v1beta1_GCPMachineImage(ref),
@@ -882,10 +883,25 @@ func schema_pkg_apis_core_v1alpha1_ControllerResource(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"required": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Required determines if this ControllerResource is required by all Shoot clusters.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"reconcileTimeout": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ReconcileTimeout defines how long Gardener should wait for the resource reconciliation.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 				Required: []string{"kind", "type"},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
@@ -3365,6 +3381,34 @@ func schema_pkg_apis_garden_v1beta1_DNSProviderConstraint(ref common.ReferenceCa
 					},
 				},
 				Required: []string{"name"},
+			},
+		},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_Extension(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "Extension contains type and provider information for Shoot extensions.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the type of the extension resource.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the configuration passed to extension resource.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"type"},
 			},
 		},
 	}
@@ -6541,6 +6585,19 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS"),
 						},
 					},
+					"extensions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Extensions contain type and provider information for Shoot extensions.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension"),
+									},
+								},
+							},
+						},
+					},
 					"hibernation": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Hibernation contains information whether the Shoot is suspended or not.",
@@ -6563,7 +6620,7 @@ func schema_pkg_apis_garden_v1beta1_ShootSpec(ref common.ReferenceCallback) comm
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Backup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Cloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNS", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Extension", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Hibernation", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kubernetes", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance"},
 	}
 }
 
