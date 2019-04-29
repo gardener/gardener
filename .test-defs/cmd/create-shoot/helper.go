@@ -16,6 +16,7 @@ package main
 
 import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/common"
 )
 
 // updateWorkerZone updates the zone of the workers.
@@ -105,4 +106,12 @@ func updateLoadBalancerProvider(shoot *gardenv1beta1.Shoot, loadBalancerProvider
 	if cloudprovider == gardenv1beta1.CloudProviderOpenStack && loadBalancerProvider != "" {
 		shoot.Spec.Cloud.OpenStack.LoadBalancerProvider = loadBalancerProvider
 	}
+}
+
+// updateAnnotations adds default annotations that should be present on any shoot created.
+func updateAnnotations(shoot *gardenv1beta1.Shoot) {
+	if shoot.Annotations == nil {
+		shoot.Annotations = map[string]string{}
+	}
+	shoot.Annotations[common.GardenIgnoreAlerts] = "true"
 }
