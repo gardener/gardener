@@ -47,7 +47,7 @@ tests:
         service: vpn-test
         severity: critical
         type: shoot
-        visibiliy: owner
+        visibiliy: all
         job: vpn-probe-apiserver-proxy
       exp_annotations:
         description: The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
