@@ -6,22 +6,38 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # K8SNodeOutOfDisk
   - series: 'kube_node_status_condition{condition="OutOfDisk", status="true", node="node1"}'
-    values: '1+0x30'
+    values: '1+0x120'
+  # VMRootfsFull
   - series: 'node_filesystem_free{mountpoint="/", instance="instance1"}'
     values: '512+0x120'
+  # NodeExporterDown
+  - series: 'up{job="node-exporter"}'
+    values: '0+0x120'
+  # K8SNodeMemoryPressure
+  - series: 'kube_node_status_condition{condition="MemoryPressure", status="true", node="node1"}'
+    values: '1+0x120'
+  # K8SNodeDiskPressure
+  - series: 'kube_node_status_condition{condition="DiskPressure", status="true", node="node1"}'
+    values: '1+0x120'
+  # VMConntrackTableFull
+  - series: 'node_nf_conntrack_entries'
+    values: '95+0x120'
+  - series: 'node_nf_conntrack_entries_limit'
+    values: '100+0x120'
   alert_rule_test:
-  - eval_time: 10m
+  - eval_time: 1h
     alertname: K8SNodeOutOfDisk
     exp_alerts:
     - exp_labels:
+        condition: OutOfDisk
+        node: node1
         service: node-exporter
         severity: critical
-        type: shoot
-        visibility: all
-        condition: OutOfDisk
         status: true
-        node: node1
+        type: shoot
+        visibility: owner
       exp_annotations:
         summary: Node ran out of disk space.
         description: Node node1 has run out of disk space.
@@ -29,12 +45,62 @@ tests:
     alertname: VMRootfsFull
     exp_alerts:
     - exp_labels:
+        instance: instance1
+        mountpoint: /
         service: node-exporter
         severity: critical
         type: shoot
-        visibility: all
-        instance: instance1
-        mountpoint: /
+        visibility: owner
       exp_annotations:
-        description: Root filesystem device on instance instance1 is almost full!
+        description: Root filesystem device on instance instance1 is almost full.
         summary: Node's root filesystem is almost full
+  - eval_time: 1h
+    alertname: NodeExporterDown
+    exp_alerts:
+    - exp_labels:
+        service: node-exporter
+        severity: warning
+        type: shoot
+        visibility: owner
+      exp_annotations:
+        summary: NodeExporter down or unreachable
+        description: The NodeExporter has been down or unreachable from Prometheus for more than 1 hour.
+  - eval_time: 1h
+    alertname: K8SNodeMemoryPressure
+    exp_alerts:
+    - exp_labels:
+        condition: MemoryPressure
+        node: node1
+        service: node-exporter
+        severity: warning
+        status: true
+        type: shoot
+        visibility: owner
+      exp_annotations:
+        summary: Node is under memory pressure.
+        description: Node node1 is under memory pressure.
+  - eval_time: 1h
+    alertname: K8SNodeDiskPressure
+    exp_alerts:
+    - exp_labels:
+        condition: DiskPressure
+        node: node1
+        service: node-exporter
+        severity: warning
+        status: true
+        type: shoot
+        visibility: owner
+      exp_annotations:
+        summary: Node is under disk pressure.
+        description: Node node1 is under disk pressure
+  - eval_time: 1h
+    alertname: VMConntrackTableFull
+    exp_alerts:
+    - exp_labels:
+        service: node-exporter
+        severity: critical
+        type: shoot
+        visibility: owner
+      exp_annotations:
+        description: The nf_conntrack table is 95% full.
+        summary: Number of tracked connections is near the limit

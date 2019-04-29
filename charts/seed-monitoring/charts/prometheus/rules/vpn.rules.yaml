@@ -30,19 +30,7 @@ groups:
       service: vpn-test
       severity: critical
       type: shoot
-      visibiliy: owner
+      visibiliy: all
     annotations:
       description: The API Server proxy functionality is not working. Probably the vpn connection from an API Server pod to the vpn-shoot endpoint on the Shoot workers does not work.
       summary: API Server Proxy not usable
-
-  # TODO: Remove. Test is covered by other alerts.
-  - alert: VPNProbeK8sServiceFailed
-    expr: absent(probe_success{job="vpn-probe-apiserver-proxy"}) == 1 or probe_success{job="vpn-probe-apiserver-proxy"} != 1
-    for: 30m
-    labels:
-      service: vpn-test
-      severity: warning
-      type: shoot
-    annotations:
-      description: The VPN probe via the kubernetes service does not work. The vpn connection from Prometheus to the vpn-shoot endpoint on the Shoot workers or the communication from the Shoot workers to the API Server via the kubernetes service is not working.
-      summary: VPN probe via kubernetes service failed
