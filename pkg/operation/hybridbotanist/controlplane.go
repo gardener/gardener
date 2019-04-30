@@ -16,6 +16,7 @@ package hybridbotanist
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -207,6 +208,38 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 	b.CheckSums[common.CloudProviderConfigName] = computeCloudProviderConfigChecksum(newConfigData[common.CloudProviderConfigMapKey])
 
 	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfigData)
+	return err
+}
+
+// RefreshCSIControllersChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
+func (b *HybridBotanist) RefreshCSIControllersChecksums() error {
+	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CSIPluginController); err != nil {
+		if apierrors.IsNotFound(err) {
+			return b.DeployCSIControllers()
+		}
+		return err
+	}
+
+	type jsonPatch struct {
+		Op    string `json:"op"`
+		Path  string `json:"path"`
+		Value string `json:"value"`
+	}
+
+	patch := []jsonPatch{
+		{
+			Op:    "replace",
+			Path:  "/spec/template/metadata/annotations/checksum~1cloudprovider",
+			Value: b.CheckSums[common.CloudProviderSecretName],
+		},
+	}
+
+	body, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, common.CSIPluginController, body)
 	return err
 }
 

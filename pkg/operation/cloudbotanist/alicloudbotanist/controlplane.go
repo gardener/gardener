@@ -204,23 +204,6 @@ func (b *AlicloudBotanist) GenerateKubeAPIServerExposeConfig() (map[string]inter
 // GenerateCSIConfig generates the configuration for CSI charts
 func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 	//TODO: This part is just for release 0.21 and will be deleted in release 0.22
-
-	if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, common.CSIPluginController); err != nil && !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
-	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSIAttacher); err != nil && !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
-	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSIProvisioner); err != nil && !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
-	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CSISnapshotter); err != nil && !apierrors.IsNotFound(err) {
-		return nil, err
-	}
-
 	storageClass := &storagev1.StorageClass{}
 	if b.K8sShootClient != nil {
 		if err := b.K8sShootClient.Client().Get(context.TODO(), kutil.Key("default"), storageClass); err != nil {
