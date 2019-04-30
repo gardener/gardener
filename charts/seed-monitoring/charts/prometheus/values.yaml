@@ -193,6 +193,7 @@ seed:
 
 shoot:
   apiserver: https://api.foo.bar
+  provider: aws
 
 rules:
   optional:
