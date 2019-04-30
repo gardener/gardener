@@ -18,24 +18,17 @@ import (
 	"context"
 	"strings"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
 
 // Unknown is a constant to be used for unknown cloud info
 const Unknown = "<unknown>"
-
-func newConditionOrError(oldCondition, newCondition gardencorev1alpha1.Condition, err error) gardencorev1alpha1.Condition {
-	if err != nil {
-		return helper.UpdatedConditionUnknownError(oldCondition, err)
-	}
-	return newCondition
-}
 
 // FetchCloudInfo deduces the cloud info from the plant cluster
 func FetchCloudInfo(ctx context.Context, plantClient client.Client, discoveryClient discovery.DiscoveryInterface, logger logrus.FieldLogger) (*StatusCloudInfo, error) {

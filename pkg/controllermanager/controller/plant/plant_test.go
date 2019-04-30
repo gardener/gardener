@@ -15,6 +15,7 @@ package plant_test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -63,8 +64,12 @@ func makeNodeWithProvider(provider string, withLabels map[string]string) corev1.
 	}
 }
 
-func hasConditonTrue(cond *gardencorev1alpha1.Condition) bool {
+func hasConditonTrue(cond gardencorev1alpha1.Condition) bool {
 	return cond.Status == gardencorev1alpha1.ConditionTrue
+}
+
+func hasConditionUnknown(cond gardencorev1alpha1.Condition) bool {
+	return cond.Status == gardencorev1alpha1.ConditionUnknown
 }
 
 var _ = Describe("Plant", func() {
@@ -112,18 +117,22 @@ var _ = Describe("Plant", func() {
 	})
 	Context("HealthChecker", func() {
 		var (
-			healthChecker *plant.HealthChecker
-			runtimeClient = mockclient.NewMockClient(ctrl)
+			healthChecker       *plant.HealthChecker
+			runtimeClient       = mockclient.NewMockClient(ctrl)
+			discoveryMockclient *mockdiscovery.MockDiscoveryInterface
 		)
+
+		BeforeEach(func() {
+			discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
+		})
 
 		DescribeTable("checkAPIServerAvailablility", func(response *http.Response, matcher types.GomegaMatcher) {
 			var (
-				apiServerAvailable  = helper.InitCondition(gardencorev1alpha1.PlantAPIServerAvailable)
-				discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
-				restMockClient      = mockrest.NewMockInterface(ctrl)
-				httpMockClient      = mockrest.NewMockHTTPClient(ctrl)
-				body                = mockio.NewMockReadCloser(ctrl)
-				healthChecker       = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
+				apiServerAvailable = helper.InitCondition(gardencorev1alpha1.PlantAPIServerAvailable)
+				restMockClient     = mockrest.NewMockInterface(ctrl)
+				httpMockClient     = mockrest.NewMockHTTPClient(ctrl)
+				body               = mockio.NewMockReadCloser(ctrl)
+				healthChecker      = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
 
 				request = rest.NewRequest(httpMockClient, http.MethodGet, &url.URL{}, "", rest.ContentConfig{}, rest.Serializers{}, nil, nil, 0)
 			)
@@ -139,18 +148,17 @@ var _ = Describe("Plant", func() {
 			)
 			_ = baseNode
 			actual := healthChecker.CheckAPIServerAvailability(apiServerAvailable)
-			Expect(hasConditonTrue(&actual)).To(matcher)
+			Expect(hasConditonTrue(actual)).To(matcher)
 
 		},
 			Entry("bad response", &http.Response{StatusCode: http.StatusOK}, BeTrue()),
 			Entry("bad response", &http.Response{StatusCode: http.StatusNotFound}, BeFalse()),
 		)
 		DescribeTable("checkClusterNodes",
-			func(node *corev1.Node, errMatcher, caseMatcher types.GomegaMatcher) {
+			func(node *corev1.Node, caseMatcher types.GomegaMatcher) {
 				var (
-					healthyNodes        = helper.InitCondition(gardencorev1alpha1.PlantEveryNodeReady)
-					discoveryMockclient = mockdiscovery.NewMockDiscoveryInterface(ctrl)
-					runtimeClient       = mockclient.NewMockClient(ctrl)
+					conditionEveryNodeReady = helper.InitCondition(gardencorev1alpha1.PlantEveryNodeReady)
+					runtimeClient           = mockclient.NewMockClient(ctrl)
 				)
 
 				healthChecker = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
@@ -160,17 +168,33 @@ var _ = Describe("Plant", func() {
 					return nil
 				})
 
-				actual, err := healthChecker.CheckPlantClusterNodes(context.TODO(), &healthyNodes)
-				Expect(err).To(errMatcher)
-				Expect(hasConditonTrue(actual)).To(caseMatcher)
+				condition := healthChecker.CheckPlantClusterNodes(context.TODO(), conditionEveryNodeReady)
+				Expect(hasConditonTrue(condition)).To(caseMatcher)
 			},
 			Entry("healthy cluster nodes", &corev1.Node{
 				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}}},
-			}, BeNil(), BeTrue()),
-			Entry("no ready condition", &corev1.Node{}, BeNil(), Not(BeTrue())),
+			}, BeTrue()),
+			Entry("no ready condition", &corev1.Node{}, Not(BeTrue())),
 			Entry("ready condition not indicating true", &corev1.Node{
 				Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}},
-			}, BeNil(), Not(BeTrue())),
+			}, Not(BeTrue())),
+		)
+		DescribeTable("checkClusterNodes - returns correct condition on failure",
+			func(caseMatcher types.GomegaMatcher) {
+				var (
+					conditionEveryNodeReady = helper.InitCondition(gardencorev1alpha1.PlantEveryNodeReady)
+					runtimeClient           = mockclient.NewMockClient(ctrl)
+				)
+
+				healthChecker = plant.NewHealthChecker(runtimeClient, discoveryMockclient)
+				runtimeClient.EXPECT().List(context.TODO(), gomock.Any(), gomock.Any()).DoAndReturn(func(ctx context.Context, options *client.ListOptions, list runtime.Object) error {
+					return fmt.Errorf("Some Error")
+				})
+
+				condition := healthChecker.CheckPlantClusterNodes(context.TODO(), conditionEveryNodeReady)
+				Expect(hasConditionUnknown(condition)).To(caseMatcher)
+			},
+			Entry("no healthy cluster nodes", BeTrue()),
 		)
 	})
 })
