@@ -190,7 +190,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		originalConfig["caBundle"] = *caBundle
 	}
 
-	return b.ImageVector.InjectImages(originalConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName, common.PauseContainerImageName)
+	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
 func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName gardenv1beta1.MachineImageName, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
@@ -290,7 +290,7 @@ func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.Ren
 		"workers":        workers,
 	}
 
-	config, err = b.ImageVector.InjectImages(config, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	config, err = b.InjectShootShootImages(config, common.HyperkubeImageName)
 	if err != nil {
 		return nil, err
 	}

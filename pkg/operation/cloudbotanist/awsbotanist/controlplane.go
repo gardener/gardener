@@ -224,7 +224,7 @@ func (b *AWSBotanist) DeployCloudSpecificControlPlane() error {
 		}
 	)
 
-	values, err := b.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.AWSLBReadvertiserImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.AWSLBReadvertiserImageName)
 	if err != nil {
 		return err
 	}

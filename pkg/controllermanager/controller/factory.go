@@ -47,6 +47,16 @@ import (
 	"k8s.io/client-go/tools/record"
 )
 
+// ReadGlobalImageVectorWithEnvOverride reads the global image vector and applies the env override. Exposed for testing.
+func ReadGlobalImageVectorWithEnvOverride() (imagevector.ImageVector, error) {
+	imageVector, err := imagevector.ReadFile(filepath.Join(common.ChartPath, "images.yaml"))
+	if err != nil {
+		return nil, err
+	}
+
+	return imagevector.WithEnvOverride(imageVector)
+}
+
 // GardenControllerFactory contains information relevant to controllers for the Garden API group.
 type GardenControllerFactory struct {
 	cfg                    *config.ControllerManagerConfiguration
@@ -114,10 +124,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 
 	runtime.Must(garden.VerifyInternalDomainSecret(f.k8sGardenClient, len(shootList), secrets[common.GardenRoleInternalDomain]))
 
-	globalImageVector, err := imagevector.ReadFile(filepath.Join(common.ChartPath, "images.yaml"))
-	runtime.Must(err)
-
-	imageVector, err := imagevector.WithEnvOverride(globalImageVector)
+	imageVector, err := ReadGlobalImageVectorWithEnvOverride()
 	runtime.Must(err)
 
 	runtime.Must(garden.BootstrapCluster(f.k8sGardenClient, common.GardenNamespace, secrets))

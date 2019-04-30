@@ -32,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilsecrets "github.com/gardener/gardener/pkg/utils/secrets"
@@ -221,22 +222,26 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		return err
 	}
 
-	images, err := imageVector.FindImages([]string{
-		common.AlertManagerImageName,
-		common.AlpineImageName,
-		common.CertManagerImageName,
-		common.ConfigMapReloaderImageName,
-		common.CuratorImageName,
-		common.ElasticsearchImageName,
-		common.FluentBitImageName,
-		common.FluentdEsImageName,
-		common.KibanaImageName,
-		common.PauseContainerImageName,
-		common.PrometheusImageName,
-		common.VpaAdmissionControllerImageName,
-		common.VpaRecommenderImageName,
-		common.VpaUpdaterImageName,
-	}, k8sSeedClient.Version(), k8sSeedClient.Version())
+	images, err := imagevector.FindImages(imageVector,
+		[]string{
+			common.AlertManagerImageName,
+			common.AlpineImageName,
+			common.CertManagerImageName,
+			common.ConfigMapReloaderImageName,
+			common.CuratorImageName,
+			common.ElasticsearchImageName,
+			common.FluentBitImageName,
+			common.FluentdEsImageName,
+			common.KibanaImageName,
+			common.PauseContainerImageName,
+			common.PrometheusImageName,
+			common.VpaAdmissionControllerImageName,
+			common.VpaRecommenderImageName,
+			common.VpaUpdaterImageName,
+		},
+		imagevector.RuntimeVersion(k8sSeedClient.Version()),
+		imagevector.TargetVersion(k8sSeedClient.Version()),
+	)
 	if err != nil {
 		return err
 	}
@@ -393,7 +398,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), common.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"global": map[string]interface{}{
-			"images": images,
+			"images": chart.ImageMapToValues(images),
 		},
 		"reserveExcessCapacity": seed.reserveExcessCapacity,
 		"replicas": map[string]interface{}{

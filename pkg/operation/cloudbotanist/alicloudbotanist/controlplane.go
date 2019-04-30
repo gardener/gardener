@@ -20,7 +20,6 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 )
 
 type cloudConfig struct {
@@ -108,42 +107,12 @@ func (b *AlicloudBotanist) GenerateCloudControllerManagerConfig() (map[string]in
 	conf := map[string]interface{}{
 		"configureRoutes": false,
 	}
-	newConf, err := b.ImageVector.InjectImages(conf, b.SeedVersion(), b.ShootVersion(), common.AlicloudControllerManagerImageName)
+	newConf, err := b.InjectSeedShootImages(conf, common.AlicloudControllerManagerImageName)
 	if err != nil {
 		return conf, chartName, err
 	}
 
 	return newConf, chartName, nil
-}
-
-// GenerateCSIConfig generates the configuration for CSI charts
-func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
-	conf := map[string]interface{}{
-		"credential": map[string]interface{}{
-			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
-			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
-		},
-		"kubernetesVersion": b.Operation.ShootVersion(),
-		"enabled":           true,
-	}
-
-	lessV1_13, _ := utils.CompareVersions(b.ShootVersion(), "<", "v1.13.0")
-	if lessV1_13 {
-		return b.ImageVector.InjectImages(conf, b.ShootVersion(), b.ShootVersion(),
-			common.CSIAttacherImageName,
-			common.CSIDriverRegistrarImageName,
-			common.CSIPluginAlicloudImageName,
-			common.CSIProvisionerImageName,
-		)
-	}
-
-	return b.ImageVector.InjectImages(conf, b.SeedVersion(), b.ShootVersion(),
-		common.CSIAttacherImageName,
-		common.CSIPluginAlicloudImageName,
-		common.CSIProvisionerImageName,
-		common.CSISnapshotterImageName,
-		common.CSINodeDriverRegistrarImageName,
-	)
 }
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
@@ -174,6 +143,27 @@ func (b *AlicloudBotanist) GenerateKubeAPIServerExposeConfig() (map[string]inter
 			fmt.Sprintf("--external-hostname=%s", b.APIServerAddress),
 		},
 	}, nil
+}
+
+// GenerateCSIConfig generates the configuration for CSI charts
+func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
+	conf := map[string]interface{}{
+		"credential": map[string]interface{}{
+			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
+			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
+		},
+		"kubernetesVersion": b.Operation.ShootVersion(),
+		"enabled":           true,
+	}
+
+	return b.InjectShootShootImages(conf,
+		common.CSIAttacherImageName,
+		common.CSIPluginAlicloudImageName,
+		common.CSIDriverRegistrarImageName,
+		common.CSIProvisionerImageName,
+		common.CSISnapshotterImageName,
+		common.CSINodeDriverRegistrarImageName,
+	)
 }
 
 // GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the
