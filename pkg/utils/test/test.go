@@ -16,6 +16,7 @@ package test
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 
 	"github.com/onsi/ginkgo"
@@ -71,6 +72,52 @@ func WithVars(dstsAndSrcs ...interface{}) func() {
 	return func() {
 		for _, revert := range reverts {
 			revert()
+		}
+	}
+}
+
+// WithEnvVar sets the env variable to the given environment variable and returns a function to revert.
+// If the value is empty, the environment variable will be unset.
+func WithEnvVar(key, value string) func() {
+	tmp := os.Getenv(key)
+
+	var err error
+	if value == "" {
+		err = os.Unsetenv(key)
+	} else {
+		err = os.Setenv(key, value)
+	}
+	if err != nil {
+		ginkgo.Fail(fmt.Sprintf("Could not set the env variable %q to %q: %v", key, value, err))
+	}
+
+	return func() {
+		var err error
+		if tmp == "" {
+			err = os.Unsetenv(key)
+		} else {
+			err = os.Setenv(key, tmp)
+		}
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("Could not revert the env variable %q to %q: %v", key, value, err))
+		}
+	}
+}
+
+// WithWd sets the working directory and returns a function to revert to the previous one.
+func WithWd(path string) func() {
+	oldPath, err := os.Getwd()
+	if err != nil {
+		ginkgo.Fail(fmt.Sprintf("Could not obtain current working diretory: %v", err))
+	}
+
+	if err := os.Chdir(path); err != nil {
+		ginkgo.Fail(fmt.Sprintf("Could not change working diretory: %v", err))
+	}
+
+	return func() {
+		if err := os.Chdir(oldPath); err != nil {
+			ginkgo.Fail(fmt.Sprintf("Could not revert working diretory: %v", err))
 		}
 	}
 }

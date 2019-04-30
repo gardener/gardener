@@ -18,18 +18,28 @@ package imagevector
 // image is only valid for a specific Kubernetes version, then it must also contain the 'versions'
 // field describing for which versions it can be used.
 type ImageSource struct {
-	Name       string `json:"name" yaml:"name"`
-	Repository string `json:"repository" yaml:"repository"`
-	Tag        string `json:"tag" yaml:"tag"`
-	Versions   string `json:"versions" yaml:"versions"`
+	Name           string  `json:"name" yaml:"name"`
+	RuntimeVersion *string `json:"runtimeVersion,omitempty" yaml:"runtimeVersion,omitempty"`
+
+	Repository string  `json:"repository" yaml:"repository"`
+	Tag        *string `json:"tag,omitempty" yaml:"tag,omitempty"`
 }
 
 // Image is a concrete, pullable image with a nonempty tag.
 type Image struct {
 	Name       string
 	Repository string
-	Tag        string
+	Tag        *string
 }
 
 // ImageVector is a list of image sources.
 type ImageVector []*ImageSource
+
+// FindOptions are options that can be supplied during either `FindImage` or `FindImages`.
+type FindOptions struct {
+	RuntimeVersion *string
+	TargetVersion  *string
+}
+
+// FindOptionFunc is a function that mutates FindOptions.
+type FindOptionFunc func(*FindOptions)
