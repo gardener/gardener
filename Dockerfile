@@ -33,3 +33,14 @@ COPY charts /charts
 WORKDIR /
 
 ENTRYPOINT ["/gardener-controller-manager"]
+
+############# scheduler #############
+FROM alpine:3.8 AS scheduler
+
+RUN apk add --update bash curl
+
+COPY --from=builder /go/bin/gardener-scheduler /gardener-scheduler
+
+WORKDIR /
+
+ENTRYPOINT ["/gardener-scheduler"]

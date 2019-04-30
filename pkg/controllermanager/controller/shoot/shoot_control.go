@@ -87,6 +87,12 @@ func (c *Controller) shootDelete(obj interface{}) {
 }
 
 func (c *Controller) newShootElement(shoot *gardenv1beta1.Shoot) (*shootElement, error) {
+	if shoot.Spec.Cloud.Seed == nil {
+		return &shootElement{
+			shoot: newID(shoot.Namespace, shoot.Name),
+		}, nil
+	}
+
 	shootedSeed, err := c.usesShootedSeed(shoot)
 	if err != nil {
 		logger.Logger.Errorf("Error while trying to identify whether shoot %q uses a shoot seed: %+v", shoot.Name, err)
@@ -158,6 +164,9 @@ func (c *Controller) reconcileShootKey(key string) error {
 	case shoot.DeletionTimestamp != nil:
 		c.scheduler.Delete(shootID)
 		mayReconcile, reason = true, reconcilescheduler.NewReason(reconcilescheduler.CodeOther, "shoot shall be deleted")
+	case shoot.Spec.Cloud.Seed == nil:
+		shootLogger.Info("Skipping Shoot as it is not scheduled to a seed yet")
+		mayReconcile, reason = false, reconcilescheduler.NewReason(reconcilescheduler.CodeOther, "waiting for shoot to be scheduled to seed")
 	case shoot.Status.LastOperation != nil && shoot.Status.LastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate:
 		mayReconcile, reason = true, reconcilescheduler.NewReason(reconcilescheduler.CodeOther, "shoot shall be created")
 	default:
@@ -177,7 +186,7 @@ func (c *Controller) reconcileShootKey(key string) error {
 		if !shootIsFailed(shoot) {
 			shootLogger.Debugf(message)
 			c.recorder.Eventf(shoot, corev1.EventTypeNormal, "OperationPending", message)
-			c.updateShootStatusPending(shoot, message)
+			c.updateShootStatusProcessing(shoot, message)
 		}
 	default:
 		// Otherwise (i.e., shoot is not ignored and may be reconciled) we start the reconcile operation).
@@ -194,8 +203,10 @@ func (c *Controller) reconcileShootKey(key string) error {
 	}
 
 	// Sync `Cluster` extension resource into the seed.
-	if err := o.SyncClusterResourceToSeed(ctx); err != nil {
-		return err
+	if shoot.Spec.Cloud.Seed != nil {
+		if err := o.SyncClusterResourceToSeed(ctx); err != nil {
+			return err
+		}
 	}
 
 	if startReconciliation {
@@ -212,7 +223,7 @@ func (c *Controller) reconcileShootKey(key string) error {
 	return nil
 }
 
-func (c *Controller) updateShootStatusPending(shoot *gardenv1beta1.Shoot, message string) error {
+func (c *Controller) updateShootStatusProcessing(shoot *gardenv1beta1.Shoot, message string) error {
 	_, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, shoot.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.LastOperation = &gardencorev1alpha1.LastOperation{
@@ -349,14 +360,16 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 			}
 			return true, errors.New(deleteErr.Description)
 		}
-		if err := operation.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
-			lastErr := &gardencorev1alpha1.LastError{Description: fmt.Sprintf("Could not delete Cluster resource in seed: %s", err)}
-			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "[%s] %s", operationID, lastErr.Description)
-			if state, updateErr := c.updateShootStatusDeleteError(operation, lastErr); updateErr != nil {
-				shootLogger.Errorf("Could not update the Shoot status after deletion error: %+v", updateErr)
-				return state != gardencorev1alpha1.LastOperationStateFailed, updateErr
+		if shoot.Spec.Cloud.Seed != nil {
+			if err := operation.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
+				lastErr := &gardencorev1alpha1.LastError{Description: fmt.Sprintf("Could not delete Cluster resource in seed: %s", err)}
+				c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "[%s] %s", operationID, lastErr.Description)
+				if state, updateErr := c.updateShootStatusDeleteError(operation, lastErr); updateErr != nil {
+					shootLogger.Errorf("Could not update the Shoot status after deletion error: %+v", updateErr)
+					return state != gardencorev1alpha1.LastOperationStateFailed, updateErr
+				}
+				return true, errors.New(lastErr.Description)
 			}
-			return true, errors.New(lastErr.Description)
 		}
 		c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.EventDeleted, "[%s] Deleted Shoot cluster", operationID)
 		if updateErr := c.updateShootStatusDeleteSuccess(operation); updateErr != nil {

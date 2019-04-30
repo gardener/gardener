@@ -59,12 +59,12 @@ import (
 
 // New creates a new operation object with a Shoot resource object.
 func New(shoot *gardenv1beta1.Shoot, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector, shootBackup *config.ShootBackup) (*Operation, error) {
-	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, *(shoot.Spec.Cloud.Seed), shoot, nil, shootBackup)
+	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, shoot.Namespace, shoot.Spec.Cloud.Seed, shoot, nil, shootBackup)
 }
 
 // NewWithBackupInfrastructure creates a new operation object without a Shoot resource object but the BackupInfrastructure resource.
 func NewWithBackupInfrastructure(backupInfrastructure *gardenv1beta1.BackupInfrastructure, logger *logrus.Entry, k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, gardenerInfo *gardenv1beta1.Gardener, secretsMap map[string]*corev1.Secret, imageVector imagevector.ImageVector) (*Operation, error) {
-	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, backupInfrastructure.Spec.Seed, nil, backupInfrastructure, nil)
+	return newOperation(logger, k8sGardenClient, k8sGardenInformers, gardenerInfo, secretsMap, imageVector, backupInfrastructure.Namespace, &backupInfrastructure.Spec.Seed, nil, backupInfrastructure, nil)
 }
 
 func newOperation(
@@ -74,8 +74,8 @@ func newOperation(
 	gardenerInfo *gardenv1beta1.Gardener,
 	secretsMap map[string]*corev1.Secret,
 	imageVector imagevector.ImageVector,
-	namespace,
-	seedName string,
+	namespace string,
+	seedName *string,
 	shoot *gardenv1beta1.Shoot,
 	backupInfrastructure *gardenv1beta1.BackupInfrastructure,
 	shootBackup *config.ShootBackup,
@@ -90,9 +90,13 @@ func newOperation(
 	if err != nil {
 		return nil, err
 	}
-	seedObj, err := seed.NewFromName(k8sGardenClient, k8sGardenInformers, seedName)
-	if err != nil {
-		return nil, err
+
+	var seedObj *seed.Seed
+	if seedName != nil {
+		seedObj, err = seed.NewFromName(k8sGardenClient, k8sGardenInformers, *seedName)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	renderer, err := chartrenderer.NewForConfig(k8sGardenClient.RESTConfig())

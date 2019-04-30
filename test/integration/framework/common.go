@@ -43,7 +43,7 @@ const (
 
 // CreateShootTestArtifacts creates the necessary artifacts for a shoot tests including a random integration test name and
 // a shoot object which is read from the resources directory
-func CreateShootTestArtifacts(shootTestYamlPath, prefix string) (string, *v1beta1.Shoot, error) {
+func CreateShootTestArtifacts(shootTestYamlPath, prefix string, clearDNS bool) (string, *v1beta1.Shoot, error) {
 	integrationTestName, err := generateRandomShootName(prefix)
 	if err != nil {
 		return "", nil, err
@@ -55,7 +55,10 @@ func CreateShootTestArtifacts(shootTestYamlPath, prefix string) (string, *v1beta
 	}
 
 	shoot.Name = integrationTestName
-	shoot.Spec.DNS = v1beta1.DNS{}
+
+	if clearDNS {
+		shoot.Spec.DNS = v1beta1.DNS{}
+	}
 	return integrationTestName, shoot, nil
 }
 

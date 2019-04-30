@@ -48,3 +48,10 @@ The cloud provider secrets can be stored in any namespace. With [`SecretBindings
 The Gardener controller manager does only support one command line flag which should be a path to a valid configuration file.
 
 Please take a look at [this](../../example/20-componentconfig-gardener-controller-manager.yaml) example configuration.
+
+## Configuration file for Gardener scheduler
+The Gardener scheduler also only supports one command line flag which should be a path to a valid scheduler configuration file.
+
+Please take a look at [this](../../example/20-componentconfig-gardener-scheduler.yaml) example configuration.
+
+Information about the concepts of the gardener scheduler can be found [here](./scheduler.md)

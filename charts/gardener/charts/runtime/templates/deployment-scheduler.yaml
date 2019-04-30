@@ -1,0 +1,72 @@
+{{- if .Values.global.scheduler.enabled }}
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: gardener-scheduler
+  namespace: garden
+  labels:
+    app: gardener
+    role: scheduler
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  replicas: {{ required ".Values.global.scheduler.replicaCount is required" .Values.global.scheduler.replicaCount }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: scheduler
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-gardener-scheduler-config: {{ include (print $.Template.BasePath "/configmap-scheduler.yaml") . | sha256sum }}
+        checksum/secret-gardener-scheduler-kubeconfig: {{ include (print $.Template.BasePath "/secret-scheduler-kubeconfig.yaml") . | sha256sum }}
+      labels:
+        app: gardener
+        role: scheduler
+        chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+        release: "{{ .Release.Name }}"
+        heritage: "{{ .Release.Service }}"
+    spec:
+      {{- if not .Values.global.scheduler.kubeconfig }}
+      serviceAccountName: {{ required ".Values.global.scheduler.serviceAccountName is required" .Values.global.scheduler.serviceAccountName }}
+      {{- end }}
+      containers:
+      - name: gardener-scheduler
+        image: {{ required ".Values.global.scheduler.image.repository is required" .Values.global.scheduler.image.repository }}:{{ required ".Values.global.scheduler.image.tag is required" .Values.global.scheduler.image.tag }}
+        imagePullPolicy: {{ .Values.global.scheduler.image.pullPolicy }}
+        command:
+        - /gardener-scheduler
+        - --config=/etc/gardener-scheduler/config/schedulerconfiguration.yaml
+        {{- if .Values.global.scheduler.resources }}
+        resources:
+{{ toYaml .Values.global.scheduler.resources | indent 10 }}
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ required ".Values.global.scheduler.config.server.http.port is required" .Values.global.scheduler.config.server.http.port }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        {{- if .Values.global.scheduler.kubeconfig }}
+        - name: gardener-scheduler-kubeconfig
+          mountPath: /etc/gardener-scheduler/kubeconfig
+          readOnly: true
+        {{- end }}
+        - name: gardener-scheduler-config
+          mountPath: /etc/gardener-scheduler/config
+      terminationGracePeriodSeconds: 3600
+      volumes:
+      {{- if .Values.global.scheduler.kubeconfig }}
+      - name: gardener-scheduler-kubeconfig
+        secret:
+          secretName: gardener-scheduler-kubeconfig
+      {{- end }}
+      - name: gardener-scheduler-config
+        configMap:
+          name: gardener-scheduler-configmap
+{{- end}}

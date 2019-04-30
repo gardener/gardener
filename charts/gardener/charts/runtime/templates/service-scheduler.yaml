@@ -1,0 +1,23 @@
+{{- if .Values.global.scheduler.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: gardener-scheduler
+  namespace: garden
+  labels:
+    app: gardener
+    role: scheduler
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  selector:
+    app: gardener
+    role: scheduler
+    release: {{ .Release.Name }}
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: {{ required ".Values.global.scheduler.config.server.http.port is required" .Values.global.scheduler.config.server.http.port }}
+{{- end }}

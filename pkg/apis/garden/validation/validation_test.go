@@ -2750,7 +2750,6 @@ var _ = Describe("validation", func() {
 			newShoot.Spec.Cloud.SecretBindingRef = corev1.LocalObjectReference{
 				Name: "another-reference",
 			}
-			newShoot.Spec.Cloud.Seed = makeStringPointer("another-seed")
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 
@@ -2766,7 +2765,18 @@ var _ = Describe("validation", func() {
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.cloud.secretBindingRef"),
-				})),
+				}))),
+			)
+		})
+
+		It("should forbid updating the seed, if it has been set previously", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.Cloud.Seed = makeStringPointer("another-seed")
+			shoot.Spec.Cloud.Seed = makeStringPointer("first-seed")
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(errorList).To(ConsistOf(
 				PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeInvalid),
 					"Field": Equal("spec.cloud.seed"),
@@ -2796,6 +2806,16 @@ var _ = Describe("validation", func() {
 			errorList := ValidateShoot(shoot)
 
 			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow updating the seed if it has not been set previously", func() {
+			newShoot := prepareShootForUpdate(shoot)
+			newShoot.Spec.Cloud.Seed = makeStringPointer("another-seed")
+			shoot.Spec.Cloud.Seed = nil
+
+			errorList := ValidateShootUpdate(newShoot, shoot)
+
+			Expect(len(errorList)).To(Equal(0))
 		})
 
 		Context("AWS specific validation", func() {

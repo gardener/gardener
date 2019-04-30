@@ -46,9 +46,17 @@ import (
 // It receives a Garden object <garden> which stores the Shoot object.
 func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1.LastError {
 	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
-	// cluster. This implies that there can not be any resource which we have to delete. We accept the deletion.
+	// cluster. This implies that there can not be any resource which we have to delete.
+	// We accept the deletion.
 	if len(o.Shoot.Info.Status.UID) == 0 {
 		o.Logger.Info("`.status.uid` is empty, assuming Shoot cluster did never exist. Deletion accepted.")
+		return nil
+	}
+	// If the shoot has never been scheduled (this is the case e.g when the scheduler cannot find a seed for the shoot), the gardener controller manager has never reconciled it.
+	// This implies that there can not be any resource which we have to delete.
+	// We accept the deletion.
+	if o.Shoot.Info.Spec.Cloud.Seed == nil {
+		o.Logger.Info("`.spec.cloud.seed` is empty, assuming Shoot cluster has never been scheduled - thus never existed. Deletion accepted.")
 		return nil
 	}
 

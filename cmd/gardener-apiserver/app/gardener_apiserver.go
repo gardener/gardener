@@ -38,7 +38,6 @@ import (
 	"github.com/gardener/gardener/plugin/pkg/global/resourcereferencemanager"
 	shootdns "github.com/gardener/gardener/plugin/pkg/shoot/dns"
 	shootquotavalidator "github.com/gardener/gardener/plugin/pkg/shoot/quotavalidator"
-	shootseedmanager "github.com/gardener/gardener/plugin/pkg/shoot/seedmanager"
 	shootvalidator "github.com/gardener/gardener/plugin/pkg/shoot/validator"
 
 	"github.com/spf13/cobra"
@@ -128,7 +127,6 @@ func (o *Options) complete() error {
 	resourcereferencemanager.Register(o.Recommended.Admission.Plugins)
 	deletionconfirmation.Register(o.Recommended.Admission.Plugins)
 	shootquotavalidator.Register(o.Recommended.Admission.Plugins)
-	shootseedmanager.Register(o.Recommended.Admission.Plugins)
 	shootdns.Register(o.Recommended.Admission.Plugins)
 	shootvalidator.Register(o.Recommended.Admission.Plugins)
 	controllerregistrationresources.Register(o.Recommended.Admission.Plugins)
@@ -138,7 +136,6 @@ func (o *Options) complete() error {
 		resourcereferencemanager.PluginName,
 		shootdns.PluginName,
 		shootquotavalidator.PluginName,
-		shootseedmanager.PluginName,
 		shootvalidator.PluginName,
 		controllerregistrationresources.PluginName,
 		plantvalidator.PluginName,

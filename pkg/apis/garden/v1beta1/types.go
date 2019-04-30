@@ -1517,6 +1517,11 @@ const (
 	ProjectEventNamespaceDeletionFailed = "NamespaceDeletionFailed"
 	// ProjectEventNamespaceMarkedForDeletion indicates that the namespace has been successfully marked for deletion.
 	ProjectEventNamespaceMarkedForDeletion = "NamespaceMarkedForDeletion"
+
+	// ShootEventSchedulingSuccessful
+	ShootEventSchedulingSuccessful = "SchedulingSuccessful"
+	// ShootEventSchedulingFailed
+	ShootEventSchedulingFailed = "SchedulingFailed"
 )
 
 const (

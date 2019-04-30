@@ -122,7 +122,7 @@ var _ = Describe("Shoot application testing", func() {
 		if StringSet(*shootTestYamlPath) {
 			*cleanup = true
 			// parse shoot yaml into shoot object and generate random test names for shoots
-			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix)
+			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix, true)
 			Expect(err).NotTo(HaveOccurred())
 
 			shootGardenerTest, err = NewShootGardenerTest(*kubeconfig, shootObject, shootAppTestLogger)

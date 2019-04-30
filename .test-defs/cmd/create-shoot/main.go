@@ -24,6 +24,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/test/integration/framework"
 	"github.com/sirupsen/logrus"
+	helper "github.com/gardener/gardener/.test-defs/cmd"
 )
 
 var (
@@ -127,7 +128,7 @@ func main() {
 		testLogger.Fatalf("Cannot create ShootGardenerTest %s", err.Error())
 	}
 
-	_, shootObject, err := framework.CreateShootTestArtifacts(shootArtifactPath, "")
+	_, shootObject, err := framework.CreateShootTestArtifacts(shootArtifactPath, "", true)
 	if err != nil {
 		testLogger.Fatalf("Cannot create shoot artifact %s", err.Error())
 	}
@@ -138,12 +139,21 @@ func main() {
 	shootObject.Spec.Cloud.Region = region
 	shootObject.Spec.Cloud.SecretBindingRef.Name = secretBindingName
 	shootObject.Spec.Kubernetes.Version = k8sVersion
-	updateAnnotations(shootObject)
-	updateWorkerZone(shootObject, cloudprovider, zone)
-	updateMachineType(shootObject, cloudprovider, machineType)
-	updateAutoscalerMinMax(shootObject, cloudprovider, autoScalerMin, autoScalerMax)
-	updateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
-	updateLoadBalancerProvider(shootObject, loadBalancerProvider, cloudprovider)
+	helper.UpdateAnnotations(shootObject)
+	if err := helper.UpdateWorkerZone(shootObject, cloudprovider, zone); err != nil {
+		testLogger.Warnf(err.Error())
+	}
+	if err := helper.UpdateMachineType(shootObject, cloudprovider, machineType); err != nil {
+		testLogger.Warnf(err.Error())
+	}
+	if err := helper.UpdateAutoscalerMin(shootObject, cloudprovider, autoScalerMin); err != nil {
+		testLogger.Warnf(err.Error())
+	}
+	if err := helper.UpdateAutoscalerMax(shootObject, cloudprovider, autoScalerMax); err != nil {
+		testLogger.Warnf(err.Error())
+	}
+	helper.UpdateFloatingPoolName(shootObject, floatingPoolName, cloudprovider)
+	helper.UpdateLoadBalancerProvider(shootObject, loadBalancerProvider, cloudprovider)
 
 	// TODO: tests need to be adopted when nginx gets removed.
 	shootObject.Spec.Addons.NginxIngress = &gardenv1beta1.NginxIngress{

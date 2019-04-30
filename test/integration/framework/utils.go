@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -27,11 +28,13 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
+	scheduler "github.com/gardener/gardener/pkg/scheduler/controller"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -137,7 +140,7 @@ func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, n
 }
 
 func shootCreationCompleted(newStatus *v1beta1.ShootStatus) bool {
-	if len(newStatus.Conditions) == 0 {
+	if len(newStatus.Conditions) == 0 && newStatus.LastOperation == nil {
 		return false
 	}
 
@@ -219,4 +222,24 @@ func plantReconciledWithStatusUnknown(plantStatus *gardencorev1alpha1.PlantStatu
 	}
 
 	return true
+}
+
+func shootIsUnschedulable(events []corev1.Event) bool {
+	if len(events) == 0 {
+		return false
+	}
+
+	for _, event := range events {
+		if strings.Contains(event.Message, scheduler.MsgUnschedulable) {
+			return true
+		}
+	}
+	return false
+}
+
+func shootIsScheduledSuccessfully(newSpec *v1beta1.ShootSpec) bool {
+	if newSpec.Cloud.Seed != nil {
+		return true
+	}
+	return false
 }

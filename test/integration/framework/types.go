@@ -18,10 +18,12 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/sirupsen/logrus"
+	"github.com/gardener/gardener/pkg/scheduler/apis/config"
 )
 
 // Helm is the home for the HELM repo
@@ -61,6 +63,14 @@ type ShootGardenerTest struct {
 
 	Shoot  *v1beta1.Shoot
 	Logger *logrus.Logger
+}
+
+// SchedulerGardenerTest represents an instance of scheduler tests which contains a shoot test & adds the scheduler configuration
+type SchedulerGardenerTest struct {
+	ShootGardenerTest      *ShootGardenerTest
+	CloudProfile           *v1beta1.CloudProfile
+	SchedulerConfiguration *config.SchedulerConfiguration
+	Seeds                  []v1beta1.Seed
 }
 
 // PlantTest represents an instance of shoot tests which entails all necessary data

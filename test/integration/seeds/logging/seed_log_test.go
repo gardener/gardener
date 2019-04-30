@@ -133,7 +133,7 @@ var _ = Describe("Seed logging testing", func() {
 		if StringSet(*shootTestYamlPath) {
 			*cleanup = true
 			// parse shoot yaml into shoot object and generate random test names for shoots
-			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix)
+			_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix, true)
 			Expect(err).NotTo(HaveOccurred())
 
 			seed := &v1beta1.Seed{}
