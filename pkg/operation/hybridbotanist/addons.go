@@ -100,27 +100,27 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 	}
 
-	calico, err := b.Botanist.ImageVector.InjectImages(calicoConfig, b.ShootVersion(), b.ShootVersion(), common.CalicoNodeImageName, common.CalicoCNIImageName, common.CalicoTyphaImageName)
+	calico, err := b.InjectShootShootImages(calicoConfig, common.CalicoNodeImageName, common.CalicoCNIImageName, common.CalicoTyphaImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	coreDNS, err := b.Botanist.ImageVector.InjectImages(coreDNSConfig, b.ShootVersion(), b.ShootVersion(), common.CoreDNSImageName)
+	coreDNS, err := b.InjectShootShootImages(coreDNSConfig, common.CoreDNSImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	kubeProxy, err := b.Botanist.ImageVector.InjectImages(kubeProxyConfig, b.ShootVersion(), b.ShootVersion(), common.HyperkubeImageName, common.AlpineImageName)
+	kubeProxy, err := b.InjectShootShootImages(kubeProxyConfig, common.HyperkubeImageName, common.AlpineImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	metricsServer, err := b.Botanist.ImageVector.InjectImages(metricsServerConfig, b.ShootVersion(), b.ShootVersion(), common.MetricsServerImageName)
+	metricsServer, err := b.InjectShootShootImages(metricsServerConfig, common.MetricsServerImageName)
 	if err != nil {
 		return nil, err
 	}
 
-	vpnShoot, err := b.Botanist.ImageVector.InjectImages(vpnShootConfig, b.ShootVersion(), b.ShootVersion(), common.VPNShootImageName)
+	vpnShoot, err := b.InjectShootShootImages(vpnShootConfig, common.VPNShootImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -130,11 +130,11 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	}
 	vpnShoot = utils.MergeMaps(vpnShoot, vpnShootCloudSpecific)
 
-	nodeExporter, err := b.Botanist.ImageVector.InjectImages(nodeExporterConfig, b.ShootVersion(), b.ShootVersion(), common.NodeExporterImageName)
+	nodeExporter, err := b.InjectShootShootImages(nodeExporterConfig, common.NodeExporterImageName)
 	if err != nil {
 		return nil, err
 	}
-	blackboxExporter, err := b.Botanist.ImageVector.InjectImages(blackboxExporterConfig, b.ShootVersion(), b.ShootVersion(), common.BlackboxExporterImageName)
+	blackboxExporter, err := b.InjectShootShootImages(blackboxExporterConfig, common.BlackboxExporterImageName)
 	if err != nil {
 		return nil, err
 	}
@@ -211,19 +211,19 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		}
 	}
 
-	kubeLego, err := b.Botanist.ImageVector.InjectImages(kubeLegoConfig, b.ShootVersion(), b.ShootVersion(), common.KubeLegoImageName)
+	kubeLego, err := b.InjectShootShootImages(kubeLegoConfig, common.KubeLegoImageName)
 	if err != nil {
 		return nil, err
 	}
-	kube2IAM, err := b.Botanist.ImageVector.InjectImages(kube2IAMConfig, b.ShootVersion(), b.ShootVersion(), common.Kube2IAMImageName)
+	kube2IAM, err := b.InjectShootShootImages(kube2IAMConfig, common.Kube2IAMImageName)
 	if err != nil {
 		return nil, err
 	}
-	kubernetesDashboard, err := b.Botanist.ImageVector.InjectImages(kubernetesDashboardConfig, b.ShootVersion(), b.ShootVersion(), common.KubernetesDashboardImageName)
+	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, common.KubernetesDashboardImageName)
 	if err != nil {
 		return nil, err
 	}
-	nginxIngress, err := b.Botanist.ImageVector.InjectImages(nginxIngressConfig, b.ShootVersion(), b.ShootVersion(), common.NginxIngressControllerImageName, common.IngressDefaultBackendImageName)
+	nginxIngress, err := b.InjectShootShootImages(nginxIngressConfig, common.NginxIngressControllerImageName, common.IngressDefaultBackendImageName)
 	if err != nil {
 		return nil, err
 	}
