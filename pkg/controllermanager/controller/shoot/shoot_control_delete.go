@@ -156,6 +156,16 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 			Fn:           flow.SimpleTaskFn(botanist.RefreshKubeControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
 		})
+		deploySecrets = g.Add(flow.Task{
+			Name: "Deploying Shoot certificates / keys",
+			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets).DoIf(cleanupShootResources && botanist.Shoot.UsesCSI()),
+		})
+		refreshCSIControllers = g.Add(flow.Task{
+			Name:         "Refreshing CSI Controllers checksums",
+			Fn:           flow.SimpleTaskFn(hybridBotanist.RefreshCSIControllersChecksums).DoIf(cleanupShootResources && botanist.Shoot.UsesCSI()).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deploySecrets, refreshCloudProviderConfig),
+		})
+
 		wakeUpControlPlane = g.Add(flow.Task{
 			Name: "Waking up control plane to ensure proper cleanup of resources",
 			Fn:   flow.TaskFn(botanist.WakeUpControlPlane).DoIf(o.Shoot.IsHibernated && cleanupShootResources),
@@ -164,7 +174,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager, wakeUpControlPlane),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshMachineClassSecrets, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager, refreshCSIControllers, wakeUpControlPlane),
 		})
 
 		// Only needed for migration from in-tree DNS management to out-of-tree mgmt by an extension DNS controller.
