@@ -47,13 +47,6 @@ var _ = Describe("utils", func() {
 		canceledCtx = func() context.Context {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-
-			for range ctx.Done() {
-			}
-			// Sanity check
-			if err := ctx.Err(); err == nil {
-				GinkgoT().Fatalf("Cancelled context %v does not yield an error: %v", ctx, err)
-			}
 			return ctx
 		}()
 	})
@@ -161,27 +154,6 @@ var _ = Describe("utils", func() {
 	})
 
 	Context("#Sleep", func() {
-		It("should sleep for the zero duration", func() {
-			var (
-				duration = 0 * time.Second
-				newTimer = mockutils.NewMockNewTimer(ctrl)
-				timer    = mockutils.NewMockTimer(ctrl)
-				c        = make(chan time.Time, 1)
-			)
-			c <- time.Now()
-			defer close(c)
-
-			defer test.RevertableSet(&NewTimer, newTimer.Do)()
-
-			gomock.InOrder(
-				newTimer.EXPECT().Do(duration).Return(timer),
-				timer.EXPECT().C().Return(c),
-				timer.EXPECT().Stop(),
-			)
-
-			Expect(Sleep(context.Background(), duration)).To(Succeed())
-		})
-
 		It("should sleep for the given duration", func() {
 			var (
 				duration = 10 * time.Second
