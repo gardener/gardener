@@ -45,7 +45,7 @@ var _ = Describe("Chart", func() {
 				img1.Name: img1,
 				img2.Name: img2,
 			})
-			Expect(values).To(Equal(Values{
+			Expect(values).To(Equal(map[string]interface{}{
 				img1.Name: img1.String(),
 				img2.Name: img2.String(),
 			}))
@@ -55,7 +55,7 @@ var _ = Describe("Chart", func() {
 	Describe("#InjectImages", func() {
 		It("should find the images and inject the image as value map at the 'images' key into a shallow copy", func() {
 			var (
-				values Values
+				values map[string]interface{}
 				img1   = &imagevector.ImageSource{
 					Name:       "img1",
 					Repository: "repo1",
@@ -69,8 +69,8 @@ var _ = Describe("Chart", func() {
 
 			injected, err := InjectImages(values, v, []string{img1.Name, img2.Name})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(injected).To(Equal(Values{
-				"images": Values{
+			Expect(injected).To(Equal(map[string]interface{}{
+				"images": map[string]interface{}{
 					img1.Name: img1.ToImage(nil).String(),
 					img2.Name: img2.ToImage(nil).String(),
 				},
@@ -80,7 +80,7 @@ var _ = Describe("Chart", func() {
 
 	Describe("#CopyValues", func() {
 		It("should create a shallow copy of the map", func() {
-			v := Values{"foo": nil, "bar": Values{"baz": nil}}
+			v := map[string]interface{}{"foo": nil, "bar": map[string]interface{}{"baz": nil}}
 
 			c := CopyValues(v)
 
@@ -89,8 +89,8 @@ var _ = Describe("Chart", func() {
 			c["foo"] = 1
 			Expect(v["foo"]).To(BeNil())
 
-			c["bar"].(Values)["baz"] = "bang"
-			Expect(v["bar"].(Values)["baz"]).To(Equal("bang"))
+			c["bar"].(map[string]interface{})["baz"] = "bang"
+			Expect(v["bar"].(map[string]interface{})["baz"]).To(Equal("bang"))
 		})
 	})
 })
