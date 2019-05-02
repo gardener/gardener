@@ -140,7 +140,7 @@ func (b *HybridBotanist) DeployETCD() error {
 		etcdConfig["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-backup"] = utils.HashForMap(backupConfigData)
 	}
 
-	etcd, err := b.Botanist.ImageVector.InjectImages(etcdConfig, b.SeedVersion(), b.ShootVersion(), common.ETCDImageName, common.ETCDBackupRestoreImageName)
+	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName, common.ETCDBackupRestoreImageName)
 	if err != nil {
 		return err
 	}
@@ -416,7 +416,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/configmap-cloud-provider-config"] = b.CheckSums[common.CloudProviderConfigName]
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(),
+	values, err := b.InjectSeedShootImages(defaultValues,
 		common.HyperkubeImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
@@ -527,7 +527,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		}
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}
@@ -573,7 +573,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		defaultValues["featureGates"] = cloudControllerManagerConfig.FeatureGates
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}
@@ -614,7 +614,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		defaultValues["featureGates"] = schedulerConfig.FeatureGates
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}

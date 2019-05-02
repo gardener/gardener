@@ -55,12 +55,39 @@ func ReadFile(name string) (ImageVector, error) {
 // If the tag of the override is non-empty, it immediately returns the override.
 // Otherwise, the override is copied, gets the tag of the old source and is returned.
 func mergeImageSources(old, override *ImageSource) *ImageSource {
-	if len(override.Tag) != 0 {
-		return override
+	tag := override.Tag
+	if tag == nil {
+		tag = old.Tag
 	}
-	merged := *override
-	merged.Tag = old.Tag
-	return &merged
+
+	runtimeVersion := override.RuntimeVersion
+	if runtimeVersion == nil {
+		runtimeVersion = old.RuntimeVersion
+	}
+
+	return &ImageSource{
+		Name:           override.Name,
+		RuntimeVersion: runtimeVersion,
+		Repository:     override.Repository,
+		Tag:            tag,
+	}
+}
+
+type imageSourceKey struct {
+	Name           string
+	RuntimeVersion string
+}
+
+func computeKey(source *ImageSource) imageSourceKey {
+	var runtimeVersion string
+	if source.RuntimeVersion != nil {
+		runtimeVersion = *source.RuntimeVersion
+	}
+
+	return imageSourceKey{
+		Name:           source.Name,
+		RuntimeVersion: runtimeVersion,
+	}
 }
 
 // Merge merges the given ImageVectors into one.
@@ -69,18 +96,20 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 // previous images.
 func Merge(vectors ...ImageVector) ImageVector {
 	var (
-		out              ImageVector
-		imageNameToIndex = make(map[string]int)
+		out        ImageVector
+		keyToIndex = make(map[imageSourceKey]int)
 	)
 
 	for _, vector := range vectors {
 		for _, image := range vector {
-			if idx, ok := imageNameToIndex[image.Name]; ok {
+			key := computeKey(image)
+
+			if idx, ok := keyToIndex[key]; ok {
 				out[idx] = mergeImageSources(out[idx], image)
 				continue
 			}
 
-			imageNameToIndex[image.Name] = len(out)
+			keyToIndex[key] = len(out)
 			out = append(out, image)
 		}
 	}
@@ -104,11 +133,59 @@ func WithEnvOverride(vector ImageVector) (ImageVector, error) {
 	return Merge(vector, override), nil
 }
 
-func checkConstraintMatchesK8sVersion(constraint, k8sVersion string) (bool, error) {
-	if constraint == "" {
-		return true, nil
+// String implements Stringer.
+func (o *FindOptions) String() string {
+	return fmt.Sprintf("runtime version %v target version %v", o.RuntimeVersion, o.TargetVersion)
+}
+
+// ApplyOptions applies the given FindOptionFuncs to these FindOptions. Returns a pointer to the mutated value.
+func (o *FindOptions) ApplyOptions(opts []FindOptionFunc) *FindOptions {
+	for _, opt := range opts {
+		opt(o)
 	}
-	return utils.CheckVersionMeetsConstraint(k8sVersion, constraint)
+	return o
+}
+
+// RuntimeVersion sets the RuntimeVersion of the FindOptions to the given version.
+func RuntimeVersion(version string) FindOptionFunc {
+	return func(options *FindOptions) {
+		options.RuntimeVersion = &version
+	}
+}
+
+// TargetVersion sets the TargetVersion of the FindOptions to the given version.
+func TargetVersion(version string) FindOptionFunc {
+	return func(options *FindOptions) {
+		options.TargetVersion = &version
+	}
+}
+
+func checkConstraint(constraint, version *string) (score int, ok bool, err error) {
+	if constraint == nil || version == nil {
+		return 0, true, nil
+	}
+
+	matches, err := utils.CheckVersionMeetsConstraint(*version, *constraint)
+	if err != nil || !matches {
+		return 0, false, err
+	}
+
+	return 1, true, nil
+}
+
+func match(source *ImageSource, name string, opts *FindOptions) (score int, ok bool, err error) {
+	if source.Name != name {
+		return 0, false, nil
+	}
+
+	runtimeScore, ok, err := checkConstraint(source.RuntimeVersion, opts.RuntimeVersion)
+	if err != nil || !ok {
+		return 0, false, err
+	}
+
+	score += runtimeScore
+
+	return score, true, nil
 }
 
 // FindImage returns an image with the given <name> from the sources in the image vector.
@@ -118,21 +195,33 @@ func checkConstraintMatchesK8sVersion(constraint, k8sVersion string) (bool, erro
 // stated in the image definition.
 // In case multiple images match the search, the first which was found is returned.
 // In case no image was found, an error is returned.
-func (v ImageVector) FindImage(name, k8sVersionRuntime, k8sVersionTarget string) (*Image, error) {
+func (v ImageVector) FindImage(name string, opts ...FindOptionFunc) (*Image, error) {
+	o := &FindOptions{}
+	o = o.ApplyOptions(opts)
+
+	var (
+		bestScore     int
+		bestCandidate *ImageSource
+	)
+
 	for _, source := range v {
 		if source.Name == name {
-			matches, err := checkConstraintMatchesK8sVersion(source.Versions, k8sVersionRuntime)
+			score, ok, err := match(source, name, o)
 			if err != nil {
 				return nil, err
 			}
 
-			if matches {
-				return source.ToImage(k8sVersionTarget), nil
+			if ok && (bestCandidate == nil || score > bestScore) {
+				bestCandidate = source
 			}
 		}
 	}
 
-	return nil, fmt.Errorf("could not find image %q for Kubernetes runtime version %q in the image vector", name, k8sVersionRuntime)
+	if bestCandidate == nil {
+		return nil, fmt.Errorf("could not find image %q opts %v", name, o)
+	}
+
+	return bestCandidate.ToImage(o.TargetVersion), nil
 }
 
 // FindImages returns an image map with the given <names> from the sources in the image vector.
@@ -142,47 +231,25 @@ func (v ImageVector) FindImage(name, k8sVersionRuntime, k8sVersionTarget string)
 // stated in the image definition.
 // In case multiple images match the search, the first which was found is returned.
 // In case no image was found, an error is returned.
-func (v ImageVector) FindImages(names []string, k8sVersionRuntime, k8sVersionTarget string) (map[string]interface{}, error) {
-	images := map[string]interface{}{}
+func FindImages(v ImageVector, names []string, opts ...FindOptionFunc) (map[string]*Image, error) {
+	images := map[string]*Image{}
 	for _, imageName := range names {
-		image, err := v.FindImage(imageName, k8sVersionRuntime, k8sVersionTarget)
+		image, err := v.FindImage(imageName, opts...)
 		if err != nil {
 			return nil, err
 		}
-		images[imageName] = image.String()
+		images[imageName] = image
 	}
 	return images, nil
 }
 
-// InjectImages injects images from a given image vector into the provided <values> map.
-func (v ImageVector) InjectImages(values map[string]interface{}, k8sVersionRuntime, k8sVersionTarget string, images ...string) (map[string]interface{}, error) {
-	var (
-		copy = make(map[string]interface{})
-		i    = make(map[string]interface{})
-	)
-
-	for k, v := range values {
-		copy[k] = v
-	}
-
-	for _, imageName := range images {
-		image, err := v.FindImage(imageName, k8sVersionRuntime, k8sVersionTarget)
-		if err != nil {
-			return nil, err
-		}
-		i[imageName] = image.String()
-	}
-
-	copy["images"] = i
-	return copy, nil
-}
-
 // ToImage applies the given <targetK8sVersion> to the source to produce an output image.
 // If the tag of an image source is empty, it will use the given <k8sVersion> as tag.
-func (i *ImageSource) ToImage(targetK8sVersion string) *Image {
+func (i *ImageSource) ToImage(targetVersion *string) *Image {
 	tag := i.Tag
-	if tag == "" {
-		tag = fmt.Sprintf("v%s", strings.TrimLeft(targetK8sVersion, "v"))
+	if tag == nil && targetVersion != nil {
+		version := fmt.Sprintf("v%s", strings.TrimLeft(*targetVersion, "v"))
+		tag = &version
 	}
 
 	return &Image{
@@ -194,8 +261,8 @@ func (i *ImageSource) ToImage(targetK8sVersion string) *Image {
 
 // String will returns the string representation of the image.
 func (i *Image) String() string {
-	if len(i.Tag) == 0 {
+	if i.Tag == nil {
 		return i.Repository
 	}
-	return fmt.Sprintf("%s:%s", i.Repository, i.Tag)
+	return fmt.Sprintf("%s:%s", i.Repository, *i.Tag)
 }

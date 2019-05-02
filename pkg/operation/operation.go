@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/chart"
+
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -317,8 +319,27 @@ func (o *Operation) ShootVersion() string {
 	return o.Shoot.Info.Spec.Kubernetes.Version
 }
 
+func (o *Operation) injectImages(values chart.Values, names []string, opts ...imagevector.FindOptionFunc) (chart.Values, error) {
+	return chart.InjectImages(values, o.ImageVector, names, opts...)
+}
+
+// InjectSeedSeedImages injects images that shall run on the Seed and target the Seed's Kubernetes version.
+func (o *Operation) InjectSeedSeedImages(values chart.Values, names ...string) (chart.Values, error) {
+	return o.injectImages(values, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.SeedVersion()))
+}
+
+// InjectSeedShootImages injects images that shall run on the Seed but target the Shoot's Kubernetes version.
+func (o *Operation) InjectSeedShootImages(values chart.Values, names ...string) (chart.Values, error) {
+	return o.injectImages(values, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.ShootVersion()))
+}
+
+// InjectShootShootImages injects images that shall run on the Shoot and target the Shoot's Kubernetes version.
+func (o *Operation) InjectShootShootImages(values chart.Values, names ...string) (chart.Values, error) {
+	return o.injectImages(values, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
+}
+
 func (o *Operation) newTerraformer(purpose, namespace, name string) (*terraformer.Terraformer, error) {
-	image, err := o.ImageVector.FindImage(common.TerraformerImageName, o.K8sSeedClient.Version(), o.K8sSeedClient.Version())
+	image, err := o.ImageVector.FindImage(common.TerraformerImageName, imagevector.RuntimeVersion(o.K8sSeedClient.Version()), imagevector.TargetVersion(o.K8sSeedClient.Version()))
 	if err != nil {
 		return nil, err
 	}

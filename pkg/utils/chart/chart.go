@@ -82,7 +82,7 @@ func (c *Chart) getValues(
 ) (map[string]interface{}, error) {
 
 	// Get default values
-	values := make(map[string]interface{})
+	values := make(Values)
 	var err error
 	if c.ValuesFunc != nil {
 		values, err = c.ValuesFunc(clusterName, shoot, checksums)
@@ -93,7 +93,7 @@ func (c *Chart) getValues(
 
 	// Inject images
 	if len(c.Images) > 0 {
-		values, err = imageVector.InjectImages(values, k8sVersion, shoot.Spec.Kubernetes.Version, c.Images...)
+		values, err = InjectImages(values, imageVector, c.Images, imagevector.RuntimeVersion(k8sVersion), imagevector.TargetVersion(shoot.Spec.Kubernetes.Version))
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not inject chart '%s' images for cluster '%s'", c.Name, clusterName)
 		}
@@ -149,4 +149,38 @@ func (o *Object) Delete(ctx context.Context, client client.Client, namespace str
 
 func objectKey(namespace, name string) client.ObjectKey {
 	return client.ObjectKey{Namespace: namespace, Name: name}
+}
+
+// Values are values used in Helm charts.
+type Values map[string]interface{}
+
+// CopyValues creates a shallow copy of the given Values.
+func CopyValues(values Values) Values {
+	copiedValues := make(Values, len(values))
+	for k, v := range values {
+		copiedValues[k] = v
+	}
+	return copiedValues
+}
+
+// ImageMapToValues transforms the given image name to image mapping into chart Values.
+func ImageMapToValues(m map[string]*imagevector.Image) Values {
+	out := make(Values, len(m))
+	for k, v := range m {
+		out[k] = v.String()
+	}
+	return out
+}
+
+// InjectImages finds the images with the given names and opts, makes a shallow copy of the given
+// Values and injects a name to image string mapping at the `images` key of that map and returns it.
+func InjectImages(values Values, v imagevector.ImageVector, names []string, opts ...imagevector.FindOptionFunc) (Values, error) {
+	images, err := imagevector.FindImages(v, names, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	values = CopyValues(values)
+	values["images"] = ImageMapToValues(images)
+	return values, nil
 }
