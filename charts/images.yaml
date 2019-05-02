@@ -42,6 +42,10 @@ images:
   sourceRepository: github.com/gardener/aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.6.0"
+- name: dependency-watchdog
+  sourceRepository: github.com/gardener/dependency-watchdog
+  repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
+  tag: "0.1.1"
 
 # Monitoring
 - name: alertmanager

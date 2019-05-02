@@ -219,6 +219,7 @@ var _ = Describe("health check", func() {
 		kubeControllerManagerDeployment    = newDeployment(seedNamespace, common.KubeControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
 		kubeSchedulerDeployment            = newDeployment(seedNamespace, common.KubeSchedulerDeploymentName, common.GardenRoleControlPlane, true)
 		machineControllerManagerDeployment = newDeployment(seedNamespace, common.MachineControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
+		dependencyWatchdogDeployment       = newDeployment(seedNamespace, common.DependancyWatchdogDeploymentName, common.GardenRoleControlPlane, true)
 		awsLBReadvertiserDeployment        = newDeployment(seedNamespace, common.AWSLBReadvertiserDeploymentName, common.GardenRoleControlPlane, true)
 		clusterAutoscalerDeployment        = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, common.GardenRoleControlPlane, true)
 
@@ -229,6 +230,7 @@ var _ = Describe("health check", func() {
 			kubeControllerManagerDeployment,
 			kubeSchedulerDeployment,
 			machineControllerManagerDeployment,
+			dependencyWatchdogDeployment,
 			awsLBReadvertiserDeployment,
 			clusterAutoscalerDeployment,
 		}
@@ -331,6 +333,7 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 				machineControllerManagerDeployment,
+				dependencyWatchdogDeployment,
 				awsLBReadvertiserDeployment,
 			},
 			requiredControlPlaneStatefulSets,
@@ -346,6 +349,7 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 				machineControllerManagerDeployment,
+				dependencyWatchdogDeployment,
 				clusterAutoscalerDeployment,
 			},
 			requiredControlPlaneStatefulSets,
@@ -360,6 +364,7 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 				machineControllerManagerDeployment,
+				dependencyWatchdogDeployment,
 			},
 			requiredControlPlaneStatefulSets,
 			nil,
@@ -374,6 +379,7 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 				machineControllerManagerDeployment,
+				dependencyWatchdogDeployment,
 			},
 			requiredControlPlaneStatefulSets,
 			nil,
@@ -407,6 +413,7 @@ var _ = Describe("health check", func() {
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
 				machineControllerManagerDeployment,
+				dependencyWatchdogDeployment,
 			},
 			requiredControlPlaneStatefulSets,
 			[]*machinev1alpha1.MachineDeployment{
