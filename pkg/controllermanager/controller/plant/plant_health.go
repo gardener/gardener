@@ -47,19 +47,19 @@ type HealthChecker struct {
 }
 
 // CheckPlantClusterNodes checks whether cluster nodes in the given listers are complete and healthy.
-func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition *gardencorev1alpha1.Condition) (*gardencorev1alpha1.Condition, error) {
+func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
 	nodeList := &corev1.NodeList{}
 	err := h.plantClient.List(ctx, &client.ListOptions{}, nodeList)
 	if err != nil {
-		return nil, err
+		return helper.UpdatedConditionUnknownError(condition, err)
 	}
 
-	if exitCondition := h.checkNodes(*condition, nodeList); exitCondition != nil {
-		return exitCondition, nil
+	if exitCondition, err := h.checkNodes(condition, nodeList); err != nil {
+		return exitCondition
 	}
 
-	updatedCondition := helper.UpdatedCondition(*condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready")
-	return &updatedCondition, nil
+	updatedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionTrue, string(gardencorev1alpha1.PlantEveryNodeReady), "Every node registered to the cluster is ready")
+	return updatedCondition
 }
 
 // CheckAPIServerAvailability checks if the API server of a Plant cluster is reachable and measure the response time.
@@ -69,14 +69,14 @@ func (h *HealthChecker) CheckAPIServerAvailability(condition gardencorev1alpha1.
 	})
 }
 
-func (h *HealthChecker) checkNodes(condition gardencorev1alpha1.Condition, nodeList *corev1.NodeList) *gardencorev1alpha1.Condition {
+func (h *HealthChecker) checkNodes(condition gardencorev1alpha1.Condition, nodeList *corev1.NodeList) (gardencorev1alpha1.Condition, error) {
 	for _, object := range nodeList.Items {
 		if err := health.CheckNode(&object); err != nil {
 			failedCondition := helper.UpdatedCondition(condition, gardencorev1alpha1.ConditionFalse, "NodesUnhealthy", fmt.Sprintf("Node %s is unhealthy: %v", object.Name, err))
-			return &failedCondition
+			return failedCondition, err
 		}
 	}
-	return nil
+	return condition, nil
 }
 
 func (h *HealthChecker) makePlantNodeLister(ctx context.Context, options *client.ListOptions) kutil.NodeLister {

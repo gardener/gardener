@@ -316,7 +316,7 @@ func (c *defaultPlantControl) initializePlantClients(plant *gardencorev1alpha1.P
 	return plantClusterClient, discoveryClient, nil
 }
 
-func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *HealthChecker, logger logrus.FieldLogger, apiserverAvailability, healthyNodes gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
+func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *HealthChecker, logger logrus.FieldLogger, apiserverAvailability, everyNodeReady gardencorev1alpha1.Condition) (gardencorev1alpha1.Condition, gardencorev1alpha1.Condition) {
 	var wg sync.WaitGroup
 
 	wg.Add(2)
@@ -326,11 +326,10 @@ func (c *defaultPlantControl) healthChecks(ctx context.Context, healthChecker *H
 	}()
 	go func() {
 		defer wg.Done()
-		newNodes, err := healthChecker.CheckPlantClusterNodes(ctx, &healthyNodes)
-		healthyNodes = newConditionOrError(healthyNodes, *newNodes, err)
+		everyNodeReady = healthChecker.CheckPlantClusterNodes(ctx, everyNodeReady)
 	}()
 
 	wg.Wait()
 
-	return apiserverAvailability, healthyNodes
+	return apiserverAvailability, everyNodeReady
 }
