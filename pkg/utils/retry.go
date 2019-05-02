@@ -135,7 +135,7 @@ func Retry(interval time.Duration, timeout time.Duration, f ConditionFunc) error
 
 // Sleep sleeps the given duration and errors and exits early if the context expires.
 func Sleep(ctx context.Context, d time.Duration) error {
-	if d < 0 {
+	if d <= 0 {
 		return ctx.Err()
 	}
 
