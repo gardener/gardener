@@ -619,6 +619,7 @@ func (b *Botanist) DeleteCertBroker() error {
 // * cloud-controller-manager
 // * kube-controller-manager
 // * machine-controller-manager
+// * csi-controllers
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
 
