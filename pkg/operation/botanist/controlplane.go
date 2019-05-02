@@ -349,6 +349,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			},
 			"shoot": map[string]interface{}{
 				"apiserver": fmt.Sprintf("https://%s", b.Shoot.InternalClusterDomain),
+				"provider":  b.Shoot.CloudProvider,
 			},
 			"vpa": map[string]interface{}{
 				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
