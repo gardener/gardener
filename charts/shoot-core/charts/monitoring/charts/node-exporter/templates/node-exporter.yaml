@@ -20,7 +20,7 @@ spec:
   clusterIP: None
   ports:
   - name: metrics
-    port: 9100
+    port: {{ .Values.ports.metrics }}
     protocol: TCP
   selector:
     component: node-exporter
@@ -76,23 +76,23 @@ spec:
         - --path.sysfs=/host/sys
         - --collector.filesystem.ignored-fs-types=^(tmpfs|cgroup|nsfs|fuse\.lxcfs|rpc_pipefs)$
         - --collector.filesystem.ignored-mount-points=^/(rootfs/|host/)?(sys|proc|dev|host|etc|var/lib/docker)($|/)
-        - --web.listen-address=:9100
+        - --web.listen-address=:{{ .Values.ports.metrics }}
         - --log.level=error
         ports:
-        - containerPort: 9100
+        - containerPort: {{ .Values.ports.metrics }}
           protocol: TCP
-          hostPort: 9100
+          hostPort: {{ .Values.ports.metrics }}
           name: scrape
         livenessProbe:
           httpGet:
             path: /
-            port: 9100
+            port: {{ .Values.ports.metrics }}
           initialDelaySeconds: 5
           timeoutSeconds: 5
         readinessProbe:
           httpGet:
             path: /
-            port: 9100
+            port: {{ .Values.ports.metrics }}
           initialDelaySeconds: 5
           timeoutSeconds: 5
         resources:
