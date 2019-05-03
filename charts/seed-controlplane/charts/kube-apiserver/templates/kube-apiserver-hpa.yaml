@@ -1,3 +1,4 @@
+{{ if .Values.hpa.enabled }}
 {{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
 {{- if ne (.Values.replicas | toString) "0" }}
 apiVersion: {{ include "hpaversion" . }}
@@ -22,3 +23,4 @@ spec:
       name: memory
       targetAverageUtilization: {{ .Values.targetAverageUtilization }}
 {{- end }}
+{{ end }}

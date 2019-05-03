@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hvpa-controller
+  namespace: garden
+  labels:
+{{ toYaml .Values.hvpa.labels | indent 4 }}
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: hvpa-controller
+  namespace: garden
+  labels:
+    app: hvpa-controller
+{{ toYaml .Values.hvpa.labels | indent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hvpa-controller
+{{ toYaml .Values.hvpa.labels | indent 6 }}
+  template:
+    metadata:
+      labels:
+        app: hvpa-controller
+{{ toYaml .Values.hvpa.labels | indent 8 }}
+    spec:
+      serviceAccountName: hvpa-controller
+      containers:
+      - name: hvpa-controller
+        image: {{ index .Values.global.images "hvpa-controller" }}
+        imagePullPolicy: IfNotPresent
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1000Mi
+          requests:
+            cpu: 50m
+            memory: 500Mi
+        ports:
+        - containerPort: 8080

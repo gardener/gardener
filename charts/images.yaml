@@ -168,3 +168,9 @@ images:
   sourceRepository: github.com/gardener/vpa-exporter
   repository: eu.gcr.io/gardener-project/gardener/vpa-exporter
   tag: "0.1.5"
+
+# HVPA
+- name: hvpa-controller
+  sourceRepository: github.com/gardener/hvpa-controller
+  repository: eu.gcr.io/gardener-project/gardener/hvpa-controller
+  tag: "0.1.0-dev"

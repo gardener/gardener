@@ -96,3 +96,10 @@ enableBasicAuthentication: true
 #  # The current private key of the service account token issuer. The issuer will sign issued ID
 #  #  tokens with this private key. (Requires the 'TokenRequest' feature gate.)
 #  signingKey: <private key in PEM format>
+
+hvpa:
+  enabled: true
+
+scaleUpStabilizationWindow: "3m"
+scaleDownStabilizationWindow: "15m"
+lastReplicaCountForHpa: 1

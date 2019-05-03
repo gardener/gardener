@@ -1,0 +1,60 @@
+{{ if .Values.hvpa.enabled }}
+{{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
+{{- if ne (.Values.replicas | toString) "0" }}
+apiVersion: autoscaling.k8s.io/v1alpha1
+kind: Hvpa
+metadata:
+  #annotations:
+    #"hpa-controller": "hvpa"
+    #"enable-vertical-scale-down": "true"
+  labels:
+    controller-tools.k8s.io: "1.0"
+  name: kube-apiserver
+spec:
+  scaleUpStabilizationWindow: {{ .Values.scaleUpStabilizationWindow }}
+  scaleDownStabilizationWindow: {{ .Values.scaleDownStabilizationWindow }}
+  minCpuChange:
+    value: 500m
+    percentage: 80
+  minMemChange:
+    value: 200M
+    percentage: 80
+  hpaTemplate:
+    maxReplicas: {{ .Values.maxReplicas }}
+    minReplicas: {{ .Values.minReplicas }}
+    metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.targetAverageUtilization }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.targetAverageUtilization }}
+  vpaTemplate:
+    resourcePolicy:
+      containerPolicies:
+      - containerName: kube-apiserver
+        minAllowed:
+          memory: 400M
+          cpu: 400m
+        maxAllowed:
+          memory: 10000M
+          cpu: 5
+  weightBasedScalingIntervals:
+    - vpaWeight: 0
+      startReplicaCount: {{ .Values.minReplicas }}
+      lastReplicaCount: {{ .Values.lastReplicaCountForHpa }}
+    - vpaWeight: 1
+      startReplicaCount: {{ .Values.maxReplicas }}
+      lastReplicaCount: {{ .Values.maxReplicas }}
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: kube-apiserver
+{{ end }}
+{{ end }}

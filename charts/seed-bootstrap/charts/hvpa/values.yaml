@@ -1,0 +1,9 @@
+global:
+  images:
+    hvpa-controller: image-repository:image-tag
+
+hvpa:
+  podAnnotations: {}
+  enabled: true
+  labels:
+    garden.sapcloud.io/role: hvpa
