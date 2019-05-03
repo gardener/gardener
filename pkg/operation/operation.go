@@ -319,22 +319,22 @@ func (o *Operation) ShootVersion() string {
 	return o.Shoot.Info.Spec.Kubernetes.Version
 }
 
-func (o *Operation) injectImages(values chart.Values, names []string, opts ...imagevector.FindOptionFunc) (chart.Values, error) {
+func (o *Operation) injectImages(values map[string]interface{}, names []string, opts ...imagevector.FindOptionFunc) (map[string]interface{}, error) {
 	return chart.InjectImages(values, o.ImageVector, names, opts...)
 }
 
 // InjectSeedSeedImages injects images that shall run on the Seed and target the Seed's Kubernetes version.
-func (o *Operation) InjectSeedSeedImages(values chart.Values, names ...string) (chart.Values, error) {
+func (o *Operation) InjectSeedSeedImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
 	return o.injectImages(values, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.SeedVersion()))
 }
 
 // InjectSeedShootImages injects images that shall run on the Seed but target the Shoot's Kubernetes version.
-func (o *Operation) InjectSeedShootImages(values chart.Values, names ...string) (chart.Values, error) {
+func (o *Operation) InjectSeedShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
 	return o.injectImages(values, names, imagevector.RuntimeVersion(o.SeedVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
 // InjectShootShootImages injects images that shall run on the Shoot and target the Shoot's Kubernetes version.
-func (o *Operation) InjectShootShootImages(values chart.Values, names ...string) (chart.Values, error) {
+func (o *Operation) InjectShootShootImages(values map[string]interface{}, names ...string) (map[string]interface{}, error) {
 	return o.injectImages(values, names, imagevector.RuntimeVersion(o.ShootVersion()), imagevector.TargetVersion(o.ShootVersion()))
 }
 
