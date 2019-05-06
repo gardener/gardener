@@ -100,7 +100,7 @@ spec:
             cpu: 5m
             memory: 10Mi
           limits:
-            cpu: 15m
+            cpu: 25m
             memory: 100Mi
         volumeMounts:
         - name: proc
