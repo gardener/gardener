@@ -33,7 +33,6 @@ spec:
     matchLabels:
       component: kube-state-metrics
       type: shoot
-  revisionHistoryLimit: 10
   strategy:
     type: RollingUpdate
     rollingUpdate:
