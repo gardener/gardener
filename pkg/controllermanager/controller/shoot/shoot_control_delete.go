@@ -234,10 +234,15 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 			Fn:           flow.SimpleTaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(cleanupWebhooks),
 		})
+		cleanExtendedAPIs = g.Add(flow.Task{
+			Name:         "Cleaning extended API groups",
+			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive),
+		})
 		cleanKubernetesResources = g.Add(flow.Task{
 			Name:         "Cleaning kubernetes resources",
-			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).RetryUntilTimeout(defaultInterval, 10*time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive),
+			Fn:           flow.TaskFn(botanist.CleanKubernetesResources).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
+			Dependencies: flow.NewTaskIDs(cleanExtendedAPIs),
 		})
 		destroyMachines = g.Add(flow.Task{
 			Name:         "Destroying Shoot workers",
