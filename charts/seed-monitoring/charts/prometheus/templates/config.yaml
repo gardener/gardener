@@ -446,24 +446,26 @@ data:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.nodeExporter | indent 6 }}
 
     - job_name: vpn-connection
-      honor_labels: false
-      metrics_path: /probe
       params:
         module:
         - icmp_probe
         target:
         - {{ .Values.vpnEndpointIP }}
-      static_configs:
-      - targets:
-        - 127.0.0.1:9115
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      metrics_path: /probe
       relabel_configs:
       - target_label: type
         replacement: seed
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: blackbox-exporter;probe
       - source_labels: [ __param_target ]
         target_label: instance
-        action: replace
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
         action: replace
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
@@ -497,35 +499,8 @@ data:
         target_label: instance
         action: replace
       - target_label: __address__
-        replacement: 127.0.0.1:9115
+        replacement: blackbox-exporter:9115
         action: replace
-      metric_relabel_configs:
-{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
-
-    # This probe is intended to be deprecated, because it is testing the vpn-tunnel and the
-    # reachability of the kube-apiservers from the shoot workers. We have introduced isolated
-    # probes for both cases and will therefore remove this probe in the future.
-    - job_name: vpn-probe-k8s-service
-      honor_labels: false
-      scrape_timeout: 5s
-      metrics_path: /probe
-      params:
-        module:
-        - tcp_vpn
-        target:
-        - {{ .Values.apiserverServiceIP }}:443
-      kubernetes_sd_configs:
-      - role: pod
-        namespaces:
-          names: [{{ .Release.Namespace }}]
-      relabel_configs:
-      - source_labels: [ __meta_kubernetes_pod_container_port_name ]
-        action: keep
-        regex: blackbox-export
-      - action: labelmap
-        regex: __meta_kubernetes_pod_label_(.+)
-      - source_labels: [__meta_kubernetes_pod_name]
-        target_label: pod
       metric_relabel_configs:
 {{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.vpn | indent 6 }}
 
@@ -533,23 +508,26 @@ data:
       params:
         module:
         - http_apiserver
-      scrape_timeout: 10s
-      metrics_path: /probe
-      static_configs:
-      - targets:
+        target:
         - {{ .Values.shoot.apiserver }}/healthz
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      metrics_path: /probe
       relabel_configs:
       - target_label: type
-        replacement: seed
-      - source_labels: [__address__]
-        target_label: __param_target
-        action: replace
-      - source_labels: [__param_target]
+        replacement: shoot
+      - source_labels:
+        - __meta_kubernetes_endpoints_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: blackbox-exporter;probe
+      - source_labels: [ __param_target ]
         target_label: instance
         action: replace
-      - target_label: __address__
-        replacement: 127.0.0.1:9115
-        action: replace
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.blackboxExporter | indent 8 }}
 
     - job_name: blackbox-exporter-k8s-service-check
       params:

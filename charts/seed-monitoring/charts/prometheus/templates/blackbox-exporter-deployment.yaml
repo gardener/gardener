@@ -1,0 +1,94 @@
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: blackbox-exporter
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: blackbox-exporter
+    role: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: blackbox-exporter
+      role: monitoring
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-blackbox-exporter-config: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
+      labels:
+        app: blackbox-exporter
+        role: monitoring
+    spec:
+      containers:
+      - name: blackbox-exporter
+        image: {{ index .Values.images "blackbox-exporter" }}
+        args:
+        - --config.file=/etc/blackbox_exporter/blackbox.yaml
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: 5m
+            memory: 5Mi
+          limits:
+            cpu: 10m
+            memory: 25Mi
+        ports:
+        - containerPort: 9115
+          protocol: TCP
+          name: probe
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: blackbox-exporter-config
+          mountPath: /etc/blackbox_exporter
+        - mountPath: /var/run/secrets/blackbox
+          name: prometheus-kubeconfig
+          readOnly: true
+      - image: {{ index .Values.images "vpn-seed" }}
+        imagePullPolicy: IfNotPresent
+        name: vpn-seed
+        env:
+        - name: OPENVPN_PORT
+          value: "4314"
+        ports:
+        - name: https
+          containerPort: 1194
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 10m
+            memory: 10Mi
+          limits:
+            cpu: 20m
+            memory: 25Mi
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+          privileged: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /srv/secrets/vpn-seed
+          name: vpn-seed
+        - mountPath: /srv/secrets/tlsauth
+          name: vpn-seed-tlsauth
+        - mountPath: /srv/auth
+          name: kube-apiserver-basic-auth
+      volumes:
+      - name: blackbox-exporter-config
+        configMap:
+          name: blackbox-exporter-config
+      - name: prometheus-kubeconfig
+        secret:
+          secretName: prometheus
+      - name: vpn-seed
+        secret:
+          secretName: vpn-seed
+      - name: vpn-seed-tlsauth
+        secret:
+          secretName: vpn-seed-tlsauth
+      - name: kube-apiserver-basic-auth
+        secret:
+          secretName: kube-apiserver-basic-auth

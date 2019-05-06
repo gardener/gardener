@@ -48,9 +48,6 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
-        checksum/configmap-rules: {{ include (print $.Template.BasePath "/rules.yaml") . | sha256sum }}
-        checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
 {{- end }}
@@ -133,6 +130,23 @@ spec:
         # we mount the Shoot cluster's CA and certs
         - mountPath: /etc/prometheus/seed
           name: prometheus-kubeconfig
+      - name: prometheus-config-reloader
+        image: {{ index .Values.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:9090/-/reload
+        - -volume-dir=/etc/prometheus/config
+        - -volume-dir=/etc/prometheus/rules
+        resources:
+          requests:
+            cpu: 5m
+            memory: 10Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
       - image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
         name: vpn-seed
@@ -164,28 +178,6 @@ spec:
           name: vpn-seed-tlsauth
         - mountPath: /srv/auth
           name: kube-apiserver-basic-auth
-      - name: blackbox-exporter
-        image: {{ index .Values.images "blackbox-exporter" }}
-        args:
-        - --config.file=/vpn/blackbox.yaml
-        ports:
-        # port name must be max 15 characters long
-        - name: blackbox-export
-          containerPort: 9115
-          protocol: TCP
-        resources:
-          requests:
-            cpu: 5m
-            memory: 16Mi
-          limits:
-            cpu: 50m
-            memory: 128Mi
-        volumeMounts:
-        - name: blackbox-exporter-config-prometheus
-          mountPath: /vpn
-        - mountPath: /var/run/secrets/blackbox
-          name: prometheus-kubeconfig
-          readOnly: true
       terminationGracePeriodSeconds: 300
       volumes:
       - name: config
@@ -221,9 +213,6 @@ spec:
       - name: prometheus-kubelet
         secret:
           secretName: prometheus-kubelet
-      - name: blackbox-exporter-config-prometheus
-        configMap:
-          name: blackbox-exporter-config-prometheus
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db
