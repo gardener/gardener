@@ -1,0 +1,39 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vpa-exporter
+  namespace: garden
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name: system:vpa-exporter-role-binding
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:vpa-exporter-role
+subjects:
+- kind: ServiceAccount
+  name: vpa-exporter
+  namespace: garden
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: system:vpa-exporter-role
+  labels:
+{{ toYaml .Values.vpa.labels | indent 4 }}
+rules:
+- apiGroups:
+  - "autoscaling.k8s.io"
+  resources:
+  - verticalpodautoscalers
+  verbs:
+  - get
+  - watch
+  - list
