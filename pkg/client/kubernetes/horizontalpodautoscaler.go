@@ -14,7 +14,7 @@
 
 package kubernetes
 
-// DeleteHorizontalPodAutoscaler deletes an Ingress object.
+// DeleteHorizontalPodAutoscaler deletes a HorizontalPodAutoscaler object.
 func (c *Clientset) DeleteHorizontalPodAutoscaler(namespace, name string) error {
 	return c.kubernetes.AutoscalingV2beta1().HorizontalPodAutoscalers(namespace).Delete(name, &defaultDeleteOptions)
 }
