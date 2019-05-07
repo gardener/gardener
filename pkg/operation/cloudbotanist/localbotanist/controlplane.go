@@ -88,7 +88,7 @@ func (b *LocalBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 // GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
 func (b *LocalBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name":        "etcd-fast",
+		"name":        "gardener.cloud-fast",
 		"capacity":    "25Gi",
 		"provisioner": "k8s.io/minikube-hostpath",
 		"parameters":  map[string]interface{}{},

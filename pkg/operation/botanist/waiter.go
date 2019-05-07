@@ -89,15 +89,15 @@ func (b *Botanist) WaitUntilEtcdReady() error {
 }
 
 // WaitUntilEtcdStatefulsetDeleted waits until the etcd statefulsets get deleted.
-func (b *Botanist) WaitUntilEtcdStatefulsetDeleted(role string) error {
-	return wait.Poll(5*time.Second, 300*time.Second, func() (bool, error) {
+func (b *Botanist) WaitUntilEtcdStatefulsetDeleted(ctx context.Context, role string) error {
+	return wait.PollUntil(5*time.Second, func() (bool, error) {
 		b.Logger.Infof("Waiting until the etcd-%s statefulset get deleted...", role)
 		_, err := b.K8sSeedClient.Kubernetes().AppsV1().StatefulSets(b.Shoot.SeedNamespace).Get(fmt.Sprintf("etcd-%s", role), metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			return true, nil
 		}
 		return false, err
-	})
+	}, ctx.Done())
 }
 
 // WaitUntilKubeAPIServerReady waits until the kube-apiserver pod(s) indicate readiness in their statuses.

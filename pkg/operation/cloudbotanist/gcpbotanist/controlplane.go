@@ -139,7 +139,7 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 // GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
 func (b *GCPBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name":        "etcd-fast",
+		"name":        "gardener.cloud-fast",
 		"capacity":    "25Gi",
 		"provisioner": "kubernetes.io/gce-pd",
 		"parameters": map[string]interface{}{

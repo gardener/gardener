@@ -154,7 +154,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 // GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
 func (b *AWSBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name":        "etcd-fast",
+		"name":        "gardener.cloud-fast",
 		"capacity":    "80Gi",
 		"provisioner": "kubernetes.io/aws-ebs",
 		"parameters": map[string]interface{}{

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -107,12 +108,9 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 }
 
 // DeployETCDStorageClass create the high iops storageclass required for volume used by etcd pods in seed cluster.
-func (b *HybridBotanist) DeployETCDStorageClass() error {
+func (b *HybridBotanist) DeployETCDStorageClass(ctx context.Context) error {
 	storageClassConfig := b.SeedCloudBotanist.GenerateETCDStorageClassConfig()
-	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd-storageclass"), b.Shoot.SeedNamespace, "etcd-storageclass", nil, storageClassConfig); err != nil {
-		return err
-	}
-	return nil
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd-storageclass"), b.Shoot.SeedNamespace, "etcd-storageclass", nil, storageClassConfig)
 }
 
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
@@ -157,30 +155,6 @@ func (b *HybridBotanist) DeployETCD() error {
 		return err
 	}
 
-	// Apply etcd main
-	// s
-	// Apply etcd events
-	// etcd["role"] = common.EtcdRoleEvents
-	// etcd["backup"] = map[string]interface{}{
-	// 	"storageProvider": "", // No storage provider means no backup
-	// }
-
-	// if b.Shoot.IsHibernated {
-	// 	statefulset := &appsv1.StatefulSet{}
-	// 	if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
-	// 		return err
-	// 	}
-
-	// 	if statefulset.Spec.Replicas == nil {
-	// 		etcd["replicas"] = 0
-	// 	} else {
-	// 		etcd["replicas"] = *statefulset.Spec.Replicas
-	// 	}
-	// }
-	// if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
-	// 	return err
-	// }
-	// Legacy
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
 		etcd["role"] = role
 		if role == common.EtcdRoleEvents {
@@ -210,9 +184,13 @@ func (b *HybridBotanist) DeployETCD() error {
 					if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
 						return err
 					}
-					if err := b.Botanist.WaitUntilEtcdStatefulsetDeleted(role); err != nil {
+
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+					defer cancel()
+					if err := b.Botanist.WaitUntilEtcdStatefulsetDeleted(ctx, role); err != nil {
 						return err
 					}
+
 					if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
 						return err
 					}

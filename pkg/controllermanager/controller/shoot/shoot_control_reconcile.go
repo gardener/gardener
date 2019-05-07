@@ -131,7 +131,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deployETCDStorageClass = g.Add(flow.Task{
 			Name: "Deploying storageclass for etcd",
-			Fn:   flow.SimpleTaskFn(hybridBotanist.DeployETCDStorageClass).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(hybridBotanist.DeployETCDStorageClass).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",

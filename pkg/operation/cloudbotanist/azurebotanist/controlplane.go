@@ -179,7 +179,7 @@ func (b *AzureBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 // GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
 func (b *AzureBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name":        "etcd-fast",
+		"name":        "gardener.cloud-fast",
 		"capacity":    "33Gi",
 		"provisioner": "kubernetes.io/azure-disk",
 		"parameters": map[string]interface{}{
