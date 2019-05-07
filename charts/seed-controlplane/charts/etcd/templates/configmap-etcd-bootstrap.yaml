@@ -51,6 +51,7 @@ data:
           done
     }
 
+{{- if eq .Values.role "main" }}
     migrate_data() {
       OLD_DATA_DIR=/var/etcd/old-data
       NEW_DATA_DIR=/var/etcd/data
@@ -88,6 +89,7 @@ data:
 
     # Do migration
     migrate_data
+{{- end }}
     # Do validation and bootstrap
     if [ ! -f $VALIDATION_MARKER ] ;
     then

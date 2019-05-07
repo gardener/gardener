@@ -73,10 +73,15 @@ spec:
             cpu: 2500m
             memory: 4Gi
         volumeMounts:
+{{- if eq .Values.role "main" }}
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/old-data
         - name: {{ .Values.role }}-etcd
           mountPath: /var/etcd/data
+{{- else }}
+        - name: etcd-{{ .Values.role }}
+          mountPath: /var/etcd/data
+{{- end}}
         - name: etcd-bootstrap
           mountPath: /bootstrap
         - name: ca-etcd
@@ -124,8 +129,13 @@ spec:
 {{ toYaml .Values.backup.env | indent 8 }}
 {{- end }}
         volumeMounts:
+{{- if eq .Values.role "main" }}
         - name: {{ .Values.role }}-etcd
           mountPath: /var/etcd/data
+{{- else }}
+        - name: etcd-{{ .Values.role }}
+          mountPath: /var/etcd/data
+{{- end}}
         - name: ca-etcd
           mountPath: /var/etcd/ssl/ca
         - name: etcd-client-tls
@@ -153,6 +163,7 @@ spec:
           secretName: {{ .Values.backup.backupSecret }}
 {{- end }}
   volumeClaimTemplates:
+{{- if eq .Values.role "main" }}
   - metadata:
       name: {{ .Values.role }}-etcd
     spec:
@@ -162,6 +173,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.storageCapacity }}
+{{- end }}
   - metadata:
       name: etcd-{{ .Values.role }}
     spec:

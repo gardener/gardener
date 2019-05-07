@@ -157,6 +157,30 @@ func (b *HybridBotanist) DeployETCD() error {
 		return err
 	}
 
+	// Apply etcd main
+	// s
+	// Apply etcd events
+	// etcd["role"] = common.EtcdRoleEvents
+	// etcd["backup"] = map[string]interface{}{
+	// 	"storageProvider": "", // No storage provider means no backup
+	// }
+
+	// if b.Shoot.IsHibernated {
+	// 	statefulset := &appsv1.StatefulSet{}
+	// 	if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)), statefulset); err != nil && !apierrors.IsNotFound(err) {
+	// 		return err
+	// 	}
+
+	// 	if statefulset.Spec.Replicas == nil {
+	// 		etcd["replicas"] = 0
+	// 	} else {
+	// 		etcd["replicas"] = *statefulset.Spec.Replicas
+	// 	}
+	// }
+	// if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+	// 	return err
+	// }
+	// Legacy
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
 		etcd["role"] = role
 		if role == common.EtcdRoleEvents {
@@ -179,14 +203,20 @@ func (b *HybridBotanist) DeployETCD() error {
 		}
 
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
-			if apierrors.IsInvalid(err) {
-				if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
-					return err
-				}
-				if err := b.Botanist.WaitUntilEtcdStatefulsetDeleted(role); err != nil {
-					return err
-				}
-				if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+			if role == common.EtcdRoleMain {
+				// Since we have to update volumeClaimTemplate in existing statefulset, which is forbidden
+				// by k8s. So, we have to explicitely delete the old statefulset and create new one.
+				if apierrors.IsInvalid(err) {
+					if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
+						return err
+					}
+					if err := b.Botanist.WaitUntilEtcdStatefulsetDeleted(role); err != nil {
+						return err
+					}
+					if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+						return err
+					}
+				} else {
 					return err
 				}
 			} else {
