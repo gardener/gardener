@@ -186,10 +186,20 @@ func cleanResourceFn(c client.Client, deleteSelector, checkSelector *client.List
 		}
 	}
 	if !finalize {
-		return mkCleaner(false)
+		return mkCleaner(false).Retry(5 * time.Second)
 	}
 
-	return flow.SequentialSliced(10*time.Minute, mkCleaner(false), mkCleaner(true))
+	return func(ctx context.Context) error {
+		timeout := splitTimeout(ctx, 5*time.Minute)
+		return mkCleaner(false).RetryUntilTimeout(5*time.Second, timeout).Recover(mkCleaner(true).Retry(5 * time.Second).ToRecoverFn())(ctx)
+	}
+}
+
+func splitTimeout(deadlineCtx context.Context, fallback time.Duration) time.Duration {
+	if deadline, ok := deadlineCtx.Deadline(); ok {
+		return deadline.Sub(time.Now()) / 2
+	}
+	return fallback
 }
 
 // CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
@@ -202,6 +212,16 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	)(ctx)
 }
 
+// CleanExtendedAPIs removes API extensions like CRDs and API services from the Shoot cluster.
+func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
+	c := b.K8sShootClient.Client()
+
+	return flow.Parallel(
+		cleanResourceFn(c, APIServiceDeleteSelector, APIServiceCheckSelector, &apiregistrationv1beta1.APIServiceList{}, true),
+		cleanResourceFn(c, CustomResourceDefinitionDeleteSelector, CustomResourceDefinitionCheckSelector, &apiextensionsv1beta1.CustomResourceDefinitionList{}, true),
+	)(ctx)
+}
+
 // CleanKubernetesResources deletes all the Kubernetes resources in the Shoot cluster
 // other than those stored in the exceptions map. It will check whether all the Kubernetes resources
 // in the Shoot cluster other than those stored in the exceptions map have been deleted.
@@ -210,9 +230,6 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
 
 	return flow.Parallel(
-		cleanResourceFn(c, APIServiceDeleteSelector, APIServiceCheckSelector, &apiregistrationv1beta1.APIServiceList{}, true),
-		cleanResourceFn(c, CustomResourceDefinitionDeleteSelector, CustomResourceDefinitionCheckSelector, &apiextensionsv1beta1.CustomResourceDefinitionList{}, true),
-
 		cleanResourceFn(c, CronJobDeleteSelector, CronJobCheckSelector, &batchv1beta1.CronJobList{}, false),
 		cleanResourceFn(c, DaemonSetDeleteSelector, DaemonSetCheckSelector, &appsv1.DaemonSetList{}, false),
 		cleanResourceFn(c, DeploymentDeleteSelector, DeploymentCheckSelector, &appsv1.DeploymentList{}, false),

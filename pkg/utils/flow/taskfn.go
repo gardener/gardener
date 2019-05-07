@@ -16,10 +16,11 @@ package flow
 
 import (
 	"context"
-	"github.com/gardener/gardener/pkg/utils"
-	"github.com/hashicorp/go-multierror"
 	"sync"
 	"time"
+
+	"github.com/gardener/gardener/pkg/utils"
+	"github.com/hashicorp/go-multierror"
 )
 
 var (
@@ -60,6 +61,7 @@ func (t TaskFn) DoIf(condition bool) TaskFn {
 }
 
 // Retry returns a TaskFn that is retried until the timeout is reached.
+// Deprecated: Retry handling should be done in the function itself, if necessary.
 func (t TaskFn) Retry(interval time.Duration) TaskFn {
 	return func(ctx context.Context) error {
 		return utils.RetryUntil(ctx, interval, func() (ok, severe bool, err error) {
@@ -68,6 +70,17 @@ func (t TaskFn) Retry(interval time.Duration) TaskFn {
 			}
 			return true, false, nil
 		})
+	}
+}
+
+// Timeout returns a TaskFn that is bound to a context which times out.
+func (t TaskFn) Timeout(timeout time.Duration) TaskFn {
+	return func(ctx context.Context) error {
+		var cancel func()
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		return t(ctx)
 	}
 }
 
@@ -102,32 +115,6 @@ func (t TaskFn) Recover(recoverFn RecoverFn) TaskFn {
 				return err
 			}
 			return recoverFn(ctx, err)
-		}
-		return nil
-	}
-}
-
-// SequentialSliced runs the given TaskFns sequentially, each giving an equal share of the given total duration.
-//
-// 'Unused' slices are not added to subsequent functions, i.e. if a function does not use all of its slice,
-// the next TaskFns won't have longer to execute.
-func SequentialSliced(total time.Duration, fns ...TaskFn) TaskFn {
-	slice := total / time.Duration(len(fns))
-
-	return func(ctx context.Context) error {
-		for _, fn := range fns {
-			if err := func(fn TaskFn) error {
-				ctx, cancel := ContextWithTimeout(ctx, slice)
-				defer cancel()
-
-				return fn(ctx)
-			}(fn); err != nil {
-				return err
-			}
-
-			if err := ctx.Err(); err != nil {
-				return err
-			}
 		}
 		return nil
 	}
