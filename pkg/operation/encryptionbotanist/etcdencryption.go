@@ -7,7 +7,7 @@ import (
 )
 
 type encryptionBotanistImpl struct {
-	Operation *operation.Operation
+	*operation.Operation
 }
 
 func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
@@ -31,6 +31,7 @@ func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
 	//logger.Logger.Info("deployment: ", deployment.Spec.Template.Spec.Containers[0].Command[1])
 	//var manifest = []byte("")
 	//e.Operation.K8sSeedClient.Applier().ApplyManifest(context.TODO(), kubernetes.NewManifestReader(manifest), kubernetes.DefaultApplierOptions)
+	//e.Operation.
 	return nil
 }
 
@@ -39,4 +40,9 @@ func New(o *operation.Operation) (EncryptionBotanist, error) {
 	return &encryptionBotanistImpl{
 		Operation: o,
 	}, nil
+}
+
+//
+func (e *encryptionBotanistImpl) EncryptionConfigExists() (bool, error) {
+	return false, nil
 }

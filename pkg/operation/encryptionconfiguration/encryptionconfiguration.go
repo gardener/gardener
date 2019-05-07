@@ -1,0 +1,220 @@
+package encryptionconfiguration
+
+import (
+	"fmt"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
+
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/apimachinery/pkg/runtime/serializer/json"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
+)
+
+// CreateNewPassiveConfiguration creates a initial configuration for etcd encryption
+// The list of encryption providers contains identity as first provider, which has
+// the effect, that this configuration does not yet encrypt written secrets. The
+// configuration has to be activated to actually encrypt written secrets.
+// Nevertheless, an encryption provider aescbc is already contained in the configuration
+// at the second position in the list of providers. A key is created for aescbc with
+// the key's name containing the timestamp when it was created in UTC.
+//
+//
+// kind: EncryptionConfiguration
+// apiVersion: apiserver.config.k8s.io/v1
+// resources:
+//   - resources:
+//     - secrets
+//     providers:
+//     - aescbc:
+//         keys:
+//         - name: key1553679720
+//           secret: t44dGAwGt73RMOSNwp4Z9QXadtnLvC4fZWgzS8Tjz+c=
+//     - identity: {}
+func CreateNewPassiveConfiguration() (*apiserverconfigv1.EncryptionConfiguration, error) {
+	nanos := time.Now().UnixNano()
+	key, err := createNewRandomKeyString()
+	if err != nil {
+		return nil, err
+	}
+	if len(key) == 0 {
+		return nil, fmt.Errorf("generated random encryption key is of unexpected length 0")
+	}
+	ec := apiserverconfigv1.EncryptionConfiguration{
+		TypeMeta: v1.TypeMeta{
+			Kind:       ecKind,
+			APIVersion: ecAPIVersion,
+		},
+		Resources: []apiserverconfigv1.ResourceConfiguration{
+			{
+				Resources: ecEncryptedResources,
+				Providers: []apiserverconfigv1.ProviderConfiguration{
+					{Identity: &apiserverconfigv1.IdentityConfiguration{}},
+					{AESCBC: &apiserverconfigv1.AESConfiguration{
+						Keys: []apiserverconfigv1.Key{
+							{Name: ecKeyPrefix + strconv.FormatInt(nanos, 10), Secret: key},
+						},
+					}},
+				},
+			},
+		},
+	}
+	return &ec, nil
+}
+
+func slicesContainSameElements(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	// copy slices due to sorting
+	var copyA = make([]string, len(a))
+	var copyB = make([]string, len(b))
+	// Sort slices
+	sort.Strings(copyA)
+	sort.Strings(copyB)
+	for i, v := range copyA {
+		if v != copyB[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// CreateFromYAML creates a new configuration from a YAML String as Byte Array.
+func CreateFromYAML(yamlArray []byte) (*apiserverconfigv1.EncryptionConfiguration, error) {
+	scheme := runtime.NewScheme()
+	codecs := serializer.NewCodecFactory(scheme)
+	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
+	configObj := &apiserverconfigv1.EncryptionConfiguration{}
+	_, _, err := codecs.UniversalDecoder().Decode(yamlArray, nil, configObj)
+	if err != nil {
+		return nil, fmt.Errorf("error while decoding encryption configuration from yamlArray: %v", err)
+	}
+	return configObj, nil
+}
+
+// ToYAML Creates a YAML representation of the EncryptionConfiguration.
+func ToYAML(ec *apiserverconfigv1.EncryptionConfiguration) ([]byte, error) {
+	scheme := runtime.NewScheme()
+	codecs := serializer.NewCodecFactory(scheme)
+	err := apiserverconfigv1.AddToScheme(scheme)
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing encryption configuration: %v", err)
+	}
+	serializer := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme, scheme)
+	encoder := codecs.EncoderForVersion(serializer, apiserverconfigv1.SchemeGroupVersion)
+	output, err := runtime.Encode(encoder, ec)
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing encryption configuration: %v", err)
+	}
+	return output, nil
+}
+
+// IsConsistent checks whether the configuration is consistent.
+// Consistency checks include the following:
+// Has the secret etcd-encryption-secret a data item named encryption-configuration.yaml?
+// Consists the list of encryption providers of exactly the following 2 entries: "identity", "aescbc")?
+// Is a key present with a sensible timestamp in its name and a sensible value?
+// Is the additional data item encryption-metadata.yaml available and valid?
+// Is the secret made available as a volume and via a volume mount to the API server pod in the shoot's API server deployment?
+// Is the file encryption-configuration.yaml referenced in a startup parameter --encryption-provider-config of the shoot's API server?
+func IsConsistent(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
+	if ec.Kind != ecKind {
+		return false, fmt.Errorf("kind (%v) of the EncryptionConfiguration does not match the expected kind (%v)", ec.Kind, ecKind)
+	}
+	if ec.APIVersion != ecAPIVersion {
+		return false, fmt.Errorf("apiversion (%v) of the EncryptionConfiguration does not match the expected apiversion (%v)", ec.APIVersion, ecAPIVersion)
+	}
+	ecResouceConfigurationLenA := len(ec.Resources)
+	if ecResouceConfigurationLenA != ecResouceConfigurationLenE {
+		return false, fmt.Errorf("number of resource configurations (%v) of the EncryptionConfiguration does not match the expected number (%v)", ecResouceConfigurationLenA, ecResouceConfigurationLenE)
+	}
+	// Check resources
+	if !slicesContainSameElements(ec.Resources[0].Resources, ecEncryptedResources) {
+		return false, fmt.Errorf("list of encrypted resources (%v) of the EncryptionConfiguration does not match the expected list (%v)", ec.Resources[0].Resources, ecEncryptedResources)
+	}
+	// Check encryption providers
+	ecEncryptionProviderLenA := len(ec.Resources[0].Providers)
+	if ecEncryptionProviderLenA != ecEncryptionProviderLenE {
+		return false, fmt.Errorf("number of encryption providers (%v) of the EncryptionConfiguration does not match the expected number (%v)", ecEncryptionProviderLenA, ecEncryptionProviderLenE)
+	}
+	// Encryption provider aescbc and identity in any order are ok
+	if !(((ec.Resources[0].Providers[0].Identity != nil) && (ec.Resources[0].Providers[1].AESCBC != nil)) ||
+		((ec.Resources[0].Providers[0].AESCBC != nil) && (ec.Resources[0].Providers[1].Identity != nil))) {
+		return false, fmt.Errorf("unexpected encryption providers of the EncryptionConfiguration found. Expected are exactly two providers 'identity' and 'aescbc'")
+	}
+	var aesConfig *apiserverconfigv1.AESConfiguration
+	if ec.Resources[0].Providers[0].AESCBC != nil {
+		aesConfig = ec.Resources[0].Providers[0].AESCBC
+	} else {
+		aesConfig = ec.Resources[0].Providers[1].AESCBC
+	}
+	ecEncryptionProviderAESCBCKeyLenA := len(aesConfig.Keys)
+	if ecEncryptionProviderAESCBCKeyLenA < ecEncryptionProviderAESCBCMinKeyLenE {
+		return false, fmt.Errorf("unexpected number of keys in encryption provider aescbc of the EncryptionConfiguration found. Expected are at least %v key(s)", ecEncryptionProviderAESCBCMinKeyLenE)
+	}
+	for _, key := range aesConfig.Keys {
+		if !strings.HasPrefix(key.Name, ecKeyPrefix) {
+			return false, fmt.Errorf("unexpected prefix for key name of key (%v) in encryption provider aescbc of the EncryptionConfiguration found", key.Name)
+		}
+
+	}
+
+	// kind: EncryptionConfiguration
+	// apiVersion: apiserver.config.k8s.io/v1
+	// resources:
+	//   - resources:
+	//     - secrets
+	//     providers:
+	//     - aescbc:
+	//         keys:
+	//         - name: key1553679720
+	//           secret: t44dGAwGt73RMOSNwp4Z9QXadtnLvC4fZWgzS8Tjz+c=
+	//     - identity: {}
+	return true, nil
+}
+
+// IsActive checks whether the configuration is active, i.e. whether the provider
+// identity is NOT the first in the list of providers.
+func IsActive(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
+	return true, nil
+}
+
+// SetActive sets the configuration to active state, i.e. ensures that
+// provider aescbc is the first in the list of providers.
+func SetActive(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	return nil
+}
+
+// SetPassive sets the configuration to passive state, i.e. ensures that
+// provider identity is the first in the list of providers.
+func SetPassive(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	return nil
+}
+
+// CreatePassiveRotationKey adds a new key to the configuration as a second key
+// in the list of keys. Note that the order matters and the first key in the list
+// of keys is used for encrypting etcd contents.
+func CreatePassiveRotationKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	return nil
+}
+
+// IsRotationKeyActive checks whether the most current key
+func IsRotationKeyActive(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
+	return true, nil
+}
+
+// ActivateRotationKey ensures that the newest key is also the first key in the
+// list of keys.
+func ActivateRotationKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	return nil
+}
+
+// PruneOldEncryptionKey removes the old key f
+func PruneOldEncryptionKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	return nil
+}

@@ -160,6 +160,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
+		// TODOME: modify here to pass botanist etc.
 		_ = g.Add(flow.Task{
 			Name:         "Start Etcd Encryption",
 			Fn:           flow.SimpleTaskFn(encryptionBotanist.StartEtcdEncryption),

@@ -922,6 +922,7 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 // SyncShootCredentialsToGarden copies the kubeconfig generated for the user as well as the SSH keypair to
 // the project namespace in the Garden cluster.
 func (b *Botanist) SyncShootCredentialsToGarden() error {
+	// TODOME: add etcd encryption secret here to sync to Garden ?
 	for key, value := range map[string]string{"kubeconfig": "kubecfg", "ssh-keypair": "ssh-keypair"} {
 		secretObj := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
