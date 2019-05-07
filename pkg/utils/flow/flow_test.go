@@ -16,11 +16,8 @@ package flow_test
 
 import (
 	"context"
-	"time"
 
 	mockflow "github.com/gardener/gardener/pkg/mock/gardener/utils/flow"
-	mockcontext "github.com/gardener/gardener/pkg/mock/go/context"
-	"github.com/gardener/gardener/test"
 	"github.com/golang/mock/gomock"
 	"github.com/hashicorp/go-multierror"
 	. "github.com/onsi/ginkgo"
@@ -249,45 +246,6 @@ var _ = Describe("Flow", func() {
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(BeAssignableToTypeOf(&multierror.Error{}))
 			Expect(err.(*multierror.Error).Errors).To(ConsistOf(err1, err2))
-		})
-	})
-
-	Describe("#SequentialSliced", func() {
-		It("should execute the functions with an equal slice", func() {
-			var (
-				ctx     = context.Background()
-				ctx1    = context.WithValue(ctx, "1", nil)
-				cancel1 = mockcontext.NewMockCancelFunc(ctrl)
-				ctx2    = context.WithValue(ctx1, "2", nil)
-				cancel2 = mockcontext.NewMockCancelFunc(ctrl)
-				ctx3    = context.WithValue(ctx2, "3", nil)
-				cancel3 = mockcontext.NewMockCancelFunc(ctrl)
-
-				withTimeouter = mockcontext.NewMockWithTimeout(ctrl)
-				total         = 9 * time.Second
-				slice         = 3 * time.Second
-
-				f1 = mockflow.NewMockTaskFn(ctrl)
-				f2 = mockflow.NewMockTaskFn(ctrl)
-				f3 = mockflow.NewMockTaskFn(ctrl)
-			)
-			defer test.RevertableSet(&flow.ContextWithTimeout, withTimeouter.Do)()
-
-			gomock.InOrder(
-				withTimeouter.EXPECT().Do(ctx, slice).Return(ctx1, cancel1.Do),
-				f1.EXPECT().Do(ctx1),
-				cancel1.EXPECT().Do(),
-
-				withTimeouter.EXPECT().Do(ctx, slice).Return(ctx2, cancel2.Do),
-				f2.EXPECT().Do(ctx2),
-				cancel2.EXPECT().Do(),
-
-				withTimeouter.EXPECT().Do(ctx, slice).Return(ctx3, cancel3.Do),
-				f3.EXPECT().Do(ctx3),
-				cancel3.EXPECT().Do(),
-			)
-
-			Expect(flow.SequentialSliced(total, f1.Do, f2.Do, f3.Do)(ctx)).To(Succeed())
 		})
 	})
 })
