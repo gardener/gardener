@@ -17,4 +17,4 @@ spec:
     -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
     -shootName=$SHOOT_NAME
     -shootNamespace=$PROJECT_NAMESPACE
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0

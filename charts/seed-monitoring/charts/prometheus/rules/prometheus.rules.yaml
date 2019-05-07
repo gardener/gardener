@@ -11,11 +11,11 @@ groups:
       type: seed
       visibility: operator
     annotations:
-      description: Prometheus failed to scrape metrics. Instance {{ $labels.instance}}, job {{ $labels.job }}.
+      description: Prometheus failed to scrape metrics. Instance {{ $labels.instance }}, job {{ $labels.job }}.
       summary: No metrics are scraped from any target.
   - alert: PrometheusConfigurationFailure
     expr: prometheus_config_last_reload_successful == 0
-    for: 10m
+    for: 1h
     labels:
       service: prometheus
       severity: warning

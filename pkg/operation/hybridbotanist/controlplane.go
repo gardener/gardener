@@ -16,6 +16,7 @@ package hybridbotanist
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -139,7 +140,7 @@ func (b *HybridBotanist) DeployETCD() error {
 		etcdConfig["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-backup"] = utils.HashForMap(backupConfigData)
 	}
 
-	etcd, err := b.Botanist.ImageVector.InjectImages(etcdConfig, b.SeedVersion(), b.ShootVersion(), common.ETCDImageName, common.ETCDBackupRestoreImageName)
+	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName, common.ETCDBackupRestoreImageName)
 	if err != nil {
 		return err
 	}
@@ -207,6 +208,38 @@ func (b *HybridBotanist) RefreshCloudProviderConfig() error {
 	b.CheckSums[common.CloudProviderConfigName] = computeCloudProviderConfigChecksum(newConfigData[common.CloudProviderConfigMapKey])
 
 	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfigData)
+	return err
+}
+
+// RefreshCSIControllersChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
+func (b *HybridBotanist) RefreshCSIControllersChecksums() error {
+	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CSIPluginController); err != nil {
+		if apierrors.IsNotFound(err) {
+			return b.DeployCSIControllers()
+		}
+		return err
+	}
+
+	type jsonPatch struct {
+		Op    string `json:"op"`
+		Path  string `json:"path"`
+		Value string `json:"value"`
+	}
+
+	patch := []jsonPatch{
+		{
+			Op:    "replace",
+			Path:  "/spec/template/metadata/annotations/checksum~1cloudprovider",
+			Value: b.CheckSums[common.CloudProviderSecretName],
+		},
+	}
+
+	body, err := json.Marshal(patch)
+	if err != nil {
+		return err
+	}
+
+	_, err = b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, common.CSIPluginController, body)
 	return err
 }
 
@@ -383,7 +416,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/configmap-cloud-provider-config"] = b.CheckSums[common.CloudProviderConfigName]
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(),
+	values, err := b.InjectSeedShootImages(defaultValues,
 		common.HyperkubeImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
@@ -494,7 +527,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		}
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}
@@ -540,7 +573,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		defaultValues["featureGates"] = cloudControllerManagerConfig.FeatureGates
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}
@@ -581,7 +614,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		defaultValues["featureGates"] = schedulerConfig.FeatureGates
 	}
 
-	values, err := b.Botanist.ImageVector.InjectImages(defaultValues, b.SeedVersion(), b.ShootVersion(), common.HyperkubeImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
 	if err != nil {
 		return err
 	}

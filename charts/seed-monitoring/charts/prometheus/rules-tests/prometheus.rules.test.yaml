@@ -1,0 +1,41 @@
+rule_files:
+- ../rules/prometheus.rules.yaml
+
+evaluation_interval: 30s
+
+tests:
+- interval: 30s
+  input_series:
+  # PrometheusCantScrape
+  - series: 'scrape_samples_scraped{instance="instance", job="job"}'
+    values: '0+0x120'
+  - series: 'up{job="job", instance="instance"}'
+    values: '1+0x120'
+  # PrometheusConfigurationFailure
+  - series: 'prometheus_config_last_reload_successful'
+    values: '0+0x120'
+  alert_rule_test:
+  - eval_time: 1h
+    alertname: PrometheusCantScrape
+    exp_alerts:
+    - exp_labels:
+        instance: instance
+        service: prometheus
+        severity: warning
+        type: seed
+        visibility: operator
+        job: job
+      exp_annotations:
+        description: Prometheus failed to scrape metrics. Instance instance, job job.
+        summary: No metrics are scraped from any target.
+  - eval_time: 1h
+    alertname: PrometheusConfigurationFailure
+    exp_alerts:
+    - exp_labels:
+        service: prometheus
+        severity: warning
+        type: seed
+        visibility: operator
+      exp_annotations:
+        description: Latest Prometheus configuration is broken and Prometheus is using the previous one.
+        summary: Prometheus is misconfigured

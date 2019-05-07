@@ -12,18 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package=utils -destination=mocks.go github.com/gardener/gardener/pkg/utils Timer
-//go:generate mockgen -package=utils -destination=funcs.go github.com/gardener/gardener/pkg/mock/gardener/utils NewTimer
-
-package utils
+package controller
 
 import (
-	"time"
+	"testing"
 
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/imagevector"
+	"github.com/gardener/gardener/pkg/utils/test"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
-// NewTimer provides an interface to mock `utils.NewTimer`.
-type NewTimer interface {
-	Do(d time.Duration) utils.Timer
+func TestControllerManager(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Controller Manager Suite")
 }
+
+var _ = Describe("Controller Manager", func() {
+	Describe("ReadGlobalImageVector", func() {
+		It("should read the global image vector with no override", func() {
+			defer test.WithEnvVar(imagevector.OverrideEnv, "")()
+			defer test.WithWd("../../..")()
+
+			_, err := ReadGlobalImageVectorWithEnvOverride()
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+})

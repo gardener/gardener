@@ -4,11 +4,11 @@
   command: start
   content: |
     [Unit]
-    Description=Hourly Log Rotation
+    Description=Log Rotation at each 10 minutes
 
     [Timer]
-    OnCalendar=hourly
-    AccuracySec=10m
+    OnCalendar=*:0/10
+    AccuracySec=1min
     Persistent=true
 
     [Install]

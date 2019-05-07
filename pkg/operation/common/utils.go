@@ -375,6 +375,12 @@ func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
 		return err
 	}
 
+	// Delete vpa-exporter service
+	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete("vpa-exporter",
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
 	// Delete Service
 	if err := k8sClient.Client().Delete(context.TODO(), &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "vpa-webhook"}}); err != nil && !apierrors.IsNotFound(err) {
 		return err

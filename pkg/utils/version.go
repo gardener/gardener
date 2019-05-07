@@ -49,7 +49,8 @@ func CheckVersionMeetsConstraint(version, constraint string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	v, _ := semver.NewVersion(version)
+
+	v, err := semver.NewVersion(version)
 	if err != nil {
 		return false, err
 	}

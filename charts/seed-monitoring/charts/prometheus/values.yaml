@@ -123,6 +123,7 @@ allowedMetrics:
   - kube_pod_info
   - kube_pod_labels
   - kube_pod_status_phase
+  - kube_pod_status_ready
   - kube_statefulset_metadata_generation
   - kube_statefulset_replicas
   - kube_statefulset_status_observed_generation
@@ -181,6 +182,10 @@ allowedMetrics:
   - probe_http_duration_seconds
   - probe_success
   - probe_http_status_code
+  vpa:
+  - vpa_status_recommendation
+  - vpa_spec_container_resource_policy_allowed
+  - vpa_metadata_generation
   vpn:
   - probe_http_status_code
   - probe_success
@@ -192,6 +197,7 @@ seed:
 
 shoot:
   apiserver: https://api.foo.bar
+  provider: aws
 
 rules:
   optional:
@@ -199,6 +205,8 @@ rules:
       enabled: true
     alertmanager:
       enabled: false
+
+ignoreAlerts: false
 
 # object can be any object you want to scale Prometheus on:
 # - number of Pods

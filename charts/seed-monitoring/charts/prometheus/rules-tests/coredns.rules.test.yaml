@@ -6,6 +6,7 @@ evaluation_interval: 30s
 tests:
 - interval: 30s
   input_series:
+  # CoreDNSDown
   - series: 'up{job="coredns"}'
     values: '0+0x40'
   alert_rule_test:
