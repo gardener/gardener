@@ -14,4 +14,4 @@ spec:
     /tm/setup github.com/gardener gardener &&
     go run $GOPATH/src/github.com/gardener/gardener/.test-defs/cmd/create-shoot
 
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0

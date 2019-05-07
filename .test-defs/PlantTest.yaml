@@ -19,4 +19,4 @@ spec:
       -plant-path=$GOPATH/src/github.com/gardener/gardener/example/100-plant.yaml
       -plant-test-namespace=$PROJECT_NAMESPACE
 
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.28.0
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0
