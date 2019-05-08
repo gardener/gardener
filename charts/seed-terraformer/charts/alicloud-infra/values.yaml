@@ -13,7 +13,7 @@ vpc:
   cidr: 10.10.10.10/6
   natGatewayID: ${alicloud_nat_gateway.nat_gateway.id}
   snatTableID: ${alicloud_nat_gateway.nat_gateway.snat_table_ids} 
-
+  internetChargeType: PayByTraffic
 
 zones:
 - name: cn-beijing-a
