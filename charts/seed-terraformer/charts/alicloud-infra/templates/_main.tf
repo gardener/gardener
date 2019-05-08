@@ -37,8 +37,9 @@ resource "alicloud_vswitch" "vsw_z{{ $index }}" {
 // Create a new EIP.
 resource "alicloud_eip" "eip_natgw_z{{ $index }}" {
   name                 = "{{ required "clusterName is required" $.Values.clusterName }}-eip-natgw-z{{ $index }}"
-  bandwidth            = "20"
-  internet_charge_type = "PayByBandwidth"
+  bandwidth            = "100"
+  instance_charge_type = "PostPaid"
+  internet_charge_type = "{{ required "vpc.internetChargeType is required" $.Values.vpc.internetChargeType }}"
 }
 
 resource "alicloud_eip_association" "eip_natgw_asso_z{{ $index }}" {

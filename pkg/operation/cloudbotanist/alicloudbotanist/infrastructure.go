@@ -16,9 +16,11 @@ package alicloudbotanist
 
 import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/gardener/gardener/pkg/client/alicloud"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 // DeployInfrastructure kicks off a Terraform job which deploys the infrastructure.
@@ -53,8 +55,13 @@ func (b *AlicloudBotanist) DeployInfrastructure() error {
 		return err
 	}
 
+	vals, err := b.generateTerraformInfraConfig(createVPC, vpcID, natGatewayID, snatTableID, vpcCIDR)
+	if err != nil {
+		return err
+	}
+
 	return tf.SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
-		InitializeWith(b.ChartInitializer("alicloud-infra", b.generateTerraformInfraConfig(createVPC, vpcID, natGatewayID, snatTableID, vpcCIDR))).
+		InitializeWith(b.ChartInitializer("alicloud-infra", vals)).
 		Apply()
 }
 
@@ -123,7 +130,12 @@ func (b *AlicloudBotanist) generateTerraformInfraVariablesEnvironment() map[stri
 
 // generateTerraformInfraConfig creates the Terraform variables and the Terraform config (for the infrastructure)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
-func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, natGatewayID, snatTableID, vpcCIDR string) map[string]interface{} {
+func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, natGatewayID, snatTableID, vpcCIDR string) (map[string]interface{}, error) {
+	chargeType, err := b.fetchEIPInternetChargeType()
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		sshSecret = b.Secrets["ssh-keypair"]
 		zones     = []map[string]interface{}{}
@@ -146,15 +158,35 @@ func (b *AlicloudBotanist) generateTerraformInfraConfig(createVPC bool, vpcID, n
 			"vpc": createVPC,
 		},
 		"vpc": map[string]interface{}{
-			"cidr":         vpcCIDR,
-			"id":           vpcID,
-			"natGatewayID": natGatewayID,
-			"snatTableID":  snatTableID,
+			"cidr":               vpcCIDR,
+			"id":                 vpcID,
+			"natGatewayID":       natGatewayID,
+			"snatTableID":        snatTableID,
+			"internetChargeType": chargeType,
 		},
 		"clusterName":  b.Shoot.SeedNamespace,
 		"sshPublicKey": string(sshSecret.Data[secrets.DataKeySSHAuthorizedKeys]),
 		"zones":        zones,
+	}, nil
+}
+
+func (b *AlicloudBotanist) fetchEIPInternetChargeType() (string, error) {
+	var (
+		vpcID = "vpc_id"
+	)
+	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	if err != nil {
+		return "", err
 	}
+	stateVariables, err := tf.GetStateOutputVariables(vpcID)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return alicloud.DefaultInternetChargeType, nil
+		}
+		return "", err
+	}
+
+	return b.AlicloudClient.GetEIPInternetChargeType(stateVariables[vpcID])
 }
 
 func (b *AlicloudBotanist) generateTerraformBackupVariablesEnvironment() map[string]string {

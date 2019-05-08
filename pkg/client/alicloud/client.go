@@ -22,6 +22,9 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/vpc"
 )
 
+// DefaultInternetChargeType is used for EIP
+const DefaultInternetChargeType = "PayByTraffic"
+
 type client struct {
 	vpcCli *vpc.Client
 }
@@ -51,7 +54,7 @@ func (c *client) GetCIDR(vpcID string) (string, error) {
 	}
 
 	if len(resp.Vpcs.Vpc) != 1 {
-		return "", fmt.Errorf("Can't get VPC via id: %s", vpcID)
+		return "", fmt.Errorf("Can't get VPC via vpc id: %s", vpcID)
 	}
 	vpc := resp.Vpcs.Vpc[0]
 
@@ -74,4 +77,36 @@ func (c *client) GetNatGatewayInfo(vpcID string) (string, string, error) {
 	natgw := resp.NatGateways.NatGateway[0]
 
 	return natgw.NatGatewayId, strings.Join(natgw.SnatTableIds.SnatTableId, ","), nil
+}
+
+//GetEIPInternetChargeType gets Binded NatGateway, then get binded IP. If found, return the InternetChargeType
+// If not, return PayByTraffic
+func (c *client) GetEIPInternetChargeType(vpcID string) (string, error) {
+	req := vpc.CreateDescribeNatGatewaysRequest()
+	req.VpcId = vpcID
+
+	resp, err := c.vpcCli.DescribeNatGateways(req)
+	if err != nil {
+		return "", err
+	}
+
+	if len(resp.NatGateways.NatGateway) != 1 {
+		return DefaultInternetChargeType, nil
+	}
+	natgw := resp.NatGateways.NatGateway[0]
+	if len(natgw.IpLists.IpList) == 0 {
+		return DefaultInternetChargeType, nil
+	}
+	iplist := natgw.IpLists.IpList[0]
+	eipReq := vpc.CreateDescribeEipAddressesRequest()
+	eipReq.AllocationId = iplist.AllocationId
+	eipResp, err := c.vpcCli.DescribeEipAddresses(eipReq)
+	if err != nil {
+		return "", err
+	}
+	if len(eipResp.EipAddresses.EipAddress) == 0 {
+		return DefaultInternetChargeType, nil
+	}
+
+	return eipResp.EipAddresses.EipAddress[0].InternetChargeType, nil
 }
