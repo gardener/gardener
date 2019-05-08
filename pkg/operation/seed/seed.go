@@ -20,10 +20,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/gardener/gardener/pkg/utils/chart"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
-
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -36,18 +32,18 @@ import (
 	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilsecrets "github.com/gardener/gardener/pkg/utils/secrets"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -537,14 +533,14 @@ func createDNSProviderValues(configs []certmanagement.DNSProviderConfig) []inter
 // (on the seed) in terms of reserve-excess-capacity deployment replicas. Each deployment replica currently
 // corresponds to resources of (request/limits) 500m of CPU and 1200Mi of Memory.
 // ReplicasRequiredToSupportSingleShoot is 4 which is 2000m of CPU and 4800Mi of RAM.
-// The logic for computation of desired excess capacity corresponds to either deploying 3 new shoot control planes
-// or 5% of existing shoot control planes of current number of shoots deployed in seed (5 if current shoots are 100),
+// The logic for computation of desired excess capacity corresponds to either deploying 2 new shoot control planes
+// or 3% of existing shoot control planes of current number of shoots deployed in seed (3 if current shoots are 100),
 // whichever of the two is larger
 func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
 	var (
 		replicasToSupportSingleShoot          = 4
-		effectiveExcessCapacity               = 3
-		excessCapacityBasedOnAssociatedShoots = int(float64(numberOfAssociatedShoots) * 0.05)
+		effectiveExcessCapacity               = 2
+		excessCapacityBasedOnAssociatedShoots = int(float64(numberOfAssociatedShoots) * 0.03)
 	)
 
 	if excessCapacityBasedOnAssociatedShoots > effectiveExcessCapacity {
