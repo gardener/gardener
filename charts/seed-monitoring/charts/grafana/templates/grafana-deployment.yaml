@@ -2,17 +2,19 @@
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
-  name: grafana
+  name: grafana-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
     garden.sapcloud.io/role: monitoring
     component: grafana
+    role: {{ .Values.role }}
 spec:
   revisionHistoryLimit: 0
   replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       component: grafana
+      role: {{ .Values.role }}
   template:
     metadata:
       annotations:
@@ -23,6 +25,7 @@ spec:
         garden.sapcloud.io/role: monitoring
         component: grafana
         networking.gardener.cloud/to-dns: allowed
+        role: {{ .Values.role }}
     spec:
       initContainers:
       - name: init-prometheus
@@ -67,10 +70,10 @@ spec:
         emptyDir: {}
       - name: grafana-dashboards
         configMap:
-          name: grafana-dashboards
+          name: grafana-{{ .Values.role }}-dashboards
       - name: grafana-datasources
         configMap:
-          name: grafana-datasources
+          name: grafana-{{ .Values.role }}-datasources
       - name: grafana-dashboard-providers
         configMap:
-          name: grafana-dashboard-providers
+          name: grafana-{{ .Values.role }}-dashboard-providers

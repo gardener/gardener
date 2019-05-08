@@ -165,6 +165,10 @@ const (
 	// GardenRoleVpa is the value of GardenRole key indicating type 'vpa'.
 	GardenRoleVpa = "vpa"
 
+	// GardenControlPlaneMonitoring is the key for an annotation of a Shoot cluster whose value indicates if
+	// a monitoring stack for the shoot owner should be deployed.
+	GardenControlPlaneMonitoring = "monitoring.shoot.gardener.cloud/enabled"
+
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "garden.sapcloud.io/createdBy"
@@ -235,8 +239,11 @@ const (
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
 
-	// GrafanaDeploymentName is the name of the grafana deployment.
-	GrafanaDeploymentName = "grafana"
+	// GrafanaOperatorsDeploymentName is the name of the grafana deployment.
+	GrafanaOperatorsDeploymentName = "grafana-operators"
+
+	// GrafanaUsersDeploymentName is the name of the grafana deployment for the user-facing grafana.
+	GrafanaUsersDeploymentName = "grafana-users"
 
 	// KubeStateMetricsShootDeploymentName is the name of the kube-state-metrics deployment.
 	KubeStateMetricsShootDeploymentName = "kube-state-metrics"
@@ -596,7 +603,7 @@ var (
 
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
-		GrafanaDeploymentName,
+		GrafanaOperatorsDeploymentName,
 		KubeStateMetricsSeedDeploymentName,
 		KubeStateMetricsShootDeploymentName,
 	)

@@ -37,10 +37,11 @@ type Shoot struct {
 	ExternalClusterDomain *string
 	ExternalDomain        *ExternalDomain
 
-	WantsClusterAutoscaler bool
-	WantsAlertmanager      bool
-	IgnoreAlerts           bool
-	IsHibernated           bool
+	WantsClusterAutoscaler      bool
+	WantsAlertmanager           bool
+	WantsControlPlaneMonitoring bool
+	IgnoreAlerts                bool
+	IsHibernated                bool
 
 	CloudConfigMap       map[string]CloudConfig
 	Extensions           map[string]Extension

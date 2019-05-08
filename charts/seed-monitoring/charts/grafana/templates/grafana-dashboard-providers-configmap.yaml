@@ -1,10 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboard-providers
+  name: grafana-{{ .Values.role }}-dashboard-providers
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
+    role: {{ .Values.role }}
 data:
   default.yaml: |-
     apiVersion: 1

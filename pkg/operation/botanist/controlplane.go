@@ -315,9 +315,11 @@ func (b *Botanist) DeleteClusterAutoscaler() error {
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
 func (b *Botanist) DeploySeedMonitoring() error {
 	var (
-		credentials    = b.Secrets["monitoring-ingress-credentials"]
-		basicAuth      = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
-		prometheusHost = b.ComputePrometheusIngressFQDN()
+		credentials      = b.Secrets["monitoring-ingress-credentials"]
+		credentialsUsers = b.Secrets["monitoring-ingress-credentials-users"]
+		basicAuth        = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
+		basicAuthUsers   = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
+		prometheusHost   = b.ComputePrometheusIngressFQDN()
 	)
 
 	var (
@@ -413,18 +415,23 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		return err
 	}
 
-	grafanaValues, err := b.InjectSeedShootImages(map[string]interface{}{
-		"ingress": map[string]interface{}{
-			"basicAuthSecret": basicAuth,
-			"host":            b.Seed.GetIngressFQDN("g", b.Shoot.Info.Name, b.Garden.Project.Name),
-		},
-		"replicas": b.Shoot.GetReplicas(1),
-	}, common.GrafanaImageName, common.BusyboxImageName)
-	if err != nil {
+	// TODO: Cleanup logic. Remove once all old grafana artifacts have been removed from all landscapes
+	if err := common.DeleteOldGrafanaStack(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
 		return err
 	}
-	if err := b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), nil, grafanaValues); err != nil {
+
+	if err := b.deployGrafanaCharts("operators", basicAuth, "g-operators"); err != nil {
 		return err
+	}
+
+	if b.Shoot.WantsControlPlaneMonitoring {
+		if err := b.deployGrafanaCharts("users", basicAuthUsers, "g-users"); err != nil {
+			return err
+		}
+	} else {
+		if err := common.DeleteOwnerGrafana(b.K8sSeedClient, b.Shoot.SeedNamespace, "users"); err != nil {
+			return err
+		}
 	}
 
 	// Check if we want to deploy an alertmanager into the shoot namespace.
@@ -469,6 +476,21 @@ func (b *Botanist) DeploySeedMonitoring() error {
 	}
 
 	return nil
+}
+
+func (b *Botanist) deployGrafanaCharts(role, basicAuth, subDomain string) error {
+	values, err := b.InjectSeedShootImages(map[string]interface{}{
+		"ingress": map[string]interface{}{
+			"basicAuthSecret": basicAuth,
+			"host":            b.Seed.GetIngressFQDN(subDomain, b.Shoot.Info.Name, b.Garden.Project.Name),
+		},
+		"replicas": b.Shoot.GetReplicas(1),
+		"role":     role,
+	}, common.GrafanaImageName, common.BusyboxImageName)
+	if err != nil {
+		return err
+	}
+	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-monitoring", "charts", "grafana"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-monitoring", b.Shoot.SeedNamespace), nil, values)
 }
 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts

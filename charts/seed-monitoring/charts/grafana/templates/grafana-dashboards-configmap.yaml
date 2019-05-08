@@ -1,13 +1,20 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-dashboards
+  name: grafana-{{ .Values.role }}-dashboards
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
+    role: {{ .Values.role }}
 data:
-  {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
+  {{ if eq .Values.role "users" }}
+  {{ range $name, $bytes := .Files.Glob "dashboards/owners/**.json" }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
-
+  {{ end }}
+  {{ else }}
+  {{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
+  {{ base $name }}: |-
+{{ toString $bytes | indent 4}}
+  {{ end }}
   {{ end }}
