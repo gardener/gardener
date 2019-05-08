@@ -1,35 +1,10 @@
 package encryptionconfiguration
 
 import (
-	"fmt"
 	"testing"
-)
 
-func TestSliceElementCompare(t *testing.T) {
-	var s1 = []string{
-		"test",
-		"Test",
-		"test",
-		"Test",
-		"A",
-		"C",
-		"B",
-	}
-	var s2 = []string{
-		"Test",
-		"test",
-		"C",
-		"test",
-		"Test",
-		"A",
-		"B",
-	}
-	if !slicesContainSameElements(s1, s2) {
-		t.Fatalf("slices should contain same elements")
-	}
-	fmt.Println(s1)
-	fmt.Println(s2)
-}
+	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
+)
 
 // kind: EncryptionConfiguration
 // apiVersion: apiserver.config.k8s.io/v1
@@ -42,6 +17,13 @@ func TestSliceElementCompare(t *testing.T) {
 //         - name: key1553679720
 //           secret: t44dGAwGt73RMOSNwp4Z9QXadtnLvC4fZWgzS8Tjz+c=
 //     - identity: {}
+func TestCreateNewPassiveConfiguration(t *testing.T) {
+	_, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+}
+
 func TestCreateToYAMLFromYAML(t *testing.T) {
 	ec, err := CreateNewPassiveConfiguration()
 	if err != nil {
@@ -51,7 +33,7 @@ func TestCreateToYAMLFromYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error during YAML creation: %v", err)
 	}
-	fmt.Println(string(str))
+	t.Log(string(str))
 	ec2, err := CreateFromYAML(str)
 	if err != nil {
 		t.Fatalf("error during object creation from YAML string: %v", err)
@@ -60,7 +42,7 @@ func TestCreateToYAMLFromYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error during second YAML creation: %v", err)
 	}
-	fmt.Println(string(str2))
+	t.Log(string(str2))
 }
 
 func TestConsistencyCorrect(t *testing.T) {
@@ -69,10 +51,175 @@ func TestConsistencyCorrect(t *testing.T) {
 		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
 	}
 	ok, err := IsConsistent(ec)
-	if err != nil {
-		t.Fatalf("error during consistency check: %v", err)
+	if (err != nil) || (!ok) {
+		t.Fatalf("newly generated configuration ought to be consistent: %v", err)
 	}
-	if !ok {
-		t.Fatal("Expected initial configuration to be consistent")
+}
+
+func TestConsistencyIncorrectWrongKind(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Kind = "wrong"
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (wrong kind) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectWrongAPIVersion(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.APIVersion = "v1"
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (wrong APIVersion) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectNoResourceConfiguration(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources = nil
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (no resource configuration) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectTooManyResourceConfigurations(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources = []apiserverconfigv1.ResourceConfiguration{
+		{},
+		{},
+	}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (no resource configuration) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectUnsupportedResource(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources[0].Resources = []string{
+		"unknownresource",
+	}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (unsupported resource to be encrypted) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectNoProviders(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources[0].Providers = nil
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (no encryption providers) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectTooManyProviders(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{
+		{},
+		{},
+		{},
+	}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (too many encryption providers) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectJustProviderIdentity(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{
+		{Identity: &apiserverconfigv1.IdentityConfiguration{}},
+		{Identity: &apiserverconfigv1.IdentityConfiguration{}},
+	}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (twice encryption provider identity) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectProvidersIdentityAndAESGCM(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{
+		{Identity: &apiserverconfigv1.IdentityConfiguration{}},
+		{AESGCM: &apiserverconfigv1.AESConfiguration{
+			Keys: []apiserverconfigv1.Key{},
+		}}}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (identity and aesgcm) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrectNoKeysInAESCBC(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	ec.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{
+		{Identity: &apiserverconfigv1.IdentityConfiguration{}},
+		{AESCBC: &apiserverconfigv1.AESConfiguration{
+			Keys: []apiserverconfigv1.Key{},
+		}}}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (no keys in configuration aescbc) of encryption configuration not detected")
+	}
+}
+
+func TestConsistencyIncorrecKeysWithSameNameInAESCBC(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	key1, _ := createEncryptionKey()
+	key2, _ := createEncryptionKey()
+	key3, _ := createEncryptionKey()
+	key4, _ := createEncryptionKey()
+	key4.Name = key2.Name
+	key5, _ := createEncryptionKey()
+	ec.Resources[0].Providers = []apiserverconfigv1.ProviderConfiguration{
+		{Identity: &apiserverconfigv1.IdentityConfiguration{}},
+		{AESCBC: &apiserverconfigv1.AESConfiguration{
+			Keys: []apiserverconfigv1.Key{
+				key1,
+				key2,
+				key3,
+				key4,
+				key5,
+			},
+		}}}
+	ok, err := IsConsistent(ec)
+	if err == nil || ok {
+		t.Fatalf("expected inconcistency (two keys with same name) of encryption configuration not detected")
 	}
 }

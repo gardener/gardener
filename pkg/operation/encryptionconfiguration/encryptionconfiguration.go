@@ -2,10 +2,6 @@ package encryptionconfiguration
 
 import (
 	"fmt"
-	"sort"
-	"strconv"
-	"strings"
-	"time"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,13 +32,9 @@ import (
 //           secret: t44dGAwGt73RMOSNwp4Z9QXadtnLvC4fZWgzS8Tjz+c=
 //     - identity: {}
 func CreateNewPassiveConfiguration() (*apiserverconfigv1.EncryptionConfiguration, error) {
-	nanos := time.Now().UnixNano()
-	key, err := createNewRandomKeyString()
+	key, err := createEncryptionKey()
 	if err != nil {
 		return nil, err
-	}
-	if len(key) == 0 {
-		return nil, fmt.Errorf("generated random encryption key is of unexpected length 0")
 	}
 	ec := apiserverconfigv1.EncryptionConfiguration{
 		TypeMeta: v1.TypeMeta{
@@ -56,7 +48,7 @@ func CreateNewPassiveConfiguration() (*apiserverconfigv1.EncryptionConfiguration
 					{Identity: &apiserverconfigv1.IdentityConfiguration{}},
 					{AESCBC: &apiserverconfigv1.AESConfiguration{
 						Keys: []apiserverconfigv1.Key{
-							{Name: ecKeyPrefix + strconv.FormatInt(nanos, 10), Secret: key},
+							key,
 						},
 					}},
 				},
@@ -64,24 +56,6 @@ func CreateNewPassiveConfiguration() (*apiserverconfigv1.EncryptionConfiguration
 		},
 	}
 	return &ec, nil
-}
-
-func slicesContainSameElements(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	// copy slices due to sorting
-	var copyA = make([]string, len(a))
-	var copyB = make([]string, len(b))
-	// Sort slices
-	sort.Strings(copyA)
-	sort.Strings(copyB)
-	for i, v := range copyA {
-		if v != copyB[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // CreateFromYAML creates a new configuration from a YAML String as Byte Array.
@@ -157,24 +131,19 @@ func IsConsistent(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
 	if ecEncryptionProviderAESCBCKeyLenA < ecEncryptionProviderAESCBCMinKeyLenE {
 		return false, fmt.Errorf("unexpected number of keys in encryption provider aescbc of the EncryptionConfiguration found. Expected are at least %v key(s)", ecEncryptionProviderAESCBCMinKeyLenE)
 	}
+	keyNameMap := make(map[string]bool)
 	for _, key := range aesConfig.Keys {
-		if !strings.HasPrefix(key.Name, ecKeyPrefix) {
-			return false, fmt.Errorf("unexpected prefix for key name of key (%v) in encryption provider aescbc of the EncryptionConfiguration found", key.Name)
+		ok, err := isKeyConsistent(key)
+		if (err != nil) || (!ok) {
+			return false, fmt.Errorf("inconsistent key in encryption provider aescbc of the EncryptionConfiguration found")
 		}
-
+		_, ok = keyNameMap[key.Name]
+		if ok {
+			return false, fmt.Errorf("two or more keys (%v) with same timestamp found in encryption provider aescbc of the EncryptionConfiguration", key.Name)
+		} else {
+			keyNameMap[key.Name] = true
+		}
 	}
-
-	// kind: EncryptionConfiguration
-	// apiVersion: apiserver.config.k8s.io/v1
-	// resources:
-	//   - resources:
-	//     - secrets
-	//     providers:
-	//     - aescbc:
-	//         keys:
-	//         - name: key1553679720
-	//           secret: t44dGAwGt73RMOSNwp4Z9QXadtnLvC4fZWgzS8Tjz+c=
-	//     - identity: {}
 	return true, nil
 }
 
