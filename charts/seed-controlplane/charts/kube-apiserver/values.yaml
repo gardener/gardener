@@ -22,6 +22,7 @@ environment: []
 # Needed due to https://github.com/kubernetes/kubernetes/pull/73102
 cloudProvider: ""
 enableCSI: false
+seedCloudProvider: ""
 
 oidcConfig: {}
   # caBundle: |
