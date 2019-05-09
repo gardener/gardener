@@ -34,7 +34,7 @@
     kubernetesVersion="1.14.0"
   elif cloud == "alicloud":
     region="cn-beijing"
-    kubernetesVersion="1.13.4"
+    kubernetesVersion="1.14.0"
   elif cloud == "packet":
     region="EWR1"
     kubernetesVersion="1.14.0"

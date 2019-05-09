@@ -40,8 +40,6 @@ type Controller struct {
 	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
 
-	k8sInformers kubeinformers.SharedInformerFactory
-
 	config *config.ControllerManagerConfiguration
 
 	control  ControlInterface
