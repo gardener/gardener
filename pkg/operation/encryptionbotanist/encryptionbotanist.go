@@ -16,7 +16,7 @@ type encryptionBotanistImpl struct {
 func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
 	logger.Logger.Info("Starting Etcd Encryption")
 
-	// TODO: do we need a switch to de-activate the encryption feature (although we all agreed to have 'secure by default')?
+	// TODO: question do we need a switch to de-activate the encryption feature (although we all agreed to have 'secure by default')?
 
 	exists, ec, err := e.readEncryptionConfigurationFromSeed()
 	if err != nil {
@@ -50,6 +50,8 @@ func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
 	// WARNING:
 	// No explicit checking of whether EncryptionConfiguration is contained in a backup.
 	// Be aware of the risk!
+	//
+	// TODO: Ensure this is also agreed upon by Gardener team
 	if !encryptionconfiguration.IsActive(ec) {
 		encryptionconfiguration.SetActive(ec)
 		err = e.writeConfiguration(ec)
@@ -85,20 +87,40 @@ func New(o *operation.Operation) (EncryptionBotanist, error) {
 
 // readEncryptionConfigurationFromSeed reads the EncryptionConfiguration from the shoot namespace in the seed
 func (e *encryptionBotanistImpl) readEncryptionConfigurationFromSeed() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sSeedClient
+	// 2. switch to shoot namespace
+	// 3. read etcd-encryption-secret
+	// ec, err := encryptionconfiguration.CreateFromYAML(secretData)
+	// if err != nil {
+	// 	return false, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
+	// }
+	// ****************************************************************************************************************
+
 	return false, nil, nil
 }
 
 // readEncryptionConfigurationFromGarden reads the EncryptionConfiguration from the shoot namespace in the seed
 func (e *encryptionBotanistImpl) readEncryptionConfigurationFromGarden() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sGardenClient
+	// 2. switch to shoot namespace
+	// 3. read etcd-encryption-secret
+	//
+	// ec, err := encryptionconfiguration.CreateFromYAML(secretData)
+	// if err != nil {
+	// 	return false, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
+	// }
+	// ****************************************************************************************************************
 	return false, nil, nil
 }
 
 // writeConfiguration writes the secret which contains the EncryptionConfiguration to the
 // shoot namespace in the seed cluster as well as to the garden cluster
-// ****************************************************************************************************************
-// TODO questions:
-// - will this automatically restart the apiserver(s) since the secret is (once enabled) mounted to the apiserver
-// ****************************************************************************************************************
 func (e *encryptionBotanistImpl) writeConfiguration(ec *apiserverconfigv1.EncryptionConfiguration) error {
 	err := e.writeConfigurationSecretToSeed(ec)
 	if err != nil {
@@ -114,12 +136,29 @@ func (e *encryptionBotanistImpl) writeConfiguration(ec *apiserverconfigv1.Encryp
 // writeConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
 // to the shoot namespace in the seed cluster
 func (e *encryptionBotanistImpl) writeConfigurationSecretToSeed(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sSeedClient
+	// 2. switch to shoot namespace
+	// 3. write etcd-encryption-secret
+	//
+	// TODO questions:
+	// - will this automatically restart the apiserver(s) since the secret is (once enabled) mounted to the apiserver
+	// ****************************************************************************************************************
 	return nil
 }
 
 // writeConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
 // to the garden cluster
 func (e *encryptionBotanistImpl) writeConfigurationSecretToGarden(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sGardenClient
+	// 2. switch to shoot namespace
+	// 3. write etcd-encryption-secret
+	// ****************************************************************************************************************
 	return nil
 }
 
@@ -127,12 +166,21 @@ func (e *encryptionBotanistImpl) writeConfigurationSecretToGarden(ec *apiserverc
 // - creates a volume for the EncryptionConfiguration
 // - creates a volume mount
 // - sets the apiserver start parameter
-// ****************************************************************************************************************
-// TODO questions:
-// - will this automatically restart the apiserver(s) ?
-// - how will processing of this reconsiliation continue then?
-// ****************************************************************************************************************
 func (e *encryptionBotanistImpl) enableConfiguration() error {
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sSeedClient
+	// 2. switch to shoot namespace
+	// 3. read deployment of apiserver
+	// 4. adapt deployment (urks, not easy to change the params)
+	// 5. write deployment
+	//
+	// TODO questions:
+	// - will this automatically restart the apiserver(s) ?
+	// - how will processing of this reconsiliation continue then?
+	// ****************************************************************************************************************
+
 	return nil
 }
 
@@ -142,6 +190,15 @@ func (e *encryptionBotanistImpl) enableConfiguration() error {
 // - volume mount
 // - apiserver start parameter
 func (e *encryptionBotanistImpl) isConfigurationEnabled() (bool, error) {
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sSeedClient
+	// 2. switch to shoot namespace
+	// 3. read deployment of apiserver
+	// 4. verify deployment (urks, not easy to parse the params)
+	//
+	// ****************************************************************************************************************
 	return false, nil
 }
 
@@ -169,22 +226,43 @@ func (e *encryptionBotanistImpl) isConfigurationConsistent() (bool, error) {
 // needToRewriteShootSecrets checks whether the secrets in the shoot need to
 // be rewritten, e.g. after a change to the EncryptionConfiguration
 func (e *encryptionBotanistImpl) needToRewriteShootSecrets() (bool, error) {
-	// check annotation
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sSeedClient
+	// 2. switch to shoot namespace
+	// 3. check annotation (how?)
+	//
+	// ****************************************************************************************************************
 	return false, nil
 }
 
 // setNeedToRewriteShootSecrets sets the annotation with which to remember
 // whether the shoot secrets need to be rewritten
 func (e *encryptionBotanistImpl) setNeedToRewriteShootSecrets(rewrite bool) error {
-	// set annotation
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sSeedClient
+	// 2. switch to shoot namespace
+	// 3. set annotation (how?)
+	//
+	// ****************************************************************************************************************
 	return nil
 }
 
 // rewriteShootSecrets rewrites all secrets of the shoot.
 // This will take into account the current EncryptionConfiguration.
 func (e *encryptionBotanistImpl) rewriteShootSecrets() error {
-	// connect to shoot
-	// read all secrets and write them again
+	// ****************************************************************************************************************
+	// TODO: Check Pseudocode
+	//
+	// 1. obtain e.Operation.K8sShootClient
+	// 2. For all secrets in all namespaces:
+	//    a) read secret
+	//    b) write secret
+	//
+	// ****************************************************************************************************************
 	return nil
 }
 
