@@ -52,7 +52,7 @@ func TestConsistencyCorrect(t *testing.T) {
 	}
 	ok, err := IsConsistent(ec)
 	if (err != nil) || (!ok) {
-		t.Fatalf("newly generated configuration ought to be consistent: %v", err)
+		t.Fatalf("newly generated EncryptionConfiguration ought to be consistent: %v", err)
 	}
 }
 
@@ -64,7 +64,7 @@ func TestConsistencyIncorrectWrongKind(t *testing.T) {
 	ec.Kind = "wrong"
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (wrong kind) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (wrong kind) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -76,7 +76,7 @@ func TestConsistencyIncorrectWrongAPIVersion(t *testing.T) {
 	ec.APIVersion = "v1"
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (wrong APIVersion) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (wrong APIVersion) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -88,7 +88,7 @@ func TestConsistencyIncorrectNoResourceConfiguration(t *testing.T) {
 	ec.Resources = nil
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (no resource configuration) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (no resource configuration) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -103,7 +103,7 @@ func TestConsistencyIncorrectTooManyResourceConfigurations(t *testing.T) {
 	}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (no resource configuration) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (no resource configuration) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -117,7 +117,7 @@ func TestConsistencyIncorrectUnsupportedResource(t *testing.T) {
 	}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (unsupported resource to be encrypted) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (unsupported resource to be encrypted) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -129,7 +129,7 @@ func TestConsistencyIncorrectNoProviders(t *testing.T) {
 	ec.Resources[0].Providers = nil
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (no encryption providers) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (no encryption providers) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -145,7 +145,7 @@ func TestConsistencyIncorrectTooManyProviders(t *testing.T) {
 	}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (too many encryption providers) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (too many encryption providers) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -160,7 +160,7 @@ func TestConsistencyIncorrectJustProviderIdentity(t *testing.T) {
 	}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (twice encryption provider identity) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (twice encryption provider identity) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -176,7 +176,7 @@ func TestConsistencyIncorrectProvidersIdentityAndAESGCM(t *testing.T) {
 		}}}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (identity and aesgcm) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (identity and aesgcm) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -192,7 +192,7 @@ func TestConsistencyIncorrectNoKeysInAESCBC(t *testing.T) {
 		}}}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (no keys in configuration aescbc) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (no keys in configuration aescbc) of EncryptionConfiguration not detected")
 	}
 }
 
@@ -220,6 +220,20 @@ func TestConsistencyIncorrecKeysWithSameNameInAESCBC(t *testing.T) {
 		}}}
 	ok, err := IsConsistent(ec)
 	if err == nil || ok {
-		t.Fatalf("expected inconcistency (two keys with same name) of encryption configuration not detected")
+		t.Fatalf("expected inconcistency (two keys with same name) of EncryptionConfiguration not detected")
+	}
+}
+
+func TestPassive(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	active := IsActive(ec)
+	if err != nil {
+		t.Fatalf("error during IsActive: %v", err)
+	}
+	if active {
+		t.Fatalf("a passive EncryptionConfiguration should be in fact passive")
 	}
 }

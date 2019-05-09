@@ -66,7 +66,7 @@ func CreateFromYAML(yamlArray []byte) (*apiserverconfigv1.EncryptionConfiguratio
 	configObj := &apiserverconfigv1.EncryptionConfiguration{}
 	_, _, err := codecs.UniversalDecoder().Decode(yamlArray, nil, configObj)
 	if err != nil {
-		return nil, fmt.Errorf("error while decoding encryption configuration from yamlArray: %v", err)
+		return nil, fmt.Errorf("error while decoding EncryptionConfiguration from yamlArray: %v", err)
 	}
 	return configObj, nil
 }
@@ -77,13 +77,13 @@ func ToYAML(ec *apiserverconfigv1.EncryptionConfiguration) ([]byte, error) {
 	codecs := serializer.NewCodecFactory(scheme)
 	err := apiserverconfigv1.AddToScheme(scheme)
 	if err != nil {
-		return nil, fmt.Errorf("error while parsing encryption configuration: %v", err)
+		return nil, fmt.Errorf("error while preparing parsing of EncryptionConfiguration: %v", err)
 	}
 	serializer := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme, scheme)
 	encoder := codecs.EncoderForVersion(serializer, apiserverconfigv1.SchemeGroupVersion)
 	output, err := runtime.Encode(encoder, ec)
 	if err != nil {
-		return nil, fmt.Errorf("error while parsing encryption configuration: %v", err)
+		return nil, fmt.Errorf("error while parsing EncryptionConfiguration: %v", err)
 	}
 	return output, nil
 }
@@ -147,32 +147,56 @@ func IsConsistent(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
 	return true, nil
 }
 
-// IsActive checks whether the configuration is active, i.e. whether the provider
+// IsActive checks whether the EncryptionConfiguration is active, i.e. whether the provider
 // identity is NOT the first in the list of providers.
-func IsActive(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
-	return true, nil
+func IsActive(ec *apiserverconfigv1.EncryptionConfiguration) bool {
+	if ec.Resources[0].Providers[0].AESCBC != nil {
+		return true
+	} else {
+		return false
+	}
 }
 
-// SetActive sets the configuration to active state, i.e. ensures that
+// Equals checks whether the provided encryption configurations are equal.
+func Equals(ec1 *apiserverconfigv1.EncryptionConfiguration, ec2 *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
+	ec1Bytes, err := ToYAML(ec1)
+	if err != nil {
+		return false, fmt.Errorf("error when converting EncryptionConfiguration to yaml: %v", err)
+	}
+	ec1String := string(ec1Bytes)
+	ec2Bytes, err := ToYAML(ec2)
+	if err != nil {
+		return false, fmt.Errorf("error when converting EncryptionConfiguration to yaml: %v", err)
+	}
+	ec2String := string(ec2Bytes)
+	if ec1String == ec2String {
+		return true, nil
+	} else {
+		return false, nil
+	}
+}
+
+// SetActive sets the EncryptionConfiguration to active state, i.e. ensures that
 // provider aescbc is the first in the list of providers.
 func SetActive(ec *apiserverconfigv1.EncryptionConfiguration) error {
 	return nil
 }
 
-// SetPassive sets the configuration to passive state, i.e. ensures that
+// SetPassive sets the EncryptionConfiguration to passive state, i.e. ensures that
 // provider identity is the first in the list of providers.
 func SetPassive(ec *apiserverconfigv1.EncryptionConfiguration) error {
 	return nil
 }
 
-// CreatePassiveRotationKey adds a new key to the configuration as a second key
+// CreatePassiveRotationKey adds a new key to the EncryptionConfiguration as a second key
 // in the list of keys. Note that the order matters and the first key in the list
 // of keys is used for encrypting etcd contents.
 func CreatePassiveRotationKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
 	return nil
 }
 
-// IsRotationKeyActive checks whether the most current key
+// IsRotationKeyActive checks whether the most current key (i.e. the rotation key) is
+// also the first key in the list of keys.
 func IsRotationKeyActive(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
 	return true, nil
 }
