@@ -45,7 +45,7 @@ type PlantList struct {
 }
 
 const (
-	// EveryPlantNodeReady is a constant for a condition type indicating the node health.
+	// PlantEveryNodeReady is a constant for a condition type indicating the node health.
 	PlantEveryNodeReady ConditionType = "EveryNodeReady"
 	// PlantAPIServerAvailable is a constant for a condition type indicating that the Plant cluster API server is available.
 	PlantAPIServerAvailable ConditionType = "APIServerAvailable"

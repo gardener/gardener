@@ -128,7 +128,7 @@ type WorkerStatus struct {
 	MachineDeployments []MachineDeployment `json:"machineDeployments,omitempty"`
 }
 
-// MachineDeployments is a created machine deployments.
+// MachineDeployment is a created machine deployment.
 type MachineDeployment struct {
 	// Name is the name of the `MachineDeployment` resource.
 	Name string `json:"name"`

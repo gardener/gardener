@@ -71,9 +71,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
-        - 1.13.4
-        - 1.12.6
-        - 1.11.8
+        - 1.13.6
+        - 1.12.8
+        - 1.11.10
         - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
@@ -177,9 +177,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
-        - 1.13.4
-        - 1.12.6
-        - 1.11.8
+        - 1.13.6
+        - 1.12.8
+        - 1.11.10
         - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
@@ -278,9 +278,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
-        - 1.13.4
-        - 1.12.6
-        - 1.11.8
+        - 1.13.6
+        - 1.12.8
+        - 1.11.10
         - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
@@ -367,7 +367,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
-        - 1.13.4
+        - 1.14.0
+        - 1.13.6
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -533,9 +534,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.14.0
-        - 1.13.4
-        - 1.12.6
-        - 1.11.8
+        - 1.13.6
+        - 1.12.8
+        - 1.11.10
         - 1.10.13
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
