@@ -83,6 +83,7 @@ spec:
         - --etcd-keyfile=/srv/kubernetes/etcd/client/tls.key
         - --etcd-servers=https://etcd-main-client:{{ .Values.etcdServicePort }}
         - --etcd-servers-overrides=/events#https://etcd-events-client:{{ .Values.etcdServicePort }}
+        - --encryption-provider-config=/etc/kubernetes/etcd-encryption-secret/encryption-configuration.yaml
         {{- include "kube-apiserver.featureGates" . | trimSuffix "," | indent 8 }}
         - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
         - --kubelet-client-certificate=/srv/kubernetes/apiserver-kubelet/kube-apiserver-kubelet.crt
@@ -188,6 +189,9 @@ spec:
         - name: cloudprovider
           mountPath: /srv/cloudprovider
         {{- end }}
+        - name: etcd-encryption-secret
+          mountPath: /etc/kubernetes/etcd-encryption-secret
+          readOnly: true
       - name: vpn-seed
         image: {{ index .Values.images "vpn-seed" }}
         imagePullPolicy: IfNotPresent
@@ -307,3 +311,7 @@ spec:
         secret:
           secretName: cloudprovider
       {{- end }}
+      - name: etcd-encryption-secret
+        secret:
+          defaultMode: 420
+          secretName: etcd-encryption-secret

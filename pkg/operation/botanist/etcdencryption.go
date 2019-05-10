@@ -10,8 +10,12 @@ import (
 )
 
 const (
-	// EtcdEncryptionSecret is a constant for the name of the secret which contains the etcd encryption key
-	EtcdEncryptionSecret = "etcd-encryption-secret"
+	// EtcdEncryptionSecretName is a constant for the name of the secret which contains the etcd encryption key(s).
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	EtcdEncryptionSecretName = "etcd-encryption-secret"
+	// EtcdEncryptionSecretFileName is a constant for the name of the file within the EncryptionConfiguration secret
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
 )
 
 // CreateEtcdEncryptionConfiguration creates a secret
@@ -26,36 +30,40 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 		return err
 	}
 	if !exists {
+		// create new passive EncryptionConfiguration if it does not exist yet
+		// and remember to write this created configuration
 		ec, err = encryptionconfiguration.CreateNewPassiveConfiguration()
 		if err != nil {
 			return err
 		}
 		needToWriteConfig = true
 	} else {
+		// if it exists already, it needs to be consistent
 		consistent, err := b.isEncryptionConfigurationConsistent()
 		if (err != nil) || !consistent {
 			return err
 		}
+		// if it is not active already (aescbc as first provider) then set it to active
+		// and remember to write this created configuration
 		if !encryptionconfiguration.IsActive(ec) {
 			encryptionconfiguration.SetActive(ec)
 			needToWriteConfig = true
 		}
 	}
 	if needToWriteConfig {
-		// TODOME: calculate checksumme des secrets berechnen und in checksum map merken
+		// TODOME: calculate checksum of secret and remember in checksum mapß
 		err = b.writeEncryptionConfiguration(ec)
 		if err != nil {
 			return err
 		}
+		// if configuration was written successfully, remember to rewrite secrets once shoot apiserver is up and running
 		err = b.setNeedToRewriteShootSecrets(true)
 		if err != nil {
 			return err
 		}
 	}
-
-	// enablement of configuration done in helm chart of apiserver deployment
+	// enablement of etcd encryption feature done in helm chart of apiserver deployment
 	// TODOME: check hybridbotanist controlplane.go DeployKubeAPIServer
-	// TODOME: adapt helm chart to contain etcd encryption configuration parameters (static)
 
 	return nil
 }
@@ -64,10 +72,12 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 func (b *Botanist) RewriteShootSecrets() error {
 	logger.Logger.Info("Starting RewriteShootSecrets")
 
+	// rewrite secrets only if EncryptionConfiguration is (still) consistent
 	consistent, err := b.isEncryptionConfigurationConsistent()
 	if (err != nil) || !consistent {
 		return fmt.Errorf("EncryptionConfiguration inconsistent: %v", err)
 	}
+	// ensure etcd encryption feature is enabled
 	enabled, err := b.isEtcdEncryptionEnabled()
 	if (err != nil) || !enabled {
 		return fmt.Errorf("etcd encryption not enabled")
@@ -144,6 +154,11 @@ func (b *Botanist) writeEncryptionConfiguration(ec *apiserverconfigv1.Encryption
 	if err != nil {
 		return err
 	}
+	// if configuration was changed, we need to rewrite the shoot secrets
+	err = b.setNeedToRewriteShootSecrets(true)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -194,7 +209,7 @@ func (b *Botanist) isEtcdEncryptionEnabled() (bool, error) {
 	return false, nil
 }
 
-// isEncryptionConfigurationConsistent checks whether the configuration is consistent
+// isEncryptionConfigurationConsistent checks whether the configuration is consistent in seed and garden
 func (b *Botanist) isEncryptionConfigurationConsistent() (bool, error) {
 	exists, ecSeed, err := b.readEncryptionConfigurationFromSeed()
 	if (err != nil) || !exists {
@@ -238,7 +253,7 @@ func (b *Botanist) setNeedToRewriteShootSecrets(rewrite bool) error {
 	// 1. obtain e.Operation.K8sSeedClient
 	// 2. switch to shoot namespace
 	// 3. set annotation of etcdencryptionconfigurationsecret in shoot namespace of seed
-	// patchDeploymentCloudProviderChecksums
+	// pkg/operation/botanist/controlplane.go ==> patchDeploymentCloudProviderChecksums
 	//
 	// ****************************************************************************************************************
 	return nil
@@ -259,6 +274,7 @@ func (b *Botanist) rewriteShootSecrets() error {
 	return nil
 }
 
+// TODOME: remove testAndPlay
 func (b *Botanist) testAndPlay() {
 	// pl, err := e.Operation.K8sSeedClient.ListPods(e.Operation.Shoot.SeedNamespace, metav1.ListOptions{})
 	// if err != nil {
