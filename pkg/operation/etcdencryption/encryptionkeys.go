@@ -33,6 +33,7 @@ func createKeyName() string {
 }
 
 func createKeySecret() (string, error) {
+	// TODO: use util package random.go 
 	keyArray := make([]byte, ecKeySecretLen)
 	_, err := rand.Read(keyArray)
 	if err != nil {
