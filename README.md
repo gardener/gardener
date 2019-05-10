@@ -2,10 +2,11 @@
 
 ![Gardener Logo](logo/gardener-large.png)
 
+[![Slack channel #gardener](https://img.shields.io/badge/slack-gardener-brightgreen.svg?logo=slack)](https://kubernetes.slack.com/messages/gardener)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener)](https://goreportcard.com/report/github.com/gardener/gardener)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1822/badge)](https://bestpractices.coreinfrastructure.org/projects/1822)
 
-Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides support for multiple cloud providers (AWS, GCP, Azure, OpenStack). Its main principle is to leverage Kubernetes concepts for all of its tasks.
+Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides support for multiple cloud providers (Alicloud, AWS, Azure, GCP, OpenStack, ...). Its main principle is to leverage Kubernetes concepts for all of its tasks.
 
 In essence, Gardener is an [extension API server](https://kubernetes.io/docs/tasks/access-kubernetes-api/setup-extension-api-server/) that comes along with a bundle of custom controllers. It introduces new API objects in an existing Kubernetes cluster (which is called **garden** cluster) in order to use them for the management of end-user Kubernetes clusters (which are called **shoot** clusters). These shoot clusters are described via [declarative cluster specifications](https://github.com/gardener/gardener/blob/master/example/90-shoot-aws.yaml) which are observed by the controllers. They will bring up the clusters, reconcile their state, perform automated updates and make sure they are always up and running.
 
@@ -21,7 +22,9 @@ See our documentation in the `/docs` repository, please [find the index here](do
 
 ## Setting up your own Gardener landscape in the cloud
 
-If you already have a Kubernetes cluster then please take a look at our [Gardener Helm Chart](https://github.com/gardener/gardener/tree/master/charts/gardener). Alternatively you can use our [garden setup](https://github.com/gardener/garden-setup) project to create a fully configured Gardener landscape which also includes our [Gardener Dashboard](https://github.com/gardener/dashboard).
+The quickest way to test drive Gardener is to install it virtually onto an existing Kubernetes cluster, just like you would install any other Kubernetes-ready application. Launch your automatic installer [here](https://gardener.cloud/installer/)
+
+We also have a [Gardener Helm Chart](https://github.com/gardener/gardener/tree/master/charts/gardener). Alternatively you can use our [garden setup](https://github.com/gardener/garden-setup) project to create a fully configured Gardener landscape which also includes our [Gardener Dashboard](https://github.com/gardener/dashboard).
 
 ## Feedback and Support
 
