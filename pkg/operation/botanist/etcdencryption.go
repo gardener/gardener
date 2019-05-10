@@ -1,24 +1,27 @@
-package encryptionbotanist
+package botanist
 
 import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation"
-	"github.com/gardener/gardener/pkg/operation/encryptionconfiguration"
+	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
+
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 )
 
-type encryptionBotanistImpl struct {
-	*operation.Operation
-}
+const (
+	// EtcdEncryptionSecret is a constant for the name of the secret which contains the etcd encryption key
+	EtcdEncryptionSecret = "etcd-encryption-secret"
+)
 
-func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
-	logger.Logger.Info("Starting Etcd Encryption")
+// CreateEtcdEncryptionConfiguration creates a secret
+func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
+	logger.Logger.Info("Starting CreateEtcdEncryptionConfiguration")
 
 	// TODO: question do we need a switch to de-activate the encryption feature (although we all agreed to have 'secure by default')?
 
-	exists, ec, err := e.readEncryptionConfigurationFromSeed()
+	needToWriteConfig := false
+	exists, ec, err := b.readEncryptionConfigurationFromSeed()
 	if err != nil {
 		return err
 	}
@@ -27,24 +30,47 @@ func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
 		if err != nil {
 			return err
 		}
-		err = e.writeConfiguration(ec)
+		needToWriteConfig = true
+	} else {
+		consistent, err := b.isEncryptionConfigurationConsistent()
+		if (err != nil) || !consistent {
+			return err
+		}
+		if !encryptionconfiguration.IsActive(ec) {
+			encryptionconfiguration.SetActive(ec)
+			needToWriteConfig = true
+		}
+	}
+	if needToWriteConfig {
+		// TODOME: calculate checksumme des secrets berechnen und in checksum map merken
+		err = b.writeEncryptionConfiguration(ec)
 		if err != nil {
 			return err
 		}
-		err = e.enableConfiguration()
+		err = b.setNeedToRewriteShootSecrets(true)
 		if err != nil {
 			return err
 		}
 	}
 
-	consistent, err := e.isConfigurationConsistent()
+	// enablement of configuration done in helm chart of apiserver deployment
+	// TODOME: check hybridbotanist controlplane.go DeployKubeAPIServer
+	// TODOME: adapt helm chart to contain etcd encryption configuration parameters (static)
+
+	return nil
+}
+
+// RewriteShootSecrets rewrites a shoot's secrets if the EncryptionConfiguration has changed
+func (b *Botanist) RewriteShootSecrets() error {
+	logger.Logger.Info("Starting RewriteShootSecrets")
+
+	consistent, err := b.isEncryptionConfigurationConsistent()
 	if (err != nil) || !consistent {
-		return err
+		return fmt.Errorf("EncryptionConfiguration inconsistent: %v", err)
 	}
-
-	enabled, err := e.isConfigurationEnabled()
+	enabled, err := b.isEtcdEncryptionEnabled()
 	if (err != nil) || !enabled {
-		return err
+		return fmt.Errorf("etcd encryption not enabled")
 	}
 
 	// WARNING:
@@ -52,24 +78,19 @@ func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
 	// Be aware of the risk!
 	//
 	// TODO: Ensure this is also agreed upon by Gardener team
-	if !encryptionconfiguration.IsActive(ec) {
-		encryptionconfiguration.SetActive(ec)
-		err = e.writeConfiguration(ec)
-		if err != nil {
-			return err
-		}
-	}
 
-	needToRewrite, err := e.needToRewriteShootSecrets()
+	// TODO: contact Amshuman Rao Karaya
+
+	needToRewrite, err := b.needToRewriteShootSecrets()
 	if err != nil {
 		return err
 	}
 	if needToRewrite {
-		err = e.rewriteShootSecrets()
+		err = b.rewriteShootSecrets()
 		if err != nil {
 			return err
 		}
-		err = e.setNeedToRewriteShootSecrets(false)
+		err = b.setNeedToRewriteShootSecrets(false)
 		if err != nil {
 			return err
 		}
@@ -78,15 +99,8 @@ func (e *encryptionBotanistImpl) StartEtcdEncryption() error {
 	return nil
 }
 
-// New creates a new EncryptionBotanist
-func New(o *operation.Operation) (EncryptionBotanist, error) {
-	return &encryptionBotanistImpl{
-		Operation: o,
-	}, nil
-}
-
 // readEncryptionConfigurationFromSeed reads the EncryptionConfiguration from the shoot namespace in the seed
-func (e *encryptionBotanistImpl) readEncryptionConfigurationFromSeed() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
+func (b *Botanist) readEncryptionConfigurationFromSeed() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -103,7 +117,7 @@ func (e *encryptionBotanistImpl) readEncryptionConfigurationFromSeed() (bool, *a
 }
 
 // readEncryptionConfigurationFromGarden reads the EncryptionConfiguration from the shoot namespace in the seed
-func (e *encryptionBotanistImpl) readEncryptionConfigurationFromGarden() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
+func (b *Botanist) readEncryptionConfigurationFromGarden() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -119,23 +133,23 @@ func (e *encryptionBotanistImpl) readEncryptionConfigurationFromGarden() (bool, 
 	return false, nil, nil
 }
 
-// writeConfiguration writes the secret which contains the EncryptionConfiguration to the
+// writeEncryptionConfiguration writes the secret which contains the EncryptionConfiguration to the
 // shoot namespace in the seed cluster as well as to the garden cluster
-func (e *encryptionBotanistImpl) writeConfiguration(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	err := e.writeConfigurationSecretToSeed(ec)
+func (b *Botanist) writeEncryptionConfiguration(ec *apiserverconfigv1.EncryptionConfiguration) error {
+	err := b.writeEncryptionConfigurationSecretToSeed(ec)
 	if err != nil {
 		return err
 	}
-	err = e.writeConfigurationSecretToGarden(ec)
+	err = b.writeEncryptionConfigurationSecretToGarden(ec)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// writeConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
+// writeEncryptionConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
 // to the shoot namespace in the seed cluster
-func (e *encryptionBotanistImpl) writeConfigurationSecretToSeed(ec *apiserverconfigv1.EncryptionConfiguration) error {
+func (b *Botanist) writeEncryptionConfigurationSecretToSeed(ec *apiserverconfigv1.EncryptionConfiguration) error {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -149,9 +163,9 @@ func (e *encryptionBotanistImpl) writeConfigurationSecretToSeed(ec *apiservercon
 	return nil
 }
 
-// writeConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
+// writeEncryptionConfigurationSecretToGarden writes the secret which contains the EncryptionConfiguration
 // to the garden cluster
-func (e *encryptionBotanistImpl) writeConfigurationSecretToGarden(ec *apiserverconfigv1.EncryptionConfiguration) error {
+func (b *Botanist) writeEncryptionConfigurationSecretToGarden(ec *apiserverconfigv1.EncryptionConfiguration) error {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -162,34 +176,12 @@ func (e *encryptionBotanistImpl) writeConfigurationSecretToGarden(ec *apiserverc
 	return nil
 }
 
-// enableConfiguration enables the configuration and thus modifies the shoot's apiserver deployment in the seed cluster
-// - creates a volume for the EncryptionConfiguration
-// - creates a volume mount
-// - sets the apiserver start parameter
-func (e *encryptionBotanistImpl) enableConfiguration() error {
-	// ****************************************************************************************************************
-	// TODO: Check Pseudocode
-	//
-	// 1. obtain e.Operation.K8sSeedClient
-	// 2. switch to shoot namespace
-	// 3. read deployment of apiserver
-	// 4. adapt deployment (urks, not easy to change the params)
-	// 5. write deployment
-	//
-	// TODO questions:
-	// - will this automatically restart the apiserver(s) ?
-	// - how will processing of this reconsiliation continue then?
-	// ****************************************************************************************************************
-
-	return nil
-}
-
-// isConfigurationEnabled checks whether the following parameters exist in the shoot's
+// isEtcdEncryptionEnabled checks whether the following parameters exist in the shoot's
 // apiserver deployment as expected
 // - volume for the EncryptionConfiguration
 // - volume mount
 // - apiserver start parameter
-func (e *encryptionBotanistImpl) isConfigurationEnabled() (bool, error) {
+func (b *Botanist) isEtcdEncryptionEnabled() (bool, error) {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -202,13 +194,13 @@ func (e *encryptionBotanistImpl) isConfigurationEnabled() (bool, error) {
 	return false, nil
 }
 
-// isConfigurationConsistent checks whether the configuration is consistent and enabled
-func (e *encryptionBotanistImpl) isConfigurationConsistent() (bool, error) {
-	exists, ecSeed, err := e.readEncryptionConfigurationFromSeed()
+// isEncryptionConfigurationConsistent checks whether the configuration is consistent
+func (b *Botanist) isEncryptionConfigurationConsistent() (bool, error) {
+	exists, ecSeed, err := b.readEncryptionConfigurationFromSeed()
 	if (err != nil) || !exists {
 		return false, err
 	}
-	exists, ecGarden, err := e.readEncryptionConfigurationFromGarden()
+	exists, ecGarden, err := b.readEncryptionConfigurationFromGarden()
 	if (err != nil) || !exists {
 		return false, err
 	}
@@ -225,7 +217,7 @@ func (e *encryptionBotanistImpl) isConfigurationConsistent() (bool, error) {
 
 // needToRewriteShootSecrets checks whether the secrets in the shoot need to
 // be rewritten, e.g. after a change to the EncryptionConfiguration
-func (e *encryptionBotanistImpl) needToRewriteShootSecrets() (bool, error) {
+func (b *Botanist) needToRewriteShootSecrets() (bool, error) {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -239,13 +231,14 @@ func (e *encryptionBotanistImpl) needToRewriteShootSecrets() (bool, error) {
 
 // setNeedToRewriteShootSecrets sets the annotation with which to remember
 // whether the shoot secrets need to be rewritten
-func (e *encryptionBotanistImpl) setNeedToRewriteShootSecrets(rewrite bool) error {
+func (b *Botanist) setNeedToRewriteShootSecrets(rewrite bool) error {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
 	// 1. obtain e.Operation.K8sSeedClient
 	// 2. switch to shoot namespace
-	// 3. set annotation (how?)
+	// 3. set annotation of etcdencryptionconfigurationsecret in shoot namespace of seed
+	// patchDeploymentCloudProviderChecksums
 	//
 	// ****************************************************************************************************************
 	return nil
@@ -253,7 +246,7 @@ func (e *encryptionBotanistImpl) setNeedToRewriteShootSecrets(rewrite bool) erro
 
 // rewriteShootSecrets rewrites all secrets of the shoot.
 // This will take into account the current EncryptionConfiguration.
-func (e *encryptionBotanistImpl) rewriteShootSecrets() error {
+func (b *Botanist) rewriteShootSecrets() error {
 	// ****************************************************************************************************************
 	// TODO: Check Pseudocode
 	//
@@ -266,7 +259,7 @@ func (e *encryptionBotanistImpl) rewriteShootSecrets() error {
 	return nil
 }
 
-func (e *encryptionBotanistImpl) testAndPlay() {
+func (b *Botanist) testAndPlay() {
 	// pl, err := e.Operation.K8sSeedClient.ListPods(e.Operation.Shoot.SeedNamespace, metav1.ListOptions{})
 	// if err != nil {
 	// 	return err

@@ -30,7 +30,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
-	encryptionbotanistpkg "github.com/gardener/gardener/pkg/operation/encryptionbotanist"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 )
@@ -62,10 +61,6 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	if err != nil {
 		return formatError("Failed to create a HybridBotanist", err)
 	}
-	encryptionBotanist, err := encryptionbotanistpkg.New(o)
-	if err != nil {
-		return formatError("Failed to create a EncryptionBotanist", err)
-	}
 
 	if err := botanist.RequiredExtensionsExist(); err != nil {
 		return formatError("Failed to check whether all required extensions exist", err)
@@ -96,10 +91,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
+		createEtcdEncryptionConfiguration = g.Add(flow.Task{
+			Name: "Create EncryptionConfiguration for Etcd encryption",
+			Fn:   flow.SimpleTaskFn(botanist.CreateEtcdEncryptionConfiguration),
+		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServerService).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
+			Dependencies: flow.NewTaskIDs(deployNamespace, createEtcdEncryptionConfiguration),
 		})
 		waitUntilKubeAPIServerServiceIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server service has reported readiness",
@@ -160,10 +159,9 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		// TODOME: modify here to pass botanist etc.
 		_ = g.Add(flow.Task{
-			Name:         "Start Etcd Encryption",
-			Fn:           flow.SimpleTaskFn(encryptionBotanist.StartEtcdEncryption),
+			Name:         "Rewrite shoot secrets",
+			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecrets),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilEtcdReady),
 		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
