@@ -9,3 +9,7 @@ project:
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: alice.doe@example.com
+  viewers:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: bob.doe@example.com

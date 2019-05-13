@@ -5616,7 +5616,7 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 					},
 					"members": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Members is a list of subjects representing a user name, an email address, or any other identifier of a user that should be part of this project.",
+							Description: "Members is a list of subjects representing a user name, an email address, or any other identifier of a user that should be part of this project with full permissions to manage it.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -5632,6 +5632,19 @@ func schema_pkg_apis_garden_v1beta1_ProjectSpec(ref common.ReferenceCallback) co
 							Description: "Namespace is the name of the namespace that has been created for the Project object. A nil value means that Gardener will determine the name of the namespace.",
 							Type:        []string{"string"},
 							Format:      "",
+						},
+					},
+					"viewers": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Viewers is a list of subjects representing a user name, an email address, or any other identifier of a user that should be part of this project with limited permissions to only view some resources.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("k8s.io/api/rbac/v1.Subject"),
+									},
+								},
+							},
 						},
 					},
 				},
