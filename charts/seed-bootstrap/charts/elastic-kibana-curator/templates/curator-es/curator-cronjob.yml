@@ -26,8 +26,8 @@ spec:
           containers:
           - image: {{ index .Values.global.images "curator-es" }}
             name: curator
-            command: ["/bin/sh","-c"]
-            args: ["curator-es --disk-space-threshold={{ include "curator.disk_threshold" .Values.curator }}; curator --config /etc/config/config.yml /etc/config/action_file.yml"]
+            command: ["/bin/sh", "-c"]
+            args: ["curator-es --disk-space-threshold={{ .Values.curator.diskSpaceThreshold | int64 }}; curator --config /etc/config/config.yml /etc/config/action_file.yml"]
             volumeMounts:
             - name: config
               mountPath: /etc/config
