@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dependency-watchdog
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.dependencywatchdog.labels | indent 4 }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: gardener.cloud:dependency-watchdog:role-binding
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.dependencywatchdog.labels | indent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: gardener.cloud:dependency-watchdog:role
+subjects:
+- kind: ServiceAccount
+  name: dependency-watchdog
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: Role
+metadata:
+  name: gardener.cloud:dependency-watchdog:role
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ toYaml .Values.dependencywatchdog.labels | indent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - delete
+  - get
+  - list
+  - watch
