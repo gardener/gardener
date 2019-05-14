@@ -10,9 +10,7 @@ The reason for that is that the least supported Kubernetes version in Gardener i
 ## Seed cluster versions
 
 :warning: The minimum version of a seed cluster that can be connected to Gardener is **`1.11.x`**.
-The reason for that is that we require CRD status subresources for the extension controllers that we install into the seeds.
-CRD status subresources are alpha in `1.10` and can be enabled with the `CustomResourceSubresources` feature gate.
-They are enabled by default in `1.11`. Also, we install VPA as a part of controlplane component with version 0.5.0, which does not work on kubernetes version below `1.11`.
+The reason for that is that we require CRD status subresources for the extension controllers that we install into the seeds. They are enabled by default in `1.11`. Also, we install VPA as a part of controlplane component with version 0.5.0, which does not work on kubernetes version below `1.11`.
 
 ## Shoot cluster versions
 
