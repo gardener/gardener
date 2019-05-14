@@ -68,12 +68,16 @@ spec:
         - mountPath: /var/prometheus/data
           name: prometheus-db
           subPath: prometheus-
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
       - name: prometheus-config-reloader
         image: {{ index .Values.global.images "configmap-reloader" }}
         imagePullPolicy: IfNotPresent
         args:
         - -webhook-url=http://localhost:{{ .Values.aggregatePrometheus.port }}/-/reload
         - -volume-dir=/etc/prometheus/config
+        - -volume-dir=/etc/prometheus/rules
         resources:
           requests:
             cpu: 5m
@@ -85,12 +89,19 @@ spec:
         - mountPath: /etc/prometheus/config
           name: config
           readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
+          readOnly: true
       terminationGracePeriodSeconds: 300
       volumes:
       - name: config
         configMap:
           defaultMode: 420
           name: aggregate-prometheus-config
+      - name: rules
+        configMap:
+          defaultMode: 420
+          name: aggregate-prometheus-rules
   volumeClaimTemplates:
   - metadata:
       name: prometheus-db

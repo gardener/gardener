@@ -54,3 +54,8 @@ echo "Executing Prometheus alert tests"
 pushd $SOURCE_PATH/charts/seed-monitoring/charts/core/charts/prometheus > /dev/null
   promtool test rules rules-tests/*test.yaml
 popd > /dev/null
+
+echo "Executing aggregate Prometheus alert tests"
+pushd $SOURCE_PATH/charts/seed-bootstrap/aggregate-prometheus-rules-tests > /dev/null
+  promtool test rules *test.yaml
+popd > /dev/null

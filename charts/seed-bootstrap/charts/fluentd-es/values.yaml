@@ -11,6 +11,7 @@ fluentd:
   storage: 9Gi
   ports:
     forward: 24224
+    metrics: 24231
   labels:
     garden.sapcloud.io/role: logging
     app: fluentd-es
@@ -27,3 +28,5 @@ fluentbit:
     garden.sapcloud.io/role: logging
     app: fluent-bit
     role: logging
+  ports:
+    metrics: 2020

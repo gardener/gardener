@@ -12,6 +12,9 @@ data:
         Daemon          Off
         Log_Level       info
         Parsers_File    parsers.conf
+        HTTP_Server     On
+        HTTP_Listen     0.0.0.0
+        HTTP_PORT       {{ .Values.fluentbit.ports.metrics }}
 
     @INCLUDE input-kubernetes.conf
     @INCLUDE input-systemd.conf
@@ -30,6 +33,9 @@ data:
         Mem_Buf_Limit     12MB
         Refresh_Interval  10
         Ignore_Older      1800s
+        
+    [INPUT]
+        Name cpu
 
   input-systemd.conf: |-
     [INPUT]
@@ -292,6 +298,10 @@ data:
         Match           *
         Host            ${FLUENTD_HOST}
         Port            ${FLUENTD_PORT}
+
+    [OUTPUT]
+        Name  stdout
+        Match *
 
   parsers.conf: |-
     [PARSER]

@@ -6,6 +6,7 @@ metadata:
   labels:
 {{ toYaml .Values.fluentbit.labels | indent 4 }}
 spec:
+  serviceName: fluent-bit
   selector:
     matchLabels:
 {{ toYaml .Values.fluentbit.labels | indent 6 }}

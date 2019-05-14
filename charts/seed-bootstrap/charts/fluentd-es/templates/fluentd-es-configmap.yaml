@@ -15,6 +15,33 @@ data:
       bind 0.0.0.0
     </source>
 
+  monitoring.conf: |-
+    # Prometheus Exporter Plugin
+    # input plugin that exports metrics
+    <source>
+      @id prometheus
+      @type prometheus
+    </source>
+    <source>
+      @id monitor_agent
+      @type monitor_agent
+    </source>
+    # input plugin that collects metrics from MonitorAgent
+    <source>
+      @id prometheus_monitor
+      @type prometheus_monitor
+    </source>
+    # input plugin that collects metrics for output plugin
+    <source>
+      @id prometheus_output_monitor
+      @type prometheus_output_monitor
+    </source>
+    # input plugin that collects metrics for in_tail plugin
+    <source>
+      @id prometheus_tail_monitor
+      @type prometheus_tail_monitor
+    </source>
+
   output.conf: |-
     # Decide which is shoot record and which is not
     <match kubernetes.**>

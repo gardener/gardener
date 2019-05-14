@@ -1,0 +1,25 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Ingress from Prometheus to pods labeled with 'networking.gardener.cloud/from-prometheus=allowed'
+      and ports named 'metrics' in the PodSpecification.
+  name: allow-from-aggregate-prometheus
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/from-aggregate-prometheus: allowed
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: aggregate-prometheus
+          role: monitoring
+    ports:
+    - port: metrics
+      protocol: TCP
+  policyTypes:
+  - Ingress
+  egress: []

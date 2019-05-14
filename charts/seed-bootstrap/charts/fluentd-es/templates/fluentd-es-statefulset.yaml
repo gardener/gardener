@@ -23,6 +23,7 @@ spec:
         checksum/fluentd-es-configmap: {{ include (print $.Template.BasePath "/fluentd-es-configmap.yaml") . | sha256sum }}
       labels:
 {{ toYaml .Values.fluentd.labels | indent 8 }}
+        networking.gardener.cloud/from-aggregate-prometheus: allowed
         networking.gardener.cloud/to-dns: allowed
     spec:
       affinity:
@@ -60,6 +61,9 @@ spec:
         - containerPort: {{ .Values.fluentd.ports.forward }}
           name: fwd-input-udp
           protocol: UDP
+        - name: metrics
+          protocol: TCP
+          containerPort: {{ .Values.fluentd.ports.metrics }}
         livenessProbe:
           tcpSocket:
             port: {{ .Values.fluentd.ports.forward }}

@@ -17,3 +17,7 @@ spec:
     port: {{ .Values.fluentd.ports.forward }}
     protocol: UDP
     targetPort: fwd-input-udp
+  - name: metrics
+    port: {{ .Values.fluentd.ports.metrics }}
+    protocol: TCP
+    targetPort: {{ .Values.fluentd.ports.metrics }}
