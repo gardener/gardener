@@ -12,6 +12,7 @@ This means that basically every operating system is possible to be used as long 
 1) The operating system must have built-in [Docker](https://www.docker.com/) support.
 2) The operating system must have [systemd](https://www.freedesktop.org/wiki/Software/systemd/) support.
 3) The operating system must have [`wget`](https://www.gnu.org/software/wget/) pre-installed.
+4) The operating system must have [`jq`](https://stedolan.github.io/jq/) pre-installed.
 
 The reasons for that will become evident later.
 
