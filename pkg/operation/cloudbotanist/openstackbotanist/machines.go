@@ -105,6 +105,9 @@ func (b *OpenStackBotanist) GenerateMachineConfig() ([]map[string]interface{}, o
 				Maximum:        common.DistributeOverZones(zoneIndex, worker.AutoScalerMax, zoneLen),
 				MaxSurge:       common.DistributePositiveIntOrPercent(zoneIndex, *worker.MaxSurge, zoneLen, worker.AutoScalerMax),
 				MaxUnavailable: common.DistributePositiveIntOrPercent(zoneIndex, *worker.MaxUnavailable, zoneLen, worker.AutoScalerMin),
+				Labels:         worker.Labels,
+				Annotations:    worker.Annotations,
+				Taints:         worker.Taints,
 			})
 
 			machineClassSpec["name"] = className

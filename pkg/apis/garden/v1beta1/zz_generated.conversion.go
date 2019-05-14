@@ -4629,6 +4629,9 @@ func autoConvert_v1beta1_Worker_To_garden_Worker(in *Worker, out *garden.Worker,
 	out.AutoScalerMax = in.AutoScalerMax
 	// WARNING: in.MaxSurge requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/util/intstr.IntOrString vs k8s.io/apimachinery/pkg/util/intstr.IntOrString)
 	// WARNING: in.MaxUnavailable requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/util/intstr.IntOrString vs k8s.io/apimachinery/pkg/util/intstr.IntOrString)
+	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
+	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
+	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	return nil
 }
 
@@ -4639,6 +4642,9 @@ func autoConvert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker,
 	out.AutoScalerMax = in.AutoScalerMax
 	// WARNING: in.MaxSurge requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/util/intstr.IntOrString vs *k8s.io/apimachinery/pkg/util/intstr.IntOrString)
 	// WARNING: in.MaxUnavailable requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/util/intstr.IntOrString vs *k8s.io/apimachinery/pkg/util/intstr.IntOrString)
+	out.Annotations = *(*map[string]string)(unsafe.Pointer(&in.Annotations))
+	out.Labels = *(*map[string]string)(unsafe.Pointer(&in.Labels))
+	out.Taints = *(*[]v1.Taint)(unsafe.Pointer(&in.Taints))
 	return nil
 }
 

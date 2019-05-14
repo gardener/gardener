@@ -88,6 +88,14 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       % endif
       zones: ${value("spec.cloud.aws.zones", ["eu-west-1a"])}
     % endif
@@ -122,6 +130,14 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       % endif
     % endif
     % if cloud == "alicloud":
@@ -146,6 +162,16 @@ spec:
         volumeSize: 30Gi
         autoScalerMin: 1
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       % endif
       zones: ${value("spec.cloud.alicloud.zones", ["cn-beijing-f"])}
     % endif
@@ -161,6 +187,16 @@ spec:
         volumeSize: 30Gi
         autoScalerMin: 1
         autoScalerMax: 2
+        maxSurge: 1
+        maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       % endif
       zones: ${value("spec.cloud.packet.zones", ["EWR1"])}
     % endif
@@ -188,6 +224,14 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       % endif
       zones: ${value("spec.cloud.gcp.zones", ["europe-west1-b"])}
     % endif
@@ -214,6 +258,14 @@ spec:
         autoScalerMax: 2
         maxSurge: 1
         maxUnavailable: 0
+      # labels:
+      #   key: value
+      # annotations:
+      #   key: value
+      # taints: # See also https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      # - key: foo
+      #   value: bar
+      #   effect: NoSchedule
       % endif
       zones: ${value("spec.cloud.openstack.zones", ["europe-1a"])}
     % endif

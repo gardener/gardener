@@ -9,3 +9,12 @@ machineDeployments:
   class:
     kind: AWSMachineClass
     name: shoot-garden-core-ncm-nodes-cpu-worker-z0
+  nodeTemplate:
+    labels: {}
+ #    foo: bar
+    annotations: {}
+ #    foo: bar
+    taints: []
+ #  - key: foo
+ #    value: bar
+ #    effect: NoSchedule
