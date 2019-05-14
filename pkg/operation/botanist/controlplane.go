@@ -579,6 +579,28 @@ func (b *Botanist) DeployCertBroker() error {
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CertBrokerResourceName), b.Shoot.SeedNamespace, common.CertBrokerResourceName, nil, certBroker)
 }
 
+// DeployDependencyWatchdog deploys the dependency watchdog to the Shoot namespace in the Seed.
+func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
+	dependencyWatchdogConfig := map[string]interface{}{
+		"replicas": b.Shoot.GetReplicas(1),
+		"dependencywatchdog": map[string]interface{}{
+			"service": map[string]interface{}{
+				"name": "etcd-main-client",
+				"labels": map[string]interface{}{
+					"app":  "etcd-statefulset",
+					"role": "main",
+				},
+			},
+		},
+	}
+
+	dependancyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependancyWatchdogDeploymentName)
+	if err != nil {
+		return nil
+	}
+	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependancyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependancyWatchdogDeploymentName, nil, dependancyWatchdog)
+}
+
 func createDNSProviderValuesForDomain(config certmanagement.DNSProviderConfig, shootDomain string) []interface{} {
 	var dnsConfig []interface{}
 	for _, domain := range config.DomainNames() {

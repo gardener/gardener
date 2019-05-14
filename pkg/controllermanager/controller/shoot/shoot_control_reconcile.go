@@ -134,10 +134,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilBackupInfrastructureReconciled).DoIf(isCloud),
 			Dependencies: flow.NewTaskIDs(deployBackupInfrastructure),
 		})
+		deployETCDStorageClass = g.Add(flow.Task{
+			Name: "Deploying storageclass for etcd",
+			Fn:   flow.TaskFn(hybridBotanist.DeployETCDStorageClass).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled, deployETCDStorageClass),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
@@ -209,13 +213,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.DeployMachineControllerManager).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
 		})
-
 		deployCSIControllers = g.Add(flow.Task{
 			Name:         "Deploying CSI controllers",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCSIControllers).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.UsesCSI()),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
 		})
-
 		reconcileMachines = g.Add(flow.Task{
 			Name:         "Reconciling Shoot workers",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.ReconcileMachines).DoIf(isCloud).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -255,6 +257,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Name:         "Deploying Cert-Broker",
 			Fn:           flow.SimpleTaskFn(botanist.DeployCertBroker).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying Dependency Watchdog",
+			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdog).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",

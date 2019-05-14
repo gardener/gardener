@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -106,8 +107,14 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
 }
 
+// DeployETCDStorageClass create the high iops storageclass required for volume used by etcd pods in seed cluster.
+func (b *HybridBotanist) DeployETCDStorageClass(ctx context.Context) error {
+	storageClassConfig := b.SeedCloudBotanist.GenerateETCDStorageClassConfig()
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd-storageclass"), b.Shoot.SeedNamespace, "etcd-storageclass", nil, storageClassConfig)
+}
+
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
-/// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
+// data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
 func (b *HybridBotanist) DeployETCD() error {
 	secretData, backupConfigData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
@@ -122,16 +129,19 @@ func (b *HybridBotanist) DeployETCD() error {
 		}
 	}
 
+	storageClassConfig := b.SeedCloudBotanist.GenerateETCDStorageClassConfig()
 	etcdConfig := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-etcd-ca":         b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
 		},
-		"storage": b.Seed.GetValidVolumeSize("10Gi"),
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
+		"storage":          b.Seed.GetValidVolumeSize("10Gi"),
+		"storageClassName": storageClassConfig["name"].(string),
+		"storageCapacity":  storageClassConfig["capacity"].(string),
 	}
 
 	// Some cloud botanists do not yet support backup and won't return backup config data.
@@ -167,7 +177,29 @@ func (b *HybridBotanist) DeployETCD() error {
 		}
 
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
-			return err
+			if role == common.EtcdRoleMain {
+				// Since we have to update volumeClaimTemplate in existing statefulset, which is forbidden
+				// by k8s. So, we have to explicitely delete the old statefulset and create new one.
+				if apierrors.IsInvalid(err) {
+					if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
+						return err
+					}
+
+					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+					defer cancel()
+					if err := b.Botanist.WaitUntilEtcdStatefulsetDeleted(ctx, role); err != nil {
+						return err
+					}
+
+					if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
+						return err
+					}
+				} else {
+					return err
+				}
+			} else {
+				return err
+			}
 		}
 		if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
 			return err

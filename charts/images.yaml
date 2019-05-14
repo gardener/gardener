@@ -14,11 +14,11 @@ images:
 - name: etcd
   sourceRepository: github.com/coreos/etcd
   repository: quay.io/coreos/etcd
-  tag: v3.3.12
+  tag: v3.3.13
 - name: etcd-backup-restore
   sourceRepository: github.com/gardener/etcd-backup-restore
   repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.5.2"
+  tag: "0.6.2"
 - name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
@@ -42,6 +42,10 @@ images:
   sourceRepository: github.com/gardener/aws-lb-readvertiser
   repository: eu.gcr.io/gardener-project/gardener/aws-lb-readvertiser
   tag: "0.6.0"
+- name: dependency-watchdog
+  sourceRepository: github.com/gardener/dependency-watchdog
+  repository: eu.gcr.io/gardener-project/gardener/dependency-watchdog
+  tag: "0.1.1"
 
 # Monitoring
 - name: alertmanager

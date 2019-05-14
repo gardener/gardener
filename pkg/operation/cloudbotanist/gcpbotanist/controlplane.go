@@ -136,6 +136,18 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 	return nil, nil
 }
 
+// GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
+func (b *GCPBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"name":        "gardener.cloud-fast",
+		"capacity":    "25Gi",
+		"provisioner": "kubernetes.io/gce-pd",
+		"parameters": map[string]interface{}{
+			"type": "pd-ssd",
+		},
+	}
+}
+
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	var (

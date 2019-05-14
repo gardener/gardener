@@ -1,0 +1,4 @@
+apiVersion: v1
+description: A Helm chart for etcd storageclass
+name: etcd-storageclass
+version: 0.1.0

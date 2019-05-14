@@ -129,6 +129,20 @@ func (b *AlicloudBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}
 	return nil, nil
 }
 
+// GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
+func (b *AlicloudBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"name":        "gardener.cloud-fast",
+		"capacity":    "25Gi",
+		"provisioner": "diskplugin.csi.alibabacloud.com",
+		"parameters": map[string]interface{}{
+			"csi.storage.k8s.io/fstype": "ext4",
+			"type":                      "cloud_ssd",
+			"readOnly":                  "false",
+		},
+	}
+}
+
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	tf, err := b.NewBackupInfrastructureTerraformer()

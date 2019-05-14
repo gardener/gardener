@@ -1,0 +1,10 @@
+apiVersion: {{ include "storageclassversion" . }}
+kind: StorageClass
+metadata:
+  name: {{ $.Values.name }}
+provisioner: {{ $.Values.provisioner }}
+allowVolumeExpansion: true
+parameters:
+{{- if $.Values.parameters }}
+{{ toYaml $.Values.parameters | indent 2 }}
+{{- end }}

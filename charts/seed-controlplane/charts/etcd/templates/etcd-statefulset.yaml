@@ -1,26 +1,8 @@
-apiVersion: v1
-kind: Service
-metadata:
-  name: etcd-{{ .Values.role }}-client
-  namespace: {{ .Release.Namespace }}
-  labels:
-    app: etcd-statefulset
-    role: {{ .Values.role }}
-spec:
-  type: ClusterIP
-  sessionAffinity: None
-  selector:
-    app: etcd-statefulset
-    role: {{ .Values.role }}
-  ports:
-  - name: client
-    protocol: TCP
-    port: 2379
-    targetPort: 2379
----
 apiVersion: {{ include "statefulsetversion" . }}
 kind: StatefulSet
 metadata:
+  annotations:
+    "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"
   name: etcd-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
   labels:
@@ -59,7 +41,7 @@ spec:
           httpGet:
             path: /healthz
             port: 8080
-          initialDelaySeconds: 15
+          initialDelaySeconds: 5
           periodSeconds: 5
         livenessProbe:
           exec:
@@ -85,14 +67,21 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 200m
-            memory: 500Mi
+            cpu: 500m
+            memory: 1000Mi
           limits:
-            cpu: 1000m
-            memory: 2560Mi
+            cpu: 2500m
+            memory: 4Gi
         volumeMounts:
+{{- if eq .Values.role "main" }}
+        - name: etcd-{{ .Values.role }}
+          mountPath: /var/etcd/old-data
+        - name: {{ .Values.role }}-etcd
+          mountPath: /var/etcd/data
+{{- else }}
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
+{{- end}}
         - name: etcd-bootstrap
           mountPath: /bootstrap
         - name: ca-etcd
@@ -132,7 +121,7 @@ spec:
             memory: 128Mi
           limits:
             cpu: 500m
-            memory: 1.5Gi
+            memory: 2Gi
         env:
         - name: STORAGE_CONTAINER
           value: {{ .Values.backup.storageContainer }}
@@ -140,8 +129,13 @@ spec:
 {{ toYaml .Values.backup.env | indent 8 }}
 {{- end }}
         volumeMounts:
+{{- if eq .Values.role "main" }}
+        - name: {{ .Values.role }}-etcd
+          mountPath: /var/etcd/data
+{{- else }}
         - name: etcd-{{ .Values.role }}
           mountPath: /var/etcd/data
+{{- end}}
         - name: ca-etcd
           mountPath: /var/etcd/ssl/ca
         - name: etcd-client-tls
@@ -169,6 +163,17 @@ spec:
           secretName: {{ .Values.backup.backupSecret }}
 {{- end }}
   volumeClaimTemplates:
+{{- if eq .Values.role "main" }}
+  - metadata:
+      name: {{ .Values.role }}-etcd
+    spec:
+      accessModes:
+      - "ReadWriteOnce"
+      storageClassName: {{ .Values.storageClassName }}
+      resources:
+        requests:
+          storage: {{ .Values.storageCapacity }}
+{{- end }}
   - metadata:
       name: etcd-{{ .Values.role }}
     spec:

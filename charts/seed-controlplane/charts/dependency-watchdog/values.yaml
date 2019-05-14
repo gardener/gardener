@@ -1,0 +1,12 @@
+podAnnotations: {}
+replicas: 1
+dependencywatchdog:
+  service: 
+    name: etcd-main-client
+    labels:
+      "app" : "etcd-statefulset"
+      "role" : "main"
+  labels:
+    role: dependency-watchdog	    
+images:
+  dependency-watchdog: image-repository:image-tag

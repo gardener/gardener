@@ -1,0 +1,49 @@
+---
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: dependency-watchdog
+  namespace: {{ .Release.Namespace }}
+  labels:
+    role: dependency-watchdog
+    garden.sapcloud.io/role: controlplane
+spec:
+  replicas: {{ .Values.replicas }}
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      role: dependency-watchdog
+  template:
+    metadata:
+      annotations:
+        checksum/configmap-dep-config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+{{- if .Values.podAnnotations }}
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        role: dependency-watchdog
+    spec:
+      serviceAccountName: dependency-watchdog
+      terminationGracePeriodSeconds: 5
+      containers:
+      - name: dependency-watchdog
+        image: {{ index .Values.images "dependency-watchdog" }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - /usr/local/bin/dependency-watchdog
+        - --config-file=/etc/dependency-watchdog/config/dep-config.yaml
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: "128Mi"
+            cpu: "50m"
+        volumeMounts:
+        - mountPath: /etc/dependency-watchdog/config
+          name: config
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: dependency-watchdog-config
