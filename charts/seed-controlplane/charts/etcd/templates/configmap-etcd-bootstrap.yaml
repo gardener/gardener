@@ -9,23 +9,104 @@ metadata:
 data:
   bootstrap.sh: |-
     #!/bin/sh
-    while true;
-    do
-      wget http://localhost:8080/initialization/status -S -O status;
-      STATUS=`cat status`;
-      case $STATUS in
-      "New")
-            wget http://localhost:8080/initialization/start -S -O - ;;
-      "Progress")
-            sleep 5;
-            continue;;
-      "Failed")
-            continue;;
-      "Successful")
-            exec etcd --config-file /bootstrap/etcd.conf.yml
-            ;;
-      esac;
-    done
+    VALIDATION_MARKER=/var/etcd/data/validation_marker
+
+    trap_and_propagate() {
+        PID=$1
+        shift
+        for sig in "$@" ; do
+            trap "kill -$sig $PID" "$sig"
+        done
+    }
+
+    start_managed_etcd(){
+          rm -rf $VALIDATION_MARKER
+          etcd --config-file /bootstrap/etcd.conf.yml &
+          ETCDPID=$!
+          trap_and_propagate $ETCDPID INT TERM
+          wait $ETCDPID
+          RET=$?
+          echo $RET > $VALIDATION_MARKER
+          exit $RET
+    }
+
+    check_and_start_etcd(){
+          while true;
+          do
+            wget http://localhost:8080/initialization/status -S -O status;
+            STATUS=`cat status`;
+            case $STATUS in
+            "New")
+                  wget http://localhost:8080/initialization/start?mode=$1 -S -O - ;;
+            "Progress")
+                  sleep 1;
+                  continue;;
+            "Failed")
+                  continue;;
+            "Successful")
+                  start_managed_etcd
+                  break
+                  ;;
+            esac;
+          done
+    }
+
+{{- if eq .Values.role "main" }}
+    migrate_data() {
+      OLD_DATA_DIR=/var/etcd/old-data
+      NEW_DATA_DIR=/var/etcd/data
+      MIGRATION_MARKER=$OLD_DATA_DIR/migration.marker
+
+      if [ ! -f $MIGRATION_MARKER ]; then
+            # Keep this for debugging purpose
+            echo "old data directory content: $OLD_DATA_DIR"
+            ls -A $OLD_DATA_DIR
+            echo "New data directory content: $NEW_DATA_DIR"
+            ls -A $NEW_DATA_DIR
+
+            echo "Removing content of new data directory $NEW_DATA_DIR"
+            rm -rf $NEW_DATA_DIR/*
+
+            # Copy only if not empty
+            if [ "$(ls -A $OLD_DATA_DIR)" ];
+            then
+            echo "Migrating content of old data directory $OLD_DATA_DIR to $NEW_DATA_DIR"
+            time cp -rf $OLD_DATA_DIR/* $NEW_DATA_DIR/
+            if [ ! $? -eq 0 ] ;
+            then
+            exit $?
+            fi
+            time sync
+            fi
+
+            # Mark migration
+            echo "Creating migration successful marker file $MIGRATION_MARKER"
+            touch $MIGRATION_MARKER
+      else
+            echo "$MIGRATION_MARKER is present. Skipping migration."
+      fi
+    }
+
+    # Do migration
+    migrate_data
+{{- end }}
+    # Do validation and bootstrap
+    if [ ! -f $VALIDATION_MARKER ] ;
+    then
+          echo "No $VALIDATION_MARKER file. Perform complete initialization routine and start etcd."
+          check_and_start_etcd full
+    else
+          echo "$VALIDATION_MARKER file present. Check return status and decide on initialization"
+          run_status=`cat $VALIDATION_MARKER`
+          echo "$VALIDATION_MARKER content: $run_status"
+          if [ $run_status == '143' ] || [ $run_status == '130' ] || [ $run_status == '0' ] ; then
+                echo "Requesting sidecar to perform sanity validation"
+                check_and_start_etcd sanity
+          else
+                echo "Requesting sidecar to perform full validation"
+                check_and_start_etcd full
+          fi
+    fi
   etcd.conf.yml: |-
       # This is the configuration file for the etcd server.
 
@@ -65,7 +146,7 @@ data:
       initial-cluster-state: 'new'
 
       # Number of committed transactions to trigger a snapshot to disk.
-      snapshot-count: 75000  
+      snapshot-count: 75000
 
       # Raise alarms when backend size exceeds the given quota. 0 means use the
       # default quota.

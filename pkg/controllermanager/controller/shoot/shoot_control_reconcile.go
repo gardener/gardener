@@ -129,10 +129,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilBackupInfrastructureReconciled).DoIf(isCloud),
 			Dependencies: flow.NewTaskIDs(deployBackupInfrastructure),
 		})
+		deployETCDStorageClass = g.Add(flow.Task{
+			Name: "Deploying storageclass for etcd",
+			Fn:   flow.TaskFn(hybridBotanist.DeployETCDStorageClass).RetryUntilTimeout(defaultInterval, defaultTimeout),
+		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled, deployETCDStorageClass),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",

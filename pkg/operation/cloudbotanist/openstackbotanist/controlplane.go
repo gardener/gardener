@@ -158,6 +158,17 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 	return nil, nil
 }
 
+// GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
+func (b *OpenStackBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"name":        "gardener.cloud-fast",
+		"capacity":    "25Gi",
+		"provisioner": "kubernetes.io/cinder",
+		"parameters":  map[string]interface{}{},
+	}
+
+}
+
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
 	containerName := "containerName"

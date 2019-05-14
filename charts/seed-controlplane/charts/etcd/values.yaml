@@ -6,6 +6,8 @@ images:
   etcd-backup-restore: image-repository:image-tag
 
 storage: 10Gi
+storageClassName: default
+storageCapacity: 16Gi
 
 backup:
   schedule: "0 */24 * * *" # cron standard schedule
