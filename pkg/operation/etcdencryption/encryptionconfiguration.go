@@ -59,16 +59,16 @@ func CreateNewPassiveConfiguration() (*apiserverconfigv1.EncryptionConfiguration
 }
 
 // CreateFromYAML creates a new configuration from a YAML String as Byte Array.
-func CreateFromYAML(yamlArray []byte) (*apiserverconfigv1.EncryptionConfiguration, error) {
+func CreateFromYAML(ecYamlBytes []byte) (*apiserverconfigv1.EncryptionConfiguration, error) {
 	scheme := runtime.NewScheme()
 	codecs := serializer.NewCodecFactory(scheme)
 	utilruntime.Must(apiserverconfigv1.AddToScheme(scheme))
-	configObj := &apiserverconfigv1.EncryptionConfiguration{}
-	_, _, err := codecs.UniversalDecoder().Decode(yamlArray, nil, configObj)
+	ec := &apiserverconfigv1.EncryptionConfiguration{}
+	_, _, err := codecs.UniversalDecoder().Decode(ecYamlBytes, nil, ec)
 	if err != nil {
 		return nil, fmt.Errorf("error while decoding EncryptionConfiguration from yamlArray: %v", err)
 	}
-	return configObj, nil
+	return ec, nil
 }
 
 // ToYAML Creates a YAML representation of the EncryptionConfiguration.
@@ -81,11 +81,11 @@ func ToYAML(ec *apiserverconfigv1.EncryptionConfiguration) ([]byte, error) {
 	}
 	serializer := json.NewYAMLSerializer(json.DefaultMetaFactory, scheme, scheme)
 	encoder := codecs.EncoderForVersion(serializer, apiserverconfigv1.SchemeGroupVersion)
-	output, err := runtime.Encode(encoder, ec)
+	ecYamlBytes, err := runtime.Encode(encoder, ec)
 	if err != nil {
 		return nil, fmt.Errorf("error while parsing EncryptionConfiguration: %v", err)
 	}
-	return output, nil
+	return ecYamlBytes, nil
 }
 
 // IsConsistent checks whether the configuration is consistent.
@@ -149,17 +149,17 @@ func IsConsistent(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
 
 // Equals checks whether the provided encryption configurations are equal.
 func Equals(ec1 *apiserverconfigv1.EncryptionConfiguration, ec2 *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
-	ec1Bytes, err := ToYAML(ec1)
+	ec1YamlBytes, err := ToYAML(ec1)
 	if err != nil {
 		return false, fmt.Errorf("error when converting EncryptionConfiguration to yaml: %v", err)
 	}
-	ec1String := string(ec1Bytes)
-	ec2Bytes, err := ToYAML(ec2)
+	ec1YamlString := string(ec1YamlBytes)
+	ec2YamlBytes, err := ToYAML(ec2)
 	if err != nil {
 		return false, fmt.Errorf("error when converting EncryptionConfiguration to yaml: %v", err)
 	}
-	ec2String := string(ec2Bytes)
-	if ec1String == ec2String {
+	ec2YamlString := string(ec2YamlBytes)
+	if ec1YamlString == ec2YamlString {
 		return true, nil
 	} else {
 		return false, nil
@@ -195,22 +195,22 @@ func SetActive(ec *apiserverconfigv1.EncryptionConfiguration, active bool) error
 // in the list of keys. Note that the order matters and the first key in the list
 // of keys is used for encrypting etcd contents.
 func CreatePassiveRotationKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	return nil
+	return fmt.Errorf("not implemented yet")
 }
 
 // IsRotationKeyActive checks whether the most current key (i.e. the rotation key) is
 // also the first key in the list of keys.
 func IsRotationKeyActive(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
-	return true, nil
+	return false, fmt.Errorf("not implemented yet")
 }
 
 // ActivateRotationKey ensures that the newest key is also the first key in the
 // list of keys.
 func ActivateRotationKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	return nil
+	return fmt.Errorf("not implemented yet")
 }
 
-// PruneOldEncryptionKey removes the old key f
+// PruneOldEncryptionKey removes the old key from the list of keys.
 func PruneOldEncryptionKey(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	return nil
+	return fmt.Errorf("not implemented yet")
 }

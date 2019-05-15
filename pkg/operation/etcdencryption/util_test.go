@@ -1,7 +1,6 @@
 package encryptionconfiguration
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -27,6 +26,6 @@ func TestSliceElementCompare(t *testing.T) {
 	if !slicesContainSameElements(s1, s2) {
 		t.Fatalf("slices should contain same elements")
 	}
-	fmt.Println(s1)
-	fmt.Println(s2)
+	t.Log(s1)
+	t.Log(s2)
 }

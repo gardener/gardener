@@ -6,7 +6,9 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 )
 
@@ -17,6 +19,10 @@ const (
 	// EtcdEncryptionSecretFileName is a constant for the name of the file within the EncryptionConfiguration secret
 	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
 	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
+	// EtcdEncryptionRewriteSecretsAnnotation is a constant for the name of the annotation
+	// with which to decide whether or not a rewriting of the shoot secrets is necessary.
+	// This is the case e.g. in case of a changed EtcdEncryptionConfiguration.
+	EtcdEncryptionRewriteSecretsAnnotation = "garden.sapcloud.io/rewrite-shoot-secrets"
 )
 
 // CreateEtcdEncryptionConfiguration creates a secret
@@ -57,11 +63,6 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 		if err != nil {
 			return err
 		}
-		// if configuration was written successfully, remember to rewrite secrets once shoot apiserver is up and running
-		err = b.setNeedToRewriteShootSecrets(true)
-		if err != nil {
-			return err
-		}
 	}
 	// enablement of etcd encryption feature done in helm chart of apiserver deployment
 	// TODOME: check hybridbotanist controlplane.go DeployKubeAPIServer
@@ -77,11 +78,6 @@ func (b *Botanist) RewriteShootSecrets() error {
 	consistent, err := b.isEncryptionConfigurationConsistent()
 	if (err != nil) || !consistent {
 		return fmt.Errorf("EncryptionConfiguration inconsistent: %v", err)
-	}
-	// ensure etcd encryption feature is enabled
-	enabled, err := b.isEtcdEncryptionEnabled()
-	if (err != nil) || !enabled {
-		return fmt.Errorf("etcd encryption not enabled")
 	}
 
 	// WARNING:
@@ -101,10 +97,6 @@ func (b *Botanist) RewriteShootSecrets() error {
 		if err != nil {
 			return err
 		}
-		err = b.setNeedToRewriteShootSecrets(false)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
@@ -112,17 +104,6 @@ func (b *Botanist) RewriteShootSecrets() error {
 
 // readEncryptionConfigurationFromSeed reads the EncryptionConfiguration from the shoot namespace in the seed
 func (b *Botanist) readEncryptionConfigurationFromSeed() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
-	// ****************************************************************************************************************
-	// TODO: Check Pseudocode
-	//
-	// 1. obtain e.Operation.K8sSeedClient
-	// 2. switch to shoot namespace
-	// 3. read etcd-encryption-secret
-	// ec, err := encryptionconfiguration.CreateFromYAML(secretData)
-	// if err != nil {
-	// 	return false, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
-	// }
-	// ****************************************************************************************************************
 	client := b.Operation.K8sSeedClient
 	ecs, err := client.GetSecret(b.Operation.Shoot.SeedNamespace, EtcdEncryptionSecretName)
 	if err != nil {
@@ -134,44 +115,59 @@ func (b *Botanist) readEncryptionConfigurationFromSeed() (bool, *apiserverconfig
 	}
 	secretData, ok := ecs.Data[EtcdEncryptionSecretFileName]
 	if !ok {
-		return true, nil, fmt.Errorf("EncryptionConfiguration in seed cluster does not contain expected element: %v", EtcdEncryptionSecretFileName)
+		return true, nil, fmt.Errorf("EncryptionConfiguration in seed cluster (%v) does not contain expected element: %v", EtcdEncryptionSecretName, EtcdEncryptionSecretFileName)
 	}
 	ec, err := encryptionconfiguration.CreateFromYAML(secretData)
 	if err != nil {
-		return true, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
+		return true, nil, fmt.Errorf("EncryptionConfiguration in seed cluster (%v) is not consistent: %v", EtcdEncryptionSecretName, err)
 	}
 	return true, ec, nil
 }
 
+func (b *Botanist) calculateEtcdEncryptionSecretNameInGardenCluster() string {
+	secretName := fmt.Sprintf("%s.%s", b.Shoot.Info.Name, EtcdEncryptionSecretName)
+	return secretName
+}
+
 // readEncryptionConfigurationFromGarden reads the EncryptionConfiguration from the shoot namespace in the seed
 func (b *Botanist) readEncryptionConfigurationFromGarden() (bool, *apiserverconfigv1.EncryptionConfiguration, error) {
-	// ****************************************************************************************************************
-	// TODO: Check Pseudocode
-	//
-	// 1. obtain e.Operation.K8sGardenClient
-	// 2. switch to shoot namespace
-	// 3. read etcd-encryption-secret
-	//
-	// ec, err := encryptionconfiguration.CreateFromYAML(secretData)
-	// if err != nil {
-	// 	return false, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
-	// }
-	// ****************************************************************************************************************
-	return false, nil, fmt.Errorf("not implemented yet")
+	client := b.Operation.K8sGardenClient
+	secretNameInGardenCluster := b.calculateEtcdEncryptionSecretNameInGardenCluster()
+	ecs, err := client.GetSecret(b.Shoot.Info.Namespace, secretNameInGardenCluster)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil, nil
+		} else {
+			return false, nil, err
+		}
+	}
+	secretData, ok := ecs.Data[EtcdEncryptionSecretFileName]
+	if !ok {
+		return true, nil, fmt.Errorf("EncryptionConfiguration in garden cluster (%v) does not contain expected element: %v", secretNameInGardenCluster, EtcdEncryptionSecretFileName)
+	}
+	ec, err := encryptionconfiguration.CreateFromYAML(secretData)
+	if err != nil {
+		return true, nil, fmt.Errorf("EncryptionConfiguration in garden cluster (%v) is not consistent: %v", secretNameInGardenCluster, err)
+	}
+	return true, ec, nil
 }
 
 // writeEncryptionConfiguration writes the secret which contains the EncryptionConfiguration to the
 // shoot namespace in the seed cluster as well as to the garden cluster
 func (b *Botanist) writeEncryptionConfiguration(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	err := b.writeEncryptionConfigurationSecretToSeed(ec)
+	ecYamlBytes, err := encryptionconfiguration.ToYAML(ec)
 	if err != nil {
 		return err
 	}
-	err = b.writeEncryptionConfigurationSecretToGarden(ec)
+	err = b.writeEncryptionConfigurationSecretToSeed(ecYamlBytes)
 	if err != nil {
 		return err
 	}
-	// if configuration was changed, we need to rewrite the shoot secrets
+	err = b.writeEncryptionConfigurationSecretToGarden(ecYamlBytes)
+	if err != nil {
+		return err
+	}
+	// if changed configuration was written successfully, remember to rewrite secrets once shoot apiserver is up and running
 	err = b.setNeedToRewriteShootSecrets(true)
 	if err != nil {
 		return err
@@ -181,49 +177,45 @@ func (b *Botanist) writeEncryptionConfiguration(ec *apiserverconfigv1.Encryption
 
 // writeEncryptionConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
 // to the shoot namespace in the seed cluster
-func (b *Botanist) writeEncryptionConfigurationSecretToSeed(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	// ****************************************************************************************************************
-	// TODO: Check Pseudocode
-	//
-	// 1. obtain e.Operation.K8sSeedClient
-	// 2. switch to shoot namespace
-	// 3. write etcd-encryption-secret
-	//
-	// TODO questions:
-	// - will this automatically restart the apiserver(s) since the secret is (once enabled) mounted to the apiserver
-	// ****************************************************************************************************************
-	return fmt.Errorf("not implemented yet")
+func (b *Botanist) writeEncryptionConfigurationSecretToSeed(ecYamlBytes []byte) error {
+	client := b.Operation.K8sSeedClient
+	secretObj := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      EtcdEncryptionSecretName,
+			Namespace: b.Operation.Shoot.SeedNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			EtcdEncryptionSecretFileName: ecYamlBytes,
+		},
+	}
+	if _, err := client.CreateSecretObject(secretObj, true); err != nil {
+		return err
+	}
+	// TODOME: what about checksum calculation (to trigger restart of api server if required)
+	return nil
 }
 
 // writeEncryptionConfigurationSecretToGarden writes the secret which contains the EncryptionConfiguration
 // to the garden cluster
-func (b *Botanist) writeEncryptionConfigurationSecretToGarden(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	// ****************************************************************************************************************
-	// TODO: Check Pseudocode
-	//
-	// 1. obtain e.Operation.K8sGardenClient
-	// 2. switch to shoot namespace
-	// 3. write etcd-encryption-secret
-	// ****************************************************************************************************************
-	return fmt.Errorf("not implemented yet")
-}
-
-// isEtcdEncryptionEnabled checks whether the following parameters exist in the shoot's
-// apiserver deployment as expected
-// - volume for the EncryptionConfiguration
-// - volume mount
-// - apiserver start parameter
-func (b *Botanist) isEtcdEncryptionEnabled() (bool, error) {
-	// ****************************************************************************************************************
-	// TODO: Check Pseudocode
-	//
-	// 1. obtain e.Operation.K8sSeedClient
-	// 2. switch to shoot namespace
-	// 3. read deployment of apiserver
-	// 4. verify deployment (urks, not easy to parse the params)
-	//
-	// ****************************************************************************************************************
-	return false, fmt.Errorf("not implemented yet")
+func (b *Botanist) writeEncryptionConfigurationSecretToGarden(ecYamlBytes []byte) error {
+	client := b.Operation.K8sGardenClient
+	secretNameInGardenCluster := b.calculateEtcdEncryptionSecretNameInGardenCluster()
+	secretObj := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretNameInGardenCluster,
+			Namespace: b.Shoot.Info.Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			EtcdEncryptionSecretFileName: ecYamlBytes,
+		},
+	}
+	if _, err := client.CreateSecretObject(secretObj, true); err != nil {
+		return err
+	}
+	// TODOME: what about checksum calculation (to trigger restart of api server if required)
+	return nil
 }
 
 // isEncryptionConfigurationConsistent checks whether the configuration is consistent in seed and garden
@@ -258,6 +250,7 @@ func (b *Botanist) needToRewriteShootSecrets() (bool, error) {
 	// 3. check annotation (how?)
 	//
 	// ****************************************************************************************************************
+
 	return false, fmt.Errorf("not implemented yet")
 }
 
@@ -289,27 +282,8 @@ func (b *Botanist) rewriteShootSecrets() error {
 	//
 	// ****************************************************************************************************************
 	return fmt.Errorf("not implemented yet")
-}
-
-// TODOME: remove testAndPlay
-func (b *Botanist) testAndPlay() {
-	// pl, err := e.Operation.K8sSeedClient.ListPods(e.Operation.Shoot.SeedNamespace, metav1.ListOptions{})
+	// err = b.setNeedToRewriteShootSecrets(false)
 	// if err != nil {
 	// 	return err
 	// }
-	// for _, pod := range pl.Items {
-	// 	if pod.DeletionTimestamp != nil {
-	// 		continue
-	// 	}
-	// 	name := pod.GetName()
-	// 	logger.Logger.Info("pod: " + name)
-	// }
-
-	//deployment, err := e.Operation.K8sSeedClient.GetDeployment(e.Operation.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
-	//logger.Logger.Info("deployment command length: ", len(deployment.Spec.Template.Spec.Containers[0].Command))
-	//logger.Logger.Info("deployment: ", deployment.Spec.Template.Spec.Containers[0].Command[0])
-	//logger.Logger.Info("deployment: ", deployment.Spec.Template.Spec.Containers[0].Command[1])
-	//var manifest = []byte("")
-	//e.Operation.K8sSeedClient.Applier().ApplyManifest(context.TODO(), kubernetes.NewManifestReader(manifest), kubernetes.DefaultApplierOptions)
-	//e.Operation.
 }

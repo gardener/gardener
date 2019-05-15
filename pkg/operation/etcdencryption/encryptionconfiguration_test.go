@@ -29,12 +29,12 @@ func TestCreateToYAMLFromYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
 	}
-	str, err := ToYAML(ec)
+	ecYamlBytes, err := ToYAML(ec)
 	if err != nil {
 		t.Fatalf("error during YAML creation: %v", err)
 	}
-	t.Log(string(str))
-	ec2, err := CreateFromYAML(str)
+	t.Log(string(ecYamlBytes))
+	ec2, err := CreateFromYAML(ecYamlBytes)
 	if err != nil {
 		t.Fatalf("error during object creation from YAML string: %v", err)
 	}
@@ -243,14 +243,14 @@ func TestSetActive(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
 	}
-	yaml, err := ToYAML(ec)
-	t.Log(string(yaml))
+	ecYamlBytes, err := ToYAML(ec)
+	t.Log(string(ecYamlBytes))
 	err = SetActive(ec, true)
 	if err != nil {
 		t.Fatalf("error during SetActive: %v", err)
 	}
-	yaml, err = ToYAML(ec)
-	t.Log(string(yaml))
+	ecYamlBytes, err = ToYAML(ec)
+	t.Log(string(ecYamlBytes))
 	active := IsActive(ec)
 	if !active {
 		t.Fatalf("the activated EncryptionConfiguration is not active")
@@ -290,22 +290,22 @@ func TestSetActiveWithYAML(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error during object creation from YAML string: %v", err)
 	}
-	ecActiveB, err := ToYAML(ecActive)
+	ecActiveYamlBytes, err := ToYAML(ecActive)
 	if err != nil {
 		t.Fatalf("error during second YAML creation: %v", err)
 	}
-	ecActiveStr := string(ecActiveB)
+	ecActiveYamlString := string(ecActiveYamlBytes)
 	ecPassive, err := CreateFromYAML([]byte(passiveConfig))
 	if err != nil {
 		t.Fatalf("error during object creation from YAML string: %v", err)
 	}
 	SetActive(ecPassive, true)
-	ecPassiveB, err := ToYAML(ecPassive)
+	ecPassiveYamlBytes, err := ToYAML(ecPassive)
 	if err != nil {
 		t.Fatalf("error during second YAML creation: %v", err)
 	}
-	ecPassiveStr := string(ecPassiveB)
-	if ecActiveStr != ecPassiveStr {
-		t.Fatalf("unexpected result of activation of encryption configuration.\nExpected:\n%v\n\nActual:\n%v", ecActiveStr, ecPassiveStr)
+	ecPassiveYamlString := string(ecPassiveYamlBytes)
+	if ecActiveYamlString != ecPassiveYamlString {
+		t.Fatalf("unexpected result of activation of encryption configuration.\nExpected:\n%v\n\nActual:\n%v", ecActiveYamlString, ecPassiveYamlString)
 	}
 }
