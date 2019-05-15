@@ -35,6 +35,11 @@ type ControlPlane struct {
 	Status ControlPlaneStatus `json:"status"`
 }
 
+// GetExtensionType returns the type of this ControlPlane resource.
+func (cp *ControlPlane) GetExtensionType() string {
+	return cp.Spec.Type
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ControlPlaneList is a list of ControlPlane resources.
