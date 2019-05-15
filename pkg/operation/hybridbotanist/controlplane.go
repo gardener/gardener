@@ -539,16 +539,11 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 	}
 
 	if b.Shoot.IsHibernated {
-		deployment := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName)
+		if err != nil {
 			return err
 		}
-
-		if deployment.Spec.Replicas == nil {
-			defaultValues["replicas"] = 0
-		} else {
-			defaultValues["replicas"] = *deployment.Spec.Replicas
-		}
+		defaultValues["replicas"] = replicaCount
 	}
 
 	controllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.KubeControllerManager
@@ -576,7 +571,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		"clusterName":       b.Shoot.SeedNamespace,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
-		"replicas":          b.Shoot.GetReplicas(1),
+		"replicas":          1,
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cloud-controller-manager":        b.CheckSums[common.CloudControllerManagerDeploymentName],
 			"checksum/secret-cloud-controller-manager-server": b.CheckSums[common.CloudControllerManagerServerName],
@@ -599,6 +594,14 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 				"memory": "512Mi",
 			},
 		}
+	}
+
+	if b.Shoot.IsHibernated {
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName)
+		if err != nil {
+			return err
+		}
+		defaultValues["replicas"] = replicaCount
 	}
 
 	cloudControllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.CloudControllerManager
