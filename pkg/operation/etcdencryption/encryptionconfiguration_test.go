@@ -237,3 +237,75 @@ func TestPassive(t *testing.T) {
 		t.Fatalf("a passive EncryptionConfiguration should be in fact passive")
 	}
 }
+
+func TestSetActive(t *testing.T) {
+	ec, err := CreateNewPassiveConfiguration()
+	if err != nil {
+		t.Fatalf("error during CreateNewPassiveConfiguration: %v", err)
+	}
+	yaml, err := ToYAML(ec)
+	t.Log(string(yaml))
+	err = SetActive(ec, true)
+	if err != nil {
+		t.Fatalf("error during SetActive: %v", err)
+	}
+	yaml, err = ToYAML(ec)
+	t.Log(string(yaml))
+	active := IsActive(ec)
+	if !active {
+		t.Fatalf("the activated EncryptionConfiguration is not active")
+	}
+}
+
+const (
+	passiveConfig = `
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - identity: {}
+  - aescbc:
+      keys:
+      - name: key1557839139300191000
+        secret: kL03D325eDntRBfLtlh0jFSqQE0Ji69bVq421IwJGiI=
+  resources:
+  - secrets`
+	activeConfig = `
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+- providers:
+  - aescbc:
+      keys:
+      - name: key1557839139300191000
+        secret: kL03D325eDntRBfLtlh0jFSqQE0Ji69bVq421IwJGiI=
+  - identity: {}
+  resources:
+  - secrets
+`
+)
+
+func TestSetActiveWithYAML(t *testing.T) {
+	ecActive, err := CreateFromYAML([]byte(activeConfig))
+	if err != nil {
+		t.Fatalf("error during object creation from YAML string: %v", err)
+	}
+	ecActiveB, err := ToYAML(ecActive)
+	if err != nil {
+		t.Fatalf("error during second YAML creation: %v", err)
+	}
+	ecActiveStr := string(ecActiveB)
+	ecPassive, err := CreateFromYAML([]byte(passiveConfig))
+	if err != nil {
+		t.Fatalf("error during object creation from YAML string: %v", err)
+	}
+	SetActive(ecPassive, true)
+	ecPassiveB, err := ToYAML(ecPassive)
+	if err != nil {
+		t.Fatalf("error during second YAML creation: %v", err)
+	}
+	ecPassiveStr := string(ecPassiveB)
+	if ecActiveStr != ecPassiveStr {
+		t.Fatalf("unexpected result of activation of encryption configuration.\nExpected:\n%v\n\nActual:\n%v", ecActiveStr, ecPassiveStr)
+	}
+}

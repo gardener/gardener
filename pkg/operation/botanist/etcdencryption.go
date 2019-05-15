@@ -6,6 +6,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	encryptionconfiguration "github.com/gardener/gardener/pkg/operation/etcdencryption"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apiserverconfigv1 "k8s.io/apiserver/pkg/apis/config/v1"
 )
 
@@ -46,12 +47,12 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 		// if it is not active already (aescbc as first provider) then set it to active
 		// and remember to write this created configuration
 		if !encryptionconfiguration.IsActive(ec) {
-			encryptionconfiguration.SetActive(ec)
+			encryptionconfiguration.SetActive(ec, true)
 			needToWriteConfig = true
 		}
 	}
 	if needToWriteConfig {
-		// TODOME: calculate checksum of secret and remember in checksum mapß
+		// TODOME: calculate checksum of secret and remember in checksum map
 		err = b.writeEncryptionConfiguration(ec)
 		if err != nil {
 			return err
@@ -122,8 +123,24 @@ func (b *Botanist) readEncryptionConfigurationFromSeed() (bool, *apiserverconfig
 	// 	return false, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
 	// }
 	// ****************************************************************************************************************
-
-	return false, nil, nil
+	client := b.Operation.K8sSeedClient
+	ecs, err := client.GetSecret(b.Operation.Shoot.SeedNamespace, EtcdEncryptionSecretName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil, nil
+		} else {
+			return false, nil, err
+		}
+	}
+	secretData, ok := ecs.Data[EtcdEncryptionSecretFileName]
+	if !ok {
+		return true, nil, fmt.Errorf("EncryptionConfiguration in seed cluster does not contain expected element: %v", EtcdEncryptionSecretFileName)
+	}
+	ec, err := encryptionconfiguration.CreateFromYAML(secretData)
+	if err != nil {
+		return true, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
+	}
+	return true, ec, nil
 }
 
 // readEncryptionConfigurationFromGarden reads the EncryptionConfiguration from the shoot namespace in the seed
@@ -140,7 +157,7 @@ func (b *Botanist) readEncryptionConfigurationFromGarden() (bool, *apiserverconf
 	// 	return false, nil, fmt.Errorf("EncryptionConfiguration in seed cluster is not consistent: %v", err)
 	// }
 	// ****************************************************************************************************************
-	return false, nil, nil
+	return false, nil, fmt.Errorf("not implemented yet")
 }
 
 // writeEncryptionConfiguration writes the secret which contains the EncryptionConfiguration to the
@@ -175,7 +192,7 @@ func (b *Botanist) writeEncryptionConfigurationSecretToSeed(ec *apiserverconfigv
 	// TODO questions:
 	// - will this automatically restart the apiserver(s) since the secret is (once enabled) mounted to the apiserver
 	// ****************************************************************************************************************
-	return nil
+	return fmt.Errorf("not implemented yet")
 }
 
 // writeEncryptionConfigurationSecretToGarden writes the secret which contains the EncryptionConfiguration
@@ -188,7 +205,7 @@ func (b *Botanist) writeEncryptionConfigurationSecretToGarden(ec *apiserverconfi
 	// 2. switch to shoot namespace
 	// 3. write etcd-encryption-secret
 	// ****************************************************************************************************************
-	return nil
+	return fmt.Errorf("not implemented yet")
 }
 
 // isEtcdEncryptionEnabled checks whether the following parameters exist in the shoot's
@@ -206,7 +223,7 @@ func (b *Botanist) isEtcdEncryptionEnabled() (bool, error) {
 	// 4. verify deployment (urks, not easy to parse the params)
 	//
 	// ****************************************************************************************************************
-	return false, nil
+	return false, fmt.Errorf("not implemented yet")
 }
 
 // isEncryptionConfigurationConsistent checks whether the configuration is consistent in seed and garden
@@ -241,7 +258,7 @@ func (b *Botanist) needToRewriteShootSecrets() (bool, error) {
 	// 3. check annotation (how?)
 	//
 	// ****************************************************************************************************************
-	return false, nil
+	return false, fmt.Errorf("not implemented yet")
 }
 
 // setNeedToRewriteShootSecrets sets the annotation with which to remember
@@ -256,7 +273,7 @@ func (b *Botanist) setNeedToRewriteShootSecrets(rewrite bool) error {
 	// pkg/operation/botanist/controlplane.go ==> patchDeploymentCloudProviderChecksums
 	//
 	// ****************************************************************************************************************
-	return nil
+	return fmt.Errorf("not implemented yet")
 }
 
 // rewriteShootSecrets rewrites all secrets of the shoot.
@@ -271,7 +288,7 @@ func (b *Botanist) rewriteShootSecrets() error {
 	//    b) write secret
 	//
 	// ****************************************************************************************************************
-	return nil
+	return fmt.Errorf("not implemented yet")
 }
 
 // TODOME: remove testAndPlay

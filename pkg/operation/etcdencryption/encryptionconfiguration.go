@@ -147,16 +147,6 @@ func IsConsistent(ec *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
 	return true, nil
 }
 
-// IsActive checks whether the EncryptionConfiguration is active, i.e. whether the provider
-// identity is NOT the first in the list of providers.
-func IsActive(ec *apiserverconfigv1.EncryptionConfiguration) bool {
-	if ec.Resources[0].Providers[0].AESCBC != nil {
-		return true
-	} else {
-		return false
-	}
-}
-
 // Equals checks whether the provided encryption configurations are equal.
 func Equals(ec1 *apiserverconfigv1.EncryptionConfiguration, ec2 *apiserverconfigv1.EncryptionConfiguration) (bool, error) {
 	ec1Bytes, err := ToYAML(ec1)
@@ -176,15 +166,28 @@ func Equals(ec1 *apiserverconfigv1.EncryptionConfiguration, ec2 *apiserverconfig
 	}
 }
 
-// SetActive sets the EncryptionConfiguration to active state, i.e. ensures that
-// provider aescbc is the first in the list of providers.
-func SetActive(ec *apiserverconfigv1.EncryptionConfiguration) error {
-	return nil
+// IsActive checks whether the EncryptionConfiguration is active, i.e. whether the provider
+// identity is NOT the first in the list of providers.
+func IsActive(ec *apiserverconfigv1.EncryptionConfiguration) bool {
+	if ec.Resources[0].Providers[0].AESCBC != nil {
+		return true
+	} else {
+		return false
+	}
 }
 
-// SetPassive sets the EncryptionConfiguration to passive state, i.e. ensures that
-// provider identity is the first in the list of providers.
-func SetPassive(ec *apiserverconfigv1.EncryptionConfiguration) error {
+// SetActive sets the EncryptionConfiguration to active or non-active (passive) state.
+// State active means that provider aescbc is the first in the list of providers.
+// State non-active (passive) means that provider identity is the first in the list of providers.
+func SetActive(ec *apiserverconfigv1.EncryptionConfiguration, active bool) error {
+	a := IsActive(ec)
+	if a == active {
+		// nothing to do
+		return nil
+	}
+	pc := ec.Resources[0].Providers[0]
+	ec.Resources[0].Providers[0] = ec.Resources[0].Providers[1]
+	ec.Resources[0].Providers[1] = pc
 	return nil
 }
 

@@ -92,7 +92,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		createEtcdEncryptionConfiguration = g.Add(flow.Task{
-			Name: "Create EncryptionConfiguration for Etcd encryption",
+			Name: "Creating EncryptionConfiguration for etcd encryption",
 			Fn:   flow.SimpleTaskFn(botanist.CreateEtcdEncryptionConfiguration),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
@@ -164,9 +164,9 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Rewrite shoot secrets",
+			Name:         "Rewriting shoot secrets",
 			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecrets),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilEtcdReady),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilEtcdReady, createEtcdEncryptionConfiguration),
 		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
 			Name:         "Deploying cloud-specific control plane components",

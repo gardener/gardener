@@ -3,7 +3,6 @@ package encryptionconfiguration
 import (
 	"crypto/rand"
 	"encoding/base64"
-	b64 "encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -33,13 +32,12 @@ func createKeyName() string {
 }
 
 func createKeySecret() (string, error) {
-	// TODO: use util package random.go 
 	keyArray := make([]byte, ecKeySecretLen)
 	_, err := rand.Read(keyArray)
 	if err != nil {
 		return "", fmt.Errorf("error while obtaining random data: %v", err)
 	}
-	sEnc := b64.StdEncoding.EncodeToString(keyArray)
+	sEnc := base64.StdEncoding.EncodeToString(keyArray)
 	return sEnc, nil
 }
 
