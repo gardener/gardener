@@ -1098,8 +1098,14 @@ type Worker struct {
 	AutoScalerMax int
 	// MaxSurge is maximum number of VMs that are created during an update.
 	MaxSurge intstr.IntOrString
-	//MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
 	MaxUnavailable intstr.IntOrString
+	// Annotations is a map of key/value pairs for annotations for all the `Node` objects in this worker pool.
+	Annotations map[string]string
+	// Labels is a map of key/value pairs for labels for all the `Node` objects in this worker pool.
+	Labels map[string]string
+	// Taints is a list of taints for all the `Node` objects in this worker pool.
+	Taints []corev1.Taint
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.

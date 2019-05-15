@@ -107,10 +107,13 @@ func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, op
 			)
 
 			machineDeployments = append(machineDeployments, operation.MachineDeployment{
-				Name:      deploymentName,
-				ClassName: className,
-				Minimum:   worker.AutoScalerMin,
-				Maximum:   worker.AutoScalerMax,
+				Name:        deploymentName,
+				ClassName:   className,
+				Minimum:     worker.AutoScalerMin,
+				Maximum:     worker.AutoScalerMax,
+				Labels:      worker.Labels,
+				Annotations: worker.Annotations,
+				Taints:      worker.Taints,
 			})
 
 			machineClassSpec["name"] = className

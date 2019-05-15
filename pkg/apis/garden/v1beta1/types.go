@@ -1085,9 +1085,18 @@ type Worker struct {
 	// MaxSurge is maximum number of VMs that are created during an update.
 	// +optional
 	MaxSurge *intstr.IntOrString `json:"maxSurge,omitempty"`
-	//MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
+	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+	// Annotations is a map of key/value pairs for annotations for all the `Node` objects in this worker pool.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// Labels is a map of key/value pairs for labels for all the `Node` objects in this worker pool.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Taints is a list of taints for all the `Node` objects in this worker pool.
+	// +optional
+	Taints []corev1.Taint `json:"taints,omitempty"`
 }
 
 var (

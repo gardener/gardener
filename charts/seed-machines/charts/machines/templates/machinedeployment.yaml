@@ -23,4 +23,23 @@ spec:
     spec:
       class:
 {{ toYaml $deployment.class | indent 8 }}
+{{- if or $deployment.nodeTemplate.labels $deployment.nodeTemplate.annotations $deployment.nodeTemplate.taints }}
+      nodeTemplate:
+{{- if or $deployment.nodeTemplate.labels $deployment.nodeTemplate.annotations }}
+        metadata:
+{{- if $deployment.nodeTemplate.labels }}
+          labels:
+{{ toYaml $deployment.nodeTemplate.labels | indent 12 }}
+{{- end }}
+{{- if $deployment.nodeTemplate.annotations }}
+          annotations:
+{{ toYaml $deployment.nodeTemplate.annotations | indent 12 }}
+{{- end }}
+{{- end }}
+{{- if $deployment.nodeTemplate.taints }}
+        spec:
+          taints:
+{{ toYaml $deployment.nodeTemplate.taints | indent 10 }}
+{{- end }}
+{{- end }}
 {{- end }}

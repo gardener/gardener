@@ -39,6 +39,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
+	metav1validation "k8s.io/apimachinery/pkg/apis/meta/v1/validation"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -1861,7 +1862,67 @@ func ValidateWorker(worker garden.Worker, fldPath *field.Path) field.ErrorList {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxUnavailable"), worker.MaxUnavailable, "may not be 0 when `maxSurge` is 0"))
 	}
 
+	allErrs = append(allErrs, metav1validation.ValidateLabels(worker.Labels, fldPath.Child("labels"))...)
+	allErrs = append(allErrs, apivalidation.ValidateAnnotations(worker.Annotations, fldPath.Child("annotations"))...)
+	if len(worker.Taints) > 0 {
+		allErrs = append(allErrs, validateTaints(worker.Taints, fldPath.Child("taints"))...)
+	}
+
 	return allErrs
+}
+
+// https://github.com/kubernetes/kubernetes/blob/ee9079f8ec39914ff8975b5390749771b9303ea4/pkg/apis/core/validation/validation.go#L4057-L4089
+func validateTaints(taints []corev1.Taint, fldPath *field.Path) field.ErrorList {
+	allErrors := field.ErrorList{}
+
+	uniqueTaints := map[corev1.TaintEffect]sets.String{}
+
+	for i, taint := range taints {
+		idxPath := fldPath.Index(i)
+		// validate the taint key
+		allErrors = append(allErrors, metav1validation.ValidateLabelName(taint.Key, idxPath.Child("key"))...)
+		// validate the taint value
+		if errs := validation.IsValidLabelValue(taint.Value); len(errs) != 0 {
+			allErrors = append(allErrors, field.Invalid(idxPath.Child("value"), taint.Value, strings.Join(errs, ";")))
+		}
+		// validate the taint effect
+		allErrors = append(allErrors, validateTaintEffect(&taint.Effect, false, idxPath.Child("effect"))...)
+
+		// validate if taint is unique by <key, effect>
+		if len(uniqueTaints[taint.Effect]) > 0 && uniqueTaints[taint.Effect].Has(taint.Key) {
+			duplicatedError := field.Duplicate(idxPath, taint)
+			duplicatedError.Detail = "taints must be unique by key and effect pair"
+			allErrors = append(allErrors, duplicatedError)
+			continue
+		}
+
+		// add taint to existingTaints for uniqueness check
+		if len(uniqueTaints[taint.Effect]) == 0 {
+			uniqueTaints[taint.Effect] = sets.String{}
+		}
+		uniqueTaints[taint.Effect].Insert(taint.Key)
+	}
+	return allErrors
+}
+
+// https://github.com/kubernetes/kubernetes/blob/ee9079f8ec39914ff8975b5390749771b9303ea4/pkg/apis/core/validation/validation.go#L2774-L2795
+func validateTaintEffect(effect *corev1.TaintEffect, allowEmpty bool, fldPath *field.Path) field.ErrorList {
+	if !allowEmpty && len(*effect) == 0 {
+		return field.ErrorList{field.Required(fldPath, "")}
+	}
+
+	allErrors := field.ErrorList{}
+	switch *effect {
+	case corev1.TaintEffectNoSchedule, corev1.TaintEffectPreferNoSchedule, corev1.TaintEffectNoExecute:
+	default:
+		validValues := []string{
+			string(corev1.TaintEffectNoSchedule),
+			string(corev1.TaintEffectPreferNoSchedule),
+			string(corev1.TaintEffectNoExecute),
+		}
+		allErrors = append(allErrors, field.NotSupported(fldPath, *effect, validValues))
+	}
+	return allErrors
 }
 
 // ValidateWorkers validates worker objects.
