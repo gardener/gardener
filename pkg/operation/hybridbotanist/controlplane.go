@@ -325,6 +325,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                   b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
+			"checksum/secret-etcd-encryption":           b.CheckSums[common.EtcdEncryptionSecretName],
 		},
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),

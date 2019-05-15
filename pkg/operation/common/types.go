@@ -99,6 +99,17 @@ const (
 	// EtcdEventsStatefulSetName is the constant defining the statefulset name for the events etcd.
 	EtcdEventsStatefulSetName = "etcd-events"
 
+	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
+	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
+	// which the shoot's apiserver uses for encrypting selected etcd content.
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	EtcdEncryptionSecretName = "etcd-encryption-secret"
+
+	// EtcdEncryptionSecretFileName is the name of the file within the EncryptionConfiguration
+	// which is made available as volume mount to the shoot's apiserver.
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.

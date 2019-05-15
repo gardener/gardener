@@ -92,8 +92,9 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		createEtcdEncryptionConfiguration = g.Add(flow.Task{
-			Name: "Creating EncryptionConfiguration for etcd encryption",
-			Fn:   flow.SimpleTaskFn(botanist.CreateEtcdEncryptionConfiguration),
+			Name:         "Creating EncryptionConfiguration for etcd encryption",
+			Fn:           flow.SimpleTaskFn(botanist.CreateEtcdEncryptionConfiguration),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server service",
@@ -163,11 +164,6 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Rewriting shoot secrets",
-			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecrets),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, waitUntilEtcdReady, createEtcdEncryptionConfiguration),
-		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
 			Name:         "Deploying cloud-specific control plane components",
 			Fn:           flow.SimpleTaskFn(seedCloudBotanist.DeployCloudSpecificControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -177,6 +173,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployCloudSpecificControlPlane),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Rewriting shoot secrets",
+			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecrets),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, createEtcdEncryptionConfiguration),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
