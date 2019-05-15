@@ -46,6 +46,8 @@ spec:
         - --skip-nodes-with-local-storage=false
         - --expander=least-waste
         - --expendable-pods-priority-cutoff=-10
+        - --scale-down-delay-after-add=60m
+        - --scale-down-unneeded-time=30m
         - --v=2
         env:
         - name: CONTROL_NAMESPACE
