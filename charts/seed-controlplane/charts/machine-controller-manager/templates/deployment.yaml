@@ -40,7 +40,7 @@ spec:
         - --namespace={{ .Release.Namespace }}
         - --port={{ .Values.metricsPort }}
         - --machine-creation-timeout=20m
-        - --machine-drain-timeout=5m
+        - --machine-drain-timeout=20m
         - --machine-health-timeout=10m
         - --machine-safety-apiserver-statuscheck-timeout=30s
         - --machine-safety-apiserver-statuscheck-period=1m
