@@ -33,12 +33,12 @@ resources:
       unit: Mi
   limits:
     cpu:
-      base: 400
-      perObject: 15
-      weight: 10
+      base: 1500
+      perObject: 7
+      weight: 5
       unit: m
     memory:
-      base: 512
-      perObject: 125
-      weight: 10
+      base: 1500
+      perObject: 50
+      weight: 5
       unit: Mi

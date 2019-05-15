@@ -270,8 +270,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			if vpaEnabled {
 				// Overwrite limit values if vpa is enabled
 				// as request values might exceed them
-				cpuLimit = "5"
-				memoryLimit = "10G"
+				cpuLimit = "8"
+				memoryLimit = "16G"
 			}
 			defaultValues["apiServerResources"] = map[string]interface{}{
 				"limits": map[string]interface{}{

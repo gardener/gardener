@@ -74,7 +74,7 @@ spec:
             memory: 1000Mi
           limits:
             cpu: 2500m
-            memory: 4Gi
+            memory: 20Gi
         volumeMounts:
 {{- if eq .Values.role "main" }}
         - name: {{ .Values.role }}-etcd

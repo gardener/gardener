@@ -10,6 +10,7 @@ metadata:
   labels:
     controller-tools.k8s.io: "1.0"
   name: kube-apiserver
+  namespace: {{ .Release.Namespace }}
 spec:
   scaleUpStabilizationWindow: {{ .Values.scaleUpStabilizationWindow }}
   scaleDownStabilizationWindow: {{ .Values.scaleDownStabilizationWindow }}
@@ -26,15 +27,11 @@ spec:
     - type: Resource
       resource:
         name: cpu
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.targetAverageUtilization }}
+        targetAverageUtilization: {{ .Values.targetAverageUtilization }}
     - type: Resource
       resource:
         name: memory
-        target:
-          type: Utilization
-          averageUtilization: {{ .Values.targetAverageUtilization }}
+        targetAverageUtilization: {{ .Values.targetAverageUtilization }}
   vpaTemplate:
     resourcePolicy:
       containerPolicies:
@@ -43,8 +40,8 @@ spec:
           memory: 400M
           cpu: 400m
         maxAllowed:
-          memory: 10000M
-          cpu: 5
+          memory: 16000M
+          cpu: 8
   weightBasedScalingIntervals:
     - vpaWeight: 0
       startReplicaCount: {{ .Values.minReplicas }}

@@ -8,5 +8,11 @@ spec:
     apiVersion: {{ include "deploymentversion" . }}
     kind: Deployment
     name: kube-controller-manager
+  resourcePolicy:
+    containerPolicies:
+    - containerName: kube-controller-manager
+      maxAllowed:
+        memory: 3000Mi
+        cpu: 3000m
   updatePolicy:
     updateMode: "Auto"
