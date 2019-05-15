@@ -48,8 +48,6 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/configmap-config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
-        checksum/configmap-rules: {{ include (print $.Template.BasePath "/rules.yaml") . | sha256sum }}
         checksum/configmap-blackbox-exporter: {{ include (print $.Template.BasePath "/blackbox-exporter-config.yaml") . | sha256sum }}
 {{- if .Values.podAnnotations }}
 {{ toYaml .Values.podAnnotations | indent 8 }}
@@ -186,6 +184,27 @@ spec:
           mountPath: /vpn
         - mountPath: /var/run/secrets/blackbox
           name: prometheus-kubeconfig
+          readOnly: true
+      - name: prometheus-config-reloader
+        image: {{ index .Values.images "configmap-reloader" }}
+        imagePullPolicy: IfNotPresent
+        args:
+        - -webhook-url=http://localhost:{{ .Values.port }}/-/reload
+        - -volume-dir=/etc/prometheus/config
+        - -volume-dir=/etc/prometheus/rules
+        resources:
+          requests:
+            cpu: 5m
+            memory: 10Mi
+          limits:
+            cpu: 10m
+            memory: 20Mi
+        volumeMounts:
+        - mountPath: /etc/prometheus/config
+          name: config
+          readOnly: true
+        - mountPath: /etc/prometheus/rules
+          name: rules
           readOnly: true
       terminationGracePeriodSeconds: 300
       volumes:
