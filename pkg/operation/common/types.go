@@ -508,6 +508,9 @@ const (
 	// ElasticsearchImageName is the name of the Elastic-Search image used for logging
 	ElasticsearchImageName = "elasticsearch-oss"
 
+	// ElasticsearchMetricsExporterImageName is the name of the metrics exporter image used to fetch elasticsearch metrics.
+	ElasticsearchMetricsExporterImageName = "elasticsearch-metrics-exporter"
+
 	// CuratorImageName is the name of the curator image used to alter the Elastic-search logs
 	CuratorImageName = "curator-es"
 

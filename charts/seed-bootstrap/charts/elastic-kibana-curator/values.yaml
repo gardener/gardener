@@ -3,10 +3,12 @@ global:
     alpine: image-repository:image-tag
     curator-es: image-repository:image-tag
     elasticsearch-oss: image-repository:image-tag
+    elasticsearch-metrics-exporter: image-repository:image-tag
     kibana-oss: image-repository:image-tag
   elasticsearchPorts:
     db: 9200
     transport: 9300
+    metricsExporter: 9114
 
 ingress:
   enabled: true
@@ -65,6 +67,43 @@ elasticsearch:
       port: http
     initialDelaySeconds: 20
     timeoutSeconds: 5
+  metricsExporter:
+    securityContext:
+      capabilities:
+        drop:
+          - SETPCAP
+          - MKNOD
+          - AUDIT_WRITE
+          - CHOWN
+          - NET_RAW
+          - DAC_OVERRIDE
+          - FOWNER
+          - FSETID
+          - KILL
+          - SETGID
+          - SETUID
+          - NET_BIND_SERVICE
+          - SYS_CHROOT
+          - SETFCAP
+    resources:
+      limits:
+        cpu: 20m
+        memory: 32Mi
+      requests:
+        cpu: 2m
+        memory: 16Mi
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: metrics
+      initialDelaySeconds: 30
+      timeoutSeconds: 10
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: metrics
+      initialDelaySeconds: 10
+      timeoutSeconds: 10
 
 kibana:
   replicaCount: 1

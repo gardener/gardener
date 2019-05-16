@@ -189,6 +189,19 @@ allowedMetrics:
   vpn:
   - probe_http_status_code
   - probe_success
+  elasticsearch:
+  - elasticsearch_cluster_health_active_primary_shards
+  - elasticsearch_cluster_health_active_shards
+  - elasticsearch_cluster_health_delayed_unassigned_shards
+  - elasticsearch_cluster_health_number_of_pending_tasks
+  - elasticsearch_cluster_health_status
+  - elasticsearch_filesystem_data_free_bytes
+  - elasticsearch_indices_flush_time_seconds
+  - elasticsearch_indices_flush_total
+  - elasticsearch_indices_segments_count
+  - elasticsearch_indices_segments_memory_bytes
+  - elasticsearch_jvm_memory_pool_used_bytes
+  - elasticsearch_jvm_memory_pool_max_bytes
 
 seed:
   apiserver: https://api.foo.bar
@@ -205,6 +218,8 @@ rules:
       enabled: true
     alertmanager:
       enabled: false
+    elasticsearch:
+      enabled: true
 
 ignoreAlerts: false
 
