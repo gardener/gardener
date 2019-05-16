@@ -34,6 +34,7 @@ import (
 
 	jsoniter "github.com/json-iterator/go"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -538,4 +539,16 @@ func GetDomainInfoFromAnnotations(annotations map[string]string) (provider strin
 	}
 
 	return
+}
+
+// CurrentReplicaCount returns the current replicaCount for the given deployment.
+func CurrentReplicaCount(client client.Client, namespace, deploymentName string) (int32, error) {
+	deployment := &appsv1.Deployment{}
+	if err := client.Get(context.TODO(), kutil.Key(namespace, deploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+		return 0, err
+	}
+	if deployment.Spec.Replicas == nil {
+		return 0, nil
+	}
+	return *deployment.Spec.Replicas, nil
 }

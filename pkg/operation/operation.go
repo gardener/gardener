@@ -174,6 +174,17 @@ func (o *Operation) InitializeShootClients() error {
 		return nil
 	}
 
+	if o.Shoot.IsHibernated {
+		controlPlaneHibernated, err := o.controlPlaneHibernated()
+		if err != nil {
+			return err
+		}
+		// Do not initialize Shoot clients for already hibernated shoots.
+		if controlPlaneHibernated {
+			return nil
+		}
+	}
+
 	k8sShootClient, err := kubernetes.NewClientFromSecret(o.K8sSeedClient, o.Shoot.SeedNamespace, gardenv1beta1.GardenerName, client.Options{
 		Scheme: kubernetes.ShootScheme,
 	})
@@ -193,6 +204,17 @@ func (o *Operation) InitializeShootClients() error {
 
 	o.ChartApplierShoot = kubernetes.NewChartApplier(renderer, applier)
 	return nil
+}
+
+func (o *Operation) controlPlaneHibernated() (bool, error) {
+	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+	if err != nil {
+		return false, err
+	}
+	if replicaCount > 0 {
+		return false, nil
+	}
+	return true, nil
 }
 
 //ComputePrometheusIngressFQDN computes full qualified domain name for prometheus ingress sub-resource and returns it.
