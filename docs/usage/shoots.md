@@ -24,7 +24,7 @@ If a shoot has `.spec.maintenance.autoUpdate.kubernetesVersion: true` in the man
 
 Since Kubernetes follows [Semantic Versioning](http://semver.org/), if indicated so, Gardener will automatically apply the patch release updates. But it will never auto update the Major or Minor releases since there is no effort to keep backward compatibility in those releases.
 
-Major or Minor updates must be handled by updating the `.spec.kubernetes.version` field manually, theese updates will be executed immediately and will not wait for maintenance time window. **Before applying such update on Minor or Major releases, operators should check for all the breaking chances introduced in the target release Changelog**.
+Major or Minor updates must be handled by updating the `.spec.kubernetes.version` field manually, these updates will be executed immediately and will not wait for maintenance time window. **Before applying such update on Minor or Major releases, operators should check for all the breaking changes introduced in the target release Changelog**.
 
 E.g. If you have a shoot cluster with below field values (only related fields are shown):
 

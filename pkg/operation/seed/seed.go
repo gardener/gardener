@@ -52,7 +52,7 @@ const (
 )
 
 var wantedCertificateAuthorities = map[string]*utilsecrets.CertificateSecretConfig{
-	caSeed: &utilsecrets.CertificateSecretConfig{
+	caSeed: {
 		Name:       caSeed,
 		CommonName: "kubernetes",
 		CertType:   utilsecrets.CACert,
@@ -418,13 +418,13 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 				"host":            kibanaHost,
 			},
 			"curator": map[string]interface{}{
-				"objectCount":       nodeCount,
-				"baseDiskThreshold": 2 * 1073741824,
+				// Set curator threshold to 5Gi
+				"diskSpaceThreshold": 5 * 1024 * 1024 * 1024,
 			},
 			"elasticsearch": map[string]interface{}{
 				"objectCount": nodeCount,
 				"persistence": map[string]interface{}{
-					"size": "100Gi",
+					"size": seed.GetValidVolumeSize("100Gi"),
 				},
 			},
 		},
