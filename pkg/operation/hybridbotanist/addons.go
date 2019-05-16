@@ -100,7 +100,7 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		vpnShootConfig["diffieHellmanKey"] = openvpnDiffieHellmanSecret.Data["dh2048.pem"]
 	}
 
-	calico, err := b.InjectShootShootImages(calicoConfig, common.CalicoNodeImageName, common.CalicoCNIImageName, common.CalicoTyphaImageName)
+	calico, err := b.InjectShootShootImages(calicoConfig, common.CalicoNodeImageName, common.CalicoCNIImageName, common.CalicoTyphaImageName, common.CalicoKubeControllersImageName)
 	if err != nil {
 		return nil, err
 	}
