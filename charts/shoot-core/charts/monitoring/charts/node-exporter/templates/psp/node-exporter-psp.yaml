@@ -15,8 +15,8 @@ spec:
   - pathPrefix: /sys
   - pathPrefix: /proc
   hostPorts:
-  - min: 9100
-    max: 9100
+  - min: {{ .Values.ports.metrics }}
+    max: {{ .Values.ports.metrics }}
   runAsUser:
     rule: 'MustRunAsNonRoot'
   seLinux:
