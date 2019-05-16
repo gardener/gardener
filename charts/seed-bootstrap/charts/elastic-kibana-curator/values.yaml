@@ -15,16 +15,15 @@ ingress:
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 
 curator:
-  objectCount: 1
-  # set curator threshold to 1GB
-  baseDiskThreshold: 1073741824
+  # Set curator threshold to 1.5Gi
+  diskSpaceThreshold: 1610612736
   hourly:
     schedule: "0 * * * *"
     suspend: false
   daily:
     schedule: "5 0,6,12,18 * * *"
     suspend: false
-    
+
 elasticsearch:
   replicaCount: 1
   persistence:

@@ -19,6 +19,12 @@
 {{- if semverCompare "< 1.12" .Values.kubernetes.version }}
 --cadvisor-port=0 \
 {{- end }}
+{{- if semverCompare "< 1.11" .Values.kubernetes.version }}
+--feature-gates=PodPriority=true \
+{{- end }}
+{{- if semverCompare "< 1.14" .Values.kubernetes.version }}
+--feature-gates=SupportPodPidsLimit=true \
+{{- end }}
 --pod-infra-container-image={{ index .Values.images "pause-container" }} \
 --kubeconfig=/var/lib/kubelet/kubeconfig-real \
 --network-plugin=cni \
@@ -30,10 +36,4 @@
 {{ $param }} \
 {{- end }}
 --v=2
-{{- if semverCompare "< 1.11" .Values.kubernetes.version }}
---feature-gates=PodPriority=true \
-{{- end }}
-{{- if semverCompare "< 1.14" .Values.kubernetes.version }}
---feature-gates=SupportPodPidsLimit=true \
-{{- end }}
 {{- end -}}

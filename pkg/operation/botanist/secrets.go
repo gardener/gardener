@@ -38,27 +38,27 @@ import (
 )
 
 var wantedCertificateAuthorities = map[string]*secrets.CertificateSecretConfig{
-	gardencorev1alpha1.SecretNameCACluster: &secrets.CertificateSecretConfig{
+	gardencorev1alpha1.SecretNameCACluster: {
 		Name:       gardencorev1alpha1.SecretNameCACluster,
 		CommonName: "kubernetes",
 		CertType:   secrets.CACert,
 	},
-	gardencorev1alpha1.SecretNameCAETCD: &secrets.CertificateSecretConfig{
+	gardencorev1alpha1.SecretNameCAETCD: {
 		Name:       gardencorev1alpha1.SecretNameCAETCD,
 		CommonName: "etcd",
 		CertType:   secrets.CACert,
 	},
-	gardencorev1alpha1.SecretNameCAFrontProxy: &secrets.CertificateSecretConfig{
+	gardencorev1alpha1.SecretNameCAFrontProxy: {
 		Name:       gardencorev1alpha1.SecretNameCAFrontProxy,
 		CommonName: "front-proxy",
 		CertType:   secrets.CACert,
 	},
-	gardencorev1alpha1.SecretNameCAKubelet: &secrets.CertificateSecretConfig{
+	gardencorev1alpha1.SecretNameCAKubelet: {
 		Name:       gardencorev1alpha1.SecretNameCAKubelet,
 		CommonName: "kubelet",
 		CertType:   secrets.CACert,
 	},
-	gardencorev1alpha1.SecretNameCAMetricsServer: &secrets.CertificateSecretConfig{
+	gardencorev1alpha1.SecretNameCAMetricsServer: {
 		Name:       gardencorev1alpha1.SecretNameCAMetricsServer,
 		CommonName: "metrics-server",
 		CertType:   secrets.CACert,

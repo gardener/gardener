@@ -67,7 +67,7 @@ var _ = Describe("Garden", func() {
 
 		It("should return an error", func() {
 			secrets := map[string]*corev1.Secret{
-				fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, "nip"): &corev1.Secret{
+				fmt.Sprintf("%s-%s", common.GardenRoleDefaultDomain, "nip"): {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
 							common.DNSProvider: "aws",
@@ -122,7 +122,7 @@ var _ = Describe("Garden", func() {
 
 		It("should return an error", func() {
 			secrets := map[string]*corev1.Secret{
-				common.GardenRoleInternalDomain: &corev1.Secret{
+				common.GardenRoleInternalDomain: {
 					ObjectMeta: metav1.ObjectMeta{
 						Annotations: map[string]string{
 							common.DNSProvider: "aws",

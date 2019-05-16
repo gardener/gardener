@@ -34,7 +34,6 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
-	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -213,16 +212,11 @@ func (b *Botanist) DeployMachineControllerManager() error {
 	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
 	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
 	if b.Shoot.IsHibernated {
-		deployment := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName)
+		if err != nil {
 			return err
 		}
-
-		if deployment.Spec.Replicas == nil {
-			defaultValues["replicas"] = 0
-		} else {
-			defaultValues["replicas"] = *deployment.Spec.Replicas
-		}
+		defaultValues["replicas"] = replicaCount
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.MachineControllerManagerImageName)
@@ -694,7 +688,12 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	deployments := []string{common.KubeAddonManagerDeploymentName, common.KubeControllerManagerDeploymentName, common.KubeAPIServerDeploymentName}
+	deployments := []string{
+		common.KubeAddonManagerDeploymentName,
+		common.CloudControllerManagerDeploymentName,
+		common.KubeControllerManagerDeploymentName,
+		common.KubeAPIServerDeploymentName,
+	}
 	if b.Shoot.UsesCSI() {
 		deployments = append(deployments, common.CSIPluginController)
 	}
