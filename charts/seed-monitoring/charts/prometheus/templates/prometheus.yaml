@@ -168,6 +168,7 @@ spec:
         image: {{ index .Values.images "blackbox-exporter" }}
         args:
         - --config.file=/vpn/blackbox.yaml
+        - --web.listen-address=127.0.0.1:9115
         ports:
         # port name must be max 15 characters long
         - name: blackbox-export
