@@ -2,6 +2,8 @@
 
 package v1alpha1
 
+type BackupInfrastructureExpansion interface{}
+
 type ClusterExpansion interface{}
 
 type ControlPlaneExpansion interface{}
