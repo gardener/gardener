@@ -4,18 +4,18 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
-    nginx.ingress.kubernetes.io/auth-secret: {{.Chart.Name}}-basic-auth
+    nginx.ingress.kubernetes.io/auth-secret: {{ .Chart.Name }}-basic-auth
     nginx.ingress.kubernetes.io/auth-type: basic
     addonmanager.kubernetes.io/mode: Reconcile
-  name: {{.Chart.Name}}
-  namespace: {{.Release.Namespace}}
+  name: {{ .Chart.Name }}
+  namespace: {{ .Release.Namespace }}
 spec:
   tls:
-  - secretName: {{.Chart.Name}}-tls
+  - secretName: {{ .Chart.Name }}-tls
     hosts:
-    - {{.Values.ingress.host}}
+    - {{ .Values.ingress.host }}
   rules:
-  - host: {{.Values.ingress.host}}
+  - host: {{ .Values.ingress.host }}
     http:
       paths:
       - backend:

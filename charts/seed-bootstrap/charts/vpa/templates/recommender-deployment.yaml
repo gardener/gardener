@@ -2,29 +2,29 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vpa-recommender
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
 metadata:
   name: vpa-recommender
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-recommender
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: vpa-recommender
-{{ toYaml .Values.vpa.labels | indent 6 }}
+{{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
       labels:
         app: vpa-recommender
-{{ toYaml .Values.vpa.labels | indent 8 }}
+{{ toYaml .Values.labels | indent 8 }}
     spec:
       serviceAccountName: vpa-recommender
       containers:
