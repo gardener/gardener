@@ -179,7 +179,7 @@ func (b *HybridBotanist) DeployETCD() error {
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
 			if role == common.EtcdRoleMain {
 				// Since we have to update volumeClaimTemplate in existing statefulset, which is forbidden
-				// by k8s. So, we have to explicitely delete the old statefulset and create new one.
+				// by k8s. So, we have to explicitly delete the old statefulset and create new one.
 				if apierrors.IsInvalid(err) {
 					if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
 						return err

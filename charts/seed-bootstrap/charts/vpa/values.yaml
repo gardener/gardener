@@ -5,8 +5,7 @@ global:
     vpa-updater: image-repository:image-tag
     vpa-exporter: image-repository:image-tag
 
-vpa:
-  podAnnotations: {}
-  enabled: true
-  labels:
-    garden.sapcloud.io/role: vpa
+enabled: true
+podAnnotations: {}
+labels:
+  garden.sapcloud.io/role: vpa

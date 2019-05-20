@@ -1,12 +1,12 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  name: prometheus-{{.Release.Namespace}}
+  name: prometheus-{{ .Release.Namespace }}
   ownerReferences:
   - apiVersion: v1
     kind: Namespace
-    name: {{.Release.Namespace}}
-    uid: {{.Values.namespace.uid}}
+    name: {{ .Release.Namespace }}
+    uid: {{ .Values.namespace.uid }}
     controller: true
     blockOwnerDeletion: true
 roleRef:
@@ -16,4 +16,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: prometheus
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}

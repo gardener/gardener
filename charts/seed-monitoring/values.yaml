@@ -1,5 +1,5 @@
 alertmanager:
-  email_configs: []
+  emailConfigs: []
   replicas: 1
   storage: 1Gi
   images:

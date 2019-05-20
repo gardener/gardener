@@ -310,7 +310,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 			return false, nil
 		}
 
-		if updateErr := c.updateShootStatusResetRetry(operation, operationType); err != nil {
+		if updateErr := c.updateShootStatusResetRetry(operation, operationType); updateErr != nil {
 			shootLogger.Errorf("Could not reschedule failed shoot due to Gardener version update: %+v", updateErr)
 			return true, updateErr
 		}
