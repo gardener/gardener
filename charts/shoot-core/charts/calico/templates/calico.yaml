@@ -18,6 +18,15 @@ metadata:
 
 ---
 
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: calico-kube-controllers
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+---
+
 # This manifest installs the calico/node container, as well
 # as the Calico CNI plugins and network config on
 # each master and worker node in a Kubernetes cluster.
@@ -71,6 +80,27 @@ spec:
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
       initContainers:
+      # This container performs upgrade from host-local IPAM to calico-ipam.
+      # It can be deleted if this is a fresh installation, or if you have already
+      # upgraded to use calico-ipam.
+      - name: upgrade-ipam
+        image: {{ index .Values.images "calico-cni" }}
+        command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
+        env:
+          - name: KUBERNETES_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: CALICO_NETWORKING_BACKEND
+            valueFrom:
+              configMapKeyRef:
+                name: calico-config
+                key: calico_backend
+        volumeMounts:
+          - mountPath: /var/lib/cni/networks
+            name: host-local-net-dir
+          - mountPath: /host/opt/cni/bin
+            name: cni-bin-dir
       # This container installs the Calico CNI binaries
       # and CNI network config file on each node.
       - name: install-cni
@@ -127,6 +157,9 @@ spec:
             # Set Felix endpoint to host default action to ACCEPT.
             - name: FELIX_DEFAULTENDPOINTTOHOSTACTION
               value: "ACCEPT"
+            # Auto-detect the BGP IP address.
+            - name: IP
+              value: "autodetect"
             # Disable IPV6 on Kubernetes.
             - name: FELIX_IPV6SUPPORT
               value: "false"
@@ -161,20 +194,11 @@ spec:
             - name: FELIX_IPINIPENABLED
               value: "false"
             {{- end }}
-            # Typha support: controlled by the ConfigMap.
-            - name: FELIX_TYPHAK8SSERVICENAME
-              valueFrom:
-                configMapKeyRef:
-                  name: calico-config
-                  key: typha_service_name
             # Set based on the k8s node name.
             - name: NODENAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            # Auto-detect the BGP IP address.
-            - name: IP
-              value: "autodetect"
             - name: FELIX_HEALTHENABLED
               value: "true"
             # Limit NAT port range: https://github.com/projectcalico/felix/pull/1838
@@ -241,6 +265,12 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
+        # Mount in the directory for host-local IPAM allocations. This is
+        # used when upgrading from host-local to calico-ipam, and can be removed
+        # if not using the upgrade-ipam init container.
+        - name: host-local-net-dir
+          hostPath:
+            path: /var/lib/cni/networks
 ---
 
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
@@ -379,6 +409,59 @@ spec:
 #       k8s-app: calico-typha
 
 ---
+
+# Source: calico/templates/calico-kube-controllers.yaml
+# See https://github.com/projectcalico/kube-controllers
+apiVersion: {{ include "deploymentversion" . }}
+kind: Deployment
+metadata:
+  name: calico-kube-controllers
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    k8s-app: calico-kube-controllers
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ''
+spec:
+  selector:
+    matchLabels:
+      k8s-app: calico-kube-controllers
+  # The controller can only have a single active instance.
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      name: calico-kube-controllers
+      namespace: kube-system
+      labels:
+        k8s-app: calico-kube-controllers
+    spec:
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      tolerations:
+        # Mark the pod as a critical add-on for rescheduling.
+        - key: CriticalAddonsOnly
+          operator: Exists
+        - key: node-role.kubernetes.io/master
+          effect: NoSchedule
+      serviceAccountName: calico-kube-controllers
+      containers:
+        - name: calico-kube-controllers
+          image: {{ index .Values.images "calico-kube-controllers" }}
+          env:
+            # Choose which controllers to run.
+            - name: ENABLED_CONTROLLERS
+              value: node
+            - name: DATASTORE_TYPE
+              value: kubernetes
+          readinessProbe:
+            exec:
+              command:
+              - /usr/bin/check-status
+              - -r
+
+---
 # Create all the CustomResourceDefinitions needed for
 # Calico policy and networking mode.
 
@@ -397,6 +480,78 @@ spec:
     kind: FelixConfiguration
     plural: felixconfigurations
     singular: felixconfiguration
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ipamblocks.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    garden.sapcloud.io/role: system-component
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPAMBlock
+    plural: ipamblocks
+    singular: ipamblock
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: blockaffinities.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    garden.sapcloud.io/role: system-component
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: BlockAffinity
+    plural: blockaffinities
+    singular: blockaffinity
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ipamhandles.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    garden.sapcloud.io/role: system-component
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPAMHandle
+    plural: ipamhandles
+    singular: ipamhandle
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: ipamconfigs.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    garden.sapcloud.io/role: system-component
+spec:
+  scope: Cluster
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: IPAMConfig
+    plural: ipamconfigs
+    singular: ipamconfig
 
 ---
 
@@ -541,3 +696,21 @@ spec:
     kind: NetworkPolicy
     plural: networkpolicies
     singular: networkpolicy
+
+---
+
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: networksets.crd.projectcalico.org
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+    garden.sapcloud.io/role: system-component
+spec:
+  scope: Namespaced
+  group: crd.projectcalico.org
+  version: v1
+  names:
+    kind: NetworkSet
+    plural: networksets
+    singular: networkset
