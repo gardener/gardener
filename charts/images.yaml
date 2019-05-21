@@ -85,15 +85,19 @@ images:
 - name: calico-node
   sourceRepository: github.com/projectcalico/calico
   repository: quay.io/calico/node
-  tag: v3.4.0
+  tag: v3.7.2
 - name: calico-cni
   sourceRepository: github.com/projectcalico/cni-plugin
   repository: quay.io/calico/cni
-  tag: v3.4.0
+  tag: v3.7.2
 - name: calico-typha
   sourceRepository: github.com/projectcalico/typha
   repository: quay.io/calico/typha
-  tag: v3.4.0
+  tag: v3.7.2
+- name: calico-kube-controllers
+  sourceRepository: github.com/projectcalico/typha
+  repository: quay.io/calico/kube-controllers
+  tag: v3.7.2
 - name: vpn-shoot
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-shoot

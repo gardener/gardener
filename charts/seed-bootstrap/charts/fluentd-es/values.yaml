@@ -7,6 +7,7 @@ global:
     fluent-bit: image-repository:image-tag
 
 fluentd:
+  replicaCount: 1
   storage: 9Gi
   ports:
     forward: 24224
@@ -14,6 +15,13 @@ fluentd:
     garden.sapcloud.io/role: logging
     app: fluentd-es
     role: logging
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 70
+
 fluentbit:
   labels:
     garden.sapcloud.io/role: logging

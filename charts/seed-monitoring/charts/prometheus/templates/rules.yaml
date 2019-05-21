@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: prometheus-rules
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
 data:
 {{ (.Files.Glob "rules/**").AsConfig | indent 2 }}
 # optional rules

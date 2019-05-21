@@ -6,6 +6,7 @@ metadata:
   labels:
 {{ toYaml .Values.fluentd.labels | indent 4 }}
 spec:
+  replicas: {{ .Values.fluentd.replicaCount }}
   updateStrategy:
     type: RollingUpdate
   serviceName: fluentd-es

@@ -4,20 +4,20 @@ kind: Deployment
 metadata:
   labels:
     app: vpa-exporter
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
   name: vpa-exporter
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: vpa-exporter
-{{ toYaml .Values.vpa.labels | indent 6 }}
+{{ toYaml .Values.labels | indent 6 }}
   template:
     metadata:
       labels:
         app: vpa-exporter
-{{ toYaml .Values.vpa.labels | indent 8 }}
+{{ toYaml .Values.labels | indent 8 }}
     spec:
       serviceAccountName: vpa-exporter
       containers:
@@ -42,10 +42,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: vpa-exporter
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
   labels:
     app: vpa-exporter
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 spec:
   type: ClusterIP
   sessionAffinity: None

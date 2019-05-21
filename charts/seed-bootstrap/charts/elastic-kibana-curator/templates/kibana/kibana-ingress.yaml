@@ -7,14 +7,14 @@ metadata:
     nginx.ingress.kubernetes.io/auth-secret: kibana-basic-auth
     nginx.ingress.kubernetes.io/auth-type: basic
   name: kibana
-  namespace: {{.Release.Namespace}}
+  namespace: {{ .Release.Namespace }}
 spec:
   tls:
   - secretName: kibana-tls
     hosts:
-    - {{.Values.ingress.host}}
+    - {{ .Values.ingress.host }}
   rules:
-  - host: {{.Values.ingress.host}}
+  - host: {{ .Values.ingress.host }}
     http:
       paths:
       - backend:

@@ -4,7 +4,7 @@ kind: ClusterRole
 metadata:
   name: system:metrics-reader
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
   - "metrics.k8s.io"
@@ -19,7 +19,7 @@ kind: ClusterRole
 metadata:
   name: system:vpa-actor
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -63,7 +63,7 @@ kind: ClusterRole
 metadata:
   name: system:vpa-checkpoint-actor
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
   - "poc.autoscaling.k8s.io"
@@ -100,7 +100,7 @@ kind: ClusterRole
 metadata:
   name: system:evictioner
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
   - "extensions"
@@ -121,7 +121,7 @@ kind: ClusterRoleBinding
 metadata:
   name: system:metrics-reader
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -129,14 +129,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-recommender
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:vpa-actor
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -144,17 +144,17 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-recommender
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 - kind: ServiceAccount
   name: vpa-updater
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:vpa-checkpoint-actor
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -162,14 +162,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-recommender
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: system:vpa-target-reader
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -204,7 +204,7 @@ kind: ClusterRoleBinding
 metadata:
   name: system:vpa-target-reader-binding
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -212,20 +212,20 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-recommender
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 - kind: ServiceAccount
   name: vpa-admission-controller
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 - kind: ServiceAccount
   name: vpa-updater
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:vpa-evictionter-binding
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -233,20 +233,20 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-updater
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vpa-admission-controller
-  namespace: garden
+  namespace: {{ .Release.Namespace }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: system:vpa-admission-controller
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 rules:
 - apiGroups:
   - ""
@@ -289,7 +289,7 @@ kind: ClusterRoleBinding
 metadata:
   name: system:vpa-admission-controller
   labels:
-{{ toYaml .Values.vpa.labels | indent 4 }}
+{{ toYaml .Values.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -297,4 +297,4 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vpa-admission-controller
-  namespace: garden
+  namespace: {{ .Release.Namespace }}

@@ -34,8 +34,10 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
 	utilsecrets "github.com/gardener/gardener/pkg/utils/secrets"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -249,9 +251,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	// Logging feature gate
 
 	var (
-		basicAuth      string
-		kibanaHost     string
-		loggingEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
+		basicAuth           string
+		kibanaHost          string
+		fluentdReplicaCount int32
+		loggingEnabled      = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 	)
 
 	if loggingEnabled {
@@ -267,6 +270,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 
 		deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
 		if err != nil {
+			return err
+		}
+
+		if fluentdReplicaCount, err = GetFluentdReplicaCount(k8sSeedClient); err != nil {
 			return err
 		}
 
@@ -431,7 +438,8 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		"fluentd-es": map[string]interface{}{
 			"enabled": loggingEnabled,
 			"fluentd": map[string]interface{}{
-				"storage": seed.GetValidVolumeSize("9Gi"),
+				"replicaCount": fluentdReplicaCount,
+				"storage":      seed.GetValidVolumeSize("9Gi"),
 			},
 		},
 		"cert-manager": map[string]interface{}{
@@ -548,6 +556,27 @@ func DesiredExcessCapacity(numberOfAssociatedShoots int) int {
 	}
 
 	return effectiveExcessCapacity * replicasToSupportSingleShoot
+}
+
+// GetFluentdReplicaCount returns fluentd stateful set replica count if it exists, otherwise - the default (1).
+// As fluentd HPA manages the number of replicas, we have to make sure to do not override HPA scaling.
+func GetFluentdReplicaCount(k8sSeedClient kubernetes.Interface) (int32, error) {
+	statefulSet := &appsv1.StatefulSet{}
+	if err := k8sSeedClient.Client().Get(context.TODO(), kutil.Key(common.GardenNamespace, common.FluentdEsStatefulSetName), statefulSet); err != nil {
+		if apierrors.IsNotFound(err) {
+			// the stateful set is still not created, return the default replicas
+			return 1, nil
+		}
+
+		return -1, err
+	}
+
+	replicas := statefulSet.Spec.Replicas
+	if replicas == nil || *replicas == 0 {
+		return 1, nil
+	}
+
+	return *replicas, nil
 }
 
 // GetIngressFQDN returns the fully qualified domain name of ingress sub-resource for the Seed cluster. The

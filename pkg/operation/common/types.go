@@ -410,6 +410,9 @@ const (
 	// CalicoTyphaImageName is the name of the CalicoTypha image.
 	CalicoTyphaImageName = "calico-typha"
 
+	// CalicoKubeControllersImageName is the name of the CalicoKubeControllers image.
+	CalicoKubeControllersImageName = "calico-kube-controllers"
+
 	// CoreDNSImageName is the name of the CoreDNS image.
 	CoreDNSImageName = "coredns"
 
