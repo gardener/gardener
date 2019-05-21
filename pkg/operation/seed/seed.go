@@ -637,3 +637,12 @@ func (s *Seed) GetValidVolumeSize(size string) string {
 
 	return size
 }
+
+// GetPersistentVolumeProvider gets the Persistent Volume Provider of seed cluster. If it is not specified, return ""
+func (s *Seed) GetPersistentVolumeProvider() string {
+	if s.Info.Annotations == nil {
+		return ""
+	}
+
+	return s.Info.Annotations[common.AnnotatePersistentVolumeProvider]
+}
