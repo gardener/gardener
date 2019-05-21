@@ -384,8 +384,11 @@ const (
 	// then the namespace in the seed will be annotated with <AnnotateSeedNamespacePrefix>key=value, as well.
 	AnnotateSeedNamespacePrefix = "custom.shoot.sapcloud.io/"
 
-	//AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
+	// AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
 	AnnotatePersistentVolumeMinimumSize = "persistentvolume.garden.sapcloud.io/minimumSize"
+
+	// AnnotatePersistentVolumeProvider is used to tell volume provider in the k8s cluster
+	AnnotatePersistentVolumeProvider = "persistentvolume.garden.sapcloud.io/provider"
 
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
