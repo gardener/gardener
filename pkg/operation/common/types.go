@@ -110,6 +110,15 @@ const (
 	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
 	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
 
+	// EtcdEncryptionChecksumAnnotationName is the name of the annotation with which to annotate
+	// the EncryptionConfiguration secret to denote the checksum of the EncryptionConfiguration
+	// that was used when last rewriting secrets.
+	EtcdEncryptionChecksumAnnotationName = "shoot.garden.sapcloud.io/secret-encryption-key-checksum"
+
+	// EtcdEncryptionForcePlaintextAnnotationName is the name of the annotation with which to annotate
+	// the EncryptionConfiguration secret to force the decryption of shoot secrets
+	EtcdEncryptionForcePlaintextAnnotationName = "shoot.garden.sapcloud.io/force-plaintext-secrets"
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.
