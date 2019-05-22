@@ -6,6 +6,7 @@ metadata:
   labels:
     app: curator
     role: logging
+    garden.sapcloud.io/role: logging
 data:
   action_file.yml: |-
     actions:
@@ -58,6 +59,7 @@ metadata:
   labels:
     app: curator
     role: logging
+    garden.sapcloud.io/role: logging
 data:
   action_file.yml: |-
     actions:

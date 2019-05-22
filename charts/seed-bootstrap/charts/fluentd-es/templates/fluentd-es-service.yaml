@@ -3,9 +3,11 @@ kind: Service
 metadata:
   name: fluentd-es
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- toYaml .Values.fluentd.labels | nindent 4 }}
 spec:
   selector:
-{{ toYaml .Values.fluentd.labels | indent 4 }}
+    {{- toYaml .Values.fluentd.labels | nindent 4 }}
   ports:
   - name: fluentd-input
     port: {{ .Values.fluentd.ports.forward }}

@@ -44,6 +44,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,8 +65,8 @@ var wantedCertificateAuthorities = map[string]*utilsecrets.CertificateSecretConf
 // New takes a <k8sGardenClient>, the <k8sGardenInformers> and a <seed> manifest, and creates a new Seed representation.
 // It will add the CloudProfile and identify the cloud provider.
 func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface, seed *gardenv1beta1.Seed) (*Seed, error) {
-	secret, err := k8sGardenClient.GetSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name)
-	if err != nil {
+	secret := &corev1.Secret{}
+	if err := k8sGardenClient.Client().Get(context.TODO(), kutil.Key(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name), secret); err != nil {
 		return nil, err
 	}
 
@@ -193,7 +194,6 @@ func deployCertificates(seed *Seed, k8sSeedClient kubernetes.Interface, existing
 // BootstrapCluster bootstraps a Seed cluster and deploys various required manifests.
 func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, numberOfAssociatedShoots int) error {
 	const chartName = "seed-bootstrap"
-	var existingSecretsMap = map[string]*corev1.Secret{}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecretObject(seed.Secret, client.Options{
 		Scheme: kubernetes.SeedScheme,
@@ -201,12 +201,13 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	if err != nil {
 		return err
 	}
+
 	gardenNamespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.GardenNamespace,
 		},
 	}
-	if _, err := k8sSeedClient.CreateNamespace(gardenNamespace, false); err != nil && !apierrors.IsAlreadyExists(err) {
+	if err = k8sSeedClient.Client().Create(context.TODO(), gardenNamespace); err != nil && !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -250,17 +251,17 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	}
 
 	// Logging feature gate
-
 	var (
 		basicAuth           string
 		kibanaHost          string
 		fluentdReplicaCount int32
 		loggingEnabled      = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
+		existingSecretsMap  = map[string]*corev1.Secret{}
 	)
 
 	if loggingEnabled {
-		existingSecrets, err := k8sSeedClient.ListSecrets(common.GardenNamespace, metav1.ListOptions{})
-		if err != nil {
+		existingSecrets := &corev1.SecretList{}
+		if err = k8sSeedClient.Client().List(context.TODO(), client.InNamespace(common.GardenNamespace), existingSecrets); err != nil {
 			return err
 		}
 
@@ -299,12 +300,13 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			return fmt.Errorf("certificate management is enabled but no secret could be found with role: %s", common.GardenRoleCertificateManagement)
 		}
 
-		clusterIssuer, err = createClusterIssuer(k8sSeedClient, certificateManagement)
+		clusterIssuer, err = createClusterIssuer(certificateManagement)
 		if err != nil {
 			return fmt.Errorf("cannot create Cluster Issuer for certificate management: %v", err)
 		}
 	} else {
-		if err := k8sSeedClient.DeleteDeployment(common.GardenNamespace, common.CertManagerResourceName); err != nil && !apierrors.IsNotFound(err) {
+		obj := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: common.CertManagerResourceName, Namespace: common.GardenNamespace}}
+		if err = k8sSeedClient.Client().Delete(context.TODO(), obj, kubernetes.DefaultDeleteOptionFuncs...); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -316,8 +318,8 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	)
 
 	if vpaEnabled {
-		existingSecrets, err := k8sSeedClient.ListSecrets(common.GardenNamespace, metav1.ListOptions{})
-		if err != nil {
+		existingSecrets := &corev1.SecretList{}
+		if err = k8sSeedClient.Client().List(context.TODO(), client.InNamespace(common.GardenNamespace), existingSecrets); err != nil {
 			return err
 		}
 
@@ -338,7 +340,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		vpaPodAnnotations = map[string]interface{}{
 			"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
 		}
-
 	} else {
 		if err := common.DeleteVpa(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -346,14 +347,15 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	}
 
 	// Cleanup legacy external admission controller (no longer needed).
-	if err := k8sSeedClient.DeleteService(common.GardenNamespace, "gardener-external-admission-controller"); err != nil && !apierrors.IsNotFound(err) {
-		return err
+	objects := []runtime.Object{
+		&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: common.GardenNamespace}},
+		&appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller", Namespace: common.GardenNamespace}},
+		&corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "gardener-external-admission-controller-tls", Namespace: common.GardenNamespace}},
 	}
-	if err := k8sSeedClient.DeleteDeployment(common.GardenNamespace, "gardener-external-admission-controller"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sSeedClient.DeleteSecret(common.GardenNamespace, "gardener-external-admission-controller-tls"); err != nil && !apierrors.IsNotFound(err) {
-		return err
+	for _, object := range objects {
+		if err = k8sSeedClient.Client().Delete(context.TODO(), object, kubernetes.DefaultDeleteOptionFuncs...); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 	}
 
 	// AlertManager configuration
@@ -377,8 +379,8 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		alertManagerConfig["emailConfigs"] = emailConfigs
 	}
 
-	nodes, err := k8sSeedClient.ListNodes(metav1.ListOptions{})
-	if err != nil {
+	nodes := &corev1.NodeList{}
+	if err = k8sSeedClient.Client().List(context.TODO(), nil, nodes); err != nil {
 		return err
 	}
 	nodeCount := len(nodes.Items)
@@ -455,7 +457,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	}, applierOptions)
 }
 
-func createClusterIssuer(k8sSeedclient kubernetes.Interface, certificateManagement *corev1.Secret) (map[string]interface{}, error) {
+func createClusterIssuer(certificateManagement *corev1.Secret) (map[string]interface{}, error) {
 	certManagementConfig, err := certmanagement.RetrieveCertificateManagementConfig(certificateManagement)
 	if err != nil {
 		return nil, err
