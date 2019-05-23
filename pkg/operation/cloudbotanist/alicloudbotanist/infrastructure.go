@@ -227,9 +227,10 @@ func cleanSnapshots(bucketName, storageEndpoint, accessKeyID, accessKeySecret st
 		for _, object := range lsRes.Objects {
 			snapshots = append(snapshots, object.Key)
 		}
-		_, err = bucket.DeleteObjects(snapshots)
-		if err != nil {
-			return err
+		if len(snapshots) > 0 {
+			if _, err = bucket.DeleteObjects(snapshots); err != nil {
+				return err
+			}
 		}
 		if !lsRes.IsTruncated {
 			break
