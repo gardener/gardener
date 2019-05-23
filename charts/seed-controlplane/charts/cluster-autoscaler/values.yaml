@@ -13,3 +13,7 @@ workerPools:
   max: 3
 
 metricsPort: 8085
+
+flags:
+- name: foo
+  value: bar

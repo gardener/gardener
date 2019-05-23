@@ -2552,6 +2552,7 @@ func autoConvert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in *Clust
 	if err := Convert_v1beta1_Addon_To_garden_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
+	out.ScaleDownUtilizationThreshold = (*string)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
 	return nil
 }
 
@@ -2564,6 +2565,7 @@ func autoConvert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garde
 	if err := Convert_garden_Addon_To_v1beta1_Addon(&in.Addon, &out.Addon, s); err != nil {
 		return err
 	}
+	out.ScaleDownUtilizationThreshold = (*string)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
 	return nil
 }
 

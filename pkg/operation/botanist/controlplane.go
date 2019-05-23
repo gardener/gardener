@@ -248,6 +248,14 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		})
 	}
 
+	var flags []map[string]interface{}
+	if b.Shoot.Info.Spec.Addons.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
+		flags = append(flags, map[string]interface{}{
+			"name":  "scale-down-utilization-threshold",
+			"value": b.Shoot.Info.Spec.Addons.ClusterAutoscaler.ScaleDownUtilizationThreshold,
+		})
+	}
+
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cluster-autoscaler": b.CheckSums[gardencorev1alpha1.DeploymentNameClusterAutoscaler],
@@ -257,6 +265,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		},
 		"replicas":    b.Shoot.GetReplicas(1),
 		"workerPools": workerPools,
+		"flags":       flags,
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.ClusterAutoscalerImageName)

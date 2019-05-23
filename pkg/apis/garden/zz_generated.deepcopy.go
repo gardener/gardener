@@ -290,7 +290,7 @@ func (in *Addons) DeepCopyInto(out *Addons) {
 	if in.ClusterAutoscaler != nil {
 		in, out := &in.ClusterAutoscaler, &out.ClusterAutoscaler
 		*out = new(ClusterAutoscaler)
-		**out = **in
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Heapster != nil {
 		in, out := &in.Heapster, &out.Heapster
@@ -1142,6 +1142,11 @@ func (in *CloudProfileSpec) DeepCopy() *CloudProfileSpec {
 func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 	*out = *in
 	out.Addon = in.Addon
+	if in.ScaleDownUtilizationThreshold != nil {
+		in, out := &in.ScaleDownUtilizationThreshold, &out.ScaleDownUtilizationThreshold
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

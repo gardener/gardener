@@ -3301,6 +3301,13 @@ func schema_pkg_apis_garden_v1beta1_ClusterAutoscaler(ref common.ReferenceCallba
 							Format:      "",
 						},
 					},
+					"scale-down-utilization-threshold": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 				Required: []string{"enabled"},
 			},

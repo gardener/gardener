@@ -48,6 +48,9 @@ spec:
         - --expendable-pods-priority-cutoff=-10
         - --scale-down-delay-after-add=60m
         - --scale-down-unneeded-time=30m
+        {{- range $key, $flag := .Values.flags }}
+        - --{{ $flag.name }}={{ $flag.value }}
+        {{- end }}
         - --v=2
         env:
         - name: CONTROL_NAMESPACE

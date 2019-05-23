@@ -1166,6 +1166,9 @@ type KubernetesDashboard struct {
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
 type ClusterAutoscaler struct {
 	Addon `json:",inline"`
+	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+	// +optional
+	ScaleDownUtilizationThreshold *string `json:"scale-down-utilization-threshold,omitempty"`
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
