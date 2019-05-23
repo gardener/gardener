@@ -131,6 +131,16 @@ func (b *AlicloudBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}
 
 // GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
 func (b *AlicloudBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
+	if b.Operation.Seed.GetPersistentVolumeProvider() == "FlexVolume" {
+		return map[string]interface{}{
+			"name":        "gardener.cloud-fast",
+			"capacity":    "25Gi",
+			"provisioner": "alicloud/disk",
+			"parameters": map[string]interface{}{
+				"type": "cloud_ssd",
+			},
+		}
+	}
 	return map[string]interface{}{
 		"name":        "gardener.cloud-fast",
 		"capacity":    "25Gi",
