@@ -568,3 +568,25 @@ data:
       - source_labels: [ namespace ]
         action: keep
         regex: ^{{ .Release.Namespace }}$
+
+{{- if  (index .Values.rules.optional "elasticsearch" ).enabled }}
+    - job_name: elasticsearch-logging
+      honor_labels: false
+      kubernetes_sd_configs:
+      - role: endpoints
+        namespaces:
+          names: [{{ .Release.Namespace }}]
+      relabel_configs:
+      - source_labels:
+        - __meta_kubernetes_service_name
+        - __meta_kubernetes_endpoint_port_name
+        action: keep
+        regex: elasticsearch-logging;metrics
+      # common metrics
+      - action: labelmap
+        regex: __meta_kubernetes_service_label_(.+)
+      - source_labels: [ __meta_kubernetes_pod_name ]
+        target_label: pod
+      metric_relabel_configs:
+{{ include "prometheus.keep-metrics.metric-relabel-config" .Values.allowedMetrics.elasticsearch | indent 6 }}
+{{- end }}

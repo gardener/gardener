@@ -91,6 +91,30 @@ spec:
         - name: config
           mountPath: /usr/share/elasticsearch/config/jvm.options
           subPath: jvm.options
+      - name: metrics-exporter
+        image: {{ index .Values.global.images "elasticsearch-metrics-exporter" }}
+        imagePullPolicy: IfNotPresent
+        command: ["elasticsearch_exporter"]
+        args:
+          - -es.uri=http://localhost:{{ .Values.global.elasticsearchPorts.db }}
+          - -es.all=true
+          - -es.indices=true
+          - -es.timeout=30s
+          - -web.listen-address=:{{ .Values.global.elasticsearchPorts.metricsExporter }}
+        securityContext:
+          capabilities:
+            {{- toYaml .Values.elasticsearch.metricsExporter.securityContext.capabilities | nindent 12 }}
+          readOnlyRootFilesystem: true
+        resources:
+          {{- toYaml .Values.elasticsearch.metricsExporter.resources | nindent 10 }}
+        ports:
+          - containerPort: {{ .Values.global.elasticsearchPorts.metricsExporter }}
+            name: metrics
+            protocol: TCP
+        livenessProbe:
+          {{- toYaml .Values.elasticsearch.metricsExporter.livenessProbe | nindent 10 }}
+        readinessProbe:
+          {{- toYaml .Values.elasticsearch.metricsExporter.readinessProbe | nindent 10 }}
       volumes:
       - name: config
         configMap:

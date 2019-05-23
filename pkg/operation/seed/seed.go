@@ -231,6 +231,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			common.ConfigMapReloaderImageName,
 			common.CuratorImageName,
 			common.ElasticsearchImageName,
+			common.ElasticsearchMetricsExporterImageName,
 			common.FluentBitImageName,
 			common.FluentdEsImageName,
 			common.KibanaImageName,
