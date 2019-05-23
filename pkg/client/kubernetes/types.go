@@ -101,6 +101,12 @@ var (
 	// PlantScheme is the scheme used in the Plant cluster
 	PlantScheme = runtime.NewScheme()
 
+	// DefaultDeleteOptionFuncs use foreground propagation policy and grace period of 60 seconds.
+	DefaultDeleteOptionFuncs = []client.DeleteOptionFunc{
+		client.PropagationPolicy(metav1.DeletePropagationForeground),
+		client.GracePeriodSeconds(60),
+	}
+
 	propagationPolicy    = metav1.DeletePropagationForeground
 	gracePeriodSeconds   = int64(60)
 	defaultDeleteOptions = metav1.DeleteOptions{

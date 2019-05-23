@@ -35,10 +35,16 @@ import (
 	jsoniter "github.com/json-iterator/go"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -427,61 +433,47 @@ func InjectCSIFeatureGates(kubeVersion string, featureGates map[string]bool) (ma
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
 func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error {
 	if k8sClient == nil {
-		return fmt.Errorf("require kubernetes client")
+		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
 	}
 
-	var (
-		services     = []string{"kibana-logging", "elasticsearch-logging", "fluentd-es"}
-		configmaps   = []string{"kibana-object-registration", "kibana-saved-objects", "curator-hourly-config", "curator-daily-config", "fluent-bit-config", "fluentd-es-config", "es-configmap"}
-		statefulsets = []string{"elasticsearch-logging", "fluentd-es"}
-		cronjobs     = []string{"hourly-curator", "daily-curator"}
-	)
-
-	if err := k8sClient.DeleteDeployment(namespace, "kibana-logging"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteDaemonSet(namespace, "fluent-bit"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	for _, name := range statefulsets {
-		if err := k8sClient.DeleteStatefulSet(namespace, name); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-	}
-	for _, name := range cronjobs {
-		if err := k8sClient.DeleteCronJob(namespace, name); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
+	// Delete the resources below that match "garden.sapcloud.io/role=logging"
+	lists := []runtime.Object{
+		&corev1.ConfigMapList{},
+		&batchv1beta1.CronJobList{},
+		&rbacv1.ClusterRoleList{},
+		&rbacv1.ClusterRoleBindingList{},
+		&appsv1.DaemonSetList{},
+		&appsv1.DeploymentList{},
+		&autoscalingv1.HorizontalPodAutoscalerList{},
+		&extensionsv1beta1.IngressList{},
+		&corev1.SecretList{},
+		&corev1.ServiceAccountList{},
+		&corev1.ServiceList{},
+		&appsv1.StatefulSetList{},
 	}
 
-	if err := k8sClient.DeleteIngress(namespace, "kibana"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteSecret(namespace, "kibana-basic-auth"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteClusterRoleBinding("fluent-bit-read"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteClusterRole("fluent-bit-read"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteServiceAccount(namespace, "fluent-bit"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteHorizontalPodAutoscaler(namespace, "fluentd-es"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	for _, name := range services {
-		if err := k8sClient.DeleteService(namespace, name); err != nil && !apierrors.IsNotFound(err) {
+	listOptions := client.InNamespace(namespace).MatchingLabels(map[string]string{
+		GardenRole: GardenRoleLogging,
+	})
+
+	// TODO: Use `DeleteCollection` as soon it is in the controller-runtime:
+	// https://github.com/kubernetes-sigs/controller-runtime/pull/324
+
+	for _, list := range lists {
+		if err := k8sClient.Client().List(context.TODO(), listOptions, list); err != nil {
+			return err
+		}
+
+		if err := meta.EachListItem(list, func(obj runtime.Object) error {
+			if err := k8sClient.Client().Delete(context.TODO(), obj, kubernetes.DefaultDeleteOptionFuncs...); err != nil && !apierrors.IsNotFound(err) {
+				return err
+			}
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
-	for _, name := range configmaps {
-		if err := k8sClient.DeleteConfigMap(namespace, name); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-	}
+
 	return nil
 }
 

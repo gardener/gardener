@@ -4,8 +4,9 @@ metadata:
   name: kibana-saved-objects
   namespace: {{ .Release.Namespace }}
   labels:
-    app: kibana
+    app: kibana-logging
     role: logging
+    garden.sapcloud.io/role: logging
 data:
   index-pattern.json: |
     {

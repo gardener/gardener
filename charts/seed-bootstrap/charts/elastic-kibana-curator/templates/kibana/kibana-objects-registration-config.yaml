@@ -4,8 +4,9 @@ metadata:
   name: kibana-object-registration
   namespace: {{ .Release.Namespace }}
   labels:
-    app: kibana
+    app: kibana-logging
     role: logging
+    garden.sapcloud.io/role: logging
 data:
   register: |-
     #/bin/sh

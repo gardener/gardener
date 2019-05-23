@@ -195,7 +195,7 @@ First, start `minikube` with at least Kubernetes v1.11.x. The default CPU and me
 
 ```bash
 $ minikube start --cpus=4 --memory=8192
-😄  minikube v1.0.0 on darwin (amd64)
+😄  minikube v1.0.1 on darwin (amd64)
 🔥  Creating virtualbox VM (CPUs=4, Memory=8192MB, Disk=20000MB) ...
 [...]
 🏄  Done! Thank you for using minikube!

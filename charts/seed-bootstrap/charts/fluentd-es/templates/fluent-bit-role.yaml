@@ -3,8 +3,7 @@ kind: ClusterRole
 metadata:
   name: fluent-bit-read
   labels:
-    app: fluent-bit
-    role: logging
+    {{- toYaml .Values.fluentbit.labels | nindent 4 }}
 rules:
 - apiGroups: [""]
   resources:

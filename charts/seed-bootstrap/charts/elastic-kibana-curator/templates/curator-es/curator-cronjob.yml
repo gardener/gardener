@@ -4,9 +4,9 @@ metadata:
   name: hourly-curator
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: logging
     app: curator
     role: logging
+    garden.sapcloud.io/role: logging
 spec:
   schedule: {{ .Values.curator.hourly.schedule }}
   successfulJobsHistoryLimit: 1
@@ -50,9 +50,9 @@ metadata:
   name: daily-curator
   namespace: {{ .Release.Namespace }}
   labels:
-    garden.sapcloud.io/role: logging
     app: curator
     role: logging
+    garden.sapcloud.io/role: logging
 spec:
   schedule: {{ .Values.curator.daily.schedule }}
   successfulJobsHistoryLimit: 1
