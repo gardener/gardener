@@ -1718,7 +1718,24 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 
 	allErrs = append(allErrs, validateKubeControllerManager(kubernetes.Version, kubernetes.KubeControllerManager, fldPath.Child("kubeControllerManager"))...)
 	allErrs = append(allErrs, validateKubeProxy(kubernetes.KubeProxy, fldPath.Child("kubeProxy"))...)
+	if clusterAutoscaler := kubernetes.ClusterAutoscaler; clusterAutoscaler != nil {
+		allErrs = append(allErrs, ValidateClusterAutoscaler(*clusterAutoscaler, fldPath.Child("clusterAutoscaler"))...)
+	}
 
+	return allErrs
+}
+
+// ValidateClusterAutoscaler validates the given ClusterAutoscaler fields.
+func ValidateClusterAutoscaler(autoScaler garden.ClusterAutoscaler, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if threshold := autoScaler.ScaleDownUtilizationThreshold; threshold != nil {
+		if *threshold < 0.0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUtilizationThreshold"), *threshold, "can not be negative"))
+		}
+		if *threshold > 1.0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("scaleDownUtilizationThreshold"), *threshold, "can not be greater than 1.0"))
+		}
+	}
 	return allErrs
 }
 

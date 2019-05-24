@@ -37,6 +37,8 @@ spec:
       #   effect: NoSchedule
       zones: ['eu-west-1a']
   kubernetes:
+  # clusterAutoscaler:
+  #   scaleDownUtilizationThreshold: 0.5
     version: 1.14.0
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
@@ -169,7 +171,6 @@ spec:
     # you put here has no effect. This field will be removed in the future. Please do not use it anymore.
     cluster-autoscaler:
       enabled: true
-      # scaleDownUtilizationThreshold: 0.5 (default)
     # kube-lego addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
     # instead of enabling it here. You should not use this field anymore.

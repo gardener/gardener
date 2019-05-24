@@ -66,6 +66,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSVPC":                        schema_pkg_apis_garden_v1beta1_AWSVPC(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSWorker":                     schema_pkg_apis_garden_v1beta1_AWSWorker(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addon":                         schema_pkg_apis_garden_v1beta1_Addon(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AddonClusterAutoscaler":        schema_pkg_apis_garden_v1beta1_AddonClusterAutoscaler(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Addons":                        schema_pkg_apis_garden_v1beta1_Addons(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AdmissionPlugin":               schema_pkg_apis_garden_v1beta1_AdmissionPlugin(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Alicloud":                      schema_pkg_apis_garden_v1beta1_Alicloud(ref),
@@ -1747,6 +1748,27 @@ func schema_pkg_apis_garden_v1beta1_Addon(ref common.ReferenceCallback) common.O
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_AddonClusterAutoscaler(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enabled": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Enabled indicates whether the addon is enabled or not.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"enabled"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -1769,7 +1791,7 @@ func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.
 					"cluster-autoscaler": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ClusterAutoscaler holds configuration settings for the cluster autoscaler addon. DEPRECATED: This field will be removed in a future version.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler"),
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.AddonClusterAutoscaler"),
 						},
 					},
 					"heapster": {
@@ -1800,7 +1822,7 @@ func schema_pkg_apis_garden_v1beta1_Addons(ref common.ReferenceCallback) common.
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AddonClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Heapster", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Kube2IAM", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeLego", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Monocular", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.NginxIngress"},
 	}
 }
 
@@ -3291,25 +3313,17 @@ func schema_pkg_apis_garden_v1beta1_ClusterAutoscaler(ref common.ReferenceCallba
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.",
+				Description: "ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"enabled": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Enabled indicates whether the addon is enabled or not.",
-							Type:        []string{"boolean"},
-							Format:      "",
-						},
-					},
 					"scaleDownUtilizationThreshold": {
 						SchemaProps: spec.SchemaProps{
 							Description: "ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed",
-							Type:        []string{"string"},
-							Format:      "",
+							Type:        []string{"number"},
+							Format:      "double",
 						},
 					},
 				},
-				Required: []string{"enabled"},
 			},
 		},
 	}
@@ -4344,12 +4358,18 @@ func schema_pkg_apis_garden_v1beta1_Kubernetes(ref common.ReferenceCallback) com
 							Format:      "",
 						},
 					},
+					"clusterAutoscaler": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler"),
+						},
+					},
 				},
 				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeletConfig"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.CloudControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ClusterAutoscaler", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeAPIServerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeControllerManagerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeProxyConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeSchedulerConfig", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubeletConfig"},
 	}
 }
 

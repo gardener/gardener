@@ -1120,7 +1120,7 @@ type Addons struct {
 	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
 	// DEPRECATED: This field will be removed in a future version.
 	// +optional
-	ClusterAutoscaler *ClusterAutoscaler `json:"cluster-autoscaler,omitempty"`
+	ClusterAutoscaler *AddonClusterAutoscaler `json:"cluster-autoscaler,omitempty"`
 	// Heapster holds configuration settings for the heapster addon.
 	// DEPRECATED: This field will be removed in a future version.
 	// +optional
@@ -1164,11 +1164,8 @@ type KubernetesDashboard struct {
 }
 
 // ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
-type ClusterAutoscaler struct {
+type AddonClusterAutoscaler struct {
 	Addon `json:",inline"`
-	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
-	// +optional
-	ScaleDownUtilizationThreshold *string `json:"scaleDownUtilizationThreshold,omitempty"`
 }
 
 // NginxIngress describes configuration values for the nginx-ingress addon.
@@ -1310,6 +1307,15 @@ type Kubernetes struct {
 	Kubelet *KubeletConfig `json:"kubelet,omitempty"`
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	Version string `json:"version"`
+	// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+	ClusterAutoscaler *ClusterAutoscaler `json:"clusterAutoscaler,omitempty"`
+}
+
+// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+type ClusterAutoscaler struct {
+	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+	// +optional
+	ScaleDownUtilizationThreshold *float64 `json:"scaleDownUtilizationThreshold,omitempty"`
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.

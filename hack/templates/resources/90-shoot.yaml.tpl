@@ -278,6 +278,8 @@ spec:
   #     name: coreos
     % endif
   kubernetes:
+  # clusterAutoscaler:
+  #   scaleDownUtilizationThreshold: 0.5
     version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% cloudControllerManager=value("spec.kubernetes.cloudControllerManager", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
     allowPrivilegedContainers: ${value("spec.kubernetes.allowPrivilegedContainers", "true")} # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
     % if kubeAPIServer != {}:
@@ -450,7 +452,6 @@ spec:
     # you put here has no effect. This field will be removed in the future. Please do not use it anymore.
     cluster-autoscaler:
       enabled: ${value("spec.addons.cluster-autoscaler.enabled", "true")}
-      # scaleDownUtilizationThreshold: 0.5 (default)
     # kube-lego addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy your own kube-lego/cert-manager
     # instead of enabling it here. You should not use this field anymore.
