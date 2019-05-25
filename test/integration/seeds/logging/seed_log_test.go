@@ -211,8 +211,7 @@ var _ = Describe("Seed logging testing", func() {
 		seedLogTestLogger.Debugf("expected logs count is %d", expectedLogsCount)
 
 		By("Deploy the logger application")
-		var loggingAppTpl *template.Template
-		loggingAppTpl = template.Must(template.ParseFiles(filepath.Join(TemplateDir, LoggingAppTemplateName)))
+		loggingAppTpl := template.Must(template.ParseFiles(filepath.Join(TemplateDir, LoggingAppTemplateName)))
 
 		loggerParams := struct {
 			HelmDeployNamespace string

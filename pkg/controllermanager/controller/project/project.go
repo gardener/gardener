@@ -47,7 +47,6 @@ import (
 type Controller struct {
 	k8sGardenClient    kubernetes.Interface
 	k8sGardenInformers gardeninformers.SharedInformerFactory
-	k8sInformers       kubeinformers.SharedInformerFactory
 
 	control  ControlInterface
 	recorder record.EventRecorder
@@ -59,8 +58,6 @@ type Controller struct {
 	namespaceLister kubecorev1listers.NamespaceLister
 	namespaceQueue  workqueue.RateLimitingInterface
 	namespaceSynced cache.InformerSynced
-
-	shootLister gardenlisters.ShootLister
 
 	workerCh               chan int
 	numberOfRunningWorkers int

@@ -46,7 +46,6 @@ func New(o *operation.Operation, purpose string) (*AlicloudBotanist, error) {
 
 	case common.CloudPurposeSeed:
 		cloudProvider = o.Seed.CloudProvider
-		secret = o.Seed.Secret
 	}
 
 	if cloudProvider != gardenv1beta1.CloudProviderAlicloud {

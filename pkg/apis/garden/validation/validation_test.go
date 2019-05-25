@@ -5595,7 +5595,7 @@ var _ = Describe("validation", func() {
 				},
 				Spec: garden.BackupInfrastructureSpec{
 					Seed:     "aws",
-					ShootUID: types.UID(utils.ComputeSHA1Hex([]byte(fmt.Sprintf(fmt.Sprintf("shoot-%s-%s", "garden", "backup-infrastructure"))))),
+					ShootUID: types.UID(utils.ComputeSHA1Hex([]byte("shoot-garden-backup-infrastructure"))),
 				},
 			}
 		})
