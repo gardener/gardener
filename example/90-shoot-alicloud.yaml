@@ -92,6 +92,7 @@ spec:
   #     SomeKubernetesFeature: true
   #   mode: IPVS
   # kubelet:
+  #   cpuCFSQuota: true
   #   podPidsLimit: 10
   #   featureGates:
   #     SomeKubernetesFeature: true

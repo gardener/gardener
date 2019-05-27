@@ -358,6 +358,7 @@ spec:
     kubelet: ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
     % else:
   # kubelet:
+  #   cpuCFSQuota: true
   #   podPidsLimit: 10
   #   featureGates:
   #     SomeKubernetesFeature: true

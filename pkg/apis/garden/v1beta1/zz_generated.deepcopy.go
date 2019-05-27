@@ -1719,6 +1719,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(int64)
 		**out = **in
 	}
+	if in.CPUCFSQuota != nil {
+		in, out := &in.CPUCFSQuota, &out.CPUCFSQuota
+		*out = new(bool)
+		**out = **in
+	}
 	return
 }
 

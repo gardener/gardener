@@ -4274,6 +4274,13 @@ func schema_pkg_apis_garden_v1beta1_KubeletConfig(ref common.ReferenceCallback) 
 							Format:      "int64",
 						},
 					},
+					"cpuCFSQuota": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPUCFSQuota allows you to disable/enable CPU throttling for Pods.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
