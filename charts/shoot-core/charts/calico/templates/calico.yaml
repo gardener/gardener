@@ -80,27 +80,6 @@ spec:
       # deletion": https://kubernetes.io/docs/concepts/workloads/pods/pod/#termination-of-pods.
       terminationGracePeriodSeconds: 0
       initContainers:
-      # This container performs upgrade from host-local IPAM to calico-ipam.
-      # It can be deleted if this is a fresh installation, or if you have already
-      # upgraded to use calico-ipam.
-      - name: upgrade-ipam
-        image: {{ index .Values.images "calico-cni" }}
-        command: ["/opt/cni/bin/calico-ipam", "-upgrade"]
-        env:
-          - name: KUBERNETES_NODE_NAME
-            valueFrom:
-              fieldRef:
-                fieldPath: spec.nodeName
-          - name: CALICO_NETWORKING_BACKEND
-            valueFrom:
-              configMapKeyRef:
-                name: calico-config
-                key: calico_backend
-        volumeMounts:
-          - mountPath: /var/lib/cni/networks
-            name: host-local-net-dir
-          - mountPath: /host/opt/cni/bin
-            name: cni-bin-dir
       # This container installs the Calico CNI binaries
       # and CNI network config file on each node.
       - name: install-cni
@@ -265,12 +244,6 @@ spec:
         - name: cni-net-dir
           hostPath:
             path: /etc/cni/net.d
-        # Mount in the directory for host-local IPAM allocations. This is
-        # used when upgrading from host-local to calico-ipam, and can be removed
-        # if not using the upgrade-ipam init container.
-        - name: host-local-net-dir
-          hostPath:
-            path: /var/lib/cni/networks
 ---
 
 # This manifest creates a Service, which will be backed by Calico's Typha daemon.
