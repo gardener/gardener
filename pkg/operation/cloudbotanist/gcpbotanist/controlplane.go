@@ -140,7 +140,7 @@ func (b *GCPBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 func (b *GCPBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "gardener.cloud-fast",
-		"capacity":    "25Gi",
+		"capacity":    b.Seed.GetValidVolumeSize("25Gi"),
 		"provisioner": "kubernetes.io/gce-pd",
 		"parameters": map[string]interface{}{
 			"type": "pd-ssd",

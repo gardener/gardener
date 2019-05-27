@@ -5,7 +5,6 @@ images:
   etcd: image-repository:image-tag
   etcd-backup-restore: image-repository:image-tag
 
-storage: 10Gi
 storageClassName: default
 storageCapacity: 16Gi
 

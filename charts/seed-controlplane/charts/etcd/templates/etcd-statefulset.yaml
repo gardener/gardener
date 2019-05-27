@@ -74,8 +74,6 @@ spec:
             memory: 4Gi
         volumeMounts:
 {{- if eq .Values.role "main" }}
-        - name: etcd-{{ .Values.role }}
-          mountPath: /var/etcd/old-data
         - name: {{ .Values.role }}-etcd
           mountPath: /var/etcd/data
 {{- else }}
@@ -173,7 +171,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.storageCapacity }}
-{{- end }}
+{{- else }}
   - metadata:
       name: etcd-{{ .Values.role }}
     spec:
@@ -181,4 +179,5 @@ spec:
       - "ReadWriteOnce"
       resources:
         requests:
-          storage: {{ .Values.storage }}
+          storage: {{ .Values.storageCapacity }}
+{{- end }}

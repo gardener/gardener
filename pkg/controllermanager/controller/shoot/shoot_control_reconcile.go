@@ -154,6 +154,11 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deleting orphan etcd main persistent volume due to recent migration",
+			Fn:           flow.TaskFn(botanist.DeleteOrphanEtcdMainPVC),
+			Dependencies: flow.NewTaskIDs(deployETCD),
+		})
 		deployCloudProviderConfig = g.Add(flow.Task{
 			Name:         "Deploying cloud provider configuration",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudProviderConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),

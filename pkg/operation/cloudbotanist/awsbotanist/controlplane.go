@@ -160,7 +160,7 @@ func getAWSCredentialsEnvironment() []map[string]interface{} {
 func (b *AWSBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "gardener.cloud-fast",
-		"capacity":    "80Gi",
+		"capacity":    b.Seed.GetValidVolumeSize("80Gi"),
 		"provisioner": "kubernetes.io/aws-ebs",
 		"parameters": map[string]interface{}{
 			"type": "gp2",

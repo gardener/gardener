@@ -192,7 +192,7 @@ func (b *AzureBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, e
 func (b *AzureBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "gardener.cloud-fast",
-		"capacity":    "33Gi",
+		"capacity":    b.Seed.GetValidVolumeSize("33Gi"),
 		"provisioner": "kubernetes.io/azure-disk",
 		"parameters": map[string]interface{}{
 			"storageaccounttype": "Premium_LRS",
