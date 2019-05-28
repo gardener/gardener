@@ -51,8 +51,11 @@ groups:
 
   ### etcd proposal alerts ###
   # alert if there are several failed proposals within an hour
+  # Note: Increasing the failedProposals count to 80, known issue in etcd, fix in progress
+  # https://github.com/kubernetes/kubernetes/pull/64539 - fix in Kubernetes to be released with v1.15
+  # https://github.com/etcd-io/etcd/issues/9360 - ongoing discussion in etcd
   - alert: KubeEtcd3HighNumberOfFailedProposals
-    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 5
+    expr: increase(etcd_server_proposals_failed_total{job="kube-etcd3"}[1h]) > 80
     labels:
       service: etcd
       severity: warning
