@@ -22,6 +22,7 @@ package v1alpha1
 
 import (
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	v1 "k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -867,6 +868,27 @@ func (in *WorkerPool) DeepCopyInto(out *WorkerPool) {
 	*out = *in
 	out.MaxSurge = in.MaxSurge
 	out.MaxUnavailable = in.MaxUnavailable
+	if in.Annotations != nil {
+		in, out := &in.Annotations, &out.Annotations
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Labels != nil {
+		in, out := &in.Labels, &out.Labels
+		*out = make(map[string]string, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
+	}
+	if in.Taints != nil {
+		in, out := &in.Taints, &out.Taints
+		*out = make([]v1.Taint, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
 	out.MachineImage = in.MachineImage
 	if in.ProviderConfig != nil {
 		in, out := &in.ProviderConfig, &out.ProviderConfig

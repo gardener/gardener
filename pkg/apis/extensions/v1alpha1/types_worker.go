@@ -81,6 +81,15 @@ type WorkerPool struct {
 	MaxSurge intstr.IntOrString `json:"maxSurge"`
 	// MaxUnavailable is the maximum number of VMs that can be unavailable during an update.
 	MaxUnavailable intstr.IntOrString `json:"maxUnavailable"`
+	// Annotations is a map of key/value pairs for annotations for all the `Node` objects in this worker pool.
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// Labels is a map of key/value pairs for labels for all the `Node` objects in this worker pool.
+	// +optional
+	Labels map[string]string `json:"labels,omitempty"`
+	// Taints is a list of taints for all the `Node` objects in this worker pool.
+	// +optional
+	Taints []corev1.Taint `json:"taints,omitempty"`
 	// MachineImage contains logical information about the name and the version of the machie image that
 	// should be used. The logical information must be mapped to the provider-specific information (e.g.,
 	// AMIs, ...) by the provider itself.
