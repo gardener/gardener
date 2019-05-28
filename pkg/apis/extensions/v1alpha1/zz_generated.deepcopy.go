@@ -911,6 +911,11 @@ func (in *WorkerSpec) DeepCopyInto(out *WorkerSpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	out.SecretRef = in.SecretRef
+	if in.SSHPublicKey != nil {
+		in, out := &in.SSHPublicKey, &out.SSHPublicKey
+		*out = make([]byte, len(*in))
+		copy(*out, *in)
+	}
 	if in.Pools != nil {
 		in, out := &in.Pools, &out.Pools
 		*out = make([]WorkerPool, len(*in))

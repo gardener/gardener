@@ -64,6 +64,9 @@ type WorkerSpec struct {
 	Region string `json:"region"`
 	// SecretRef is a reference to a secret that contains the cloud provider specific credentials.
 	SecretRef corev1.SecretReference `json:"secretRef"`
+	// SSHPublicKey is the public SSH key that should be used with these workers.
+	// +optional
+	SSHPublicKey []byte `json:"sshPublicKey,omitempty"`
 	// Pools is a list of worker pools.
 	Pools []WorkerPool `json:"pools"`
 }
