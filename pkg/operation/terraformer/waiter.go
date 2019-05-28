@@ -16,14 +16,15 @@ package terraformer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // waitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
@@ -32,27 +33,27 @@ func (t *Terraformer) waitForCleanEnvironment(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
-		err := t.client.Get(ctx, kutil.Key(t.namespace, t.jobName), &batchv1.Job{})
+	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+		err = t.client.Get(ctx, kutil.Key(t.namespace, t.jobName), &batchv1.Job{})
 		if !apierrors.IsNotFound(err) {
 			if err != nil {
-				return false, err
+				return retry.SevereError(err)
 			}
 			t.logger.Infof("Waiting until no Terraform Job with name '%s' exist any more...", t.jobName)
-			return false, nil
+			return retry.MinorError(fmt.Errorf("terraform job %q still exists", t.jobName))
 		}
 
 		jobPodList, err := t.listJobPods(ctx)
 		if err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 		if len(jobPodList.Items) != 0 {
 			t.logger.Infof("Waiting until no Terraform Pods with label 'job-name=%s' exist any more...", t.jobName)
-			return false, nil
+			return retry.MinorError(fmt.Errorf("terraform pods with label 'job-name%s' still exist", t.jobName))
 		}
 
-		return true, nil
-	}, ctx.Done())
+		return retry.Ok()
+	})
 }
 
 // waitForPod waits for the Terraform validation Pod to be completed (either successful or failed).
@@ -65,16 +66,16 @@ func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		t.logger.Infof("Waiting for Terraform validation Pod '%s' to be completed...", t.podName)
 		pod := &corev1.Pod{}
-		err := t.client.Get(ctx, kutil.Key(t.namespace, t.podName), pod)
+		err = t.client.Get(ctx, kutil.Key(t.namespace, t.podName), pod)
 		if apierrors.IsNotFound(err) {
 			t.logger.Warn("Terraform validation Pod disappeared unexpectedly, somebody must have manually deleted it!")
-			return true, nil
+			return retry.Ok()
 		}
 		if err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		// Check whether the Job has been successful (at least one succeeded Pod)
@@ -87,11 +88,11 @@ func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 			if containerStateTerminated := containerStatuses[0].State.Terminated; containerStateTerminated != nil {
 				exitCode = containerStateTerminated.ExitCode
 			}
-			return true, nil
+			return retry.Ok()
 		}
 
-		return false, nil
-	}, ctx.Done()); err != nil {
+		return retry.MinorError(fmt.Errorf("job was not successful (phase=%s, no-of-container-states=%d)", phase, len(containerStatuses)))
+	}); err != nil {
 		exitCode = 1
 	}
 
@@ -105,30 +106,30 @@ func (t *Terraformer) waitForJob(ctx context.Context) bool {
 	defer cancel()
 
 	var succeeded = false
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		t.logger.Infof("Waiting for Terraform Job '%s' to be completed...", t.jobName)
 		job := &batchv1.Job{}
-		err := t.client.Get(ctx, kutil.Key(t.namespace, t.jobName), job)
+		err = t.client.Get(ctx, kutil.Key(t.namespace, t.jobName), job)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.logger.Warnf("Terraform Job %s disappeared unexpectedly, somebody must have manually deleted it!", t.jobName)
-				return true, nil
+				return retry.Ok()
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
 		// Check the job conditions to identify whether the job has been completed or failed.
 		for _, cond := range job.Status.Conditions {
 			if cond.Type == batchv1.JobComplete && cond.Status == corev1.ConditionTrue {
 				succeeded = true
-				return true, nil
+				return retry.Ok()
 			}
 			if cond.Type == batchv1.JobFailed && cond.Status == corev1.ConditionTrue {
 				t.logger.Errorf("Terraform Job %s failed for reason '%s': '%s'", t.jobName, cond.Reason, cond.Message)
-				return true, nil
+				return retry.Ok()
 			}
 		}
-		return false, nil
-	}, ctx.Done()); err != nil {
+		return retry.MinorError(fmt.Errorf("job %q is not yet completed", t.jobName))
+	}); err != nil {
 		t.logger.Errorf("Error while waiting for Terraform job: '%s'", err.Error())
 	}
 	return succeeded

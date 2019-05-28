@@ -138,10 +138,10 @@ func (c *Clientset) ForwardPodPort(namespace, name string, local, remote int) (c
 // CheckForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
 // the <local> port. If <local> equals zero, a free port will be chosen randomly.
 // It returns true if the port forward connection has been established successfully or false otherwise.
-func (c *Clientset) CheckForwardPodPort(namespace, name string, local, remote int) (bool, error) {
+func (c *Clientset) CheckForwardPodPort(namespace, name string, local, remote int) error {
 	fw, stopChan, err := c.setupForwardPodPort(namespace, name, local, remote)
 	if err != nil {
-		return false, err
+		return fmt.Errorf("could not setup pod port forwarding: %v", err)
 	}
 
 	errChan := make(chan error)
@@ -152,11 +152,11 @@ func (c *Clientset) CheckForwardPodPort(namespace, name string, local, remote in
 
 	select {
 	case err = <-errChan:
-		return false, fmt.Errorf("forwarding ports: %v", err)
+		return fmt.Errorf("error forwarding ports: %v", err)
 	case <-fw.Ready:
-		return true, nil
+		return nil
 	case <-time.After(time.Second * 5):
-		return false, errors.New("port forward connection could not be established within five seconds")
+		return errors.New("port forward connection could not be established within five seconds")
 	}
 }
 

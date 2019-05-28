@@ -16,7 +16,10 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -36,7 +39,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 )
 
@@ -52,12 +54,12 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 
 	// We create botanists (which will do the actual work).
 	var botanist *botanistpkg.Botanist
-	if err := utils.Retry(10*time.Second, 10*time.Minute, func() (ok, severe bool, err error) {
+	if err := utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 		botanist, err = botanistpkg.New(o)
 		if err != nil {
-			return false, false, err
+			return utilretry.MinorError(err)
 		}
-		return true, false, nil
+		return utilretry.Ok()
 	}); err != nil {
 		return formatError("Failed to create a Botanist", err)
 	}
@@ -234,7 +236,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		waitUntilKubeAddonManagerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes addon manager has been deleted",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAddonManagerDeleted),
+			Fn:           botanist.WaitUntilKubeAddonManagerDeleted,
 			Dependencies: flow.NewTaskIDs(deleteKubeAddonManager),
 		})
 
@@ -315,7 +317,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
-			Fn:           flow.TaskFn(botanist.DestroyInternalDomainDNSRecord),
+			Fn:           botanist.DestroyInternalDomainDNSRecord,
 			Dependencies: flow.NewTaskIDs(syncPoint),
 		})
 		deleteNamespace = g.Add(flow.Task{
@@ -325,7 +327,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until Shoot namespace in Seed has been deleted",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilSeedNamespaceDeleted),
+			Fn:           botanist.WaitUntilSeedNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
 		_ = g.Add(flow.Task{
@@ -416,19 +418,19 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
-	return wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+	return utilretry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
 		shoot, err := c.k8sGardenInformers.Shoots().Lister().Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
 		if apierrors.IsNotFound(err) {
-			return true, nil
+			return utilretry.Ok()
 		}
 		if err != nil {
-			return false, err
+			return utilretry.SevereError(err)
 		}
 		lastOperation := shoot.Status.LastOperation
 		if !sets.NewString(shoot.Finalizers...).Has(gardenv1beta1.GardenerName) && lastOperation != nil && lastOperation.Type == gardencorev1alpha1.LastOperationTypeDelete && lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded {
-			return true, nil
+			return utilretry.Ok()
 		}
-		return false, nil
+		return utilretry.MinorError(fmt.Errorf("shoot still has finalizer %s", gardenv1beta1.GardenerName))
 	})
 }
 

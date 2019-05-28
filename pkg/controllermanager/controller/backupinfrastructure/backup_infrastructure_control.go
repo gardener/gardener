@@ -15,10 +15,13 @@
 package backupinfrastructure
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
+
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -39,7 +42,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
@@ -340,7 +342,7 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until backup namespace is deleted",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilBackupNamespaceDeleted),
+			Fn:           botanist.WaitUntilBackupNamespaceDeleted,
 			Dependencies: flow.NewTaskIDs(deleteBackupNamespace),
 		})
 		f = g.Compile()
@@ -401,18 +403,18 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
-	return wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+	return utilretry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
 		backupInfrastructure, err := c.k8sGardenInformers.BackupInfrastructures().Lister().BackupInfrastructures(op.BackupInfrastructure.Namespace).Get(op.BackupInfrastructure.Name)
 		if apierrors.IsNotFound(err) {
-			return true, nil
+			return utilretry.Ok()
 		}
 		if err != nil {
-			return false, err
+			return utilretry.SevereError(err)
 		}
 		if !sets.NewString(backupInfrastructure.Finalizers...).Has(gardenv1beta1.GardenerName) {
-			return true, nil
+			return utilretry.Ok()
 		}
-		return false, nil
+		return utilretry.MinorError(fmt.Errorf("backup infrastructure still has finalizer %s", gardenv1beta1.GardenerName))
 	})
 }
 

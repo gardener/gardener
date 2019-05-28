@@ -19,7 +19,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/hashicorp/go-multierror"
 )
 
@@ -64,11 +65,11 @@ func (t TaskFn) DoIf(condition bool) TaskFn {
 // Deprecated: Retry handling should be done in the function itself, if necessary.
 func (t TaskFn) Retry(interval time.Duration) TaskFn {
 	return func(ctx context.Context) error {
-		return utils.RetryUntil(ctx, interval, func() (ok, severe bool, err error) {
+		return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 			if err := t(ctx); err != nil {
-				return false, false, err
+				return retry.MinorError(err)
 			}
-			return true, false, nil
+			return retry.Ok()
 		})
 	}
 }
@@ -87,15 +88,14 @@ func (t TaskFn) Timeout(timeout time.Duration) TaskFn {
 // RetryUntilTimeout returns a TaskFn that is retried until the timeout is reached.
 func (t TaskFn) RetryUntilTimeout(interval, timeout time.Duration) TaskFn {
 	return func(ctx context.Context) error {
-		var cancel func()
-		ctx, cancel = context.WithTimeout(ctx, timeout)
+		ctx, cancel := context.WithTimeout(ctx, timeout)
 		defer cancel()
 
-		return utils.RetryUntil(ctx, interval, func() (ok, severe bool, err error) {
+		return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 			if err := t(ctx); err != nil {
-				return false, false, err
+				return retry.MinorError(err)
 			}
-			return true, false, nil
+			return retry.Ok()
 		})
 	}
 }

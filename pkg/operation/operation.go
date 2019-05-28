@@ -22,6 +22,8 @@ import (
 	"strings"
 	"time"
 
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/gardener/gardener/pkg/utils/chart"
 
 	"github.com/gardener/gardener/pkg/operation/terraformer"
@@ -408,11 +410,11 @@ func (o *Operation) ChartInitializer(chartName string, values map[string]interfa
 		}
 		values["initializeEmptyState"] = config.InitializeState
 
-		return utils.Retry(5*time.Second, 30*time.Second, func() (bool, bool, error) {
-			if err := chartApplier.ApplyChart(context.TODO(), filepath.Join(common.TerraformerChartPath, chartName), config.Namespace, chartName, nil, values); err != nil {
-				return false, false, nil
+		return utilretry.UntilTimeout(context.TODO(), 5*time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
+			if err := chartApplier.ApplyChart(ctx, filepath.Join(common.TerraformerChartPath, chartName), config.Namespace, chartName, nil, values); err != nil {
+				return utilretry.MinorError(err)
 			}
-			return true, false, nil
+			return utilretry.Ok()
 		})
 	}
 }

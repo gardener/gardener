@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"time"
 
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -38,6 +40,7 @@ import (
 
 func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger logrus.FieldLogger) error {
 	var (
+		ctx        = context.TODO()
 		generation = project.Generation
 		err        error
 	)
@@ -81,11 +84,15 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
-			if err := utils.Retry(time.Second, time.Minute, func() (ok, severe bool, err error) {
-				if err := c.k8sGardenClient.DeleteNamespace(namespace.Name); err != nil && !apierrors.IsNotFound(err) {
-					return false, false, err
+			if err := utilretry.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
+				if err := c.k8sGardenClient.DeleteNamespace(namespace.Name); err != nil {
+					if apierrors.IsNotFound(err) {
+						return utilretry.Ok()
+					}
+					return utilretry.SevereError(err)
 				}
-				return true, false, nil
+
+				return utilretry.MinorError(fmt.Errorf("namespace %q still exists", namespace.Name))
 			}); err != nil {
 				c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, "Failed to delete created namespace for project %q: %v", namespace.Name, err)
 			}

@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package=context -destination=funcs.go github.com/gardener/gardener/pkg/mock/go/context WithTimeout,CancelFunc
-//go:generate mockgen -package=context -destination=mocks.go github.com/gardener/gardener/pkg/mock/go/context Context
-
 package context
 
 import (
@@ -22,18 +19,8 @@ import (
 	"time"
 )
 
-// Context allows mocking context.Context. The interface is necessary due to an issue with
-// golang/mock not being able to generate code for go's core context package.
-type Context interface {
-	context.Context
-}
-
-// WithTimeout is an interface that allows mocking `WithTimeout`.
-type WithTimeout interface {
-	Do(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc)
-}
-
-// CancelFunc is an interface that allows mocking `CancelFunc`.
-type CancelFunc interface {
-	Do()
+// Ops are operations to do with a context. They mimic the functions from the context package.
+type Ops interface {
+	// WithTimeout returns a new context with the given timeout that can be canceled with the returned function.
+	WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc)
 }

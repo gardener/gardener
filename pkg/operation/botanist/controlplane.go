@@ -535,14 +535,14 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := b.WaitUntilEtcdReady(); err != nil {
+	if err := b.WaitUntilEtcdReady(ctx); err != nil {
 		return err
 	}
 
 	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), 1); err != nil {
 		return err
 	}
-	if err := b.WaitUntilKubeAPIServerReady(); err != nil {
+	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
 		return err
 	}
 

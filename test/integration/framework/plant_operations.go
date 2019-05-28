@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+
 	"k8s.io/client-go/util/retry"
 
 	"k8s.io/api/core/v1"
@@ -31,7 +33,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 )
@@ -165,67 +166,67 @@ func (s *PlantTest) DeletePlant(ctx context.Context) error {
 
 // WaitForPlantToBeCreated waits for the plant to be created
 func (s *PlantTest) WaitForPlantToBeCreated(ctx context.Context) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		plant := &gardencorev1alpha1.Plant{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
-			return false, err
+			return utilretry.SevereError(err)
 		}
 
 		s.Logger.Infof("Plant %s has been created", s.Plant.Name)
-		return true, nil
-	}, ctx.Done())
+		return utilretry.Ok()
+	})
 }
 
 // WaitForPlantToBeDeleted waits for the plant to be deleted
 func (s *PlantTest) WaitForPlantToBeDeleted(ctx context.Context) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		plant := &gardencorev1alpha1.Plant{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.ObjectMeta.Namespace, Name: s.Plant.ObjectMeta.Name}, plant)
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.ObjectMeta.Namespace, Name: s.Plant.ObjectMeta.Name}, plant)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				return true, nil
+				return utilretry.Ok()
 			}
-			return false, err
+			return utilretry.SevereError(err)
 		}
 		s.Logger.Infof("Waiting for plant %s to be deleted", s.Plant.ObjectMeta.Name)
-		return false, nil
+		return utilretry.MinorError(fmt.Errorf("plant %q is still present", s.Plant.Name))
 
-	}, ctx.Done())
+	})
 }
 
 // WaitForPlantToBeReconciledSuccessfully waits for the plant to be reconciled with a status indicating success
 func (s *PlantTest) WaitForPlantToBeReconciledSuccessfully(ctx context.Context) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		plant := &gardencorev1alpha1.Plant{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
-			return false, err
+			return utilretry.SevereError(err)
 		}
 
 		if plantCreationSuccessful(&plant.Status) {
-			return true, nil
+			return utilretry.Ok()
 		}
 
 		s.Logger.Infof("Waiting for Plant %s to be successfully reconciled", s.Plant.Name)
-		return false, nil
-	}, ctx.Done())
+		return utilretry.MinorError(fmt.Errorf("plant %q was not successfully reconciled", s.Plant.Name))
+	})
 }
 
 // WaitForPlantToBeReconciledWithUnknownStatus waits for the plant to be reconciled, setting the expected status 'unknown'
 func (s *PlantTest) WaitForPlantToBeReconciledWithUnknownStatus(ctx context.Context) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+	return utilretry.Until(ctx, 2*time.Second, func(ctx context.Context) (done bool, err error) {
 		plant := &gardencorev1alpha1.Plant{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Plant.Namespace, Name: s.Plant.Name}, plant)
 		if err != nil {
-			return false, err
+			return utilretry.SevereError(err)
 		}
 
 		if plantReconciledWithStatusUnknown(&plant.Status) {
-			return true, nil
+			return utilretry.Ok()
 		}
 
 		s.Logger.Infof("Waiting for Plant %s to be reconciled with status : 'unknown'", s.Plant.Name)
-		return false, nil
-	}, ctx.Done())
+		return utilretry.MinorError(fmt.Errorf("plant %q was not reconciled with status 'unknown'", s.Plant.Name))
+	})
 }
