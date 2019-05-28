@@ -28,6 +28,10 @@ func (c *FakeExtensionsV1alpha1) Infrastructures(namespace string) v1alpha1.Infr
 	return &FakeInfrastructures{c, namespace}
 }
 
+func (c *FakeExtensionsV1alpha1) Networks(namespace string) v1alpha1.NetworkInterface {
+	return &FakeNetworks{c, namespace}
+}
+
 func (c *FakeExtensionsV1alpha1) OperatingSystemConfigs(namespace string) v1alpha1.OperatingSystemConfigInterface {
 	return &FakeOperatingSystemConfigs{c, namespace}
 }

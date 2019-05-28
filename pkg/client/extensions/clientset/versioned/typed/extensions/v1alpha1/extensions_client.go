@@ -15,6 +15,7 @@ type ExtensionsV1alpha1Interface interface {
 	ControlPlanesGetter
 	ExtensionsGetter
 	InfrastructuresGetter
+	NetworksGetter
 	OperatingSystemConfigsGetter
 	WorkersGetter
 }
@@ -38,6 +39,10 @@ func (c *ExtensionsV1alpha1Client) Extensions(namespace string) ExtensionInterfa
 
 func (c *ExtensionsV1alpha1Client) Infrastructures(namespace string) InfrastructureInterface {
 	return newInfrastructures(c, namespace)
+}
+
+func (c *ExtensionsV1alpha1Client) Networks(namespace string) NetworkInterface {
+	return newNetworks(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) OperatingSystemConfigs(namespace string) OperatingSystemConfigInterface {

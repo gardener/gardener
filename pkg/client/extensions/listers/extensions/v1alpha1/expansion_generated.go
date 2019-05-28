@@ -34,6 +34,14 @@ type InfrastructureListerExpansion interface{}
 // InfrastructureNamespaceLister.
 type InfrastructureNamespaceListerExpansion interface{}
 
+// NetworkListerExpansion allows custom methods to be added to
+// NetworkLister.
+type NetworkListerExpansion interface{}
+
+// NetworkNamespaceListerExpansion allows custom methods to be added to
+// NetworkNamespaceLister.
+type NetworkNamespaceListerExpansion interface{}
+
 // OperatingSystemConfigListerExpansion allows custom methods to be added to
 // OperatingSystemConfigLister.
 type OperatingSystemConfigListerExpansion interface{}

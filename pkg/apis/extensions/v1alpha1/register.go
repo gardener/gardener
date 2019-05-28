@@ -53,6 +53,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&OperatingSystemConfigList{},
 		&Worker{},
 		&WorkerList{},
+		&Network{},
+		&NetworkList{},
 		&ControlPlane{},
 		&ControlPlaneList{},
 	)
