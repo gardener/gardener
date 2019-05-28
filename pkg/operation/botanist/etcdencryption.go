@@ -24,11 +24,12 @@ const (
 
 // CreateEtcdEncryptionConfiguration creates a secret
 func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
-	logger.Logger.Info("Starting CreateEtcdEncryptionConfiguration")
+	logger.Logger.Info("starting CreateEtcdEncryptionConfiguration")
 
 	// TODOME: question do we need a switch to de-activate the encryption feature (although we all agreed to have 'secure by default')?
 
 	needToWriteConfig := false
+	logger.Logger.Trace("reading EncryptionConfiguration from seed")
 	exists, ecSeed, forcePlaintext, err := b.readEncryptionConfigurationFromSeed()
 	if err != nil {
 		return err
@@ -36,30 +37,35 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 	if !exists {
 		// create new passive EncryptionConfiguration if it does not exist yet
 		// and remember to write this created configuration
+		logger.Logger.Info("no EncryptionConfiguration found in seed. Creating new passive configuration.")
 		ecSeed, err = encryptionconfiguration.CreateNewPassiveConfiguration()
 		if err != nil {
 			return err
 		}
 		needToWriteConfig = true
 	} else {
-		// if it exists already, it needs to be consistent
+		logger.Logger.Trace("reading EncryptionConfiguration from garden")
 		exists, ecGarden, err := b.readEncryptionConfigurationFromGarden()
 		if err != nil {
 			return err
 		} else if !exists {
 			return fmt.Errorf("EncryptionConfiguration exists in seed but not in garden")
 		}
+		// if it exists already, it needs to be consistent
 		consistent, err := b.isEncryptionConfigurationConsistent(ecSeed, ecGarden)
 		if (err != nil) || !consistent {
 			return err
 		}
+		// TODOME: plaintext annotation gets lost .. check why!
 		if forcePlaintext && encryptionconfiguration.IsActive(ecSeed) {
 			// if annotation requires plaintext secrets, thou shalt get plaintext secrets
+			logger.Logger.Info("de-activating existing active EncryptionConfiguration. Note: secrets will be decrypted in etcd subsequently")
 			encryptionconfiguration.SetActive(ecSeed, false)
 			needToWriteConfig = true
 		} else if !encryptionconfiguration.IsActive(ecSeed) {
 			// if it is not active already (aescbc as first provider) then set it to active
 			// and remember to write this created configuration
+			logger.Logger.Info("activating existing passive EncryptionConfiguration")
 			encryptionconfiguration.SetActive(ecSeed, true)
 			needToWriteConfig = true
 		}
@@ -69,6 +75,7 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 		return err
 	}
 	if needToWriteConfig {
+		logger.Logger.Info("writing new/updated EncryptionConfiguration")
 		err = b.writeEncryptionConfiguration(ecSeedYamlBytes)
 		if err != nil {
 			return err
@@ -83,9 +90,9 @@ func (b *Botanist) CreateEtcdEncryptionConfiguration() error {
 	return nil
 }
 
-// RewriteShootSecrets rewrites a shoot's secrets if the EncryptionConfiguration has changed
-func (b *Botanist) RewriteShootSecrets() error {
-	logger.Logger.Info("Starting RewriteShootSecrets")
+// RewriteShootSecretsIfEncryptionConfigurationChanged rewrites a shoot's secrets if the EncryptionConfiguration has changed
+func (b *Botanist) RewriteShootSecretsIfEncryptionConfigurationChanged() error {
+	logger.Logger.Info("starting RewriteShootSecretsIfEncryptionConfigurationChanged")
 	// WARNING:
 	// No explicit checking of whether EncryptionConfiguration is contained in a backup.
 	// Be aware of the risk!
@@ -99,10 +106,13 @@ func (b *Botanist) RewriteShootSecrets() error {
 		return err
 	}
 	if needToRewrite {
+		logger.Logger.Info("rewriting shoot secrets")
 		err = b.rewriteShootSecrets()
 		if err != nil {
 			return err
 		}
+	} else {
+		logger.Logger.Trace("EncryptionConfiguration unchanged, no rewriting necessary")
 	}
 	return nil
 }
@@ -178,6 +188,8 @@ func (b *Botanist) writeEncryptionConfiguration(ecYamlBytes []byte) error {
 // writeEncryptionConfigurationSecretToSeed writes the secret which contains the EncryptionConfiguration
 // to the shoot namespace in the seed cluster
 func (b *Botanist) writeEncryptionConfigurationSecretToSeed(ecYamlBytes []byte) error {
+	logger.Logger.Info("starting writeEncryptionConfigurationSecretToSeed")
+
 	client := b.Operation.K8sSeedClient
 	secretObj := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -192,12 +204,14 @@ func (b *Botanist) writeEncryptionConfigurationSecretToSeed(ecYamlBytes []byte) 
 	if _, err := client.CreateSecretObject(secretObj, true); err != nil {
 		return err
 	}
+	logger.Logger.Info("EncryptionConfiguration written to seed successfully")
 	return nil
 }
 
 // writeEncryptionConfigurationSecretToGarden writes the secret which contains the EncryptionConfiguration
 // to the garden cluster
 func (b *Botanist) writeEncryptionConfigurationSecretToGarden(ecYamlBytes []byte) error {
+	logger.Logger.Info("starting writeEncryptionConfigurationSecretToGarden")
 	client := b.Operation.K8sGardenClient
 	secretNameInGardenCluster := b.calculateEtcdEncryptionSecretNameInGardenCluster()
 	secretObj := &corev1.Secret{
@@ -216,6 +230,7 @@ func (b *Botanist) writeEncryptionConfigurationSecretToGarden(ecYamlBytes []byte
 	if _, err := client.CreateSecretObject(secretObj, true); err != nil {
 		return err
 	}
+	logger.Logger.Info("EncryptionConfiguration written to garden successfully")
 	return nil
 }
 
@@ -234,15 +249,19 @@ func (b *Botanist) isEncryptionConfigurationConsistent(ecSeed *apiserverconfigv1
 
 // needToRewriteShootSecrets checks whether the secrets in the shoot need to
 // be rewritten, e.g. after a change to the EncryptionConfiguration
-func (b *Botanist) needToRewriteShootSecrets() (bool, error) {
+func (b *Botanist) needToRewriteShootSecrets() (needToRewriteSecrets bool, err error) {
 	client := b.Operation.K8sSeedClient
 	ecs, err := client.GetSecret(b.Operation.Shoot.SeedNamespace, common.EtcdEncryptionSecretName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("No EncryptionConfiguration found in seed cluster (%v)", b.Operation.Shoot.SeedNamespace)
+			return false, fmt.Errorf("no EncryptionConfiguration found in seed cluster (%v)", b.Operation.Shoot.SeedNamespace)
 		} else {
 			return false, err
 		}
+	}
+	if ecs.Annotations == nil {
+		// no annotations found, rewrite secrets
+		return true, nil
 	}
 	lastSecretRewriteChecksum, ok := ecs.Annotations[common.EtcdEncryptionChecksumAnnotationName]
 	if !ok {
@@ -262,15 +281,18 @@ func (b *Botanist) needToRewriteShootSecrets() (bool, error) {
 // This will take into account the current EncryptionConfiguration.
 func (b *Botanist) rewriteShootSecrets() error {
 	client := b.Operation.K8sShootClient
-
 	secretList, err := client.ListSecrets(metav1.NamespaceAll, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
 	for _, secret := range secretList.Items {
+		secretName := secret.GetName()
+		secretNamespace := secret.GetNamespace()
 		_, err := client.UpdateSecretObject(&secret)
 		if err != nil {
-			return err
+			return fmt.Errorf("error occurred when rewriting secret %v/%v: %v", secretNamespace, secretName, err)
+		} else {
+			logger.Logger.Infof("successfully rewrote secret %v/%v", secretNamespace, secretName)
 		}
 	}
 	// remember checksum of EncryptionConfiguration used for rewriting shoot secrets
@@ -279,10 +301,13 @@ func (b *Botanist) rewriteShootSecrets() error {
 	ecs, err := client.GetSecret(b.Operation.Shoot.SeedNamespace, common.EtcdEncryptionSecretName)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return fmt.Errorf("No EncryptionConfiguration found in seed cluster (%v)", b.Operation.Shoot.SeedNamespace)
+			return fmt.Errorf("no EncryptionConfiguration found in seed cluster (%v)", b.Operation.Shoot.SeedNamespace)
 		} else {
 			return fmt.Errorf("error occurred when reading EncryptionConfiguration in seed cluster (%v): %v", b.Operation.Shoot.SeedNamespace, err)
 		}
+	}
+	if ecs.Annotations == nil {
+		ecs.Annotations = make(map[string]string, 1)
 	}
 	ecs.Annotations[common.EtcdEncryptionChecksumAnnotationName] = b.CheckSums[common.EtcdEncryptionSecretName]
 	_, err = client.UpdateSecretObject(ecs)

@@ -175,8 +175,8 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployCloudSpecificControlPlane),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Rewriting shoot secrets",
-			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecrets),
+			Name:         "Rewriting shoot secrets if EncryptionConfiguration has changed",
+			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, createEtcdEncryptionConfiguration),
 		})
 		_ = g.Add(flow.Task{
