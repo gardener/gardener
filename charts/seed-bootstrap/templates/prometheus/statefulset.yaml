@@ -97,6 +97,7 @@ spec:
           readOnly: true
         - mountPath: /etc/prometheus/rules
           name: rules
+          readOnly: true
       terminationGracePeriodSeconds: 300
       volumes:
       - name: config

@@ -20,7 +20,7 @@ tests:
     values: '0+0x30'
   # KubeEtcd3HighNumberOfFailedProposals
   - series: 'etcd_server_proposals_failed_total{job="kube-etcd3", pod="etcd"}'
-    values: '0+0x15 1+0x15 2+0x15 3+0x15 4+0x15 5+0x15 6+0x15 7+0x15'
+    values: '0+1x81 81+0x39'
   alert_rule_test:
   - eval_time: 5m
     alertname: KubeEtcdMainDown
@@ -77,6 +77,6 @@ tests:
         pod: etcd
         job: kube-etcd3
       exp_annotations:
-        description: Etcd3 pod etcd has seen 7 proposal failures
+        description: Etcd3 pod etcd has seen 81 proposal failures
           within the last hour.
         summary: High number of failed etcd proposals

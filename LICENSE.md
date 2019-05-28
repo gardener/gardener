@@ -287,25 +287,25 @@ https://github.com/robfig/cron.
 Copyright (C) 2012 Rob Figueiredo.  
 MIT license (https://github.com/robfig/cron/blob/master/LICENSE)
 
-errors
-https://github.com/pkg/errors
-Copyright (c) 2015, Dave Cheney.
+errors  
+https://github.com/pkg/errors  
+Copyright (c) 2015, Dave Cheney.  
 BSD 2-Clause "Simplified" License (https://github.com/pkg/errors/blob/master/LICENSE)
 
-go-multierror
-https://github.com/hashicorp/go-multierror
-Copyright (c) 2015, Hashicorp.
+go-multierror  
+https://github.com/hashicorp/go-multierror  
+Copyright (c) 2015, Hashicorp.  
 MPL-2.0 (https://github.com/hashicorp/go-multierror/blob/master/LICENSE)
 
-go-jmespath
-https://github.com/jmespath/go-jmespath
-Copyright 2015 James Saryerwinnie
-Apache License, Version 2
-(https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
+go-jmespath  
+https://github.com/jmespath/go-jmespath  
+Copyright 2015 James Saryerwinnie  
+Apache License, Version 2 (https://github.com/jmespath/go-jmespath/blob/master/LICENSE)
 
-alibaba-cloud-sdk-go
-https://github.com/aliyun/alibaba-cloud-sdk-go
+alibaba-cloud-sdk-go  
+https://github.com/aliyun/alibaba-cloud-sdk-go  
 Apache License 2.0 (https://github.com/aliyun/alibaba-cloud-sdk-go/blob/master/LICENSE)
+
 ------
 ## MIT License
 

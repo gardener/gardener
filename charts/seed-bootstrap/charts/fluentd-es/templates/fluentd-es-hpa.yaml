@@ -4,6 +4,8 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: fluentd-es
   namespace: {{ .Release.Namespace }}
+  labels:
+    {{- toYaml .Values.fluentd.labels | nindent 4 }}
 spec:
   minReplicas: {{ .Values.fluentd.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.fluentd.autoscaling.maxReplicas }}

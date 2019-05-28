@@ -6,6 +6,7 @@ metadata:
   labels:
     app: kibana-logging
     role: logging
+    garden.sapcloud.io/role: logging
 spec:
   ports:
   - port: {{ .Values.kibana.service.internalPort }}

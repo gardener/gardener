@@ -6,6 +6,7 @@ metadata:
   labels:
     app: elasticsearch-logging
     role: logging
+    garden.sapcloud.io/role: logging
 data:
   elasticsearch.yml: |-
     node:

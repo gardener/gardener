@@ -401,8 +401,11 @@ const (
 	// then the namespace in the seed will be annotated with <AnnotateSeedNamespacePrefix>key=value, as well.
 	AnnotateSeedNamespacePrefix = "custom.shoot.sapcloud.io/"
 
-	//AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
+	// AnnotatePersistentVolumeMinimumSize is used to specify the minimum size of persistent volume in the cluster
 	AnnotatePersistentVolumeMinimumSize = "persistentvolume.garden.sapcloud.io/minimumSize"
+
+	// AnnotatePersistentVolumeProvider is used to tell volume provider in the k8s cluster
+	AnnotatePersistentVolumeProvider = "persistentvolume.garden.sapcloud.io/provider"
 
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
@@ -530,6 +533,9 @@ const (
 
 	// ElasticsearchImageName is the name of the Elastic-Search image used for logging
 	ElasticsearchImageName = "elasticsearch-oss"
+
+	// ElasticsearchMetricsExporterImageName is the name of the metrics exporter image used to fetch elasticsearch metrics.
+	ElasticsearchMetricsExporterImageName = "elasticsearch-metrics-exporter"
 
 	// CuratorImageName is the name of the curator image used to alter the Elastic-search logs
 	CuratorImageName = "curator-es"

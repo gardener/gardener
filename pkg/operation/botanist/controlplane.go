@@ -339,6 +339,9 @@ func (b *Botanist) DeploySeedMonitoring() error {
 					"alertmanager": map[string]interface{}{
 						"enabled": b.Shoot.WantsAlertmanager,
 					},
+					"elasticsearch": map[string]interface{}{
+						"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.Logging),
+					},
 				},
 			},
 			"shoot": map[string]interface{}{
@@ -484,6 +487,7 @@ func (b *Botanist) DeploySeedLogging() error {
 
 	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
 		common.ElasticsearchImageName,
+		common.ElasticsearchMetricsExporterImageName,
 		common.CuratorImageName,
 		common.KibanaImageName,
 		common.AlpineImageName,

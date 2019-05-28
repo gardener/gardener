@@ -6,11 +6,16 @@ metadata:
   labels:
     app: elasticsearch-logging
     role: logging
+    garden.sapcloud.io/role: logging
 spec:
   ports:
-  - port: {{ .Values.global.elasticsearchPorts.db }}
+  - name: db
+    port: {{ .Values.global.elasticsearchPorts.db }}
     protocol: TCP
     targetPort: http
+  - name: metrics
+    port: {{ .Values.global.elasticsearchPorts.metricsExporter }}
+    protocol: TCP
   selector:
     app: elasticsearch-logging
     role: logging
