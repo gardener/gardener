@@ -17,6 +17,7 @@ package alicloudbotanist
 import (
 	"fmt"
 
+	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
@@ -48,39 +49,41 @@ func (b *AlicloudBotanist) GenerateMachineClassSecretData() map[string][]byte {
 // the desired availability zones. It returns the computed list of MachineClasses and MachineDeployments.
 func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, operation.MachineDeployments, error) {
 	var (
-		securityGroupID     = "sg_id"
-		keyPairName         = "key_pair_name"
-		outputVariables     = []string{securityGroupID, keyPairName}
-		workers             = b.Shoot.Info.Spec.Cloud.Alicloud.Workers
-		zones               = b.Shoot.Info.Spec.Cloud.Alicloud.Zones
-		machineDeployments  = operation.MachineDeployments{}
-		machineClasses      = []map[string]interface{}{}
-		secretData          = b.GenerateMachineClassSecretData()
-		tfOutputNameVswitch = func(zoneIndex int) string {
-			return fmt.Sprintf("vswitch_id_z%d", zoneIndex)
-		}
+		machineDeployments = operation.MachineDeployments{}
+		machineClasses     = []map[string]interface{}{}
+
+		secretData = b.GenerateMachineClassSecretData()
 	)
-	for zoneIndex := range zones {
-		outputVariables = append(outputVariables, tfOutputNameVswitch(zoneIndex))
+
+	// This code will only exist temporarily until we have introduced the `Worker` extension. Gardener
+	// will no longer compute the machine config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return nil, nil, fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
+	if err != nil {
+		return nil, nil, err
+	}
+	nodesSecurityGroup, err := findSecurityGroupByPurpose(infrastructureStatus.VPC.SecurityGroups, alicloudv1alpha1.PurposeNodes)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
-	if err != nil {
-		return nil, nil, err
-	}
-	stateVariables, err := tf.GetStateOutputVariables(outputVariables...)
-	if err != nil {
-		return nil, nil, err
-	}
-	for zoneIndex, zone := range zones {
-		for _, worker := range workers {
+	for _, zone := range b.Shoot.Info.Spec.Cloud.Alicloud.Zones {
+		nodesVSwitch, err := findVSWitchByPurposeAndZone(infrastructureStatus.VPC.VSwitches, alicloudv1alpha1.PurposeNodes, zone)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, worker := range b.Shoot.Info.Spec.Cloud.Alicloud.Workers {
 			machineClassSpec := map[string]interface{}{
 				"imageID":         b.Shoot.Info.Spec.Cloud.Alicloud.MachineImage.ID,
 				"instanceType":    worker.MachineType,
 				"region":          b.Shoot.Info.Spec.Cloud.Region,
 				"zoneID":          zone,
-				"securityGroupID": stateVariables[securityGroupID],
-				"vSwitchID":       stateVariables[tfOutputNameVswitch(zoneIndex)],
+				"securityGroupID": nodesSecurityGroup.ID,
+				"vSwitchID":       nodesVSwitch.ID,
 				"systemDisk": map[string]interface{}{
 					"category": worker.VolumeType,
 					"size":     common.DiskSize(worker.VolumeSize),
@@ -97,7 +100,7 @@ func (b *AlicloudBotanist) GenerateMachineConfig() ([]map[string]interface{}, op
 				"secret": map[string]interface{}{
 					UserData: b.Shoot.CloudConfigMap[worker.Name].Downloader.Content,
 				},
-				"keyPairName": stateVariables[keyPairName],
+				"keyPairName": infrastructureStatus.KeyPairName,
 			}
 
 			var (
