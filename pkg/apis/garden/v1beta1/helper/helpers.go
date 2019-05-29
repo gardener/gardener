@@ -156,33 +156,33 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 	return workers
 }
 
-// GetMachineImageNameFromShoot returns the machine image name used in a shoot manifest, however, it requires the cloudprovider as input.
-func GetMachineImageNameFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) gardenv1beta1.MachineImageName {
+// GetMachineImageFromShoot returns the machine image used in a shoot manifest, however, it requires the cloudprovider as input.
+func GetMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) *gardenv1beta1.MachineImage {
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
-		return shoot.Spec.Cloud.AWS.MachineImage.Name
+		return shoot.Spec.Cloud.AWS.MachineImage
 	case gardenv1beta1.CloudProviderAzure:
-		return shoot.Spec.Cloud.Azure.MachineImage.Name
+		return shoot.Spec.Cloud.Azure.MachineImage
 	case gardenv1beta1.CloudProviderGCP:
-		return shoot.Spec.Cloud.GCP.MachineImage.Name
+		return shoot.Spec.Cloud.GCP.MachineImage
 	case gardenv1beta1.CloudProviderAlicloud:
-		return shoot.Spec.Cloud.Alicloud.MachineImage.Name
+		return shoot.Spec.Cloud.Alicloud.MachineImage
 	case gardenv1beta1.CloudProviderOpenStack:
-		return shoot.Spec.Cloud.OpenStack.MachineImage.Name
+		return shoot.Spec.Cloud.OpenStack.MachineImage
 	case gardenv1beta1.CloudProviderPacket:
-		return shoot.Spec.Cloud.Packet.MachineImage.Name
+		return shoot.Spec.Cloud.Packet.MachineImage
 	}
-	return ""
+	return nil
 }
 
-// GetShootMachineImageName returns the machine image name used in a shoot manifest.
-func GetShootMachineImageName(shoot *gardenv1beta1.Shoot) (gardenv1beta1.MachineImageName, error) {
+// GetShootMachineImage returns the machine image used in a shoot manifest.
+func GetShootMachineImage(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.MachineImage, error) {
 	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return GetMachineImageNameFromShoot(cloudProvider, shoot), nil
+	return GetMachineImageFromShoot(cloudProvider, shoot), nil
 }
 
 // GetMachineTypesFromCloudProfile retrieves list of machine types from cloud profile
@@ -251,100 +251,66 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 // DetermineMachineImage finds the cloud specific machine image in the <cloudProfile> for the given <name> and
 // region. In case it does not find a machine image with the <name>, it returns false. Otherwise, true and the
 // cloud-specific machine image object will be returned.
-func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name gardenv1beta1.MachineImageName, region string) (bool, interface{}, error) {
+func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name string) (bool, *gardenv1beta1.MachineImage, error) {
 	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
 	if err != nil {
 		return false, nil, err
 	}
 
-	currentMachineImageName := machineImageToString(name)
+	var (
+		currentMachineImageName = machineImageLowerCase(name)
+		machineImages           []gardenv1beta1.MachineImage
+	)
 
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
-		for _, image := range cloudProfile.Spec.AWS.Constraints.MachineImages {
-			if machineImageToString(image.Name) == currentMachineImageName {
-				for _, regionMapping := range image.Regions {
-					if regionMapping.Name == region {
-						return true, &gardenv1beta1.AWSMachineImage{
-							Name: image.Name,
-							AMI:  regionMapping.AMI,
-						}, nil
-					}
-				}
-			}
-		}
+		machineImages = cloudProfile.Spec.AWS.Constraints.MachineImages
 	case gardenv1beta1.CloudProviderAzure:
-		for _, image := range cloudProfile.Spec.Azure.Constraints.MachineImages {
-			if machineImageToString(image.Name) == currentMachineImageName {
-				ptr := image
-				return true, &ptr, nil
-			}
-		}
+		machineImages = cloudProfile.Spec.Azure.Constraints.MachineImages
 	case gardenv1beta1.CloudProviderGCP:
-		for _, image := range cloudProfile.Spec.GCP.Constraints.MachineImages {
-			if machineImageToString(image.Name) == currentMachineImageName {
-				ptr := image
-				return true, &ptr, nil
-			}
-		}
+		machineImages = cloudProfile.Spec.GCP.Constraints.MachineImages
 	case gardenv1beta1.CloudProviderOpenStack:
-		for _, image := range cloudProfile.Spec.OpenStack.Constraints.MachineImages {
-			if machineImageToString(image.Name) == currentMachineImageName {
-				ptr := image
-				return true, &ptr, nil
-			}
-		}
+		machineImages = cloudProfile.Spec.OpenStack.Constraints.MachineImages
 	case gardenv1beta1.CloudProviderAlicloud:
-		for _, image := range cloudProfile.Spec.Alicloud.Constraints.MachineImages {
-			// The OR-case can be removed in a further version of Gardener. We need it to migrate from in-tree OS support
-			// to out-of-tree extensions.
-			if name := machineImageToString(image.Name); name == currentMachineImageName || (currentMachineImageName == "coreos" && name == "coreos-alicloud") {
-				ptr := image
-				return true, &ptr, nil
-			}
-		}
+		machineImages = cloudProfile.Spec.Alicloud.Constraints.MachineImages
 	case gardenv1beta1.CloudProviderPacket:
-		for _, image := range cloudProfile.Spec.Packet.Constraints.MachineImages {
-			if image.Name == name {
-				ptr := image
-				return true, &ptr, nil
-			}
-		}
+		machineImages = cloudProfile.Spec.Packet.Constraints.MachineImages
 	default:
 		return false, nil, fmt.Errorf("unknown cloud provider %s", cloudProvider)
+	}
+
+	for _, image := range machineImages {
+		if machineImageLowerCase(image.Name) == currentMachineImageName {
+			ptr := image
+			return true, &ptr, nil
+		}
 	}
 
 	return false, nil, nil
 }
 
 // UpdateMachineImage updates the machine image for the given cloud provider.
-func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage interface{}) func(*gardenv1beta1.Cloud) {
+func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage *gardenv1beta1.MachineImage) func(*gardenv1beta1.Cloud) {
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
-		image := machineImage.(*gardenv1beta1.AWSMachineImage)
-		return func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = image }
+		return func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = machineImage }
 	case gardenv1beta1.CloudProviderAzure:
-		image := machineImage.(*gardenv1beta1.AzureMachineImage)
-		return func(s *gardenv1beta1.Cloud) { s.Azure.MachineImage = image }
+		return func(s *gardenv1beta1.Cloud) { s.Azure.MachineImage = machineImage }
 	case gardenv1beta1.CloudProviderGCP:
-		image := machineImage.(*gardenv1beta1.GCPMachineImage)
-		return func(s *gardenv1beta1.Cloud) { s.GCP.MachineImage = image }
+		return func(s *gardenv1beta1.Cloud) { s.GCP.MachineImage = machineImage }
 	case gardenv1beta1.CloudProviderOpenStack:
-		image := machineImage.(*gardenv1beta1.OpenStackMachineImage)
-		return func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = image }
+		return func(s *gardenv1beta1.Cloud) { s.OpenStack.MachineImage = machineImage }
 	case gardenv1beta1.CloudProviderPacket:
-		image := machineImage.(*gardenv1beta1.PacketMachineImage)
-		return func(s *gardenv1beta1.Cloud) { s.Packet.MachineImage = image }
+		return func(s *gardenv1beta1.Cloud) { s.Packet.MachineImage = machineImage }
 	case gardenv1beta1.CloudProviderAlicloud:
-		image := machineImage.(*gardenv1beta1.AlicloudMachineImage)
-		return func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = image }
+		return func(s *gardenv1beta1.Cloud) { s.Alicloud.MachineImage = machineImage }
 	}
 
 	return nil
 }
 
-func machineImageToString(name gardenv1beta1.MachineImageName) string {
-	return strings.ToLower(string(name))
+func machineImageLowerCase(name string) string {
+	return strings.ToLower(name)
 }
 
 // DetermineLatestKubernetesVersion finds the latest Kubernetes patch version in the <cloudProfile> compared

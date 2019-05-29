@@ -19,7 +19,8 @@ spec:
         - 1.13.6
       machineImages:
       - name: coreos-alicloud
-        id: coreos_1911_5_0_64_30G_alibase_20181219.vhd
+        version: 2023.5.0
+        # Proper mappings to Alicloud image VHD IDs must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: ecs.sn2ne.large
         cpu: "2"

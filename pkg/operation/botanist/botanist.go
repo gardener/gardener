@@ -208,7 +208,7 @@ func (b *Botanist) RequiredExtensionsExist() error {
 func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 	requiredExtensions := make(map[string]sets.String)
 
-	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = sets.NewString(string(b.Shoot.GetMachineImageName()))
+	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = sets.NewString(string(b.Shoot.GetMachineImage().Name))
 
 	if b.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged {
 		if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
@@ -231,7 +231,7 @@ func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
 		requiredExtensions[extensionsv1alpha1.ExtensionResource].Insert(extensionType)
 	}
 
-	requiredExtensions[extensionsv1alpha1.InfrastructureResource] = string(b.Shoot.CloudProvider)
+	requiredExtensions[extensionsv1alpha1.InfrastructureResource] = sets.NewString(string(b.Shoot.CloudProvider))
 
 	return requiredExtensions
 }

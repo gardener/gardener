@@ -199,9 +199,9 @@ func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
 	return ""
 }
 
-// GetMachineImageName returns the name of the used machine image.
-func (s *Shoot) GetMachineImageName() gardenv1beta1.MachineImageName {
-	return helper.GetMachineImageNameFromShoot(s.CloudProvider, s.Info)
+// GetMachineImage returns the name of the used machine image.
+func (s *Shoot) GetMachineImage() *gardenv1beta1.MachineImage {
+	return helper.GetMachineImageFromShoot(s.CloudProvider, s.Info)
 }
 
 // ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.

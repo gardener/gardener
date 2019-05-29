@@ -97,7 +97,7 @@ type AWSConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AWSMachineImageMapping
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -106,27 +106,12 @@ type AWSConstraints struct {
 	Zones []Zone
 }
 
-// AWSMachineImage defines the region and the AMI for a machine image.
-type AWSMachineImage struct {
+// MachineImage defines the name and the version of the machine image in any environment.
+type MachineImage struct {
 	// Name is the name of the image.
-	Name MachineImageName
-	// AMI is the technical id of the image (region specific).
-	AMI string
-}
-
-// AWSMachineImageMapping is a mapping of machine images to regions.
-type AWSMachineImageMapping struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Regions is a list of machine images with their regional technical id.
-	Regions []AWSRegionalMachineImage
-}
-
-type AWSRegionalMachineImage struct {
-	// Name is the name of a region.
 	Name string
-	// AMI is the technical id of the image (specific for region stated in the 'Name' field).
-	AMI string
+	// Version is the version of the image.
+	Version string
 }
 
 // AzureProfile defines certain constraints and definitions for the Azure cloud.
@@ -146,7 +131,7 @@ type AzureConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AzureMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -159,20 +144,6 @@ type AzureDomainCount struct {
 	Region string
 	// Count is the count value for the respective domain count.
 	Count int
-}
-
-// AzureMachineImage defines the channel and the version of the machine image in the Azure environment.
-type AzureMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Publisher is the publisher of the image.
-	Publisher string
-	// Offer is the offering of the image.
-	Offer string
-	// SKU is the stock keeping unit to pull images from.
-	SKU string
-	// Version is the version of the image.
-	Version string
 }
 
 // GCPProfile defines certain constraints and definitions for the GCP cloud.
@@ -188,22 +159,13 @@ type GCPConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []GCPMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone
-}
-
-// GCPMachineImage defines the name of the machine image in the GCP environment.
-type GCPMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Image is the technical name of the image. It contains the image name and the Google Cloud project.
-	// Example: projects/<name>/global/images/version23
-	Image string
 }
 
 // OpenStackProfile defines certain constraints and definitions for the OpenStack cloud.
@@ -235,7 +197,7 @@ type OpenStackConstraints struct {
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 	LoadBalancerProviders []OpenStackLoadBalancerProvider
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []OpenStackMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []OpenStackMachineType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
@@ -254,14 +216,6 @@ type OpenStackLoadBalancerProvider struct {
 	Name string
 }
 
-// OpenStackMachineImage defines the name of the machine image in the OpenStack environment.
-type OpenStackMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Image is the technical name of the image.
-	Image string
-}
-
 // AlicloudProfile defines constraints and definitions in Alibaba Cloud environment.
 type AlicloudProfile struct {
 	// Constraints is an object containing constraints for certain values in the Shoot specification.
@@ -275,21 +229,13 @@ type AlicloudConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AlicloudMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []AlicloudMachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []AlicloudVolumeType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone
-}
-
-// AlicloudMachineImage defines the machine image for Alicloud.
-type AlicloudMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// ID is the ID of the image.
-	ID string
 }
 
 // AlicloudMachineType defines certain machine types and zone constraints.
@@ -317,21 +263,13 @@ type PacketConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []PacketMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone
-}
-
-// PacketMachineImage defines the machine image for Packet.
-type PacketMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// ID is the ID of the image.
-	ID string
 }
 
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
@@ -395,18 +333,6 @@ type Zone struct {
 	// Names is a list of availability zone names in this region.
 	Names []string
 }
-
-// MachineImageName is a string alias.
-type MachineImageName string
-
-const (
-	// MachineImageCoreOS is a constant for the CoreOS machine image.
-	MachineImageCoreOS MachineImageName = "coreos"
-	// MachineImageCoreOSAlicloud is a constant for the CoreOS machine image used by Alicloud.
-	// The Alicloud CoreOS image is modified (e.g., it does not support cloud-config, and is therefore
-	// treated like another OS).
-	MachineImageCoreOSAlicloud MachineImageName = "coreos-alicloud"
-)
 
 ////////////////////////////////////////////////////
 //                    PROJECTS                    //
@@ -798,7 +724,7 @@ type AWSCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AWSMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AWSNetworks
 	// Workers is a list of worker groups.
@@ -845,7 +771,7 @@ type Alicloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AlicloudMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AlicloudNetworks
 	// Workers is a list of worker groups.
@@ -888,7 +814,7 @@ type PacketCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *PacketMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks PacketNetworks
 	// Workers is a list of worker groups.
@@ -917,7 +843,7 @@ type AzureCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AzureMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AzureNetworks
 	// ResourceGroup indicates whether to use an existing resource group or create a new one.
@@ -967,7 +893,7 @@ type GCPCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *GCPMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks GCPNetworks
 	// Workers is a list of worker groups.
@@ -1013,7 +939,7 @@ type OpenStackCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *OpenStackMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks OpenStackNetworks
 	// Workers is a list of worker groups.
