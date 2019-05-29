@@ -206,25 +206,25 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady, computeShootOSConfig),
 		})
-		deployMachineControllerManager = g.Add(flow.Task{
-			Name:         "Deploying machine controller manager",
-			Fn:           flow.SimpleTaskFn(botanist.DeployMachineControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
-		})
 		deployCSIControllers = g.Add(flow.Task{
 			Name:         "Deploying CSI controllers",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCSIControllers).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.UsesCSI()),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
 		})
-		reconcileMachines = g.Add(flow.Task{
-			Name:         "Reconciling Shoot workers",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.ReconcileMachines).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(computeShootOSConfig, deployMachineControllerManager, deployInfrastructure, initializeShootClients),
+		deployWorker = g.Add(flow.Task{
+			Name:         "Configuring shoot worker pools",
+			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilInfrastructureReady, initializeShootClients, computeShootOSConfig),
+		})
+		waitUntilWorkerReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot worker nodes have been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube2IAM resources",
 			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployKube2IAMResources).DoIf(requireKube2IAMDeployment).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
@@ -234,22 +234,22 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.SimpleTaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, reconcileMachines, deployCSIControllers),
+			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, waitUntilWorkerReady, deployCSIControllers),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
 			Fn:           flow.SimpleTaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady),
 		})
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
 			Fn:           flow.SimpleTaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, reconcileMachines),
+			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady),
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
 			Fn:           flow.SimpleTaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(reconcileMachines, deployKubeAddonManager, deploySeedMonitoring),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployKubeAddonManager, deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Dependency Watchdog",

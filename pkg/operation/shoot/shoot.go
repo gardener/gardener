@@ -175,6 +175,79 @@ func (s *Shoot) GetK8SNetworks() *gardencorev1alpha1.K8SNetworks {
 	return nil
 }
 
+// GetWorkerVolumesByName returns the volume information for the specific worker pool (if there
+// is any volume information).
+func (s *Shoot) GetWorkerVolumesByName(workerName string) (ok bool, volumeType, volumeSize string, err error) {
+	switch s.CloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		for _, worker := range s.Info.Spec.Cloud.AWS.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		for _, worker := range s.Info.Spec.Cloud.Azure.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		return
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, worker := range s.Info.Spec.Cloud.Alicloud.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, worker := range s.Info.Spec.Cloud.Packet.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	}
+
+	return false, "", "", fmt.Errorf("could not find worker with name %q", workerName)
+}
+
+// GetZones returns the zones of the shoot cluster.
+func (s *Shoot) GetZones() []string {
+	switch s.CloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return s.Info.Spec.Cloud.AWS.Zones
+	case gardenv1beta1.CloudProviderAzure:
+		return nil
+	case gardenv1beta1.CloudProviderGCP:
+		return s.Info.Spec.Cloud.GCP.Zones
+	case gardenv1beta1.CloudProviderOpenStack:
+		return s.Info.Spec.Cloud.OpenStack.Zones
+	case gardenv1beta1.CloudProviderAlicloud:
+		return s.Info.Spec.Cloud.Alicloud.Zones
+	}
+	return nil
+}
+
 // GetPodNetwork returns the pod network CIDR for the Shoot cluster.
 func (s *Shoot) GetPodNetwork() gardencorev1alpha1.CIDR {
 	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
