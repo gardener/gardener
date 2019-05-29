@@ -249,10 +249,10 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 	}
 
 	var flags []map[string]interface{}
-	if b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold != nil {
+	if clusterAutoscalerConfig := b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler; clusterAutoscalerConfig != nil {
 		flags = append(flags, map[string]interface{}{
 			"name":  "scale-down-utilization-threshold", // TODO: flags should probably go into a constant block
-			"value": b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler.ScaleDownUtilizationThreshold,
+			"value": clusterAutoscalerConfig.ScaleDownUtilizationThreshold,
 		})
 	}
 
