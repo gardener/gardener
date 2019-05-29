@@ -2624,7 +2624,7 @@ var _ = Describe("validation", func() {
 						KubernetesDashboard: &garden.KubernetesDashboard{
 							Addon: addon,
 						},
-						ClusterAutoscaler: &garden.ClusterAutoscaler{
+						ClusterAutoscaler: &garden.AddonClusterAutoscaler{
 							Addon: addon,
 						},
 						NginxIngress: &garden.NginxIngress{
@@ -5328,6 +5328,24 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.kubernetes.kubeProxy.mode"),
 				}))))
 			})
+		})
+
+		Context("ClusterAutoscaler validation", func() {
+			DescribeTable("cluster autoscaler values",
+				func(clusterAutoscaler garden.ClusterAutoscaler, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateClusterAutoscaler(clusterAutoscaler, nil)).To(matcher)
+				},
+				Entry("valid", garden.ClusterAutoscaler{}, BeEmpty()),
+				Entry("valid with threshold", garden.ClusterAutoscaler{
+					ScaleDownUtilizationThreshold: makeFloat64Pointer(0.5),
+				}, BeEmpty()),
+				Entry("invalid negative threshold", garden.ClusterAutoscaler{
+					ScaleDownUtilizationThreshold: makeFloat64Pointer(-0.5),
+				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+				Entry("invalid > 1 threshold", garden.ClusterAutoscaler{
+					ScaleDownUtilizationThreshold: makeFloat64Pointer(1.5),
+				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+			)
 		})
 
 		Context("AuditConfig validation", func() {

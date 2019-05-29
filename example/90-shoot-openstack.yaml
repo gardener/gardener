@@ -34,6 +34,8 @@ spec:
       #   effect: NoSchedule
       zones: ['europe-1a']
   kubernetes:
+  # clusterAutoscaler:
+  #   scaleDownUtilizationThreshold: 0.5
     version: 1.14.0
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
