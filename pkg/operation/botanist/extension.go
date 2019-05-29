@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/util/sets"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -30,7 +31,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
-	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -175,7 +176,7 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 					lastError = lastErr
 				}
 
-				return retry.MinorError(wrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
+				return retry.MinorError(common.WrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
 			}); err != nil {
 				message := fmt.Sprintf("Failed waiting for extension delete")
 				if lastError != nil {

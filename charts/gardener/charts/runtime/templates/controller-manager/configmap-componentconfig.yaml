@@ -110,6 +110,15 @@ data:
         deletionGracePeriodHoursByPurpose:
 {{ toYaml .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose | indent 10 }}
         {{- end }}
+      backupBucket:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupBucket.concurrentSyncs is required" .Values.global.controller.config.controllers.backupBucket.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.backupBucket.syncPeriod is required" .Values.global.controller.config.controllers.backupBucket.syncPeriod }}
+      backupEntry:
+        concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupEntry.concurrentSyncs is required" .Values.global.controller.config.controllers.backupEntry.concurrentSyncs }}
+        syncPeriod: {{ required ".Values.global.controller.config.controllers.backupEntry.syncPeriod is required" .Values.global.controller.config.controllers.backupEntry.syncPeriod }}
+        {{- if .Values.global.controller.config.controllers.backupEntry.deletionGracePeriodHours }}
+        deletionGracePeriodHours: {{ .Values.global.controller.config.controllers.backupEntry.deletionGracePeriodHours }}
+        {{- end }}
     leaderElection:
       leaderElect: {{ required ".Values.global.controller.config.leaderElection.leaderElect is required" .Values.global.controller.config.leaderElection.leaderElect }}
       leaseDuration: {{ required ".Values.global.controller.config.leaderElection.leaseDuration is required" .Values.global.controller.config.leaderElection.leaseDuration }}

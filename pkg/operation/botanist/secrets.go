@@ -717,7 +717,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 	defer b.mutex.Unlock()
 
 	for name, secret := range b.Secrets {
-		b.CheckSums[name] = computeSecretCheckSum(secret.Data)
+		b.CheckSums[name] = common.ComputeSecretCheckSum(secret.Data)
 	}
 
 	return nil
@@ -727,7 +727,7 @@ func (b *Botanist) DeploySecrets(ctx context.Context) error {
 // in the Seed cluster.
 func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	var (
-		checksum = computeSecretCheckSum(b.Shoot.Secret.Data)
+		checksum = common.ComputeSecretCheckSum(b.Shoot.Secret.Data)
 		secret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      gardencorev1alpha1.SecretNameCloudProvider,

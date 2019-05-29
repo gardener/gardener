@@ -40,6 +40,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -140,39 +141,6 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 		},
 	}
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...))
-}
-
-// DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
-// BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
-func (b *Botanist) DeployBackupInfrastructure(ctx context.Context) error {
-	var (
-		name                 = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
-		backupInfrastructure = &gardenv1beta1.BackupInfrastructure{}
-		shootPurpose         = b.Shoot.Info.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
-	)
-
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupInfrastructure); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-
-	if backupInfrastructure.Annotations == nil {
-		backupInfrastructure.Annotations = map[string]string{}
-	}
-	backupInfrastructure.Annotations[gardencorev1alpha1.GardenPurpose] = shootPurpose
-
-	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), b.Shoot.Info.Namespace, "backup-infrastructure", nil, map[string]interface{}{
-		"backupInfrastructure": map[string]interface{}{
-			"name":        name,
-			"annotations": backupInfrastructure.Annotations,
-		},
-		"seed": map[string]interface{}{
-			"name": b.Seed.Info.Name,
-		},
-		"shoot": map[string]interface{}{
-			"name": b.Shoot.Info.Name,
-			"uid":  b.Shoot.Info.Status.UID,
-		},
-	})
 }
 
 // DeleteBackupInfrastructure deletes the sets deletionTimestamp on the backupInfrastructure resource in the Garden namespace
@@ -502,7 +470,7 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 		}
 
 		b.Logger.Infof("Waiting for control plane to be deleted...")
-		return retry.MinorError(wrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
+		return retry.MinorError(common.WrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
 	}); err != nil {
 		message := fmt.Sprintf("Failed to delete control plane")
 		if lastError != nil {
@@ -510,7 +478,6 @@ func (b *Botanist) waitUntilControlPlaneDeleted(ctx context.Context, name string
 		}
 		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
-
 	return nil
 }
 
@@ -532,4 +499,49 @@ func (b *Botanist) DeployGardenerResourceManager(ctx context.Context) error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-controlplane", "charts", name), b.Shoot.SeedNamespace, name, values, nil)
+}
+
+// DeployBackupEntryInGarden deploys the BackupEntry resource in garden.
+func (b *Botanist) DeployBackupEntryInGarden(ctx context.Context) error {
+	var (
+		name        = common.GenerateBackupEntryName(b.Shoot.Info.Status.TechnicalID, b.Shoot.Info.Status.UID)
+		backupEntry = &gardencorev1alpha1.BackupEntry{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: b.Shoot.Info.Namespace,
+			},
+		}
+		bucketName string
+		seedName   *string
+	)
+
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupEntry); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		// If backupEntry doesn't already exists, we have to assign backupBucket to backupEntry.
+		bucketName = common.GenerateBackupBucketName(b.Seed.Info.Name, b.Seed.Info.Spec.Cloud.Region, b.Seed.Info.UID)
+		if b.Seed.Info.Spec.Backup.Region != nil && len(*b.Seed.Info.Spec.Backup.Region) != 0 {
+			bucketName = common.GenerateBackupBucketName(b.Seed.Info.Name, *b.Seed.Info.Spec.Backup.Region, b.Seed.Info.UID)
+		}
+		seedName = &b.Seed.Info.Name
+	} else {
+		bucketName = backupEntry.Spec.BucketName
+		seedName = backupEntry.Spec.Seed
+	}
+	ownerRef := metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot"))
+	blockOwnerDeletion := false
+	ownerRef.BlockOwnerDeletion = &blockOwnerDeletion
+
+	return kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), backupEntry, func() error {
+		finalizers := sets.NewString(backupEntry.GetFinalizers()...)
+		finalizers.Insert(gardenv1beta1.GardenerName)
+		backupEntry.SetFinalizers(finalizers.UnsortedList())
+
+		backupEntry.ObjectMeta.OwnerReferences = []metav1.OwnerReference{*ownerRef}
+		backupEntry.Spec.BucketName = bucketName
+		backupEntry.Spec.Seed = seedName
+		return nil
+	})
 }

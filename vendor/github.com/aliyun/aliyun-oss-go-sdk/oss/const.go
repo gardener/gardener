@@ -19,6 +19,17 @@ const (
 	ACLDefault ACLType = "default"
 )
 
+// bucket versioning status
+type VersioningStatus string
+
+const (
+	// Versioning Status definition: Enabled
+	VersionEnabled VersioningStatus = "Enabled"
+
+	// Versioning Status definition: Suspended
+	VersionSuspended VersioningStatus = "Suspended"
+)
+
 // MetadataDirectiveType specifying whether use the metadata of source object when copying object.
 type MetadataDirectiveType string
 
@@ -28,6 +39,25 @@ const (
 
 	// MetaReplace the target object's metadata is created as part of the copy request (not same as the source one)
 	MetaReplace MetadataDirectiveType = "REPLACE"
+)
+
+// TaggingDirectiveType specifying whether use the tagging of source object when copying object.
+type TaggingDirectiveType string
+
+const (
+	// TaggingCopy the target object's tagging is copied from the source one
+	TaggingCopy TaggingDirectiveType = "COPY"
+
+	// TaggingReplace the target object's tagging is created as part of the copy request (not same as the source one)
+	TaggingReplace TaggingDirectiveType = "REPLACE"
+)
+
+// AlgorithmType specifying the server side encryption algorithm name
+type AlgorithmType string
+
+const (
+	KMSAlgorithm AlgorithmType = "KMS"
+	AESAlgorithm AlgorithmType = "AES256"
 )
 
 // StorageClassType bucket storage type
@@ -49,7 +79,10 @@ type PayerType string
 
 const (
 	// Requester the requester who send the request
-	Requester PayerType = "requester"
+	Requester PayerType = "Requester"
+
+	// BucketOwner the requester who send the request
+	BucketOwner PayerType = "BucketOwner"
 )
 
 // HTTPMethod HTTP request method
@@ -97,6 +130,8 @@ const (
 	HTTPHeaderIfUnmodifiedSince         = "If-Unmodified-Since"
 	HTTPHeaderIfMatch                   = "If-Match"
 	HTTPHeaderIfNoneMatch               = "If-None-Match"
+	HTTPHeaderACReqMethod               = "Access-Control-Request-Method"
+	HTTPHeaderACReqHeaders              = "Access-Control-Request-Headers"
 
 	HTTPHeaderOssACL                         = "X-Oss-Acl"
 	HTTPHeaderOssMetaPrefix                  = "X-Oss-Meta-"
@@ -118,7 +153,10 @@ const (
 	HTTPHeaderOssStorageClass                = "X-Oss-Storage-Class"
 	HTTPHeaderOssCallback                    = "X-Oss-Callback"
 	HTTPHeaderOssCallbackVar                 = "X-Oss-Callback-Var"
-	HTTPHeaderOSSRequester                   = "X-Oss-Request-Payer"
+	HTTPHeaderOssRequester                   = "X-Oss-Request-Payer"
+	HTTPHeaderOssTagging                     = "X-Oss-Tagging"
+	HTTPHeaderOssTaggingDirective            = "X-Oss-Tagging-Directive"
+	HTTPHeaderOssTrafficLimit                = "X-Oss-Traffic-Limit"
 )
 
 // HTTP Param
@@ -142,5 +180,7 @@ const (
 
 	CheckpointFileSuffix = ".cp" // Checkpoint file suffix
 
-	Version = "v1.9.6" // Go SDK version
+	NullVersion = "null"
+
+	Version = "v2.0.1" // Go SDK version
 )

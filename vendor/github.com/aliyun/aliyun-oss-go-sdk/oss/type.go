@@ -47,6 +47,7 @@ type LifecycleRule struct {
 	ID                   string                         `xml:"ID,omitempty"`                   // The rule ID
 	Prefix               string                         `xml:"Prefix"`                         // The object key prefix
 	Status               string                         `xml:"Status"`                         // The rule status (enabled or not)
+	Tags                 []Tag                          `xml:"Tag,omitempty"`                  // the tags property
 	Expiration           *LifecycleExpiration           `xml:"Expiration,omitempty"`           // The expiration property
 	Transitions          []LifecycleTransition          `xml:"Transition,omitempty"`           // The transition property
 	AbortMultipartUpload *LifecycleAbortMultipartUpload `xml:"AbortMultipartUpload,omitempty"` // The AbortMultipartUpload property
@@ -180,8 +181,9 @@ type GetBucketLoggingResult LoggingXML
 // WebsiteXML defines Website configuration
 type WebsiteXML struct {
 	XMLName       xml.Name      `xml:"WebsiteConfiguration"`
-	IndexDocument IndexDocument `xml:"IndexDocument"` // The index page
-	ErrorDocument ErrorDocument `xml:"ErrorDocument"` // The error page
+	IndexDocument IndexDocument `xml:"IndexDocument,omitempty"`            // The index page
+	ErrorDocument ErrorDocument `xml:"ErrorDocument,omitempty"`            // The error page
+	RoutingRules  []RoutingRule `xml:"RoutingRules>RoutingRule,omitempty"` // The routing Rule list
 }
 
 // IndexDocument defines the index page info
@@ -194,6 +196,63 @@ type IndexDocument struct {
 type ErrorDocument struct {
 	XMLName xml.Name `xml:"ErrorDocument"`
 	Key     string   `xml:"Key"` // 404 error file name
+}
+
+// RoutingRule defines the routing rules
+type RoutingRule struct {
+	XMLName    xml.Name  `xml:"RoutingRule"`
+	RuleNumber int       `xml:"RuleNumber,omitempty"` // The routing number
+	Condition  Condition `xml:"Condition,omitempty"`  // The routing condition
+	Redirect   Redirect  `xml:"Redirect,omitempty"`   // The routing redirect
+
+}
+
+// Condition defines codition in the RoutingRule
+type Condition struct {
+	XMLName                     xml.Name        `xml:"Condition"`
+	KeyPrefixEquals             string          `xml:"KeyPrefixEquals,omitempty"`             // Matching objcet prefix
+	HTTPErrorCodeReturnedEquals int             `xml:"HttpErrorCodeReturnedEquals,omitempty"` // The rule is for Accessing to the specified object
+	IncludeHeader               []IncludeHeader `xml:"IncludeHeader"`                         // The rule is for request which include header
+}
+
+// IncludeHeader defines includeHeader in the RoutingRule's Condition
+type IncludeHeader struct {
+	XMLName xml.Name `xml:"IncludeHeader"`
+	Key     string   `xml:"Key,omitempty"`    // The Include header key
+	Equals  string   `xml:"Equals,omitempty"` // The Include header value
+}
+
+// Redirect defines redirect in the RoutingRule
+type Redirect struct {
+	XMLName               xml.Name      `xml:"Redirect"`
+	RedirectType          string        `xml:"RedirectType,omitempty"`         // The redirect type, it have Mirror,External,Internal,AliCDN
+	PassQueryString       *bool         `xml:"PassQueryString"`                // Whether to send the specified request's parameters, true or false
+	MirrorURL             string        `xml:"MirrorURL,omitempty"`            // Mirror of the website address back to the source.
+	MirrorPassQueryString *bool         `xml:"MirrorPassQueryString"`          // To Mirror of the website Whether to send the specified request's parameters, true or false
+	MirrorFollowRedirect  *bool         `xml:"MirrorFollowRedirect"`           // Redirect the location, if the mirror return 3XX
+	MirrorCheckMd5        *bool         `xml:"MirrorCheckMd5"`                 // Check the mirror is MD5.
+	MirrorHeaders         MirrorHeaders `xml:"MirrorHeaders,omitempty"`        // Mirror headers
+	Protocol              string        `xml:"Protocol,omitempty"`             // The redirect Protocol
+	HostName              string        `xml:"HostName,omitempty"`             // The redirect HostName
+	ReplaceKeyPrefixWith  string        `xml:"ReplaceKeyPrefixWith,omitempty"` // object name'Prefix replace the value
+	HttpRedirectCode      int           `xml:"HttpRedirectCode,omitempty"`     // THe redirect http code
+	ReplaceKeyWith        string        `xml:"ReplaceKeyWith,omitempty"`       // object name replace the value
+}
+
+// MirrorHeaders defines MirrorHeaders in the Redirect
+type MirrorHeaders struct {
+	XMLName xml.Name          `xml:"MirrorHeaders"`
+	PassAll *bool             `xml:"PassAll"` // Penetrating all of headers to source website.
+	Pass    []string          `xml:"Pass"`    // Penetrating some of headers to source website.
+	Remove  []string          `xml:"Remove"`  // Prohibit passthrough some of headers to source website
+	Set     []MirrorHeaderSet `xml:"Set"`     // Setting some of headers send to source website
+}
+
+// MirrorHeaderSet defines Set for Redirect's MirrorHeaders
+type MirrorHeaderSet struct {
+	XMLName xml.Name `xml:"Set"`
+	Key     string   `xml:"Key,omitempty"`   // The mirror header key
+	Value   string   `xml:"Value,omitempty"` // The mirror header value
 }
 
 // GetBucketWebsiteResult defines the result from GetBucketWebsite request.
@@ -227,14 +286,22 @@ type GetBucketInfoResult struct {
 // BucketInfo defines Bucket information
 type BucketInfo struct {
 	XMLName          xml.Name  `xml:"Bucket"`
-	Name             string    `xml:"Name"`                    // Bucket name
-	Location         string    `xml:"Location"`                // Bucket datacenter
-	CreationDate     time.Time `xml:"CreationDate"`            // Bucket creation time
-	ExtranetEndpoint string    `xml:"ExtranetEndpoint"`        // Bucket external endpoint
-	IntranetEndpoint string    `xml:"IntranetEndpoint"`        // Bucket internal endpoint
-	ACL              string    `xml:"AccessControlList>Grant"` // Bucket ACL
-	Owner            Owner     `xml:"Owner"`                   // Bucket owner
-	StorageClass     string    `xml:"StorageClass"`            // Bucket storage class
+	Name             string    `xml:"Name"`                     // Bucket name
+	Location         string    `xml:"Location"`                 // Bucket datacenter
+	CreationDate     time.Time `xml:"CreationDate"`             // Bucket creation time
+	ExtranetEndpoint string    `xml:"ExtranetEndpoint"`         // Bucket external endpoint
+	IntranetEndpoint string    `xml:"IntranetEndpoint"`         // Bucket internal endpoint
+	ACL              string    `xml:"AccessControlList>Grant"`  // Bucket ACL
+	Owner            Owner     `xml:"Owner"`                    // Bucket owner
+	StorageClass     string    `xml:"StorageClass"`             // Bucket storage class
+	SseRule          SSERule   `xml:"ServerSideEncryptionRule"` // Bucket ServerSideEncryptionRule
+	Versioning       string    `xml:"Versioning"`               // Bucket Versioning
+}
+
+type SSERule struct {
+	XMLName        xml.Name `xml:"ServerSideEncryptionRule"` // Bucket ServerSideEncryptionRule
+	KMSMasterKeyID string   `xml:"KMSMasterKeyID"`           // Bucket KMSMasterKeyID
+	SSEAlgorithm   string   `xml:"SSEAlgorithm"`             // Bucket SSEAlgorithm
 }
 
 // ListObjectsResult defines the result from ListObjects request
@@ -262,6 +329,46 @@ type ObjectProperties struct {
 	StorageClass string    `xml:"StorageClass"` // Object storage class (Standard, IA, Archive)
 }
 
+// ListObjectVersionsResult defines the result from ListObjectVersions request
+type ListObjectVersionsResult struct {
+	XMLName             xml.Name                       `xml:"ListVersionsResult"`
+	Name                string                         `xml:"Name"`                  // The Bucket Name
+	Owner               Owner                          `xml:"Owner"`                 // The owner of bucket
+	Prefix              string                         `xml:"Prefix"`                // The object prefix
+	KeyMarker           string                         `xml:"KeyMarker"`             // The start marker filter.
+	VersionIdMarker     string                         `xml:"VersionIdMarker"`       // The start VersionIdMarker filter.
+	MaxKeys             int                            `xml:"MaxKeys"`               // Max keys to return
+	Delimiter           string                         `xml:"Delimiter"`             // The delimiter for grouping objects' name
+	IsTruncated         bool                           `xml:"IsTruncated"`           // Flag indicates if all results are returned (when it's false)
+	NextKeyMarker       string                         `xml:"NextKeyMarker"`         // The start point of the next query
+	NextVersionIdMarker string                         `xml:"NextVersionIdMarker"`   // The start point of the next query
+	CommonPrefixes      []string                       `xml:"CommonPrefixes>Prefix"` // You can think of commonprefixes as "folders" whose names end with the delimiter
+	ObjectDeleteMarkers []ObjectDeleteMarkerProperties `xml:"DeleteMarker"`          // DeleteMarker list
+	ObjectVersions      []ObjectVersionProperties      `xml:"Version"`               // version list
+}
+
+type ObjectDeleteMarkerProperties struct {
+	XMLName      xml.Name  `xml:"DeleteMarker"`
+	Key          string    `xml:"Key"`          // The Object Key
+	VersionId    string    `xml:"VersionId"`    // The Object VersionId
+	IsLatest     bool      `xml:"IsLatest"`     // is current version or not
+	LastModified time.Time `xml:"LastModified"` // Object last modified time
+	Owner        Owner     `xml:"Owner"`        // bucket owner element
+}
+
+type ObjectVersionProperties struct {
+	XMLName      xml.Name  `xml:"Version"`
+	Key          string    `xml:"Key"`          // The Object Key
+	VersionId    string    `xml:"VersionId"`    // The Object VersionId
+	IsLatest     bool      `xml:"IsLatest"`     // is latest version or not
+	LastModified time.Time `xml:"LastModified"` // Object last modified time
+	Type         string    `xml:"Type"`         // Object type
+	Size         int64     `xml:"Size"`         // Object size
+	ETag         string    `xml:"ETag"`         // Object ETag
+	StorageClass string    `xml:"StorageClass"` // Object storage class (Standard, IA, Archive)
+	Owner        Owner     `xml:"Owner"`        // bucket owner element
+}
+
 // Owner defines Bucket/Object's owner
 type Owner struct {
 	XMLName     xml.Name `xml:"Owner"`
@@ -287,14 +394,30 @@ type deleteXML struct {
 
 // DeleteObject defines the struct for deleting object
 type DeleteObject struct {
-	XMLName xml.Name `xml:"Object"`
-	Key     string   `xml:"Key"` // Object name
+	XMLName   xml.Name `xml:"Object"`
+	Key       string   `xml:"Key"`                 // Object name
+	VersionId string   `xml:"VersionId,omitempty"` // Object VersionId
 }
 
 // DeleteObjectsResult defines result of DeleteObjects request
 type DeleteObjectsResult struct {
-	XMLName        xml.Name `xml:"DeleteResult"`
-	DeletedObjects []string `xml:"Deleted>Key"` // Deleted object list
+	XMLName        xml.Name
+	DeletedObjects []string // Deleted object key list
+}
+
+// DeleteObjectsResult_inner defines result of DeleteObjects request
+type DeleteObjectVersionsResult struct {
+	XMLName              xml.Name         `xml:"DeleteResult"`
+	DeletedObjectsDetail []DeletedKeyInfo `xml:"Deleted"` // Deleted object detail info
+}
+
+// DeleteKeyInfo defines object delete info
+type DeletedKeyInfo struct {
+	XMLName               xml.Name `xml:"Deleted"`
+	Key                   string   `xml:"Key"`                   // Object key
+	VersionId             string   `xml:"VersionId"`             // VersionId
+	DeleteMarker          bool     `xml:"DeleteMarker"`          // Object DeleteMarker
+	DeleteMarkerVersionId string   `xml:"DeleteMarkerVersionId"` // Object DeleteMarkerVersionId
 }
 
 // InitiateMultipartUploadResult defines result of InitiateMultipartUpload request
@@ -401,10 +524,10 @@ type ProcessObjectResult struct {
 }
 
 // decodeDeleteObjectsResult decodes deleting objects result in URL encoding
-func decodeDeleteObjectsResult(result *DeleteObjectsResult) error {
+func decodeDeleteObjectsResult(result *DeleteObjectVersionsResult) error {
 	var err error
-	for i := 0; i < len(result.DeletedObjects); i++ {
-		result.DeletedObjects[i], err = url.QueryUnescape(result.DeletedObjects[i])
+	for i := 0; i < len(result.DeletedObjectsDetail); i++ {
+		result.DeletedObjectsDetail[i].Key, err = url.QueryUnescape(result.DeletedObjectsDetail[i].Key)
 		if err != nil {
 			return err
 		}
@@ -443,6 +566,73 @@ func decodeListObjectsResult(result *ListObjectsResult) error {
 			return err
 		}
 	}
+	return nil
+}
+
+// decodeListObjectVersionsResult decodes list version objects result in URL encoding
+func decodeListObjectVersionsResult(result *ListObjectVersionsResult) error {
+	var err error
+
+	// decode:Delimiter
+	result.Delimiter, err = url.QueryUnescape(result.Delimiter)
+	if err != nil {
+		return err
+	}
+
+	// decode Prefix
+	result.Prefix, err = url.QueryUnescape(result.Prefix)
+	if err != nil {
+		return err
+	}
+
+	// decode KeyMarker
+	result.KeyMarker, err = url.QueryUnescape(result.KeyMarker)
+	if err != nil {
+		return err
+	}
+
+	// decode VersionIdMarker
+	result.VersionIdMarker, err = url.QueryUnescape(result.VersionIdMarker)
+	if err != nil {
+		return err
+	}
+
+	// decode NextKeyMarker
+	result.NextKeyMarker, err = url.QueryUnescape(result.NextKeyMarker)
+	if err != nil {
+		return err
+	}
+
+	// decode NextVersionIdMarker
+	result.NextVersionIdMarker, err = url.QueryUnescape(result.NextVersionIdMarker)
+	if err != nil {
+		return err
+	}
+
+	// decode CommonPrefixes
+	for i := 0; i < len(result.CommonPrefixes); i++ {
+		result.CommonPrefixes[i], err = url.QueryUnescape(result.CommonPrefixes[i])
+		if err != nil {
+			return err
+		}
+	}
+
+	// decode deleteMarker
+	for i := 0; i < len(result.ObjectDeleteMarkers); i++ {
+		result.ObjectDeleteMarkers[i].Key, err = url.QueryUnescape(result.ObjectDeleteMarkers[i].Key)
+		if err != nil {
+			return err
+		}
+	}
+
+	// decode ObjectVersions
+	for i := 0; i < len(result.ObjectVersions); i++ {
+		result.ObjectVersions[i].Key, err = url.QueryUnescape(result.ObjectVersions[i].Key)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -592,4 +782,79 @@ type LiveChannelInfo struct {
 	LastModified time.Time `xml:"LastModified"`    //Last modification time, format: ISO8601
 	PublishUrls  []string  `xml:"PublishUrls>Url"` //push urls list
 	PlayUrls     []string  `xml:"PlayUrls>Url"`    //play urls list
+}
+
+// Tag a tag for the object
+type Tag struct {
+	XMLName xml.Name `xml:"Tag"`
+	Key     string   `xml:"Key"`
+	Value   string   `xml:"Value"`
+}
+
+// Tagging tagset for the object
+type Tagging struct {
+	XMLName xml.Name `xml:"Tagging"`
+	Tags    []Tag    `xml:"TagSet>Tag,omitempty"`
+}
+
+// for GetObjectTagging return value
+type GetObjectTaggingResult Tagging
+
+// VersioningConfig for the bucket
+type VersioningConfig struct {
+	XMLName xml.Name `xml:"VersioningConfiguration"`
+	Status  string   `xml:"Status"`
+}
+
+type GetBucketVersioningResult VersioningConfig
+
+// Server Encryption rule for the bucket
+type ServerEncryptionRule struct {
+	XMLName    xml.Name       `xml:"ServerSideEncryptionRule"`
+	SSEDefault SSEDefaultRule `xml:"ApplyServerSideEncryptionByDefault"`
+}
+
+// Server Encryption deafult rule for the bucket
+type SSEDefaultRule struct {
+	XMLName        xml.Name `xml:"ApplyServerSideEncryptionByDefault"`
+	SSEAlgorithm   string   `xml:"SSEAlgorithm"`
+	KMSMasterKeyID string   `xml:"KMSMasterKeyID"`
+}
+
+type GetBucketEncryptionResult ServerEncryptionRule
+type GetBucketTaggingResult Tagging
+
+type BucketStat struct {
+	XMLName              xml.Name `xml:"BucketStat"`
+	Storage              int64    `xml:"Storage"`
+	ObjectCount          int64    `xml:"ObjectCount"`
+	MultipartUploadCount int64    `xml:"MultipartUploadCount"`
+}
+type GetBucketStatResult BucketStat
+
+// RequestPaymentConfiguration define the request payment configuration
+type RequestPaymentConfiguration struct {
+	XMLName xml.Name `xml:"RequestPaymentConfiguration"`
+	Payer   string   `xml:"Payer,omitempty"`
+}
+
+// BucketQoSConfiguration define QoS configuration
+type BucketQoSConfiguration struct {
+	XMLName                   xml.Name `xml:"QoSConfiguration"`	
+	TotalUploadBandwidth      *int      `xml:"TotalUploadBandwidth"`      // Total upload bandwidth
+	IntranetUploadBandwidth   *int      `xml:"IntranetUploadBandwidth"`   // Intranet upload bandwidth
+	ExtranetUploadBandwidth   *int      `xml:"ExtranetUploadBandwidth"`   // Extranet upload bandwidth
+	TotalDownloadBandwidth    *int      `xml:"TotalDownloadBandwidth"`    // Total download bandwidth
+	IntranetDownloadBandwidth *int      `xml:"IntranetDownloadBandwidth"` // Intranet download bandwidth
+	ExtranetDownloadBandwidth *int      `xml:"ExtranetDownloadBandwidth"` // Extranet download bandwidth
+	TotalQPS                  *int      `xml:"TotalQps"`                  // Total Qps
+	IntranetQPS               *int      `xml:"IntranetQps"`               // Intranet Qps
+	ExtranetQPS               *int      `xml:"ExtranetQps"`               // Extranet Qps
+}
+
+// UserQoSConfiguration define QoS and Range configuration
+type UserQoSConfiguration struct {
+	XMLName xml.Name `xml:"QoSConfiguration"`
+	Region  string   `xml:"Region,omitempty"` // Effective area of Qos configuration
+	BucketQoSConfiguration
 }

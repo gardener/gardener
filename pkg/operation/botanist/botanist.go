@@ -21,8 +21,6 @@ import (
 	"sort"
 	"strings"
 
-	errors2 "github.com/pkg/errors"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -153,13 +151,6 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 		_, err = b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Update(seed)
 	}
 	return err
-}
-
-func wrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error {
-	if err == nil || lastError == nil {
-		return err
-	}
-	return errors2.Wrapf(err, "last error: %s", lastError.Description)
 }
 
 // UnregisterAsSeed unregisters a Shoot cluster as a Seed in the Garden cluster.

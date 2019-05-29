@@ -8,6 +8,10 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
+	// BackupBuckets returns a BackupBucketInformer.
+	BackupBuckets() BackupBucketInformer
+	// BackupEntries returns a BackupEntryInformer.
+	BackupEntries() BackupEntryInformer
 	// ControllerInstallations returns a ControllerInstallationInformer.
 	ControllerInstallations() ControllerInstallationInformer
 	// ControllerRegistrations returns a ControllerRegistrationInformer.
@@ -27,6 +31,16 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
+}
+
+// BackupBuckets returns a BackupBucketInformer.
+func (v *version) BackupBuckets() BackupBucketInformer {
+	return &backupBucketInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// BackupEntries returns a BackupEntryInformer.
+func (v *version) BackupEntries() BackupEntryInformer {
+	return &backupEntryInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ControllerInstallations returns a ControllerInstallationInformer.

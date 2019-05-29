@@ -15,7 +15,6 @@ data:
     ---
     apiVersion: scheduler.config.gardener.cloud/v1alpha1
     kind: SchedulerConfiguration
-    candidateDeterminationStrategy: {{ required ".Values.global.scheduler.config.candidateDeterminationStrategy is required" .Values.global.scheduler.config.candidateDeterminationStrategy }}
     clientConnection:
       acceptContentTypes: {{ required ".Values.global.scheduler.config.clientConnection.acceptContentTypes is required" .Values.global.scheduler.config.clientConnection.acceptContentTypes }}
       contentType: {{ required ".Values.global.scheduler.config.clientConnection.contentType is required" .Values.global.scheduler.config.clientConnection.contentType }}
@@ -50,6 +49,18 @@ data:
       http:
         bindAddress: {{ required ".Values.global.scheduler.config.server.http.bindAddress is required" .Values.global.scheduler.config.server.http.bindAddress }}
         port: {{ required ".Values.global.scheduler.config.server.http.port is required" .Values.global.scheduler.config.server.http.port }}
-    retrySyncPeriod: {{ .Values.global.scheduler.config.retrySyncPeriod }}
-    concurrentSyncs: {{ .Values.global.scheduler.config.concurrentSyncs }}
+    {{- if .Values.global.scheduler.config.schedulers }}
+    schedulers:
+      {{- if .Values.global.scheduler.config.schedulers.backupBucket }}
+      backupBucket:
+        retrySyncPeriod: {{ .Values.global.scheduler.config.schedulers.backupBucket.retrySyncPeriod }}
+        concurrentSyncs: {{ .Values.global.scheduler.config.schedulers.backupBucket.concurrentSyncs }}
+      {{- end }}
+      {{- if .Values.global.scheduler.config.schedulers.shoot }}
+      shoot:
+        retrySyncPeriod: {{ .Values.global.scheduler.config.schedulers.shoot.retrySyncPeriod }}
+        concurrentSyncs: {{ .Values.global.scheduler.config.schedulers.shoot.concurrentSyncs }}
+        candidateDeterminationStrategy: {{ required ".Values.global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy is required" .Values.global.scheduler.config.schedulers.shoot.candidateDeterminationStrategy }}
+      {{- end }}
+    {{- end }}
 {{- end }}

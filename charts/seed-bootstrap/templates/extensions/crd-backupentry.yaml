@@ -27,7 +27,7 @@ spec:
     JSONPath: .spec.region
   - name: Bucket
     type: string
-    description: The bucket into which the backup entry should be created.
+    description: The name of the bucket into which the backup entry should be created.
     JSONPath: .spec.bucketName
   - name: State
     type: string

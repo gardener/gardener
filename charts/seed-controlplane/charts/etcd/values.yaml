@@ -16,3 +16,5 @@ servicePorts:
 
 metrics: basic
 
+# Temporary parameter for backward compatibility
+#failBelowRevision: 0

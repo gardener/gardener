@@ -45,6 +45,7 @@
 
 * [Audit a Kubernetes Cluster](usage/shoot_auditpolicy.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
+* [Trouble Shooting Guide](usage/trouble_shooting_guide.md)
 
 ## Proposals
 

@@ -51,31 +51,27 @@ type ControllerManagerConfiguration struct {
 
 // ControllerManagerControllerConfiguration defines the configuration of the controllers.
 type ControllerManagerControllerConfiguration struct {
+	// BackupBucket defines the configuration of the BackupBucket controller.
+	BackupBucket *BackupBucketControllerConfiguration
+	// BackupEntry defines the configuration of the BackupEntry controller.
+	BackupEntry *BackupEntryControllerConfiguration
 	// BackupInfrastructure defines the configuration of the BackupInfrastructure controller.
 	BackupInfrastructure BackupInfrastructureControllerConfiguration
 	// CloudProfile defines the configuration of the CloudProfile controller.
-	// +optional
 	CloudProfile *CloudProfileControllerConfiguration
 	// ControllerRegistration defines the configuration of the ControllerRegistration controller.
-	// +optional
 	ControllerRegistration *ControllerRegistrationControllerConfiguration
 	// ControllerInstallation defines the configuration of the ControllerInstallation controller.
-	// +optional
 	ControllerInstallation *ControllerInstallationControllerConfiguration
 	// Plant defines the configuration of the Plant controller.
-	// +optional
 	Plant *PlantConfiguration
 	// SecretBinding defines the configuration of the SecretBinding controller.
-	// +optional
 	SecretBinding *SecretBindingControllerConfiguration
 	// Project defines the configuration of the Project controller.
-	// +optional
 	Project *ProjectControllerConfiguration
 	// Quota defines the configuration of the Quota controller.
-	// +optional
 	Quota *QuotaControllerConfiguration
 	// Seed defines the configuration of the Seed controller.
-	// +optional
 	Seed *SeedControllerConfiguration
 	// Shoot defines the configuration of the Shoot controller.
 	Shoot ShootControllerConfiguration
@@ -87,6 +83,23 @@ type ControllerManagerControllerConfiguration struct {
 	ShootQuota ShootQuotaControllerConfiguration
 	// ShootHibernation defines the configuration of the ShootHibernation controller.
 	ShootHibernation ShootHibernationControllerConfiguration
+}
+
+// BackupBucketControllerConfiguration defines the configuration of the BackupBucket
+// controller.
+type BackupBucketControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs int
+}
+
+// BackupEntryControllerConfiguration defines the configuration of the BackupEntry
+// controller.
+type BackupEntryControllerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on events.
+	ConcurrentSyncs int
+	// DeletionGracePeriodHours holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
+	// If value is set to 0 then the BackupEntryController will trigger deletion immediately.
+	DeletionGracePeriodHours *int
 }
 
 // CloudProfileControllerConfiguration defines the configuration of the CloudProfile
@@ -156,7 +169,6 @@ type SeedControllerConfiguration struct {
 	// PodPriority and requires the Seed cluster to have Kubernetes version 1.11 or
 	// the PodPriority feature gate as well as the scheduling.k8s.io/v1alpha1 API
 	// group enabled. It defaults to true.
-	// +optional
 	ReserveExcessCapacity *bool
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
@@ -170,18 +182,15 @@ type ShootControllerConfiguration struct {
 	ConcurrentSyncs int
 	// ReconcileInMaintenanceOnly determines whether Shoot reconciliations happen only
 	// during its maintenance time window.
-	// +optional
 	ReconcileInMaintenanceOnly *bool
 	// RespectSyncPeriodOverwrite determines whether a sync period overwrite of a
 	// Shoot (via annotation) is respected or not. Defaults to false.
-	// +optional
 	RespectSyncPeriodOverwrite *bool
 	// RetryDuration is the maximum duration how often a reconciliation will be retried
 	// in case of errors.
 	RetryDuration metav1.Duration
 	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
 	// re-added to the queue so that the operation can be retried. Defaults to 15s.
-	// +optional
 	RetrySyncPeriod *metav1.Duration
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
@@ -198,7 +207,6 @@ type ShootCareControllerConfiguration struct {
 	// already running on them).
 	SyncPeriod metav1.Duration
 	// ConditionThresholds defines the condition threshold per condition type.
-	// +optional
 	ConditionThresholds []ConditionThreshold
 }
 
@@ -246,10 +254,8 @@ type BackupInfrastructureControllerConfiguration struct {
 	SyncPeriod metav1.Duration
 	// DeletionGracePeriodHours holds the period in number of hours to delete the Backup Infrastructure after deletion timestamp is set.
 	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately.
-	// +optional
 	DeletionGracePeriodHours *int
 	// DeletionGracePeriodHoursByPurpose holds various shoot purposes mapped to the respective deletion grace periods in hours for the backup infrastructure associated with the shoot
-	// +optional
 	DeletionGracePeriodHoursByPurpose map[string]int
 }
 
@@ -258,14 +264,11 @@ type BackupInfrastructureControllerConfiguration struct {
 type DiscoveryConfiguration struct {
 	// DiscoveryCacheDir is the directory to store discovery cache information.
 	// If unset, the discovery client will use the current working directory.
-	// +optional
 	DiscoveryCacheDir *string
 	// HTTPCacheDir is the directory to store discovery HTTP cache information.
 	// If unset, no HTTP caching will be done.
-	// +optional
 	HTTPCacheDir *string
 	// TTL is the ttl how long discovery cache information shall be valid.
-	// +optional
 	TTL *metav1.Duration
 }
 

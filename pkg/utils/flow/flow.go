@@ -33,7 +33,7 @@ const (
 )
 
 // ProgressReporter is continuously called on progress in a flow.
-type ProgressReporter func(*Stats)
+type ProgressReporter func(context.Context, *Stats)
 
 type nodes map[TaskID]*node
 
@@ -97,7 +97,7 @@ func (n *node) addTargets(taskIDs ...TaskID) {
 // are left blank and don't affect the Flow.
 type Opts struct {
 	Logger           logrus.FieldLogger
-	ProgressReporter func(stats *Stats)
+	ProgressReporter func(ctx context.Context, stats *Stats)
 	Context          context.Context
 }
 
@@ -236,16 +236,16 @@ func (e *execution) processTriggers(ctx context.Context, id TaskID) {
 	}
 }
 
-func (e *execution) reportProgress() {
+func (e *execution) reportProgress(ctx context.Context) {
 	if e.progressReporter != nil {
-		e.progressReporter(e.stats.Copy())
+		e.progressReporter(ctx, e.stats.Copy())
 	}
 }
 
 func (e *execution) run(ctx context.Context) error {
 	defer close(e.done)
 	e.log.Info("Starting")
-	e.reportProgress()
+	e.reportProgress(ctx)
 
 	var (
 		cancelErr error
@@ -254,7 +254,7 @@ func (e *execution) run(ctx context.Context) error {
 	for name := range roots {
 		if cancelErr = ctx.Err(); cancelErr == nil {
 			e.runNode(ctx, name)
-			e.reportProgress()
+			e.reportProgress(ctx)
 		}
 	}
 
@@ -269,7 +269,7 @@ func (e *execution) run(ctx context.Context) error {
 				e.processTriggers(ctx, result.TaskID)
 			}
 		}
-		e.reportProgress()
+		e.reportProgress(ctx)
 	}
 
 	e.log.Info("Finished")

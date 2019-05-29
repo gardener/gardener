@@ -15,7 +15,11 @@
 package openstackbotanist
 
 import (
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gophercloud/gophercloud"
+	"github.com/gophercloud/gophercloud/openstack"
+	"github.com/gophercloud/utils/openstack/clientconfig"
 )
 
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
@@ -42,4 +46,42 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error
 	}
 
 	return secretData, nil
+}
+
+// GetEtcdBackupSnapstore returns the etcd backup snapstore object.
+func (b *OpenStackBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte) (snapstore.SnapStore, error) {
+	var (
+		bucket = string(secretData[common.BackupBucketName])
+	)
+	opts := &clientconfig.ClientOpts{
+		AuthInfo: &clientconfig.AuthInfo{
+			AuthURL:     string(secretData[AuthURL]),
+			Username:    string(secretData[UserName]),
+			Password:    string(secretData[Password]),
+			DomainName:  string(secretData[DomainName]),
+			ProjectName: string(secretData[TenantName]),
+		},
+	}
+	authOpts, err := clientconfig.AuthOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// AllowReauth should be set to true if you grant permission for Gophercloud to
+	// cache your credentials in memory, and to allow Gophercloud to attempt to
+	// re-authenticate automatically if/when your token expires.
+	authOpts.AllowReauth = true
+	provider, err := openstack.AuthenticatedClient(*authOpts)
+	if err != nil {
+		return nil, err
+
+	}
+
+	client, err := openstack.NewObjectStorageV1(provider, gophercloud.EndpointOpts{})
+	if err != nil {
+		return nil, err
+
+	}
+
+	return snapstore.NewSwiftSnapstoreFromClient(bucket, "etcd-main/v1", "", 10, client), nil
 }

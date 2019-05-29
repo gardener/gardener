@@ -177,7 +177,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.TaskFn(botanist.DeploySecrets).DoIf(!shootNamespaceInDeletion),
+			Fn:   flow.TaskFn(botanist.DeploySecrets).SkipIf(shootNamespaceInDeletion),
 		})
 		// Redeploy the control plane to make sure all components that depend on the cloud provider secret are restarted
 		// in case it has changed. Also, it's needed for other control plane components like the kube-apiserver or kube-
@@ -411,11 +411,6 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			waitUntilInfrastructureDeleted,
 		)
 
-		deleteBackupInfrastructure = g.Add(flow.Task{
-			Name:         "Deleting backup infrastructure",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupInfrastructure),
-			Dependencies: flow.NewTaskIDs(deleteKubeAPIServer),
-		})
 		destroyInternalDomainDNSRecord = g.Add(flow.Task{
 			Name:         "Destroying internal domain DNS record",
 			Fn:           botanist.DestroyInternalDomainDNSRecord,
@@ -424,7 +419,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting Shoot namespace in Seed",
 			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer),
+			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, deleteKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Waiting until Shoot namespace in Seed has been deleted",

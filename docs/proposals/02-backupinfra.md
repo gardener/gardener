@@ -52,7 +52,7 @@ Just to give brief before going into the details, we will be sticking to the fac
 apiVersion: garden.cloud/v1alpha1
 kind: BackupBucket
 metadata:
-  name: packet-random[:5]
+  name: packet-region1-uid[:5]
   # No namespace needed. This will be cluster scope resource.
   ownerReferences:
   - kind: CloudProfile
@@ -62,7 +62,7 @@ spec:
   region: eu-west-1
   secretRef: # Required for root
     name: backup-operator-aws
-    namespace: backup-garden
+    namespace: garden
 status:
   lastOperation: ...
   observedGeneration: ...
@@ -85,11 +85,7 @@ metadata:
 spec:
   shootUID: 19a9538b-5058-11e9-b5a6-5e696cab3bc8 # Just for reference to find back associated shoot.
   # Following section comes from cloudProfile or seed yaml based on granularity decision.
-  provider: aws
-  region: eu-west-1
-  secretRef: # Required for root
-    name: backup-operator-aws
-    namespace: backup-garden
+  bucketName: packet-region1-uid[:5]
 status:
   lastOperation: ...
   observedGeneration: ...
@@ -127,7 +123,7 @@ apiVersion: extensions.gardener.cloud/v1alpha1
 kind: BackupEntry
 metadata:
   name: shoot--dev--example--3ef42 # Naming convention explained later
-  namespace: backup-garden
+  # No namespace need. This will be cluster scope resource
 spec:
   type: aws
   region: eu-west-1
@@ -150,19 +146,21 @@ status:
 Spec:
     backup:
         provider: aws
-        region: eu-qest-1
+        region: eu-west-1
         secretRef:
             name: backup-operator-aws
             namespace: garden
 ```
 Here CloudProfileController will interpret this spec as follows:
+- If `spec.backup` is nil
+  - No backup for any shoot.
 - If `spec.backup.region` is not nil,
   - Then respect it, i.e. use the provider and unique region field mentioned there for BackupBucket.
   - Here Preferably, `spec.backup.region` field will be unique, since for cross provider, it doesn’t make much sense. Since region name will be different for different providers.
 - Otherwise, spec.backup.region is nil then,
   - If same provider case i.e. spec.backup.provider = spec.(type-of-provider)  or nil,
     - Then, for each region from `spec.(type-of-provider).constraints.regions` create a `BackupBucket` instance. This can be done lazily i.e. create `BackupBucket` instance for region only if some seed actually spawned in the region has been registered. This will avoid creating IaaS bucket even if no seed is registered in that region, but region is listed in `cloudprofile`.
-    - Shoot controller will choose backup container as per the seed region. (With shoot control plane migration also, seed’s availibility zone might change but the region will be remaining same as per current scope.)
+    - Shoot controller will choose backup container as per the seed region. (With shoot control plane migration also, seed’s availability zone might change but the region will be remaining same as per current scope.)
   - Otherwise cross provider case i.e. spec.backup.provider != spec.(type-of-provider)
     - Report validation error: Since, for example,  we can’t expect `spec.backup.provider` = `aws`  to support region in, `spec.packet.constraint.region`. Where type-of-provider is `packet`
 

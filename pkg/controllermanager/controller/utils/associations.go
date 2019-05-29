@@ -15,12 +15,15 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/apimachinery/pkg/labels"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DetermineShootAssociations gets a <shootLister> to determine the Shoots resources which are associated
@@ -91,4 +94,24 @@ func DetermineSecretBindingAssociations(quota *gardenv1beta1.Quota, bindingListe
 		}
 	}
 	return associatedBindings, nil
+}
+
+// DetermineBackupBucketAssociations  determine the BackupBucket resources which are associated
+// to seed with name <seedName>
+func DetermineBackupBucketAssociations(ctx context.Context, c client.Client, seedName string) ([]string, error) {
+	var (
+		associatedBackupBuckets []string
+		backupBuckets           = &gardencorev1alpha1.BackupBucketList{}
+	)
+
+	if err := c.List(ctx, backupBuckets); err != nil {
+		return nil, err
+	}
+
+	for _, backupBucket := range backupBuckets.Items {
+		if backupBucket.Spec.Seed != nil && *backupBucket.Spec.Seed == seedName {
+			associatedBackupBuckets = append(associatedBackupBuckets, backupBucket.Name)
+		}
+	}
+	return associatedBackupBuckets, nil
 }

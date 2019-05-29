@@ -15,9 +15,10 @@
 package config
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	componentbaseconfig "k8s.io/component-base/config"
-	"time"
 )
 
 const (
@@ -51,7 +52,6 @@ type CandidateDeterminationStrategy string
 type SchedulerConfiguration struct {
 	metav1.TypeMeta
 
-	Strategy CandidateDeterminationStrategy
 	// ClientConnection specifies the kubeconfig file and client connection
 	// settings for the proxy server to use when communicating with the gardener-apiserver.
 	ClientConnection componentbaseconfig.ClientConnectionConfiguration
@@ -63,14 +63,56 @@ type SchedulerConfiguration struct {
 	LogLevel string
 	// Server defines the configuration of the HTTP server.
 	Server ServerConfiguration
+	// Scheduler defines the configuration of the schedulers.
+	Schedulers SchedulerControllerConfiguration
+}
+
+// SchedulerControllerConfiguration defines the configuration of the controllers.
+type SchedulerControllerConfiguration struct {
+	// BackupBucket defines the configuration of the BackupBucket controller.
+	// +optional
+	BackupBucket *BackupBucketSchedulerConfiguration
+	// Shoot defines the configuration of the Shoot controller.
+	// +optional
+	Shoot *ShootSchedulerConfiguration
+}
+
+// BackupBucketSchedulerConfiguration defines the configuration of the BackupBucket to Seed
+// scheduler.
+type BackupBucketSchedulerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// RetrySyncPeriod is the duration how fast BackupBuckets with an errornous operation are
+	// re-added to the queue so that the operation can be retried. Defaults to 15s.
+	// +optional
+	RetrySyncPeriod metav1.Duration
+}
+
+// BackupEntrySchedulerConfiguration defines the configuration of the BackupEntry to Seed
+// scheduler.
+type BackupEntrySchedulerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
+	// RetrySyncPeriod is the duration how fast BackupEntries with an errornous operation are
+	// re-added to the queue so that the operation can be retried. Defaults to 15s.
+	// +optional
+	RetrySyncPeriod metav1.Duration
+}
+
+// ShootSchedulerConfiguration defines the configuration of the Shoot to Seed
+// scheduler.
+type ShootSchedulerConfiguration struct {
+	// ConcurrentSyncs is the number of workers used for the controller to work on
+	// events.
+	ConcurrentSyncs int
 	// RetrySyncPeriod is the duration how fast Shoots with an errornous operation are
 	// re-added to the queue so that the operation can be retried. Defaults to 15s.
 	// +optional
-	RetrySyncPeriod *metav1.Duration
-	// ConcurrentSyncs is the number of workers used for the scheduler to work on
-	// events.
-	// +optional
-	ConcurrentSyncs *int
+	RetrySyncPeriod metav1.Duration
+	// Strategy defines how seeds for shoots, that do not specify a seed explicitly, are being determined
+	Strategy CandidateDeterminationStrategy
 }
 
 // DiscoveryConfiguration defines the configuration of how to discover API groups.

@@ -114,7 +114,7 @@ func (c *Controller) reconcileBackupInfrastructureKey(key string) error {
 		durationToNextSync = 15 * time.Second
 	} else if deleted {
 		gracePeriod := computeGracePeriod(c.config, backupInfrastructure)
-		durationToActualDeletion := gracePeriod - time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time)
+		durationToActualDeletion := gracePeriod - time.Since(backupInfrastructure.DeletionTimestamp.Local())
 		// We don't set durationToNextSync directly to durationToActualDeletion since,
 		// we want reconciliation to update status as per sync period. This will help in adjusting
 		// the next sync time in case deletionGracePeriod is reduced from GCM config.
@@ -195,7 +195,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	if backupInfrastructure.DeletionTimestamp != nil {
 		gracePeriod := computeGracePeriod(c.config, backupInfrastructure)
 		present, _ := strconv.ParseBool(backupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion])
-		if present || time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
+		if present || time.Since(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
 			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateProcessing, operationType, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
 				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion start: %+v", updateErr)
 				return false, updateErr

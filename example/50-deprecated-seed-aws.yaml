@@ -21,3 +21,10 @@ spec:
   #   services: 100.64.0.0/13
   blockCIDRs:
   - 169.254.169.254/32
+# Configuration of backup object store provider into which the backups will be stored.
+# backup:
+#  type: aws
+#  region: eu-west-1
+#  secretRef:
+#    name: backup-secret
+#    namespace: garden

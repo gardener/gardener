@@ -12,6 +12,14 @@ type FakeCoreV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeCoreV1alpha1) BackupBuckets() v1alpha1.BackupBucketInterface {
+	return &FakeBackupBuckets{c}
+}
+
+func (c *FakeCoreV1alpha1) BackupEntries(namespace string) v1alpha1.BackupEntryInterface {
+	return &FakeBackupEntries{c, namespace}
+}
+
 func (c *FakeCoreV1alpha1) ControllerInstallations() v1alpha1.ControllerInstallationInterface {
 	return &FakeControllerInstallations{c}
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/version"
+	errors2 "github.com/pkg/errors"
 
 	jsoniter "github.com/json-iterator/go"
 	appsv1 "k8s.io/api/apps/v1"
@@ -116,9 +117,24 @@ func GenerateBackupNamespaceName(backupInfrastructureName string) string {
 	return fmt.Sprintf("%s--%s", BackupNamespacePrefix, backupInfrastructureName)
 }
 
+// GenerateBackupBucketName returns BackupBucket resource name created from provided <provider>, <region> and <seedUID>.
+func GenerateBackupBucketName(provider, region string, seedUID types.UID) string {
+	// Bucket name length's common maximum limit is 63 across cloud provider.
+	return fmt.Sprintf("%s--%s--%s", provider, region, []byte(seedUID))
+}
+
 // GenerateBackupEntryName returns BackupEntry resource name created from provided <seedNamespace> and <shootUID>.
 func GenerateBackupEntryName(seedNamespace string, shootUID types.UID) string {
 	return fmt.Sprintf("%s--%s", seedNamespace, shootUID)
+}
+
+// ExtractShootDetailsFromBackupEntryName returns Shoot resource technicalID its UID from provided <backupEntryName>.
+func ExtractShootDetailsFromBackupEntryName(backupEntryName string) (shootTechnicalID, shootUID string) {
+	tokens := strings.Split(backupEntryName, "--")
+	shootUID = tokens[len(tokens)-1]
+	shootTechnicalID = strings.TrimSuffix(backupEntryName, shootUID)
+	shootTechnicalID = strings.TrimSuffix(shootTechnicalID, "--")
+	return shootTechnicalID, shootUID
 }
 
 // IsFollowingNewNamingConvention determines whether the new naming convention followed for shoot resources.
@@ -239,6 +255,15 @@ func ShouldObjectBeRemoved(obj metav1.Object, gracePeriod time.Duration) bool {
 	}
 
 	return deletionTimestamp.Time.Before(time.Now().Add(-gracePeriod))
+}
+
+// ComputeSecretCheckSum computes the sha256 checksum of secret data.
+func ComputeSecretCheckSum(data map[string][]byte) string {
+	jsonString, err := json.Marshal(data)
+	if err != nil {
+		return ""
+	}
+	return utils.ComputeSHA256Hex(jsonString)
 }
 
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
@@ -558,4 +583,21 @@ func GetServiceAccountSigningKeySecret(ctx context.Context, c client.Client, sho
 // end result is 'api.<domain>'.
 func GetAPIServerDomain(domain string) string {
 	return fmt.Sprintf("%s.%s", APIServerPrefix, domain)
+}
+
+// GetSecretFromSecretRef gets the Secret object from <secretRef>.
+func GetSecretFromSecretRef(ctx context.Context, c client.Client, secretRef *corev1.SecretReference) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	if err := c.Get(ctx, kutil.Key(secretRef.Namespace, secretRef.Name), secret); err != nil {
+		return nil, err
+	}
+	return secret, nil
+}
+
+// WrapWithLastError is wrapper function for gardencorev1alpha1.LastError
+func WrapWithLastError(err error, lastError *gardencorev1alpha1.LastError) error {
+	if err == nil || lastError == nil {
+		return err
+	}
+	return errors2.Wrapf(err, "last error: %s", lastError.Description)
 }

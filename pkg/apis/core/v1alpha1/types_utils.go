@@ -19,6 +19,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+const (
+	// EventSchedulingSuccessful is an event reason for successful scheduling.
+	EventSchedulingSuccessful = "SchedulingSuccessful"
+	// EventSchedulingFailed is an event reason for failed scheduling.
+	EventSchedulingFailed = "SchedulingFailed"
+)
+
 // ProviderConfig is a workaround for missing OpenAPI functions on runtime.RawExtension struct.
 // https://github.com/kubernetes/kubernetes/issues/55890
 // https://github.com/kubernetes-sigs/cluster-api/issues/137

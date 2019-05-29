@@ -15,6 +15,7 @@
 package alicloudbotanist
 
 import (
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
@@ -41,7 +42,7 @@ func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
 	}
 
 	// Must clean snapshots before deleting the bucket
-	stateVariables, err := tf.GetStateOutputVariables(BucketName, StorageEndpoint)
+	stateVariables, err := tf.GetStateOutputVariables(common.BackupBucketName, StorageEndpoint)
 	if err != nil {
 		if terraformer.IsVariablesNotFoundError(err) {
 			b.Logger.Infof("Skipping Alicloud backup storage bucket deletion because no storage endpoint has been found in the Terraform state.")
@@ -50,7 +51,7 @@ func (b *AlicloudBotanist) DestroyBackupInfrastructure() error {
 		return err
 	}
 
-	err = cleanSnapshots(stateVariables[BucketName], stateVariables[StorageEndpoint],
+	err = cleanSnapshots(stateVariables[common.BackupBucketName], stateVariables[StorageEndpoint],
 		string(b.Seed.Secret.Data[AccessKeyID]), string(b.Seed.Secret.Data[AccessKeySecret]))
 	if err != nil {
 		return err

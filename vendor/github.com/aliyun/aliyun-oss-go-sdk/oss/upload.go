@@ -94,7 +94,7 @@ func getRoutines(options []Option) int {
 
 // getPayer return the payer of the request
 func getPayer(options []Option) string {
-	payerOpt, err := findOption(options, HTTPHeaderOSSRequester, nil)
+	payerOpt, err := findOption(options, HTTPHeaderOssRequester, nil)
 	if err != nil || payerOpt == nil {
 		return ""
 	}
@@ -175,12 +175,6 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 		return err
 	}
 
-	payerOptions := []Option{}
-	payer := getPayer(options)
-	if payer != "" {
-		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
-	}
-
 	// Initialize the multipart upload
 	imur, err := bucket.InitiateMultipartUpload(objectKey, options...)
 	if err != nil {
@@ -194,11 +188,11 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 
 	var completedBytes int64
 	totalBytes := getTotalBytes(chunks)
-	event := newProgressEvent(TransferStartedEvent, 0, totalBytes)
+	event := newProgressEvent(TransferStartedEvent, 0, totalBytes, 0)
 	publishProgress(listener, event)
 
 	// Start the worker coroutine
-	arg := workerArg{&bucket, filePath, imur, payerOptions, uploadPartHooker}
+	arg := workerArg{&bucket, filePath, imur, options, uploadPartHooker}
 	for w := 1; w <= routines; w++ {
 		go worker(w, arg, jobs, results, failed, die)
 	}
@@ -215,13 +209,16 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 			completed++
 			parts[part.PartNumber-1] = part
 			completedBytes += chunks[part.PartNumber-1].Size
-			event = newProgressEvent(TransferDataEvent, completedBytes, totalBytes)
+
+			// why RwBytes in ProgressEvent is 0 ?
+			// because read or write event has been notified in teeReader.Read()
+			event = newProgressEvent(TransferDataEvent, completedBytes, totalBytes, 0)
 			publishProgress(listener, event)
 		case err := <-failed:
 			close(die)
-			event = newProgressEvent(TransferFailedEvent, completedBytes, totalBytes)
+			event = newProgressEvent(TransferFailedEvent, completedBytes, totalBytes, 0)
 			publishProgress(listener, event)
-			bucket.AbortMultipartUpload(imur, payerOptions...)
+			bucket.AbortMultipartUpload(imur, options...)
 			return err
 		}
 
@@ -230,13 +227,13 @@ func (bucket Bucket) uploadFile(objectKey, filePath string, partSize int64, opti
 		}
 	}
 
-	event = newProgressEvent(TransferStartedEvent, completedBytes, totalBytes)
+	event = newProgressEvent(TransferStartedEvent, completedBytes, totalBytes, 0)
 	publishProgress(listener, event)
 
 	// Complete the multpart upload
-	_, err = bucket.CompleteMultipartUpload(imur, parts, payerOptions...)
+	_, err = bucket.CompleteMultipartUpload(imur, parts, options...)
 	if err != nil {
-		bucket.AbortMultipartUpload(imur, payerOptions...)
+		bucket.AbortMultipartUpload(imur, options...)
 		return err
 	}
 	return nil
@@ -448,12 +445,6 @@ func complete(cp *uploadCheckpoint, bucket *Bucket, parts []UploadPart, cpFilePa
 func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64, options []Option, cpFilePath string, routines int) error {
 	listener := getProgressListener(options)
 
-	payerOptions := []Option{}
-	payer := getPayer(options)
-	if payer != "" {
-		payerOptions = append(payerOptions, RequestPayer(PayerType(payer)))
-	}
-
 	// Load CP data
 	ucp := uploadCheckpoint{}
 	err := ucp.load(cpFilePath)
@@ -482,11 +473,14 @@ func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64
 	die := make(chan bool)
 
 	completedBytes := ucp.getCompletedBytes()
-	event := newProgressEvent(TransferStartedEvent, completedBytes, ucp.FileStat.Size)
+
+	// why RwBytes in ProgressEvent is 0 ?
+	// because read or write event has been notified in teeReader.Read()
+	event := newProgressEvent(TransferStartedEvent, completedBytes, ucp.FileStat.Size, 0)
 	publishProgress(listener, event)
 
 	// Start the workers
-	arg := workerArg{&bucket, filePath, imur, payerOptions, uploadPartHooker}
+	arg := workerArg{&bucket, filePath, imur, options, uploadPartHooker}
 	for w := 1; w <= routines; w++ {
 		go worker(w, arg, jobs, results, failed, die)
 	}
@@ -503,11 +497,11 @@ func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64
 			ucp.updatePart(part)
 			ucp.dump(cpFilePath)
 			completedBytes += ucp.Parts[part.PartNumber-1].Chunk.Size
-			event = newProgressEvent(TransferDataEvent, completedBytes, ucp.FileStat.Size)
+			event = newProgressEvent(TransferDataEvent, completedBytes, ucp.FileStat.Size, 0)
 			publishProgress(listener, event)
 		case err := <-failed:
 			close(die)
-			event = newProgressEvent(TransferFailedEvent, completedBytes, ucp.FileStat.Size)
+			event = newProgressEvent(TransferFailedEvent, completedBytes, ucp.FileStat.Size, 0)
 			publishProgress(listener, event)
 			return err
 		}
@@ -517,10 +511,10 @@ func (bucket Bucket) uploadFileWithCp(objectKey, filePath string, partSize int64
 		}
 	}
 
-	event = newProgressEvent(TransferCompletedEvent, completedBytes, ucp.FileStat.Size)
+	event = newProgressEvent(TransferCompletedEvent, completedBytes, ucp.FileStat.Size, 0)
 	publishProgress(listener, event)
 
 	// Complete the multipart upload
-	err = complete(&ucp, &bucket, ucp.allParts(), cpFilePath, payerOptions)
+	err = complete(&ucp, &bucket, ucp.allParts(), cpFilePath, options)
 	return err
 }

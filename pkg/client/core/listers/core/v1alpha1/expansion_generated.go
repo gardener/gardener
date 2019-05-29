@@ -2,6 +2,18 @@
 
 package v1alpha1
 
+// BackupBucketListerExpansion allows custom methods to be added to
+// BackupBucketLister.
+type BackupBucketListerExpansion interface{}
+
+// BackupEntryListerExpansion allows custom methods to be added to
+// BackupEntryLister.
+type BackupEntryListerExpansion interface{}
+
+// BackupEntryNamespaceListerExpansion allows custom methods to be added to
+// BackupEntryNamespaceLister.
+type BackupEntryNamespaceListerExpansion interface{}
+
 // ControllerInstallationListerExpansion allows custom methods to be added to
 // ControllerInstallationLister.
 type ControllerInstallationListerExpansion interface{}

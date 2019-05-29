@@ -15,6 +15,8 @@
 package alicloudbotanist
 
 import (
+	"github.com/aliyun/aliyun-oss-go-sdk/oss"
+	"github.com/gardener/etcd-backup-restore/pkg/snapstore"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -24,17 +26,39 @@ func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error)
 	if err != nil {
 		return nil, err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(BucketName, StorageEndpoint)
+	stateVariables, err := tf.GetStateOutputVariables(common.BackupBucketName, StorageEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	secretData := map[string][]byte{
-		common.BackupBucketName: []byte(stateVariables[BucketName]),
+		common.BackupBucketName: []byte(stateVariables[common.BackupBucketName]),
 		StorageEndpoint:         []byte(stateVariables[StorageEndpoint]),
 		AccessKeyID:             b.Seed.Secret.Data[AccessKeyID],
 		AccessKeySecret:         b.Seed.Secret.Data[AccessKeySecret],
 	}
 
 	return secretData, nil
+}
+
+// GetEtcdBackupSnapstore returns the etcd backup snapstore object.
+func (b *AlicloudBotanist) GetEtcdBackupSnapstore(secretData map[string][]byte) (snapstore.SnapStore, error) {
+	var (
+		accessKeyID     = string(secretData[AccessKeyID])
+		secretAccessKey = string(secretData[AccessKeySecret])
+		bucket          = string(secretData[common.BackupBucketName])
+		storageEndpoint = string(secretData[StorageEndpoint])
+	)
+
+	client, err := oss.New(storageEndpoint, accessKeyID, secretAccessKey)
+	if err != nil {
+		return nil, err
+	}
+
+	bucketOSS, err := client.Bucket(bucket)
+	if err != nil {
+		return nil, err
+	}
+
+	return snapstore.NewOSSFromBucket("etcd-main/v1", "", 10, bucketOSS), nil
 }
