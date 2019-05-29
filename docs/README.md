@@ -12,18 +12,21 @@
 ## Concepts
 
 * [Configuration and Secrets](concepts/configuration.md)
-* [Machine-Controller-Manager integration and Machine bootstrap flow](concepts/machine-bootstrap.md)
-* [Repositories of required components](concepts/repositories.md)
 
 ## Extensions
 
 * [Extensibility overview](extensions/overview.md)
 * [Extension controller registration](extensions/controllerregistration.md)
 * [`Cluster` resource](extensions/cluster.md)
-* Contracts
-  * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
-  * [`Infrastructure` resource](extensions/infrastructure.md)
-  * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
+* Extension points
+  * [General conventions](extensions/conventions.md)
+  * DNS providers
+    * [`DNSProvider` and `DNSEntry` resources](extensions/dns.md)
+  * IaaS/Cloud providers
+    * [`Infrastructure` resource](extensions/infrastructure.md)
+    * [`Worker` resource](extensions/worker.md)
+  * Operating systems
+    * [`OperatingSystemConfig` resource](extensions/operatingsystemconfig.md)
 
 ## Deployment
 
