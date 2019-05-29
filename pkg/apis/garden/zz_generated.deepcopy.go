@@ -1066,6 +1066,31 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 		*out = new(float64)
 		**out = **in
 	}
+	if in.ScaleDownUnneededTime != nil {
+		in, out := &in.ScaleDownUnneededTime, &out.ScaleDownUnneededTime
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScaleDownDelayAfterAdd != nil {
+		in, out := &in.ScaleDownDelayAfterAdd, &out.ScaleDownDelayAfterAdd
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScaleDownDelayAfterFailure != nil {
+		in, out := &in.ScaleDownDelayAfterFailure, &out.ScaleDownDelayAfterFailure
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScaleDownDelayAfterDelete != nil {
+		in, out := &in.ScaleDownDelayAfterDelete, &out.ScaleDownDelayAfterDelete
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScanInterval != nil {
+		in, out := &in.ScanInterval, &out.ScanInterval
+		*out = new(metav1.Duration)
+		**out = **in
+	}
 	return
 }
 

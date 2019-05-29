@@ -24,6 +24,7 @@ import (
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -1059,6 +1060,31 @@ func (in *ClusterAutoscaler) DeepCopyInto(out *ClusterAutoscaler) {
 	if in.ScaleDownUtilizationThreshold != nil {
 		in, out := &in.ScaleDownUtilizationThreshold, &out.ScaleDownUtilizationThreshold
 		*out = new(float64)
+		**out = **in
+	}
+	if in.ScaleDownUnneededTime != nil {
+		in, out := &in.ScaleDownUnneededTime, &out.ScaleDownUnneededTime
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScaleDownDelayAfterAdd != nil {
+		in, out := &in.ScaleDownDelayAfterAdd, &out.ScaleDownDelayAfterAdd
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScaleDownDelayAfterFailure != nil {
+		in, out := &in.ScaleDownDelayAfterFailure, &out.ScaleDownDelayAfterFailure
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScaleDownDelayAfterDelete != nil {
+		in, out := &in.ScaleDownDelayAfterDelete, &out.ScaleDownDelayAfterDelete
+		*out = new(metav1.Duration)
+		**out = **in
+	}
+	if in.ScanInterval != nil {
+		in, out := &in.ScanInterval, &out.ScanInterval
+		*out = new(metav1.Duration)
 		**out = **in
 	}
 	return

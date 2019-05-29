@@ -2338,6 +2338,11 @@ func Convert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.Clou
 
 func autoConvert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in *ClusterAutoscaler, out *garden.ClusterAutoscaler, s conversion.Scope) error {
 	out.ScaleDownUtilizationThreshold = (*float64)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
+	out.ScaleDownUnneededTime = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownUnneededTime))
+	out.ScaleDownDelayAfterAdd = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterAdd))
+	out.ScaleDownDelayAfterFailure = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterFailure))
+	out.ScaleDownDelayAfterDelete = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterDelete))
+	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
 	return nil
 }
 
@@ -2348,6 +2353,11 @@ func Convert_v1beta1_ClusterAutoscaler_To_garden_ClusterAutoscaler(in *ClusterAu
 
 func autoConvert_garden_ClusterAutoscaler_To_v1beta1_ClusterAutoscaler(in *garden.ClusterAutoscaler, out *ClusterAutoscaler, s conversion.Scope) error {
 	out.ScaleDownUtilizationThreshold = (*float64)(unsafe.Pointer(in.ScaleDownUtilizationThreshold))
+	out.ScaleDownUnneededTime = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownUnneededTime))
+	out.ScaleDownDelayAfterAdd = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterAdd))
+	out.ScaleDownDelayAfterFailure = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterFailure))
+	out.ScaleDownDelayAfterDelete = (*metav1.Duration)(unsafe.Pointer(in.ScaleDownDelayAfterDelete))
+	out.ScanInterval = (*metav1.Duration)(unsafe.Pointer(in.ScanInterval))
 	return nil
 }
 

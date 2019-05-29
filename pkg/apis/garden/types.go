@@ -1206,6 +1206,21 @@ type ClusterAutoscaler struct {
 	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
 	// +optional
 	ScaleDownUtilizationThreshold *float64
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 10 mins).
+	// +optional
+	ScaleDownUnneededTime *metav1.Duration
+	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 10 mins).
+	// +optional
+	ScaleDownDelayAfterAdd *metav1.Duration
+	// ScaleDownDelayAfterFailure how long after scale down failure that scale down evaluation resumes (default: 3 mins).
+	// +optional
+	ScaleDownDelayAfterFailure *metav1.Duration
+	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+	// +optional
+	ScaleDownDelayAfterDelete *metav1.Duration
+	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
+	// +optional
+	ScanInterval *metav1.Duration
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
