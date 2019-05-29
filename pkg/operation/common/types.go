@@ -417,9 +417,6 @@ const (
 	// IngressDefaultBackendImageName is the name of the IngressDefaultBackend image.
 	IngressDefaultBackendImageName = "ingress-default-backend"
 
-	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
-	MachineControllerManagerImageName = "machine-controller-manager"
-
 	// ClusterAutoscalerImageName is the name of the ClusterAutoscaler image.
 	ClusterAutoscalerImageName = "cluster-autoscaler"
 

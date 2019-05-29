@@ -53,36 +53,6 @@ var _ = Describe("common", func() {
 	})
 
 	Describe("utils", func() {
-		Describe("#DistributePercentOverZones", func() {
-			It("should return unmodified percentage if total is evenly dividable", func() {
-				var (
-					total      = 6
-					noOfZones  = 3
-					percentage = "40%"
-				)
-
-				percentages := make([]string, 0, noOfZones)
-				for i := 0; i < noOfZones; i++ {
-					percentages = append(percentages, DistributePercentOverZones(i, percentage, noOfZones, total))
-				}
-				Expect(percentages).To(Equal([]string{percentage, percentage, percentage}))
-			})
-
-			It("should return correct percentage if total is not evenly dividable", func() {
-				var (
-					total      = 7
-					noOfZones  = 3
-					percentage = "40%"
-				)
-
-				percentages := make([]string, 0, noOfZones)
-				for i := 0; i < noOfZones; i++ {
-					percentages = append(percentages, DistributePercentOverZones(i, percentage, noOfZones, total))
-				}
-				Expect(percentages).To(Equal([]string{"52%", "35%", "35%"}))
-			})
-		})
-
 		Describe("#ComputeClusterIP", func() {
 			It("should return a cluster IP as string", func() {
 				var (
@@ -93,19 +63,6 @@ var _ = Describe("common", func() {
 				result := ComputeClusterIP(cidr, 10)
 
 				Expect(result).To(Equal("100.64.0.10"))
-			})
-		})
-
-		Describe("#DiskSize", func() {
-			It("should return a string", func() {
-				var (
-					size    = "10"
-					sizeInt = 10
-				)
-
-				result := DiskSize(size + "Gi")
-
-				Expect(result).To(Equal(sizeInt))
 			})
 		})
 

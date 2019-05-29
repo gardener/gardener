@@ -115,7 +115,6 @@ func newOperation(
 		ChartApplierGarden:   kubernetes.NewChartApplier(renderer, applier),
 		BackupInfrastructure: backupInfrastructure,
 		ShootBackup:          shootBackup,
-		MachineDeployments:   MachineDeployments{},
 	}
 
 	if shoot != nil {
@@ -471,26 +470,4 @@ func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// ContainsName checks whether the <name> is part of the <machineDeployments>
-// list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.
-func (m MachineDeployments) ContainsName(name string) bool {
-	for _, deployment := range m {
-		if name == deployment.Name {
-			return true
-		}
-	}
-	return false
-}
-
-// ContainsClass checks whether the <className> is part of the <machineDeployments>
-// list, i.e. whether there is an entry whose 'ClassName' attribute matches <name>. It returns true or false.
-func (m MachineDeployments) ContainsClass(className string) bool {
-	for _, deployment := range m {
-		if className == deployment.ClassName {
-			return true
-		}
-	}
-	return false
 }
