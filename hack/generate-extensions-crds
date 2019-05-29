@@ -14,11 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-go get sigs.k8s.io/controller-tools/cmd/crd
+go get sigs.k8s.io/controller-tools/cmd/controller-gen
 
 # The CRD generator does not understand APIs managed by aggregated API servers.
 cp -r pkg/apis pkg/apis-tmp
 rm -rf pkg/apis/core pkg/apis/garden
+# The CRD generator does not understand the embedded structs - the validation for these
+# fields needs to be added manually after generation.
+rm -f pkg/apis/extensions/v1alpha1/types_defaults.go
 
 function end_execution() {
   trap - HUP QUIT PIPE INT TERM EXIT
@@ -27,6 +30,6 @@ function end_execution() {
 }
 trap end_execution INT TERM EXIT
 
-crd generate \
+controller-gen crd \
   --domain=extensions.gardener.cloud \
   --output-dir=dev/extensions-crds
