@@ -119,7 +119,7 @@ The kube-scheduler command line can't contain provider-specific flags, and it ma
 
 ### etcd-main and etcd-events
 
-To deploy etcd, Gardener **shall** create 2 StatefulSet named `etcd-main` and `etcd-events` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
+To deploy etcd, Gardener **shall** create 2 StatefulSets named `etcd-main` and `etcd-events` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
 
 The pod template of these 2 deployments **shall** contain a container named `etcd`. It **shall not** contain a sidecar container for etcd backups. If such a container is needed, it should be added by webhooks, together with any volumes it may need to mount.
 
