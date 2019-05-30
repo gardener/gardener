@@ -11,6 +11,8 @@ import (
 
 type ExtensionsV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	BackupBucketsGetter
+	BackupEntriesGetter
 	ClustersGetter
 	ControlPlanesGetter
 	ExtensionsGetter
@@ -23,6 +25,14 @@ type ExtensionsV1alpha1Interface interface {
 // ExtensionsV1alpha1Client is used to interact with features provided by the extensions.gardener.cloud group.
 type ExtensionsV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *ExtensionsV1alpha1Client) BackupBuckets(namespace string) BackupBucketInterface {
+	return newBackupBuckets(c, namespace)
+}
+
+func (c *ExtensionsV1alpha1Client) BackupEntries(namespace string) BackupEntryInterface {
+	return newBackupEntries(c, namespace)
 }
 
 func (c *ExtensionsV1alpha1Client) Clusters() ClusterInterface {
