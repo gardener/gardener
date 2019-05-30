@@ -28,7 +28,7 @@ import (
 // waitForCleanEnvironment waits until no Terraform Job and Pod(s) exist for the current instance
 // of the Terraformer.
 func (t *Terraformer) waitForCleanEnvironment(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
