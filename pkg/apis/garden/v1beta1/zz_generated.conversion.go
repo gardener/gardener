@@ -3197,6 +3197,7 @@ func autoConvert_v1beta1_KubeletConfig_To_garden_KubeletConfig(in *KubeletConfig
 		return err
 	}
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
+	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	return nil
 }
 
@@ -3210,6 +3211,7 @@ func autoConvert_garden_KubeletConfig_To_v1beta1_KubeletConfig(in *garden.Kubele
 		return err
 	}
 	out.PodPIDsLimit = (*int64)(unsafe.Pointer(in.PodPIDsLimit))
+	out.CPUCFSQuota = (*bool)(unsafe.Pointer(in.CPUCFSQuota))
 	return nil
 }
 

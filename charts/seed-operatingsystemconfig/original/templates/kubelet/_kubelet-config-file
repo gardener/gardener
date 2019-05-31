@@ -21,7 +21,7 @@ clusterDomain: {{ required "kubernetes.domain is required" .Values.kubernetes.do
 clusterDNS:
 - {{ required "kubernetes.clusterDNS is required" .Values.kubernetes.clusterDNS }}
 configTrialDuration: 10m0s
-cpuCFSQuota: true
+cpuCFSQuota: {{ .Values.kubernetes.kubelet.cpuCFSQuota }}
 cpuManagerPolicy: none
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true

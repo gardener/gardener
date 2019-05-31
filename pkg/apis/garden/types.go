@@ -1480,6 +1480,8 @@ type KubeletConfig struct {
 	KubernetesConfig
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	PodPIDsLimit *int64
+	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
+	CPUCFSQuota *bool
 }
 
 // Maintenance contains information about the time window for maintenance operations and which

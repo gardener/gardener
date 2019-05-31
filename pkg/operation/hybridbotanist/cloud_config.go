@@ -165,6 +165,9 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		if podPIDsLimit := kubeletConfig.PodPIDsLimit; podPIDsLimit != nil {
 			kubelet["podPIDsLimit"] = *podPIDsLimit
 		}
+		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
+			kubelet["cpuCFSQuota"] = *cpuCFSQuota
+		}
 	}
 
 	if b.Shoot.UsesCSI() {
