@@ -60,6 +60,8 @@ const (
 	// operation.
 	GardenerOperationReconcile = "reconcile"
 
+	// BackupProvider is used to identify the backup provider.
+	BackupProvider = "backup.gardener.cloud/provider"
 	// SeedProvider is used to identify the seed provider.
 	SeedProvider = "seed.gardener.cloud/provider"
 	// ShootProvider is used to identify the shoot provider.

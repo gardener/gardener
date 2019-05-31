@@ -49,10 +49,11 @@ func (b *Botanist) DeployNamespace() error {
 			Annotations: getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID),
 			Name:        b.Shoot.SeedNamespace,
 			Labels: map[string]string{
-				common.GardenRole:                common.GardenRoleShoot,
-				common.ShootHibernated:           strconv.FormatBool(b.Shoot.IsHibernated),
-				gardencorev1alpha1.SeedProvider:  string(b.Seed.CloudProvider),
-				gardencorev1alpha1.ShootProvider: string(b.Shoot.CloudProvider),
+				common.GardenRole:                 common.GardenRoleShoot,
+				common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
+				gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
+				gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),
+				gardencorev1alpha1.ShootProvider:  string(b.Shoot.CloudProvider),
 			},
 		},
 	}, true)
