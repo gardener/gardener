@@ -29,6 +29,9 @@ const (
 	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
 	BackupSecretName = "etcd-backup"
 
+	// BackupInfrastructureForceDeletion is a constant for an annotation on a Backupinfrastructure indicating that it should be force deleted.
+	BackupInfrastructureForceDeletion = "backupinfrastructure.garden.sapcloud.io/force-deletion"
+
 	// BackupInfrastructureOperation is a constant for an annotation on a Backupinfrastructure indicating that an operation shall be performed.
 	BackupInfrastructureOperation = "backupinfrastructure.garden.sapcloud.io/operation"
 
