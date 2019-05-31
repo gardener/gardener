@@ -34,6 +34,7 @@ import (
 
 	dnsv1alpha1 "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1"
 
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -185,8 +186,13 @@ func (b *Botanist) RequiredExtensionsExist() error {
 			return err
 		}
 
-		for extensionKind, extensionType := range requiredExtensions {
-			if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
+		for extensionKind, extensionTypes := range requiredExtensions {
+			for extensionType := range extensionTypes {
+				if helper.IsResourceSupported(controllerRegistration.Spec.Resources, extensionKind, extensionType) && helper.IsControllerInstallationSuccessful(controllerInstallation) {
+					extensionTypes.Delete(extensionType)
+				}
+			}
+			if extensionTypes.Len() == 0 {
 				delete(requiredExtensions, extensionKind)
 			}
 		}
@@ -199,17 +205,30 @@ func (b *Botanist) RequiredExtensionsExist() error {
 	return nil
 }
 
-func (b *Botanist) computeRequiredExtensions() map[string]string {
-	requiredExtensions := map[string]string{
-		extensionsv1alpha1.OperatingSystemConfigResource: string(b.Shoot.GetMachineImageName()),
-	}
+func (b *Botanist) computeRequiredExtensions() map[string]sets.String {
+	requiredExtensions := make(map[string]sets.String)
+
+	requiredExtensions[extensionsv1alpha1.OperatingSystemConfigResource] = sets.NewString(string(b.Shoot.GetMachineImageName()))
 
 	if b.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged {
-		requiredExtensions[dnsv1alpha1.DNSProviderKind] = b.Garden.InternalDomain.Provider
+		if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
+			requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
+		}
+		requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Garden.InternalDomain.Provider)
 	}
 
 	if b.Shoot.ExternalDomain != nil && b.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged {
-		requiredExtensions[dnsv1alpha1.DNSProviderKind] = b.Shoot.ExternalDomain.Provider
+		if requiredExtensions[dnsv1alpha1.DNSProviderKind] == nil {
+			requiredExtensions[dnsv1alpha1.DNSProviderKind] = sets.NewString()
+		}
+		requiredExtensions[dnsv1alpha1.DNSProviderKind].Insert(b.Shoot.ExternalDomain.Provider)
+	}
+
+	for extensionType := range b.Shoot.Extensions {
+		if requiredExtensions[extensionsv1alpha1.ExtensionResource] == nil {
+			requiredExtensions[extensionsv1alpha1.ExtensionResource] = sets.NewString()
+		}
+		requiredExtensions[extensionsv1alpha1.ExtensionResource].Insert(extensionType)
 	}
 
 	return requiredExtensions

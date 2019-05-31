@@ -733,6 +733,8 @@ type ShootSpec struct {
 	Cloud Cloud
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS DNS
+	// Extensions contain type and provider information for Shoot extensions.
+	Extensions []Extension
 	// Hibernation contains information whether the Shoot is suspended or not.
 	// +optional
 	Hibernation *Hibernation
@@ -1106,6 +1108,14 @@ type Worker struct {
 	Labels map[string]string
 	// Taints is a list of taints for all the `Node` objects in this worker pool.
 	Taints []corev1.Taint
+}
+
+// Extension contains type and provider information for Shoot extensions.
+type Extension struct {
+	// Type is the type of the extension resource.
+	Type string
+	// ProviderConfig is the configuration passed to extension resource.
+	ProviderConfig *gardencore.ProviderConfig
 }
 
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.

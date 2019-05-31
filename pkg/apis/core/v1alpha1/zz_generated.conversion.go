@@ -8,6 +8,7 @@ import (
 	unsafe "unsafe"
 
 	core "github.com/gardener/gardener/pkg/apis/core"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -517,6 +518,8 @@ func Convert_core_ControllerRegistrationSpec_To_v1alpha1_ControllerRegistrationS
 func autoConvert_v1alpha1_ControllerResource_To_core_ControllerResource(in *ControllerResource, out *core.ControllerResource, s conversion.Scope) error {
 	out.Kind = in.Kind
 	out.Type = in.Type
+	out.GloballyEnabled = (*bool)(unsafe.Pointer(in.GloballyEnabled))
+	out.ReconcileTimeout = (*v1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	return nil
 }
 
@@ -528,6 +531,8 @@ func Convert_v1alpha1_ControllerResource_To_core_ControllerResource(in *Controll
 func autoConvert_core_ControllerResource_To_v1alpha1_ControllerResource(in *core.ControllerResource, out *ControllerResource, s conversion.Scope) error {
 	out.Kind = in.Kind
 	out.Type = in.Type
+	out.GloballyEnabled = (*bool)(unsafe.Pointer(in.GloballyEnabled))
+	out.ReconcileTimeout = (*v1.Duration)(unsafe.Pointer(in.ReconcileTimeout))
 	return nil
 }
 

@@ -28,8 +28,6 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/logger"
-	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/chart"
@@ -228,7 +226,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		[]string{
 			common.AlertManagerImageName,
 			common.AlpineImageName,
-			common.CertManagerImageName,
 			common.ConfigMapReloaderImageName,
 			common.CuratorImageName,
 			common.ElasticsearchImageName,
@@ -284,29 +281,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
 	} else {
 		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-	}
-
-	// Certificate Management feature gate
-	var (
-		clusterIssuer      map[string]interface{}
-		certManagerEnabled = controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement)
-	)
-
-	if certManagerEnabled {
-		certificateManagement, ok := secrets[common.GardenRoleCertificateManagement]
-		if !ok {
-			return fmt.Errorf("certificate management is enabled but no secret could be found with role: %s", common.GardenRoleCertificateManagement)
-		}
-
-		clusterIssuer, err = createClusterIssuer(certificateManagement)
-		if err != nil {
-			return fmt.Errorf("cannot create Cluster Issuer for certificate management: %v", err)
-		}
-	} else {
-		obj := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: common.CertManagerResourceName, Namespace: common.GardenNamespace}}
-		if err = k8sSeedClient.Client().Delete(context.TODO(), obj, kubernetes.DefaultDeleteOptionFuncs...); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -445,99 +419,12 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 				"storage":      seed.GetValidVolumeSize("9Gi"),
 			},
 		},
-		"cert-manager": map[string]interface{}{
-			"enabled":       certManagerEnabled,
-			"clusterissuer": clusterIssuer,
-		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
 			"enabled":        vpaEnabled,
 			"podAnnotations": vpaPodAnnotations,
 		},
 	}, applierOptions)
-}
-
-func createClusterIssuer(certificateManagement *corev1.Secret) (map[string]interface{}, error) {
-	certManagementConfig, err := certmanagement.RetrieveCertificateManagementConfig(certificateManagement)
-	if err != nil {
-		return nil, err
-	}
-
-	var (
-		clusterIssuerName = certManagementConfig.ClusterIssuerName
-		acmeConfig        = certManagementConfig.ACME
-		route53Config     = certManagementConfig.Providers.Route53
-		clouddnsConfig    = certManagementConfig.Providers.CloudDNS
-	)
-
-	var dnsProviders []certmanagement.DNSProviderConfig
-	for _, route53provider := range route53Config {
-		it := route53provider
-		dnsProviders = append(dnsProviders, &it)
-	}
-	for _, cloudDNSProvider := range clouddnsConfig {
-		it := cloudDNSProvider
-		dnsProviders = append(dnsProviders, &it)
-	}
-
-	var (
-		letsEncryptSecretName = "lets-encrypt"
-		providers             = createDNSProviderValues(dnsProviders)
-		acmePrivateKey        = acmeConfig.ACMEPrivateKey()
-	)
-
-	return map[string]interface{}{
-		"name": string(clusterIssuerName),
-		"acme": map[string]interface{}{
-			"email":  acmeConfig.Email,
-			"server": acmeConfig.Server,
-			"letsEncrypt": map[string]interface{}{
-				"name": letsEncryptSecretName,
-				"key":  acmePrivateKey,
-			},
-			"dns01": map[string]interface{}{
-				"providers": providers,
-			},
-		},
-	}, nil
-}
-
-func createDNSProviderValues(configs []certmanagement.DNSProviderConfig) []interface{} {
-	var providers []interface{}
-	for _, config := range configs {
-		name := config.ProviderName()
-		switch config.DNSProvider() {
-		case certmanagement.Route53:
-			route53config, ok := config.(*certmanagement.Route53Config)
-			if !ok {
-				logger.Logger.Errorf("Failed to cast to Route53Config object for DNSProviderConfig  %+v", config)
-				return nil
-			}
-
-			providers = append(providers, map[string]interface{}{
-				"name":        name,
-				"type":        certmanagement.Route53,
-				"region":      route53config.Region,
-				"accessKeyID": route53config.AccessKeyID,
-				"accessKey":   route53config.AccessKey(),
-			})
-		case certmanagement.CloudDNS:
-			cloudDNSConfig, ok := config.(*certmanagement.CloudDNSConfig)
-			if !ok {
-				logger.Logger.Errorf("Failed to cast to CloudDNSConfig object for DNSProviderConfig  %+v", config)
-				return nil
-			}
-
-			providers = append(providers, map[string]interface{}{
-				"name":      name,
-				"type":      certmanagement.CloudDNS,
-				"project":   cloudDNSConfig.Project,
-				"accessKey": cloudDNSConfig.AccessKey(),
-			})
-		default:
-		}
-	}
-	return providers
 }
 
 // DesiredExcessCapacity computes the required resources (CPU and memory) required to deploy new shoot control planes

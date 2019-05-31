@@ -31,11 +31,6 @@ const (
 	// alpha: v0.13.0
 	Logging utilfeature.Feature = "Logging"
 
-	// CertificateManagement enables certificate management for Shoot clusters.
-	// owner @timuthy, @zanetworker
-	// alpha: v0.1.0
-	CertificateManagement utilfeature.Feature = "CertificateManagement"
-
 	// VPA enables vertical pod autoscaling in Seed clusters.
 	// owner @wyb1
 	// alpha: v0.1.0

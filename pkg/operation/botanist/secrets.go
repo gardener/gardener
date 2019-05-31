@@ -689,25 +689,6 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 		)
 	}
 
-	certManagementEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement)
-	if certManagementEnabled {
-		secretList = append(secretList,
-			&secrets.ControlPlaneSecretConfig{
-				CertificateSecretConfig: &secrets.CertificateSecretConfig{
-					Name: common.CertBrokerResourceName,
-
-					CommonName: "garden.sapcloud.io:system:cert-broker",
-					CertType:   secrets.ClientCert,
-					SigningCA:  certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
-				},
-
-				KubeConfigRequest: &secrets.KubeConfigRequest{
-					ClusterName:  b.Shoot.SeedNamespace,
-					APIServerURL: b.Shoot.ComputeAPIServerURL(true, true),
-				},
-			})
-	}
-
 	return secretList, nil
 }
 

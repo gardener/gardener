@@ -29,7 +29,6 @@ spec:
         checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
         checksum/secret-alerting-smtp: {{ include "gardener.secret-alerting-smtp" . | sha256sum }}
         checksum/secret-openvpn-diffie-hellman: {{ include "gardener.secret-openvpn-diffie-hellman" . | sha256sum }}
-        checksum/secret-certificate-management: {{ include "gardener.secret-certificate-management" . | sha256sum }}
       labels:
         app: gardener
         role: controller-manager
