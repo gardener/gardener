@@ -257,10 +257,7 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name string)
 		return false, nil, err
 	}
 
-	var (
-		currentMachineImageName = machineImageLowerCase(name)
-		machineImages           []gardenv1beta1.MachineImage
-	)
+	var machineImages []gardenv1beta1.MachineImage
 
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
@@ -280,7 +277,7 @@ func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name string)
 	}
 
 	for _, image := range machineImages {
-		if machineImageLowerCase(image.Name) == currentMachineImageName {
+		if strings.ToLower(image.Name) == strings.ToLower(name) {
 			ptr := image
 			return true, &ptr, nil
 		}
@@ -307,10 +304,6 @@ func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage 
 	}
 
 	return nil
-}
-
-func machineImageLowerCase(name string) string {
-	return strings.ToLower(name)
 }
 
 // DetermineLatestKubernetesVersion finds the latest Kubernetes patch version in the <cloudProfile> compared

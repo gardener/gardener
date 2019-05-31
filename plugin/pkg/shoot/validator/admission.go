@@ -915,9 +915,11 @@ func validateLoadBalancerProviderConstraints(providers []garden.OpenStackLoadBal
 }
 
 func getMachineImage(machineImages []garden.MachineImage) (*garden.MachineImage, error) {
-	if len(machineImages) != 1 {
-		return nil, errors.New("must provide a value for .spec.cloud.<provider>.machineImage as the referenced cloud profile contains more than one")
+	if len(machineImages) == 0 {
+		return nil, errors.New("the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
+	// If the shoot does not specify a machine image then we consider the first one specified in the cloud profile to be the
+	// default machine image and return it.
 	return &machineImages[0], nil
 }
 
