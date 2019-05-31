@@ -30,16 +30,12 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
+	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	multierror "github.com/hashicorp/go-multierror"
-
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
 	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -51,6 +47,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const installationTypeHelm = "helm"
@@ -214,7 +211,11 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
-	if _, err := controllerutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), namespace, func(existing runtime.Object) error { return nil }); err != nil {
+	if err := kutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), namespace, func() error {
+		kutil.SetMetaDataLabel(&namespace.ObjectMeta, common.GardenerRole, common.GardenRoleExtension)
+		kutil.SetMetaDataLabel(&namespace.ObjectMeta, common.ControllerRegistrationName, controllerRegistration.Name)
+		return nil
+	}); err != nil {
 		return err
 	}
 

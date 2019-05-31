@@ -66,6 +66,9 @@ const (
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
 
+	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
+	ControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
+
 	// DNSProviderDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
 	// deprecated
@@ -104,11 +107,18 @@ const (
 	// GardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	GardenRole = "garden.sapcloud.io/role"
 
+	// GardenerRole is the key for an annotation on a Kubernetes object indicating what it is used for with the new
+	// naming scheme.
+	GardenerRole = "gardener.cloud/role"
+
 	// GardenRoleShoot is the value of the GardenRole key indicating type 'shoot'.
 	GardenRoleShoot = "shoot"
 
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.
 	GardenRoleSeed = "seed"
+
+	// GardenRoleExtension is the value of the GardenRole key indicating type 'extension'.
+	GardenRoleExtension = "extension"
 
 	// GardenRoleControlPlane is the value of the GardenRole key indicating type 'controlplane'.
 	GardenRoleControlPlane = "controlplane"
@@ -312,6 +322,7 @@ const (
 	ShootUnhealthy = "shoot.garden.sapcloud.io/unhealthy"
 
 	// ShootHibernated is a constant for a label on the Shoot namespace in the Seed indicating the Shoot's hibernation status.
+	// +deprecated: Use `Cluster` resource instead.
 	ShootHibernated = "shoot.garden.sapcloud.io/hibernated"
 
 	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.

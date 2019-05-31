@@ -50,6 +50,7 @@ func (b *Botanist) DeployNamespace() error {
 			Name:        b.Shoot.SeedNamespace,
 			Labels: map[string]string{
 				common.GardenRole:                 common.GardenRoleShoot,
+				common.GardenerRole:               common.GardenRoleShoot,
 				common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
 				gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
 				gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),
