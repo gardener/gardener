@@ -38,7 +38,7 @@ func newTableConvertor() rest.TableConvertor {
 	return &convertor{
 		headers: []metav1beta1.TableColumnDefinition{
 			{Name: "Name", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["name"]},
-			{Name: "CloudProfile", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["cloudprofile"]},
+			{Name: "Provider", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["provider"]},
 			{Name: "Region", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["region"]},
 			{Name: "Ingress Domain", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["domain"]},
 			{Name: "Available", Type: "string", Format: "name", Description: swaggerMetadataDescriptions["available"]},
@@ -74,8 +74,8 @@ func (c *convertor) ConvertToTable(ctx context.Context, obj runtime.Object, tabl
 		)
 
 		cells = append(cells, seed.Name)
-		cells = append(cells, seed.Spec.Cloud.Profile)
-		cells = append(cells, seed.Spec.Cloud.Region)
+		cells = append(cells, seed.Spec.Provider.Type)
+		cells = append(cells, seed.Spec.Provider.Region)
 		cells = append(cells, seed.Spec.IngressDomain)
 		if cond := gardencorehelper.GetCondition(seed.Status.Conditions, garden.SeedAvailable); cond != nil {
 			cells = append(cells, cond.Status)

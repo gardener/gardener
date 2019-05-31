@@ -746,18 +746,35 @@ func ValidateSeedAnnotation(annotations map[string]string, fldPath *field.Path) 
 	return allErrs
 }
 
+// ValidateSeedProvider validates a Seed's provider.
+func ValidateSeedProvider(provider *garden.SeedProvider, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if provider.Region == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must not be empty"))
+	}
+	if provider.Type == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "must not be empty"))
+	}
+	return allErrs
+}
+
+func ValidateSeedCloud(cloud *garden.SeedCloud, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+	if cloud.Profile == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("profile"), "must provide a cloud profile name"))
+	}
+	if cloud.Region == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "must provide a region"))
+	}
+	return allErrs
+}
+
 // ValidateSeedSpec validates the specification of a Seed object.
 func ValidateSeedSpec(seedSpec *garden.SeedSpec, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	cloudPath := fldPath.Child("cloud")
-	if len(seedSpec.Cloud.Profile) == 0 {
-		allErrs = append(allErrs, field.Required(cloudPath.Child("profile"), "must provide a cloud profile name"))
-	}
-	if len(seedSpec.Cloud.Region) == 0 {
-		allErrs = append(allErrs, field.Required(cloudPath.Child("region"), "must provide a region"))
-	}
-
+	allErrs = append(allErrs, ValidateSeedCloud(&seedSpec.Cloud, fldPath.Child("provider"))...)
+	allErrs = append(allErrs, ValidateSeedProvider(&seedSpec.Provider, fldPath.Child("provider"))...)
 	allErrs = append(allErrs, validateDNS1123Subdomain(seedSpec.IngressDomain, fldPath.Child("ingressDomain"))...)
 	allErrs = append(allErrs, validateSecretReference(seedSpec.SecretRef, fldPath.Child("secretRef"))...)
 

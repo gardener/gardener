@@ -16,6 +16,16 @@ package seed
 
 import (
 	"context"
+	"fmt"
+
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+
+	"github.com/gardener/gardener/pkg/apis/garden/helper"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apiserver/pkg/registry/rest"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
@@ -31,16 +41,61 @@ import (
 type seedStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
+
+	CloudProfiles rest.StandardStorage
 }
 
-// Strategy defines the storage strategy for Seeds.
-var Strategy = seedStrategy{api.Scheme, names.SimpleNameGenerator}
+func NewStrategy(cloudProfiles rest.StandardStorage) seedStrategy {
+	return seedStrategy{api.Scheme, names.SimpleNameGenerator, cloudProfiles}
+}
+
+var (
+	EmptyProvider garden.SeedProvider
+	EmptyCloud    garden.SeedCloud
+)
+
+func (s seedStrategy) Migrate(ctx context.Context, obj runtime.Object) error {
+	migrate := func(obj runtime.Object) error {
+		seed := obj.(*garden.Seed)
+		if apiequality.Semantic.DeepEqual(seed.Spec.Provider, EmptyProvider) || seed.Spec.Cloud == EmptyCloud {
+			fmt.Printf("no need to migrate %v\n", seed)
+			return nil
+		}
+
+		fmt.Printf("migrating seed %v\n", seed)
+		cloudProfileObj, err := s.CloudProfiles.Get(ctx, seed.Spec.Cloud.Profile, &metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		cloudProfile := cloudProfileObj.(*garden.CloudProfile)
+
+		providerType, err := helper.DetermineCloudProviderInProfile(cloudProfile.Spec)
+		if err != nil {
+			return err
+		}
+
+		seed.Spec.Provider = garden.SeedProvider{
+			Type:          string(providerType),
+			Region:        seed.Spec.Cloud.Region,
+			CloudProfiles: []string{seed.Spec.Cloud.Profile},
+		}
+		return nil
+	}
+
+	if meta.IsListType(obj) {
+		return meta.EachListItem(obj, migrate)
+	}
+	return migrate(obj)
+}
 
 func (seedStrategy) NamespaceScoped() bool {
 	return false
 }
 
-func (seedStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+func (s seedStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
+	utilruntime.HandleError(s.Migrate(ctx, obj))
+
 	seed := obj.(*garden.Seed)
 
 	seed.Generation = 1
@@ -53,7 +108,10 @@ func (seedStrategy) PrepareForCreate(ctx context.Context, obj runtime.Object) {
 	seed.Finalizers = finalizers.UnsortedList()
 }
 
-func (seedStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (s seedStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	utilruntime.HandleError(s.Migrate(ctx, obj))
+	utilruntime.HandleError(s.Migrate(ctx, old))
+
 	newSeed := obj.(*garden.Seed)
 	oldSeed := old.(*garden.Seed)
 	newSeed.Status = oldSeed.Status
@@ -88,10 +146,14 @@ type seedStatusStrategy struct {
 	seedStrategy
 }
 
-// StatusStrategy defines the storage strategy for the status subresource of Seeds.
-var StatusStrategy = seedStatusStrategy{Strategy}
+func NewStatusStrategy(cloudProfiles rest.StandardStorage) seedStatusStrategy {
+	return seedStatusStrategy{NewStrategy(cloudProfiles)}
+}
 
-func (seedStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+func (s seedStatusStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object) {
+	utilruntime.HandleError(s.Migrate(ctx, obj))
+	utilruntime.HandleError(s.Migrate(ctx, old))
+
 	newSeed := obj.(*garden.Seed)
 	oldSeed := old.(*garden.Seed)
 	newSeed.Spec = oldSeed.Spec

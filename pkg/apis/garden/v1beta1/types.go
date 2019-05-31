@@ -547,6 +547,8 @@ type SeedList struct {
 
 // SeedSpec is the specification of a Seed.
 type SeedSpec struct {
+	// Provider is the provider of a Seed.
+	Provider SeedProvider `json:"provider"`
 	// Cloud defines the cloud profile and the region this Seed cluster belongs to.
 	Cloud SeedCloud `json:"cloud"`
 	// IngressDomain is the domain of the Seed cluster pointing to the ingress controller endpoint. It will be used
@@ -570,6 +572,16 @@ type SeedStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +optional
 	Conditions []gardencorev1alpha1.Condition `json:"conditions,omitempty"`
+}
+
+// SeedProvider defines information about the provider.
+type SeedProvider struct {
+	// Type is the name of a provider.
+	Type string `json:"type"`
+	// Region is a name of a region.
+	Region string `json:"region"`
+	// CloudProfiles is a list of supported cloud profiles. Empty list means all cloud profiles are supported.
+	CloudProfiles []string `json:"cloudProfiles,omitempty"`
 }
 
 // SeedCloud defines the cloud profile and the region this Seed cluster belongs to.

@@ -66,7 +66,7 @@ func (p StorageProvider) v1beta1Storage(restOptionsGetter generic.RESTOptionsGet
 	secretBindingStorage := secretbinding.NewStorage(restOptionsGetter)
 	storage["secretbindings"] = secretBindingStorage.SecretBinding
 
-	seedStorage := seedstore.NewStorage(restOptionsGetter)
+	seedStorage := seedstore.NewStorage(cloudprofileStorage.CloudProfile, restOptionsGetter)
 	storage["seeds"] = seedStorage.Seed
 	storage["seeds/status"] = seedStorage.Status
 

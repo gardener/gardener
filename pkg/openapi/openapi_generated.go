@@ -170,6 +170,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud":                     schema_pkg_apis_garden_v1beta1_SeedCloud(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedList":                      schema_pkg_apis_garden_v1beta1_SeedList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks":                  schema_pkg_apis_garden_v1beta1_SeedNetworks(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedProvider":                  schema_pkg_apis_garden_v1beta1_SeedProvider(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedSpec":                      schema_pkg_apis_garden_v1beta1_SeedSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus":                    schema_pkg_apis_garden_v1beta1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot":                         schema_pkg_apis_garden_v1beta1_Shoot(ref),
@@ -6406,6 +6407,48 @@ func schema_pkg_apis_garden_v1beta1_SeedNetworks(ref common.ReferenceCallback) c
 	}
 }
 
+func schema_pkg_apis_garden_v1beta1_SeedProvider(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "SeedProvider defines information about the provider.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"type": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Type is the name of a provider.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"region": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Region is a name of a region.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"cloudProfiles": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CloudProfiles is a list of supported cloud profiles. Empty list means all cloud profiles are supported.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"type", "region"},
+			},
+		},
+	}
+}
+
 func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -6413,6 +6456,12 @@ func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) commo
 				Description: "SeedSpec is the specification of a Seed.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"provider": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Provider is the provider of a Seed.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedProvider"),
+						},
+					},
 					"cloud": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Cloud defines the cloud profile and the region this Seed cluster belongs to.",
@@ -6453,11 +6502,11 @@ func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) commo
 						},
 					},
 				},
-				Required: []string{"cloud", "ingressDomain", "secretRef", "networks"},
+				Required: []string{"provider", "cloud", "ingressDomain", "secretRef", "networks"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "k8s.io/api/core/v1.SecretReference"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedCloud", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedProvider", "k8s.io/api/core/v1.SecretReference"},
 	}
 }
 
