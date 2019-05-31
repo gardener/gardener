@@ -256,27 +256,8 @@ const (
 	// by the Gardener Dashboard.
 	ProjectName = "project.garden.sapcloud.io/name"
 
-	// ProjectNamespace is they key of a label on projects whose value holds the namespace name. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectNamespace = "project.garden.sapcloud.io/namespace"
-
 	// NamespaceProject is they key of a label on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.garden.sapcloud.io/project"
-
-	// ProjectOwner is they key of a label on namespaces whose value holds the project owner. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectOwner = "project.garden.sapcloud.io/owner"
-
-	// ProjectDescription is they key of a label on namespaces whose value holds the project description. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectDescription = "project.garden.sapcloud.io/description"
-
-	// ProjectPurpose is they key of a label on namespaces whose value holds the project purpose. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectPurpose = "project.garden.sapcloud.io/purpose"
-
-	// ProjectMemberClusterRole is the name of the cluster role defining the permissions for project members.
-	ProjectMemberClusterRole = "garden.sapcloud.io:system:project-member"
 
 	// PrometheusStatefulSetName is the name of the Prometheus stateful set.
 	PrometheusStatefulSetName = "prometheus"

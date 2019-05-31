@@ -905,19 +905,6 @@ func validateLocalObjectReference(ref *corev1.LocalObjectReference, fldPath *fie
 	return allErrs
 }
 
-func validateObjectReference(ref corev1.ObjectReference, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(ref.Name) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "must provide a name"))
-	}
-	if len(ref.Namespace) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "must provide a namespace"))
-	}
-
-	return allErrs
-}
-
 func validateSecretReference(ref corev1.SecretReference, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
