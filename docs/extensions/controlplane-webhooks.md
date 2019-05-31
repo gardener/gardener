@@ -12,15 +12,17 @@ In order to apply any provider-specific changes to the configuration provided by
 In order to support a new cloud provider you should install "controlplane" mutating webhooks for any of the following resources:
 
 * Deployment with name `kube-apiserver`, `kube-controller-manager`, or `kube-scheduler`
+* StatefulSet with name `etcd-main` or `etcd-events`
 * Service with name `kube-apiserver`
 * `OperatingSystemConfig` with any name and purpose `reconcile`
 
 See [Contract Specification](#contract-specification) for more details on the contract that Gardener and webhooks should adhere to regarding the content of the above resources.
 
-You can install 2 different kinds of controlplane webhooks:
+You can install 3 different kinds of controlplane webhooks:
 
 * `Shoot`, or `controlplane` webhooks apply changes needed by the Shoot cloud provider, for example the `--cloud-provider` command line flag of `kube-apiserver` and `kube-controller-manager`. Such webhooks should only operate on Shoot namespaces labeled with `shoot.gardener.cloud/provider=<provider>`.
 * `Seed`, or `controlplaneexposure` webhooks apply changes needed by the Seed cloud provider, for example annotations on the `kube-apiserver` service to ensure cloud-specific load balancers are correctly provisioned for a service of type `LoadBalancer`. Such webhooks should only operate on Shoot namespaces labeled with `seed.gardener.cloud/provider=<provider>`.
+* `Backup`, or `controlplanebackup` webhooks apply changes needed by the `etcd` backup cloud provider, for example injecting the `backup-restore` sidecar container in the `etcd-*` StatefulSets. Such webhooks should only operate on Shoot namespaces labeled with `backup.gardener.cloud/provider=<provider>`.
 
 The labels `shoot.gardener.cloud/provider` and `shoot.gardener.cloud/provider` are added by Gardener when it creates the Shoot namespace. 
 
@@ -114,6 +116,16 @@ The kube-scheduler command line **may** contain additional provider-independent 
 * `--feature-gates`
 
 The kube-scheduler command line can't contain provider-specific flags, and it makes no sense to specify provider-specific environment variables or mount provider-specific `Secret` or `ConfigMap` resources as volumes. 
+
+### etcd-main and etcd-events
+
+To deploy etcd, Gardener **shall** create 2 StatefulSets named `etcd-main` and `etcd-events` in the Shoot namespace. They can be mutated by webhooks to apply any provider-specific changes to the standard configuration provided by Gardener.
+
+The pod template of these 2 deployments **shall** contain a container named `etcd`. It **shall not** contain a sidecar container for etcd backups. If such a container is needed, it should be added by webhooks, together with any volumes it may need to mount.
+
+The `command` field of the `etcd` container **shall** contain the etcd command line. It **shall** contain only provider-independent flags that should be ignored by webhooks. It can't contain provider-specific flags, and it makes no sense to specify provider-specific environment variables or mount provider-specific `Secret` or `ConfigMap` resources as volumes.
+
+The `volumeClaimTemplates` section of these 2 StatefulSets **shall** contain a template named `etcd-main` or `etcd-events`. This template **shall** use the default storage class. The corresponding claim is mounted into the `etcd` container at `/var/etcd/data`. If it is desirable to use a non-default storage class, this should be done by webhooks.
 
 ### cloud-controller-manager
 
