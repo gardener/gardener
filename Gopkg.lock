@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:180876db3ec295bb9f0babec5ca926fe9f2036b747b7c5bfcd13b333023e7cfd"
-  name = "cloud.google.com/go"
-  packages = ["compute/metadata"]
-  pruneopts = "NUT"
-  revision = "767c40d6a2e058483c25fa193e963a22da17236d"
-  version = "v0.18.0"
-
-[[projects]]
   digest = "1:5d72bbcc9c8667b11c3dc3cbe681c5a6f71e5096744c0bf7726ab5c6425d5dc4"
   name = "github.com/BurntSushi/toml"
   packages = ["."]
@@ -66,7 +58,7 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:454adc7b48ac16899ea8d3a44d294ea0b3eb6dc495761af34e04b359c828546e"
+  digest = "1:17a840e7058b98a31da6e3775e3ac7b90eae9f5fc76413397cc0b68c9e03a2e2"
   name = "github.com/aliyun/alibaba-cloud-sdk-go"
   packages = [
     "sdk",
@@ -82,16 +74,16 @@
     "services/vpc",
   ]
   pruneopts = "NUT"
-  revision = "dd07f1bb8819bf9e3e0778e6abfb823486a36048"
-  version = "1.56.6"
+  revision = "6c7e87673c6e93922019eaa2229b32c245b7cf22"
+  version = "1.58.1"
 
 [[projects]]
-  digest = "1:a9a98adb2a4181b9e4622eff8b6070646971a18427c265852f3686dbc7112ab1"
+  digest = "1:c5c73365822fb6a7bbe288316868057ae58447ddd95ecef466b6dbe93c37670e"
   name = "github.com/aliyun/aliyun-oss-go-sdk"
   packages = ["oss"]
   pruneopts = "NUT"
-  revision = "86c17b95fcd5db33628a61e492fb4a1a937d5906"
-  version = "1.9.5"
+  revision = "08079eb9f6aaa13ee00b8fade6ceeffa138bf877"
+  version = "v1.9.6"
 
 [[projects]]
   digest = "1:b28f9249808d9e7f593589c55e08416dedd312df32f3fb1f94f0f45af780a33b"
@@ -224,10 +216,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2448b1052a5465d6fdb4ec984b75214a1ca7832a7299526f9c60eb23915a536d"
+  digest = "1:2935e832092e74bcce14d3a1d5a671e22676babdbd3856161ecd1b6ad58b74b3"
   name = "github.com/gardener/controller-manager-library"
   packages = [
-    "pkg/clientsets",
     "pkg/ctxutil",
     "pkg/fieldpath",
     "pkg/informerfactories",
@@ -237,7 +228,7 @@
     "pkg/utils",
   ]
   pruneopts = "NUT"
-  revision = "525da661baa5383bc7610f0b29cba80bc38656cb"
+  revision = "83f4bac4b55f6c971d6241ee365517f604000f77"
 
 [[projects]]
   digest = "1:1a39eed9705758f621f4fc435f32dccece308026bfc5087d62389dd09d7a829a"
@@ -250,6 +241,26 @@
   pruneopts = "NUT"
   revision = "b4bbb5832a03a0354bcd945917ea11f9e709f9db"
   version = "0.1.0"
+
+[[projects]]
+  digest = "1:d551f6f75ca03af75445b20a824d28f1da653fa410ccc8488ac64b147af1901c"
+  name = "github.com/gardener/gardener-extensions"
+  packages = [
+    "controllers/provider-alicloud/pkg/apis/alicloud",
+    "controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1",
+    "controllers/provider-aws/pkg/apis/aws",
+    "controllers/provider-aws/pkg/apis/aws/v1alpha1",
+    "controllers/provider-azure/pkg/apis/azure",
+    "controllers/provider-azure/pkg/apis/azure/v1alpha1",
+    "controllers/provider-gcp/pkg/apis/gcp",
+    "controllers/provider-gcp/pkg/apis/gcp/v1alpha1",
+    "controllers/provider-openstack/pkg/apis/openstack",
+    "controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
+    "controllers/provider-packet/pkg/apis/packet",
+    "controllers/provider-packet/pkg/apis/packet/v1alpha1",
+  ]
+  pruneopts = "NUT"
+  revision = "f09dd7bc8d2fee9f4cfff1d95d39e7713728bf81"
 
 [[projects]]
   digest = "1:b678acaf8766b6df36723a4adefc3302191a34c22b7a38b0abaf5f6d3dd24090"
@@ -373,11 +384,10 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:a98a0b00720dc3149bf3d0c8d5726188899e5bab2f5072b9a7ef82958fbc98b2"
+  digest = "1:2d0636a8c490d2272dd725db26f74a537111b99b9dbdda0d8b98febe63702aa4"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
-    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -716,7 +726,7 @@
   name = "github.com/prometheus/procfs"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "8368d24ba045f26503eb745b624d930cbe214c79"
+  revision = "e22ddced71425e65e388b17b7d0289c5ea77d06e"
 
 [[projects]]
   digest = "1:9dfe20a82800ffcf0a2bde15beba44cc6d6f6cf1d003420ecc8ad0ac78300d70"
@@ -777,31 +787,6 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "48954b6210f8d154cb5f8484d3a3e1f83489309e"
-
-[[projects]]
-  digest = "1:045bc0ab96bb83bdffd2606f019003da03d1c139d3cb8aad13596863e4dd37d6"
-  name = "go.opencensus.io"
-  packages = [
-    ".",
-    "internal",
-    "internal/tagencoding",
-    "metric/metricdata",
-    "metric/metricproducer",
-    "plugin/ochttp",
-    "plugin/ochttp/propagation/b3",
-    "resource",
-    "stats",
-    "stats/internal",
-    "stats/view",
-    "tag",
-    "trace",
-    "trace/internal",
-    "trace/propagation",
-    "trace/tracestate",
-  ]
-  pruneopts = "NUT"
-  revision = "75c0cca22312e51bfd4fafdbe9197ae399e18b38"
-  version = "v0.20.2"
 
 [[projects]]
   digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
@@ -880,18 +865,15 @@
     "websocket",
   ]
   pruneopts = "NUT"
-  revision = "1da14a5a36f220ea3f03470682b737b1dfd5de22"
+  revision = "4a65cf94b67935be46fbc55ddaea48ae3f7a1471"
 
 [[projects]]
   branch = "master"
-  digest = "1:3121d742fbe48670a16d98b6da4693501fc33cd76d69ed6f35850c564f255c65"
+  digest = "1:4d25d388c9ad5169b31c1a6f16cc7bcdb856489958e99f2123d8d8cdf000d7eb"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
-    "google",
     "internal",
-    "jws",
-    "jwt",
   ]
   pruneopts = "NUT"
   revision = "9f3314589c9a9136388751d9adae6b0ed400978a"
@@ -906,7 +888,7 @@
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "3fd5a3612ccd7907f26270fa92579a0f2f76f734"
+  revision = "16da32be82c5df9a338c27758247c0b7b0bd8fea"
 
 [[projects]]
   digest = "1:2c4e3b27329379d7b5f889038b48086140ea60708fb92e4b19d6a775926ea30b"
@@ -954,7 +936,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:71850ac10bbeb4d8dd06ce0743fe57654daf28510b0f6cbd9692aaf0d269360e"
+  digest = "1:be1ab6d2b333b1d487c01f1328aef9dc76cee4ff4f780775a552d2a1653f0207"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -970,37 +952,16 @@
     "internal/semver",
   ]
   pruneopts = "NUT"
-  revision = "2e9de471ebd3a3af420e4dd35a826936b94da7f6"
+  revision = "681f9ce8ac52c4ba431539a515ecb7f2ab72eca0"
 
 [[projects]]
-  digest = "1:b0d0313c9209e09de225a878c804f368d3846183b2f124c70257476219f9f2f5"
-  name = "google.golang.org/api"
-  packages = [
-    "compute/v1",
-    "gensupport",
-    "googleapi",
-    "googleapi/internal/uritemplates",
-    "googleapi/transport",
-    "internal",
-    "option",
-    "transport/http",
-    "transport/http/internal/propagation",
-  ]
-  pruneopts = "NUT"
-  revision = "0cbcb99a9ea0c8023c794b2693cbe1def82ed4d7"
-  version = "v0.3.2"
-
-[[projects]]
-  digest = "1:a4824d8df1fd1f63c6b3690bf4801d6ff1722adcb3e13c0489196a7e248d868a"
+  digest = "1:372cd8eba449f9b6db06677d0e73fa193ec5b19aaee148f355503ab6127045ca"
   name = "google.golang.org/appengine"
   packages = [
-    ".",
     "internal",
-    "internal/app_identity",
     "internal/base",
     "internal/datastore",
     "internal/log",
-    "internal/modules",
     "internal/remote_api",
     "internal/urlfetch",
     "urlfetch",
@@ -1015,10 +976,10 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "NUT"
-  revision = "d1146b9035b912113a38af3b138eb2af567b2c67"
+  revision = "e7d98fc518a78c9f8b5ee77be7b0b317475d89e1"
 
 [[projects]]
-  digest = "1:3f2a1eab296780787765ddb658d1bfc090d006fb2c41d667dbd5f9fd2e88dd21"
+  digest = "1:0e2881968b34ee22486956afa001626d375164a627806903e232595c0ba40736"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -1048,8 +1009,6 @@
     "metadata",
     "naming",
     "peer",
-    "reflection",
-    "reflection/grpc_reflection_v1alpha",
     "resolver",
     "resolver/dns",
     "resolver/passthrough",
@@ -1058,8 +1017,8 @@
     "tap",
   ]
   pruneopts = "NUT"
-  revision = "236199dd5f8031d698fb64091194aecd1c3895b2"
-  version = "v1.20.0"
+  revision = "25c4f928eaa6d96443009bd842389fb4fa48664e"
+  version = "v1.20.1"
 
 [[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
@@ -1745,11 +1704,20 @@
     "github.com/aws/aws-sdk-go/service/sts",
     "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1",
     "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme",
+    "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws",
+    "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure",
+    "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp",
+    "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack",
+    "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1",
     "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",
     "github.com/golang/mock/gomock",
-    "github.com/golang/protobuf/proto",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/hashicorp/go-multierror",
     "github.com/json-iterator/go",
@@ -1770,18 +1738,11 @@
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
     "golang.org/x/crypto/ssh",
-    "golang.org/x/net/context",
-    "golang.org/x/oauth2",
-    "golang.org/x/oauth2/google",
-    "google.golang.org/api/compute/v1",
-    "google.golang.org/grpc",
-    "google.golang.org/grpc/codes",
-    "google.golang.org/grpc/reflection",
-    "google.golang.org/grpc/status",
     "gopkg.in/yaml.v2",
     "k8s.io/api/admission/v1beta1",
     "k8s.io/api/admissionregistration/v1beta1",
     "k8s.io/api/apps/v1",
+    "k8s.io/api/autoscaling/v1",
     "k8s.io/api/batch/v1",
     "k8s.io/api/batch/v1beta1",
     "k8s.io/api/core/v1",
@@ -1799,6 +1760,7 @@
     "k8s.io/apimachinery/pkg/api/validation",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
+    "k8s.io/apimachinery/pkg/apis/meta/v1/validation",
     "k8s.io/apimachinery/pkg/apis/meta/v1beta1",
     "k8s.io/apimachinery/pkg/conversion",
     "k8s.io/apimachinery/pkg/fields",

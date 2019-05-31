@@ -262,7 +262,7 @@ func (b *HybridBotanist) RefreshCSIControllersChecksums() error {
 		{
 			Op:    "replace",
 			Path:  "/spec/template/metadata/annotations/checksum~1cloudprovider",
-			Value: b.CheckSums[common.CloudProviderSecretName],
+			Value: b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
 		},
 	}
 
@@ -445,7 +445,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	} else {
 		// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
 		defaultValues["cloudProvider"] = b.ShootCloudBotanist.GetCloudProviderName()
-		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-cloudprovider"] = b.CheckSums[common.CloudProviderSecretName]
+		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-cloudprovider"] = b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider]
 		defaultValues["podAnnotations"].(map[string]interface{})["checksum/configmap-cloud-provider-config"] = b.CheckSums[common.CloudProviderConfigName]
 	}
 
@@ -525,7 +525,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 			"checksum/secret-kube-controller-manager":        b.CheckSums[common.KubeControllerManagerDeploymentName],
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
-			"checksum/secret-cloudprovider":                  b.CheckSums[common.CloudProviderSecretName],
+			"checksum/secret-cloudprovider":                  b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
 			"checksum/configmap-cloud-provider-config":       b.CheckSums[common.CloudProviderConfigName],
 		},
 		"objectCount": b.Shoot.GetNodeCount(),
@@ -575,7 +575,7 @@ func (b *HybridBotanist) DeployCloudControllerManager() error {
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cloud-controller-manager":        b.CheckSums[common.CloudControllerManagerDeploymentName],
 			"checksum/secret-cloud-controller-manager-server": b.CheckSums[common.CloudControllerManagerServerName],
-			"checksum/secret-cloudprovider":                   b.CheckSums[common.CloudProviderSecretName],
+			"checksum/secret-cloudprovider":                   b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
 			"checksum/configmap-cloud-provider-config":        b.CheckSums[common.CloudProviderConfigName],
 		},
 		"vpa": map[string]interface{}{

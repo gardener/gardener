@@ -3,7 +3,7 @@ As already mentioned, the Gardener is designed to run as API server extension in
 
 ```bash
 # Check https://github.com/gardener/gardener/releases for current available releases.
-RELEASE=0.19.1
+RELEASE=0.21.0
 
 # Since master can have breaking changes after last release, checkout the tag for your release
 git checkout $RELEASE
@@ -28,3 +28,11 @@ helm install charts/gardener \
 You can check the [default values file](../../charts/gardener/values.yaml) for other configuration values. Please note that all resources and deployments need to be created in the `garden` namespace (not overrideable).
 
 :warning: The Seed Kubernetes clusters need to have a `nginx-ingress-controller` deployed to make the Gardener work properly. Moreover, there should exist a DNS record `*.ingress.<SEED-CLUSTER-DOMAIN>` where `<SEED-CLUSTER-DOMAIN>` is the value of the `ingressDomain` field of [a Seed cluster resource](../../example/50-seed-aws.yaml).
+
+As we are progressing with [GEP-1](https://github.com/gardener/gardener/blob/master/docs/proposals/01-extensibility.md) you need to install extensions for:
+
+* DNS management
+* Operating system config generation
+* Provider-specific infrastructure creation
+
+Please consult [the documentation regarding extensions](../extensions/overview.md) to get more information.

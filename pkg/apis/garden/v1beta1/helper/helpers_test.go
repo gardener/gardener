@@ -102,15 +102,20 @@ var _ = Describe("helper", func() {
 				},
 			},
 			[]gardenv1beta1.Worker{{Name: "openStack"}}),
-		Entry("Local",
-			gardenv1beta1.CloudProviderLocal,
-			&gardenv1beta1.Shoot{},
-			[]gardenv1beta1.Worker{{Name: "local", AutoScalerMin: 1, AutoScalerMax: 1}}),
 	)
 
-	DescribeTable("#GetMachineImageNameFromShoot",
-		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected gardenv1beta1.MachineImageName) {
-			Expect(GetMachineImageNameFromShoot(cloudProvider, shoot)).To(Equal(expected))
+	var (
+		machineImageName    = "some-machineImage"
+		machineImageVersion = "some-version"
+		machineImage        = &gardenv1beta1.MachineImage{
+			Name:    machineImageName,
+			Version: machineImageVersion,
+		}
+	)
+
+	DescribeTable("#GetMachineImageFromShoot",
+		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected *gardenv1beta1.MachineImage) {
+			Expect(GetMachineImageFromShoot(cloudProvider, shoot)).To(Equal(expected))
 		},
 		Entry("AWS",
 			gardenv1beta1.CloudProviderAWS,
@@ -118,14 +123,12 @@ var _ = Describe("helper", func() {
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
 						AWS: &gardenv1beta1.AWSCloud{
-							MachineImage: &gardenv1beta1.AWSMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
+							MachineImage: machineImage,
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
+			machineImage,
 		),
 		Entry("Azure",
 			gardenv1beta1.CloudProviderAzure,
@@ -133,14 +136,12 @@ var _ = Describe("helper", func() {
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
 						Azure: &gardenv1beta1.AzureCloud{
-							MachineImage: &gardenv1beta1.AzureMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
+							MachineImage: machineImage,
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
+			machineImage,
 		),
 		Entry("GCP",
 			gardenv1beta1.CloudProviderGCP,
@@ -148,14 +149,12 @@ var _ = Describe("helper", func() {
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
 						GCP: &gardenv1beta1.GCPCloud{
-							MachineImage: &gardenv1beta1.GCPMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
+							MachineImage: machineImage,
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
+			machineImage,
 		),
 		Entry("OpenStack",
 			gardenv1beta1.CloudProviderOpenStack,
@@ -163,14 +162,12 @@ var _ = Describe("helper", func() {
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
 						OpenStack: &gardenv1beta1.OpenStackCloud{
-							MachineImage: &gardenv1beta1.OpenStackMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
+							MachineImage: machineImage,
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
+			machineImage,
 		),
 		Entry("Alicloud",
 			gardenv1beta1.CloudProviderAlicloud,
@@ -178,29 +175,25 @@ var _ = Describe("helper", func() {
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
 						Alicloud: &gardenv1beta1.Alicloud{
-							MachineImage: &gardenv1beta1.AlicloudMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
+							MachineImage: machineImage,
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
+			machineImage,
 		),
-		Entry("Local",
-			gardenv1beta1.CloudProviderLocal,
+		Entry("Packet",
+			gardenv1beta1.CloudProviderPacket,
 			&gardenv1beta1.Shoot{
 				Spec: gardenv1beta1.ShootSpec{
 					Cloud: gardenv1beta1.Cloud{
-						Local:&gardenv1beta1.Local{
-							MachineImage: &gardenv1beta1.LocalMachineImage{
-								Name: gardenv1beta1.MachineImageName("some-machineimage"),
-							},
+						Packet: &gardenv1beta1.PacketCloud{
+							MachineImage: machineImage,
 						},
 					},
 				},
 			},
-			gardenv1beta1.MachineImageName("some-machineimage"),
+			machineImage,
 		),
 	)
 
@@ -248,6 +241,7 @@ var _ = Describe("helper", func() {
 			common.GardenRoleAlertingSMTP: &corev1.Secret{},
 		}
 	)
+
 	DescribeTable("#ShootWantsAlertmanager",
 		func(shoot *gardenv1beta1.Shoot, secrets map[string]*corev1.Secret, wantsAlertmanager bool) {
 			actualWantsAlertmanager := ShootWantsAlertmanager(shoot, secrets)

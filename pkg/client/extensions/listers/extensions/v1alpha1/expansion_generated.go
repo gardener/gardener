@@ -6,10 +6,6 @@ package v1alpha1
 // ClusterLister.
 type ClusterListerExpansion interface{}
 
-// ClusterNamespaceListerExpansion allows custom methods to be added to
-// ClusterNamespaceLister.
-type ClusterNamespaceListerExpansion interface{}
-
 // ControlPlaneListerExpansion allows custom methods to be added to
 // ControlPlaneLister.
 type ControlPlaneListerExpansion interface{}

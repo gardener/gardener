@@ -20,6 +20,9 @@ import (
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
+
+	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 )
 
 // DeployKube2IAMResources creates the respective IAM roles which have been specified in the Shoot manifest
@@ -40,7 +43,7 @@ func (b *AWSBotanist) DeployKube2IAMResources() error {
 	}
 
 	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
+		SetVariablesEnvironment(b.generateTerraformKube2IAMVariablesEnvironment()).
 		InitializeWith(b.ChartInitializer("aws-kube2iam", values)).
 		Apply()
 }
@@ -53,19 +56,24 @@ func (b *AWSBotanist) DestroyKube2IAMResources() error {
 		return err
 	}
 	return tf.
-		SetVariablesEnvironment(b.generateTerraformInfraVariablesEnvironment()).
+		SetVariablesEnvironment(b.generateTerraformKube2IAMVariablesEnvironment()).
 		Destroy()
 }
 
 // generateTerraformKube2IAMConfig creates the Terraform variables and the Terraform config (for kube2iam)
 // and returns them (these values will be stored as a ConfigMap and a Secret in the Garden cluster.
 func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1beta1.Kube2IAMRole) (map[string]interface{}, error) {
-	nodesRoleARN := "nodes_role_arn"
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have completed the Extensibility epic. After it, kube2iam
+	// will no longer be supported by Gardener.
+	if b.Shoot.InfrastructureStatus == nil {
+		return nil, fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return nil, err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(nodesRoleARN)
+
+	nodesRole, err := findRoleByPurpose(infrastructureStatus.IAM.Roles, awsv1alpha1.PurposeNodes)
 	if err != nil {
 		return nil, err
 	}
@@ -76,9 +84,19 @@ func (b *AWSBotanist) generateTerraformKube2IAMConfig(kube2iamRoles []gardenv1be
 	}
 
 	return map[string]interface{}{
-		"nodesRoleARN": stateVariables[nodesRoleARN],
+		"nodesRoleARN": nodesRole.ARN,
 		"roles":        roles,
 	}, nil
+}
+
+// generateTerraformKube2IAMVariablesEnvironment generates the environment containing the credentials which
+// are required to validate/apply/destroy the Terraform configuration. These environment must contain
+// Terraform variables which are prefixed with TF_VAR_.
+func (b *AWSBotanist) generateTerraformKube2IAMVariablesEnvironment() map[string]string {
+	return terraformer.GenerateVariablesEnvironment(b.Shoot.Secret, map[string]string{
+		"ACCESS_KEY_ID":     AccessKeyID,
+		"SECRET_ACCESS_KEY": SecretAccessKey,
+	})
 }
 
 // createKube2IAMRoles creates the policy documents for AWS IAM in order to allow applying the respective access

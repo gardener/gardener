@@ -24,8 +24,8 @@ type ExtensionsV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ExtensionsV1alpha1Client) Clusters(namespace string) ClusterInterface {
-	return newClusters(c, namespace)
+func (c *ExtensionsV1alpha1Client) Clusters() ClusterInterface {
+	return newClusters(c)
 }
 
 func (c *ExtensionsV1alpha1Client) ControlPlanes(namespace string) ControlPlaneInterface {

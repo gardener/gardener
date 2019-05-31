@@ -26,6 +26,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/terraformer"
 
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -47,7 +48,9 @@ import (
 	"github.com/sirupsen/logrus"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -112,7 +115,6 @@ func newOperation(
 		ChartApplierGarden:   kubernetes.NewChartApplier(renderer, applier),
 		BackupInfrastructure: backupInfrastructure,
 		ShootBackup:          shootBackup,
-		MachineDeployments:   MachineDeployments{},
 	}
 
 	if shoot != nil {
@@ -415,24 +417,57 @@ func (o *Operation) ChartInitializer(chartName string, values map[string]interfa
 	}
 }
 
-// ContainsName checks whether the <name> is part of the <machineDeployments>
-// list, i.e. whether there is an entry whose 'Name' attribute matches <name>. It returns true or false.
-func (m MachineDeployments) ContainsName(name string) bool {
-	for _, deployment := range m {
-		if name == deployment.Name {
-			return true
-		}
+// SyncClusterResourceToSeed creates or updates the `Cluster` extension resource for the shoot in the seed cluster.
+// It contains the shoot, seed, and cloudprofile specification.
+func (o *Operation) SyncClusterResourceToSeed(ctx context.Context) error {
+	if err := o.InitializeSeedClients(); err != nil {
+		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
+		return err
 	}
-	return false
+
+	var (
+		cluster = &extensionsv1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: o.Shoot.SeedNamespace,
+			},
+		}
+
+		cloudProfileObj = o.Shoot.CloudProfile.DeepCopy()
+		seedObj         = o.Seed.Info.DeepCopy()
+		shootObj        = o.Shoot.Info.DeepCopy()
+	)
+
+	cloudProfileObj.TypeMeta = metav1.TypeMeta{
+		APIVersion: gardenv1beta1.SchemeGroupVersion.String(),
+		Kind:       "CloudProfile",
+	}
+	seedObj.TypeMeta = metav1.TypeMeta{
+		APIVersion: gardenv1beta1.SchemeGroupVersion.String(),
+		Kind:       "Seed",
+	}
+	shootObj.TypeMeta = metav1.TypeMeta{
+		APIVersion: gardenv1beta1.SchemeGroupVersion.String(),
+		Kind:       "Shoot",
+	}
+
+	return kutil.CreateOrUpdate(ctx, o.K8sSeedClient.Client(), cluster, func() error {
+		cluster.Spec.CloudProfile = runtime.RawExtension{Object: cloudProfileObj}
+		cluster.Spec.Seed = runtime.RawExtension{Object: seedObj}
+		cluster.Spec.Shoot = runtime.RawExtension{Object: shootObj}
+		return nil
+	})
 }
 
-// ContainsClass checks whether the <className> is part of the <machineDeployments>
-// list, i.e. whether there is an entry whose 'ClassName' attribute matches <name>. It returns true or false.
-func (m MachineDeployments) ContainsClass(className string) bool {
-	for _, deployment := range m {
-		if className == deployment.ClassName {
-			return true
-		}
+// DeleteClusterResourceFromSeed deletes the `Cluster` extension resource for the shoot in the seed cluster.
+func (o *Operation) DeleteClusterResourceFromSeed(ctx context.Context) error {
+	if err := o.InitializeSeedClients(); err != nil {
+		o.Logger.Errorf("Could not initialize a new Kubernetes client for the seed cluster: %s", err.Error())
+		return err
 	}
-	return false
+
+	if err := o.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: o.Shoot.SeedNamespace}}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	return nil
 }

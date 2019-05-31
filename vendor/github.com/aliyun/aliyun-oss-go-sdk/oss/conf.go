@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// Define the level of the output log
 const (
 	LogOff = iota
 	Error
@@ -16,6 +17,7 @@ const (
 	Debug
 )
 
+// LogTag Tag for each level of log
 var LogTag = []string{"[error]", "[warn]", "[info]", "[debug]"}
 
 // HTTPTimeout defines HTTP timeout.
@@ -27,6 +29,7 @@ type HTTPTimeout struct {
 	IdleConnTimeout  time.Duration
 }
 
+// HTTPMaxConns defines max idle connections and max idle connections per host
 type HTTPMaxConns struct {
 	MaxIdleConns        int
 	MaxIdleConnsPerHost int
@@ -59,10 +62,10 @@ type Config struct {
 	UploadLimiter    *OssLimiter  // Bandwidth limit reader for upload
 }
 
-// LimitUploadSpeed, uploadSpeed:KB/s, 0 is unlimited,default is 0
+// LimitUploadSpeed uploadSpeed:KB/s, 0 is unlimited,default is 0
 func (config *Config) LimitUploadSpeed(uploadSpeed int) error {
 	if uploadSpeed < 0 {
-		return fmt.Errorf("erro,speed is less than 0")
+		return fmt.Errorf("invalid argument, the value of uploadSpeed is less than 0")
 	} else if uploadSpeed == 0 {
 		config.UploadLimitSpeed = 0
 		config.UploadLimiter = nil
@@ -77,7 +80,7 @@ func (config *Config) LimitUploadSpeed(uploadSpeed int) error {
 	return err
 }
 
-// WriteLog
+// WriteLog output log function
 func (config *Config) WriteLog(LogLevel int, format string, a ...interface{}) {
 	if config.LogLevel < LogLevel || config.Logger == nil {
 		return

@@ -21,10 +21,8 @@ spec:
         - 1.10.13
       machineImages:
       - name: coreos
-        publisher: CoreOS
-        offer: CoreOS
-        sku: Stable
         version: 2023.5.0
+        # Proper mappings to publisher, offer, and SKU names must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: Standard_D2_v3
         cpu: "2"

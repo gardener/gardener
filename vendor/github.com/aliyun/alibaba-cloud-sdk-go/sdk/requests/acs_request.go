@@ -15,6 +15,7 @@
 package requests
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"reflect"
@@ -313,6 +314,10 @@ func flatRepeatedList(dataValue reflect.Value, request AcsRequest, position, pre
 				// simple param
 				key := prefix + name
 				value := dataValue.Field(i).String()
+				if dataValue.Field(i).Kind().String() == "map" {
+					byt, _ := json.Marshal(dataValue.Field(i).Interface())
+					value = string(byt)
+				}
 				err = addParam(request, fieldPosition, key, value)
 				if err != nil {
 					return

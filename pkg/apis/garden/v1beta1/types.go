@@ -80,9 +80,6 @@ type CloudProfileSpec struct {
 	// Packet is the profile specification for the Packet cloud.
 	// +optional
 	Packet *PacketProfile `json:"packet,omitempty"`
-	// Local is the profile specification for the Local provider.
-	// +optional
-	Local *LocalProfile `json:"local,omitempty"`
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	// +optional
 	CABundle *string `json:"caBundle,omitempty"`
@@ -101,7 +98,7 @@ type AWSConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AWSMachineImageMapping `json:"machineImages"`
+	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType `json:"machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -110,27 +107,12 @@ type AWSConstraints struct {
 	Zones []Zone `json:"zones"`
 }
 
-// AWSMachineImage defines the region and the AMI for a machine image.
-type AWSMachineImage struct {
+// MachineImage defines the name and the version of the machine image in any environment.
+type MachineImage struct {
 	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// AMI is the technical id of the image (region specific).
-	AMI string `json:"ami"`
-}
-
-// AWSMachineImageMapping is a mapping of machine images to regions.
-type AWSMachineImageMapping struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// Regions is a list of machine images with their regional technical id.
-	Regions []AWSRegionalMachineImage `json:"regions"`
-}
-
-type AWSRegionalMachineImage struct {
-	// Name is the name of a region.
 	Name string `json:"name"`
-	// AMI is the technical id of the image (specific for region stated in the 'Name' field).
-	AMI string `json:"ami"`
+	// Version is the version of the image.
+	Version string `json:"version"`
 }
 
 // AzureProfile defines certain constraints and definitions for the Azure cloud.
@@ -150,7 +132,7 @@ type AzureConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AzureMachineImage `json:"machineImages"`
+	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType `json:"machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -163,20 +145,6 @@ type AzureDomainCount struct {
 	Region string `json:"region"`
 	// Count is the count value for the respective domain count.
 	Count int `json:"count"`
-}
-
-// AzureMachineImage defines the channel and the version of the machine image in the Azure environment.
-type AzureMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// Publisher is the publisher of the image.
-	Publisher string `json:"publisher"`
-	// Offer is the offering of the image.
-	Offer string `json:"offer"`
-	// SKU is the stock keeping unit to pull images from.
-	SKU string `json:"sku"`
-	// Version is the version of the image.
-	Version string `json:"version"`
 }
 
 // GCPProfile defines certain constraints and definitions for the GCP cloud.
@@ -192,22 +160,13 @@ type GCPConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []GCPMachineImage `json:"machineImages"`
+	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType `json:"machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType `json:"volumeTypes"`
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone `json:"zones"`
-}
-
-// GCPMachineImage defines the name of the machine image in the GCP environment.
-type GCPMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// Image is the technical name of the image. It contains the image name and the Google Cloud project.
-	// Example: projects/<name>/global/images/version23
-	Image string `json:"image"`
 }
 
 // OpenStackProfile defines certain constraints and definitions for the OpenStack cloud.
@@ -239,7 +198,7 @@ type OpenStackConstraints struct {
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 	LoadBalancerProviders []OpenStackLoadBalancerProvider `json:"loadBalancerProviders"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []OpenStackMachineImage `json:"machineImages"`
+	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []OpenStackMachineType `json:"machineTypes"`
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
@@ -258,14 +217,6 @@ type OpenStackLoadBalancerProvider struct {
 	Name string `json:"name"`
 }
 
-// OpenStackMachineImage defines the name of the machine image in the OpenStack environment.
-type OpenStackMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// Image is the technical name of the image.
-	Image string `json:"image"`
-}
-
 // AlicloudProfile defines constraints and definitions in Alibaba Cloud environment.
 type AlicloudProfile struct {
 	// Constraints is an object containing constraints for certain values in the Shoot specification.
@@ -279,21 +230,13 @@ type AlicloudConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AlicloudMachineImage `json:"machineImages"`
+	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []AlicloudMachineType `json:"machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []AlicloudVolumeType `json:"volumeTypes"`
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone `json:"zones"`
-}
-
-// AlicloudMachineImage defines the machine image for Alicloud.
-type AlicloudMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// ID is the ID of the image.
-	ID string `json:"id"`
 }
 
 // AlicloudMachineType defines certain machine types and zone constraints.
@@ -321,7 +264,7 @@ type PacketConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []PacketMachineImage `json:"machineImages"`
+	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType `json:"machineTypes"`
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -330,38 +273,10 @@ type PacketConstraints struct {
 	Zones []Zone `json:"zones"`
 }
 
-// PacketMachineImage defines the machine image for Packet.
-type PacketMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
-	// ID is the ID of the image.
-	ID string `json:"id"`
-}
-
-// LocalProfile defines constraints and definitions for the local development.
-type LocalProfile struct {
-	// Constraints is an object containing constraints for certain values in the Shoot specification.
-	Constraints LocalConstraints `json:"constraints"`
-}
-
-// LocalConstraints is an object containing constraints for certain values in the Shoot specification.
-type LocalConstraints struct {
-	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
-	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
-	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []LocalMachineImage `json:"machineImages"`
-}
-
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
 type DNSProviderConstraint struct {
 	// Name is the name of the DNS provider.
 	Name string `json:"name"`
-}
-
-// LocalMachineImage defines the machine image for Local Provider.
-type LocalMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName `json:"name"`
 }
 
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
@@ -412,20 +327,6 @@ type Zone struct {
 	// Names is a list of availability zone names in this region.
 	Names []string `json:"names"`
 }
-
-// MachineImageName is a string alias.
-type MachineImageName string
-
-const (
-	// MachineImageCoreOS is a constant for the CoreOS machine image.
-	// deprecated
-	MachineImageCoreOS MachineImageName = "coreos"
-	// MachineImageCoreOSAlicloud is a constant for the CoreOS machine image used by Alicloud.
-	// The Alicloud CoreOS image is modified (e.g., it does not support cloud-config, and is therefore
-	// treated like another OS).
-	// deprecated
-	MachineImageCoreOSAlicloud MachineImageName = "coreos-alicloud"
-)
 
 ////////////////////////////////////////////////////
 //                    PROJECTS                    //
@@ -797,9 +698,6 @@ type Cloud struct {
 	// Packet contains the Shoot specification for the Packet cloud.
 	// +optional
 	Packet *PacketCloud `json:"packet,omitempty"`
-	// Local contains the Shoot specification for the Local local provider.
-	// +optional
-	Local *Local `json:"local,omitempty"`
 }
 
 // AWSCloud contains the Shoot specification for AWS.
@@ -809,7 +707,7 @@ type AWSCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AWSMachineImage `json:"machineImage,omitempty"`
+	MachineImage *MachineImage `json:"machineImage,omitempty"`
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AWSNetworks `json:"networks"`
 	// Workers is a list of worker groups.
@@ -856,7 +754,7 @@ type Alicloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AlicloudMachineImage `json:"machineImage,omitempty"`
+	MachineImage *MachineImage `json:"machineImage,omitempty"`
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AlicloudNetworks `json:"networks"`
 	// Workers is a list of worker groups.
@@ -899,7 +797,7 @@ type PacketCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *PacketMachineImage `json:"machineImage,omitempty"`
+	MachineImage *MachineImage `json:"machineImage,omitempty"`
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks PacketNetworks `json:"networks"`
 	// Workers is a list of worker groups.
@@ -928,7 +826,7 @@ type AzureCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AzureMachineImage `json:"machineImage,omitempty"`
+	MachineImage *MachineImage `json:"machineImage,omitempty"`
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AzureNetworks `json:"networks"`
 	// ResourceGroup indicates whether to use an existing resource group or create a new one.
@@ -978,7 +876,7 @@ type GCPCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *GCPMachineImage `json:"machineImage,omitempty"`
+	MachineImage *MachineImage `json:"machineImage,omitempty"`
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks GCPNetworks `json:"networks"`
 	// Workers is a list of worker groups.
@@ -1025,7 +923,7 @@ type OpenStackCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *OpenStackMachineImage `json:"machineImage,omitempty"`
+	MachineImage *MachineImage `json:"machineImage,omitempty"`
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks OpenStackNetworks `json:"networks"`
 	// Workers is a list of worker groups.
@@ -1053,26 +951,6 @@ type OpenStackRouter struct {
 // OpenStackWorker is the definition of a worker group.
 type OpenStackWorker struct {
 	Worker `json:",inline"`
-}
-
-// Local contains the Shoot specification for local provider.
-type Local struct {
-	// Networks holds information about the Kubernetes and infrastructure networks.
-	Networks LocalNetworks `json:"networks"`
-	// MachineImage holds information about the machine image to use for all workers.
-	// It will default to the first image stated in the referenced CloudProfile if no
-	// value has been provided.
-	// +optional
-	MachineImage *LocalMachineImage `json:"machineImage,omitempty"`
-	// Endpoint of the local service.
-	Endpoint string `json:"endpoint"`
-}
-
-// LocalNetworks holds information about the Kubernetes and infrastructure networks.
-type LocalNetworks struct {
-	gardencorev1alpha1.K8SNetworks `json:",inline"`
-	// Workers is a CIDR of a worker subnet (private) to create (used for the VMs).
-	Workers []gardencorev1alpha1.CIDR `json:"workers"`
 }
 
 // Worker is the base definition of a worker group.
@@ -1266,8 +1144,6 @@ const (
 	CloudProviderAlicloud CloudProvider = "alicloud"
 	// CloudProviderPacket is a constant for the Packet cloud provider.
 	CloudProviderPacket CloudProvider = "packet"
-	// CloudProviderLocal is a constant for the development provider.
-	CloudProviderLocal CloudProvider = "local"
 )
 
 // Hibernation contains information whether the Shoot is suspended or not.

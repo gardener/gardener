@@ -171,8 +171,79 @@ func (s *Shoot) GetK8SNetworks() *gardencorev1alpha1.K8SNetworks {
 		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
 	case gardenv1beta1.CloudProviderAlicloud:
 		return &s.Info.Spec.Cloud.Alicloud.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderLocal:
-		return &s.Info.Spec.Cloud.Local.Networks.K8SNetworks
+	}
+	return nil
+}
+
+// GetWorkerVolumesByName returns the volume information for the specific worker pool (if there
+// is any volume information).
+func (s *Shoot) GetWorkerVolumesByName(workerName string) (ok bool, volumeType, volumeSize string, err error) {
+	switch s.CloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		for _, worker := range s.Info.Spec.Cloud.AWS.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderAzure:
+		for _, worker := range s.Info.Spec.Cloud.Azure.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderGCP:
+		for _, worker := range s.Info.Spec.Cloud.GCP.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderOpenStack:
+		return
+	case gardenv1beta1.CloudProviderAlicloud:
+		for _, worker := range s.Info.Spec.Cloud.Alicloud.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	case gardenv1beta1.CloudProviderPacket:
+		for _, worker := range s.Info.Spec.Cloud.Packet.Workers {
+			if worker.Name == workerName {
+				ok = true
+				volumeType = worker.VolumeType
+				volumeSize = worker.VolumeSize
+				return
+			}
+		}
+	}
+
+	return false, "", "", fmt.Errorf("could not find worker with name %q", workerName)
+}
+
+// GetZones returns the zones of the shoot cluster.
+func (s *Shoot) GetZones() []string {
+	switch s.CloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return s.Info.Spec.Cloud.AWS.Zones
+	case gardenv1beta1.CloudProviderAzure:
+		return nil
+	case gardenv1beta1.CloudProviderGCP:
+		return s.Info.Spec.Cloud.GCP.Zones
+	case gardenv1beta1.CloudProviderOpenStack:
+		return s.Info.Spec.Cloud.OpenStack.Zones
+	case gardenv1beta1.CloudProviderAlicloud:
+		return s.Info.Spec.Cloud.Alicloud.Zones
 	}
 	return nil
 }
@@ -201,9 +272,9 @@ func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
 	return ""
 }
 
-// GetMachineImageName returns the name of the used machine image.
-func (s *Shoot) GetMachineImageName() gardenv1beta1.MachineImageName {
-	return helper.GetMachineImageNameFromShoot(s.CloudProvider, s.Info)
+// GetMachineImage returns the name of the used machine image.
+func (s *Shoot) GetMachineImage() *gardenv1beta1.MachineImage {
+	return helper.GetMachineImageFromShoot(s.CloudProvider, s.Info)
 }
 
 // ClusterAutoscalerEnabled returns true if the cluster-autoscaler addon is enabled in the Shoot manifest.

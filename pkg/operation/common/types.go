@@ -46,9 +46,6 @@ const (
 	// will be downloaded.
 	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
 
-	// CloudProviderSecretName is the name of the secret containing the cloud provider credentials.
-	CloudProviderSecretName = "cloudprovider"
-
 	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"
 
@@ -274,8 +271,9 @@ const (
 	// TerraformerJobSuffix is the suffix used for the name of the Job which executes the Terraform configuration.
 	TerraformerJobSuffix = ".tf-job"
 
-	// TerraformerPurposeInfra is a constant for the complete Terraform setup with purpose 'infrastructure'.
-	TerraformerPurposeInfra = "infra"
+	// TerraformerPurposeInfraDeprecated is a constant for the complete Terraform setup with purpose 'infrastructure'.
+	// deprecated
+	TerraformerPurposeInfraDeprecated = "infra"
 
 	// TerraformerPurposeInternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'internal cluster domain'
 	// deprecated
@@ -418,9 +416,6 @@ const (
 
 	// IngressDefaultBackendImageName is the name of the IngressDefaultBackend image.
 	IngressDefaultBackendImageName = "ingress-default-backend"
-
-	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
-	MachineControllerManagerImageName = "machine-controller-manager"
 
 	// ClusterAutoscalerImageName is the name of the ClusterAutoscaler image.
 	ClusterAutoscalerImageName = "cluster-autoscaler"

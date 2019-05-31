@@ -63,7 +63,7 @@ func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machin
 func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	var (
 		machineTypes     = b.Shoot.GetMachineTypesFromCloudProfile()
-		machineImageName = b.Shoot.GetMachineImageName()
+		machineImageName = b.Shoot.GetMachineImage().Name
 	)
 
 	downloaderConfig := b.generateDownloaderConfig(machineImageName)
@@ -113,7 +113,7 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	return nil
 }
 
-func (b *HybridBotanist) generateDownloaderConfig(machineImageName gardenv1beta1.MachineImageName) map[string]interface{} {
+func (b *HybridBotanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
 	return map[string]interface{}{
 		"type":    machineImageName,
 		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
@@ -190,7 +190,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName gardenv1beta1.MachineImageName, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName string, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
 	var (
 		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
 		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)

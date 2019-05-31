@@ -1,4 +1,0 @@
-apiVersion: v1
-description: Meta chart for machine resources for Shoot clusters in the Seed cluster
-name: seed-machines
-version: 0.1.0

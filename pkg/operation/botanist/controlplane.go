@@ -24,7 +24,6 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -190,42 +189,6 @@ func (b *Botanist) DeleteKubeAddonManager() error {
 	return err
 }
 
-// DeployMachineControllerManager deploys the machine-controller-manager into the Shoot namespace in the Seed cluster. It is responsible
-// for managing the worker nodes of the Shoot.
-func (b *Botanist) DeployMachineControllerManager() error {
-	var (
-		name          = common.MachineControllerManagerDeploymentName
-		defaultValues = map[string]interface{}{
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-machine-controller-manager": b.CheckSums[name],
-			},
-			"namespace": map[string]interface{}{
-				"uid": b.SeedNamespaceObject.UID,
-			},
-			"vpa": map[string]interface{}{
-				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-			},
-		}
-	)
-
-	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
-	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
-	if b.Shoot.IsHibernated {
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName)
-		if err != nil {
-			return err
-		}
-		defaultValues["replicas"] = replicaCount
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.MachineControllerManagerImageName)
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, nil, values)
-}
-
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
 // for automatically scaling the worker pools of the Shoot.
 func (b *Botanist) DeployClusterAutoscaler() error {
@@ -234,7 +197,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 	}
 
 	var workerPools []map[string]interface{}
-	for _, worker := range b.MachineDeployments {
+	for _, worker := range b.Shoot.MachineDeployments {
 		// Skip worker pools for which min=0. Auto scaler cannot handle worker pools having a min count of 0.
 		if worker.Minimum == 0 {
 			continue
@@ -463,7 +426,7 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 		{
 			Op:    "replace",
 			Path:  "/spec/template/metadata/annotations/checksum~1secret-cloudprovider",
-			Value: b.CheckSums[common.CloudProviderSecretName],
+			Value: b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
 		},
 		{
 			Op:    "replace",
@@ -561,7 +524,6 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 // * kube-apiserver
 // * cloud-controller-manager
 // * kube-controller-manager
-// * machine-controller-manager
 // * csi-controllers
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
@@ -582,11 +544,7 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName}
-	if b.Shoot.CloudProvider != v1beta1.CloudProviderLocal {
-		controllerManagerDeployments = append(controllerManagerDeployments, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName)
-	}
-
+	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName, common.CloudControllerManagerDeploymentName}
 	if b.Shoot.UsesCSI() {
 		controllerManagerDeployments = append(controllerManagerDeployments, common.CSIPluginController)
 	}

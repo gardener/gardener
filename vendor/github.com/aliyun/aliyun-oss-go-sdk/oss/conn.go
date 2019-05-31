@@ -27,7 +27,7 @@ type Conn struct {
 	client *http.Client
 }
 
-var signKeyList = []string{"acl", "uploads", "location", "cors", "logging", "website", "referer", "lifecycle", "delete", "append", "tagging", "objectMeta", "uploadId", "partNumber", "security-token", "position", "img", "style", "styleName", "replication", "replicationProgress", "replicationLocation", "cname", "bucketInfo", "comp", "qos", "live", "status", "vod", "startTime", "endTime", "symlink", "x-oss-process", "response-content-type", "response-content-language", "response-expires", "response-cache-control", "response-content-disposition", "response-content-encoding", "udf", "udfName", "udfImage", "udfId", "udfImageDesc", "udfApplication", "comp", "udfApplicationLog", "restore", "callback", "callback-var"}
+var signKeyList = []string{"acl", "uploads", "location", "cors", "logging", "website", "referer", "lifecycle", "delete", "append", "tagging", "objectMeta", "uploadId", "partNumber", "security-token", "position", "img", "style", "styleName", "replication", "replicationProgress", "replicationLocation", "cname", "bucketInfo", "comp", "qos", "live", "status", "vod", "startTime", "endTime", "symlink", "x-oss-process", "response-content-type", "response-content-language", "response-expires", "response-cache-control", "response-content-disposition", "response-content-encoding", "udf", "udfName", "udfImage", "udfId", "udfImageDesc", "udfApplication", "comp", "udfApplicationLog", "restore", "callback", "callback-var", "policy"}
 
 // init initializes Conn
 func (conn *Conn) init(config *Config, urlMaker *urlMaker, client *http.Client) error {
@@ -112,7 +112,7 @@ func (conn Conn) DoURL(method HTTPMethod, signedURL string, headers map[string]s
 	publishProgress(listener, event)
 
 	if conn.config.LogLevel >= Debug {
-		conn.LoggerHttpReq(req)
+		conn.LoggerHTTPReq(req)
 	}
 
 	resp, err := conn.client.Do(req)
@@ -125,7 +125,7 @@ func (conn Conn) DoURL(method HTTPMethod, signedURL string, headers map[string]s
 
 	if conn.config.LogLevel >= Debug {
 		//print out http resp
-		conn.LoggerHttpResp(req, resp)
+		conn.LoggerHTTPResp(req, resp)
 	}
 
 	// Transfer completed
@@ -241,7 +241,7 @@ func (conn Conn) doRequest(method string, uri *url.URL, canonicalizedResource st
 	publishProgress(listener, event)
 
 	if conn.config.LogLevel >= Debug {
-		conn.LoggerHttpReq(req)
+		conn.LoggerHTTPReq(req)
 	}
 
 	resp, err := conn.client.Do(req)
@@ -255,7 +255,7 @@ func (conn Conn) doRequest(method string, uri *url.URL, canonicalizedResource st
 
 	if conn.config.LogLevel >= Debug {
 		//print out http resp
-		conn.LoggerHttpResp(req, resp)
+		conn.LoggerHTTPResp(req, resp)
 	}
 
 	// Transfer completed
@@ -457,7 +457,8 @@ func (conn Conn) handleResponse(resp *http.Response, crc hash.Hash64) (*Response
 	}, nil
 }
 
-func (conn Conn) LoggerHttpReq(req *http.Request) {
+// LoggerHTTPReq Print the header information of the http request
+func (conn Conn) LoggerHTTPReq(req *http.Request) {
 	var logBuffer bytes.Buffer
 	logBuffer.WriteString(fmt.Sprintf("[Req:%p]Method:%s\t", req, req.Method))
 	logBuffer.WriteString(fmt.Sprintf("Host:%s\t", req.URL.Host))
@@ -478,7 +479,8 @@ func (conn Conn) LoggerHttpReq(req *http.Request) {
 	conn.config.WriteLog(Debug, "%s\n", logBuffer.String())
 }
 
-func (conn Conn) LoggerHttpResp(req *http.Request, resp *http.Response) {
+// LoggerHTTPResp Print Response to http request
+func (conn Conn) LoggerHTTPResp(req *http.Request, resp *http.Response) {
 	var logBuffer bytes.Buffer
 	logBuffer.WriteString(fmt.Sprintf("[Resp:%p]StatusCode:%d\t", req, resp.StatusCode))
 	logBuffer.WriteString(fmt.Sprintf("Header info:"))

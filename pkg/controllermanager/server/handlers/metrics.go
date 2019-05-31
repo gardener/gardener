@@ -164,9 +164,8 @@ func (m metrics) initShootMetrics() {
 				for _, worker := range shoot.Spec.Cloud.OpenStack.Workers {
 					nodeCount += worker.AutoScalerMax
 				}
-			case gardenv1beta1.CloudProviderLocal:
-				nodeCount = 1
 			}
+
 			metricShootNodeCount.With(prometheus.Labels{
 				"name":    shoot.Name,
 				"project": shoot.Namespace,

@@ -19,7 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+// ClusterResource is a constant for the name of the Cluster resource.
+const ClusterResource = "Cluster"
+
 // +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Cluster is a specification for a Cluster resource.

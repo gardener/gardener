@@ -37,7 +37,9 @@ import (
 	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
 
 	"github.com/pkg/errors"
+
 	"github.com/prometheus/client_golang/prometheus"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -56,6 +58,7 @@ type Controller struct {
 	k8sGardenCoreInformers gardencoreinformers.SharedInformerFactory
 
 	config                        *config.ControllerManagerConfiguration
+	identity                      *gardenv1beta1.Gardener
 	control                       ControlInterface
 	careControl                   CareControlInterface
 	maintenanceControl            MaintenanceControlInterface
@@ -132,6 +135,7 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 		k8sGardenCoreInformers: k8sGardenCoreInformers,
 
 		config:                        config,
+		identity:                      identity,
 		control:                       NewDefaultControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, config, gardenNamespace, recorder),
 		careControl:                   NewDefaultCareControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, config),
 		maintenanceControl:            NewDefaultMaintenanceControl(k8sGardenClient, gardenV1beta1Informer, secrets, imageVector, identity, recorder),
@@ -256,14 +260,9 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 			}
 		}
 
-		// Migration from in-tree CoreOS/operating system support to out-of-tree: We have to rename the old machine image names so that
-		// they fit with the new extension controllers.
-		// This code can be removed in a further version.
-		//'local' cloud provider doesn't need machine name migration
-		if newShoot.Spec.Cloud.Local != nil || shoot.DeletionTimestamp != nil {
-			continue
-		}
-		utilruntime.Must(errors.Wrapf(c.migrateMachineImageNames(newShoot), "Failed to migrate machine image for shoot %q", shoot.Name))
+		// Migration from old machine image specification to new one (was incompatibly changed with worker extension controllers).
+		// This code can be removed in a future version.
+		utilruntime.Must(errors.Wrapf(c.migrateMachineImages(newShoot), "Failed to migrate machine image for shoot %q", shoot.Name))
 	}
 
 	logger.Logger.Info("Shoot controller initialized.")
@@ -349,7 +348,7 @@ func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterf
 	return c.shootQueue
 }
 
-func (c *Controller) migrateMachineImageNames(shoot *gardenv1beta1.Shoot) error {
+func (c *Controller) migrateMachineImages(shoot *gardenv1beta1.Shoot) error {
 	cloudProfile, err := c.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Lister().Get(shoot.Spec.Cloud.Profile)
 	if err != nil {
 		return err
@@ -359,19 +358,36 @@ func (c *Controller) migrateMachineImageNames(shoot *gardenv1beta1.Shoot) error 
 		return err
 	}
 
-	machineImageName := helper.GetMachineImageNameFromShoot(cloudProvider, shoot)
 	// Only do the migration once
-	if machineImageName == gardenv1beta1.MachineImageCoreOS || machineImageName == gardenv1beta1.MachineImageCoreOSAlicloud {
+	var version string
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		version = shoot.Spec.Cloud.AWS.MachineImage.Version
+	case gardenv1beta1.CloudProviderAzure:
+		version = shoot.Spec.Cloud.Azure.MachineImage.Version
+	case gardenv1beta1.CloudProviderGCP:
+		version = shoot.Spec.Cloud.GCP.MachineImage.Version
+	case gardenv1beta1.CloudProviderOpenStack:
+		version = shoot.Spec.Cloud.OpenStack.MachineImage.Version
+	case gardenv1beta1.CloudProviderAlicloud:
+		version = shoot.Spec.Cloud.Alicloud.MachineImage.Version
+	case gardenv1beta1.CloudProviderPacket:
+		version = shoot.Spec.Cloud.Packet.MachineImage.Version
+	}
+	if len(version) > 0 {
 		return nil
 	}
 
-	machineImageFound, machineImage, err := helper.DetermineMachineImage(*cloudProfile, machineImageName, shoot.Spec.Cloud.Region)
+	machineImage := helper.GetMachineImageFromShoot(cloudProvider, shoot)
+	machineImageFound, machineImage, err := helper.DetermineMachineImage(*cloudProfile, machineImage.Name)
 	if err != nil {
 		return err
 	}
-
 	if !machineImageFound {
-		return nil
+		return fmt.Errorf("machine image %q was not found in the cloud profile %q", machineImage.Name, cloudProfile.Name)
+	}
+	if len(machineImage.Version) == 0 {
+		return fmt.Errorf("machine images in cloudprofile %q have not been changed to the (name,version)-tuple: %#+v", cloudProfile.Name, machineImage)
 	}
 
 	if updateMachineImage := helper.UpdateMachineImage(cloudProvider, machineImage); updateMachineImage != nil {

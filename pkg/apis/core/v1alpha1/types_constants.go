@@ -30,6 +30,12 @@ const (
 	// SecretNameCAMetricsServer is a constant for the name of a Kubernetes secret object that contains the CA
 	// certificate of the metrics-server of a shoot cluster.
 	SecretNameCAMetricsServer = "ca-metrics-server"
+	// SecretNameCloudProvider is a constant for the name of a Kubernetes secret object that contains the provider
+	// specific credentials that shall be used to create/delete the shoot.
+	SecretNameCloudProvider = "cloudprovider"
+	// SecretNameSSHKeyPair is a constant for the name of a Kubernetes secret object that contains the SSH key pair
+	// (public and private key) that can be used to SSH into the shoot nodes.
+	SecretNameSSHKeyPair = "ssh-keypair"
 
 	// SecretNameGardener is a constant for the name of a Kubernetes secret object that contains the client
 	// certificate and a kubeconfig for a shoot cluster. It is used by Gardener and can be used by extension

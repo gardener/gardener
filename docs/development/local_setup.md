@@ -137,32 +137,6 @@ On other OS, please check the [Docker installation documentation](https://docs.d
 
 In case you have to create a new release or a new hotfix of the Gardener you have to push the resulting Docker image into a Docker registry. Currently, we are using the Google Container Registry (this could change in the future). Please follow the official [installation instructions from Google](https://cloud.google.com/sdk/downloads).
 
-## Installing Vagrant
-
-In case you want to run the `gardener-local-provider` and test the creation of Shoot clusters on your machine you have to [install](https://www.vagrantup.com/downloads.html) Vagrant.
-
-Please make sure that the executable `bsdtar` is available on your system.
-
-## Installing Virtualbox
-
-In this local setup a virtualizer is needed. Here, [`Virtualbox`](https://www.virtualbox.org) is used. However, Vagrant supports other virtualizers as well. Please check the [`Vagrant` documentation](https://www.vagrantup.com/docs/index.html) for further details.
-
-## Test nip.io
-
-`nip.io` is used as an unmanaged DNS implementation for the local setup. Some ISPs don't handle `nip.io` very well. Test NS resolution:
-
-```bash
-nslookup 192.168.99.201.nip.io
-Server:         8.8.8.8
-Address:        8.8.8.8#53
-
-Non-authoritative answer:
-Name:   192.168.99.201.nip.io
-Address: 192.168.99.201
-```
-
-If there is an error, switch your DNS server to `8.8.8.8` / `8.8.4.4` or `1.1.1.1`.
-
 ## Local Gardener setup
 
 This setup is only meant to be used for developing purposes, which means that only the control plane of the Gardener cluster is running on your machine.
@@ -187,7 +161,7 @@ $ cd gardener
 
 The development of the Gardener could happen by targeting any cluster. You basically need a Garden cluster (e.g., a [Minikube](https://github.com/kubernetes/minikube) cluster) and one Seed cluster per cloud provider and per data center/region. You can configure the Gardener controller manager to watch **all namespaces** for Shoot manifests or to only watch **one single** namespace.
 
-The commands below will configure your `minikube` with the absolute minimum resources to launch Gardener API Server and Gardener Controller Manager on a local machine.
+The commands below will configure your `minikube` with the absolute minimum resources to launch Gardener API Server and Gardener Controller Manager on your local machine.
 
 #### Start minikube
 
@@ -292,129 +266,22 @@ to operate against your local running Gardener API Server.
 
 > Note: It may take several seconds until the `minikube` cluster recognizes that the Gardener API server has been started and is available. `No resources found` is the expected result of our initial development setup.
 
-#### Configure minikube to act as Gardener and Seed Cluster
+#### Limitations of local development setup
 
-Before continuing, make sure that Vagrant is installed (see section [Installing Vagrant](#installing-vagrant)), that you already ran `make dev-setup`, and that the Gardener API Server and the Gardener Controller Manager are running via `make start-api` and `make start` as described above.
+You can run Gardener (API server and controller manager) against any local Kubernetes cluster, however, your seed and shoot clusters must be deployed to a "real" provider.
+Currently, it is not possible to run Gardener entirely isolated from any cloud provider. We are planning to support such a setup based on KubeVirt (see [this for details](https://github.com/gardener/gardener/issues/827)), however, it does not yet exist.
+This means that - after you have setup Gardener - you need to register an external seed cluster (e.g., one created in AWS).
+Only after that step you can start creating shoot clusters with your locally running Gardener.
 
-Next, you need to configure `minikube` to work as the Gardener and as the Seed cluster in such a way that it uses the local Vagrant installation to create the Shoot clusters.
+Some time ago, we had a local setup based on VirtualBox/Vagrant.
+However, as we have progressed with the [Extensibility epic](https://github.com/gardener/gardener/issues/308) we noticed that this implementation/setup does no longer fit into how we envision external providers to be.
+Moreover, it hid too many things and came with a bunch of limitations, making the development scenario too "artificial":
 
-```bash
-$ make dev-setup-local
-namespace/garden-dev unchanged
-project.garden.sapcloud.io/dev created
-cloudprofile.garden.sapcloud.io/local created
-secret/core-local created
-secretbinding.garden.sapcloud.io/core-local created
-Cluster "gardener-dev" set.
-User "gardener-dev" set.
-Context "gardener-dev" modified.
-Switched to context "gardener-dev".
-controllerinstallation.core.gardener.cloud/os-coreos created
-secret/seed-local created
-seed.garden.sapcloud.io/local created
-```
-
-#### Check Vagrant setup
-
-To be sure that the Vagrant has been successfully installed and configured, test your setup:
-
-```bash
-$ cd vagrant
-$ vagrant up
-Bringing machine 'core-01' up with 'virtualbox' provider...
-==> core-01: Importing base box 'coreos-stable'...
-[...]
-```
-
-If successful, delete your machine before continuing:
-
-```bash
-$ vagrant destroy --force
-==> core-01: Forcing shutdown of VM...
-==> core-01: Destroying VM and associated drives...
-
-$ cd ..
-```
-
-#### Create, access and delete a Shoot Cluster
-
-Now, you can create a Shoot cluster by running
-
-```bash
-$ kubectl apply -f dev/90-shoot-local.yaml
-shoot "local" created
-```
-
-Wait until the 2 secrets `osc-result-cloud-config-local-*` appear in the Shoot cluster namespace and then copy `cloud_config` from the secret `osc-result-cloud-config-local-xxxxx-downloader` to the local file `dev/user-data`. This file is used to pass the downloader configuration to the Vagrant machine, which triggers the mechanism that configures the machine properly and causes it to join the Shoot cluster as a node.
-
-```bash
-$ kubectl get secrets -n shoot--dev--local | grep osc-result-cloud-config-local
-osc-result-cloud-config-local-640f6-downloader   Opaque                                1      70s
-osc-result-cloud-config-local-640f6-original     Opaque                                1      68s
-
-$ kubectl get secrets osc-result-cloud-config-local-640f6-downloader -n shoot--dev--local -o jsonpath="{.data.cloud_config}" | base64 -d > dev/user-data
-```
-
-Manually start the Vagrant machine:
-
-```bash
-$ cd vagrant
-$ vagrant up
-Bringing machine 'core-01' up with 'virtualbox' provider...
-==> core-01: Importing base box 'coreos-stable'...
-[...]
-
-$ cd ..
-```
-
-At this point, you can download the `kubeconfig` for the Shoot cluster and access it:
-
-```bash
-$ kubectl --namespace shoot--dev--local get secret kubecfg -o jsonpath="{.data.kubeconfig}" | base64 --decode > dev/shoot-kubeconfig
-
-# Depending on your Internet speed, it can take some time, before your node reports a READY status.
-$ kubectl --kubeconfig dev/shoot-kubeconfig get nodes
-NAME                    STATUS    ROLES     AGE       VERSION
-192.168.99.201.nip.io   Ready     node      1m        v1.12.5
-```
-
-> Note: It is required that your minikube has network connectivity to the nodes created by Vagrant.
-
-For additional debugging on your Vagrant node you can `ssh` into it
-
-```bash
-$ cd vagrant
-$ vagrant ssh
-```
-
-To delete the Shoot cluster
-
-```bash
-$ ./hack/delete shoot local garden-dev
-shoot "local" deleted
-shoot "local" patched
-```
-
-Manually destroy the Vagrant machine when you no longer need it:
-
-```bash
-$ cd vagrant
-$ vagrant destroy --force
-==> core-01: Discarding saved state of VM...
-==> core-01: Destroying VM and associated drives...
-
-$ cd ..
-```
-
-#### Limitations of local Shoot setup
-
-Currently, there are some limitations in the local Shoot setup which need to be considered. Please keep in mind that this setup is intended to be used by Gardener developers.
-
-- The cloud provider allows to choose from a various list of different machine types. This flexibility is not available in this setup on a single local machine. However, it is possible to specify the Shoot nodes resources (cpu and memory) used by Vagrant in this [configuration file](../../vagrant/Vagrantfile). In the Shoot creation process the Machine Controller Manager plays a central role. Due to the limitation in this setup this component is not used.
-- It is not yet possible to create Shoot clusters consisting of more than one worker node. Cluster auto-scaling therefore is not supported
-- It is not yet possible to create two or more Shoot clusters in parallel
-- The Shoot API Server is exposed via a NodePort. In a cloud setup a LoadBalancer would be used
-- The communication between the Seed and the Shoot Clusters uses VPN tunnel. In this setup tunnels are not needed since all components run on localhost
+- No integration with machine-controller-manager.
+- The Shoot API Server is exposed via a NodePort. In a cloud setup a LoadBalancer would be used.
+- It was not possible to create Shoot clusters consisting of more than one worker node. Cluster auto-scaling therefore is not supported.
+- It was not possible to create two or more Shoot clusters in parallel.
+- The communication between the Seed and the Shoot Clusters uses VPN tunnel. In this setup tunnels are not needed since all components run on localhost.
 
 ## Additional information
 
