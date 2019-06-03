@@ -22,6 +22,8 @@ spec:
 {{- end }}
       labels:
         role: dependency-watchdog
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
     spec:
       serviceAccountName: dependency-watchdog
       terminationGracePeriodSeconds: 5

@@ -22,6 +22,8 @@ spec:
             garden.sapcloud.io/role: logging
             app: curator
             role: logging
+            networking.gardener.cloud/to-dns: allowed
+            networking.gardener.cloud/to-elasticsearch: allowed
         spec:
           containers:
           - image: {{ index .Values.global.images "curator-es" }}
@@ -68,6 +70,8 @@ spec:
             garden.sapcloud.io/role: logging
             app: curator
             role: logging
+            networking.gardener.cloud/to-dns: allowed
+            networking.gardener.cloud/to-elasticsearch: allowed
         spec:
           containers:
           - image: {{ index .Values.global.images "curator-es" }}

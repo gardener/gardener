@@ -35,6 +35,8 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: addon-manager
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
     spec:
       terminationGracePeriodSeconds: 5
       containers:

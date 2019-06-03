@@ -7,3 +7,6 @@ ingress:
   # admin : admin base64 encoded
   basicAuthSecret: YWRtaW46JGFwcjEkSWRSaVM5c3MkR3U1MHMxaGUwL2Z6Tzh2elE4S1BEMQ==
 replicas: 1
+ports:
+  prometheus: 9090
+  grafana: 3000

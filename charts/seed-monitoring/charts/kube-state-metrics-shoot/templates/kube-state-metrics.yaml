@@ -43,6 +43,9 @@ spec:
         garden.sapcloud.io/role: monitoring
         component: kube-state-metrics
         type: shoot
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       containers:
       - name: kube-state-metrics
@@ -58,7 +61,8 @@ spec:
         - name: kubeconfig
           mountPath: /etc/kube-state-metrics/config
         ports:
-        - containerPort: 8080
+        - name: metrics
+          containerPort: 8080
           protocol: TCP
         livenessProbe:
           httpGet:

@@ -22,6 +22,8 @@ spec:
         garden.sapcloud.io/role: logging
         app: kibana-logging
         role: logging
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-elasticsearch: allowed
     spec:
       containers:
       - name: kibana-logging

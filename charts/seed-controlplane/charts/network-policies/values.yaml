@@ -1,0 +1,16 @@
+global-network-policies:
+  metadataService: 0.0.0.0/1
+  # metadataService: 169.254.169.254/32
+clusterNetworks:
+# Seed CIDR
+- network: 10.0.0.0/8
+  except:
+  - 10.10.0.0/24
+# Shoot CIDR
+- network: 172.16.0.0/12
+  except:
+  - 172.16.1.0/24
+# Services CIDR
+- network: 192.168.0.0/16
+  except:
+  - 192.168.1.0/24

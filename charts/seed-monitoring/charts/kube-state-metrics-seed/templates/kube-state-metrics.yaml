@@ -73,6 +73,9 @@ spec:
         garden.sapcloud.io/role: monitoring
         component: kube-state-metrics
         type: seed
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       serviceAccountName: kube-state-metrics-seed
       containers:
@@ -85,7 +88,8 @@ spec:
         - --namespace={{ .Release.Namespace }}
         - --collectors=deployments,pods,statefulsets
         ports:
-        - containerPort: 8080
+        - name: metrics
+          containerPort: 8080
           protocol: TCP
         readinessProbe:
           failureThreshold: 3

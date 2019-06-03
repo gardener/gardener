@@ -17,6 +17,9 @@ spec:
       labels:
         garden.sapcloud.io/role: controlplane
         app: aws-lb-readvertiser
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/to-public-networks: allowed
 {{- if .Values.podAnnotations }}
       annotations:
 {{ toYaml .Values.podAnnotations | indent 8 }}

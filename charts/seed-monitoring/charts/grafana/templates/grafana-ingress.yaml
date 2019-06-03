@@ -20,5 +20,5 @@ spec:
       paths:
       - backend:
           serviceName: grafana
-          servicePort: 3000
+          servicePort: {{ required ".ports.grafana is required" .Values.ports.grafana }}
         path: /

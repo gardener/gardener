@@ -15,5 +15,5 @@ spec:
   ports:
   - name: client
     protocol: TCP
-    port: 2379
-    targetPort: 2379
+    port: {{ .Values.servicePorts.client }}
+    targetPort: {{ .Values.servicePorts.client }}

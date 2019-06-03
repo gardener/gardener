@@ -1,0 +1,31 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Ingress to etcd pods from the Shoot's Kubernetes API Server.
+  name: allow-etcd
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: etcd-statefulset
+      garden.sapcloud.io/role: controlplane
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: kubernetes
+          garden.sapcloud.io/role: controlplane
+          role: apiserver
+    - podSelector:
+        matchLabels:
+          app: prometheus
+          garden.sapcloud.io/role: monitoring
+          role: monitoring
+    ports:
+    - protocol: TCP
+      port: {{ .Values.servicePorts.client }}
+  policyTypes:
+  - Ingress
+  egress: []

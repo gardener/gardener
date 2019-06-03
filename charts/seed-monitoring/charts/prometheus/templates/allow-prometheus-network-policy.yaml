@@ -1,0 +1,54 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Prometheus to talk to various components in the Seed cluster.
+  name: allow-prometheus
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+      garden.sapcloud.io/role: monitoring
+      role: monitoring
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          networking.gardener.cloud/from-prometheus: allowed
+    - podSelector:
+        matchLabels:
+          app: etcd-statefulset
+          garden.sapcloud.io/role: controlplane
+    - podSelector:
+        matchLabels:
+          app: prometheus
+          role: monitoring
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
+          component: alertmanager
+          role: monitoring
+          garden.sapcloud.io/role: monitoring
+      namespaceSelector:
+        matchLabels:
+          role: garden
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          component: grafana
+          garden.sapcloud.io/role: monitoring
+    - podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+      namespaceSelector:
+        matchLabels:
+          role: kube-system
+  policyTypes:
+  - Egress
+  - Ingress

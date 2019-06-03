@@ -22,6 +22,9 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: csi-plugin-controller
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
     spec:
       containers:
         - name: csi-diskplugin
@@ -49,7 +52,7 @@ spec:
           imagePullPolicy: Always
 {{- if .Values.diskpluginResources }}
           resources:
-{{ toYaml .Values.diskpluginResources | indent 12 }}         
+{{ toYaml .Values.diskpluginResources | indent 12 }}
 {{- end }}
           ports:
           - containerPort: 80
@@ -84,7 +87,7 @@ spec:
           - name: csi-attacher
             mountPath: /var/lib/csi-attacher
           - name: socket-dir
-            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com          
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
         - name: csi-provisioner
           image: {{ index .Values.images "csi-provisioner" }}
           args:
@@ -95,7 +98,7 @@ spec:
             - "--enable-leader-election=true"
 {{- if .Values.provisionerResources }}
           resources:
-{{ toYaml .Values.provisionerResources | indent 12 }}           
+{{ toYaml .Values.provisionerResources | indent 12 }}
 {{- end }}
           env:
           - name: CSI_ENDPOINT
@@ -104,7 +107,7 @@ spec:
             value: kube-system
           volumeMounts:
           - name: socket-dir
-            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com          
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
           - name: csi-provisioner
             mountPath: /var/lib/csi-provisioner
         - name: csi-snapshotter
@@ -117,11 +120,11 @@ spec:
             value: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com/csi.sock
 {{- if .Values.snapshotterResources}}
           resources:
-{{ toYaml .Values.snapshotterResources | indent 12 }}           
+{{ toYaml .Values.snapshotterResources | indent 12 }}
 {{- end}}
           volumeMounts:
           - name: socket-dir
-            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com          
+            mountPath: /var/lib/kubelet/plugins/diskplugin.csi.alibabacloud.com
           - name: csi-snapshotter
             mountPath: /var/lib/csi-snapshotter
       volumes:

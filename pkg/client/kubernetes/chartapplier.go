@@ -29,10 +29,12 @@ type ChartApplier interface {
 	chartrenderer.Interface
 	ApplierInterface
 
-	ApplyChartWithOptions(context.Context, string, string, string, map[string]interface{}, map[string]interface{}, ApplierOptions) error
-	ApplyChart(context.Context, string, string, string, map[string]interface{}, map[string]interface{}) error
-	ApplyChartInNamespaceWithOptions(context.Context, string, string, string, map[string]interface{}, map[string]interface{}, ApplierOptions) error
-	ApplyChartInNamespace(context.Context, string, string, string, map[string]interface{}, map[string]interface{}) error
+	ApplyChartWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error
+	ApplyChart(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
+	ApplyChartInNamespaceWithOptions(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}, options ApplierOptions) error
+	ApplyChartInNamespace(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error
+
+	DeleteChart(ctx context.Context, chartPath, namespace, name string) error
 }
 
 // chartApplier is a structure that contains a chart renderer and a manifest applier.
@@ -97,6 +99,17 @@ func (c *chartApplier) ApplyChart(ctx context.Context, chartPath, namespace, nam
 // objects do not come with a Release.Namespace option and leave the namespace field empty.
 func (c *chartApplier) ApplyChartInNamespace(ctx context.Context, chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) error {
 	return c.ApplyChartInNamespaceWithOptions(ctx, chartPath, namespace, name, defaultValues, additionalValues, DefaultApplierOptions)
+}
+
+// DeleteChart takes a path to a chart <chartPath>, name of the release <name>,
+// release's namespace <namespace> and renders the template.
+// The resulting manifest will be deleted from the cluster the Kubernetes client has been created for.
+func (c *chartApplier) DeleteChart(ctx context.Context, chartPath, namespace, name string) error {
+	manifestReader, err := c.manifestReader(chartPath, namespace, name, nil, nil)
+	if err != nil {
+		return err
+	}
+	return c.DeleteManifest(ctx, manifestReader)
 }
 
 func (c *chartApplier) manifestReader(chartPath, namespace, name string, defaultValues, additionalValues map[string]interface{}) (UnstructuredReader, error) {

@@ -1,0 +1,14 @@
+# DEPRECATED. DO NOT CREATE THIS CHART.
+# TODO: This entire chart should be remove after several releases
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  name: cloud-metadata-service-deny-blacklist-role
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Egress
+  - Ingress
+  egress: []
+  ingress: []

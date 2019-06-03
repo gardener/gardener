@@ -1,0 +1,39 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Ingress to the Grafana from the nginx controller in 'kube-system' namespace,
+      and Egress to Prometheus.
+  namespace: {{ .Release.Namespace }}
+  name: allow-grafana
+spec:
+  podSelector:
+    matchLabels:
+      component: grafana
+      garden.sapcloud.io/role: monitoring
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+          garden.sapcloud.io/role: monitoring
+          role: monitoring
+    ports:
+    - protocol: TCP
+      port: {{ required ".ports.prometheus is required" .Values.ports.prometheus }}
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          role: kube-system
+      podSelector:
+        matchLabels:
+          app: nginx-ingress
+          component: controller
+    ports:
+    - protocol: TCP
+      port: {{ required ".ports.grafana is required" .Values.ports.grafana }}
+  policyTypes:
+  - Egress
+  - Ingress

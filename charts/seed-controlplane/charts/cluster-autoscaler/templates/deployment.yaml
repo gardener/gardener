@@ -26,6 +26,10 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: cluster-autoscaler
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       serviceAccountName: cluster-autoscaler
       terminationGracePeriodSeconds: 5
@@ -55,6 +59,10 @@ spec:
           value: {{ .Release.Namespace }}
         - name: TARGET_KUBECONFIG
           value: "/var/lib/cluster-autoscaler/kubeconfig"
+        ports:
+        - name: metrics
+          containerPort: {{ .Values.metricsPort }}
+          protocol: TCP
         resources:
           limits:
             cpu: 150m

@@ -19,6 +19,9 @@ backup:
 tlsServerSecretName: etcd-server-tls
 tlsClientSecretName: etcd-client-tls
 podAnnotations: {}
+servicePorts:
+  client: 2379
+  server: 2380
 
 vpa:
   enabled: true

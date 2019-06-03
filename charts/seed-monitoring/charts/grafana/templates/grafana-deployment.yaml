@@ -22,6 +22,7 @@ spec:
       labels:
         garden.sapcloud.io/role: monitoring
         component: grafana
+        networking.gardener.cloud/to-dns: allowed
     spec:
       initContainers:
       - name: init-prometheus
@@ -53,7 +54,7 @@ spec:
           mountPath: /etc/grafana/provisioning/dashboards
         ports:
         - name: web
-          containerPort: 3000
+          containerPort: {{ required ".ports.grafana is required" .Values.ports.grafana }}
         resources:
           requests:
             cpu: 10m

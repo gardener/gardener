@@ -16,6 +16,7 @@ package awsbotanist
 
 import (
 	"fmt"
+	"net"
 	"path/filepath"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -130,6 +131,11 @@ func (b *AWSBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, err
 // GenerateCSIConfig generates the configuration for CSI charts
 func (b *AWSBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 	return nil, nil
+}
+
+// MetadataServiceAddress returns AWS's MetadataService address.
+func (b *AWSBotanist) MetadataServiceAddress() *net.IPNet {
+	return &net.IPNet{IP: net.IP{169, 254, 169, 254}, Mask: net.CIDRMask(32, 32)}
 }
 
 // maps are mutable, so it's safer to create a new instance

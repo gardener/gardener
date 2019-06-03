@@ -87,8 +87,13 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying cloud metadata service network policy",
-			Fn:           flow.SimpleTaskFn(botanist.DeployCloudMetadataServiceNetworkPolicy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Name:         "Removing old deprecated network policies",
+			Fn:           flow.TaskFn(botanist.DeleteDeprecatedCloudMetadataServiceNetworkPolicy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying network policies",
+			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{

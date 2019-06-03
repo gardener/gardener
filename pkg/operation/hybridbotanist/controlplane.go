@@ -213,6 +213,56 @@ func (b *HybridBotanist) DeployETCD() error {
 	return nil
 }
 
+// DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
+// deny all traffic and allow certain components to use annotations to declare their desire
+// to transmit/recieve traffic to/from other Pods/IP addresses.
+func (b *HybridBotanist) DeployNetworkPolicies(ctx context.Context) error {
+	addr := b.SeedCloudBotanist.MetadataServiceAddress()
+
+	globalNetworkPoliciesValues := map[string]interface{}{}
+	excludeNets := []gardencorev1alpha1.CIDR{}
+	if addr != nil {
+		excludeNets = append(excludeNets, gardencorev1alpha1.CIDR(addr.String()))
+		globalNetworkPoliciesValues["metadataService"] = addr.String()
+	}
+
+	values := map[string]interface{}{}
+	shootCIDRNetworks := []gardencorev1alpha1.CIDR{}
+	networks, err := b.Shoot.GetK8SNetworks()
+	if err != nil {
+		return err
+	}
+	if networks != nil {
+		if networks.Nodes != nil {
+			shootCIDRNetworks = append(shootCIDRNetworks, *networks.Nodes)
+		}
+		if networks.Pods != nil {
+			shootCIDRNetworks = append(shootCIDRNetworks, *networks.Pods)
+		}
+		if networks.Services != nil {
+			shootCIDRNetworks = append(shootCIDRNetworks, *networks.Services)
+		}
+		shootNetworkValues, err := common.ExceptNetworks(shootCIDRNetworks, excludeNets...)
+		if err != nil {
+			return err
+		}
+		values["clusterNetworks"] = shootNetworkValues
+	}
+
+	seedNetworks := b.Seed.Info.Spec.Networks
+	allCIDRNetworks := append([]gardencorev1alpha1.CIDR{seedNetworks.Nodes, seedNetworks.Pods, seedNetworks.Services}, shootCIDRNetworks...)
+	allCIDRNetworks = append(allCIDRNetworks, excludeNets...)
+
+	privateNetworks, err := common.ToExceptNetworks(common.AllPrivateNetworkBlocks(), allCIDRNetworks...)
+	if err != nil {
+		return err
+	}
+	globalNetworkPoliciesValues["privateNetworks"] = privateNetworks
+	values["global-network-policies"] = globalNetworkPoliciesValues
+
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", values, nil)
+}
+
 // DeployCloudProviderConfig asks the Cloud Botanist to provide the cloud specific values for the cloud
 // provider configuration. It will create a ConfigMap for it and store it in the Seed cluster.
 func (b *HybridBotanist) DeployCloudProviderConfig() error {
@@ -313,10 +363,9 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"pod":     b.Seed.Info.Spec.Networks.Pods,
 			"node":    b.Seed.Info.Spec.Networks.Nodes,
 		},
-		"seedCloudProvider": b.Seed.CloudProvider,
-		"maxReplicas":       3,
-		"securePort":        443,
-		"probeCredentials":  utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data[secrets.DataKeyUserName], b.Secrets["kubecfg"].Data[secrets.DataKeyPassword]))),
+		"maxReplicas":      3,
+		"securePort":       443,
+		"probeCredentials": utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", b.Secrets["kubecfg"].Data[secrets.DataKeyUserName], b.Secrets["kubecfg"].Data[secrets.DataKeyPassword]))),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
 			"checksum/secret-ca-front-proxy":            b.CheckSums[gardencorev1alpha1.SecretNameCAFrontProxy],

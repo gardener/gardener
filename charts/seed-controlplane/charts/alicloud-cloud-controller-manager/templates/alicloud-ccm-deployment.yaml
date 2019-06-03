@@ -43,6 +43,10 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: cloud-controller-manager
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       containers:
       - name: cloud-controller-manager
