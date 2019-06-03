@@ -16,13 +16,13 @@ package backupinfrastructure
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/gardener/gardener/pkg/api"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
 	"github.com/gardener/gardener/pkg/operation/common"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
@@ -76,7 +76,9 @@ func mustIncreaseGeneration(oldBackupInfrastructure, newBackupInfrastructure *ga
 		return true
 	}
 
-	if kutil.HasMetaDataAnnotation(&newBackupInfrastructure.ObjectMeta, common.BackupInfrastructureOperation, common.BackupInfrastructureReconcile) {
+	oldPresent, _ := strconv.ParseBool(oldBackupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion])
+	newPresent, _ := strconv.ParseBool(newBackupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion])
+	if oldPresent != newPresent && newPresent {
 		return true
 	}
 

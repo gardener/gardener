@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -190,7 +191,8 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	// When this happens the controller will remove the finalizer from the BackupInfrastructure so that it can be garbage collected.
 	if backupInfrastructure.DeletionTimestamp != nil {
 		gracePeriod := computeGracePeriod(c.config)
-		if time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
+		present, _ := strconv.ParseBool(backupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion])
+		if present || time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
 			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateProcessing, operationType, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
 				backupInfrastructureLogger.Errorf("Could not update the BackupInfrastructure status after deletion start: %+v", updateErr)
 				return false, updateErr

@@ -5542,6 +5542,9 @@ var _ = Describe("validation", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "example-backupinfrastructure",
 					Namespace: "garden",
+					Annotations: map[string]string{
+						common.BackupInfrastructureForceDeletion : "true",
+					},
 				},
 				Spec: garden.BackupInfrastructureSpec{
 					Seed:     "aws",
@@ -5561,15 +5564,14 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.namespace"),
-			}))
+			}))))
 		})
 
 		It("should forbid BackupInfrastructure specification with empty or invalid keys", func() {
@@ -5578,33 +5580,36 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.shootUID"),
-			}))
+			}))))
 		})
 
 		It("should forbid updating some keys", func() {
 			newBackupInfrastructure := prepareBackupInfrastructureForUpdate(backupInfrastructure)
 			newBackupInfrastructure.Spec.Seed = "another-seed"
 			newBackupInfrastructure.Spec.ShootUID = "another-uid"
+			newBackupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion] = "false"
 
 			errorList := ValidateBackupInfrastructureUpdate(newBackupInfrastructure, backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeInvalid),
+				"Field": Equal("metadata.annotations"),
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.shootUID"),
-			}))
+			}))))
 		})
 	})
 })
