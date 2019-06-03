@@ -70,7 +70,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % else:
         - 1.14.0
         - 1.13.6
-        - 1.12.8
+        - 1.12.9
         - 1.11.10
         - 1.10.13
         % endif
@@ -172,7 +172,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % else:
         - 1.14.0
         - 1.13.6
-        - 1.12.8
+        - 1.12.9
         - 1.11.10
         - 1.10.13
         % endif
@@ -271,7 +271,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % else:
         - 1.14.0
         - 1.13.6
-        - 1.12.8
+        - 1.12.9
         - 1.11.10
         - 1.10.13
         % endif
@@ -530,7 +530,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % else:
         - 1.14.0
         - 1.13.6
-        - 1.12.8
+        - 1.12.9
         - 1.11.10
         - 1.10.13
         % endif

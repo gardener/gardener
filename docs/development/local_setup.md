@@ -165,12 +165,10 @@ The commands below will configure your `minikube` with the absolute minimum reso
 
 #### Start minikube
 
-First, start `minikube` with at least Kubernetes v1.11.x. The default CPU and memory settings of the minikube machine are not sufficient to host the control plane of a shoot cluster, thus the minimal resources should be 3 CPUs and 4096 MB memory, while the recommended are 4 CPUs and 8192 MB memory.
-
 ```bash
-$ minikube start --cpus=4 --memory=8192
+$ minikube start
 😄  minikube v1.0.1 on darwin (amd64)
-🔥  Creating virtualbox VM (CPUs=4, Memory=8192MB, Disk=20000MB) ...
+🔥  Creating virtualbox VM (CPUs=2, Memory=2048MB, Disk=20000MB) ...
 [...]
 🏄  Done! Thank you for using minikube!
 ```
