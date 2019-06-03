@@ -218,8 +218,9 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 	}
 
 	secretData := map[string][]byte{
-		"storage-account": []byte(stateVariables[storageAccountName]),
-		"storage-key":     []byte(stateVariables[storageAccessKey]),
+		common.BackupBucketName: []byte(stateVariables[containerName]),
+		"storage-account":       []byte(stateVariables[storageAccountName]),
+		"storage-key":           []byte(stateVariables[storageAccessKey]),
 	}
 
 	backupConfigData := map[string]interface{}{

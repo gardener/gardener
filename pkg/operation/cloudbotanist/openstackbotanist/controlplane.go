@@ -188,11 +188,12 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 	}
 
 	secretData := map[string][]byte{
-		UserName:   b.Seed.Secret.Data[UserName],
-		Password:   b.Seed.Secret.Data[Password],
-		TenantName: b.Seed.Secret.Data[TenantName],
-		AuthURL:    []byte(b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL),
-		DomainName: b.Seed.Secret.Data[DomainName],
+		common.BackupBucketName: []byte(stateVariables[containerName]),
+		UserName:                b.Seed.Secret.Data[UserName],
+		Password:                b.Seed.Secret.Data[Password],
+		TenantName:              b.Seed.Secret.Data[TenantName],
+		AuthURL:                 []byte(b.Seed.CloudProfile.Spec.OpenStack.KeyStoneURL),
+		DomainName:              b.Seed.Secret.Data[DomainName],
 	}
 
 	backupConfigData := map[string]interface{}{

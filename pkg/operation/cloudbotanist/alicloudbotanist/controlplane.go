@@ -170,9 +170,10 @@ func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[st
 	}
 
 	secretData := map[string][]byte{
-		StorageEndpoint: []byte(stateVariables[StorageEndpoint]),
-		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
-		AccessKeySecret: b.Seed.Secret.Data[AccessKeySecret],
+		common.BackupBucketName: []byte(stateVariables[BucketName]),
+		StorageEndpoint:         []byte(stateVariables[StorageEndpoint]),
+		AccessKeyID:             b.Seed.Secret.Data[AccessKeyID],
+		AccessKeySecret:         b.Seed.Secret.Data[AccessKeySecret],
 	}
 
 	backupConfigData := map[string]interface{}{

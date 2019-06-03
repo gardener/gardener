@@ -164,7 +164,8 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	secretData := map[string][]byte{
-		ServiceAccountJSON: []byte(b.MinifiedServiceAccount),
+		common.BackupBucketName: []byte(stateVariables[bucketName]),
+		ServiceAccountJSON:      []byte(b.MinifiedServiceAccount),
 	}
 
 	backupConfigData := map[string]interface{}{

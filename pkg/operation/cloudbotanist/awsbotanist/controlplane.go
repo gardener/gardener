@@ -182,9 +182,10 @@ func (b *AWSBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	secretData := map[string][]byte{
-		Region:          []byte(b.Seed.Info.Spec.Cloud.Region),
-		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
-		SecretAccessKey: b.Seed.Secret.Data[SecretAccessKey],
+		common.BackupBucketName: []byte(stateVariables[bucketName]),
+		Region:                  []byte(b.Seed.Info.Spec.Cloud.Region),
+		AccessKeyID:             b.Seed.Secret.Data[AccessKeyID],
+		SecretAccessKey:         b.Seed.Secret.Data[SecretAccessKey],
 	}
 
 	backupConfigData := map[string]interface{}{

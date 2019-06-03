@@ -25,6 +25,9 @@ const (
 	// AlertManagerStatefulSetName is the name of the alertmanager stateful set.
 	AlertManagerStatefulSetName = "alertmanager"
 
+	// BackupBucketName is a constant for the name of bucket of object storage.
+	BackupBucketName = "bucketName"
+
 	// BackupSecretName defines the name of the secret containing the credentials which are required to
 	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
 	BackupSecretName = "etcd-backup"
