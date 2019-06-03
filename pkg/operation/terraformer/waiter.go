@@ -16,8 +16,9 @@ package terraformer
 
 import (
 	"context"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"time"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -61,7 +62,7 @@ func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 	// If we can't read the terminated state of the container we simply force that the Terraform
 	// job gets created.
 	var exitCode int32 = 2
-	ctx, cancel := context.WithTimeout(ctx, 120*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
