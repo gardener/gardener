@@ -47,6 +47,11 @@ func CBeforeEach(body func(ctx context.Context), timeout time.Duration) {
 	ginkgo.BeforeEach(contextify(body, timeout), timeout.Seconds())
 }
 
+// CJustBeforeEach contextifies Gingko's JustBeforeEach
+func CJustBeforeEach(body func(ctx context.Context), timeout time.Duration) {
+	ginkgo.JustBeforeEach(contextify(body, timeout), timeout.Seconds())
+}
+
 func contextify(body func(context.Context), timeout time.Duration) func() {
 	return func() {
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)

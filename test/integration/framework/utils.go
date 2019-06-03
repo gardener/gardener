@@ -22,19 +22,16 @@ import (
 	"strings"
 	"time"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
+	scheduler "github.com/gardener/gardener/pkg/scheduler/controller"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	appsv1 "k8s.io/api/apps/v1"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-
-	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-
-	scheduler "github.com/gardener/gardener/pkg/scheduler/controller"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,13 +42,13 @@ const (
 	password                  = "password"
 )
 
-// getFirstRunningPodWithLabels fetches the first running pod with the desired set of labels <labelsMap>
-func (o *GardenerTestOperation) getFirstRunningPodWithLabels(ctx context.Context, labelsMap labels.Selector, namespace string, client kubernetes.Interface) (*corev1.Pod, error) {
+// GetFirstRunningPodWithLabels fetches the first running pod with the desired set of labels <labelsMap>
+func (o *GardenerTestOperation) GetFirstRunningPodWithLabels(ctx context.Context, labelsMap labels.Selector, namespace string, client kubernetes.Interface) (*corev1.Pod, error) {
 	var (
 		podList *corev1.PodList
 		err     error
 	)
-	podList, err = getPodsByLabels(ctx, labelsMap, client, namespace)
+	podList, err = o.GetPodsByLabels(ctx, labelsMap, client, namespace)
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +57,25 @@ func (o *GardenerTestOperation) getFirstRunningPodWithLabels(ctx context.Context
 	}
 
 	for _, pod := range podList.Items {
-		if pod.Status.Phase == corev1.PodRunning {
+		if health.IsPodReady(&pod) {
 			return &pod, nil
 		}
 	}
 
 	return nil, ErrNoRunningPodsFound
+}
+
+// GetPodsByLabels fetches all pods with the desired set of labels <labelsMap>
+func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsMap labels.Selector, c kubernetes.Interface, namespace string) (*corev1.PodList, error) {
+	podList := &corev1.PodList{}
+	err := c.Client().List(ctx, &client.ListOptions{
+		Namespace:     namespace,
+		LabelSelector: labelsMap,
+	}, podList)
+	if err != nil {
+		return nil, err
+	}
+	return podList, nil
 }
 
 // getAdminPassword gets the admin password for authenticating against the api
@@ -115,18 +125,6 @@ func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *
 
 	_, err = s.GardenClient.Garden().GardenV1beta1().Shoots(s.Shoot.Namespace).Patch(s.Shoot.Name, types.StrategicMergePatchType, patchBytes)
 	return err
-}
-
-func getPodsByLabels(ctx context.Context, labelsMap labels.Selector, c kubernetes.Interface, namespace string) (*corev1.PodList, error) {
-	podList := &corev1.PodList{}
-	err := c.Client().List(ctx, &client.ListOptions{
-		Namespace:     namespace,
-		LabelSelector: labelsMap,
-	}, podList)
-	if err != nil {
-		return nil, err
-	}
-	return podList, nil
 }
 
 func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, namespace string, c kubernetes.Interface) (*appsv1.DeploymentList, error) {

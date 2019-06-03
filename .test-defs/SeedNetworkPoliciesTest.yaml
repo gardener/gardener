@@ -1,0 +1,30 @@
+kind: TestDefinition
+metadata:
+  name: seed-networkpolicies-test
+spec:
+  owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com # OutputQualification DL
+  description: Tests NetworkPolicies between various components.
+
+  activeDeadlineSeconds: 1800
+  labels: ["default"]
+
+  command: [bash, -c]
+  args:
+  - >-
+    /tm/setup github.com/gardener gardener &&
+    ginkgo
+    --progress
+    -v
+    --noColor
+    --nodes=25
+    --randomizeAllSpecs
+    --randomizeSuites
+    --failOnPending
+    --trace
+    --race
+    $GOPATH/src/github.com/gardener/gardener/test/integration/seeds/networkpolicies/$CLOUDPROVIDER --
+    --kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    --shootName=$SHOOT_NAME
+    --shootNamespace=$PROJECT_NAMESPACE
+    --cleanup=true
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0

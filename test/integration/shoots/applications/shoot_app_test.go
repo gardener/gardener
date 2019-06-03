@@ -106,7 +106,6 @@ var _ = Describe("Shoot application testing", func() {
 		shootTestOperations *GardenerTestOperation
 		cloudProvider       v1beta1.CloudProvider
 		shootAppTestLogger  *logrus.Logger
-		apiserverLabels     labels.Selector
 		guestBooktpl        *template.Template
 		targetTestShoot     *v1beta1.Shoot
 		resourcesDir        = filepath.Join("..", "..", "resources")
@@ -148,10 +147,6 @@ var _ = Describe("Shoot application testing", func() {
 		cloudProvider, err = shootTestOperations.GetCloudProvider()
 		Expect(err).NotTo(HaveOccurred())
 
-		apiserverLabels = labels.SelectorFromSet(labels.Set(map[string]string{
-			"app":  "kubernetes",
-			"role": "apiserver",
-		}))
 		guestBooktpl = template.Must(template.ParseFiles(filepath.Join(TemplateDir, GuestBookTemplateName)))
 	}, InitializationTimeout)
 
@@ -323,19 +318,19 @@ var _ = Describe("Shoot application testing", func() {
 		// define guestbook app urls
 		guestBookAppURL := fmt.Sprintf("http://guestbook.ingress.%s", *shootTestOperations.Shoot.Spec.DNS.Domain)
 		pushString := fmt.Sprintf("foobar-%s", shootTestOperations.Shoot.Name)
-		pushUrl := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
-		pullUrl := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
+		pushURL := fmt.Sprintf("%s/rpush/guestbook/%s", guestBookAppURL, pushString)
+		pullURL := fmt.Sprintf("%s/lrange/guestbook", guestBookAppURL)
 
 		// Check availability of the guestbook app
-		err = shootTestOperations.WaitUntilGuestbookAppIsAvailable(ctx, []string{guestBookAppURL, pushUrl, pullUrl})
+		err = shootTestOperations.WaitUntilGuestbookAppIsAvailable(ctx, []string{guestBookAppURL, pushURL, pullURL})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Push foobar-<shoot-name> to the guestbook app
-		_, err = shootTestOperations.HTTPGet(ctx, pushUrl)
+		_, err = shootTestOperations.HTTPGet(ctx, pushURL)
 		Expect(err).NotTo(HaveOccurred())
 
 		// Pull foobar
-		pullResponse, err := shootTestOperations.HTTPGet(ctx, pullUrl)
+		pullResponse, err := shootTestOperations.HTTPGet(ctx, pullURL)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(pullResponse.StatusCode).To(Equal(http.StatusOK))
 
@@ -354,57 +349,4 @@ var _ = Describe("Shoot application testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 	}, DashboardAvailableTimeout)
 
-	Context("Network Policy Testing", func() {
-		var (
-			NetworkPolicyTimeout = 1 * time.Minute
-			ExecNCOnAPIServer    = func(ctx context.Context, host, port string) error {
-				_, err := shootTestOperations.PodExecByLabel(ctx, apiserverLabels, APIServer,
-					fmt.Sprintf("apt-get update && apt-get -y install netcat && nc -z -w5 %s %s", host, port), shootTestOperations.ShootSeedNamespace(), shootTestOperations.SeedClient)
-
-				return err
-			}
-
-			ItShouldAllowTrafficTo = func(name, host, port string) {
-				CIt(fmt.Sprintf("%s should allow connections", name), func(ctx context.Context) {
-					Expect(ExecNCOnAPIServer(ctx, host, port)).NotTo(HaveOccurred())
-				}, NetworkPolicyTimeout)
-			}
-
-			ItShouldBlockTrafficTo = func(name, host, port string) {
-				CIt(fmt.Sprintf("%s should allow connections", name), func(ctx context.Context) {
-					Expect(ExecNCOnAPIServer(ctx, host, port)).To(HaveOccurred())
-				}, NetworkPolicyTimeout)
-			}
-		)
-
-		ItShouldAllowTrafficTo("seed apiserver/external connection", "kubernetes.default", "443")
-		ItShouldAllowTrafficTo("shoot etcd-main", "etcd-main-client", "2379")
-		ItShouldAllowTrafficTo("shoot etcd-events", "etcd-events-client", "2379")
-
-		CIt("should allow traffic to the shoot pod range", func(ctx context.Context) {
-			dashboardIP, err := shootTestOperations.GetDashboardPodIP(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ExecNCOnAPIServer(ctx, dashboardIP, "8443")).NotTo(HaveOccurred())
-		}, NetworkPolicyTimeout)
-
-		CIt("should allow traffic to the shoot node range", func(ctx context.Context) {
-			nodeIP, err := shootTestOperations.GetFirstNodeInternalIP(ctx)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ExecNCOnAPIServer(ctx, nodeIP, "10250")).NotTo(HaveOccurred())
-		}, NetworkPolicyTimeout)
-
-		ItShouldBlockTrafficTo("seed kubernetes dashboard", "kubernetes-dashboard.kube-system", "443")
-		ItShouldBlockTrafficTo("shoot grafana", "grafana", "3000")
-		ItShouldBlockTrafficTo("shoot kube-controller-manager", "kube-controller-manager", "10252")
-		ItShouldBlockTrafficTo("shoot cloud-controller-manager", "cloud-controller-manager", "10253")
-		ItShouldBlockTrafficTo("shoot machine-controller-manager", "machine-controller-manager", "10258")
-
-		CIt("should block traffic to the metadataservice", func(ctx context.Context) {
-			if cloudProvider == v1beta1.CloudProviderAlicloud {
-				Expect(ExecNCOnAPIServer(ctx, "100.100.100.200", "80")).To(HaveOccurred())
-			} else {
-				Expect(ExecNCOnAPIServer(ctx, "169.254.169.254", "80")).To(HaveOccurred())
-			}
-		}, NetworkPolicyTimeout)
-	})
 })
