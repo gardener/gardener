@@ -3147,9 +3147,41 @@ func schema_pkg_apis_garden_v1beta1_ClusterAutoscaler(ref common.ReferenceCallba
 							Format:      "double",
 						},
 					},
+					"scaleDownUnneededTime": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 10 mins).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"scaleDownDelayAfterAdd": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 10 mins).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"scaleDownDelayAfterFailure": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownDelayAfterFailure how long after scale down failure that scale down evaluation resumes (default: 3 mins).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"scaleDownDelayAfterDelete": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
+					"scanInterval": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Duration"),
+						},
+					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Duration"},
 	}
 }
 
