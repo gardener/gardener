@@ -164,6 +164,8 @@ func (c *Controller) reconcileShootKey(key string) error {
 		mayReconcile, reason = c.scheduler.TestAndActivate(shootElement, shoot.Generation != shoot.Status.ObservedGeneration, shootIsSeed(shoot))
 	}
 
+	startReconciliation := false
+
 	switch {
 	case mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite):
 		// Check whether the shoot has been marked as "never reconcile".
@@ -177,6 +179,9 @@ func (c *Controller) reconcileShootKey(key string) error {
 			c.recorder.Eventf(shoot, corev1.EventTypeNormal, "OperationPending", message)
 			c.updateShootStatusPending(shoot, message)
 		}
+	default:
+		// Otherwise (i.e., shoot is not ignored and may be reconciled) we start the reconcile operation).
+		startReconciliation = true
 	}
 
 	defer c.scheduler.Done(shootElement.GetID())
@@ -193,8 +198,9 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return err
 	}
 
-	// Otherwise (i.e., shoot is not ignored and may be reconciled) we start the reconcile operation).
-	needsRequeue, reconcileErr = c.control.ReconcileShoot(shoot, key, o)
+	if startReconciliation {
+		needsRequeue, reconcileErr = c.control.ReconcileShoot(shoot, key, o)
+	}
 
 	if durationToNextSync := scheduleNextSync(c.config.Controllers.Shoot, reconcileErr != nil, shoot.ObjectMeta, reason); durationToNextSync > 0 && needsRequeue {
 		c.getShootQueue(shoot).AddAfter(key, durationToNextSync)
