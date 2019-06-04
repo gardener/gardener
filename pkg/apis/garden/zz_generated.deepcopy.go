@@ -1667,6 +1667,11 @@ func (in *KubeletConfig) DeepCopyInto(out *KubeletConfig) {
 		*out = new(bool)
 		**out = **in
 	}
+	if in.CPUManagerPolicy != nil {
+		in, out := &in.CPUManagerPolicy, &out.CPUManagerPolicy
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

@@ -158,8 +158,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		cloudProvider["config"] = cloudProviderConfig
 	}
 
-	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
-	if kubeletConfig != nil {
+	if kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet; kubeletConfig != nil {
 		if featureGates := kubeletConfig.FeatureGates; featureGates != nil {
 			kubelet["featureGates"] = featureGates
 		}
@@ -168,6 +167,9 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		}
 		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
 			kubelet["cpuCFSQuota"] = *cpuCFSQuota
+		}
+		if cpuManagerPolicy := kubeletConfig.CPUManagerPolicy; cpuManagerPolicy != nil {
+			kubelet["cpuManagerPolicy"] = *cpuManagerPolicy
 		}
 	}
 
