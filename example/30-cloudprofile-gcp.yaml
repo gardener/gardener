@@ -16,12 +16,13 @@ spec:
         versions:
         - 1.14.0
         - 1.13.6
-        - 1.12.8
+        - 1.12.9
         - 1.11.10
         - 1.10.13
       machineImages:
       - name: coreos
-        image: projects/coreos-cloud/global/images/coreos-stable-2023-5-0-v20190312
+        version: 2023.5.0
+        # Proper mappings to GCP image URLs must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: n1-standard-2
         cpu: "2"

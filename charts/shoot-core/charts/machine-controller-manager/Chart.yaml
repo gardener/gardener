@@ -1,4 +1,0 @@
-apiVersion: v1
-description: A Helm chart for RBAC resources for the machine-controller-manager
-name: machine-controller-manager
-version: 0.1.0

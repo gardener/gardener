@@ -172,7 +172,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 	}
 
 	// Check if the CloudProfile contains another version of the machine image.
-	machineImageFound, machineImage, err := helper.DetermineMachineImage(*operation.Shoot.CloudProfile, operation.Shoot.GetMachineImageName(), shoot.Spec.Cloud.Region)
+	machineImageFound, machineImage, err := helper.DetermineMachineImage(*operation.Shoot.CloudProfile, operation.Shoot.GetMachineImage().Name)
 	if err != nil {
 		handleError(fmt.Sprintf("Failure while determining the machine image in the CloudProfile: %s", err.Error()))
 		return nil

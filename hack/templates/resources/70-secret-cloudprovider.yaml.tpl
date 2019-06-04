@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -77,6 +77,4 @@ data:
   tenantName: ${value("data.tenantName", "base64(tenant-name)")}
   username: ${value("data.username", "base64(username)")}
   password: ${value("data.password", "base64(password)")}
-  % endif
-  % if cloud == "local":
   % endif

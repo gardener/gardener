@@ -19,10 +19,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -108,15 +109,15 @@ func WaitUntilResourceDeleted(ctx context.Context, c client.Client, obj runtime.
 		return err
 	}
 
-	return wait.PollImmediateUntil(interval, func() (bool, error) {
+	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 		if err := c.Get(ctx, key, obj); err != nil {
 			if apierrors.IsNotFound(err) {
-				return true, nil
+				return retry.Ok()
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
-		return false, nil
-	}, ctx.Done())
+		return retry.MinorError(fmt.Errorf("resource %s still exists", key.String()))
+	})
 }
 
 // WaitUntilResourceDeletedWithDefaults deletes the given resource and then waits until it has been deleted. It

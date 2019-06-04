@@ -48,6 +48,10 @@ func (this *Info) GroupVersion() schema.GroupVersion {
 	return schema.GroupVersion{Group: this.groupVersion.Group, Version: this.groupVersion.Version}
 }
 
+func (this *Info) GroupVersionResource() schema.GroupVersionResource {
+	return schema.GroupVersionResource{Group: this.groupVersion.Group, Version: this.groupVersion.Version, Resource: this.resourcename}
+}
+
 func (this *Info) Group() string {
 	return this.groupVersion.Group
 }

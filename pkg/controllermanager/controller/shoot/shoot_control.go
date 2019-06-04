@@ -15,6 +15,7 @@
 package shoot
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -109,6 +110,8 @@ func (c *Controller) newShootElement(shoot *gardenv1beta1.Shoot) (*shootElement,
 }
 
 func (c *Controller) reconcileShootKey(key string) error {
+	ctx := context.TODO()
+
 	shootID, err := newIDFromString(key)
 	if err != nil {
 		return err
@@ -161,6 +164,8 @@ func (c *Controller) reconcileShootKey(key string) error {
 		mayReconcile, reason = c.scheduler.TestAndActivate(shootElement, shoot.Generation != shoot.Status.ObservedGeneration, shootIsSeed(shoot))
 	}
 
+	startReconciliation := false
+
 	switch {
 	case mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite):
 		// Check whether the shoot has been marked as "never reconcile".
@@ -174,12 +179,28 @@ func (c *Controller) reconcileShootKey(key string) error {
 			c.recorder.Eventf(shoot, corev1.EventTypeNormal, "OperationPending", message)
 			c.updateShootStatusPending(shoot, message)
 		}
-
 	default:
 		// Otherwise (i.e., shoot is not ignored and may be reconciled) we start the reconcile operation).
-		needsRequeue, reconcileErr = c.control.ReconcileShoot(shoot, key)
+		startReconciliation = true
 	}
-	c.scheduler.Done(shootElement.GetID())
+
+	defer c.scheduler.Done(shootElement.GetID())
+
+	// Create operation object
+	o, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers.Garden().V1beta1(), c.identity, c.secrets, c.imageVector, c.config.ShootBackup)
+	if err != nil {
+		shootLogger.Errorf("Could not initialize a new operation: %s", err.Error())
+		return err
+	}
+
+	// Sync `Cluster` extension resource into the seed.
+	if err := o.SyncClusterResourceToSeed(ctx); err != nil {
+		return err
+	}
+
+	if startReconciliation {
+		needsRequeue, reconcileErr = c.control.ReconcileShoot(shoot, key, o)
+	}
 
 	if durationToNextSync := scheduleNextSync(c.config.Controllers.Shoot, reconcileErr != nil, shoot.ObjectMeta, reason); durationToNextSync > 0 && needsRequeue {
 		c.getShootQueue(shoot).AddAfter(key, durationToNextSync)
@@ -254,7 +275,7 @@ type ControlInterface interface {
 	// Implementors should sink any errors that they do not wish to trigger a retry, and they may feel free to
 	// exit exceptionally at any point provided they wish the update to be re-run at a later point in time.
 	// The bool return value determines whether the Shoot should be automatically requeued for reconciliation.
-	ReconcileShoot(shoot *gardenv1beta1.Shoot, key string) (bool, error)
+	ReconcileShoot(shoot *gardenv1beta1.Shoot, key string, o *operation.Operation) (bool, error)
 }
 
 // NewDefaultControl returns a new instance of the default implementation ControlInterface that
@@ -276,7 +297,7 @@ type defaultControl struct {
 	recorder           record.EventRecorder
 }
 
-func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key string) (bool, error) {
+func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key string, operation *operation.Operation) (bool, error) {
 	key, err := cache.MetaNamespaceKeyFunc(shootObj)
 	if err != nil {
 		return true, err
@@ -295,12 +316,6 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 	logger.Logger.Infof("[SHOOT RECONCILE] %s", key)
 	shootJSON, _ := json.Marshal(shoot)
 	shootLogger.Debugf(string(shootJSON))
-
-	operation, err := operation.New(shoot, shootLogger, c.k8sGardenClient, c.k8sGardenInformers, c.identity, c.secrets, c.imageVector, c.config.ShootBackup)
-	if err != nil {
-		shootLogger.Errorf("Could not initialize a new operation: %s", err.Error())
-		return true, err
-	}
 
 	// We check whether the Shoot's last operation status field indicates that the last operation failed (i.e. the operation
 	// will not be retried unless the shoot generation changes).
@@ -326,12 +341,22 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 			return true, updateErr
 		}
 		if deleteErr := c.deleteShoot(operation); deleteErr != nil {
+			shootLogger.Errorf("Error during execution of the delete operation for shoot: %+v", deleteErr.Description)
 			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "[%s] %s", operationID, deleteErr.Description)
 			if state, updateErr := c.updateShootStatusDeleteError(operation, deleteErr); updateErr != nil {
 				shootLogger.Errorf("Could not update the Shoot status after deletion error: %+v", updateErr)
 				return state != gardencorev1alpha1.LastOperationStateFailed, updateErr
 			}
 			return true, errors.New(deleteErr.Description)
+		}
+		if err := operation.DeleteClusterResourceFromSeed(context.TODO()); err != nil {
+			lastErr := &gardencorev1alpha1.LastError{Description: fmt.Sprintf("Could not delete Cluster resource in seed: %s", err)}
+			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventDeleteError, "[%s] %s", operationID, lastErr.Description)
+			if state, updateErr := c.updateShootStatusDeleteError(operation, lastErr); updateErr != nil {
+				shootLogger.Errorf("Could not update the Shoot status after deletion error: %+v", updateErr)
+				return state != gardencorev1alpha1.LastOperationStateFailed, updateErr
+			}
+			return true, errors.New(lastErr.Description)
 		}
 		c.recorder.Eventf(shoot, corev1.EventTypeNormal, gardenv1beta1.EventDeleted, "[%s] Deleted Shoot cluster", operationID)
 		if updateErr := c.updateShootStatusDeleteSuccess(operation); updateErr != nil {
@@ -348,6 +373,7 @@ func (c *defaultControl) ReconcileShoot(shootObj *gardenv1beta1.Shoot, key strin
 		return true, updateErr
 	}
 	if reconcileErr := c.reconcileShoot(operation, operationType); reconcileErr != nil {
+		shootLogger.Errorf("Error during reconcile of the delete operation for shoot: %+v", reconcileErr.Description)
 		c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.EventReconcileError, "[%s] %s", operationID, reconcileErr.Description)
 		if state, updateErr := c.updateShootStatusReconcileError(operation, operationType, reconcileErr); updateErr != nil {
 			shootLogger.Errorf("Could not update the Shoot status after reconciliation error: %+v", updateErr)

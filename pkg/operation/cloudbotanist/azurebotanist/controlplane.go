@@ -19,6 +19,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+
+	azurev1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1"
 )
 
 const cloudProviderConfigTemplate = `
@@ -50,19 +52,29 @@ cloudProviderRateLimitBucketWrite: 100
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/azure/azure.go
 func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
-	var (
-		resourceGroupName   = "resourceGroupName"
-		vnetName            = "vnetName"
-		availabilitySetName = "availabilitySetName"
-		subnetName          = "subnetName"
-		routeTableName      = "routeTableName"
-		securityGroupName   = "securityGroupName"
-	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
+	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return "", fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return "", err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(resourceGroupName, vnetName, subnetName, routeTableName, availabilitySetName, securityGroupName)
+	nodesSubnet, err := findSubnetByPurpose(infrastructureStatus.Networks.Subnets, azurev1alpha1.PurposeNodes)
+	if err != nil {
+		return "", err
+	}
+	nodesSecurityGroup, err := findSecurityGroupByPurpose(infrastructureStatus.SecurityGroups, azurev1alpha1.PurposeNodes)
+	if err != nil {
+		return "", err
+	}
+	nodesRouteTable, err := findRouteTableByPurpose(infrastructureStatus.RouteTables, azurev1alpha1.PurposeNodes)
+	if err != nil {
+		return "", err
+	}
+	nodesAvailabilitySet, err := findAvailabilitySetByPurpose(infrastructureStatus.AvailabilitySets, azurev1alpha1.PurposeNodes)
 	if err != nil {
 		return "", err
 	}
@@ -71,13 +83,13 @@ func (b *AzureBotanist) GenerateCloudProviderConfig() (string, error) {
 		cloudProviderConfigTemplate,
 		string(b.Shoot.Secret.Data[TenantID]),
 		string(b.Shoot.Secret.Data[SubscriptionID]),
-		stateVariables[resourceGroupName],
+		infrastructureStatus.ResourceGroup.Name,
 		b.Shoot.Info.Spec.Cloud.Region,
-		stateVariables[vnetName],
-		stateVariables[subnetName],
-		stateVariables[securityGroupName],
-		stateVariables[routeTableName],
-		stateVariables[availabilitySetName],
+		infrastructureStatus.Networks.VNet.Name,
+		nodesSubnet.Name,
+		nodesSecurityGroup.Name,
+		nodesRouteTable.Name,
+		nodesAvailabilitySet.Name,
 		string(b.Shoot.Secret.Data[ClientID]),
 		string(b.Shoot.Secret.Data[ClientSecret]),
 	)
@@ -206,8 +218,9 @@ func (b *AzureBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[strin
 	}
 
 	secretData := map[string][]byte{
-		"storage-account": []byte(stateVariables[storageAccountName]),
-		"storage-key":     []byte(stateVariables[storageAccessKey]),
+		common.BackupBucketName: []byte(stateVariables[containerName]),
+		"storage-account":       []byte(stateVariables[storageAccountName]),
+		"storage-key":           []byte(stateVariables[storageAccessKey]),
 	}
 
 	backupConfigData := map[string]interface{}{

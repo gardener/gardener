@@ -160,13 +160,13 @@ func (c *defaultControllerInstallationControl) Reconcile(controllerInstallationO
 }
 
 func (c *defaultControllerInstallationControl) isDependentOnResource(resources map[string]string, shoot *gardenv1beta1.Shoot) bool {
-	machineImageName, err := helper.GetShootMachineImageName(shoot)
+	machineImage, err := helper.GetShootMachineImage(shoot)
 	if err != nil {
 		return false
 	}
 
 	for resourceKind, resourceType := range resources {
-		if resourceKind == extensionsv1alpha1.OperatingSystemConfigResource && strings.ToLower(resourceType) == strings.ToLower(string(machineImageName)) {
+		if resourceKind == extensionsv1alpha1.OperatingSystemConfigResource && strings.ToLower(resourceType) == strings.ToLower(string(machineImage.Name)) {
 			return true
 		}
 	}

@@ -15,9 +15,10 @@
 package helper_test
 
 import (
+	"time"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	. "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -26,11 +27,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
 	"github.com/onsi/gomega/types"
-)
-
-var (
-	trueVar  = true
-	falseVar = false
 )
 
 var _ = Describe("helper", func() {

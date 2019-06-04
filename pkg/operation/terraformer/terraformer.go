@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -36,7 +38,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/wait"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 
@@ -131,21 +132,21 @@ func (t *Terraformer) execute(ctx context.Context, scriptName string) error {
 	)
 
 	// We should retry the preparation check in order to allow the kube-apiserver to actually create the ConfigMaps.
-	if err := wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, 5*time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
 		numberOfExistingResources, err := t.prepare(ctx)
 		if err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 		if numberOfExistingResources == 0 {
 			t.logger.Debug("All ConfigMaps/Secrets do not exist, can not execute the Terraform Job.")
-			return true, nil
+			return retry.Ok()
 		} else if numberOfExistingResources == numberOfConfigResources {
 			t.logger.Debug("All ConfigMaps/Secrets exist, will execute the Terraform Job.")
 			execute = true
-			return true, nil
+			return retry.Ok()
 		} else {
 			t.logger.Error("Can not execute Terraform Job as ConfigMaps/Secrets are missing!")
-			return false, nil
+			return retry.MinorError(fmt.Errorf("%d/%d terraform resources are missing", numberOfConfigResources-numberOfExistingResources, numberOfConfigResources))
 		}
 	}); err != nil {
 		return err

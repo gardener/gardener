@@ -78,6 +78,7 @@ spec:
         - --collector.filesystem.ignored-mount-points=^/(rootfs/|host/)?(sys|proc|dev|host|etc|var/lib/docker)($|/)
         - --web.listen-address=:{{ .Values.ports.metrics }}
         - --log.level=error
+        - --no-collector.netclass
         ports:
         - containerPort: {{ .Values.ports.metrics }}
           protocol: TCP

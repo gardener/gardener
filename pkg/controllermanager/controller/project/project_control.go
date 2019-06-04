@@ -44,6 +44,12 @@ func (c *Controller) projectAdd(obj interface{}) {
 }
 
 func (c *Controller) projectUpdate(oldObj, newObj interface{}) {
+	newProject := newObj.(*gardenv1beta1.Project)
+
+	if newProject.Generation == newProject.Status.ObservedGeneration {
+		return
+	}
+
 	c.projectAdd(newObj)
 }
 
@@ -125,10 +131,8 @@ func (c *defaultControl) ReconcileProject(obj *gardenv1beta1.Project) (bool, err
 	if project.DeletionTimestamp != nil {
 		return c.delete(project, projectLogger)
 	}
-	if project.Generation != project.Status.ObservedGeneration {
-		return false, c.reconcile(project, projectLogger)
-	}
-	return false, nil
+
+	return false, c.reconcile(project, projectLogger)
 }
 
 func (c *defaultControl) updateProjectStatus(objectMeta metav1.ObjectMeta, transform func(project *gardenv1beta1.Project) (*gardenv1beta1.Project, error)) (*gardenv1beta1.Project, error) {

@@ -19,16 +19,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
-	"github.com/gardener/gardener/pkg/operation/certmanagement"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -51,10 +51,12 @@ func (b *Botanist) DeployNamespace() error {
 			Annotations: getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID),
 			Name:        b.Shoot.SeedNamespace,
 			Labels: map[string]string{
-				common.GardenRole:                common.GardenRoleShoot,
-				common.ShootHibernated:           strconv.FormatBool(b.Shoot.IsHibernated),
-				gardencorev1alpha1.SeedProvider:  string(b.Seed.CloudProvider),
-				gardencorev1alpha1.ShootProvider: string(b.Shoot.CloudProvider),
+				common.GardenRole:                 common.GardenRoleShoot,
+				common.GardenerRole:               common.GardenRoleShoot,
+				common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
+				gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
+				gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),
+				gardencorev1alpha1.ShootProvider:  string(b.Shoot.CloudProvider),
 			},
 		},
 	}, true)
@@ -155,10 +157,21 @@ func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
 
 // DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
-func (b *Botanist) DeployBackupInfrastructure() error {
+func (b *Botanist) DeployBackupInfrastructure(ctx context.Context) error {
+	var (
+		name = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
+
+		backupInfrastructure = &gardenv1beta1.BackupInfrastructure{}
+	)
+
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupInfrastructure); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), b.Shoot.Info.Namespace, "backup-infrastructure", nil, map[string]interface{}{
 		"backupInfrastructure": map[string]interface{}{
-			"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
+			"name":        name,
+			"annotations": backupInfrastructure.Annotations,
 		},
 		"seed": map[string]interface{}{
 			"name": b.Seed.Info.Name,
@@ -191,41 +204,20 @@ func (b *Botanist) DeleteKubeAddonManager() error {
 	return err
 }
 
-// DeployMachineControllerManager deploys the machine-controller-manager into the Shoot namespace in the Seed cluster. It is responsible
-// for managing the worker nodes of the Shoot.
-func (b *Botanist) DeployMachineControllerManager() error {
-	var (
-		name          = common.MachineControllerManagerDeploymentName
-		defaultValues = map[string]interface{}{
-			"podAnnotations": map[string]interface{}{
-				"checksum/secret-machine-controller-manager": b.CheckSums[name],
-			},
-			"namespace": map[string]interface{}{
-				"uid": b.SeedNamespaceObject.UID,
-			},
-			"vpa": map[string]interface{}{
-				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-			},
-		}
-	)
+// Supported CA flags
+const (
+	scaleDownUtilizationThresholdFlag = "scale-down-utilization-threshold"
+	scaleDownUnneededTimeFlag         = "scale-down-unneeded-time"
+	scaleDownDelayAfterAddFlag        = "scale-down-delay-after-add"
+	scaleDownDelayAfterFailureFlag    = "scale-down-delay-after-failure"
+	scaleDownDelayAfterDeleteFlag     = "scale-down-delay-after-delete"
+	scanIntervalFlag                  = "scan-interval"
+)
 
-	// If the shoot is hibernated then we want to scale down the machine-controller-manager. However, we want to first allow it to delete
-	// all remaining worker nodes. Hence, we cannot set the replicas=0 here (otherwise it would be offline and not able to delete the nodes).
-	if b.Shoot.IsHibernated {
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName)
-		if err != nil {
-			return err
-		}
-		defaultValues["replicas"] = replicaCount
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.MachineControllerManagerImageName)
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, nil, values)
-}
+var (
+	scaleDownUnneededTimeDefault  = metav1.Duration{Duration: 30 * time.Minute}
+	scaleDownDelayAfterAddDefault = metav1.Duration{Duration: 60 * time.Minute}
+)
 
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
 // for automatically scaling the worker pools of the Shoot.
@@ -235,7 +227,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 	}
 
 	var workerPools []map[string]interface{}
-	for _, worker := range b.MachineDeployments {
+	for _, worker := range b.Shoot.MachineDeployments {
 		// Skip worker pools for which min=0. Auto scaler cannot handle worker pools having a min count of 0.
 		if worker.Minimum == 0 {
 			continue
@@ -248,6 +240,19 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		})
 	}
 
+	var flags []map[string]interface{}
+	if clusterAutoscalerConfig := b.Shoot.Info.Spec.Kubernetes.ClusterAutoscaler; clusterAutoscalerConfig != nil {
+		flags = appendOrDefaultFlag(flags, scaleDownUtilizationThresholdFlag, clusterAutoscalerConfig.ScaleDownUtilizationThreshold, nil)
+		flags = appendOrDefaultFlag(flags, scaleDownUnneededTimeFlag, clusterAutoscalerConfig.ScaleDownUnneededTime, scaleDownUnneededTimeDefault)
+		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterAddFlag, clusterAutoscalerConfig.ScaleDownDelayAfterAdd, scaleDownDelayAfterAddDefault)
+		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterFailureFlag, clusterAutoscalerConfig.ScaleDownDelayAfterFailure, nil)
+		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterDeleteFlag, clusterAutoscalerConfig.ScaleDownDelayAfterDelete, nil)
+		flags = appendOrDefaultFlag(flags, scanIntervalFlag, clusterAutoscalerConfig.ScanInterval, nil)
+	} else { // add defaults in case no ClusterAutoscaler section was found in the manifest
+		flags = appendOrDefaultFlag(flags, scaleDownUnneededTimeFlag, nil, scaleDownUnneededTimeDefault)
+		flags = appendOrDefaultFlag(flags, scaleDownDelayAfterAddFlag, nil, scaleDownDelayAfterAddDefault)
+	}
+
 	defaultValues := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-cluster-autoscaler": b.CheckSums[gardencorev1alpha1.DeploymentNameClusterAutoscaler],
@@ -257,6 +262,7 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 		},
 		"replicas":    b.Shoot.GetReplicas(1),
 		"workerPools": workerPools,
+		"flags":       flags,
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.ClusterAutoscalerImageName)
@@ -265,6 +271,36 @@ func (b *Botanist) DeployClusterAutoscaler() error {
 	}
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameClusterAutoscaler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, nil, values)
+}
+
+func mkFlag(name string, value interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		"name":  name,
+		"value": marshalFlagValue(value),
+	}
+}
+
+func marshalFlagValue(value interface{}) interface{} {
+	switch v := value.(type) {
+	case metav1.Duration:
+		return v.Duration.String()
+	default:
+		rv := reflect.ValueOf(value)
+		if rv.Type().Kind() == reflect.Ptr {
+			return marshalFlagValue(rv.Elem().Interface())
+		}
+		return v
+	}
+}
+
+func appendOrDefaultFlag(flags []map[string]interface{}, flagName string, value, defaultValue interface{}) []map[string]interface{} {
+	if value == nil {
+		if defaultValue == nil {
+			return flags
+		}
+		value = defaultValue
+	}
+	return append(flags, mkFlag(flagName, value))
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
@@ -455,7 +491,7 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 		{
 			Op:    "replace",
 			Path:  "/spec/template/metadata/annotations/checksum~1secret-cloudprovider",
-			Value: b.CheckSums[common.CloudProviderSecretName],
+			Value: b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
 		},
 		{
 			Op:    "replace",
@@ -525,55 +561,6 @@ func (b *Botanist) DeploySeedLogging() error {
 	return b.ApplyChartSeed(filepath.Join(common.ChartPath, "seed-bootstrap", "charts", "elastic-kibana-curator"), b.Shoot.SeedNamespace, fmt.Sprintf("%s-logging", b.Shoot.SeedNamespace), nil, elasticKibanaCurator)
 }
 
-// DeployCertBroker deploys the Cert-Broker to the Shoot namespace in the Seed.
-func (b *Botanist) DeployCertBroker() error {
-	certManagementEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.CertificateManagement)
-	if !certManagementEnabled {
-		return b.DeleteCertBroker()
-	}
-
-	certificateManagement, ok := b.Secrets[common.GardenRoleCertificateManagement]
-	if !ok {
-		return fmt.Errorf("certificate management is enabled but no secret with role %s could be found", common.GardenRoleCertificateManagement)
-	}
-	certificateManagementConfig, err := certmanagement.RetrieveCertificateManagementConfig(certificateManagement)
-	if err != nil {
-		return fmt.Errorf("certificate management configuration could not be created %v", err)
-	}
-
-	var dns []interface{}
-	for _, route53Provider := range certificateManagementConfig.Providers.Route53 {
-		route53values := createDNSProviderValuesForDomain(&route53Provider, *b.Shoot.Info.Spec.DNS.Domain)
-		dns = append(dns, route53values...)
-	}
-	for _, cloudDNSProvider := range certificateManagementConfig.Providers.CloudDNS {
-		cloudDNSValues := createDNSProviderValuesForDomain(&cloudDNSProvider, *b.Shoot.Info.Spec.DNS.Domain)
-		dns = append(dns, cloudDNSValues...)
-	}
-
-	certBrokerConfig := map[string]interface{}{
-		"replicas": b.Shoot.GetReplicas(1),
-		"certbroker": map[string]interface{}{
-			"namespace":           b.Shoot.SeedNamespace,
-			"targetClusterSecret": common.CertBrokerResourceName,
-		},
-		"certmanager": map[string]interface{}{
-			"clusterissuer": certificateManagementConfig.ClusterIssuerName,
-			"dns":           dns,
-		},
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cert-broker": b.CheckSums[common.CertBrokerResourceName],
-		},
-	}
-
-	certBroker, err := b.InjectSeedSeedImages(certBrokerConfig, common.CertBrokerImageName)
-	if err != nil {
-		return nil
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CertBrokerResourceName), b.Shoot.SeedNamespace, common.CertBrokerResourceName, nil, certBroker)
-}
-
 // DeployDependencyWatchdog deploys the dependency watchdog to the Shoot namespace in the Seed.
 func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 	dependencyWatchdogConfig := map[string]interface{}{
@@ -589,44 +576,11 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 		},
 	}
 
-	dependancyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependancyWatchdogDeploymentName)
+	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependencyWatchdogDeploymentName)
 	if err != nil {
 		return nil
 	}
-	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependancyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependancyWatchdogDeploymentName, nil, dependancyWatchdog)
-}
-
-func createDNSProviderValuesForDomain(config certmanagement.DNSProviderConfig, shootDomain string) []interface{} {
-	var dnsConfig []interface{}
-	for _, domain := range config.DomainNames() {
-		if strings.HasSuffix(shootDomain, domain) {
-			dnsConfig = append(dnsConfig, map[string]interface{}{
-				"domain":   shootDomain,
-				"provider": config.ProviderName(),
-			})
-		}
-	}
-	return dnsConfig
-}
-
-// DeleteCertBroker delete the Cert-Broker deployment if cert-management in disabled.
-func (b *Botanist) DeleteCertBroker() error {
-	if err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteServiceAccount(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteRoleBinding(b.Shoot.SeedNamespace, common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := b.K8sSeedClient.DeleteClusterRole(common.CertBrokerResourceName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	return nil
+	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependencyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependencyWatchdogDeploymentName, nil, dependencyWatchdog)
 }
 
 // WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
@@ -635,7 +589,6 @@ func (b *Botanist) DeleteCertBroker() error {
 // * kube-apiserver
 // * cloud-controller-manager
 // * kube-controller-manager
-// * machine-controller-manager
 // * csi-controllers
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
@@ -645,22 +598,18 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 			return err
 		}
 	}
-	if err := b.WaitUntilEtcdReady(); err != nil {
+	if err := b.WaitUntilEtcdReady(ctx); err != nil {
 		return err
 	}
 
 	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), 1); err != nil {
 		return err
 	}
-	if err := b.WaitUntilKubeAPIServerReady(); err != nil {
+	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
 		return err
 	}
 
-	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName}
-	if b.Shoot.CloudProvider != v1beta1.CloudProviderLocal {
-		controllerManagerDeployments = append(controllerManagerDeployments, common.CloudControllerManagerDeploymentName, common.MachineControllerManagerDeploymentName)
-	}
-
+	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName, common.CloudControllerManagerDeploymentName}
 	if b.Shoot.UsesCSI() {
 		controllerManagerDeployments = append(controllerManagerDeployments, common.CSIPluginController)
 	}

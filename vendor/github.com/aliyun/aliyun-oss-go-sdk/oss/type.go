@@ -2,6 +2,7 @@ package oss
 
 import (
 	"encoding/xml"
+	"fmt"
 	"net/url"
 	"time"
 )
@@ -42,77 +43,105 @@ type LifecycleConfiguration struct {
 
 // LifecycleRule defines Lifecycle rules
 type LifecycleRule struct {
-	XMLName    xml.Name            `xml:"Rule"`
-	ID         string              `xml:"ID"`         // The rule ID
-	Prefix     string              `xml:"Prefix"`     // The object key prefix
-	Status     string              `xml:"Status"`     // The rule status (enabled or not)
-	Expiration LifecycleExpiration `xml:"Expiration"` // The expiration property
+	XMLName              xml.Name                       `xml:"Rule"`
+	ID                   string                         `xml:"ID,omitempty"`                   // The rule ID
+	Prefix               string                         `xml:"Prefix"`                         // The object key prefix
+	Status               string                         `xml:"Status"`                         // The rule status (enabled or not)
+	Expiration           *LifecycleExpiration           `xml:"Expiration,omitempty"`           // The expiration property
+	Transitions          []LifecycleTransition          `xml:"Transition,omitempty"`           // The transition property
+	AbortMultipartUpload *LifecycleAbortMultipartUpload `xml:"AbortMultipartUpload,omitempty"` // The AbortMultipartUpload property
 }
 
 // LifecycleExpiration defines the rule's expiration property
 type LifecycleExpiration struct {
-	XMLName xml.Name  `xml:"Expiration"`
-	Days    int       `xml:"Days,omitempty"` // Relative expiration time: The expiration time in days after the last modified time
-	Date    time.Time `xml:"Date,omitempty"` // Absolute expiration time: The expiration time in date.
+	XMLName           xml.Name `xml:"Expiration"`
+	Days              int      `xml:"Days,omitempty"`              // Relative expiration time: The expiration time in days after the last modified time
+	Date              string   `xml:"Date,omitempty"`              // Absolute expiration time: The expiration time in date, not recommended
+	CreatedBeforeDate string   `xml:"CreatedBeforeDate,omitempty"` // objects created before the date will be expired
 }
 
-type lifecycleXML struct {
-	XMLName xml.Name        `xml:"LifecycleConfiguration"`
-	Rules   []lifecycleRule `xml:"Rule"`
+// LifecycleTransition defines the rule's transition propery
+type LifecycleTransition struct {
+	XMLName           xml.Name         `xml:"Transition"`
+	Days              int              `xml:"Days,omitempty"`              // Relative transition time: The transition time in days after the last modified time
+	CreatedBeforeDate string           `xml:"CreatedBeforeDate,omitempty"` // objects created before the date will be expired
+	StorageClass      StorageClassType `xml:"StorageClass,omitempty"`      // Specifies the target storage type
 }
 
-type lifecycleRule struct {
-	XMLName    xml.Name            `xml:"Rule"`
-	ID         string              `xml:"ID"`
-	Prefix     string              `xml:"Prefix"`
-	Status     string              `xml:"Status"`
-	Expiration lifecycleExpiration `xml:"Expiration"`
+// LifecycleAbortMultipartUpload defines the rule's abort multipart upload propery
+type LifecycleAbortMultipartUpload struct {
+	XMLName           xml.Name `xml:"AbortMultipartUpload"`
+	Days              int      `xml:"Days,omitempty"`              // Relative expiration time: The expiration time in days after the last modified time
+	CreatedBeforeDate string   `xml:"CreatedBeforeDate,omitempty"` // objects created before the date will be expired
 }
 
-type lifecycleExpiration struct {
-	XMLName xml.Name `xml:"Expiration"`
-	Days    int      `xml:"Days,omitempty"`
-	Date    string   `xml:"Date,omitempty"`
-}
+const iso8601DateFormat = "2006-01-02T15:04:05.000Z"
 
-const expirationDateFormat = "2006-01-02T15:04:05.000Z"
-
-func convLifecycleRule(rules []LifecycleRule) []lifecycleRule {
-	rs := []lifecycleRule{}
-	for _, rule := range rules {
-		r := lifecycleRule{}
-		r.ID = rule.ID
-		r.Prefix = rule.Prefix
-		r.Status = rule.Status
-		if rule.Expiration.Date.IsZero() {
-			r.Expiration.Days = rule.Expiration.Days
-		} else {
-			r.Expiration.Date = rule.Expiration.Date.Format(expirationDateFormat)
-		}
-		rs = append(rs, r)
-	}
-	return rs
-}
-
-// BuildLifecycleRuleByDays builds a lifecycle rule with specified expiration days
+// BuildLifecycleRuleByDays builds a lifecycle rule objects will expiration in days after the last modified time
 func BuildLifecycleRuleByDays(id, prefix string, status bool, days int) LifecycleRule {
 	var statusStr = "Enabled"
 	if !status {
 		statusStr = "Disabled"
 	}
 	return LifecycleRule{ID: id, Prefix: prefix, Status: statusStr,
-		Expiration: LifecycleExpiration{Days: days}}
+		Expiration: &LifecycleExpiration{Days: days}}
 }
 
-// BuildLifecycleRuleByDate builds a lifecycle rule with specified expiration time.
+// BuildLifecycleRuleByDate builds a lifecycle rule objects will expiration in specified date
 func BuildLifecycleRuleByDate(id, prefix string, status bool, year, month, day int) LifecycleRule {
 	var statusStr = "Enabled"
 	if !status {
 		statusStr = "Disabled"
 	}
-	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC).Format(iso8601DateFormat)
 	return LifecycleRule{ID: id, Prefix: prefix, Status: statusStr,
-		Expiration: LifecycleExpiration{Date: date}}
+		Expiration: &LifecycleExpiration{Date: date}}
+}
+
+// ValidateLifecycleRule Determine if a lifecycle rule is valid, if it is invalid, it will return an error.
+func verifyLifecycleRules(rules []LifecycleRule) error {
+	if len(rules) == 0 {
+		return fmt.Errorf("invalid rules, the length of rules is zero")
+	}
+	for _, rule := range rules {
+		if rule.Status != "Enabled" && rule.Status != "Disabled" {
+			return fmt.Errorf("invalid rule, the value of status must be Enabled or Disabled")
+		}
+
+		expiration := rule.Expiration
+		if expiration != nil {
+			if (expiration.Days != 0 && expiration.CreatedBeforeDate != "") || (expiration.Days != 0 && expiration.Date != "") || (expiration.CreatedBeforeDate != "" && expiration.Date != "") || (expiration.Days == 0 && expiration.CreatedBeforeDate == "" && expiration.Date == "") {
+				return fmt.Errorf("invalid expiration lifecycle, must be set one of CreatedBeforeDate, Days and Date")
+			}
+		}
+
+		abortMPU := rule.AbortMultipartUpload
+		if abortMPU != nil {
+			if (abortMPU.Days != 0 && abortMPU.CreatedBeforeDate != "") || (abortMPU.Days == 0 && abortMPU.CreatedBeforeDate == "") {
+				return fmt.Errorf("invalid abort multipart upload lifecycle, must be set one of CreatedBeforeDate and Days")
+			}
+		}
+
+		transitions := rule.Transitions
+		if len(transitions) > 0 {
+			if len(transitions) > 2 {
+				return fmt.Errorf("invalid count of transition lifecycles, the count must than less than 3")
+			}
+
+			for _, transition := range transitions {
+				if (transition.Days != 0 && transition.CreatedBeforeDate != "") || (transition.Days == 0 && transition.CreatedBeforeDate == "") {
+					return fmt.Errorf("invalid transition lifecycle, must be set one of CreatedBeforeDate and Days")
+				}
+				if transition.StorageClass != StorageIA && transition.StorageClass != StorageArchive {
+					return fmt.Errorf("invalid transition lifecylce, the value of storage class must be IA or Archive")
+				}
+			}
+		} else if expiration == nil && abortMPU == nil {
+			return fmt.Errorf("invalid rule, must set one of Expiration, AbortMultipartUplaod and Transitions")
+		}
+	}
+
+	return nil
 }
 
 // GetBucketLifecycleResult defines GetBucketLifecycle's result object

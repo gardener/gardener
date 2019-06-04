@@ -1,4 +1,4 @@
-// Copyright (c) 2018 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
+// Copyright (c) 2019 SAP SE or an SAP affiliate company. All rights reserved. This file is licensed under the Apache Software License, v. 2 except as noted otherwise in the LICENSE file
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apivalidation "k8s.io/apimachinery/pkg/api/validation"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -53,6 +54,9 @@ func ValidateControllerRegistrationSpec(spec *core.ControllerRegistrationSpec, f
 		}
 		if t, ok := resources[resource.Kind]; ok && t == resource.Type {
 			allErrs = append(allErrs, field.Duplicate(idxPath, fmt.Sprintf("%s/%s", resource.Kind, resource.Type)))
+		}
+		if resource.GloballyEnabled != nil && resource.Kind != v1alpha1.ExtensionResource {
+			allErrs = append(allErrs, field.Forbidden(idxPath.Child("globallyEnabled"), fmt.Sprintf("field must not be set when kind != %s", v1alpha1.ExtensionResource)))
 		}
 
 		resources[resource.Kind] = resource.Type

@@ -296,7 +296,7 @@ type Interface interface {
 
 	// Deprecated: Use `Client()` and utils instead.
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)
-	CheckForwardPodPort(string, string, int, int) (bool, error)
+	CheckForwardPodPort(string, string, int, int) error
 	// Deprecated: Use `Client()` and utils instead.
 	DeletePod(string, string) error
 	// Deprecated: Use `Client()` and utils instead.

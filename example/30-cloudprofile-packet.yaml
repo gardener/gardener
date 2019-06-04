@@ -18,7 +18,8 @@ spec:
         - 1.13.3
       machineImages:
       - name: coreos
-        id: d61c3912-8422-4daf-835e-854efa0062e4
+        version: 2023.5.0
+        # Proper mappings to Packet image IDs must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: t1.small
         cpu: "4"

@@ -114,18 +114,6 @@ func SetDefaults_Shoot(obj *Shoot) {
 		}
 	}
 
-	if cloud.Local != nil {
-		if cloud.Local.Networks.Pods == nil {
-			obj.Spec.Cloud.Local.Networks.Pods = &defaultPodCIDR
-		}
-		if cloud.Local.Networks.Services == nil {
-			obj.Spec.Cloud.Local.Networks.Services = &defaultServiceCIDR
-		}
-		if cloud.Local.Networks.Nodes == nil && len(cloud.Local.Networks.Workers) > 0 {
-			obj.Spec.Cloud.Local.Networks.Nodes = &cloud.Local.Networks.Workers[0]
-		}
-	}
-
 	trueVar := true
 	if obj.Spec.Kubernetes.AllowPrivilegedContainers == nil {
 		obj.Spec.Kubernetes.AllowPrivilegedContainers = &trueVar

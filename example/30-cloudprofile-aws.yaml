@@ -16,17 +16,13 @@ spec:
         versions:
         - 1.14.0
         - 1.13.6
-        - 1.12.8
+        - 1.12.9
         - 1.11.10
         - 1.10.13
       machineImages:
-      # Keep in sync with https://coreos.com/dist/aws/aws-stable.json (HVM-based)
       - name: coreos
-        regions:
-        - name: eu-west-1
-          ami: ami-01f5fbceb7a9fa4d0
-        - name: us-east-1
-          ami: ami-08e58b93705fb503f
+        version: 2023.5.0
+        # Proper mappings to region-specific AMIs must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: m5.large
         cpu: "2"

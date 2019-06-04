@@ -22,13 +22,11 @@ import (
 
 	"github.com/gardener/controller-manager-library/pkg/kutil"
 	"github.com/gardener/controller-manager-library/pkg/logger"
-	//"github.com/gardener/controller-manager-library/pkg/clientsets/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 )
 
@@ -41,60 +39,37 @@ type _resources struct {
 	handlersByGroupKind        map[schema.GroupKind]Interface
 	handlersByGroupVersionKind map[schema.GroupVersionKind]Interface
 
+	unstructuredHandlersByGroupKind        map[schema.GroupKind]Interface
+	unstructuredHandlersByGroupVersionKind map[schema.GroupVersionKind]Interface
+
 	record.EventRecorder
 }
 
 var _ Resources = &_resources{}
 
-func (this *resourceContext) Resources() Resources {
-	this.SharedInformerFactory()
+func newResources(c *resourceContext, source string) *_resources {
+	res := _resources{}
+	res.ctx = c
+	res.informers = c.sharedInformerFactory
+	res.handlersByObjType = map[reflect.Type]Interface{}
+	res.handlersByGroupKind = map[schema.GroupKind]Interface{}
+	res.handlersByGroupVersionKind = map[schema.GroupVersionKind]Interface{}
 
-	this.lock.Lock()
-	defer this.lock.Unlock()
-
-	if this.resources == nil {
-		this.resources = &_resources{}
-
-		src := this.ctx.Value(ATTR_EVENTSOURCE)
-		if src != nil {
-			this.resources.new(this, src.(string))
-		} else {
-			this.resources.new(this, "controller")
-		}
-	}
-	return this.resources
-}
-
-func (this *_resources) new(c *resourceContext, source string) *_resources {
-	this.ctx = c
-	this.informers = c.sharedInformerFactory
-	this.handlersByObjType = map[reflect.Type]Interface{}
-	this.handlersByGroupKind = map[schema.GroupKind]Interface{}
-	this.handlersByGroupVersionKind = map[schema.GroupVersionKind]Interface{}
+	res.unstructuredHandlersByGroupKind = map[schema.GroupKind]Interface{}
+	res.unstructuredHandlersByGroupVersionKind = map[schema.GroupVersionKind]Interface{}
 
 	client, _ := c.GetClient(schema.GroupVersion{"", "v1"})
-
-	//kubeclientset, err := kubernetes.Clientset(c.cluster.Clientsets())
-	//client:=kubeclientset.CoreV1().RESTClient()
 
 	eventBroadcaster := record.NewBroadcaster()
 	eventBroadcaster.StartLogging(logger.Debugf)
 	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: typedcorev1.New(client).Events("")})
-	this.EventRecorder = eventBroadcaster.NewRecorder(c.scheme, corev1.EventSource{Component: source})
+	res.EventRecorder = eventBroadcaster.NewRecorder(c.scheme, corev1.EventSource{Component: source})
 
-	return this
+	return &res
 }
 
 func (this *_resources) Resources() Resources {
 	return this
-}
-
-func (this *_resources) GetClient(spec interface{}) (restclient.Interface, error) {
-	res, err := this.Get(spec)
-	if err != nil {
-		return nil, err
-	}
-	return res.Client(), nil
 }
 
 func (this *_resources) Get(spec interface{}) (Interface, error) {
@@ -188,11 +163,17 @@ func (this *_resources) GetByGK(gk schema.GroupKind) (Interface, error) {
 	if err != nil {
 		return nil, err
 	}
+	if handler, ok := this.handlersByGroupVersionKind[info.GroupVersionKind()]; ok {
+		this.handlersByGroupKind[gk] = handler
+		return handler, nil
+	}
+
 	h, err := this.getResource(info)
 	if err != nil {
 		return nil, err
 	}
 	this.handlersByGroupKind[gk] = h
+	this.handlersByGroupVersionKind[info.GroupVersionKind()] = h
 	return h, nil
 }
 
@@ -209,7 +190,12 @@ func (this *_resources) GetByGVK(gvk schema.GroupVersionKind) (Interface, error)
 		return nil, err
 	}
 
-	return this.getResource(info)
+	h, err := this.getResource(info)
+	if err != nil {
+		return nil, err
+	}
+	this.handlersByGroupVersionKind[gvk] = h
+	return h, nil
 }
 
 func (this *_resources) getResource(info *Info) (Interface, error) {
@@ -220,6 +206,58 @@ func (this *_resources) getResource(info *Info) (Interface, error) {
 	}
 
 	return this.newResource(gvk, informerType, info)
+}
+
+func (this *_resources) GetUnstructuredByGK(gk schema.GroupKind) (Interface, error) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	if handler, ok := this.unstructuredHandlersByGroupKind[gk]; ok {
+		return handler, nil
+	}
+
+	info, err := this.informers.context.GetPreferred(gk)
+	if err != nil {
+		return nil, err
+	}
+	if handler, ok := this.unstructuredHandlersByGroupVersionKind[info.GroupVersionKind()]; ok {
+		this.unstructuredHandlersByGroupKind[gk] = handler
+		return handler, nil
+	}
+
+	h, err := this.getUnstructuredResource(info)
+	if err != nil {
+		return nil, err
+	}
+	this.unstructuredHandlersByGroupKind[gk] = h
+	this.unstructuredHandlersByGroupVersionKind[info.GroupVersionKind()] = h
+	return h, nil
+}
+
+func (this *_resources) GetUnstructuredByGVK(gvk schema.GroupVersionKind) (Interface, error) {
+	lock.Lock()
+	defer lock.Unlock()
+
+	if handler, ok := this.unstructuredHandlersByGroupVersionKind[gvk]; ok {
+		return handler, nil
+	}
+
+	info, err := this.ctx.Get(gvk)
+	if err != nil {
+		return nil, err
+	}
+
+	h, err := this.getUnstructuredResource(info)
+	if err != nil {
+		return nil, err
+	}
+	this.unstructuredHandlersByGroupVersionKind[gvk] = h
+	return h, err
+}
+
+func (this *_resources) getUnstructuredResource(info *Info) (Interface, error) {
+	gvk := info.GroupVersionKind()
+	return this.newResource(gvk, nil, info)
 }
 
 func (this *_resources) Wrap(obj ObjectData) (Object, error) {
@@ -258,15 +296,6 @@ func (this *_resources) GetCachedObject(spec interface{}) (Object, error) {
 	return h.GetCached(spec)
 }
 
-func (this *_resources) AddEventHandler(spec interface{}, funcs *ResourceEventHandlerFuncs) error {
-	h, err := this.Get(spec)
-	if err != nil {
-		return err
-	}
-	h.AddEventHandler(*funcs)
-	return nil
-}
-
 func (r *_resources) newResource(gvk schema.GroupVersionKind, otype reflect.Type, info *Info) (Interface, error) {
 
 	client, err := r.ctx.GetClient(gvk.GroupVersion())
@@ -274,18 +303,14 @@ func (r *_resources) newResource(gvk schema.GroupVersionKind, otype reflect.Type
 		return nil, err
 	}
 
+	if otype == nil {
+		otype = unstructuredType
+	}
 	ltype := kutil.DetermineListType(r.ctx.scheme, gvk.GroupVersion(), otype)
 	if ltype == nil {
 		return nil, fmt.Errorf("cannot determine list type for %s", otype)
 	}
 
-	handler := &_resource{
-		context: r.ctx,
-		gvk:     gvk,
-		otype:   otype,
-		ltype:   ltype,
-		info:    info,
-		client:  client,
-	}
+	handler := newResource(r.ctx, otype, ltype, info, client)
 	return handler, nil
 }

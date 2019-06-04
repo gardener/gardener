@@ -60,7 +60,6 @@ global:
   images:
     alertmanager: image-repository:image-tag
     alpine: image-repository:image-tag
-    cert-manager: image-repository:image-tag
     configmap-reloader: image-repository:image-tag
     curator-es: image-repository:image-tag
     elasticsearch-oss: image-repository:image-tag
@@ -89,9 +88,6 @@ fluentd-es:
 alertmanager:
   emailConfigs: []
   storage: 1Gi
-
-cert-manager:
-  enabled: true
 
 vpa:
   enabled: true

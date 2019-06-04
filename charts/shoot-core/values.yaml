@@ -34,8 +34,6 @@ metrics-server:
     metrics-server: image-repository:image-tag
 podsecuritypolicies:
   allowPrivilegedContainers: false
-cert-broker:
-  enabled: true
 csi-alicloud:
   images:
     csi-attacher: image-repository:image-tag

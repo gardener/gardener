@@ -28,11 +28,13 @@ import (
 	"github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/operation/shoot"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
+
 	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
+
 	"github.com/sirupsen/logrus"
+
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // Operation contains all data required to perform an operation on a Shoot cluster.
@@ -57,26 +59,8 @@ type Operation struct {
 	SeedNamespaceObject  *corev1.Namespace
 	BackupInfrastructure *gardenv1beta1.BackupInfrastructure
 	ShootBackup          *config.ShootBackup
-	MachineDeployments   MachineDeployments
 	MonitoringClient     prometheusclient.API
 }
-
-// MachineDeployment holds information about the name, class, replicas of a MachineDeployment
-// managed by the machine-controller-manager.
-type MachineDeployment struct {
-	Name           string
-	ClassName      string
-	Minimum        int
-	Maximum        int
-	MaxSurge       intstr.IntOrString
-	MaxUnavailable intstr.IntOrString
-	Labels         map[string]string
-	Annotations    map[string]string
-	Taints         []corev1.Taint
-}
-
-// MachineDeployments is a list of machine deployments.
-type MachineDeployments []MachineDeployment
 
 type prometheusRoundTripper struct {
 	authHeader string

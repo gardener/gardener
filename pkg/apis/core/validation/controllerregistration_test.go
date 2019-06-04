@@ -16,6 +16,8 @@ package validation_test
 
 import (
 	"github.com/gardener/gardener/pkg/apis/core"
+	"github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
+	"github.com/gardener/gardener/test"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -26,19 +28,23 @@ import (
 )
 
 var _ = Describe("validation", func() {
-	var controllerRegistration *core.ControllerRegistration
+	var (
+		controllerRegistration *core.ControllerRegistration
+		ctrlResource           core.ControllerResource
+	)
 
 	BeforeEach(func() {
+		ctrlResource = core.ControllerResource{
+			Kind: "OperatingSystemConfig",
+			Type: "my-os",
+		}
 		controllerRegistration = &core.ControllerRegistration{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "extension-abc",
 			},
 			Spec: core.ControllerRegistrationSpec{
 				Resources: []core.ControllerResource{
-					{
-						Kind: "OperatingSystemConfig",
-						Type: "my-os",
-					},
+					ctrlResource,
 				},
 			},
 		}
@@ -88,6 +94,31 @@ var _ = Describe("validation", func() {
 			errorList := ValidateControllerRegistration(controllerRegistration)
 
 			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should allow to set required field for kind Extension", func() {
+			resource := core.ControllerResource{
+				Kind:            v1alpha1.ExtensionResource,
+				Type:            "arbitrary",
+				GloballyEnabled: test.MakeBoolPointer(true),
+			}
+
+			controllerRegistration.Spec.Resources = []core.ControllerResource{resource}
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(BeEmpty())
+		})
+
+		It("should forbid to set required field for kind != Extension", func() {
+			ctrlResource.GloballyEnabled = test.MakeBoolPointer(true)
+			controllerRegistration.Spec.Resources = []core.ControllerResource{ctrlResource}
+
+			errorList := ValidateControllerRegistration(controllerRegistration)
+
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
+				"Type":  Equal(field.ErrorTypeForbidden),
+				"Field": Equal("spec.resources[0].globallyEnabled"),
+			}))))
 		})
 	})
 

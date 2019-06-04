@@ -278,6 +278,13 @@ spec:
   #     name: coreos
     % endif
   kubernetes:
+  # clusterAutoscaler:
+  #   scaleDownUtilizationThreshold: 0.5
+  #   scaleDownUnneededTime: 30m
+  #   scaleDownDelayAfterAdd: 60m
+  #   scaleDownDelayAfterFailure: 10m
+  #   scaleDownDelayAfterDelete: 10s
+  #   scanInterval: 10s
     version: ${value("spec.kubernetes.version", kubernetesVersion)}<% kubeAPIServer=value("spec.kubernetes.kubeAPIServer", {}) %><% cloudControllerManager=value("spec.kubernetes.cloudControllerManager", {}) %><% kubeControllerManager=value("spec.kubernetes.kubeControllerManager", {}) %><% kubeScheduler=value("spec.kubernetes.kubeScheduler", {}) %><% kubeProxy=value("spec.kubernetes.kubeProxy", {}) %><% kubelet=value("spec.kubernetes.kubelet", {}) %>
     allowPrivilegedContainers: ${value("spec.kubernetes.allowPrivilegedContainers", "true")} # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
     % if kubeAPIServer != {}:
@@ -358,6 +365,8 @@ spec:
     kubelet: ${yaml.dump(kubelet, width=10000, default_flow_style=None)}
     % else:
   # kubelet:
+  #   cpuCFSQuota: true
+  #   cpuManagerPolicy: none
   #   podPidsLimit: 10
   #   featureGates:
   #     SomeKubernetesFeature: true

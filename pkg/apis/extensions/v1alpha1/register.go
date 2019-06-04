@@ -45,6 +45,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&Cluster{},
 		&ClusterList{},
+		&ControlPlane{},
+		&ControlPlaneList{},
 		&Extension{},
 		&ExtensionList{},
 		&Infrastructure{},
@@ -53,8 +55,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&OperatingSystemConfigList{},
 		&Worker{},
 		&WorkerList{},
-		&ControlPlane{},
-		&ControlPlaneList{},
+		&Network{},
+		&NetworkList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

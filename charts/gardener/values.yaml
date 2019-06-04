@@ -161,8 +161,6 @@ global:
     additionalVolumes: []
     additionalVolumeMounts: []
     env: []
-  # certificateManagement: |
-  #   Please find an example in example/10-secret-certificate-management-config.yaml
   # imageVectorOverwrite: |
   #  Please find documentation in docs/deployment/image_vector.md
     config:

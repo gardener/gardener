@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -34,7 +36,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	bootstraptokenapi "k8s.io/cluster-bootstrap/token/api"
 	bootstraptokenutil "k8s.io/cluster-bootstrap/token/util"
 
@@ -63,7 +64,7 @@ func getEvictionMemoryAvailable(machineTypes []gardenv1beta1.MachineType, machin
 func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	var (
 		machineTypes     = b.Shoot.GetMachineTypesFromCloudProfile()
-		machineImageName = b.Shoot.GetMachineImageName()
+		machineImageName = b.Shoot.GetMachineImage().Name
 	)
 
 	downloaderConfig := b.generateDownloaderConfig(machineImageName)
@@ -113,7 +114,7 @@ func (b *HybridBotanist) ComputeShootOperatingSystemConfig() error {
 	return nil
 }
 
-func (b *HybridBotanist) generateDownloaderConfig(machineImageName gardenv1beta1.MachineImageName) map[string]interface{} {
+func (b *HybridBotanist) generateDownloaderConfig(machineImageName string) map[string]interface{} {
 	return map[string]interface{}{
 		"type":    machineImageName,
 		"purpose": extensionsv1alpha1.OperatingSystemConfigPurposeProvision,
@@ -157,13 +158,18 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		cloudProvider["config"] = cloudProviderConfig
 	}
 
-	kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet
-	if kubeletConfig != nil {
+	if kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet; kubeletConfig != nil {
 		if featureGates := kubeletConfig.FeatureGates; featureGates != nil {
 			kubelet["featureGates"] = featureGates
 		}
 		if podPIDsLimit := kubeletConfig.PodPIDsLimit; podPIDsLimit != nil {
 			kubelet["podPIDsLimit"] = *podPIDsLimit
+		}
+		if cpuCFSQuota := kubeletConfig.CPUCFSQuota; cpuCFSQuota != nil {
+			kubelet["cpuCFSQuota"] = *cpuCFSQuota
+		}
+		if cpuManagerPolicy := kubeletConfig.CPUManagerPolicy; cpuManagerPolicy != nil {
+			kubelet["cpuManagerPolicy"] = *cpuManagerPolicy
 		}
 	}
 
@@ -187,7 +193,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName gardenv1beta1.MachineImageName, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImageName string, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
 	var (
 		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
 		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)
@@ -225,25 +231,26 @@ func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, na
 		return nil, err
 	}
 
-	return result, wait.PollImmediate(time.Second, 30*time.Second, func() (bool, error) {
+	return result, retry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
 		var osc extensionsv1alpha1.OperatingSystemConfig
 		if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, &osc); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if osc.Status.ObservedGeneration == osc.Generation && osc.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded && osc.Status.CloudConfig != nil {
 			var secret corev1.Secret
 			if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: osc.Status.CloudConfig.SecretRef.Name, Namespace: osc.Status.CloudConfig.SecretRef.Namespace}, &secret); err != nil {
-				return false, err
+				return retry.SevereError(err)
 			}
 			result = &shoot.CloudConfigData{
 				Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
 				Command: osc.Status.Command,
 				Units:   osc.Status.Units,
 			}
-			return true, nil
+			return retry.Ok()
 		}
-		return false, nil
+		return retry.MinorError(fmt.Errorf("operating system config %q is not ready (generation up to date=%t, last operation=%v, cloud config present=%t",
+			osc.Name, osc.Status.ObservedGeneration == osc.Generation, osc.Status.LastOperation, osc.Status.CloudConfig != nil))
 	})
 }
 

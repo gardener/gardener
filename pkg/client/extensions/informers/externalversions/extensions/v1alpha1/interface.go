@@ -16,6 +16,8 @@ type Interface interface {
 	Extensions() ExtensionInformer
 	// Infrastructures returns a InfrastructureInformer.
 	Infrastructures() InfrastructureInformer
+	// Networks returns a NetworkInformer.
+	Networks() NetworkInformer
 	// OperatingSystemConfigs returns a OperatingSystemConfigInformer.
 	OperatingSystemConfigs() OperatingSystemConfigInformer
 	// Workers returns a WorkerInformer.
@@ -35,7 +37,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // Clusters returns a ClusterInformer.
 func (v *version) Clusters() ClusterInformer {
-	return &clusterInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &clusterInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ControlPlanes returns a ControlPlaneInformer.
@@ -51,6 +53,11 @@ func (v *version) Extensions() ExtensionInformer {
 // Infrastructures returns a InfrastructureInformer.
 func (v *version) Infrastructures() InfrastructureInformer {
 	return &infrastructureInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+}
+
+// Networks returns a NetworkInformer.
+func (v *version) Networks() NetworkInformer {
+	return &networkInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // OperatingSystemConfigs returns a OperatingSystemConfigInformer.

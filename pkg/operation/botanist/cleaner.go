@@ -19,9 +19,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/gardener/gardener/pkg/utils/flow"
 
-	"github.com/gardener/gardener/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -215,13 +216,13 @@ func RetryCleanMatchingUntil(
 	finalize bool,
 	opts ...client.DeleteOptionFunc,
 ) error {
-	return utils.RetryUntil(ctx, interval, func() (ok, severe bool, err error) {
+	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
 		if err := CleanMatching(ctx, c, deleteOpts, checkOpts, list, finalize, opts...); err != nil {
 			if AreObjectsRemaining(err) {
-				return false, false, err
+				return retry.MinorError(err)
 			}
-			return false, true, err
+			return retry.SevereError(err)
 		}
-		return true, false, nil
+		return retry.Ok()
 	})
 }

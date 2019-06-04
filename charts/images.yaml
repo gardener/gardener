@@ -22,10 +22,6 @@ images:
 - name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
-- name: machine-controller-manager
-  sourceRepository: github.com/gardener/machine-controller-manager
-  repository: eu.gcr.io/gardener-project/gardener/machine-controller-manager
-  tag: "0.18.0"
 - name: cluster-autoscaler
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
@@ -219,16 +215,6 @@ images:
   sourceRepository: github.com/elastic/kibana-docker
   repository: docker.elastic.co/kibana/kibana-oss
   tag: "6.7.1"
-
-# Certificate Management
-- name: cert-manager
-  sourceRepository: github.com/jetstack/cert-manager
-  repository: quay.io/jetstack/cert-manager-controller
-  tag: "v0.6.0"
-- name: cert-broker
-  sourceRepository: github.com/gardener/cert-broker
-  repository: eu.gcr.io/gardener-project/gardener/cert-broker
-  tag: "0.2.0"
 
 # VPA
 - name: vpa-admission-controller

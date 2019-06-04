@@ -10,6 +10,8 @@ type ExtensionExpansion interface{}
 
 type InfrastructureExpansion interface{}
 
+type NetworkExpansion interface{}
+
 type OperatingSystemConfigExpansion interface{}
 
 type WorkerExpansion interface{}

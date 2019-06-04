@@ -19,7 +19,8 @@ import (
 	"path"
 
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/operation/terraformer"
+
+	gcpv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1"
 )
 
 const cloudProviderConfigTemplate = `
@@ -42,23 +43,22 @@ func (b *GCPBotanist) GenerateCloudProviderConfig() (string, error) {
 		networkName = b.Shoot.SeedNamespace
 	}
 
-	var (
-		subnetID       = "subnet_internal"
-		subNetworkName = ""
-	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
+	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return "", fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return "", err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(subnetID)
-	if err != nil {
-		if !terraformer.IsVariablesNotFoundError(err) {
-			return "", err
-		}
-		b.Logger.Debugf("Skipping explicit GCP subnet creation for internal loadbalancers because subnet_internal variable has not been found in the Terraform state.")
-	} else {
-		subNetworkName = fmt.Sprintf("subnetwork-name=%q", stateVariables[subnetID])
+	var subNetworkName string
+	internalSubnet, err := findSubnetByPurpose(infrastructureStatus.Networks.Subnets, gcpv1alpha1.PurposeInternal)
+	if err == nil {
+		subNetworkName = fmt.Sprintf("subnetwork-name=%q", internalSubnet.Name)
 	}
+
 	return fmt.Sprintf(
 		cloudProviderConfigTemplate,
 		b.Project,
@@ -164,7 +164,8 @@ func (b *GCPBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]
 	}
 
 	secretData := map[string][]byte{
-		ServiceAccountJSON: []byte(b.MinifiedServiceAccount),
+		common.BackupBucketName: []byte(stateVariables[bucketName]),
+		ServiceAccountJSON:      []byte(b.MinifiedServiceAccount),
 	}
 
 	backupConfigData := map[string]interface{}{

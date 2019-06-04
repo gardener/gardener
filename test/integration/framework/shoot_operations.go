@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -29,7 +31,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // NewShootGardenerTest creates a new shootGardenerTest object, given an already created shoot (created after parsing a shoot YAML)
@@ -160,38 +161,38 @@ func (s *ShootGardenerTest) AnnotateShoot(ctx context.Context, annotations map[s
 
 // WaitForShootToBeCreated waits for the shoot to be created
 func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
-	return wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
+	return retry.Until(ctx, 30*time.Second, func(ctx context.Context) (done bool, err error) {
 		shoot := &v1beta1.Shoot{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 		if shootCreationCompleted(&shoot.Status) {
-			return true, nil
+			return retry.Ok()
 		}
 		s.Logger.Infof("Waiting for shoot %s to be created", s.Shoot.Name)
 		if shoot.Status.LastOperation != nil {
 			s.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
-		return false, nil
-	}, ctx.Done())
+		return retry.MinorError(fmt.Errorf("shoot %q was not successfully reconciled", shoot.Name))
+	})
 }
 
 // WaitForShootToBeDeleted waits for the shoot to be deleted
 func (s *ShootGardenerTest) WaitForShootToBeDeleted(ctx context.Context) error {
-	return wait.PollImmediateUntil(30*time.Second, func() (bool, error) {
+	return retry.Until(ctx, 30*time.Second, func(ctx context.Context) (done bool, err error) {
 		shoot := &v1beta1.Shoot{}
-		err := s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				return true, nil
+				return retry.Ok()
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
 		s.Logger.Infof("waiting for shoot %s to be deleted", s.Shoot.Name)
 		if shoot.Status.LastOperation != nil {
 			s.Logger.Debugf("%d%%: Shoot state: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
-		return false, nil
-	}, ctx.Done())
+		return retry.MinorError(fmt.Errorf("shoot %q still exists", shoot.Name))
+	})
 }

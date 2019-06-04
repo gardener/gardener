@@ -18,10 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -46,7 +44,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,62 +62,6 @@ func GetSecretKeysWithPrefix(kind string, m map[string]*corev1.Secret) []string 
 	return result
 }
 
-// DistributeOverZones is a function which is used to determine how many nodes should be used
-// for each availability zone. It takes the number of availability zones (<zoneSize>), the
-// index of the current zone (<zoneIndex>) and the number of nodes which must be distributed
-// over the zones (<size>) and returns the number of nodes which should be placed in the zone
-// of index <zoneIndex>.
-// The distribution happens equally. In case of an uneven number <size>, the last zone will have
-// one more node than the others.
-func DistributeOverZones(zoneIndex, size, zoneSize int) int {
-	first := size / zoneSize
-	second := 0
-	if zoneIndex < (size % zoneSize) {
-		second = 1
-	}
-	return first + second
-}
-
-// DistributePercentOverZones distributes a given percentage value over zones in relation to
-// the given total value. In case the total value is evenly divisible over the zones, this
-// always just returns the initial percentage. Otherwise, the total value is used to determine
-// the weight of a specific zone in relation to the other zones and adapt the given percentage
-// accordingly.
-func DistributePercentOverZones(zoneIndex int, percent string, zoneSize int, total int) string {
-	percents, err := strconv.Atoi(percent[:len(percent)-1])
-	if err != nil {
-		panic(fmt.Sprintf("given value %q is not a percent value", percent))
-	}
-
-	var weightedPercents int
-	if total%zoneSize == 0 {
-		// Zones are evenly sized, we don't need to adapt the percentage per zone
-		weightedPercents = percents
-	} else {
-		// Zones are not evenly sized, we need to calculate the ratio of each zone
-		// and modify the percentage depending on that ratio.
-		zoneTotal := DistributeOverZones(zoneIndex, total, zoneSize)
-		absoluteTotalRatio := float64(total) / float64(zoneSize)
-		ratio := 100.0 / absoluteTotalRatio * float64(zoneTotal)
-		// Optimistic rounding up, this will cause an actual max surge / max unavailable percentage to be a bit higher.
-		weightedPercents = int(math.Ceil(ratio * float64(percents) / 100.0))
-	}
-
-	return fmt.Sprintf("%d%%", weightedPercents)
-}
-
-// DistributePositiveIntOrPercent distributes a given int or percentage value over zones in relation to
-// the given total value. In case the total value is evenly divisible over the zones, this
-// always just returns the initial percentage. Otherwise, the total value is used to determine
-// the weight of a specific zone in relation to the other zones and adapt the given percentage
-// accordingly.
-func DistributePositiveIntOrPercent(zoneIndex int, intOrPercent intstr.IntOrString, zoneSize int, total int) intstr.IntOrString {
-	if intOrPercent.Type == intstr.String {
-		return intstr.FromString(DistributePercentOverZones(zoneIndex, intOrPercent.StrVal, zoneSize, total))
-	}
-	return intstr.FromInt(DistributeOverZones(zoneIndex, int(intOrPercent.IntVal), zoneSize))
-}
-
 // ComputeClusterIP parses the provided <cidr> and sets the last byte to the value of <lastByte>.
 // For example, <cidr> = 100.64.0.0/11 and <lastByte> = 10 the result would be 100.64.0.10
 func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {
@@ -128,24 +69,6 @@ func ComputeClusterIP(cidr gardencorev1alpha1.CIDR, lastByte byte) string {
 	ip = ip.To4()
 	ip[3] = lastByte
 	return ip.String()
-}
-
-// DiskSize extracts the numerical component of DiskSize strings, i.e. strings like "10Gi" and
-// returns it as string, i.e. "10" will be returned. If the conversion to integer fails or if
-// the pattern does not match, it will return 0.
-func DiskSize(size string) int {
-	regex, _ := regexp.Compile("^(\\d+)")
-	i, err := strconv.Atoi(regex.FindString(size))
-	if err != nil {
-		return 0
-	}
-	return i
-}
-
-// MachineClassHash returns the SHA256-hash value of the <val> struct's representation concatenated with the
-// provided <version>.
-func MachineClassHash(machineClassSpec map[string]interface{}, version string) string {
-	return utils.ComputeSHA256Hex([]byte(fmt.Sprintf("%s-%s", utils.HashForMap(machineClassSpec), version)))[:5]
 }
 
 // GenerateAddonConfig returns the provided <values> in case <enabled> is true. Otherwise, nil is

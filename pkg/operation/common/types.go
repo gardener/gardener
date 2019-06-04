@@ -25,9 +25,15 @@ const (
 	// AlertManagerStatefulSetName is the name of the alertmanager stateful set.
 	AlertManagerStatefulSetName = "alertmanager"
 
+	// BackupBucketName is a constant for the name of bucket of object storage.
+	BackupBucketName = "bucketName"
+
 	// BackupSecretName defines the name of the secret containing the credentials which are required to
 	// authenticate against the respective cloud provider (required to store the backups of Shoot clusters).
 	BackupSecretName = "etcd-backup"
+
+	// BackupInfrastructureForceDeletion is a constant for an annotation on a Backupinfrastructure indicating that it should be force deleted.
+	BackupInfrastructureForceDeletion = "backupinfrastructure.garden.sapcloud.io/force-deletion"
 
 	// BackupInfrastructureOperation is a constant for an annotation on a Backupinfrastructure indicating that an operation shall be performed.
 	BackupInfrastructureOperation = "backupinfrastructure.garden.sapcloud.io/operation"
@@ -45,9 +51,6 @@ const (
 	// CloudConfigFilePath is the path on the shoot worker nodes to which the operating system specific configuration
 	// will be downloaded.
 	CloudConfigFilePath = "/var/lib/cloud-config-downloader/downloads/cloud_config"
-
-	// CloudProviderSecretName is the name of the secret containing the cloud provider credentials.
-	CloudProviderSecretName = "cloudprovider"
 
 	// CloudProviderConfigName is the name of the configmap containing the cloud provider config.
 	CloudProviderConfigName = "cloud-provider-config"
@@ -68,6 +71,9 @@ const (
 	// ControllerManagerInternalConfigMapName is the name of the internal config map in which the Gardener controller
 	// manager stores its configuration.
 	ControllerManagerInternalConfigMapName = "gardener-controller-manager-internal-config"
+
+	// ControllerRegistrationName is the key of a label on extension namespaces that indicates the controller registration name.
+	ControllerRegistrationName = "controllerregistration.core.gardener.cloud/name"
 
 	// DNSProviderDeprecated is the key for an annotation on a Kubernetes Secret object whose value must point to a valid
 	// DNS provider.
@@ -127,11 +133,18 @@ const (
 	// GardenRole is the key for an annotation on a Kubernetes object indicating what it is used for.
 	GardenRole = "garden.sapcloud.io/role"
 
+	// GardenerRole is the key for an annotation on a Kubernetes object indicating what it is used for with the new
+	// naming scheme.
+	GardenerRole = "gardener.cloud/role"
+
 	// GardenRoleShoot is the value of the GardenRole key indicating type 'shoot'.
 	GardenRoleShoot = "shoot"
 
 	// GardenRoleSeed is the value of the GardenRole key indicating type 'seed'.
 	GardenRoleSeed = "seed"
+
+	// GardenRoleExtension is the value of the GardenRole key indicating type 'extension'.
+	GardenRoleExtension = "extension"
 
 	// GardenRoleControlPlane is the value of the GardenRole key indicating type 'controlplane'.
 	GardenRoleControlPlane = "controlplane"
@@ -160,7 +173,7 @@ const (
 	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
 
-	// GardenRoleMembers ist the value of GardenRole key indicating type 'members'.
+	// GardenRoleMembers is the value of GardenRole key indicating type 'members'.
 	GardenRoleMembers = "members"
 
 	//GardenRoleProject is the value of GardenRole key indicating type 'project'.
@@ -168,9 +181,6 @@ const (
 
 	//GardenRoleBackup is the value of GardenRole key indicating type 'backup'.
 	GardenRoleBackup = "backup"
-
-	// GardenRoleCertificateManagement is the value of GardenRole key indicating type 'certificate-management'.
-	GardenRoleCertificateManagement = "certificate-management"
 
 	// GardenRoleVpa is the value of GardenRole key indicating type 'vpa'.
 	GardenRoleVpa = "vpa"
@@ -276,27 +286,8 @@ const (
 	// by the Gardener Dashboard.
 	ProjectName = "project.garden.sapcloud.io/name"
 
-	// ProjectNamespace is they key of a label on projects whose value holds the namespace name. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectNamespace = "project.garden.sapcloud.io/namespace"
-
 	// NamespaceProject is they key of a label on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.garden.sapcloud.io/project"
-
-	// ProjectOwner is they key of a label on namespaces whose value holds the project owner. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectOwner = "project.garden.sapcloud.io/owner"
-
-	// ProjectDescription is they key of a label on namespaces whose value holds the project description. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectDescription = "project.garden.sapcloud.io/description"
-
-	// ProjectPurpose is they key of a label on namespaces whose value holds the project purpose. Usually, the label is set
-	// by the Gardener Dashboard.
-	ProjectPurpose = "project.garden.sapcloud.io/purpose"
-
-	// ProjectMemberClusterRole is the name of the cluster role defining the permissions for project members.
-	ProjectMemberClusterRole = "garden.sapcloud.io:system:project-member"
 
 	// PrometheusStatefulSetName is the name of the Prometheus stateful set.
 	PrometheusStatefulSetName = "prometheus"
@@ -316,8 +307,9 @@ const (
 	// TerraformerJobSuffix is the suffix used for the name of the Job which executes the Terraform configuration.
 	TerraformerJobSuffix = ".tf-job"
 
-	// TerraformerPurposeInfra is a constant for the complete Terraform setup with purpose 'infrastructure'.
-	TerraformerPurposeInfra = "infra"
+	// TerraformerPurposeInfraDeprecated is a constant for the complete Terraform setup with purpose 'infrastructure'.
+	// deprecated
+	TerraformerPurposeInfraDeprecated = "infra"
 
 	// TerraformerPurposeInternalDNSDeprecated is a constant for the complete Terraform setup with purpose 'internal cluster domain'
 	// deprecated
@@ -356,6 +348,7 @@ const (
 	ShootUnhealthy = "shoot.garden.sapcloud.io/unhealthy"
 
 	// ShootHibernated is a constant for a label on the Shoot namespace in the Seed indicating the Shoot's hibernation status.
+	// +deprecated: Use `Cluster` resource instead.
 	ShootHibernated = "shoot.garden.sapcloud.io/hibernated"
 
 	// ShootOperation is a constant for an annotation on a Shoot in a failed state indicating that an operation shall be performed.
@@ -461,9 +454,6 @@ const (
 	// IngressDefaultBackendImageName is the name of the IngressDefaultBackend image.
 	IngressDefaultBackendImageName = "ingress-default-backend"
 
-	// MachineControllerManagerImageName is the name of the MachineControllerManager image.
-	MachineControllerManagerImageName = "machine-controller-manager"
-
 	// ClusterAutoscalerImageName is the name of the ClusterAutoscaler image.
 	ClusterAutoscalerImageName = "cluster-autoscaler"
 
@@ -552,20 +542,8 @@ const (
 	// AlpineImageName is the name of alpine image
 	AlpineImageName = "alpine"
 
-	// CertManagerImageName is the name of cert-manager image
-	CertManagerImageName = "cert-manager"
-
-	// CertManagerResourceName is the name of the Cert-Manager resources.
-	CertManagerResourceName = "cert-manager"
-
-	// CertBrokerImageName is the name of cert-broker image.
-	CertBrokerImageName = "cert-broker"
-
-	// CertBrokerResourceName is the name of the Cert-Broker resources.
-	CertBrokerResourceName = "cert-broker"
-
-	// DependancyWatchdogDeploymentName is the name of the dependency controller resources.
-	DependancyWatchdogDeploymentName = "dependency-watchdog"
+	// DependencyWatchdogDeploymentName is the name of the dependency controller resources.
+	DependencyWatchdogDeploymentName = "dependency-watchdog"
 
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
@@ -604,7 +582,7 @@ var (
 		KubeControllerManagerDeploymentName,
 		KubeSchedulerDeploymentName,
 		MachineControllerManagerDeploymentName,
-		DependancyWatchdogDeploymentName,
+		DependencyWatchdogDeploymentName,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful

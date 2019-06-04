@@ -35,5 +35,5 @@
 {{- range $index, $param := .Values.kubernetes.kubelet.parameters }}
 {{ $param }} \
 {{- end }}
---v=2
+--v=2 $KUBELET_EXTRA_ARGS
 {{- end -}}

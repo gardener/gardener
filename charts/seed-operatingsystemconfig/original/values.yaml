@@ -22,6 +22,8 @@ kubernetes:
     parameters: []
     enableCSI: false
     providerIDProvided: false
+    cpuCFSQuota: true
+    cpuManagerPolicy: none
 #   podPIDsLimit: 24
     featureGates: {}
 #     CustomResourceValidation: true

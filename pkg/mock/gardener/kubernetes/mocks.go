@@ -90,12 +90,11 @@ func (mr *MockInterfaceMockRecorder) Applier() *gomock.Call {
 }
 
 // CheckForwardPodPort mocks base method
-func (m *MockInterface) CheckForwardPodPort(arg0, arg1 string, arg2, arg3 int) (bool, error) {
+func (m *MockInterface) CheckForwardPodPort(arg0, arg1 string, arg2, arg3 int) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckForwardPodPort", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // CheckForwardPodPort indicates an expected call of CheckForwardPodPort

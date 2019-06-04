@@ -17,7 +17,6 @@
 package resources
 
 import (
-	"github.com/gardener/controller-manager-library/pkg/clientsets"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -51,12 +50,16 @@ type ResourcesSource interface {
 	Resources() Resources
 }
 
+type ClusterSource interface {
+	GetCluster() Cluster
+}
+
 type Cluster interface {
 	ResourcesSource
+	ClusterSource
 
 	GetName() string
 	GetId() string
-	Clientsets() clientsets.Interface
 	Config() restclient.Config
 
 	GetAttr(key interface{}) interface{}
@@ -92,6 +95,7 @@ type Object interface {
 	//runtime.ObjectData
 	EventRecorder
 	ResourcesSource
+	ClusterSource
 
 	GroupVersionKind() schema.GroupVersionKind
 	ObjectName() ObjectName
@@ -101,7 +105,6 @@ type Object interface {
 	ClusterKey() ClusterObjectKey
 	IsCoLocatedTo(o Object) bool
 
-	GetCluster() Cluster
 	GetResource() Interface
 
 	IsA(spec interface{}) bool
@@ -152,13 +155,13 @@ type ObjectData interface {
 
 type Interface interface {
 	GroupKindProvider
+	ClusterSource
+	ResourcesSource
 
 	Name() string
 	Namespaced() bool
-	GetCluster() Cluster
 	GroupVersionKind() schema.GroupVersionKind
 	Info() *Info
-	Client() restclient.Interface
 	ResourceContext() ResourceContext
 	AddEventHandler(eventHandlers ResourceEventHandlerFuncs) error
 	AddRawEventHandler(handlers cache.ResourceEventHandlerFuncs) error
@@ -178,6 +181,8 @@ type Interface interface {
 	Delete(ObjectData) error
 
 	Namespace(name string) Namespaced
+
+	IsUnstructured() bool
 }
 
 type Namespaced interface {
@@ -196,6 +201,9 @@ type Resources interface {
 	GetByGK(gk schema.GroupKind) (Interface, error)
 	GetByGVK(gvk schema.GroupVersionKind) (Interface, error)
 
+	GetUnstructuredByGK(gk schema.GroupKind) (Interface, error)
+	GetUnstructuredByGVK(gvk schema.GroupVersionKind) (Interface, error)
+
 	Wrap(obj ObjectData) (Object, error)
 
 	GetObjectInto(ObjectName, ObjectData) (Object, error)
@@ -205,7 +213,4 @@ type Resources interface {
 
 	CreateObject(ObjectData) (Object, error)
 	CreateOrUpdateObject(obj ObjectData) (Object, error)
-	GetClient(spec interface{}) (restclient.Interface, error)
-
-	AddEventHandler(spec interface{}, funcs *ResourceEventHandlerFuncs) error
 }

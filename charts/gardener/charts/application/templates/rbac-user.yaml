@@ -155,3 +155,45 @@ rules:
   - patch
   - update
   - watch
+
+# Cluster role setting the permissions for a project viweer. It gets bound by a RoleBinding
+# in a respective project namespace.
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRole
+metadata:
+  name: garden.sapcloud.io:system:project-viewer
+  labels:
+    garden.sapcloud.io/role: project-viewer
+    app: gardener
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - serviceaccounts
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - garden.sapcloud.io
+  resources:
+  - shoots
+  - secretbindings
+  - quotas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - core.gardener.cloud
+  resources:
+  - plants
+  verbs:
+  - get
+  - list
+  - watch

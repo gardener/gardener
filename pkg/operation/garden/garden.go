@@ -110,10 +110,9 @@ func DomainIsDefaultDomain(domain string, defaultDomains []*DefaultDomain) *Defa
 // The Secret objects are stored on the Controller in order to pass them to created Garden objects later.
 func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[string]*corev1.Secret, error) {
 	var (
-		secretsMap                                  = make(map[string]*corev1.Secret)
-		numberOfInternalDomainSecrets               = 0
-		numberOfOpenVPNDiffieHellmanSecrets         = 0
-		numberOfCertificateManagementConfigurations = 0
+		secretsMap                          = make(map[string]*corev1.Secret)
+		numberOfInternalDomainSecrets       = 0
+		numberOfOpenVPNDiffieHellmanSecrets = 0
 	)
 
 	selector, err := labels.Parse(common.GardenRole)
@@ -174,12 +173,6 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 			logger.Logger.Infof("Found OpenVPN Diffie Hellman secret %s.", secret.Name)
 			numberOfOpenVPNDiffieHellmanSecrets++
 		}
-
-		if secret.Labels[common.GardenRole] == common.GardenRoleCertificateManagement {
-			secretsMap[common.GardenRoleCertificateManagement] = secret
-			logger.Logger.Infof("Found certificate management configuration %s.", secret.Name)
-			numberOfCertificateManagementConfigurations++
-		}
 	}
 
 	// For each Shoot we create a LoadBalancer(LB) pointing to the API server of the Shoot. Because the technical address
@@ -201,12 +194,6 @@ func ReadGardenSecrets(k8sInformers kubeinformers.SharedInformerFactory) (map[st
 	// the Gardener cannot determine which to choose).
 	if numberOfOpenVPNDiffieHellmanSecrets > 1 {
 		return nil, fmt.Errorf("can only accept at most one OpenVPN Diffie Hellman secret, but found %d", numberOfOpenVPNDiffieHellmanSecrets)
-	}
-
-	// For certificate management an instance of Cert-Manager will be deployed to the Seed cluster which requires a certain configuration.
-	// This configuration is placed in the Garden cluster and must not be exist more than one time.
-	if numberOfCertificateManagementConfigurations > 1 {
-		return nil, fmt.Errorf("can only accept at most one certificate management configuration secret, but found %d", numberOfCertificateManagementConfigurations)
 	}
 
 	return secretsMap, nil

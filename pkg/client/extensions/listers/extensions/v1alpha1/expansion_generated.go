@@ -6,10 +6,6 @@ package v1alpha1
 // ClusterLister.
 type ClusterListerExpansion interface{}
 
-// ClusterNamespaceListerExpansion allows custom methods to be added to
-// ClusterNamespaceLister.
-type ClusterNamespaceListerExpansion interface{}
-
 // ControlPlaneListerExpansion allows custom methods to be added to
 // ControlPlaneLister.
 type ControlPlaneListerExpansion interface{}
@@ -33,6 +29,14 @@ type InfrastructureListerExpansion interface{}
 // InfrastructureNamespaceListerExpansion allows custom methods to be added to
 // InfrastructureNamespaceLister.
 type InfrastructureNamespaceListerExpansion interface{}
+
+// NetworkListerExpansion allows custom methods to be added to
+// NetworkLister.
+type NetworkListerExpansion interface{}
+
+// NetworkNamespaceListerExpansion allows custom methods to be added to
+// NetworkNamespaceLister.
+type NetworkNamespaceListerExpansion interface{}
 
 // OperatingSystemConfigListerExpansion allows custom methods to be added to
 // OperatingSystemConfigLister.

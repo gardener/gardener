@@ -22,6 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
+	test "github.com/gardener/gardener/test"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -105,7 +106,7 @@ var _ = Describe("validator", func() {
 					},
 					DNS: garden.DNS{
 						Provider: &unmanagedDNSProvider,
-						Domain:   makeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
+						Domain:   test.MakeStrPointer(fmt.Sprintf("shoot.%s", baseDomain)),
 					},
 					Kubernetes: garden.Kubernetes{
 						Version: "1.6.4",
@@ -283,15 +284,10 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
-						MachineImages: []garden.AWSMachineImageMapping{
+						MachineImages: []garden.MachineImage{
 							{
-								Name: garden.MachineImageName("some-machineimage"),
-								Regions: []garden.AWSRegionalMachineImage{
-									{
-										Name: "europe",
-										AMI:  "ami-12345678",
-									},
-								},
+								Name:    "some-machineimage",
+								Version: "1.2.3",
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -340,9 +336,9 @@ var _ = Describe("validator", func() {
 					},
 				}
 				zones        = []string{"europe-a"}
-				machineImage = &garden.AWSMachineImage{
-					Name: garden.MachineImageName("some-machineimage"),
-					AMI:  "ami-12345678",
+				machineImage = &garden.MachineImage{
+					Name:    "some-machineimage",
+					Version: "1.2.3",
 				}
 				awsCloud = &garden.AWSCloud{}
 			)
@@ -525,9 +521,9 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.AWS.MachineImage = &garden.AWSMachineImage{
-					Name: garden.MachineImageName("not-supported"),
-					AMI:  "not-supported",
+				shoot.Spec.Cloud.AWS.MachineImage = &garden.MachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -634,21 +630,6 @@ var _ = Describe("validator", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(apierrors.IsForbidden(err)).To(BeTrue())
 			})
-
-			It("should reject due to an invalid region where no machine image has been specified", func() {
-				shoot.Spec.Cloud.Region = "asia"
-				shoot.Spec.Cloud.AWS.Zones = []string{"asia-a"}
-
-				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
-				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
-				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
-				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
-
-				err := admissionHandler.Admit(attrs, nil)
-
-				Expect(err).To(HaveOccurred())
-				Expect(apierrors.IsForbidden(err)).To(BeTrue())
-			})
 		})
 
 		Context("tests for Azure cloud", func() {
@@ -663,13 +644,10 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
-						MachineImages: []garden.AzureMachineImage{
+						MachineImages: []garden.MachineImage{
 							{
-								Name:      garden.MachineImageName("some-machineimage"),
-								Publisher: "some-image",
-								Offer:     "some-image",
-								SKU:       "Beta",
-								Version:   "1.2.3",
+								Name:    "some-machineimage",
+								Version: "1.2.3",
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -804,12 +782,9 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.Azure.MachineImage = &garden.AzureMachineImage{
-					Name:      garden.MachineImageName("not-supported"),
-					Publisher: "not-supported",
-					Offer:     "not-supported",
-					SKU:       "not-supported",
-					Version:   "not-supported",
+				shoot.Spec.Cloud.Azure.MachineImage = &garden.MachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -905,10 +880,10 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
-						MachineImages: []garden.GCPMachineImage{
+						MachineImages: []garden.MachineImage{
 							{
-								Name:  garden.MachineImageName("some-machineimage"),
-								Image: "core-1.2.3",
+								Name:    "some-machineimage",
+								Version: "core-1.2.3",
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -1035,9 +1010,9 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.GCP.MachineImage = &garden.GCPMachineImage{
-					Name:  garden.MachineImageName("not-supported"),
-					Image: "not-supported",
+				shoot.Spec.Cloud.GCP.MachineImage = &garden.MachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -1119,10 +1094,10 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
-						MachineImages: []garden.PacketMachineImage{
+						MachineImages: []garden.MachineImage{
 							{
-								Name: garden.MachineImageName("some-machineimage"),
-								ID:   "core-1.2.3",
+								Name:    "some-machineimage",
+								Version: "core-1.2.3",
 							},
 						},
 						MachineTypes: []garden.MachineType{
@@ -1235,9 +1210,9 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.Packet.MachineImage = &garden.PacketMachineImage{
-					Name: garden.MachineImageName("not-supported"),
-					ID:   "not-supported",
+				shoot.Spec.Cloud.Packet.MachineImage = &garden.MachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -1329,10 +1304,10 @@ var _ = Describe("validator", func() {
 								Name: "haproxy",
 							},
 						},
-						MachineImages: []garden.OpenStackMachineImage{
+						MachineImages: []garden.MachineImage{
 							{
-								Name:  garden.MachineImageName("some-machineimage"),
-								Image: "core-1.2.3",
+								Name:    "some-machineimage",
+								Version: "core-1.2.3",
 							},
 						},
 						MachineTypes: []garden.OpenStackMachineType{
@@ -1498,9 +1473,9 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.OpenStack.MachineImage = &garden.OpenStackMachineImage{
-					Name:  garden.MachineImageName("not-supported"),
-					Image: "not-supported",
+				shoot.Spec.Cloud.OpenStack.MachineImage = &garden.MachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -1561,10 +1536,10 @@ var _ = Describe("validator", func() {
 						Kubernetes: garden.KubernetesConstraints{
 							Versions: []string{"1.6.4"},
 						},
-						MachineImages: []garden.AlicloudMachineImage{
+						MachineImages: []garden.MachineImage{
 							{
-								Name: garden.MachineImageName("some-machineimage"),
-								ID:   "abcd.vhd",
+								Name:    "some-machineimage",
+								Version: "abcd.vhd",
 							},
 						},
 						MachineTypes: []garden.AlicloudMachineType{
@@ -1701,9 +1676,9 @@ var _ = Describe("validator", func() {
 			})
 
 			It("should reject due to an invalid machine image", func() {
-				shoot.Spec.Cloud.Alicloud.MachineImage = &garden.AlicloudMachineImage{
-					Name: garden.MachineImageName("not-supported"),
-					ID:   "not-supported",
+				shoot.Spec.Cloud.Alicloud.MachineImage = &garden.MachineImage{
+					Name:    "not-supported",
+					Version: "not-supported",
 				}
 
 				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
@@ -1816,8 +1791,3 @@ var _ = Describe("validator", func() {
 		})
 	})
 })
-
-func makeStrPointer(in string) *string {
-	out := in
-	return &out
-}

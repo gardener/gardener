@@ -79,9 +79,6 @@ type CloudProfileSpec struct {
 	// Packet is the profile specification for the Packet cloud.
 	// +optional
 	Packet *PacketProfile
-	// Local is the profile specification for the Local provider.
-	// +optional
-	Local *LocalProfile
 	// CABundle is a certificate bundle which will be installed onto every host machine of the Shoot cluster.
 	// +optional
 	CABundle *string
@@ -100,7 +97,7 @@ type AWSConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AWSMachineImageMapping
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -109,27 +106,12 @@ type AWSConstraints struct {
 	Zones []Zone
 }
 
-// AWSMachineImage defines the region and the AMI for a machine image.
-type AWSMachineImage struct {
+// MachineImage defines the name and the version of the machine image in any environment.
+type MachineImage struct {
 	// Name is the name of the image.
-	Name MachineImageName
-	// AMI is the technical id of the image (region specific).
-	AMI string
-}
-
-// AWSMachineImageMapping is a mapping of machine images to regions.
-type AWSMachineImageMapping struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Regions is a list of machine images with their regional technical id.
-	Regions []AWSRegionalMachineImage
-}
-
-type AWSRegionalMachineImage struct {
-	// Name is the name of a region.
 	Name string
-	// AMI is the technical id of the image (specific for region stated in the 'Name' field).
-	AMI string
+	// Version is the version of the image.
+	Version string
 }
 
 // AzureProfile defines certain constraints and definitions for the Azure cloud.
@@ -149,7 +131,7 @@ type AzureConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AzureMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -162,20 +144,6 @@ type AzureDomainCount struct {
 	Region string
 	// Count is the count value for the respective domain count.
 	Count int
-}
-
-// AzureMachineImage defines the channel and the version of the machine image in the Azure environment.
-type AzureMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Publisher is the publisher of the image.
-	Publisher string
-	// Offer is the offering of the image.
-	Offer string
-	// SKU is the stock keeping unit to pull images from.
-	SKU string
-	// Version is the version of the image.
-	Version string
 }
 
 // GCPProfile defines certain constraints and definitions for the GCP cloud.
@@ -191,22 +159,13 @@ type GCPConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []GCPMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []VolumeType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone
-}
-
-// GCPMachineImage defines the name of the machine image in the GCP environment.
-type GCPMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Image is the technical name of the image. It contains the image name and the Google Cloud project.
-	// Example: projects/<name>/global/images/version23
-	Image string
 }
 
 // OpenStackProfile defines certain constraints and definitions for the OpenStack cloud.
@@ -238,7 +197,7 @@ type OpenStackConstraints struct {
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 	LoadBalancerProviders []OpenStackLoadBalancerProvider
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []OpenStackMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []OpenStackMachineType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
@@ -257,14 +216,6 @@ type OpenStackLoadBalancerProvider struct {
 	Name string
 }
 
-// OpenStackMachineImage defines the name of the machine image in the OpenStack environment.
-type OpenStackMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// Image is the technical name of the image.
-	Image string
-}
-
 // AlicloudProfile defines constraints and definitions in Alibaba Cloud environment.
 type AlicloudProfile struct {
 	// Constraints is an object containing constraints for certain values in the Shoot specification.
@@ -278,21 +229,13 @@ type AlicloudConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []AlicloudMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []AlicloudMachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
 	VolumeTypes []AlicloudVolumeType
 	// Zones contains constraints regarding allowed values for 'zones' block in the Shoot specification.
 	Zones []Zone
-}
-
-// AlicloudMachineImage defines the machine image for Alicloud.
-type AlicloudMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// ID is the ID of the image.
-	ID string
 }
 
 // AlicloudMachineType defines certain machine types and zone constraints.
@@ -320,7 +263,7 @@ type PacketConstraints struct {
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []PacketMachineImage
+	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
 	MachineTypes []MachineType
 	// VolumeTypes contains constraints regarding allowed values for volume types in the 'workers' block in the Shoot specification.
@@ -329,38 +272,10 @@ type PacketConstraints struct {
 	Zones []Zone
 }
 
-// PacketMachineImage defines the machine image for Packet.
-type PacketMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
-	// ID is the ID of the image.
-	ID string
-}
-
-// LocalProfile defines constraints and definitions for the local development.
-type LocalProfile struct {
-	// Constraints is an object containing constraints for certain values in the Shoot specification.
-	Constraints LocalConstraints
-}
-
-// LocalConstraints is an object containing constraints for certain values in the Shoot specification.
-type LocalConstraints struct {
-	// DNSProviders contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
-	DNSProviders []DNSProviderConstraint
-	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
-	MachineImages []LocalMachineImage
-}
-
 // DNSProviderConstraint contains constraints regarding allowed values of the 'dns.provider' block in the Shoot specification.
 type DNSProviderConstraint struct {
 	// Name is the name of the DNS provider.
 	Name string
-}
-
-// LocalMachineImage defines the machine image for Local provider.
-type LocalMachineImage struct {
-	// Name is the name of the image.
-	Name MachineImageName
 }
 
 // KubernetesConstraints contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
@@ -419,18 +334,6 @@ type Zone struct {
 	Names []string
 }
 
-// MachineImageName is a string alias.
-type MachineImageName string
-
-const (
-	// MachineImageCoreOS is a constant for the CoreOS machine image.
-	MachineImageCoreOS MachineImageName = "coreos"
-	// MachineImageCoreOSAlicloud is a constant for the CoreOS machine image used by Alicloud.
-	// The Alicloud CoreOS image is modified (e.g., it does not support cloud-config, and is therefore
-	// treated like another OS).
-	MachineImageCoreOSAlicloud MachineImageName = "coreos-alicloud"
-)
-
 ////////////////////////////////////////////////////
 //                    PROJECTS                    //
 ////////////////////////////////////////////////////
@@ -482,12 +385,15 @@ type ProjectSpec struct {
 	// +optional
 	Purpose *string
 	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user
-	// that should be part of this project.
+	// that should be part of this project with full permissions to manage it.
 	// +optional
 	Members []rbacv1.Subject
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// +optional
 	Namespace *string
+	// Viewers is a list of subjects representing a user name, an email address, or any other identifier of a user
+	// that should be part of this project with limited permissions to only view some resources.
+	Viewers []rbacv1.Subject `json:"viewers,omitempty"`
 }
 
 // ProjectStatus holds the most recently observed status of the project.
@@ -733,6 +639,8 @@ type ShootSpec struct {
 	Cloud Cloud
 	// DNS contains information about the DNS settings of the Shoot.
 	DNS DNS
+	// Extensions contain type and provider information for Shoot extensions.
+	Extensions []Extension
 	// Hibernation contains information whether the Shoot is suspended or not.
 	// +optional
 	Hibernation *Hibernation
@@ -810,9 +718,6 @@ type Cloud struct {
 	// PacketCloud contains the Shoot specification for the Packet cloud.
 	// +optional
 	Packet *PacketCloud
-	// Local contains the Shoot specification for the Local local provider.
-	// +optional
-	Local *Local
 }
 
 // AWSCloud contains the Shoot specification for AWS.
@@ -822,7 +727,7 @@ type AWSCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AWSMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AWSNetworks
 	// Workers is a list of worker groups.
@@ -869,7 +774,7 @@ type Alicloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AlicloudMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AlicloudNetworks
 	// Workers is a list of worker groups.
@@ -912,7 +817,7 @@ type PacketCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *PacketMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks PacketNetworks
 	// Workers is a list of worker groups.
@@ -941,7 +846,7 @@ type AzureCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *AzureMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks AzureNetworks
 	// ResourceGroup indicates whether to use an existing resource group or create a new one.
@@ -991,7 +896,7 @@ type GCPCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *GCPMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks GCPNetworks
 	// Workers is a list of worker groups.
@@ -1037,7 +942,7 @@ type OpenStackCloud struct {
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
 	// +optional
-	MachineImage *OpenStackMachineImage
+	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks OpenStackNetworks
 	// Workers is a list of worker groups.
@@ -1067,25 +972,6 @@ type OpenStackWorker struct {
 	Worker
 }
 
-// Local contains the Shoot specification for local provider.
-type Local struct {
-	// Networks holds information about the Kubernetes and infrastructure networks.
-	Networks LocalNetworks
-	// Endpoint of the local service.
-	Endpoint string
-	// MachineImage holds information about the machine image to use for all workers.
-	// It will default to the first image stated in the referenced CloudProfile if no
-	// value has been provided.
-	MachineImage *LocalMachineImage
-}
-
-// LocalNetworks holds information about the Kubernetes and infrastructure networks.
-type LocalNetworks struct {
-	gardencore.K8SNetworks
-	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
-	Workers []gardencore.CIDR
-}
-
 // Worker is the base definition of a worker group.
 type Worker struct {
 	// Name is the name of the worker group.
@@ -1108,6 +994,14 @@ type Worker struct {
 	Taints []corev1.Taint
 }
 
+// Extension contains type and provider information for Shoot extensions.
+type Extension struct {
+	// Type is the type of the extension resource.
+	Type string
+	// ProviderConfig is the configuration passed to extension resource.
+	ProviderConfig *gardencore.ProviderConfig
+}
+
 // Addons is a collection of configuration for specific addons which are managed by the Gardener.
 type Addons struct {
 	// KubernetesDashboard holds configuration settings for the kubernetes dashboard addon.
@@ -1121,7 +1015,7 @@ type Addons struct {
 	// ClusterAutoscaler holds configuration settings for the cluster autoscaler addon.
 	// DEPRECATED: This field will be removed in a future version.
 	// +optional
-	ClusterAutoscaler *ClusterAutoscaler
+	ClusterAutoscaler *AddonClusterAutoscaler
 	// Heapster holds configuration settings for the heapster addon.
 	// DEPRECATED: This field will be removed in a future version.
 	// +optional
@@ -1164,8 +1058,8 @@ type KubernetesDashboard struct {
 	AuthenticationMode *string
 }
 
-// ClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
-type ClusterAutoscaler struct {
+// AddonClusterAutoscaler describes configuration values for the cluster-autoscaler addon.
+type AddonClusterAutoscaler struct {
 	Addon
 }
 
@@ -1255,8 +1149,6 @@ const (
 	CloudProviderAlicloud CloudProvider = "alicloud"
 	// CloudProviderPacket is a constant for the Packet cloud provider.
 	CloudProviderPacket CloudProvider = "packet"
-	// CloudProviderLocal is a constant for the local development provider.
-	CloudProviderLocal CloudProvider = "local"
 )
 
 // Hibernation contains information whether the Shoot is suspended or not.
@@ -1308,6 +1200,30 @@ type Kubernetes struct {
 	Kubelet *KubeletConfig
 	// Version is the semantic Kubernetes version to use for the Shoot cluster.
 	Version string
+	// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+	ClusterAutoscaler *ClusterAutoscaler `json:"clusterAutoscaler,omitempty"`
+}
+
+// ClusterAutoscaler contains the configration flags for the Kubernetes cluster autoscaler.
+type ClusterAutoscaler struct {
+	// ScaleDownUtilizationThreshold defines the threshold in % under which a node is being removed
+	// +optional
+	ScaleDownUtilizationThreshold *float64
+	// ScaleDownUnneededTime defines how long a node should be unneeded before it is eligible for scale down (default: 10 mins).
+	// +optional
+	ScaleDownUnneededTime *metav1.Duration
+	// ScaleDownDelayAfterAdd defines how long after scale up that scale down evaluation resumes (default: 10 mins).
+	// +optional
+	ScaleDownDelayAfterAdd *metav1.Duration
+	// ScaleDownDelayAfterFailure how long after scale down failure that scale down evaluation resumes (default: 3 mins).
+	// +optional
+	ScaleDownDelayAfterFailure *metav1.Duration
+	// ScaleDownDelayAfterDelete how long after node deletion that scale down evaluation resumes, defaults to scanInterval (defaults to ScanInterval).
+	// +optional
+	ScaleDownDelayAfterDelete *metav1.Duration
+	// ScanInterval how often cluster is reevaluated for scale up or down (default: 10 secs).
+	// +optional
+	ScanInterval *metav1.Duration
 }
 
 // KubernetesConfig contains common configuration fields for the control plane components.
@@ -1471,6 +1387,12 @@ type KubeletConfig struct {
 	KubernetesConfig
 	// PodPIDsLimit is the maximum number of process IDs per pod allowed by the kubelet.
 	PodPIDsLimit *int64
+	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
+	// +optional
+	CPUCFSQuota *bool
+	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
+	// +optional
+	CPUManagerPolicy *string
 }
 
 // Maintenance contains information about the time window for maintenance operations and which

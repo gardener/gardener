@@ -19,7 +19,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
+
+	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
 )
 
 type cloudConfig struct {
@@ -40,15 +43,17 @@ type cloudConfig struct {
 // See this for more details:
 // https://github.com/kubernetes/cloud-provider-alibaba-cloud/blob/master/cloud-controller-manager/alicloud.go#L62
 func (b *AlicloudBotanist) GenerateCloudProviderConfig() (string, error) {
-	var (
-		vpcID     = "vpc_id"
-		vswitchID = fmt.Sprintf("vswitch_id_z%d", 0)
-	)
-	tf, err := b.NewShootTerraformer(common.TerraformerPurposeInfra)
+	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
+	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
+	// responsible.
+	if b.Shoot.InfrastructureStatus == nil {
+		return "", fmt.Errorf("no infrastructure status found")
+	}
+	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
 	if err != nil {
 		return "", err
 	}
-	stateVariables, err := tf.GetStateOutputVariables(vpcID, vswitchID)
+	vswitch, err := findVSWitchByPurposeAndZone(infrastructureStatus.VPC.VSwitches, alicloudv1alpha1.PurposeNodes, b.Shoot.Info.Spec.Cloud.Alicloud.Zones[0])
 	if err != nil {
 		return "", err
 	}
@@ -57,9 +62,9 @@ func (b *AlicloudBotanist) GenerateCloudProviderConfig() (string, error) {
 	secret := base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret])
 	cfg := &cloudConfig{}
 	cfg.Global.KubernetesClusterTag = b.Shoot.SeedNamespace
-	cfg.Global.VpcID = stateVariables[vpcID]
+	cfg.Global.VpcID = infrastructureStatus.VPC.ID
 	cfg.Global.ZoneID = b.Shoot.Info.Spec.Cloud.Alicloud.Zones[0]
-	cfg.Global.VswitchID = stateVariables[vswitchID]
+	cfg.Global.VswitchID = vswitch.ID
 	cfg.Global.AccessKeyID = key
 	cfg.Global.AccessKeySecret = secret
 	cfg.Global.Region = b.Shoot.Info.Spec.Cloud.Region
@@ -165,9 +170,10 @@ func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[st
 	}
 
 	secretData := map[string][]byte{
-		StorageEndpoint: []byte(stateVariables[StorageEndpoint]),
-		AccessKeyID:     b.Seed.Secret.Data[AccessKeyID],
-		AccessKeySecret: b.Seed.Secret.Data[AccessKeySecret],
+		common.BackupBucketName: []byte(stateVariables[BucketName]),
+		StorageEndpoint:         []byte(stateVariables[StorageEndpoint]),
+		AccessKeyID:             b.Seed.Secret.Data[AccessKeyID],
+		AccessKeySecret:         b.Seed.Secret.Data[AccessKeySecret],
 	}
 
 	backupConfigData := map[string]interface{}{
@@ -230,10 +236,10 @@ func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
 		},
 		"podAnnotations": map[string]interface{}{
-			fmt.Sprintf("checksum/%s", common.CSIAttacher):             b.CheckSums[common.CSIAttacher],
-			fmt.Sprintf("checksum/%s", common.CloudProviderSecretName): b.CheckSums[common.CloudProviderSecretName],
-			fmt.Sprintf("checksum/%s", common.CSIProvisioner):          b.CheckSums[common.CSIProvisioner],
-			fmt.Sprintf("checksum/%s", common.CSISnapshotter):          b.CheckSums[common.CSISnapshotter],
+			fmt.Sprintf("checksum/%s", gardencorev1alpha1.SecretNameCloudProvider): b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
+			fmt.Sprintf("checksum/%s", common.CSIAttacher):                         b.CheckSums[common.CSIAttacher],
+			fmt.Sprintf("checksum/%s", common.CSIProvisioner):                      b.CheckSums[common.CSIProvisioner],
+			fmt.Sprintf("checksum/%s", common.CSISnapshotter):                      b.CheckSums[common.CSISnapshotter],
 		},
 		"kubernetesVersion": b.ShootVersion(),
 		"enabled":           true,

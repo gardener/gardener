@@ -126,7 +126,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/packet/local"),
+				"Field": Equal("spec.aws/azure/gcp/alicloud/openstack/packet"),
 			}))
 		})
 
@@ -143,15 +143,10 @@ var _ = Describe("validation", func() {
 						AWS: &garden.AWSProfile{
 							Constraints: garden.AWSConstraints{
 								Kubernetes: kubernetesVersionConstraint,
-								MachineImages: []garden.AWSMachineImageMapping{
+								MachineImages: []garden.MachineImage{
 									{
-										Name: garden.MachineImageName("some-machineimage"),
-										Regions: []garden.AWSRegionalMachineImage{
-											{
-												Name: "eu-west-1",
-												AMI:  "ami-12345678",
-											},
-										},
+										Name:    "some-machineimage",
+										Version: "1.2.3",
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -209,7 +204,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine image validation", func() {
 				It("should forbid an empty list of machine images", func() {
-					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{}
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.MachineImage{}
 
 					errorList := ValidateCloudProfile(awsCloudProfile)
 
@@ -221,24 +216,14 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid duplicate names in list of machine images", func() {
-					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name: garden.MachineImageName("some-machineimage"),
-							Regions: []garden.AWSRegionalMachineImage{
-								{
-									Name: "my-region",
-									AMI:  "ami-a1b2c3d4",
-								},
-							},
+							Name:    "some-machineimage",
+							Version: "3.4.5",
 						},
 						{
-							Name: garden.MachineImageName("some-machineimage"),
-							Regions: []garden.AWSRegionalMachineImage{
-								{
-									Name: "my-region",
-									AMI:  "ami-a1b2c3d4",
-								},
-							},
+							Name:    "some-machineimage",
+							Version: "3.4.5",
 						},
 					}
 
@@ -251,11 +236,10 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
-				It("should forbid machine images with no regions", func() {
-					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
+				It("should forbid machine images with no version", func() {
+					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:    garden.MachineImageName("some-machineimage"),
-							Regions: []garden.AWSRegionalMachineImage{},
+							Name: "some-machineimage",
 						},
 					}
 
@@ -264,55 +248,7 @@ var _ = Describe("validation", func() {
 					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].regions", fldPath)),
-					}))
-				})
-
-				It("should forbid machine images with duplicate region names", func() {
-					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
-						{
-							Name: garden.MachineImageName("some-machineimage"),
-							Regions: []garden.AWSRegionalMachineImage{
-								{
-									Name: "my-region",
-									AMI:  "ami-a1b2c3d4",
-								},
-								{
-									Name: "my-region",
-									AMI:  "ami-a1b2c3d4",
-								},
-							},
-						},
-					}
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeDuplicate),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].regions[1]", fldPath)),
-					}))
-				})
-
-				It("should forbid machine images with invalid amis", func() {
-					awsCloudProfile.Spec.AWS.Constraints.MachineImages = []garden.AWSMachineImageMapping{
-						{
-							Name: garden.MachineImageName("some-machineimage"),
-							Regions: []garden.AWSRegionalMachineImage{
-								{
-									Name: "my-region",
-									AMI:  "invalid-ami",
-								},
-							},
-						},
-					}
-
-					errorList := ValidateCloudProfile(awsCloudProfile)
-
-					Expect(len(errorList)).To(Equal(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeInvalid),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].regions[0].ami", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
 					}))
 				})
 			})
@@ -457,13 +393,10 @@ var _ = Describe("validation", func() {
 						Azure: &garden.AzureProfile{
 							Constraints: garden.AzureConstraints{
 								Kubernetes: kubernetesVersionConstraint,
-								MachineImages: []garden.AzureMachineImage{
+								MachineImages: []garden.MachineImage{
 									{
-										Name:      garden.MachineImageName("some-machineimage"),
-										Publisher: "some-image",
-										Offer:     "some-image",
-										SKU:       "Beta",
-										Version:   "version-1.6.4",
+										Name:    "some-machineimage",
+										Version: "version-1.6.4",
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -514,7 +447,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine image validation", func() {
 				It("should forbid an empty list of machine images", func() {
-					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{}
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.MachineImage{}
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
@@ -526,20 +459,14 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid duplicate names in list of machine images", func() {
-					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:      garden.MachineImageName("some-machineimage"),
-							Publisher: "some-name",
-							Offer:     "some-name",
-							SKU:       "some-name",
-							Version:   "some-name",
+							Name:    "some-machineimage",
+							Version: "some-name",
 						},
 						{
-							Name:      garden.MachineImageName("some-machineimage"),
-							Publisher: "some-name",
-							Offer:     "some-name",
-							SKU:       "some-name",
-							Version:   "some-name",
+							Name:    "some-machineimage",
+							Version: "some-name",
 						},
 					}
 
@@ -553,35 +480,18 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid machine images with empty image names", func() {
-					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.AzureMachineImage{
+					azureCloudProfile.Spec.Azure.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:      garden.MachineImageName("some-machineimage"),
-							Publisher: "",
-							Offer:     "",
-							SKU:       "",
-							Version:   "",
+							Name: "some-machineimage",
 						},
 					}
 
 					errorList := ValidateCloudProfile(azureCloudProfile)
 
-					Expect(len(errorList)).To(Equal(4))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].publisher", fldPath)),
-					}))
-					Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].offer", fldPath)),
-					}))
-					Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].sku", fldPath)),
-					}))
-					Expect(*errorList[3]).To(MatchFields(IgnoreExtras, Fields{
+					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
 						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
-					}))
+					}))))
 				})
 			})
 
@@ -761,10 +671,10 @@ var _ = Describe("validation", func() {
 						GCP: &garden.GCPProfile{
 							Constraints: garden.GCPConstraints{
 								Kubernetes: kubernetesVersionConstraint,
-								MachineImages: []garden.GCPMachineImage{
+								MachineImages: []garden.MachineImage{
 									{
-										Name:  garden.MachineImageName("some-machineimage"),
-										Image: "v-1.6.4",
+										Name:    "some-machineimage",
+										Version: "v-1.6.4",
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -804,7 +714,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine image validation", func() {
 				It("should forbid an empty list of machine images", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{}
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.MachineImage{}
 
 					errorList := ValidateCloudProfile(gcpCloudProfile)
 
@@ -816,14 +726,14 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid duplicate names in list of machine images", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:  garden.MachineImageName("some-machineimage"),
-							Image: "some-image",
+							Name:    "some-machineimage",
+							Version: "some-image",
 						},
 						{
-							Name:  garden.MachineImageName("some-machineimage"),
-							Image: "some-image",
+							Name:    "some-machineimage",
+							Version: "some-image",
 						},
 					}
 
@@ -836,11 +746,10 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
-				It("should forbid machine images with empty image names", func() {
-					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.GCPMachineImage{
+				It("should forbid machine images with no version", func() {
+					gcpCloudProfile.Spec.GCP.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:  garden.MachineImageName("some-machineimage"),
-							Image: "",
+							Name: "some-machineimage",
 						},
 					}
 
@@ -849,7 +758,7 @@ var _ = Describe("validation", func() {
 					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].image", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
 					}))
 				})
 			})
@@ -1005,10 +914,10 @@ var _ = Describe("validation", func() {
 									},
 								},
 
-								MachineImages: []garden.OpenStackMachineImage{
+								MachineImages: []garden.MachineImage{
 									{
-										Name:  garden.MachineImageName("some-machineimage"),
-										Image: "v-1.6.4",
+										Name:    "some-machineimage",
+										Version: "v-1.6.4",
 									},
 								},
 								MachineTypes: openStackMachineTypesConstraint,
@@ -1108,7 +1017,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine image validation", func() {
 				It("should forbid an empty list of machine images", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{}
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.MachineImage{}
 
 					errorList := ValidateCloudProfile(openStackCloudProfile)
 
@@ -1120,14 +1029,14 @@ var _ = Describe("validation", func() {
 				})
 
 				It("should forbid duplicate names in list of machine images", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:  garden.MachineImageName("some-machineimage"),
-							Image: "some-image",
+							Name:    "some-machineimage",
+							Version: "some-image",
 						},
 						{
-							Name:  garden.MachineImageName("some-machineimage"),
-							Image: "some-image",
+							Name:    "some-machineimage",
+							Version: "some-image",
 						},
 					}
 
@@ -1140,11 +1049,10 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
-				It("should forbid machine images with empty image names", func() {
-					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.OpenStackMachineImage{
+				It("should forbid machine images with no version", func() {
+					openStackCloudProfile.Spec.OpenStack.Constraints.MachineImages = []garden.MachineImage{
 						{
-							Name:  garden.MachineImageName("some-machineimage"),
-							Image: "",
+							Name: "some-machineimage",
 						},
 					}
 
@@ -1153,7 +1061,7 @@ var _ = Describe("validation", func() {
 					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].image", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
 					}))
 				})
 			})
@@ -1303,10 +1211,10 @@ var _ = Describe("validation", func() {
 						Alicloud: &garden.AlicloudProfile{
 							Constraints: garden.AlicloudConstraints{
 								Kubernetes: kubernetesVersionConstraint,
-								MachineImages: []garden.AlicloudMachineImage{
+								MachineImages: []garden.MachineImage{
 									{
-										Name: garden.MachineImageName("some-machineimage"),
-										ID:   "v.vhd",
+										Name:    "some-machineimage",
+										Version: "v.vhd",
 									},
 								},
 								MachineTypes: []garden.AlicloudMachineType{
@@ -1386,7 +1294,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine image validation", func() {
 				It("should forbid an empty list of machine images", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.MachineImages = []garden.AlicloudMachineImage{}
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages = []garden.MachineImage{}
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
@@ -1397,15 +1305,15 @@ var _ = Describe("validation", func() {
 					}))
 				})
 
-				It("should forbid empty machine image id", func() {
-					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].ID = ""
+				It("should forbid empty machine image version", func() {
+					alicloudProfile.Spec.Alicloud.Constraints.MachineImages[0].Version = ""
 
 					errorList := ValidateCloudProfile(alicloudProfile)
 
 					Expect(len(errorList)).To(Equal(1))
 					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].id", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
 					}))
 				})
 			})
@@ -1613,10 +1521,10 @@ var _ = Describe("validation", func() {
 						Packet: &garden.PacketProfile{
 							Constraints: garden.PacketConstraints{
 								Kubernetes: kubernetesVersionConstraint,
-								MachineImages: []garden.PacketMachineImage{
+								MachineImages: []garden.MachineImage{
 									{
-										Name: "Container Linux - Stable",
-										ID:   "d61c3912-8422-4daf-835e-854efa0062e4",
+										Name:    "Container Linux - Stable",
+										Version: "d61c3912-8422-4daf-835e-854efa0062e4",
 									},
 								},
 								MachineTypes: machineTypesConstraint,
@@ -1672,7 +1580,7 @@ var _ = Describe("validation", func() {
 
 			Context("machine image validation", func() {
 				It("should forbid an empty list of machine images", func() {
-					packetProfile.Spec.Packet.Constraints.MachineImages = []garden.PacketMachineImage{}
+					packetProfile.Spec.Packet.Constraints.MachineImages = []garden.MachineImage{}
 
 					errorList := ValidateCloudProfile(packetProfile)
 
@@ -1682,14 +1590,14 @@ var _ = Describe("validation", func() {
 					}))))
 				})
 
-				It("should forbid empty machine image id", func() {
-					packetProfile.Spec.Packet.Constraints.MachineImages[0].ID = ""
+				It("should forbid empty machine image version", func() {
+					packetProfile.Spec.Packet.Constraints.MachineImages[0].Version = ""
 
 					errorList := ValidateCloudProfile(packetProfile)
 
 					Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].id", fldPath)),
+						"Field": Equal(fmt.Sprintf("spec.%s.constraints.machineImages[0].version", fldPath)),
 					}))))
 				})
 			})
@@ -1839,6 +1747,13 @@ var _ = Describe("validation", func() {
 							APIGroup: "rbac.authorization.k8s.io",
 							Kind:     rbacv1.UserKind,
 							Name:     "alice.doe@example.com",
+						},
+					},
+					Viewers: []rbacv1.Subject{
+						{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     rbacv1.UserKind,
+							Name:     "bob.doe@example.com",
 						},
 					},
 				},
@@ -2624,7 +2539,7 @@ var _ = Describe("validation", func() {
 						KubernetesDashboard: &garden.KubernetesDashboard{
 							Addon: addon,
 						},
-						ClusterAutoscaler: &garden.ClusterAutoscaler{
+						ClusterAutoscaler: &garden.AddonClusterAutoscaler{
 							Addon: addon,
 						},
 						NginxIngress: &garden.NginxIngress{
@@ -2759,7 +2674,7 @@ var _ = Describe("validation", func() {
 			}))
 			Expect(*errorList[2]).To(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeForbidden),
-				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+				"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 			}))
 		})
 
@@ -2857,6 +2772,30 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.cloud.seed"),
 				}))),
 			)
+		})
+
+		It("should forbid passing an extension w/o type information", func() {
+			extension := garden.Extension{}
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(ConsistOf(
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("spec.extensions[0].type"),
+				}))))
+		})
+
+		It("should allow passing an extension w/ type information", func() {
+			extension := garden.Extension{
+				Type: "arbitrary",
+			}
+			shoot.Spec.Extensions = append(shoot.Spec.Extensions, extension)
+
+			errorList := ValidateShoot(shoot)
+
+			Expect(errorList).To(BeEmpty())
 		})
 
 		Context("AWS specific validation", func() {
@@ -3296,7 +3235,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -3708,7 +3647,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -4054,7 +3993,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -4446,7 +4385,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -4670,7 +4609,7 @@ var _ = Describe("validation", func() {
 					"Field": Equal(fmt.Sprintf("spec.cloud.%s", fldPath)),
 				})), PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))))
 			})
 		})
@@ -4988,7 +4927,7 @@ var _ = Describe("validation", func() {
 				}))
 				Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeForbidden),
-					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet/local"),
+					"Field": Equal("spec.cloud.aws/azure/gcp/alicloud/openstack/packet"),
 				}))
 			})
 		})
@@ -5330,6 +5269,24 @@ var _ = Describe("validation", func() {
 			})
 		})
 
+		Context("ClusterAutoscaler validation", func() {
+			DescribeTable("cluster autoscaler values",
+				func(clusterAutoscaler garden.ClusterAutoscaler, matcher gomegatypes.GomegaMatcher) {
+					Expect(ValidateClusterAutoscaler(clusterAutoscaler, nil)).To(matcher)
+				},
+				Entry("valid", garden.ClusterAutoscaler{}, BeEmpty()),
+				Entry("valid with threshold", garden.ClusterAutoscaler{
+					ScaleDownUtilizationThreshold: makeFloat64Pointer(0.5),
+				}, BeEmpty()),
+				Entry("invalid negative threshold", garden.ClusterAutoscaler{
+					ScaleDownUtilizationThreshold: makeFloat64Pointer(-0.5),
+				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), -0.5, "can not be negative"))),
+				Entry("invalid > 1 threshold", garden.ClusterAutoscaler{
+					ScaleDownUtilizationThreshold: makeFloat64Pointer(1.5),
+				}, ConsistOf(field.Invalid(field.NewPath("scaleDownUtilizationThreshold"), 1.5, "can not be greater than 1.0"))),
+			)
+		})
+
 		Context("AuditConfig validation", func() {
 			It("should forbid empty name", func() {
 				shoot.Spec.Kubernetes.KubeAPIServer.AuditConfig.AuditPolicy.ConfigMapRef.Name = ""
@@ -5592,10 +5549,13 @@ var _ = Describe("validation", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "example-backupinfrastructure",
 					Namespace: "garden",
+					Annotations: map[string]string{
+						common.BackupInfrastructureForceDeletion : "true",
+					},
 				},
 				Spec: garden.BackupInfrastructureSpec{
 					Seed:     "aws",
-					ShootUID: types.UID(utils.ComputeSHA1Hex([]byte(fmt.Sprintf(fmt.Sprintf("shoot-%s-%s", "garden", "backup-infrastructure"))))),
+					ShootUID: types.UID(utils.ComputeSHA1Hex([]byte("shoot-garden-backup-infrastructure"))),
 				},
 			}
 		})
@@ -5611,15 +5571,14 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.namespace"),
-			}))
+			}))))
 		})
 
 		It("should forbid BackupInfrastructure specification with empty or invalid keys", func() {
@@ -5628,15 +5587,14 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateBackupInfrastructure(backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.shootUID"),
-			}))
+			}))))
 		})
 
 		It("should forbid updating some keys", func() {
@@ -5646,15 +5604,14 @@ var _ = Describe("validation", func() {
 
 			errorList := ValidateBackupInfrastructureUpdate(newBackupInfrastructure, backupInfrastructure)
 
-			Expect(len(errorList)).To(Equal(2))
-			Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
+			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
-			}))
-			Expect(*errorList[1]).To(MatchFields(IgnoreExtras, Fields{
+			})),
+			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.shootUID"),
-			}))
+			}))))
 		})
 	})
 })

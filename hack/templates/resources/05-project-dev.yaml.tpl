@@ -30,7 +30,7 @@ metadata:
   % if labels != {}:
   labels: ${yaml.dump(labels, width=10000, default_flow_style=None)}
   % endif
-spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", ""); namespace = value("spec.namespace", ""); members = value("spec.members", []) %>
+spec:<% owner = value("spec.owner", {}); description = value("spec.description", ""); purpose = value("spec.purpose", ""); namespace = value("spec.namespace", ""); members = value("spec.members", []); viewers = value("spec.viewers", []) %>
   % if owner != {}:
   owner: ${yaml.dump(owner, width=10000, default_flow_style=None)}
   % else:
@@ -46,6 +46,14 @@ spec:<% owner = value("spec.owner", {}); description = value("spec.description",
   - apiGroup: rbac.authorization.k8s.io
     kind: User
     name: alice.doe@example.com
+  % endif
+  % if viewers != []:
+  viewers: ${yaml.dump(viewers, width=10000, default_flow_style=None)}
+  % else:
+  viewers:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: bob.doe@example.com
   % endif
   % if description != "":
   description: ${description}
