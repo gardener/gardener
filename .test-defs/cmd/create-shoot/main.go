@@ -161,7 +161,7 @@ func main() {
 	testLogger.Infof("Successfully created shoot %s", shootName)
 
 
-	backupInfrastructure, err := getBackupInfrastructureOfShoot(ctx, shootGardenerTest)
+	backupInfrastructure, err := getBackupInfrastructureOfShoot(ctx, shootGardenerTest, shootObject)
 	if err != nil {
 		testLogger.Fatal(err)
 	}
