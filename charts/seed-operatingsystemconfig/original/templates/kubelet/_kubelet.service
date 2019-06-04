@@ -19,6 +19,6 @@
 {{- if .Values.kubernetes.kubelet.hostnameOverride }}
     ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
 {{- end }}
-    ExecStart=/opt/bin/hyperkube kubelet $KUBELET_EXTRA_ARGS \
+    ExecStart=/opt/bin/hyperkube kubelet \
 {{ include "kubelet-flags" . | indent 8 }}
 {{- end -}}
