@@ -247,8 +247,8 @@ func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, na
 			}
 			return retry.Ok()
 		}
-		return retry.MinorError(fmt.Errorf("operating system config %q is not ready (generation up to date=%t, last operation state=%s, cloud config present=%t",
-			osc.Name, osc.Status.ObservedGeneration == osc.Generation, osc.Status.LastOperation.State, osc.Status.CloudConfig != nil))
+		return retry.MinorError(fmt.Errorf("operating system config %q is not ready (generation up to date=%t, last operation=%v, cloud config present=%t",
+			osc.Name, osc.Status.ObservedGeneration == osc.Generation, osc.Status.LastOperation, osc.Status.CloudConfig != nil))
 	})
 }
 
