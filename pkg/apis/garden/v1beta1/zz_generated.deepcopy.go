@@ -2468,6 +2468,11 @@ func (in *ProjectSpec) DeepCopyInto(out *ProjectSpec) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.Viewers != nil {
+		in, out := &in.Viewers, &out.Viewers
+		*out = make([]rbacv1.Subject, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

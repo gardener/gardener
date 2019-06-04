@@ -153,7 +153,7 @@ const (
 	// GardenRoleOpenVPNDiffieHellman is the value of the GardenRole key indicating type 'openvpn-diffie-hellman'.
 	GardenRoleOpenVPNDiffieHellman = "openvpn-diffie-hellman"
 
-	// GardenRoleMembers ist the value of GardenRole key indicating type 'members'.
+	// GardenRoleMembers is the value of GardenRole key indicating type 'members'.
 	GardenRoleMembers = "members"
 
 	//GardenRoleProject is the value of GardenRole key indicating type 'project'.

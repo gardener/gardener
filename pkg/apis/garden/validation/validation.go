@@ -534,6 +534,9 @@ func ValidateProjectSpec(projectSpec *garden.ProjectSpec, fldPath *field.Path) f
 	for i, member := range projectSpec.Members {
 		allErrs = append(allErrs, ValidateSubject(member, fldPath.Child("members").Index(i))...)
 	}
+	for i, viewer := range projectSpec.Viewers {
+		allErrs = append(allErrs, ValidateSubject(viewer, fldPath.Child("viewers").Index(i))...)
+	}
 	if createdBy := projectSpec.CreatedBy; createdBy != nil {
 		allErrs = append(allErrs, ValidateSubject(*createdBy, fldPath.Child("createdBy"))...)
 	}

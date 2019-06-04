@@ -3773,6 +3773,7 @@ func autoConvert_v1beta1_ProjectSpec_To_garden_ProjectSpec(in *ProjectSpec, out 
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
 	out.Members = *(*[]rbacv1.Subject)(unsafe.Pointer(&in.Members))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
+	out.Viewers = *(*[]rbacv1.Subject)(unsafe.Pointer(&in.Viewers))
 	return nil
 }
 
@@ -3788,6 +3789,7 @@ func autoConvert_garden_ProjectSpec_To_v1beta1_ProjectSpec(in *garden.ProjectSpe
 	out.Purpose = (*string)(unsafe.Pointer(in.Purpose))
 	out.Members = *(*[]rbacv1.Subject)(unsafe.Pointer(&in.Members))
 	out.Namespace = (*string)(unsafe.Pointer(in.Namespace))
+	out.Viewers = *(*[]rbacv1.Subject)(unsafe.Pointer(&in.Viewers))
 	return nil
 }
 

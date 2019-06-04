@@ -124,6 +124,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 			"uid":     project.UID,
 			"owner":   project.Spec.Owner,
 			"members": project.Spec.Members,
+			"viewers": project.Spec.Viewers,
 		},
 	}, nil); err != nil {
 		c.reportEvent(project, true, gardenv1beta1.ProjectEventNamespaceReconcileFailed, "Error while creating RBAC rules for namespace %q: %+v", namespace.Name, err)

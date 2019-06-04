@@ -1749,6 +1749,13 @@ var _ = Describe("validation", func() {
 							Name:     "alice.doe@example.com",
 						},
 					},
+					Viewers: []rbacv1.Subject{
+						{
+							APIGroup: "rbac.authorization.k8s.io",
+							Kind:     rbacv1.UserKind,
+							Name:     "bob.doe@example.com",
+						},
+					},
 				},
 			}
 		})

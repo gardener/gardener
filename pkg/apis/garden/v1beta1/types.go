@@ -379,13 +379,17 @@ type ProjectSpec struct {
 	// +optional
 	Purpose *string `json:"purpose,omitempty"`
 	// Members is a list of subjects representing a user name, an email address, or any other identifier of a user
-	// that should be part of this project.
+	// that should be part of this project with full permissions to manage it.
 	// +optional
 	Members []rbacv1.Subject `json:"members,omitempty"`
 	// Namespace is the name of the namespace that has been created for the Project object.
 	// A nil value means that Gardener will determine the name of the namespace.
 	// +optional
 	Namespace *string `json:"namespace,omitempty"`
+	// Viewers is a list of subjects representing a user name, an email address, or any other identifier of a user
+	// that should be part of this project with limited permissions to only view some resources.
+	// +optional
+	Viewers []rbacv1.Subject `json:"viewers,omitempty"`
 }
 
 // ProjectStatus holds the most recently observed status of the project.
