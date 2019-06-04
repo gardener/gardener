@@ -12,28 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:generate mockgen -package=context -destination=funcs.go github.com/gardener/gardener/pkg/mock/go/context WithTimeout,CancelFunc
-//go:generate mockgen -package=context -destination=mocks.go github.com/gardener/gardener/pkg/mock/go/context Context
+//go:generate mockgen -destination=funcs.go -package=retry github.com/gardener/gardener/pkg/mock/gardener/utils/retry WaitFunc,Func
+//go:generate mockgen -destination=mocks.go -package=retry github.com/gardener/gardener/pkg/utils/retry ErrorAggregator,ErrorAggregatorFactory,IntervalFactory
 
-package context
+package retry
 
 import (
 	"context"
-	"time"
 )
 
-// Context allows mocking context.Context. The interface is necessary due to an issue with
-// golang/mock not being able to generate code for go's core context package.
-type Context interface {
-	context.Context
+// WaitFunc allows mocking retry.WaitFunc.
+type WaitFunc interface {
+	Do(ctx context.Context) (context.Context, context.CancelFunc)
 }
 
-// WithTimeout is an interface that allows mocking `WithTimeout`.
-type WithTimeout interface {
-	Do(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc)
-}
-
-// CancelFunc is an interface that allows mocking `CancelFunc`.
-type CancelFunc interface {
-	Do()
+// Func allows mocking retry.Func.
+type Func interface {
+	Do(ctx context.Context) (done bool, err error)
 }

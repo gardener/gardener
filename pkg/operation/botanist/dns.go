@@ -21,6 +21,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -29,7 +31,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -108,14 +109,14 @@ func (b *Botanist) waitUntilDNSProviderReady(ctx context.Context, name string) e
 		message string
 	)
 
-	if err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(ctx context.Context) (done bool, err error) {
 		provider := &dnsv1alpha1.DNSProvider{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, provider); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if provider.Status.State == dnsv1alpha1.STATE_READY {
-			return true, nil
+			return retry.Ok()
 		}
 
 		status = provider.Status.State
@@ -124,7 +125,7 @@ func (b *Botanist) waitUntilDNSProviderReady(ctx context.Context, name string) e
 		}
 
 		b.Logger.Infof("Waiting for %q DNS provider to be ready... (status=%s, message=%s)", name, status, message)
-		return false, nil
+		return retry.MinorError(fmt.Errorf("DNS provider %q is not ready (status=%s, message=%s)", name, status, message))
 	}); err != nil {
 		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed to create DNS provider for %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
 	}
@@ -163,14 +164,14 @@ func (b *Botanist) waitUntilDNSEntryReady(ctx context.Context, name string) erro
 		message string
 	)
 
-	if err := wait.PollImmediate(5*time.Second, 2*time.Minute, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, 5*time.Second, 2*time.Minute, func(ctx context.Context) (done bool, err error) {
 		entry := &dnsv1alpha1.DNSEntry{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, entry); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if entry.Status.ObservedGeneration == entry.Generation && entry.Status.State == dnsv1alpha1.STATE_READY {
-			return true, nil
+			return retry.Ok()
 		}
 
 		status = entry.Status.State
@@ -179,7 +180,7 @@ func (b *Botanist) waitUntilDNSEntryReady(ctx context.Context, name string) erro
 		}
 
 		b.Logger.Infof("Waiting for %q DNS record to be ready... (status=%s, message=%s)", name, status, message)
-		return false, nil
+		return retry.MinorError(fmt.Errorf("DNS record %q is not ready (status=%s, message=%s)", name, status, message))
 	}); err != nil {
 		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Failed to create %q DNS record: %q (status=%s, message=%s)", name, err.Error(), status, message))
 	}

@@ -15,7 +15,10 @@
 package shoot
 
 import (
+	"context"
 	"time"
+
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -39,12 +42,12 @@ import (
 func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1.LastError {
 	// We create the botanists (which will do the actual work).
 	var botanist *botanistpkg.Botanist
-	if err := utils.Retry(10*time.Second, 10*time.Minute, func() (ok, severe bool, err error) {
+	if err := utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
 		botanist, err = botanistpkg.New(o)
 		if err != nil {
-			return false, false, err
+			return utilretry.MinorError(err)
 		}
-		return true, false, nil
+		return utilretry.Ok()
 	}); err != nil {
 		return formatError("Failed to create a Botanist", err)
 	}
@@ -134,7 +137,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		waitUntilBackupInfrastructureReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup infrastructure has been reconciled",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilBackupInfrastructureReconciled),
+			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureReconciled),
 			Dependencies: flow.NewTaskIDs(deployBackupInfrastructure),
 		})
 		deployETCDStorageClass = g.Add(flow.Task{
@@ -148,7 +151,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
 		deployCloudProviderConfig = g.Add(flow.Task{
@@ -163,7 +166,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilKubeAPIServerReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAPIServer),
 		})
 		deployCloudSpecificControlPlane = g.Add(flow.Task{
@@ -233,7 +236,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
-			Fn:           flow.SimpleTaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
+			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, waitUntilWorkerReady, deployCSIControllers),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{

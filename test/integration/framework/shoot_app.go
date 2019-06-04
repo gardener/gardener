@@ -26,6 +26,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/chartrenderer"
@@ -40,7 +42,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/helm/pkg/repo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -160,96 +161,92 @@ func (o *GardenerTestOperation) HTTPGet(ctx context.Context, url string) (*http.
 
 // WaitUntilDeploymentIsRunning waits until the deployment with <deploymentName> is running
 func (o *GardenerTestOperation) WaitUntilDeploymentIsRunning(ctx context.Context, deploymentName, deploymentNamespace string, c kubernetes.Interface) error {
-	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		deployment := &appsv1.Deployment{}
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: deploymentNamespace, Name: deploymentName}, deployment); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if err := health.CheckDeployment(deployment); err != nil {
 			o.Logger.Infof("Waiting for %s to be ready!!", deploymentName)
-			return false, nil
+			return retry.MinorError(fmt.Errorf("deployment %q is not healthy: %v", deploymentName, err))
 		}
 
-		return true, nil
-
-	}, ctx.Done())
+		return retry.Ok()
+	})
 }
 
 // WaitUntilStatefulSetIsRunning waits until the stateful set with <statefulSetName> is running
 func (o *GardenerTestOperation) WaitUntilStatefulSetIsRunning(ctx context.Context, statefulSetName, statefulSetNamespace string, c kubernetes.Interface) error {
-	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		statefulSet := &appsv1.StatefulSet{}
 		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: statefulSetNamespace, Name: statefulSetName}, statefulSet); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if err := health.CheckStatefulSet(statefulSet); err != nil {
 			o.Logger.Infof("Waiting for %s to be ready!!", statefulSetName)
-			return false, nil
+			return retry.MinorError(fmt.Errorf("stateful set %s is not healthy: %v", statefulSetName, err))
 		}
-		o.Logger.Infof("%s is now ready!!", statefulSetName)
-		return true, nil
 
-	}, ctx.Done())
+		o.Logger.Infof("%s is now ready!!", statefulSetName)
+		return retry.Ok()
+	})
 }
 
 // WaitUntilDeploymentsWithLabelsIsReady wait until pod with labels <podLabels> is running
 func (o *GardenerTestOperation) WaitUntilDeploymentsWithLabelsIsReady(ctx context.Context, deploymentLabels labels.Selector, namespace string, client kubernetes.Interface) error {
-	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
-		var (
-			deployments *appsv1.DeploymentList
-			err         error
-		)
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		var deployments *appsv1.DeploymentList
 
 		deployments, err = getDeploymentListByLabels(ctx, deploymentLabels, namespace, client)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				o.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels.String())
-				return false, nil
+				return retry.MinorError(fmt.Errorf("no deployments with labels %s exist", deploymentLabels.String()))
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		for _, deployment := range deployments.Items {
 			err = health.CheckDeployment(&deployment)
 			if err != nil {
 				o.Logger.Infof("Waiting for deployments with labels: %v to be ready!!", deploymentLabels)
-				return false, nil
+				return retry.MinorError(fmt.Errorf("deployment %s is not healthy: %v", deployment.Name, err))
 			}
 		}
-		return true, nil
-	}, ctx.Done())
+		return retry.Ok()
+	})
 }
 
 // WaitUntilGuestbookAppIsAvailable waits until the guestbook app is available and ready to serve requests
 func (o *GardenerTestOperation) WaitUntilGuestbookAppIsAvailable(ctx context.Context, guestbookAppUrls []string) error {
-	return wait.PollImmediateUntil(defaultPollInterval, func() (bool, error) {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
 		for _, guestbookAppURL := range guestbookAppUrls {
 			response, err := o.HTTPGet(ctx, guestbookAppURL)
 			if err != nil {
-				return false, err
+				return retry.SevereError(err)
 			}
 
 			if response.StatusCode != http.StatusOK {
 				o.Logger.Infof("Guestbook app url: %q is not available yet", guestbookAppURL)
-				return false, nil
+				return retry.MinorError(fmt.Errorf("guestbook app url %q returned status %s", guestbookAppURL, response.Status))
 			}
 
 			responseBytes, err := ioutil.ReadAll(response.Body)
 			if err != nil {
-				return false, err
+				return retry.SevereError(err)
 			}
 
 			bodyString := string(responseBytes)
 			if strings.Contains(bodyString, "404") || strings.Contains(bodyString, "503") {
 				o.Logger.Infof("Guestbook app is not ready yet")
-				return false, nil
+				return retry.MinorError(fmt.Errorf("guestbook response body contained an error code"))
 			}
 		}
 		o.Logger.Infof("Rejoice, the guestbook app urls are available now!")
-		return true, nil
-	}, ctx.Done())
+		return retry.Ok()
+	})
 }
 
 // GetCloudProvider returns the cloud provider for the shoot
@@ -402,21 +399,21 @@ func (o *GardenerTestOperation) GetElasticsearchLogs(ctx context.Context, elasti
 
 // WaitUntilElasticsearchReceivesLogs waits until the elasticsearch instance in <elasticsearchNamespace> receives <expected> logs from <podName>
 func (o *GardenerTestOperation) WaitUntilElasticsearchReceivesLogs(ctx context.Context, elasticsearchNamespace, podName string, expected uint64, client kubernetes.Interface) error {
-	return wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
 		search, err := o.GetElasticsearchLogs(ctx, elasticsearchNamespace, podName, client)
 		if err != nil {
-			return true, err
+			return retry.SevereError(err)
 		}
 
 		actual := search.Hits.Total
 		if expected > actual {
 			o.Logger.Infof("Waiting to receive %d logs, currently received %d", expected, actual)
-			return false, nil
+			return retry.MinorError(fmt.Errorf("received only %d/%d logs", actual, expected))
 		} else if expected < search.Hits.Total {
-			return true, fmt.Errorf("expected to receive %d logs but was %d", expected, actual)
+			return retry.SevereError(fmt.Errorf("expected to receive %d logs but was %d", expected, actual))
 		}
 
 		o.Logger.Infof("Received all of %d logs", actual)
-		return true, nil
-	}, ctx.Done())
+		return retry.Ok()
+	})
 }
