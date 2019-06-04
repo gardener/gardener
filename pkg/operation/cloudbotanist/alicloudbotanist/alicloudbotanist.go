@@ -19,13 +19,11 @@ import (
 	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	alicloudclient "github.com/gardener/gardener/pkg/client/alicloud"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	"github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud"
 	alicloudv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -96,24 +94,11 @@ func findSecurityGroupByPurpose(securityGroups []alicloudv1alpha1.SecurityGroup,
 
 // New takes an operation object <o> and creates a new AlicloudBotanist object.
 func New(o *operation.Operation, purpose string) (*AlicloudBotanist, error) {
-	var (
-		cloudProvider gardenv1beta1.CloudProvider
-		secret        *corev1.Secret
-		region        string
-		err           error
-		client        alicloudclient.ClientInterface
-	)
+	var cloudProvider gardenv1beta1.CloudProvider
 
 	switch purpose {
 	case common.CloudPurposeShoot:
 		cloudProvider = o.Shoot.CloudProvider
-		secret = o.Shoot.Secret
-		region = o.Shoot.Info.Spec.Cloud.Region
-		client, err = alicloudclient.NewClient(string(secret.Data[AccessKeyID]), string(secret.Data[AccessKeySecret]), region)
-		if err != nil {
-			return nil, err
-		}
-
 	case common.CloudPurposeSeed:
 		cloudProvider = o.Seed.CloudProvider
 	}
@@ -125,7 +110,6 @@ func New(o *operation.Operation, purpose string) (*AlicloudBotanist, error) {
 	return &AlicloudBotanist{
 		Operation:         o,
 		CloudProviderName: "alicloud",
-		AlicloudClient:    client,
 	}, nil
 }
 

@@ -81,8 +81,8 @@ ignored = [
   version = "3.3.10"
 
 [[constraint]]
-  name = "github.com/aliyun/alibaba-cloud-sdk-go"
-  version = "1.49.2"
+  name = "github.com/aliyun/aliyun-oss-go-sdk"
+  version = "1.9.5"
 
 [[override]]
   name = "github.com/gardener/external-dns-management"
@@ -153,10 +153,6 @@ ignored = [
 [[constraint]]
   name = "github.com/golang/mock"
   version = "1.2.0"
-
-[[constraint]]
-  name = "github.com/aliyun/aliyun-oss-go-sdk"
-  version = "1.9.5"
 
 # use the same version that is referenced by k8s.io, mainly required by Helm
 # https://github.com/kubernetes/kubernetes/blob/v1.13.1/Godeps/Godeps.json#L2996

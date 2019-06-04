@@ -58,26 +58,6 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:17a840e7058b98a31da6e3775e3ac7b90eae9f5fc76413397cc0b68c9e03a2e2"
-  name = "github.com/aliyun/alibaba-cloud-sdk-go"
-  packages = [
-    "sdk",
-    "sdk/auth",
-    "sdk/auth/credentials",
-    "sdk/auth/credentials/provider",
-    "sdk/auth/signers",
-    "sdk/endpoints",
-    "sdk/errors",
-    "sdk/requests",
-    "sdk/responses",
-    "sdk/utils",
-    "services/vpc",
-  ]
-  pruneopts = "NUT"
-  revision = "6c7e87673c6e93922019eaa2229b32c245b7cf22"
-  version = "1.58.1"
-
-[[projects]]
   digest = "1:c5c73365822fb6a7bbe288316868057ae58447ddd95ecef466b6dbe93c37670e"
   name = "github.com/aliyun/aliyun-oss-go-sdk"
   packages = ["oss"]
@@ -736,14 +716,6 @@
   revision = "2315d5715e36303a941d907f038da7f7c44c773b"
 
 [[projects]]
-  digest = "1:6bc0652ea6e39e22ccd522458b8bdd8665bf23bdc5a20eec90056e4dc7e273ca"
-  name = "github.com/satori/go.uuid"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3"
-  version = "v1.2.0"
-
-[[projects]]
   digest = "1:998e4640c25e00ccb7b2569bf94562283937b8afb3485c0e1a0a05a15330240d"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -1027,14 +999,6 @@
   pruneopts = "NUT"
   revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
   version = "v0.9.1"
-
-[[projects]]
-  digest = "1:d74ba1aea6244ead12e4f16d5f61a15ced9a2f2d1cae2021fbb76088b27e7afa"
-  name = "gopkg.in/ini.v1"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "c85607071cf08ca1adaf48319cd1aa322e81d8c1"
-  version = "v1.42.0"
 
 [[projects]]
   digest = "1:80c34337e8a734e190f2d1b716cae774cca74db98315166f92074434e9af0227"
@@ -1654,13 +1618,12 @@
   revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
 
 [[projects]]
-  digest = "1:65dc13eb7585ff3674eaf72441bac9bb104ef7a31ce182cf134235e35f4f5436"
+  digest = "1:d1f08fb8a745836e7aef55ecb5a1cdb59d92517a3bd564f356426699314ff6f0"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/client/fake",
-    "pkg/controller/controllerutil",
     "pkg/runtime/log",
   ]
   pruneopts = "NUT"
@@ -1693,10 +1656,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Masterminds/semver",
-    "github.com/aliyun/alibaba-cloud-sdk-go/services/vpc",
     "github.com/aliyun/aliyun-oss-go-sdk/oss",
     "github.com/aws/aws-sdk-go/aws",
-    "github.com/aws/aws-sdk-go/aws/awserr",
     "github.com/aws/aws-sdk-go/aws/credentials",
     "github.com/aws/aws-sdk-go/aws/session",
     "github.com/aws/aws-sdk-go/service/ec2",
@@ -1704,6 +1665,7 @@
     "github.com/aws/aws-sdk-go/service/sts",
     "github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1",
     "github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme",
+    "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud",
     "github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1",
     "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws",
     "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1",
@@ -1889,7 +1851,6 @@
     "k8s.io/kube-openapi/pkg/common",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
-    "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
