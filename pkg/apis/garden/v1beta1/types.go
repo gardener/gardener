@@ -1442,7 +1442,11 @@ type KubeletConfig struct {
 	// +optional
 	PodPIDsLimit *int64 `json:"podPidsLimit,omitempty"`
 	// CPUCFSQuota allows you to disable/enable CPU throttling for Pods.
+	// +optional
 	CPUCFSQuota *bool `json:"cpuCFSQuota,omitempty"`
+	// CPUManagerPolicy allows to set alternative CPU management policies (default: none).
+	// +optional
+	CPUManagerPolicy *string `json:"cpuManagerPolicy,omitempty"`
 }
 
 // Maintenance contains information about the time window for maintenance operations and which

@@ -4159,6 +4159,13 @@ func schema_pkg_apis_garden_v1beta1_KubeletConfig(ref common.ReferenceCallback) 
 							Format:      "",
 						},
 					},
+					"cpuManagerPolicy": {
+						SchemaProps: spec.SchemaProps{
+							Description: "CPUManagerPolicy allows to set alternative CPU management policies (default: none).",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},

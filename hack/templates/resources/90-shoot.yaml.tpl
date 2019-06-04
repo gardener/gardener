@@ -366,6 +366,7 @@ spec:
     % else:
   # kubelet:
   #   cpuCFSQuota: true
+  #   cpuManagerPolicy: none
   #   podPidsLimit: 10
   #   featureGates:
   #     SomeKubernetesFeature: true

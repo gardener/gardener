@@ -22,7 +22,7 @@ clusterDNS:
 - {{ required "kubernetes.clusterDNS is required" .Values.kubernetes.clusterDNS }}
 configTrialDuration: 10m0s
 cpuCFSQuota: {{ .Values.kubernetes.kubelet.cpuCFSQuota }}
-cpuManagerPolicy: none
+cpuManagerPolicy: {{ .Values.kubernetes.kubelet.cpuManagerPolicy }}
 cpuManagerReconcilePeriod: 10s
 enableControllerAttachDetach: true
 enableDebuggingHandlers: true
