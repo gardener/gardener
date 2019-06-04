@@ -32,7 +32,6 @@ import (
 	cidrvalidation "github.com/gardener/gardener/pkg/utils/validation/cidr"
 
 	"github.com/robfig/cron"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -2028,27 +2027,13 @@ func ValidateBackupInfrastructure(backupInfrastructure *garden.BackupInfrastruct
 func ValidateBackupInfrastructureUpdate(newBackupInfrastructure, oldBackupInfrastructure *garden.BackupInfrastructure) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	allErrs = append(allErrs, ValidateBackupInfrastructureMetaUpdate(&newBackupInfrastructure.ObjectMeta, &oldBackupInfrastructure.ObjectMeta,field.NewPath("metadata"))...)
+	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(&newBackupInfrastructure.ObjectMeta, &oldBackupInfrastructure.ObjectMeta, field.NewPath("metadata"))...)
 	allErrs = append(allErrs, ValidateBackupInfrastructureSpecUpdate(&newBackupInfrastructure.Spec, &oldBackupInfrastructure.Spec, newBackupInfrastructure.DeletionTimestamp != nil, field.NewPath("spec"))...)
 	allErrs = append(allErrs, ValidateBackupInfrastructure(newBackupInfrastructure)...)
 
 	return allErrs
 }
 
-// ValidateBackupInfrastructureMetaUpdate validates the updates in metadata of a BackupInfrastructure object.
-func ValidateBackupInfrastructureMetaUpdate(newMeta, oldMeta *metav1.ObjectMeta, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	allErrs = append(allErrs, apivalidation.ValidateObjectMetaUpdate(newMeta, oldMeta, fldPath)...)
-
-	oldPresent, _:= strconv.ParseBool(oldMeta.Annotations[common.BackupInfrastructureForceDeletion])
-	newPresent, _:= strconv.ParseBool(newMeta.Annotations[common.BackupInfrastructureForceDeletion])
-	if oldPresent && !newPresent {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("annotations"), newMeta.Annotations, "force delete annotation cannot be updated once set to true"))
-	}
-
-	return allErrs
-}
 
 // ValidateBackupInfrastructureSpec validates the specification of a BackupInfrastructure object.
 func ValidateBackupInfrastructureSpec(spec *garden.BackupInfrastructureSpec, fldPath *field.Path) field.ErrorList {

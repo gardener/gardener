@@ -5601,15 +5601,10 @@ var _ = Describe("validation", func() {
 			newBackupInfrastructure := prepareBackupInfrastructureForUpdate(backupInfrastructure)
 			newBackupInfrastructure.Spec.Seed = "another-seed"
 			newBackupInfrastructure.Spec.ShootUID = "another-uid"
-			newBackupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion] = "false"
 
 			errorList := ValidateBackupInfrastructureUpdate(newBackupInfrastructure, backupInfrastructure)
 
 			Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("metadata.annotations"),
-			})),
-			PointTo(MatchFields(IgnoreExtras, Fields{
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
 			})),
