@@ -129,16 +129,16 @@ func updateBackupInfrastructureAnnotations(backup *gardenv1beta1.BackupInfrastru
 }
 
 // getBackupInfrastructureOfShoot returns the BackupInfrastructure object of the shoot
-func getBackupInfrastructureOfShoot(ctx  context.Context, shootGardenerTest *framework.ShootGardenerTest) (*gardenv1beta1.BackupInfrastructure, error) {
+func getBackupInfrastructureOfShoot(ctx  context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
 	backups := &gardenv1beta1.BackupInfrastructureList{}
-	err := shootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: shootGardenerTest.Shoot.Namespace}, backups)
+	err := shootGardenerTest.GardenClient.Client().List(ctx, &client.ListOptions{Namespace: shootObject.Namespace}, backups)
 	if err != nil {
 		return nil, err
 	}
 	for _, backup := range backups.Items {
-		if backup.Spec.ShootUID == shootGardenerTest.Shoot.Status.UID {
+		if backup.Spec.ShootUID == shootObject.GetUID() {
 			return &backup, nil
 		}
 	}
-	return nil, fmt.Errorf("cannot find backup infrastructure for shoot with uid %s", shootGardenerTest.Shoot.Status.UID)
+	return nil, fmt.Errorf("cannot find backup infrastructure for shoot with uid %s", shootObject.GetUID())
 }
