@@ -3,6 +3,10 @@ kind: BackupInfrastructure
 metadata:
   name: {{ .Values.backupInfrastructure.name }}
   namespace: {{ .Release.Namespace }}
+{{- if .Values.backupInfrastructure.annotations }}
+  annotations:
+{{ toYaml .Values.backupInfrastructure.annotations | indent 4 }}
+{{- end }}
   ownerReferences:
   - apiVersion: garden.sapcloud.io/v1beta1
     blockOwnerDeletion: false

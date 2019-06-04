@@ -133,7 +133,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deployBackupInfrastructure = g.Add(flow.Task{
 			Name: "Deploying backup infrastructure",
-			Fn:   flow.SimpleTaskFn(botanist.DeployBackupInfrastructure),
+			Fn:   flow.TaskFn(botanist.DeployBackupInfrastructure),
 		})
 		waitUntilBackupInfrastructureReconciled = g.Add(flow.Task{
 			Name:         "Waiting until the backup infrastructure has been reconciled",

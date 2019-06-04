@@ -25,6 +25,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -156,10 +157,21 @@ func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
 
 // DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
-func (b *Botanist) DeployBackupInfrastructure() error {
+func (b *Botanist) DeployBackupInfrastructure(ctx context.Context) error {
+	var (
+		name = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
+
+		backupInfrastructure = &gardenv1beta1.BackupInfrastructure{}
+	)
+
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupInfrastructure); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), b.Shoot.Info.Namespace, "backup-infrastructure", nil, map[string]interface{}{
 		"backupInfrastructure": map[string]interface{}{
-			"name": common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID),
+			"name":        name,
+			"annotations": backupInfrastructure.Annotations,
 		},
 		"seed": map[string]interface{}{
 			"name": b.Seed.Info.Name,
@@ -564,11 +576,11 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 		},
 	}
 
-	dependancyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependancyWatchdogDeploymentName)
+	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependencyWatchdogDeploymentName)
 	if err != nil {
 		return nil
 	}
-	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependancyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependancyWatchdogDeploymentName, nil, dependancyWatchdog)
+	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependencyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependencyWatchdogDeploymentName, nil, dependencyWatchdog)
 }
 
 // WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:

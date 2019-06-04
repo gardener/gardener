@@ -522,8 +522,8 @@ const (
 	// AlpineImageName is the name of alpine image
 	AlpineImageName = "alpine"
 
-	// DependancyWatchdogDeploymentName is the name of the dependency controller resources.
-	DependancyWatchdogDeploymentName = "dependency-watchdog"
+	// DependencyWatchdogDeploymentName is the name of the dependency controller resources.
+	DependencyWatchdogDeploymentName = "dependency-watchdog"
 
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
@@ -562,7 +562,7 @@ var (
 		KubeControllerManagerDeploymentName,
 		KubeSchedulerDeploymentName,
 		MachineControllerManagerDeploymentName,
-		DependancyWatchdogDeploymentName,
+		DependencyWatchdogDeploymentName,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
