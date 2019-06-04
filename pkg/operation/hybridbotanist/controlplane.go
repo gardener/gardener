@@ -325,11 +325,19 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                   b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
-			"checksum/secret-etcd-encryption":           b.CheckSums[common.EtcdEncryptionSecretName],
 		},
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
+	}
+	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+	if err != nil {
+		return err
+	}
+	if enableEtcdEncryption {
+		defaultValues["enableEtcdEncryption"] = 1
+		podAnotationMap := defaultValues["podAnnotations"].(map[string]interface{})
+		podAnotationMap["checksum/secret-etcd-encryption"] = b.CheckSums[common.EtcdEncryptionSecretName]
 	}
 	cloudSpecificExposeValues, err := b.SeedCloudBotanist.GenerateKubeAPIServerExposeConfig()
 	if err != nil {

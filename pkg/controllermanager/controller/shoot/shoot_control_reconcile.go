@@ -184,7 +184,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployCloudSpecificControlPlane),
 		})
-		_ = g.Add(flow.Task{
+		rewriteSecrets = g.Add(flow.Task{
 			Name:         "Rewriting shoot secrets if EncryptionConfiguration has changed",
 			Fn:           flow.SimpleTaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, createEtcdEncryptionConfiguration),
@@ -217,7 +217,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		deployKubeAddonManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes addon manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady, computeShootOSConfig),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady, computeShootOSConfig, rewriteSecrets),
 		})
 		deployCSIControllers = g.Add(flow.Task{
 			Name:         "Deploying CSI controllers",
