@@ -160,6 +160,17 @@ func main() {
 	}
 	testLogger.Infof("Successfully created shoot %s", shootName)
 
+
+	backupInfrastructure, err := getBackupInfrastructureOfShoot(ctx, shootGardenerTest)
+	if err != nil {
+		testLogger.Fatal(err)
+	}
+	updateBackupInfrastructureAnnotations(backupInfrastructure)
+	if err := shootGardenerTest.GardenClient.Client().Update(ctx, backupInfrastructure); err != nil {
+		testLogger.Fatalf("Cannot update annotation of backupinfrastructure %s: %s", backupInfrastructure.Name, err.Error())
+	}
+
+
 	shootTestOperations, err := framework.NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, testLogger, shootObject)
 	if err != nil {
 		testLogger.Fatalf("Cannot create shoot %s: %s", shootName, err.Error())
@@ -168,6 +179,10 @@ func main() {
 	err = shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.SeedClient, shootTestOperations.ShootSeedNamespace(), gardenv1beta1.GardenerName, fmt.Sprintf("%s/shoot.config", kubeconfigPath))
 	if err != nil {
 		testLogger.Fatalf("Cannot download shoot kubeconfig: %s", err.Error())
+	}
+	err = shootTestOperations.DownloadKubeconfig(ctx, shootTestOperations.GardenClient, shootTestOperations.Seed.Spec.SecretRef.Namespace, shootTestOperations.Seed.Spec.SecretRef.Name, fmt.Sprintf("%s/seed.config", kubeconfigPath))
+	if err != nil {
+		testLogger.Fatalf("Cannot download seed kubeconfig: %s", err.Error())
 	}
 	testLogger.Infof("Finished creating shoot %s", shootName)
 }
