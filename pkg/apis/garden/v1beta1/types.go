@@ -472,9 +472,16 @@ type SeedSpec struct {
 
 // SeedStatus holds the most recently observed status of the Seed cluster.
 type SeedStatus struct {
+	// Gardener holds information about the Gardener which last acted on the Shoot.
+	// +optional
+	Gardener Gardener `json:"gardener,omitempty"`
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +optional
 	Conditions []gardencorev1alpha1.Condition `json:"conditions,omitempty"`
+	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
+	// Seed's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
 // SeedCloud defines the cloud profile and the region this Seed cluster belongs to.

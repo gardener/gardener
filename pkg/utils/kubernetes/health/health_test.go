@@ -15,6 +15,11 @@
 package health_test
 
 import (
+	"testing"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 	gardenv1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 	. "github.com/onsi/ginkgo"
@@ -25,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
 )
 
 func replicas(i int32) *int32 {
@@ -236,6 +240,55 @@ var _ = Describe("health", func() {
 			Entry("not enough updated replicas", &gardenv1alpha1.MachineDeployment{
 				Spec: gardenv1alpha1.MachineDeploymentSpec{Replicas: 1},
 			}, HaveOccurred()),
+		)
+	})
+
+	Context("CheckSeed", func() {
+		DescribeTable("seeds",
+			func(seed *gardenv1beta1.Seed, identity *gardenv1beta1.Gardener, matcher types.GomegaMatcher) {
+				Expect(health.CheckSeed(seed, identity)).To(matcher)
+			},
+			Entry("healthy", &gardenv1beta1.Seed{
+				Status: gardenv1beta1.SeedStatus{
+					Conditions: []gardencorev1alpha1.Condition{
+						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+					},
+				},
+			}, &gardenv1beta1.Gardener{}, Succeed()),
+			Entry("healthy with non-default identity", &gardenv1beta1.Seed{
+				Status: gardenv1beta1.SeedStatus{
+					Gardener: gardenv1beta1.Gardener{ID: "thegardener"},
+					Conditions: []gardencorev1alpha1.Condition{
+						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+					},
+				},
+			}, &gardenv1beta1.Gardener{ID: "thegardener"}, Succeed()),
+			Entry("unhealthy available condition", &gardenv1beta1.Seed{
+				Status: gardenv1beta1.SeedStatus{
+					Conditions: []gardencorev1alpha1.Condition{
+						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionFalse},
+					},
+				},
+			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
+			Entry("unhealthy due to missing available condition", &gardenv1beta1.Seed{}, &gardenv1beta1.Gardener{}, HaveOccurred()),
+			Entry("unhealthy due to non-matching identity", &gardenv1beta1.Seed{
+				Status: gardenv1beta1.SeedStatus{
+					Gardener: gardenv1beta1.Gardener{ID: "thegardener"},
+					Conditions: []gardencorev1alpha1.Condition{
+						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+					},
+				},
+			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
+			Entry("not observed at latest generation", &gardenv1beta1.Seed{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: 1,
+				},
+				Status: gardenv1beta1.SeedStatus{
+					Conditions: []gardencorev1alpha1.Condition{
+						{Type: gardenv1beta1.SeedAvailable, Status: gardencorev1alpha1.ConditionTrue},
+					},
+				},
+			}, &gardenv1beta1.Gardener{}, HaveOccurred()),
 		)
 	})
 })

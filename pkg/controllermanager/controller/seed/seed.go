@@ -19,6 +19,8 @@ import (
 	"sync"
 	"time"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
@@ -58,7 +60,16 @@ type Controller struct {
 // NewSeedController takes a Kubernetes client for the Garden clusters <k8sGardenClient>, a struct
 // holding information about the acting Gardener, a <seedInformer>, and a <recorder> for
 // event recording. It creates a new Gardener controller.
-func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFactory gardeninformers.SharedInformerFactory, kubeInformerFactory kubeinformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, config *config.ControllerManagerConfiguration, recorder record.EventRecorder) *Controller {
+func NewSeedController(
+	k8sGardenClient kubernetes.Interface,
+	gardenInformerFactory gardeninformers.SharedInformerFactory,
+	kubeInformerFactory kubeinformers.SharedInformerFactory,
+	secrets map[string]*corev1.Secret,
+	imageVector imagevector.ImageVector,
+	identity *gardenv1beta1.Gardener,
+	config *config.ControllerManagerConfiguration,
+	recorder record.EventRecorder,
+) *Controller {
 	var (
 		gardenv1beta1Informer = gardenInformerFactory.Garden().V1beta1()
 		corev1Informer        = kubeInformerFactory.Core().V1()
@@ -74,7 +85,7 @@ func NewSeedController(k8sGardenClient kubernetes.Interface, gardenInformerFacto
 	seedController := &Controller{
 		k8sGardenClient:    k8sGardenClient,
 		k8sGardenInformers: gardenInformerFactory,
-		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, secrets, imageVector, recorder, seedUpdater, config, secretLister, shootLister, backupInfrastructureLister),
+		control:            NewDefaultControl(k8sGardenClient, gardenInformerFactory, secrets, imageVector, identity, recorder, seedUpdater, config, secretLister, shootLister, backupInfrastructureLister),
 		config:             config,
 		recorder:           recorder,
 		seedLister:         seedLister,

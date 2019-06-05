@@ -6103,6 +6103,12 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 				Description: "SeedStatus holds the most recently observed status of the Seed cluster.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"gardener": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Gardener holds information about the Gardener which last acted on the Shoot.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener"),
+						},
+					},
 					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Conditions represents the latest available observations of a Seed's current state.",
@@ -6116,11 +6122,18 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 							},
 						},
 					},
+					"observedGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the Shoot's generation, which is updated on mutation by the API Server.",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition"},
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.Condition", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Gardener"},
 	}
 }
 

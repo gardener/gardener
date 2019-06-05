@@ -34,7 +34,6 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	"github.com/gardener/gardener/pkg/utils/reconcilescheduler"
 
 	"github.com/pkg/errors"
 
@@ -67,7 +66,6 @@ type Controller struct {
 	recorder                      record.EventRecorder
 	secrets                       map[string]*corev1.Secret
 	imageVector                   imagevector.ImageVector
-	scheduler                     reconcilescheduler.Interface
 	hibernationScheduleRegistry   HibernationScheduleRegistry
 
 	seedLister                   gardenlisters.SeedLister
@@ -144,7 +142,6 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 		recorder:                      recorder,
 		secrets:                       secrets,
 		imageVector:                   imageVector,
-		scheduler:                     reconcilescheduler.New(nil),
 		hibernationScheduleRegistry:   NewHibernationScheduleRegistry(),
 
 		seedLister:                   seedLister,
@@ -166,12 +163,6 @@ func NewShootController(k8sGardenClient kubernetes.Interface, k8sGardenInformers
 
 		workerCh: make(chan int),
 	}
-
-	seedInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    shootController.seedAdd,
-		UpdateFunc: shootController.seedUpdate,
-		DeleteFunc: shootController.seedDelete,
-	})
 
 	shootInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    shootController.shootAdd,
@@ -281,7 +272,6 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 	}
 	for i := 0; i < shootWorkers/2+1; i++ {
 		controllerutils.CreateWorker(ctx, c.shootSeedQueue, "Shooted Seeds", c.reconcileShootKey, &waitGroup, c.workerCh)
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed Queue", c.reconcileSeedKey, &waitGroup, c.workerCh)
 		controllerutils.CreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation Queue", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
 	}
 	for i := 0; i < shootWorkers/5+1; i++ {
