@@ -44,6 +44,10 @@ spec:
         command:
 {{ toYaml $ctr.command | indent 8 }}
         {{- end }}
+        {{- if $ctr.args }}
+        args:
+{{ toYaml $ctr.args | indent 8 }}
+        {{- end }}
         volumeMounts:
         - name: shared-init-config
           mountPath: /init-config

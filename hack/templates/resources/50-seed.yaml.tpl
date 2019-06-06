@@ -36,7 +36,7 @@
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
   elif cloud == "packet":
-    region="EWR1"
+    region="ewr1"
 %># Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
 ---
 apiVersion: garden.sapcloud.io/v1beta1

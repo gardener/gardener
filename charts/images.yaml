@@ -109,6 +109,18 @@ images:
   repository: registry.eu-central-1.aliyuncs.com/gardener-de/alibaba-cloud-controller-manager
   tag: "1.9.8"
 
+# Packet Controller Manager
+- name: packet-controller-manager
+  sourceRepository: https://github.com/packethost/packet-ccm
+  repository: docker.io/packethost/packet-ccm
+  tag: "d0abe6c"
+
+# Packet Storage Interface
+- name: packet-storage-interface
+  sourceRepository: https://github.com/packethost/csi-packet
+  repository: docker.io/packethost/csi-packet
+  tag: "73641b0"
+
 # Shoot optional addons
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard

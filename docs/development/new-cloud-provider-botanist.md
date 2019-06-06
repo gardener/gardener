@@ -38,7 +38,7 @@ The implementation consists of several parts:
 7. Update the config files in [charts/seed-bootstrap/templates](../../charts/seed-bootstrap/templates/) as follows:
     1. Update `clusterrole-machine-controller-manager.yaml` to include your new provider as `<provider>machineclasses` in the list of `resources` in the `ClusterRole`.
     2. In `crd-machines.yaml`, create a `CustomResourceDefinition` for your provider named `<provider>MachineClass`. See the existing definitions.
-8. If you have updated the machine controller manager (MCM) in a previous step to include your cloud provider, update [charts/values.yaml](../../charts/values.yaml) to increment the `images:` entry for `name: machine-controller-manager` with the new tag version.
+8. If you have updated the machine controller manager (MCM) in a previous step to include your cloud provider, update [charts/images.yaml](../../charts/images.yaml) to increment the `images:` entry for `name: machine-controller-manager` with the new tag version.
 9. Add examples to [hack/templates/resources/](../../hack/templates/resources//):
     1. Create a file `30-cloudprofile-<provider>.yaml.tpl`. See existing examples.
     2. Create a file `50-seed-<provider>.yaml.tpl`. See existing examples.

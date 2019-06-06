@@ -45,6 +45,8 @@ func ShootToInfrastructureConfig(shoot *gardenv1beta1.Shoot) (runtime.Object, er
 		return GardenV1beta1ShootToOpenStackV1alpha1InfrastructureConfig(shoot)
 	case gardenv1beta1.CloudProviderAlicloud:
 		return GardenV1beta1ShootToAlicloudV1alpha1InfrastructureConfig(shoot)
+	case gardenv1beta1.CloudProviderPacket:
+		return GardenV1beta1ShootToPacketV1alpha1InfrastructureConfig(shoot)
 	}
 
 	return nil, fmt.Errorf("cannot compute infrastructure config for shoot: unknown cloud provider: %+v", cloudProvider)

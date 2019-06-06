@@ -36,7 +36,7 @@
     region="cn-beijing"
     kubernetesVersion="1.14.0"
   elif cloud == "packet":
-    region="EWR1"
+    region="ewr1"
     kubernetesVersion="1.14.0"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
@@ -198,7 +198,7 @@ spec:
       #   value: bar
       #   effect: NoSchedule
       % endif
-      zones: ${value("spec.cloud.packet.zones", ["EWR1"])}
+      zones: ${value("spec.cloud.packet.zones", ["ewr1"])}
     % endif
     % if cloud == "gcp":
     gcp:

@@ -31,7 +31,7 @@
   elif cloud == "alicloud":
     region="cn-beijing"
   elif cloud == "packet":
-    region="EWR1"
+    region="ewr1"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
 %>---
@@ -450,7 +450,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
-        version: 2023.5.0
+        version: 2079.3.0
         # Proper mappings to Packet image IDs must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.packet.constraints.machineTypes", []) %>
@@ -503,9 +503,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       % if zones != []:
       ${yaml.dump(zones, width=10000, default_flow_style=None)}
       % else:
-      - region: EWR1
+      - region: ewr1
         names:
-        - EWR1
+        - ewr1
       % endif
   % endif
   % if cloud == "openstack" or cloud == "os":

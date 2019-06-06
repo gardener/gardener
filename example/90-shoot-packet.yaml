@@ -7,7 +7,7 @@ metadata:
 spec:
   cloud:
     profile: packet
-    region: EWR1
+    region: ewr1
     secretBindingRef:
       name: core-packet
     packet:
@@ -28,7 +28,7 @@ spec:
       # - key: foo
       #   value: bar
       #   effect: NoSchedule
-      zones: ['EWR1']
+      zones: ['ewr1']
   kubernetes:
   # clusterAutoscaler:
   #   scaleDownUtilizationThreshold: 0.5

@@ -44,4 +44,14 @@ csi-alicloud:
   credential:
     accessKeyID: keyID
     accessKeySecret: secret
+csi-packet:
+  images:
+    csi-attacher: image-repository:image-tag
+    csi-driver-registrar: image-repository:image-tag
+    csi-provisioner: image-repository:image-tag
+    csi-plugin-alicloud: image-repository:image-tag
+  
+  credential:
+    apiToken: secretKeyID
+  projectID: projectID
   enabled: false

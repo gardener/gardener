@@ -1,0 +1,123 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: csi-packet-pd
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: csi-packet-pd
+spec:
+  selector:
+    app: csi-packet-pd
+  ports:
+    - name: dummy
+      port: 12345
+
+---
+
+kind: StatefulSet
+apiVersion: {{ include "statefulsetversion" . }}
+metadata:
+  name: csi-packet-controller
+  namespace: {{ .Release.Namespace }}
+  labels:
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      partition: 0
+  serviceName: "csi-packet-pd"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: csi-packet-pd-driver
+  template:
+    metadata:
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
+      labels:
+        app: csi-packet-pd-driver
+    spec:
+      containers:
+        - name: csi-external-provisioner
+          imagePullPolicy: IfNotPresent
+          image: {{ index .Values.images "csi-provisioner" }}
+          args:
+            - "--v=5"
+            - "--provisioner=net.packet.csi"
+            - "--csi-address=$(ADDRESS)"
+            - "--kubeconfig=/var/lib/csi-provisioner/kubeconfig"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+{{- if .Values.provisionerResources }}
+          resources:
+{{ toYaml .Values.provisionerResources | indent 12 }}
+{{- end }}
+          volumeMounts:
+          - name: socket-dir
+            mountPath: /var/lib/kubelet/plugins/csi.packet.com
+          - name: csi-provisioner
+            mountPath: /var/lib/csi-provisioner
+        - name: csi-attacher
+          imagePullPolicy: IfNotPresent
+          image: {{ index .Values.images "csi-attacher" }}
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+            - "--kubeconfig=/var/lib/csi-attacher/kubeconfig"
+          env:
+            - name: ADDRESS
+              value: /var/lib/kubelet/plugins/csi.packet.com/csi.sock
+{{- if .Values.attacherResources }}
+          resources:
+{{ toYaml .Values.attacherResources | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: csi-attacher
+              mountPath: /var/lib/csi-attacher
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/csi.packet.com
+        - name: packet-driver
+          imagePullPolicy: IfNotPresent
+          image: {{ index .Values.images "packet-storage-interface" }}
+          args:
+            - "--endpoint=$(CSI_ENDPOINT)"
+            - "--nodeid=$(KUBE_NODE_NAME)"
+          env:
+            - name: CSI_ENDPOINT
+              value: unix://var/lib/kubelet/plugins/csi.packet.com/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: PACKET_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudprovider
+                  key: apiToken
+            - name: PACKET_PROJECT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: cloudprovider
+                  key: projectID
+{{- if .Values.diskpluginResources }}
+          resources:
+{{ toYaml .Values.diskpluginResources | indent 12 }}
+{{- end }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /var/lib/kubelet/plugins/csi.packet.com
+      volumes:
+        - name: socket-dir
+          emptyDir: {}
+        - name: csi-attacher
+          secret:
+            secretName: csi-attacher
+        - name: csi-provisioner
+          secret:
+            secretName: csi-provisioner
+        - name: csi-snapshotter
+          secret:
+            secretName: csi-snapshotter
