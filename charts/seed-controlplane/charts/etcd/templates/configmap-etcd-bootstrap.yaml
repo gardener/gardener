@@ -51,45 +51,6 @@ data:
           done
     }
 
-{{- if eq .Values.role "main" }}
-    migrate_data() {
-      OLD_DATA_DIR=/var/etcd/old-data
-      NEW_DATA_DIR=/var/etcd/data
-      MIGRATION_MARKER=$OLD_DATA_DIR/migration.marker
-
-      if [ ! -f $MIGRATION_MARKER ]; then
-            # Keep this for debugging purpose
-            echo "old data directory content: $OLD_DATA_DIR"
-            ls -A $OLD_DATA_DIR
-            echo "New data directory content: $NEW_DATA_DIR"
-            ls -A $NEW_DATA_DIR
-
-            echo "Removing content of new data directory $NEW_DATA_DIR"
-            rm -rf $NEW_DATA_DIR/*
-
-            # Copy only if not empty
-            if [ "$(ls -A $OLD_DATA_DIR)" ];
-            then
-            echo "Migrating content of old data directory $OLD_DATA_DIR to $NEW_DATA_DIR"
-            time cp -rf $OLD_DATA_DIR/* $NEW_DATA_DIR/
-            if [ ! $? -eq 0 ] ;
-            then
-            exit $?
-            fi
-            time sync
-            fi
-
-            # Mark migration
-            echo "Creating migration successful marker file $MIGRATION_MARKER"
-            touch $MIGRATION_MARKER
-      else
-            echo "$MIGRATION_MARKER is present. Skipping migration."
-      fi
-    }
-
-    # Do migration
-    migrate_data
-{{- end }}
     # Do validation and bootstrap
     if [ ! -f $VALIDATION_MARKER ] ;
     then

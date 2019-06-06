@@ -139,7 +139,6 @@ func (b *HybridBotanist) DeployETCD() error {
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
-		"storage":          b.Seed.GetValidVolumeSize("10Gi"),
 		"storageClassName": storageClassConfig["name"].(string),
 		"storageCapacity":  storageClassConfig["capacity"].(string),
 	}
@@ -161,6 +160,7 @@ func (b *HybridBotanist) DeployETCD() error {
 			etcd["backup"] = map[string]interface{}{
 				"storageProvider": "", // No storage provider means no backup
 			}
+			etcd["storageCapacity"] = b.Seed.GetValidVolumeSize("10Gi")
 		}
 
 		if b.Shoot.IsHibernated {
@@ -180,6 +180,7 @@ func (b *HybridBotanist) DeployETCD() error {
 			if role == common.EtcdRoleMain {
 				// Since we have to update volumeClaimTemplate in existing statefulset, which is forbidden
 				// by k8s. So, we have to explicitly delete the old statefulset and create new one.
+				// TODO: This is backward compatibility code and should be removed in further releases.
 				if apierrors.IsInvalid(err) {
 					if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
 						return err

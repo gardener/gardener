@@ -166,7 +166,7 @@ func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{
 func (b *OpenStackBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"name":        "gardener.cloud-fast",
-		"capacity":    "25Gi",
+		"capacity":    b.Seed.GetValidVolumeSize("25Gi"),
 		"provisioner": "kubernetes.io/cinder",
 		"parameters":  map[string]interface{}{},
 	}

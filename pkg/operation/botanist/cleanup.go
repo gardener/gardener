@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -26,6 +27,7 @@ import (
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	apiregistrationv1beta1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1beta1"
@@ -243,4 +245,23 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 		cleanResourceFn(c, StatefulSetDeleteSelector, StatefulSetCheckSelector, &appsv1.StatefulSetList{}, false),
 		cleanResourceFn(c, PersistentVolumeClaimDeleteSelector, PersistentVolumeClaimCheckSelector, &corev1.PersistentVolumeClaimList{}, false),
 	)(ctx)
+}
+
+// DeleteOrphanEtcdMainPVC delete the orphan PVC associated with old etcd-main statefulsets as a result of migration in Release 0.22.0 (https://github.com/gardener/gardener/releases/tag/0.22.0).
+func (b *Botanist) DeleteOrphanEtcdMainPVC(ctx context.Context) error {
+	pvc := &corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("etcd-%s-etcd-%s-0", common.EtcdRoleMain, common.EtcdRoleMain),
+			Namespace: b.Shoot.SeedNamespace,
+		},
+	}
+
+	if err := b.K8sSeedClient.Client().Delete(ctx, pvc); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	// Since there isn't any further dependency on this PVC, we don't wait here until PVC
+	// and associated PV get deleted completely. Yes this won't report any error face while deleting
+	// PVC. But eventually at the time of shoot deletion we cleanup the seednamespace and all resource
+	// in it with proper error reporting. So, we can safely avoid waiting.
+	return nil
 }

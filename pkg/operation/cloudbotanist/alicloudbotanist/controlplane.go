@@ -139,7 +139,7 @@ func (b *AlicloudBotanist) GenerateETCDStorageClassConfig() map[string]interface
 	if b.Operation.Seed.GetPersistentVolumeProvider() == "FlexVolume" {
 		return map[string]interface{}{
 			"name":        "gardener.cloud-fast",
-			"capacity":    "25Gi",
+			"capacity":    b.Seed.GetValidVolumeSize("25Gi"),
 			"provisioner": "alicloud/disk",
 			"parameters": map[string]interface{}{
 				"type": "cloud_ssd",
@@ -148,7 +148,7 @@ func (b *AlicloudBotanist) GenerateETCDStorageClassConfig() map[string]interface
 	}
 	return map[string]interface{}{
 		"name":        "gardener.cloud-fast",
-		"capacity":    "25Gi",
+		"capacity":    b.Seed.GetValidVolumeSize("25Gi"),
 		"provisioner": "diskplugin.csi.alibabacloud.com",
 		"parameters": map[string]interface{}{
 			"csi.storage.k8s.io/fstype": "ext4",
