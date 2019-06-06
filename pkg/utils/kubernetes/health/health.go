@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"time"
 
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -277,6 +279,35 @@ func CheckMachineDeployment(deployment *machinev1alpha1.MachineDeployment) error
 			continue
 		}
 		if err := checkConditionState(conditionType, string(corev1.ConditionFalse), string(condition.Status), condition.Reason, condition.Message); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+var (
+	trueSeedConditionTypes = []gardencorev1alpha1.ConditionType{
+		gardenv1beta1.SeedAvailable,
+	}
+)
+
+// CheckSeed checks if the Seed is up-to-date and if its extensions have been successfully bootstrapped.
+func CheckSeed(seed *gardenv1beta1.Seed, identity *gardenv1beta1.Gardener) error {
+	if seed.Status.ObservedGeneration < seed.Generation {
+		return fmt.Errorf("observed generation outdated (%d/%d)", seed.Status.ObservedGeneration, seed.Generation)
+	}
+	if seed.Status.Gardener != *identity {
+		return fmt.Errorf("observing Gardener version not up to date (%v/%v)", seed.Status.Gardener, identity)
+	}
+
+	for _, trueConditionType := range trueSeedConditionTypes {
+		conditionType := string(trueConditionType)
+		condition := helper.GetCondition(seed.Status.Conditions, trueConditionType)
+		if condition == nil {
+			return requiredConditionMissing(conditionType)
+		}
+		if err := checkConditionState(conditionType, string(gardencorev1alpha1.ConditionTrue), string(condition.Status), condition.Reason, condition.Message); err != nil {
 			return err
 		}
 	}

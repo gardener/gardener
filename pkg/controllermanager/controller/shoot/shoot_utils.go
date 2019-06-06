@@ -158,11 +158,6 @@ func ComputeStatus(lastOperation *gardencorev1alpha1.LastOperation, lastError *g
 	return status.OrWorse(BoolToStatus(lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded))
 }
 
-func seedIsShoot(seed *gardenv1beta1.Seed) bool {
-	hasOwnerReference, _ := seedHasShootOwnerReference(seed.ObjectMeta)
-	return hasOwnerReference
-}
-
 func shootIsSeed(shoot *gardenv1beta1.Shoot) bool {
 	shootedSeed, err := helper.ReadShootedSeed(shoot)
 	return err == nil && shootedSeed != nil

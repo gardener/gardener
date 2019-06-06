@@ -478,6 +478,12 @@ type SeedStatus struct {
 	// Conditions represents the latest available observations of a Seed's current state.
 	// +optional
 	Conditions []gardencore.Condition
+	// Gardener holds information about the Gardener which last acted on the Seed.
+	Gardener Gardener
+	// ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the
+	// Seed's generation, which is updated on mutation by the API Server.
+	// +optional
+	ObservedGeneration int64
 }
 
 // SeedCloud defines the cloud profile and the region this Seed cluster belongs to.

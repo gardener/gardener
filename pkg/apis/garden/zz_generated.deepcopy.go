@@ -2780,6 +2780,7 @@ func (in *SeedStatus) DeepCopyInto(out *SeedStatus) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
+	out.Gardener = in.Gardener
 	return
 }
 

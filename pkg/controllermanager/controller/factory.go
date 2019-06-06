@@ -141,7 +141,7 @@ func (f *GardenControllerFactory) Run(ctx context.Context) {
 
 	var (
 		shootController                  = shootcontroller.NewShootController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sGardenCoreInformers, f.k8sInformers, f.cfg, f.identity, f.gardenNamespace, secrets, imageVector, f.recorder)
-		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.cfg, f.recorder)
+		seedController                   = seedcontroller.NewSeedController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, secrets, imageVector, f.identity, f.cfg, f.recorder)
 		quotaController                  = quotacontroller.NewQuotaController(f.k8sGardenClient, f.k8sGardenInformers, f.recorder)
 		projectController                = projectcontroller.NewProjectController(f.k8sGardenClient, f.k8sGardenInformers, f.k8sInformers, f.recorder)
 		cloudProfileController           = cloudprofilecontroller.NewCloudProfileController(f.k8sGardenClient, f.k8sGardenInformers)

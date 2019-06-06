@@ -111,8 +111,31 @@ type ControlInterface interface {
 // implements the documented semantics for Seeds. updater is the UpdaterInterface used
 // to update the status of Seeds. You should use an instance returned from NewDefaultControl() for any
 // scenario other than testing.
-func NewDefaultControl(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.SharedInformerFactory, secrets map[string]*corev1.Secret, imageVector imagevector.ImageVector, recorder record.EventRecorder, updater UpdaterInterface, config *config.ControllerManagerConfiguration, secretLister kubecorev1listers.SecretLister, shootLister gardenlisters.ShootLister, backupInfrastructureLister gardenlisters.BackupInfrastructureLister) ControlInterface {
-	return &defaultControl{k8sGardenClient, k8sGardenInformers, secrets, imageVector, recorder, updater, config, secretLister, shootLister, backupInfrastructureLister}
+func NewDefaultControl(
+	k8sGardenClient kubernetes.Interface,
+	k8sGardenInformers gardeninformers.SharedInformerFactory,
+	secrets map[string]*corev1.Secret,
+	imageVector imagevector.ImageVector,
+	identity *gardenv1beta1.Gardener,
+	recorder record.EventRecorder,
+	updater UpdaterInterface,
+	config *config.ControllerManagerConfiguration,
+	secretLister kubecorev1listers.SecretLister,
+	shootLister gardenlisters.ShootLister,
+	backupInfrastructureLister gardenlisters.BackupInfrastructureLister,
+) ControlInterface {
+	return &defaultControl{k8sGardenClient,
+		k8sGardenInformers,
+		secrets,
+		imageVector,
+		identity,
+		recorder,
+		updater,
+		config,
+		secretLister,
+		shootLister,
+		backupInfrastructureLister,
+	}
 }
 
 type defaultControl struct {
@@ -120,6 +143,7 @@ type defaultControl struct {
 	k8sGardenInformers         gardeninformers.SharedInformerFactory
 	secrets                    map[string]*corev1.Secret
 	imageVector                imagevector.ImageVector
+	identity                   *gardenv1beta1.Gardener
 	recorder                   record.EventRecorder
 	updater                    UpdaterInterface
 	config                     *config.ControllerManagerConfiguration
@@ -264,12 +288,16 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 
 func (c *defaultControl) updateSeedStatus(seed *gardenv1beta1.Seed, updateConditions ...gardencorev1alpha1.Condition) error {
 	newConditions := gardencorev1alpha1helper.MergeConditions(seed.Status.Conditions, updateConditions...)
-	if !gardencorev1alpha1helper.ConditionsNeedUpdate(seed.Status.Conditions, newConditions) {
+	newStatus := gardenv1beta1.SeedStatus{
+		Conditions:         newConditions,
+		ObservedGeneration: seed.Generation,
+		Gardener:           *c.identity,
+	}
+	if apiequality.Semantic.DeepEqual(seed.Status, newStatus) {
 		return nil
 	}
 
-	seed.Status.Conditions = newConditions
-
+	seed.Status = newStatus
 	_, err := c.updater.UpdateSeedStatus(seed)
 	if err != nil {
 		logger.Logger.Errorf("Could not update the Seed status: %+v", err)
