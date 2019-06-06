@@ -1,6 +1,6 @@
 backupInfrastructure:
   name: example-backup
-  annotations: {}
+# annotations: {}
 
 seed:
   name: example-seed
