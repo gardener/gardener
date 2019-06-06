@@ -23,6 +23,8 @@ podAnnotations: {}
 vpa:
   enabled: true
 
+metrics: basic
+
 # Aws S3 storage configuration
 # Note: No volumeMounts variable needed
 # storageProvider: "S3"

@@ -119,3 +119,6 @@ data:
       # keep one day of history
       auto-compaction-mode: periodic
       auto-compaction-retention: "24"
+
+      # metrics configuration
+      metrics: {{ .Values.metrics }}

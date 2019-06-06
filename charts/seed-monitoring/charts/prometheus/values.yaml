@@ -81,6 +81,9 @@ allowedMetrics:
   - etcd_server_proposals_pending
   - grpc_server_handled_total
   - grpc_server_started_total
+  - grpc_server_handling_seconds_count
+  - grpc_server_handling_seconds_sum
+  - grpc_server_handling_seconds_bucket
   - process_max_fds
   - process_open_fds
   - process_resident_memory_bytes

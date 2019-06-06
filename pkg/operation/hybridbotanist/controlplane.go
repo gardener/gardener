@@ -161,6 +161,9 @@ func (b *HybridBotanist) DeployETCD() error {
 				"storageProvider": "", // No storage provider means no backup
 			}
 			etcd["storageCapacity"] = b.Seed.GetValidVolumeSize("10Gi")
+		} else {
+			// etcd-main emits extensive (histogram) metrics
+			etcd["metrics"] = "extensive"
 		}
 
 		if b.Shoot.IsHibernated {
