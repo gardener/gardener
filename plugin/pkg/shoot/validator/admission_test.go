@@ -22,7 +22,7 @@ import (
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/internalversion"
 	. "github.com/gardener/gardener/plugin/pkg/shoot/validator"
-	test "github.com/gardener/gardener/test"
+	"github.com/gardener/gardener/test"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -59,6 +59,7 @@ var _ = Describe("validator", func() {
 
 			unmanagedDNSProvider = garden.DNSUnmanaged
 			baseDomain           = "example.com"
+			trueVar              = true
 
 			seedPodsCIDR     = gardencore.CIDR("10.241.128.0/17")
 			seedServicesCIDR = gardencore.CIDR("10.241.0.0/17")
@@ -139,6 +140,230 @@ var _ = Describe("validator", func() {
 			shoot.Spec.Cloud.GCP = nil
 			shoot.Spec.Cloud.Packet = nil
 			shoot.Spec.Cloud.OpenStack = nil
+		})
+
+		// The verification of protection is independent of the Cloud Provider (being checked before). We  picked AWS.
+		Context("VALIDATION: Shoot references a Seed already -  validate user provided seed regarding protection", func() {
+			var (
+				falseVar   = false
+				oldShoot   *garden.Shoot
+				awsProfile = &garden.AWSProfile{
+					Constraints: garden.AWSConstraints{
+						DNSProviders: []garden.DNSProviderConstraint{
+							{
+								Name: garden.DNSUnmanaged,
+							},
+						},
+						Kubernetes: garden.KubernetesConstraints{
+							Versions: []string{"1.6.4"},
+						},
+						MachineImages: []garden.MachineImage{
+							{
+								Name:    "some-machineimage",
+								Version: "ami-12345678",
+							},
+						},
+						MachineTypes: []garden.MachineType{
+							{
+								Name:   "machine-type-1",
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("100Gi"),
+							},
+							{
+								Name:   "machine-type-old",
+								CPU:    resource.MustParse("2"),
+								GPU:    resource.MustParse("0"),
+								Memory: resource.MustParse("100Gi"),
+								Usable: &falseVar,
+							},
+						},
+						VolumeTypes: []garden.VolumeType{
+							{
+								Name:  "volume-type-1",
+								Class: "super-premium",
+							},
+						},
+						Zones: []garden.Zone{
+							{
+								Region: "europe",
+								Names:  []string{"europe-a"},
+							},
+							{
+								Region: "asia",
+								Names:  []string{"asia-a"},
+							},
+						},
+					},
+				}
+				workers = []garden.AWSWorker{
+					{
+						Worker: garden.Worker{
+							Name:          "worker-name",
+							MachineType:   "machine-type-1",
+							AutoScalerMin: 1,
+							AutoScalerMax: 1,
+						},
+						VolumeSize: "10Gi",
+						VolumeType: "volume-type-1",
+					},
+				}
+				zones        = []string{"europe-a"}
+				machineImage = &garden.MachineImage{
+					Name:    "some-machineimage",
+					Version: "ami-12345678",
+				}
+				awsCloud = &garden.AWSCloud{}
+			)
+
+			BeforeEach(func() {
+				cloudProfile = cloudProfileBase
+				shoot = shootBase
+				awsCloud.Networks = garden.AWSNetworks{K8SNetworks: k8sNetworks}
+				awsCloud.Workers = workers
+				awsCloud.Zones = zones
+				awsCloud.MachineImage = machineImage
+				cloudProfile.Spec.AWS = awsProfile
+				shoot.Spec.Cloud.AWS = awsCloud
+
+				// set seed name
+				shoot.Spec.Cloud.Seed = &seedName
+
+				// set old shoot for update
+				oldShoot = shoot.DeepCopy()
+				oldShoot.Spec.Cloud.Seed = nil
+			})
+
+			It("create should pass because the Seed specified in shoot manifest is not protected and shoot is not in garden namespace", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should pass because the Seed specified in shoot manifest is not protected and shoot is not in garden namespace", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("create should pass because shoot is not in garden namespace and seed is not protected", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should pass because shoot is not in garden namespace and seed is not protected", func() {
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("create should fail because shoot is not in garden namespace and seed is protected", func() {
+				seed.Spec.Protected = &trueVar
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("update should fail because shoot is not in garden namespace and seed is protected", func() {
+				seed.Spec.Protected = &trueVar
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsForbidden(err)).To(BeTrue())
+			})
+
+			It("create should pass because shoot is in garden namespace and seed is protected", func() {
+				ns := "garden"
+				shoot.Namespace = ns
+				project.Spec.Namespace = &ns
+				seed.Spec.Protected = &trueVar
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should pass because shoot is in garden namespace and seed is protected", func() {
+				ns := "garden"
+				shoot.Namespace = ns
+				project.Spec.Namespace = &ns
+				seed.Spec.Protected = &trueVar
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("create should pass because shoot is in garden namespace and seed is not protected", func() {
+				ns := "garden"
+				shoot.Namespace = ns
+				project.Spec.Namespace = &ns
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("update should pass because shoot is in garden namespace and seed is not protected", func() {
+				ns := "garden"
+				shoot.Namespace = ns
+				project.Spec.Namespace = &ns
+
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				gardenInformerFactory.Garden().InternalVersion().Seeds().Informer().GetStore().Add(&seed)
+				attrs := admission.NewAttributesRecord(&shoot, oldShoot, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Update, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+
 		})
 
 		Context("name/project length checks", func() {
@@ -352,6 +577,17 @@ var _ = Describe("validator", func() {
 				awsCloud.MachineImage = machineImage
 				cloudProfile.Spec.AWS = awsProfile
 				shoot.Spec.Cloud.AWS = awsCloud
+			})
+
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.Cloud.Seed = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
@@ -710,6 +946,17 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Cloud.Azure = azureCloud
 			})
 
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.Cloud.Seed = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should reject because the shoot node and the seed node networks intersect", func() {
 				shoot.Spec.Cloud.Azure.Networks.Nodes = &seedNodesCIDR
 
@@ -938,6 +1185,17 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Cloud.GCP = gcpCloud
 			})
 
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.Cloud.Seed = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should reject because the shoot node and the seed node networks intersect", func() {
 				shoot.Spec.Cloud.GCP.Networks.Nodes = &seedNodesCIDR
 
@@ -1152,6 +1410,17 @@ var _ = Describe("validator", func() {
 				shoot.Spec.Cloud.Packet = packetCloud
 			})
 
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.Cloud.Seed = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
 			It("should reject because the shoot pod and the seed pod networks intersect", func() {
 				shoot.Spec.Cloud.Packet.Networks.Pods = &seedPodsCIDR
 
@@ -1358,6 +1627,17 @@ var _ = Describe("validator", func() {
 				openStackCloud.Zones = zones
 				cloudProfile.Spec.OpenStack = openStackProfile
 				shoot.Spec.Cloud.OpenStack = openStackCloud
+			})
+
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.Cloud.Seed = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {
@@ -1602,6 +1882,17 @@ var _ = Describe("validator", func() {
 				aliCloud.Zones = zones
 				cloudProfile.Spec.Alicloud = alicloudProfile
 				shoot.Spec.Cloud.Alicloud = aliCloud
+			})
+
+			It("should pass because no seed has to be specified (however can be). The scheduler sets the seed instead.", func() {
+				shoot.Spec.Cloud.Seed = nil
+				gardenInformerFactory.Garden().InternalVersion().Projects().Informer().GetStore().Add(&project)
+				gardenInformerFactory.Garden().InternalVersion().CloudProfiles().Informer().GetStore().Add(&cloudProfile)
+				attrs := admission.NewAttributesRecord(&shoot, nil, garden.Kind("Shoot").WithVersion("version"), shoot.Namespace, shoot.Name, garden.Resource("shoots").WithVersion("version"), "", admission.Create, false, nil)
+
+				err := admissionHandler.Admit(attrs, nil)
+
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should reject because the shoot node and the seed node networks intersect", func() {

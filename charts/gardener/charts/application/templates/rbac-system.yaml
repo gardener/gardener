@@ -87,3 +87,25 @@ subjects:
   name: "{{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}"
   namespace: garden
 {{- end }}
+
+{{- if .Values.global.scheduler.enabled }}
+---
+apiVersion: {{ include "rbacversion" . }}
+kind: ClusterRoleBinding
+metadata:
+  name:  gardener.cloud:system:gardener-scheduler
+  labels:
+    app: gardener
+    role: scheduler
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gardener.cloud:system:gardener-scheduler
+subjects:
+  - kind: ServiceAccount
+    name: "{{ required ".Values.global.scheduler.serviceAccountName is required" .Values.global.scheduler.serviceAccountName }}"
+    namespace: garden
+{{- end }}

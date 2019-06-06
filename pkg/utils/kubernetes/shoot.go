@@ -66,7 +66,7 @@ func tryUpdateShoot(
 	return result, err
 }
 
-// TryUpdateShoot tries to update the status of the shoot matching the given <meta>.
+// TryUpdateShoot tries to update the shoot matching the given <meta>.
 // It retries with the given <backoff> characteristics as long as it gets Conflict errors.
 // The transformation function is applied to the current state of the Shoot object. If the transformation
 // yields a semantically equal Shoot, no update is done and the operation returns normally.

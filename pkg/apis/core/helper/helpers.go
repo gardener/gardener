@@ -18,14 +18,22 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core"
 )
 
+// GetConditionIndex returns the index of the condition with the given <conditionType> out of the list of <conditions>.
+// In case the required type could not be found, it returns -1.
+func GetConditionIndex(conditions []core.Condition, conditionType core.ConditionType) int {
+	for index, condition := range conditions {
+		if condition.Type == conditionType {
+			return index
+		}
+	}
+	return -1
+}
+
 // GetCondition returns the condition with the given <conditionType> out of the list of <conditions>.
 // In case the required type could not be found, it returns nil.
 func GetCondition(conditions []core.Condition, conditionType core.ConditionType) *core.Condition {
-	for _, condition := range conditions {
-		if condition.Type == conditionType {
-			c := condition
-			return &c
-		}
+	if index := GetConditionIndex(conditions, conditionType); index != -1 {
+		return &conditions[index]
 	}
 	return nil
 }

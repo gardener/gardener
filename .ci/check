@@ -68,7 +68,7 @@ fi
 
 ###############################################################################
 
-PACKAGES="$(go list -e ./... | grep -vE '/tmp/|/vendor/|/pkg/apis|/pkg/controllermanager/apis|/pkg/client/garden|/pkg/client/machine|/pkg/openapi')"
+PACKAGES="$(go list -e ./... | grep -vE '/tmp/|/vendor/|/pkg/apis|/pkg/controllermanager/apis|/pkg/scheduler/apis|/pkg/client/garden|/pkg/client/machine|/pkg/openapi')"
 LINT_FOLDERS="$(echo ${PACKAGES} | sed "s|github.com/gardener/gardener|.|g")"
 
 # Execute static code checks.

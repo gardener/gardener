@@ -112,6 +112,11 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 		return nil
 	}
 
+	// if shoot has not been scheduled, requeue
+	if shoot.Spec.Cloud.Seed == nil {
+		return nil
+	}
+
 	return c.maintenanceControl.Maintain(shoot, key)
 }
 

@@ -1368,7 +1368,10 @@ func ValidateShootSpecUpdate(newSpec, oldSpec *garden.ShootSpec, deletionTimesta
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.SecretBindingRef, oldSpec.Cloud.SecretBindingRef, fldPath.Child("cloud", "secretBindingRef"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Profile, oldSpec.Cloud.Profile, fldPath.Child("cloud", "profile"))...)
 	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Region, oldSpec.Cloud.Region, fldPath.Child("cloud", "region"))...)
-	allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Seed, oldSpec.Cloud.Seed, fldPath.Child("cloud", "seed"))...)
+	// allow initial seed assignment
+	if oldSpec.Cloud.Seed != nil {
+		allErrs = append(allErrs, apivalidation.ValidateImmutableField(newSpec.Cloud.Seed, oldSpec.Cloud.Seed, fldPath.Child("cloud", "seed"))...)
+	}
 
 	awsPath := fldPath.Child("cloud", "aws")
 	if oldSpec.Cloud.AWS != nil && newSpec.Cloud.AWS == nil {

@@ -22,12 +22,14 @@ import (
 
 	"strconv"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils"
 )
 
 // Now determines the current metav1.Time.
@@ -599,4 +601,70 @@ func ReadShootedSeed(shoot *gardenv1beta1.Shoot) (*ShootedSeed, error) {
 	}
 
 	return shootedSeed, nil
+}
+
+// GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
+func GetK8SNetworks(shoot *gardenv1beta1.Shoot) (*gardencorev1alpha1.K8SNetworks, error) {
+	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
+	if err != nil {
+		return &gardencorev1alpha1.K8SNetworks{}, err
+	}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return &shoot.Spec.Cloud.AWS.Networks.K8SNetworks, nil
+	case gardenv1beta1.CloudProviderAzure:
+		return &shoot.Spec.Cloud.Azure.Networks.K8SNetworks, nil
+	case gardenv1beta1.CloudProviderGCP:
+		return &shoot.Spec.Cloud.GCP.Networks.K8SNetworks, nil
+	case gardenv1beta1.CloudProviderOpenStack:
+		return &shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, nil
+	case gardenv1beta1.CloudProviderAlicloud:
+		return &shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, nil
+	case gardenv1beta1.CloudProviderPacket:
+		return &shoot.Spec.Cloud.Packet.Networks.K8SNetworks, nil
+	}
+	return &gardencorev1alpha1.K8SNetworks{}, nil
+}
+
+// GetZones returns the CloudProvide, the Zones for the CloudProfile and an error
+// Returns an empty Zone slice for Azure
+func GetZones(shoot gardenv1beta1.Shoot, cloudProfile *gardenv1beta1.CloudProfile) (gardenv1beta1.CloudProvider, []gardenv1beta1.Zone, error) {
+	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
+	if err != nil {
+		return "", []gardenv1beta1.Zone{}, err
+	}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return gardenv1beta1.CloudProviderAWS, cloudProfile.Spec.AWS.Constraints.Zones, nil
+	case gardenv1beta1.CloudProviderAzure:
+		// Azure instead of Zones, has AzureDomainCounts
+		return gardenv1beta1.CloudProviderAzure, []gardenv1beta1.Zone{}, nil
+	case gardenv1beta1.CloudProviderGCP:
+		return gardenv1beta1.CloudProviderGCP, cloudProfile.Spec.GCP.Constraints.Zones, nil
+	case gardenv1beta1.CloudProviderOpenStack:
+		return gardenv1beta1.CloudProviderOpenStack, cloudProfile.Spec.OpenStack.Constraints.Zones, nil
+	case gardenv1beta1.CloudProviderAlicloud:
+		return gardenv1beta1.CloudProviderAlicloud, cloudProfile.Spec.Alicloud.Constraints.Zones, nil
+	case gardenv1beta1.CloudProviderPacket:
+		return gardenv1beta1.CloudProviderPacket, cloudProfile.Spec.Packet.Constraints.Zones, nil
+	}
+	return "", []gardenv1beta1.Zone{}, nil
+}
+
+// SetZoneForShoot sets the Zone for the shoot for the specific Cloud provider. Azure does not have Zones, so it is being ignored.
+func SetZoneForShoot(shoot *gardenv1beta1.Shoot, cloudProvider gardenv1beta1.CloudProvider, zones []string) {
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		shoot.Spec.Cloud.AWS.Zones = zones
+	case gardenv1beta1.CloudProviderGCP:
+		shoot.Spec.Cloud.GCP.Zones = zones
+	case gardenv1beta1.CloudProviderOpenStack:
+		shoot.Spec.Cloud.OpenStack.Zones = zones
+	case gardenv1beta1.CloudProviderAlicloud:
+		shoot.Spec.Cloud.Alicloud.Zones = zones
+	case gardenv1beta1.CloudProviderPacket:
+		shoot.Spec.Cloud.Packet.Zones = zones
+	}
 }

@@ -68,7 +68,7 @@ var _ = Describe("Shoot creation/deletion testing", func() {
 		validateFlags()
 
 		// parse shoot yaml into shoot object and generate random test names for shoots
-		_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix)
+		_, shootObject, err := CreateShootTestArtifacts(*shootTestYamlPath, *testShootsPrefix, true)
 		Expect(err).To(BeNil())
 
 		shoot = shootObject

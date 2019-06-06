@@ -61,6 +61,11 @@ func (c *Controller) reconcileShootCareKey(key string) error {
 		return err
 	}
 
+	// if shoot has not been scheduled, requeue
+	if shoot.Spec.Cloud.Seed == nil {
+		return nil
+	}
+
 	if err := c.careControl.Care(shoot, key); err != nil {
 		return err
 	}

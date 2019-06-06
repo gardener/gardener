@@ -49,8 +49,6 @@ global:
         ...
         -----END RSA PRIVATE KEY-----
     featureGates: {}
-#    admissionControlConfig: |
-#      configuration for the admission plugins. See example/20-admissionconfiguration.yaml
     audit:
  #    dynamicConfiguration: false                             Enables dynamic audit configuration. This feature also requires the DynamicAuditing feature flag
       log:
@@ -234,7 +232,46 @@ global:
       shootBackup:
         schedule: "0 */24 * * *"
       featureGates: {}
-
+  scheduler:
+    enabled: true
+    replicaCount: 1
+    serviceAccountName: gardener-scheduler
+    image:
+      repository: eu.gcr.io/gardener-project/gardener/scheduler
+      tag: latest
+      pullPolicy: IfNotPresent
+    resources:
+      requests:
+        cpu: 50m
+        memory: 50Mi
+      limits:
+        cpu: 300m
+        memory: 256Mi
+    config:
+      candidateDeterminationStrategy: SameRegion # either {SameRegion,MinimalDistance}
+      clientConnection:
+        acceptContentTypes: application/json
+        contentType: application/json
+        qps: 100
+        burst: 130
+      leaderElection:
+        leaderElect: true
+        leaseDuration: 15s
+        renewDeadline: 10s
+        retryPeriod: 2s
+        resourceLock: configmaps
+      # `discovery` allows specifying options for the cached discovery client
+      discovery:
+      #  discoveryCacheDir: /tmp/cache-dir
+      #  httpCacheDir: /tmp/http-cache-dir
+      #  ttl: 10s
+      logLevel: info
+      server:
+        http:
+          bindAddress: 0.0.0.0
+          port: 10251
+#      retrySyncPeriod: 15s
+#      concurrentSyncs: 5
   # Deployment related configuration
   deployment:
     virtualGarden:

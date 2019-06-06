@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -32,18 +33,19 @@ import (
 	controllermanagerconfigv1alpha1 "github.com/gardener/gardener/pkg/controllermanager/apis/config/v1alpha1"
 	"github.com/gardener/gardener/pkg/controllermanager/controller"
 	"github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/controllermanager/server"
-	"github.com/gardener/gardener/pkg/controllermanager/server/handlers"
+	"github.com/gardener/gardener/pkg/controllermanager/server/handlers/webhooks"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/server"
+	"github.com/gardener/gardener/pkg/server/handlers"
+	gardenerutils "github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/version"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	corev1 "k8s.io/api/core/v1"
+	"github.com/gardener/gardener/cmd/utils"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/discovery"
@@ -52,14 +54,9 @@ import (
 	kubeinformers "k8s.io/client-go/informers"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/tools/record"
-	componentbaseconfig "k8s.io/component-base/config"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -230,21 +227,8 @@ type Gardener struct {
 	LeaderElection         *leaderelection.LeaderElectionConfig
 }
 
-func restConfigFromClientConnectionConfiguration(cfg componentbaseconfig.ClientConnectionConfiguration) (*rest.Config, error) {
-	restConfig, err := clientcmd.BuildConfigFromFlags("", cfg.Kubeconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig.Burst = int(cfg.Burst)
-	restConfig.QPS = cfg.QPS
-	restConfig.AcceptContentTypes = cfg.AcceptContentTypes
-	restConfig.ContentType = cfg.ContentType
-	return restConfig, nil
-}
-
 func discoveryFromControllerManagerConfiguration(cfg *config.ControllerManagerConfiguration) (discovery.CachedDiscoveryInterface, error) {
-	restConfig, err := restConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	restConfig, err := utils.RESTConfigFromClientConnectionConfiguration(cfg.ClientConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +275,7 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 		cfg.ClientConnection.Kubeconfig = kubeconfig
 	}
 
-	restCfg, err := restConfigFromClientConnectionConfiguration(cfg.ClientConnection)
+	restCfg, err := utils.RESTConfigFromClientConnectionConfiguration(cfg.ClientConnection)
 	if err != nil {
 		return nil, err
 	}
@@ -316,10 +300,10 @@ func NewGardener(cfg *config.ControllerManagerConfiguration) (*Gardener, error) 
 	// Set up leader election if enabled and prepare event recorder.
 	var (
 		leaderElectionConfig *leaderelection.LeaderElectionConfig
-		recorder             = createRecorder(k8sGardenClient.Kubernetes())
+		recorder             = utils.CreateRecorder(k8sGardenClient.Kubernetes(), "gardener-controller-manager")
 	)
 	if cfg.LeaderElection.LeaderElect {
-		leaderElectionConfig, err = makeLeaderElectionConfig(cfg.LeaderElection, k8sGardenClientLeaderElection, recorder)
+		leaderElectionConfig, err = utils.MakeLeaderElectionConfig(cfg.LeaderElection.LeaderElectionConfiguration, cfg.LeaderElection.LockObjectNamespace, cfg.LeaderElection.LockObjectName, k8sGardenClientLeaderElection, recorder)
 		if err != nil {
 			return nil, err
 		}
@@ -361,7 +345,18 @@ func (g *Gardener) Run(ctx context.Context, cancel context.CancelFunc) error {
 	}
 
 	// Start HTTP server
-	go server.Serve(ctx, g.K8sGardenClient, g.K8sGardenInformers, g.Config.Server)
+	var (
+		backupInfrastructureInformer = g.K8sGardenInformers.Garden().V1beta1().BackupInfrastructures()
+		projectInformer              = g.K8sGardenInformers.Garden().V1beta1().Projects()
+		shootInformer                = g.K8sGardenInformers.Garden().V1beta1().Shoots()
+
+		httpsHandlers = map[string]func(http.ResponseWriter, *http.Request){
+			"/webhooks/validate-namespace-deletion": webhooks.NewValidateNamespaceDeletionHandler(g.K8sGardenClient, projectInformer.Lister(), backupInfrastructureInformer.Lister(), shootInformer.Lister()),
+		}
+	)
+
+	go server.ServeHTTP(ctx, g.Config.Server.HTTP.Port, g.Config.Server.HTTP.BindAddress)
+	go server.ServeHTTPS(ctx, g.K8sGardenInformers, httpsHandlers, g.Config.Server.HTTPS.Port, g.Config.Server.HTTPS.BindAddress, g.Config.Server.HTTPS.TLS.ServerCertPath, g.Config.Server.HTTPS.TLS.ServerKeyPath, shootInformer.Informer(), projectInformer.Informer(), backupInfrastructureInformer.Informer())
 	handlers.UpdateHealth(true)
 
 	// If leader election is enabled, run via LeaderElector until done and exit.
@@ -404,42 +399,6 @@ func (g *Gardener) startControllers(ctx context.Context) {
 	).Run(ctx)
 }
 
-func createRecorder(kubeClient k8s.Interface) record.EventRecorder {
-	eventBroadcaster := record.NewBroadcaster()
-	eventBroadcaster.StartLogging(logger.Logger.Debugf)
-	eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: typedcorev1.New(kubeClient.CoreV1().RESTClient()).Events("")})
-	return eventBroadcaster.NewRecorder(scheme.Scheme, corev1.EventSource{Component: "gardener-controller-manager"})
-}
-
-func makeLeaderElectionConfig(cfg config.LeaderElectionConfiguration, client k8s.Interface, recorder record.EventRecorder) (*leaderelection.LeaderElectionConfig, error) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get hostname: %v", err)
-	}
-
-	lock, err := resourcelock.New(
-		cfg.ResourceLock,
-		cfg.LockObjectNamespace,
-		cfg.LockObjectName,
-		client.CoreV1(),
-		client.CoordinationV1(),
-		resourcelock.ResourceLockConfig{
-			Identity:      hostname,
-			EventRecorder: recorder,
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't create resource lock: %v", err)
-	}
-
-	return &leaderelection.LeaderElectionConfig{
-		Lock:          lock,
-		LeaseDuration: cfg.LeaseDuration.Duration,
-		RenewDeadline: cfg.RenewDeadline.Duration,
-		RetryPeriod:   cfg.RetryPeriod.Duration,
-	}, nil
-}
-
 // We want to determine the Docker container id of the currently running Gardener controller manager because
 // we need to identify for still ongoing operations whether another Gardener controller manager instance is
 // still operating the respective Shoots. When running locally, we generate a random string because
@@ -464,7 +423,7 @@ func determineGardenerIdentity() (*gardenv1beta1.Gardener, string, error) {
 		splitBySlash := strings.Split(splitByNewline[0], "/")
 		gardenerID = splitBySlash[len(splitBySlash)-1]
 	} else {
-		gardenerID, err = utils.GenerateRandomString(64)
+		gardenerID, err = gardenerutils.GenerateRandomString(64)
 		if err != nil {
 			return nil, "", fmt.Errorf("unable to generate gardenerID: %v", err)
 		}

@@ -27,6 +27,7 @@ import (
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
+	gardenv1beta1helper "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -159,22 +160,8 @@ func (s *Shoot) GetNodeCount() int {
 }
 
 // GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
-func (s *Shoot) GetK8SNetworks() *gardencorev1alpha1.K8SNetworks {
-	switch s.CloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		return &s.Info.Spec.Cloud.AWS.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderAzure:
-		return &s.Info.Spec.Cloud.Azure.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderGCP:
-		return &s.Info.Spec.Cloud.GCP.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderOpenStack:
-		return &s.Info.Spec.Cloud.OpenStack.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderAlicloud:
-		return &s.Info.Spec.Cloud.Alicloud.Networks.K8SNetworks
-	case gardenv1beta1.CloudProviderPacket:
-		return &s.Info.Spec.Cloud.Packet.Networks.K8SNetworks
-	}
-	return nil
+func (s *Shoot) GetK8SNetworks() (*gardencorev1alpha1.K8SNetworks, error) {
+	return gardenv1beta1helper.GetK8SNetworks(s.Info)
 }
 
 // GetWorkerVolumesByName returns the volume information for the specific worker pool (if there
@@ -254,26 +241,29 @@ func (s *Shoot) GetZones() []string {
 
 // GetPodNetwork returns the pod network CIDR for the Shoot cluster.
 func (s *Shoot) GetPodNetwork() gardencorev1alpha1.CIDR {
-	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
-		return *k8sNetworks.Pods
+	k8sNetworks, err := s.GetK8SNetworks()
+	if err != nil {
+		return ""
 	}
-	return ""
+	return *k8sNetworks.Pods
 }
 
 // GetServiceNetwork returns the service network CIDR for the Shoot cluster.
 func (s *Shoot) GetServiceNetwork() gardencorev1alpha1.CIDR {
-	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
-		return *k8sNetworks.Services
+	k8sNetworks, err := s.GetK8SNetworks()
+	if err != nil {
+		return ""
 	}
-	return ""
+	return *k8sNetworks.Services
 }
 
 // GetNodeNetwork returns the node network CIDR for the Shoot cluster.
 func (s *Shoot) GetNodeNetwork() gardencorev1alpha1.CIDR {
-	if k8sNetworks := s.GetK8SNetworks(); k8sNetworks != nil {
-		return *k8sNetworks.Nodes
+	k8sNetworks, err := s.GetK8SNetworks()
+	if err != nil {
+		return ""
 	}
-	return ""
+	return *k8sNetworks.Nodes
 }
 
 // GetMachineImage returns the name of the used machine image.

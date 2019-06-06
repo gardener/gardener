@@ -75,9 +75,9 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
 
-	k8sNetworks := b.Shoot.GetK8SNetworks()
-	if k8sNetworks == nil {
-		return errors.New("could not retrieve K8SNetworks from the Shoot resource")
+	k8sNetworks, err := b.Shoot.GetK8SNetworks()
+	if err != nil {
+		return fmt.Errorf("could not retrieve K8SNetworks from the Shoot resource: %v", err)
 	}
 
 	var (
@@ -142,7 +142,7 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 			Visible:   visible,
 		},
 	}
-	_, err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Create(seed)
+	_, err = b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Create(seed)
 	if apierrors.IsAlreadyExists(err) {
 		_, err = b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Update(seed)
 	}

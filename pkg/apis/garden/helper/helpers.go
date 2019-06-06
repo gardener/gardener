@@ -17,7 +17,6 @@ package helper
 import (
 	"errors"
 
-	gardencore "github.com/gardener/gardener/pkg/apis/core"
 	"github.com/gardener/gardener/pkg/apis/garden"
 )
 
@@ -99,26 +98,3 @@ func DetermineCloudProviderInShoot(cloudObj garden.Cloud) (garden.CloudProvider,
 	return cloud, nil
 }
 
-// GetK8SNetworks returns the Kubernetes network CIDRs for the Shoot cluster.
-func GetK8SNetworks(shoot *garden.Shoot) (gardencore.K8SNetworks, error) {
-	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
-	if err != nil {
-		return gardencore.K8SNetworks{}, err
-	}
-
-	switch cloudProvider {
-	case garden.CloudProviderAWS:
-		return shoot.Spec.Cloud.AWS.Networks.K8SNetworks, nil
-	case garden.CloudProviderAzure:
-		return shoot.Spec.Cloud.Azure.Networks.K8SNetworks, nil
-	case garden.CloudProviderGCP:
-		return shoot.Spec.Cloud.GCP.Networks.K8SNetworks, nil
-	case garden.CloudProviderOpenStack:
-		return shoot.Spec.Cloud.OpenStack.Networks.K8SNetworks, nil
-	case garden.CloudProviderAlicloud:
-		return shoot.Spec.Cloud.Alicloud.Networks.K8SNetworks, nil
-	case garden.CloudProviderPacket:
-		return shoot.Spec.Cloud.Packet.Networks.K8SNetworks, nil
-	}
-	return gardencore.K8SNetworks{}, nil
-}

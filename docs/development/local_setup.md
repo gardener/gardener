@@ -208,7 +208,7 @@ secret/internal-domain-unmanaged created
 
 #### Run the Gardener API Server and the Gardener Controller Manager
 
-Next, run the Gardener API Server and the Gardener Controller Manager in different terminals using rules in the `Makefile`.
+Next, run the Gardener API Server, the Gardener Controller Manager and the Gardener Scheduler in different terminals using rules in the `Makefile`.
 
 ```bash
 $ make start-api
@@ -241,6 +241,18 @@ time="2019-03-06T15:24:18+02:00" level=info msg="SecretBinding controller initia
 time="2019-03-06T15:24:18+02:00" level=info msg="Project controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="Quota controller initialized."
 time="2019-03-06T15:24:18+02:00" level=info msg="CloudProfile controller initialized."
+[...]
+```
+
+Launch the Gardener Scheduler
+
+```bash
+$ make start-scheduler
+time="2019-05-02T16:31:50+02:00" level=info msg="Starting Gardener scheduler ..."
+time="2019-05-02T16:31:50+02:00" level=info msg="Starting HTTP server on 0.0.0.0:10251"
+time="2019-05-02T16:31:50+02:00" level=info msg="Acquired leadership, starting scheduler."
+time="2019-05-02T16:31:50+02:00" level=info msg="Gardener scheduler initialized (with Strategy: SameRegion)"
+time="2019-05-02T16:31:50+02:00" level=info msg="Scheduler controller initialized."
 [...]
 ```
 

@@ -1,0 +1,55 @@
+{{- if .Values.global.scheduler.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gardener-scheduler-configmap
+  namespace: garden
+  labels:
+    app: gardener
+    role: scheduler
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+data:
+  schedulerconfiguration.yaml: |
+    ---
+    apiVersion: scheduler.config.gardener.cloud/v1alpha1
+    kind: SchedulerConfiguration
+    candidateDeterminationStrategy: {{ required ".Values.global.scheduler.config.candidateDeterminationStrategy is required" .Values.global.scheduler.config.candidateDeterminationStrategy }}
+    clientConnection:
+      acceptContentTypes: {{ required ".Values.global.scheduler.config.clientConnection.acceptContentTypes is required" .Values.global.scheduler.config.clientConnection.acceptContentTypes }}
+      contentType: {{ required ".Values.global.scheduler.config.clientConnection.contentType is required" .Values.global.scheduler.config.clientConnection.contentType }}
+      qps: {{ required ".Values.global.scheduler.config.clientConnection.qps is required" .Values.global.scheduler.config.clientConnection.qps }}
+      burst: {{ required ".Values.global.scheduler.config.clientConnection.burst is required" .Values.global.scheduler.config.clientConnection.burst }}
+      {{- if .Values.global.scheduler.config.clientConnection.kubeconfig }}
+      kubeconfig: {{ .Values.global.scheduler.config.clientConnection.kubeconfig }}
+      {{- end }}
+      {{- if .Values.global.scheduler.kubeconfig }}
+      kubeconfig: /etc/gardener-scheduler/kubeconfig/kubeconfig
+      {{- end }}
+    leaderElection:
+      leaderElect: {{ required ".Values.global.scheduler.config.leaderElection.leaderElect is required" .Values.global.scheduler.config.leaderElection.leaderElect }}
+      leaseDuration: {{ required ".Values.global.scheduler.config.leaderElection.leaseDuration is required" .Values.global.scheduler.config.leaderElection.leaseDuration }}
+      renewDeadline: {{ required ".Values.global.scheduler.config.leaderElection.renewDeadline is required" .Values.global.scheduler.config.leaderElection.renewDeadline }}
+      retryPeriod: {{ required ".Values.global.scheduler.config.leaderElection.retryPeriod is required" .Values.global.scheduler.config.leaderElection.retryPeriod }}
+      resourceLock: {{ required ".Values.global.scheduler.config.leaderElection.resourceLock is required" .Values.global.scheduler.config.leaderElection.resourceLock }}
+    discovery:
+      {{- with .Values.global.scheduler.config.discovery }}
+      {{- if .discoveryCacheDir }}
+      discoveryCacheDir: {{ .discoveryCacheDir }}
+      {{- end }}
+      {{- if .httpCacheDir }}
+      httpCacheDir: {{ .httpCacheDir }}
+      {{- end }}
+      {{- if .ttl }}
+      ttl: {{ .ttl }}
+      {{- end }}
+      {{- end }}
+    logLevel: {{ required ".Values.global.scheduler.config.logLevel is required" .Values.global.scheduler.config.logLevel }}
+    server:
+      http:
+        bindAddress: {{ required ".Values.global.scheduler.config.server.http.bindAddress is required" .Values.global.scheduler.config.server.http.bindAddress }}
+        port: {{ required ".Values.global.scheduler.config.server.http.port is required" .Values.global.scheduler.config.server.http.port }}
+    retrySyncPeriod: {{ .Values.global.scheduler.config.retrySyncPeriod }}
+    concurrentSyncs: {{ .Values.global.scheduler.config.concurrentSyncs }}
+{{- end }}
