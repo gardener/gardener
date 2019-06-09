@@ -16,8 +16,6 @@ package alicloudbotanist
 
 import (
 	"errors"
-	"fmt"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -59,32 +57,6 @@ func init() {
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
 
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
-}
-
-func infrastructureStatusFromInfrastructure(raw []byte) (*alicloudv1alpha1.InfrastructureStatus, error) {
-	config := &alicloudv1alpha1.InfrastructureStatus{}
-	if _, _, err := decoder.Decode(raw, nil, config); err != nil {
-		return nil, err
-	}
-	return config, nil
-}
-
-func findVSWitchByPurposeAndZone(vswitches []alicloudv1alpha1.VSwitch, purpose alicloudv1alpha1.Purpose, zone string) (*alicloudv1alpha1.VSwitch, error) {
-	for _, vswitch := range vswitches {
-		if vswitch.Purpose == purpose && vswitch.Zone == zone {
-			return &vswitch, nil
-		}
-	}
-	return nil, fmt.Errorf("no vswitch with purpose %q in zone %q found", purpose, zone)
-}
-
-func findSecurityGroupByPurpose(securityGroups []alicloudv1alpha1.SecurityGroup, purpose alicloudv1alpha1.Purpose) (*alicloudv1alpha1.SecurityGroup, error) {
-	for _, securityGroup := range securityGroups {
-		if securityGroup.Purpose == purpose {
-			return &securityGroup, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find security group with purpose %q", purpose)
 }
 
 // IMPORTANT NOTICE

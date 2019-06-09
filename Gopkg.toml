@@ -22,7 +22,7 @@ ignored = [
 # Only temporarily needed for migration purposes
 [[constraint]]
   name = "github.com/gardener/gardener-extensions"
-  revision = "f09dd7bc8d2fee9f4cfff1d95d39e7713728bf81"
+  revision = "227adb277fa467b9e805af798a502514ccbe75dd"
 
 [[override]]
   name = "k8s.io/api"

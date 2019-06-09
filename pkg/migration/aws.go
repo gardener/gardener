@@ -65,3 +65,27 @@ func GardenV1beta1ShootToAWSV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 		},
 	}, nil
 }
+
+// GardenV1beta1ShootToAWSV1alpha1ControlPlaneConfig converts a garden.sapcloud.io/v1beta1.Shoot to awsv1alpha1.ControlPlaneConfig.
+// This function is only required temporarily for migration purposes and can be removed in the future when we switched to
+// core.gardener.cloud/v1alpha1.Shoot.
+func GardenV1beta1ShootToAWSV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoot) (*awsv1alpha1.ControlPlaneConfig, error) {
+	if shoot.Spec.Cloud.AWS == nil {
+		return nil, fmt.Errorf("shoot is not of type AWS")
+	}
+
+	var cloudControllerManager *awsv1alpha1.CloudControllerManagerConfig
+	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
+		cloudControllerManager = &awsv1alpha1.CloudControllerManagerConfig{
+			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+		}
+	}
+
+	return &awsv1alpha1.ControlPlaneConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: awsv1alpha1.SchemeGroupVersion.String(),
+			Kind:       controlPlaneConfig,
+		},
+		CloudControllerManager: cloudControllerManager,
+	}, nil
+}

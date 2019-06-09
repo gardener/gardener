@@ -327,35 +327,6 @@ func DeleteVpa(k8sClient kubernetes.Interface, namespace string) error {
 	return nil
 }
 
-// InjectCSIFeatureGates adds required feature gates for csi when starting Kubelet/Kube-APIServer based on kubernetes version
-func InjectCSIFeatureGates(kubeVersion string, featureGates map[string]bool) (map[string]bool, error) {
-	lessV1_13, err := utils.CompareVersions(kubeVersion, "<", "v1.13.0")
-	if err != nil {
-		return featureGates, err
-	}
-	if lessV1_13 {
-		return featureGates, nil
-	}
-
-	//https://kubernetes-csi.github.io/docs/Setup.html
-	csiFG := map[string]bool{
-		"VolumeSnapshotDataSource": true,
-		"KubeletPluginsWatcher":    true,
-		"CSINodeInfo":              true,
-		"CSIDriverRegistry":        true,
-	}
-
-	if featureGates == nil {
-		return csiFG, nil
-	}
-
-	for k, v := range csiFG {
-		featureGates[k] = v
-	}
-
-	return featureGates, nil
-}
-
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
 func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
 	if k8sClient == nil {

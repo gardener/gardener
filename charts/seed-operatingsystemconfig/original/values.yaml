@@ -4,10 +4,6 @@ osc:
   reloadConfigFilePath: /var/lib/...
   secretName: cpu-worker-0
 
-cloudProvider:
-  name: aws
-#  config: |
-#    Kubernetes cloud provider config
 #caBundle: |
 #  root certificates
 images:
@@ -18,10 +14,6 @@ kubernetes:
   domain: cluster.local
   kubelet:
     caCert: abcd
-    hostnameOverride: false
-    parameters: []
-    enableCSI: false
-    providerIDProvided: false
     cpuCFSQuota: true
     cpuManagerPolicy: none
 #   podPIDsLimit: 24

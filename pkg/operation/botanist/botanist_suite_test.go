@@ -213,7 +213,6 @@ var _ = Describe("health check", func() {
 		shootNamespace = metav1.NamespaceSystem
 
 		// control plane deployments
-		cloudControllerManagerDeployment   = newDeployment(seedNamespace, common.CloudControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
 		kubeAddonManagerDeployment         = newDeployment(seedNamespace, common.KubeAddonManagerDeploymentName, common.GardenRoleControlPlane, true)
 		kubeAPIServerDeployment            = newDeployment(seedNamespace, common.KubeAPIServerDeploymentName, common.GardenRoleControlPlane, true)
 		kubeControllerManagerDeployment    = newDeployment(seedNamespace, common.KubeControllerManagerDeploymentName, common.GardenRoleControlPlane, true)
@@ -224,7 +223,6 @@ var _ = Describe("health check", func() {
 		clusterAutoscalerDeployment        = newDeployment(seedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler, common.GardenRoleControlPlane, true)
 
 		requiredControlPlaneDeployments = []*appsv1.Deployment{
-			cloudControllerManagerDeployment,
 			kubeAddonManagerDeployment,
 			kubeAPIServerDeployment,
 			kubeControllerManagerDeployment,
@@ -329,7 +327,6 @@ var _ = Describe("health check", func() {
 			gcpShoot,
 			gardenv1beta1.CloudProviderAWS,
 			[]*appsv1.Deployment{
-				cloudControllerManagerDeployment,
 				kubeAddonManagerDeployment,
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
@@ -345,7 +342,6 @@ var _ = Describe("health check", func() {
 			gcpShootWithAutoscaler,
 			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
-				cloudControllerManagerDeployment,
 				kubeAddonManagerDeployment,
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
@@ -361,7 +357,6 @@ var _ = Describe("health check", func() {
 			gcpShoot,
 			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
-				kubeAddonManagerDeployment,
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
 				kubeSchedulerDeployment,
@@ -375,7 +370,6 @@ var _ = Describe("health check", func() {
 			gcpShoot,
 			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
-				cloudControllerManagerDeployment,
 				newDeployment(kubeAddonManagerDeployment.Namespace, kubeAddonManagerDeployment.Name, roleOf(kubeAddonManagerDeployment), false),
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,
@@ -409,7 +403,6 @@ var _ = Describe("health check", func() {
 			gcpShootWithAutoscaler,
 			gardenv1beta1.CloudProviderGCP,
 			[]*appsv1.Deployment{
-				cloudControllerManagerDeployment,
 				kubeAddonManagerDeployment,
 				kubeAPIServerDeployment,
 				kubeControllerManagerDeployment,

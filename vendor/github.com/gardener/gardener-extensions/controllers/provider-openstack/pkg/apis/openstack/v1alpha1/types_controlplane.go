@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gcp
+package v1alpha1
 
 import (
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -23,16 +23,17 @@ import (
 
 // ControlPlaneConfig contains configuration settings for the control plane.
 type ControlPlaneConfig struct {
-	metav1.TypeMeta
+	metav1.TypeMeta `json:",inline"`
 
-	// Zone is the GCP zone
-	Zone string
+	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
+	LoadBalancerProvider string `json:"loadBalancerProvider"`
 
 	// CloudControllerManager contains configuration settings for the cloud-controller-manager.
-	CloudControllerManager *CloudControllerManagerConfig
+	// +optional
+	CloudControllerManager *CloudControllerManagerConfig `json:"cloudControllerManager,omitempty"`
 }
 
 // CloudControllerManagerConfig contains configuration settings for the cloud-controller-manager.
 type CloudControllerManagerConfig struct {
-	gardenv1beta1.KubernetesConfig
+	gardenv1beta1.KubernetesConfig `json:",inline"`
 }

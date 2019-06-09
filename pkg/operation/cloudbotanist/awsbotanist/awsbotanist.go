@@ -72,42 +72,6 @@ func infrastructureStatusFromInfrastructure(raw []byte) (*awsv1alpha1.Infrastruc
 	return config, nil
 }
 
-func findSubnetByPurpose(subnets []awsv1alpha1.Subnet, purpose string) (*awsv1alpha1.Subnet, error) {
-	for _, subnet := range subnets {
-		if subnet.Purpose == purpose {
-			return &subnet, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find subnet with purpose %q", purpose)
-}
-
-func findSubnetByPurposeAndZone(subnets []awsv1alpha1.Subnet, purpose, zone string) (*awsv1alpha1.Subnet, error) {
-	for _, subnet := range subnets {
-		if subnet.Zone == zone && subnet.Purpose == purpose {
-			return &subnet, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find subnet with purpose %q in zone %q", purpose, zone)
-}
-
-func findSecurityGroupByPurpose(securityGroups []awsv1alpha1.SecurityGroup, purpose string) (*awsv1alpha1.SecurityGroup, error) {
-	for _, securityGroup := range securityGroups {
-		if securityGroup.Purpose == purpose {
-			return &securityGroup, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find security group with purpose %q", purpose)
-}
-
-func findInstanceProfileByPurpose(instanceProfiles []awsv1alpha1.InstanceProfile, purpose string) (*awsv1alpha1.InstanceProfile, error) {
-	for _, instanceProfile := range instanceProfiles {
-		if instanceProfile.Purpose == purpose {
-			return &instanceProfile, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find instance profile with purpose %q", purpose)
-}
-
 func findRoleByPurpose(roles []awsv1alpha1.Role, purpose string) (*awsv1alpha1.Role, error) {
 	for _, role := range roles {
 		if role.Purpose == purpose {

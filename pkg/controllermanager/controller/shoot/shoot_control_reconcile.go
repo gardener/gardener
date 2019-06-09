@@ -150,34 +150,30 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilBackupInfrastructureReconciled),
 			Dependencies: flow.NewTaskIDs(deployBackupInfrastructure),
 		})
-		deployETCDStorageClass = g.Add(flow.Task{
-			Name: "Deploying storageclass for etcd",
-			Fn:   flow.TaskFn(hybridBotanist.DeployETCDStorageClass).RetryUntilTimeout(defaultInterval, defaultTimeout),
-		})
 		deployETCD = g.Add(flow.Task{
 			Name:         "Deploying main and events etcd",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployETCD).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled, deployETCDStorageClass),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilBackupInfrastructureReconciled),
 		})
 		waitUntilEtcdReady = g.Add(flow.Task{
 			Name:         "Waiting until main and event etcd report readiness",
 			Fn:           flow.TaskFn(botanist.WaitUntilEtcdReady).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(deployETCD),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Deleting orphan etcd main persistent volume due to recent migration",
-			Fn:           flow.TaskFn(botanist.DeleteOrphanEtcdMainPVC),
-			Dependencies: flow.NewTaskIDs(deployETCD),
+		deployControlPlane = g.Add(flow.Task{
+			Name:         "Deploying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilInfrastructureReady),
 		})
-		deployCloudProviderConfig = g.Add(flow.Task{
-			Name:         "Deploying cloud provider configuration",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudProviderConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady, deployCloudProviderSecret),
+		waitUntilControlPlaneReady = g.Add(flow.Task{
+			Name:         "Waiting until Shoot control plane has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, deployCloudProviderConfig),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -199,20 +195,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeScheduler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, waitUntilKubeAPIServerIsReady),
 		})
-		deployCloudControllerManager = g.Add(flow.Task{
-			Name:         "Deploying cloud controller manager",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCloudControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployCloudProviderConfig),
-		})
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployCloudProviderConfig),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Syncing shoot access credentials to project namespace in Garden",
 			Fn:           flow.SimpleTaskFn(botanist.SyncShootCredentialsToGarden).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployCloudControllerManager, deployKubeControllerManager),
+			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployKubeControllerManager),
 		})
 		computeShootOSConfig = g.Add(flow.Task{
 			Name:         "Computing operating system specific configuration for shoot workers",
@@ -223,11 +214,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Deploying Kubernetes addon manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady, computeShootOSConfig),
-		})
-		deployCSIControllers = g.Add(flow.Task{
-			Name:         "Deploying CSI controllers",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployCSIControllers).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(o.Shoot.UsesCSI()),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, deployKubeAddonManager),
 		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
@@ -252,7 +238,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, waitUntilWorkerReady, deployCSIControllers),
+			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, waitUntilWorkerReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",

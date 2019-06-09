@@ -39,3 +39,20 @@ func GardenV1beta1ShootToPacketV1alpha1InfrastructureConfig(shoot *gardenv1beta1
 		},
 	}, nil
 }
+
+// GardenV1beta1ShootToPacketV1alpha1ControlPlaneConfig converts a garden.sapcloud.io/v1beta1.Shoot to packetv1alpha1.ControlPlaneConfig.
+// This function is only required temporarily for migration purposes and can be removed in the future when we switched to
+// core.gardener.cloud/v1alpha1.Shoot.
+func GardenV1beta1ShootToPacketV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoot) (*packetv1alpha1.ControlPlaneConfig, error) {
+	if shoot.Spec.Cloud.Packet == nil {
+		return nil, fmt.Errorf("shoot is not of type Packet")
+	}
+
+	// TODO Possibly extend later
+	return &packetv1alpha1.ControlPlaneConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: packetv1alpha1.SchemeGroupVersion.String(),
+			Kind:       controlPlaneConfig,
+		},
+	}, nil
+}

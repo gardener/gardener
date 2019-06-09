@@ -3,10 +3,6 @@ kind: Service
 metadata:
   name: kube-apiserver
   namespace: {{ .Release.Namespace }}
-{{- if .Values.annotations }}
-  annotations:
-{{ toYaml .Values.annotations | indent 4 }}
-{{- end }}
   labels:
     app: kubernetes
     role: apiserver

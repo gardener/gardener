@@ -311,11 +311,6 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 	return wokenUp
 }
 
-// UsesCSI returns whether the given shoot uses CSI volume plugins.
-func (s *Shoot) UsesCSI() bool {
-	return s.CloudProvider == gardenv1beta1.CloudProviderAlicloud || s.CloudProvider == gardenv1beta1.CloudProviderPacket
-}
-
 // ComputeAPIServerURL takes a boolean value identifying whether the component connecting to the API server
 // runs in the Seed cluster <runsInSeed>, and a boolean value <useInternalClusterDomain> which determines whether the
 // internal or the external cluster domain should be used.

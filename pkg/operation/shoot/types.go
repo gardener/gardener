@@ -45,6 +45,7 @@ type Shoot struct {
 	CloudConfigMap       map[string]CloudConfig
 	Extensions           map[string]Extension
 	InfrastructureStatus []byte
+	ControlPlaneStatus   []byte
 	MachineDeployments   []extensionsv1alpha1.MachineDeployment
 }
 

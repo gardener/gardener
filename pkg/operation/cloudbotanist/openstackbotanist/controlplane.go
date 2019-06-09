@@ -15,176 +15,26 @@
 package openstackbotanist
 
 import (
-	"fmt"
-
 	"github.com/gardener/gardener/pkg/operation/common"
-	"github.com/gardener/gardener/pkg/utils"
-
-	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 )
-
-const cloudProviderConfigTemplate = `
-[Global]
-auth-url=%q
-domain-name=%q
-tenant-name=%q
-username=%q
-password=%q
-[LoadBalancer]
-lb-version=v2
-lb-provider=%q
-floating-network-id=%q
-subnet-id=%q
-create-monitor=true
-monitor-delay=60s
-monitor-timeout=30s
-monitor-max-retries=5
-`
-
-// GenerateCloudProviderConfig generates the OpenStack cloud provider config.
-// See this for more details:
-// https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/openstack/openstack.go
-func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
-	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
-	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
-	// responsible.
-	if b.Shoot.InfrastructureStatus == nil {
-		return "", fmt.Errorf("no infrastructure status found")
-	}
-	infrastructureStatus, err := infrastructureStatusFromInfrastructure(b.Shoot.InfrastructureStatus)
-	if err != nil {
-		return "", err
-	}
-	nodesSubnet, err := findSubnetByPurpose(infrastructureStatus.Networks.Subnets, openstackv1alpha1.PurposeNodes)
-	if err != nil {
-		return "", err
-	}
-
-	cloudProviderConfig := fmt.Sprintf(
-		cloudProviderConfigTemplate,
-		b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL,
-		string(b.Shoot.Secret.Data[DomainName]),
-		string(b.Shoot.Secret.Data[TenantName]),
-		string(b.Shoot.Secret.Data[UserName]),
-		string(b.Shoot.Secret.Data[Password]),
-		b.Shoot.Info.Spec.Cloud.OpenStack.LoadBalancerProvider,
-		infrastructureStatus.Networks.FloatingPool.ID,
-		nodesSubnet.ID,
-	)
-
-	// https://github.com/kubernetes/kubernetes/pull/63903#issue-188306465
-	needsDHCPDomain, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.10.1, < 1.10.3")
-	if err != nil {
-		return "", err
-	}
-
-	if needsDHCPDomain && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil || b.Shoot.CloudProfile.Spec.OpenStack.RequestTimeout != nil {
-		cloudProviderConfig += fmt.Sprintf(`
-[Metadata]`)
-	}
-
-	if needsDHCPDomain && b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain != nil {
-		cloudProviderConfig += fmt.Sprintf(`
-dhcp-domain=%q`, *b.Shoot.CloudProfile.Spec.OpenStack.DHCPDomain)
-	}
-
-	if b.Shoot.CloudProfile.Spec.OpenStack.RequestTimeout != nil {
-		cloudProviderConfig += fmt.Sprintf(`
-request-timeout=%s`, *b.Shoot.CloudProfile.Spec.OpenStack.RequestTimeout)
-	}
-
-	return cloudProviderConfig, nil
-}
-
-// RefreshCloudProviderConfig refreshes the cloud provider credentials in the existing cloud
-// provider config.
-func (b *OpenStackBotanist) RefreshCloudProviderConfig(currentConfig map[string]string) map[string]string {
-	var (
-		existing  = currentConfig[common.CloudProviderConfigMapKey]
-		updated   = existing
-		separator = "="
-	)
-
-	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "auth-url", b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL)
-	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "domain-name", string(b.Shoot.Secret.Data[DomainName]))
-	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "tenant-name", string(b.Shoot.Secret.Data[TenantName]))
-	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "username", string(b.Shoot.Secret.Data[UserName]))
-	updated = common.ReplaceCloudProviderConfigKey(updated, separator, "password", string(b.Shoot.Secret.Data[Password]))
-
-	return map[string]string{
-		common.CloudProviderConfigMapKey: updated,
-	}
-}
-
-// GenerateKubeAPIServerServiceConfig generates the cloud provider specific values which are required to render the
-// Service manifest of the kube-apiserver-service properly.
-func (b *OpenStackBotanist) GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error) {
-	return nil, nil
-}
-
-// GenerateKubeAPIServerExposeConfig defines the cloud provider specific values which configure how the kube-apiserver
-// is exposed to the public.
-func (b *OpenStackBotanist) GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"advertiseAddress": b.APIServerAddress,
-		"additionalParameters": []string{
-			fmt.Sprintf("--external-hostname=%s", b.APIServerAddress),
-		},
-	}, nil
-}
-
-// GenerateKubeAPIServerConfig generates the cloud provider specific values which are required to render the
-// Deployment manifest of the kube-apiserver properly.
-func (b *OpenStackBotanist) GenerateKubeAPIServerConfig() (map[string]interface{}, error) {
-	return nil, nil
-}
-
-// GenerateCloudControllerManagerConfig generates the cloud provider specific values which are required to
-// render the Deployment manifest of the cloud-controller-manager properly.
-func (b *OpenStackBotanist) GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error) {
-	return nil, common.CloudControllerManagerDeploymentName, nil
-}
 
 // GenerateCSIConfig generates the configuration for CSI charts
 func (b *OpenStackBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 	return nil, nil
 }
 
-// GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to
-// render the Deployment manifest of the kube-controller-manager properly.
-func (b *OpenStackBotanist) GenerateKubeControllerManagerConfig() (map[string]interface{}, error) {
-	return nil, nil
-}
-
-// GenerateKubeSchedulerConfig generates the cloud provider specific values which are required to render the
-// Deployment manifest of the kube-scheduler properly.
-func (b *OpenStackBotanist) GenerateKubeSchedulerConfig() (map[string]interface{}, error) {
-	return nil, nil
-}
-
-// GenerateETCDStorageClassConfig generates values which are required to create etcd volume storageclass properly.
-func (b *OpenStackBotanist) GenerateETCDStorageClassConfig() map[string]interface{} {
-	return map[string]interface{}{
-		"name":        "gardener.cloud-fast",
-		"capacity":    b.Seed.GetValidVolumeSize("25Gi"),
-		"provisioner": "kubernetes.io/cinder",
-		"parameters":  map[string]interface{}{},
-	}
-
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
-func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error) {
+func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	containerName := "containerName"
 
 	tf, err := b.NewBackupInfrastructureTerraformer()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	stateVariables, err := tf.GetStateOutputVariables(containerName)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	secretData := map[string][]byte{
@@ -196,60 +46,7 @@ func (b *OpenStackBotanist) GenerateEtcdBackupConfig() (map[string][]byte, map[s
 		DomainName:              b.Seed.Secret.Data[DomainName],
 	}
 
-	backupConfigData := map[string]interface{}{
-		"schedule":         b.Operation.ShootBackup.Schedule,
-		"storageProvider":  "Swift",
-		"storageContainer": stateVariables[containerName],
-		"env": []map[string]interface{}{
-			{
-				"name": "OS_AUTH_URL",
-				"valueFrom": map[string]interface{}{
-					"secretKeyRef": map[string]interface{}{
-						"name": common.BackupSecretName,
-						"key":  AuthURL,
-					},
-				},
-			},
-			{
-				"name": "OS_DOMAIN_NAME",
-				"valueFrom": map[string]interface{}{
-					"secretKeyRef": map[string]interface{}{
-						"name": common.BackupSecretName,
-						"key":  DomainName,
-					},
-				},
-			},
-			{
-				"name": "OS_USERNAME",
-				"valueFrom": map[string]interface{}{
-					"secretKeyRef": map[string]interface{}{
-						"name": common.BackupSecretName,
-						"key":  UserName,
-					},
-				},
-			},
-			{
-				"name": "OS_PASSWORD",
-				"valueFrom": map[string]interface{}{
-					"secretKeyRef": map[string]interface{}{
-						"name": common.BackupSecretName,
-						"key":  Password,
-					},
-				},
-			},
-			{
-				"name": "OS_TENANT_NAME",
-				"valueFrom": map[string]interface{}{
-					"secretKeyRef": map[string]interface{}{
-						"name": common.BackupSecretName,
-						"key":  TenantName,
-					},
-				},
-			},
-		},
-		"volumeMount": []map[string]interface{}{},
-	}
-	return secretData, backupConfigData, nil
+	return secretData, nil
 }
 
 // DeployCloudSpecificControlPlane does currently nothing for OpenStack.

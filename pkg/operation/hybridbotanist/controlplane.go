@@ -16,14 +16,10 @@ package hybridbotanist
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
-	"strings"
-	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
@@ -107,17 +103,11 @@ func getResourcesForAPIServer(nodeCount int) (string, string, string, string) {
 	return cpuRequest, memoryRequest, cpuLimit, memoryLimit
 }
 
-// DeployETCDStorageClass create the high iops storageclass required for volume used by etcd pods in seed cluster.
-func (b *HybridBotanist) DeployETCDStorageClass(ctx context.Context) error {
-	storageClassConfig := b.SeedCloudBotanist.GenerateETCDStorageClassConfig()
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd-storageclass"), b.Shoot.SeedNamespace, "etcd-storageclass", nil, storageClassConfig)
-}
-
 // DeployETCD deploys two etcd clusters via StatefulSets. The first etcd cluster (called 'main') is used for all the
 // data the Shoot Kubernetes cluster needs to store, whereas the second etcd luster (called 'events') is only used to
 // store the events data. The objectstore is also set up to store the backups.
 func (b *HybridBotanist) DeployETCD() error {
-	secretData, backupConfigData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
+	secretData, err := b.SeedCloudBotanist.GenerateEtcdBackupConfig()
 	if err != nil {
 		return err
 	}
@@ -129,7 +119,6 @@ func (b *HybridBotanist) DeployETCD() error {
 		}
 	}
 
-	storageClassConfig := b.SeedCloudBotanist.GenerateETCDStorageClassConfig()
 	etcdConfig := map[string]interface{}{
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-etcd-ca":         b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
@@ -139,29 +128,17 @@ func (b *HybridBotanist) DeployETCD() error {
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
-		"storageClassName": storageClassConfig["name"].(string),
-		"storageCapacity":  storageClassConfig["capacity"].(string),
+		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
 
-	// Some cloud botanists do not yet support backup and won't return backup config data.
-	if backupConfigData != nil {
-		etcdConfig["backup"] = backupConfigData
-		etcdConfig["podAnnotations"].(map[string]interface{})["checksum/secret-etcd-backup"] = utils.HashForMap(backupConfigData)
-	}
-
-	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName, common.ETCDBackupRestoreImageName)
+	etcd, err := b.InjectSeedShootImages(etcdConfig, common.ETCDImageName)
 	if err != nil {
 		return err
 	}
 
 	for _, role := range []string{common.EtcdRoleMain, common.EtcdRoleEvents} {
 		etcd["role"] = role
-		if role == common.EtcdRoleEvents {
-			etcd["backup"] = map[string]interface{}{
-				"storageProvider": "", // No storage provider means no backup
-			}
-			etcd["storageCapacity"] = b.Seed.GetValidVolumeSize("10Gi")
-		} else {
+		if role == common.EtcdRoleMain {
 			// etcd-main emits extensive (histogram) metrics
 			etcd["metrics"] = "extensive"
 		}
@@ -180,32 +157,6 @@ func (b *HybridBotanist) DeployETCD() error {
 		}
 
 		if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
-			if role == common.EtcdRoleMain {
-				// Since we have to update volumeClaimTemplate in existing statefulset, which is forbidden
-				// by k8s. So, we have to explicitly delete the old statefulset and create new one.
-				// TODO: This is backward compatibility code and should be removed in further releases.
-				if apierrors.IsInvalid(err) {
-					if err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
-						return err
-					}
-
-					ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-					defer cancel()
-					if err := b.Botanist.WaitUntilEtcdStatefulsetDeleted(ctx, role); err != nil {
-						return err
-					}
-
-					if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "etcd"), b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role), nil, etcd); err != nil {
-						return err
-					}
-				} else {
-					return err
-				}
-			} else {
-				return err
-			}
-		}
-		if err := b.K8sSeedClient.DeleteService(b.Shoot.SeedNamespace, fmt.Sprintf("etcd-%s", role)); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
@@ -279,94 +230,17 @@ func (b *HybridBotanist) DeployNetworkPolicies(ctx context.Context) error {
 	return b.deployNetworkPolicies(ctx, true)
 }
 
-// DeployCloudProviderConfig asks the Cloud Botanist to provide the cloud specific values for the cloud
-// provider configuration. It will create a ConfigMap for it and store it in the Seed cluster.
-func (b *HybridBotanist) DeployCloudProviderConfig() error {
-	cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
-	if err != nil {
-		return err
-	}
-	b.CheckSums[common.CloudProviderConfigName] = computeCloudProviderConfigChecksum(cloudProviderConfig)
-
-	defaultValues := map[string]interface{}{
-		"cloudProviderConfig": cloudProviderConfig,
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.CloudProviderConfigName), b.Shoot.SeedNamespace, common.CloudProviderConfigName, nil, defaultValues)
-}
-
-// RefreshCloudProviderConfig asks the Cloud Botanist to refresh the cloud provider config in case it stores
-// the cloud provider credentials. The Cloud Botanist is expected to return the complete updated cloud config.
-func (b *HybridBotanist) RefreshCloudProviderConfig() error {
-	currentConfig, err := b.K8sSeedClient.GetConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-
-	newConfigData := b.ShootCloudBotanist.RefreshCloudProviderConfig(currentConfig.Data)
-	b.CheckSums[common.CloudProviderConfigName] = computeCloudProviderConfigChecksum(newConfigData[common.CloudProviderConfigMapKey])
-
-	_, err = b.K8sSeedClient.UpdateConfigMap(b.Shoot.SeedNamespace, common.CloudProviderConfigName, newConfigData)
-	return err
-}
-
-// RefreshCSIControllersChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
-func (b *HybridBotanist) RefreshCSIControllersChecksums() error {
-	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CSIPluginController); err != nil {
-		if apierrors.IsNotFound(err) {
-			return b.DeployCSIControllers()
-		}
-		return err
-	}
-
-	type jsonPatch struct {
-		Op    string `json:"op"`
-		Path  string `json:"path"`
-		Value string `json:"value"`
-	}
-
-	patch := []jsonPatch{
-		{
-			Op:    "replace",
-			Path:  "/spec/template/metadata/annotations/checksum~1cloudprovider",
-			Value: b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
-		},
-	}
-
-	body, err := json.Marshal(patch)
-	if err != nil {
-		return err
-	}
-
-	_, err = b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, common.CSIPluginController, body)
-	return err
-}
-
-func computeCloudProviderConfigChecksum(cloudProviderConfig string) string {
-	return utils.ComputeSHA256Hex([]byte(strings.TrimSpace(cloudProviderConfig)))
-}
-
-// DeployKubeAPIServerService asks the Cloud Botanist to provide the cloud specific configuration values for the
-// kube-apiserver service.
+// DeployKubeAPIServerService deploys kube-apiserver service.
 func (b *HybridBotanist) DeployKubeAPIServerService() error {
 	var (
 		name          = "kube-apiserver-service"
 		defaultValues = map[string]interface{}{}
 	)
 
-	cloudSpecificValues, err := b.SeedCloudBotanist.GenerateKubeAPIServerServiceConfig()
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, defaultValues, cloudSpecificValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, defaultValues, nil)
 }
 
-// DeployKubeAPIServer asks the Cloud Botanist to provide the cloud specific configuration values for the
-// kube-apiserver deployment.
+// DeployKubeAPIServer deploys kube-apiserver deployment.
 func (b *HybridBotanist) DeployKubeAPIServer() error {
 	defaultValues := map[string]interface{}{
 		"etcdServicePort":   2379,
@@ -398,14 +272,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
-	}
-	cloudSpecificExposeValues, err := b.SeedCloudBotanist.GenerateKubeAPIServerExposeConfig()
-	if err != nil {
-		return err
-	}
-	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeAPIServerConfig()
-	if err != nil {
-		return err
 	}
 
 	if b.ShootedSeed != nil {
@@ -457,11 +323,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		admissionPlugins = kubernetes.GetAdmissionPluginsForVersion(b.Shoot.Info.Spec.Kubernetes.Version)
 	)
 
-	// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
-	if !b.Shoot.UsesCSI() {
-		admissionPlugins = append(admissionPlugins, gardenv1beta1.AdmissionPlugin{Name: "PersistentVolumeLabel"})
-	}
-
 	if apiServerConfig != nil {
 		defaultValues["featureGates"] = apiServerConfig.FeatureGates
 		defaultValues["runtimeConfig"] = apiServerConfig.RuntimeConfig
@@ -500,24 +361,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	}
 	defaultValues["admissionPlugins"] = admissionPlugins
 
-	if b.Shoot.UsesCSI() {
-		var existingFeatureGates map[string]bool
-		if fg, ok := defaultValues["featureGates"]; ok {
-			existingFeatureGates = fg.(map[string]bool)
-		}
-
-		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), existingFeatureGates)
-		if err != nil {
-			return err
-		}
-		defaultValues["featureGates"] = featureGates
-	} else {
-		// Needed due to https://github.com/kubernetes/kubernetes/pull/73102
-		defaultValues["cloudProvider"] = b.ShootCloudBotanist.GetCloudProviderName()
-		defaultValues["podAnnotations"].(map[string]interface{})["checksum/secret-cloudprovider"] = b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider]
-		defaultValues["podAnnotations"].(map[string]interface{})["checksum/configmap-cloud-provider-config"] = b.CheckSums[common.CloudProviderConfigName]
-	}
-
 	values, err := b.InjectSeedShootImages(defaultValues,
 		common.HyperkubeImageName,
 		common.VPNSeedImageName,
@@ -535,7 +378,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName, values, utils.MergeMaps(cloudSpecificExposeValues, cloudSpecificValues)); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName, values, nil); err != nil {
 		return err
 	}
 
@@ -580,11 +423,9 @@ func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) 
 	return auditPolicy, nil
 }
 
-// DeployKubeControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
-// kube-controller-manager deployment.
+// DeployKubeControllerManager deploys kube-controller-manager deployment.
 func (b *HybridBotanist) DeployKubeControllerManager() error {
 	defaultValues := map[string]interface{}{
-		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
 		"clusterName":       b.Shoot.SeedNamespace,
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podNetwork":        b.Shoot.GetPodNetwork(),
@@ -594,17 +435,11 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 			"checksum/secret-kube-controller-manager":        b.CheckSums[common.KubeControllerManagerDeploymentName],
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
-			"checksum/secret-cloudprovider":                  b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
-			"checksum/configmap-cloud-provider-config":       b.CheckSums[common.CloudProviderConfigName],
 		},
 		"objectCount": b.Shoot.GetNodeCount(),
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
-	}
-	cloudSpecificValues, err := b.ShootCloudBotanist.GenerateKubeControllerManagerConfig()
-	if err != nil {
-		return err
 	}
 
 	if b.Shoot.IsHibernated {
@@ -629,65 +464,10 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName, values, cloudSpecificValues)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName, values, nil)
 }
 
-// DeployCloudControllerManager asks the Cloud Botanist to provide the cloud specific configuration values for the
-// cloud-controller-manager deployment.
-func (b *HybridBotanist) DeployCloudControllerManager() error {
-	defaultValues := map[string]interface{}{
-		"cloudProvider":     b.ShootCloudBotanist.GetCloudProviderName(),
-		"clusterName":       b.Shoot.SeedNamespace,
-		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-		"podNetwork":        b.Shoot.GetPodNetwork(),
-		"replicas":          1,
-		"podAnnotations": map[string]interface{}{
-			"checksum/secret-cloud-controller-manager":        b.CheckSums[common.CloudControllerManagerDeploymentName],
-			"checksum/secret-cloud-controller-manager-server": b.CheckSums[common.CloudControllerManagerServerName],
-			"checksum/secret-cloudprovider":                   b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
-			"checksum/configmap-cloud-provider-config":        b.CheckSums[common.CloudProviderConfigName],
-		},
-		"vpa": map[string]interface{}{
-			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-		},
-	}
-	cloudSpecificValues, chartName, err := b.ShootCloudBotanist.GenerateCloudControllerManagerConfig()
-	if err != nil {
-		return err
-	}
-
-	if b.ShootedSeed != nil {
-		defaultValues["resources"] = map[string]interface{}{
-			"limits": map[string]interface{}{
-				"cpu":    "500m",
-				"memory": "512Mi",
-			},
-		}
-	}
-
-	if b.Shoot.IsHibernated {
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName)
-		if err != nil {
-			return err
-		}
-		defaultValues["replicas"] = replicaCount
-	}
-
-	cloudControllerManagerConfig := b.Shoot.Info.Spec.Kubernetes.CloudControllerManager
-	if cloudControllerManagerConfig != nil {
-		defaultValues["featureGates"] = cloudControllerManagerConfig.FeatureGates
-	}
-
-	values, err := b.InjectSeedShootImages(defaultValues, common.HyperkubeImageName)
-	if err != nil {
-		return err
-	}
-
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, chartName), b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName, values, cloudSpecificValues)
-}
-
-// DeployKubeScheduler asks the Cloud Botanist to provide the cloud specific configuration values for the
-// kube-scheduler deployment.
+// DeployKubeScheduler deploys kube-scheduler deployment.
 func (b *HybridBotanist) DeployKubeScheduler() error {
 	defaultValues := map[string]interface{}{
 		"replicas":          b.Shoot.GetReplicas(1),
@@ -699,10 +479,6 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
-	}
-	cloudValues, err := b.ShootCloudBotanist.GenerateKubeSchedulerConfig()
-	if err != nil {
-		return err
 	}
 
 	if b.ShootedSeed != nil {
@@ -724,16 +500,5 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), b.Shoot.SeedNamespace, common.KubeSchedulerDeploymentName, values, cloudValues)
-}
-
-// DeployCSIControllers deploy CSI controllers into the Shoot namespace in the Seed cluster. They include CSI plugin controller service (Provider specific),
-// CSI external attacher, CSI external provisioner and CSI snapshotter.
-func (b *HybridBotanist) DeployCSIControllers() error {
-	csiPlugin, err := b.ShootCloudBotanist.GenerateCSIConfig()
-	if err != nil {
-		return err
-	}
-	name := fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName())
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, name), b.Shoot.SeedNamespace, name, csiPlugin, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), b.Shoot.SeedNamespace, common.KubeSchedulerDeploymentName, values, nil)
 }

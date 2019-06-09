@@ -56,3 +56,28 @@ func GardenV1beta1ShootToAlicloudV1alpha1InfrastructureConfig(shoot *gardenv1bet
 		},
 	}, nil
 }
+
+// GardenV1beta1ShootToAlicloudV1alpha1ControlPlaneConfig converts a garden.sapcloud.io/v1beta1.Shoot to alicloudv1alpha1.ControlPlaneConfig.
+// This function is only required temporarily for migration purposes and can be removed in the future when we switched to
+// core.gardener.cloud/v1alpha1.Shoot.
+func GardenV1beta1ShootToAlicloudV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoot) (*alicloudv1alpha1.ControlPlaneConfig, error) {
+	if shoot.Spec.Cloud.Alicloud == nil {
+		return nil, fmt.Errorf("shoot is not of type Alicloud")
+	}
+
+	var cloudControllerManager *alicloudv1alpha1.CloudControllerManagerConfig
+	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
+		cloudControllerManager = &alicloudv1alpha1.CloudControllerManagerConfig{
+			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+		}
+	}
+
+	return &alicloudv1alpha1.ControlPlaneConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: alicloudv1alpha1.SchemeGroupVersion.String(),
+			Kind:       controlPlaneConfig,
+		},
+		Zone:                   shoot.Spec.Cloud.Alicloud.Zones[0],
+		CloudControllerManager: cloudControllerManager,
+	}, nil
+}
