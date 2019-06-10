@@ -496,7 +496,7 @@ spec:
       RestartSec=10
       EnvironmentFile=/etc/environment
       ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw k8s.gcr.io/hyperkube:v1.11.2 cp /hyperkube /opt/bin/
-      ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
+      ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(cat /etc/hostname | cut -d '.' -f 1)'
       ExecStart=/opt/bin/hyperkube kubelet \
           --allow-privileged=true \
           --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap \
