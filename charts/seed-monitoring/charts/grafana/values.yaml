@@ -10,3 +10,5 @@ replicas: 1
 ports:
   prometheus: 9090
   grafana: 3000
+
+role: operators

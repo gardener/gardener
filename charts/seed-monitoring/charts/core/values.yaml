@@ -14,11 +14,6 @@ prometheus:
     vpn-seed: image-repository:image-tag
   vpa:
     enabled: false
-grafana:
-  replicas: 1
-  images:
-    grafana: image-repository:image-tag
-    busybox: image-repository:image-tag
 kube-state-metrics-seed:
   replicas: 1
   images:

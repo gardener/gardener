@@ -1,4 +1,3 @@
-{{- if .Values.emailConfigs }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -6,4 +5,3 @@ metadata:
   namespace: {{.Release.Namespace}}
 data:
   alertmanager.yaml: {{ include "config" . | b64enc }}
-{{- end }}

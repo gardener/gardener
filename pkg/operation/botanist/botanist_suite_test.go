@@ -272,12 +272,20 @@ var _ = Describe("health check", func() {
 			nodeExporterDaemonSet,
 		}
 
-		grafanaDeployment               = newDeployment(seedNamespace, common.GrafanaDeploymentName, common.GardenRoleMonitoring, true)
+		grafanaDeployment               = newDeployment(seedNamespace, common.GrafanaOperatorsDeploymentName, common.GardenRoleMonitoring, true)
+		grafanaDeploymentUsers          = newDeployment(seedNamespace, common.GrafanaUsersDeploymentName, common.GardenRoleMonitoring, true)
 		kubeStateMetricsSeedDeployment  = newDeployment(seedNamespace, common.KubeStateMetricsSeedDeploymentName, common.GardenRoleMonitoring, true)
 		kubeStateMetricsShootDeployment = newDeployment(seedNamespace, common.KubeStateMetricsShootDeploymentName, common.GardenRoleMonitoring, true)
 
 		requiredMonitoringControlPlaneDeployments = []*appsv1.Deployment{
 			grafanaDeployment,
+			kubeStateMetricsSeedDeployment,
+			kubeStateMetricsShootDeployment,
+		}
+
+		requiredMonitoringControlPlaneDeploymentsUserMonitoring = []*appsv1.Deployment{
+			grafanaDeployment,
+			grafanaDeploymentUsers,
 			kubeStateMetricsSeedDeployment,
 			kubeStateMetricsShootDeployment,
 		}
@@ -537,20 +545,27 @@ var _ = Describe("health check", func() {
 	)
 
 	DescribeTable("#CheckMonitoringControlPlane",
-		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsAlertmanager bool, conditionMatcher types.GomegaMatcher) {
+		func(deployments []*appsv1.Deployment, statefulSets []*appsv1.StatefulSet, wantsAlertmanager bool, wantsControlPlaneMonitoring bool, conditionMatcher types.GomegaMatcher) {
 			var (
 				deploymentLister  = constDeploymentLister(deployments)
 				statefulSetLister = constStatefulSetLister(statefulSets)
 				checker           = botanist.NewHealthChecker(map[gardencorev1alpha1.ConditionType]time.Duration{})
 			)
 
-			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, wantsAlertmanager, condition, deploymentLister, statefulSetLister)
+			exitCondition, err := checker.CheckMonitoringControlPlane(seedNamespace, wantsAlertmanager, wantsControlPlaneMonitoring, condition, deploymentLister, statefulSetLister)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(exitCondition).To(conditionMatcher)
 		},
 		Entry("all healthy",
 			requiredMonitoringControlPlaneDeployments,
 			requiredMonitoringControlPlaneStatefulSets,
+			true,
+			false,
+			BeNil()),
+		Entry("all healthy (user monitoring enabled)",
+			requiredMonitoringControlPlaneDeploymentsUserMonitoring,
+			requiredMonitoringControlPlaneStatefulSets,
+			true,
 			true,
 			BeNil()),
 		Entry("required deployment set missing",
@@ -560,6 +575,7 @@ var _ = Describe("health check", func() {
 			},
 			requiredMonitoringControlPlaneStatefulSets,
 			true,
+			true,
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("required stateful set set missing",
 			requiredMonitoringControlPlaneDeployments,
@@ -567,21 +583,26 @@ var _ = Describe("health check", func() {
 				prometheusStatefulSet,
 			},
 			true,
+			true,
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("deployment unhealthy",
 			[]*appsv1.Deployment{
 				newDeployment(grafanaDeployment.Namespace, grafanaDeployment.Name, roleOf(grafanaDeployment), false),
+				grafanaDeploymentUsers,
 				kubeStateMetricsSeedDeployment,
 				kubeStateMetricsShootDeployment,
 			},
 			requiredMonitoringControlPlaneStatefulSets,
-			true, beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
+			true,
+			true,
+			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("stateful set unhealthy",
 			requiredMonitoringControlPlaneDeployments,
 			[]*appsv1.StatefulSet{
 				newStatefulSet(alertManagerStatefulSet.Namespace, alertManagerStatefulSet.Name, roleOf(alertManagerStatefulSet), false),
 				prometheusStatefulSet,
 			},
+			true,
 			true,
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 	)

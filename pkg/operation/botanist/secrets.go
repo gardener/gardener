@@ -520,6 +520,15 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			PasswordLength: 32,
 		},
 
+		// Secret definition for monitoring for shoot owners
+		&secrets.BasicAuthSecretConfig{
+			Name:   "monitoring-ingress-credentials-users",
+			Format: secrets.BasicAuthFormatNormal,
+
+			Username:       "admin",
+			PasswordLength: 32,
+		},
+
 		// Secret definition for ssh-keypair
 		&secrets.RSASecretConfig{
 			Name:       gardencorev1alpha1.SecretNameSSHKeyPair,
@@ -881,9 +890,17 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 }
 
 // SyncShootCredentialsToGarden copies the kubeconfig generated for the user as well as the SSH keypair to
-// the project namespace in the Garden cluster.
+// the project namespace in the Garden cluster. If control plane monitoring is enabled, then the
+// monitoring credentials for the user-facing monitoring stack are also copied.
 func (b *Botanist) SyncShootCredentialsToGarden() error {
-	for key, value := range map[string]string{"kubeconfig": "kubecfg", gardencorev1alpha1.SecretNameSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair} {
+
+	projectSecrets := map[string]string{"kubeconfig": "kubecfg", gardencorev1alpha1.SecretNameSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair}
+
+	if b.Shoot.WantsControlPlaneMonitoring {
+		projectSecrets["monitoring-credentials"] = "monitoring-ingress-credentials-users"
+	}
+
+	for key, value := range projectSecrets {
 		secretObj := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("%s.%s", b.Shoot.Info.Name, key),

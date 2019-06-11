@@ -1,10 +1,11 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: grafana-datasources
+  name: grafana-{{ .Values.role }}-datasources
   namespace: {{ .Release.Namespace }}
   labels:
     component: grafana
+    role: {{ .Values.role }}
 data:
   prometheus-datasource.yaml: |-
     # config file version

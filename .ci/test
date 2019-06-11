@@ -66,6 +66,6 @@ ginkgo ${COVER_FLAG} -r cmd pkg plugin
 ###############################################################################
 
 echo "Executing Prometheus alert tests"
-pushd $SOURCE_PATH/charts/seed-monitoring/charts/prometheus > /dev/null
+pushd $SOURCE_PATH/charts/seed-monitoring/charts/core/charts/prometheus > /dev/null
   promtool test rules rules-tests/*test.yaml
 popd > /dev/null

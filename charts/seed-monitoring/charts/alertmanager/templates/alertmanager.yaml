@@ -1,4 +1,3 @@
-{{- if .Values.emailConfigs }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -152,4 +151,3 @@ spec:
       resources:
         requests:
           storage: {{ .Values.storage }}
-{{- end }}

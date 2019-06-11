@@ -426,6 +426,86 @@ func DeleteAlertmanager(k8sClient kubernetes.Interface, namespace string) error 
 	return nil
 }
 
+// DeleteOwnerGrafana deletes the monitoring stack for the shoot owner.
+func DeleteOwnerGrafana(k8sClient kubernetes.Interface, namespace, role string) error {
+	if k8sClient == nil {
+		return fmt.Errorf("require kubernetes client")
+	}
+
+	listOptions := metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s,%s=%s", "component", "grafana", "role", role),
+	}
+
+	deletePropagation := metav1.DeletePropagationForeground
+	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).DeleteCollection(
+		&metav1.DeleteOptions{
+			PropagationPolicy: &deletePropagation,
+		}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().ExtensionsV1beta1().Ingresses(namespace).DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().CoreV1().Secrets(namespace).DeleteCollection(
+		&metav1.DeleteOptions{}, listOptions); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete(fmt.Sprintf("grafana-%s", role),
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+	return nil
+}
+
+// TODO: Remove later
+
+// DeleteOldGrafanaStack deletes all left over grafana objects.
+func DeleteOldGrafanaStack(k8sClient kubernetes.Interface, namespace string) error {
+	if k8sClient == nil {
+		return fmt.Errorf("require kubernetes client")
+	}
+
+	configMaps := []string{"grafana-dashboards", "grafana-dashboard-providers", "grafana-datasources"}
+
+	for _, configMap := range configMaps {
+		if err := k8sClient.Kubernetes().CoreV1().ConfigMaps(namespace).Delete(configMap,
+			&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+
+	if err := k8sClient.Kubernetes().AppsV1().Deployments(namespace).Delete("grafana",
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().CoreV1().Secrets(namespace).Delete("grafana-basic-auth",
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().ExtensionsV1beta1().Ingresses(namespace).Delete("grafana",
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	if err := k8sClient.Kubernetes().CoreV1().Services(namespace).Delete("grafana",
+		&metav1.DeleteOptions{}); err != nil && !apierrors.IsNotFound(err) {
+		return err
+	}
+
+	return nil
+}
+
 // GetDomainInfoFromAnnotations returns the provider and the domain that is specified in the give annotations.
 func GetDomainInfoFromAnnotations(annotations map[string]string) (provider string, domain string, err error) {
 	if annotations == nil {

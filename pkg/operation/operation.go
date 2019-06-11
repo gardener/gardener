@@ -131,6 +131,7 @@ func newOperation(
 		operation.Shoot = shootObj
 		operation.Shoot.IgnoreAlerts = helper.ShootIgnoreAlerts(shoot)
 		operation.Shoot.WantsAlertmanager = helper.ShootWantsAlertmanager(shoot, secrets) && !operation.Shoot.IgnoreAlerts
+		operation.Shoot.WantsControlPlaneMonitoring = helper.ShootWantsControlPlaneMonitoring(shoot)
 
 		shootedSeed, err := helper.ReadShootedSeed(shoot)
 		if err != nil {

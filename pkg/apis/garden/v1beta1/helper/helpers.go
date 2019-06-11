@@ -112,6 +112,15 @@ func ShootWantsAlertmanager(shoot *gardenv1beta1.Shoot, secrets map[string]*core
 	return false
 }
 
+// ShootWantsControlPlaneMonitoring checks if the given shoots needs a grafana monitoring stack for the shoot owner
+func ShootWantsControlPlaneMonitoring(shoot *gardenv1beta1.Shoot) bool {
+	wants := false
+	if value, ok := shoot.Annotations[common.GardenControlPlaneMonitoring]; ok {
+		wants, _ = strconv.ParseBool(value)
+	}
+	return wants
+}
+
 // ShootIgnoreAlerts checks if the alerts for the annotated shoot cluster should be ignored.
 func ShootIgnoreAlerts(shoot *gardenv1beta1.Shoot) bool {
 	ignore := false
