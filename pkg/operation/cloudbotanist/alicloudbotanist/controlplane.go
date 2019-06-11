@@ -18,7 +18,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"net"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -119,11 +118,6 @@ func (b *AlicloudBotanist) GenerateCloudControllerManagerConfig() (map[string]in
 	}
 
 	return newConf, chartName, nil
-}
-
-// MetadataServiceAddress returns Aliyun's MetadataService address.
-func (b *AlicloudBotanist) MetadataServiceAddress() *net.IPNet {
-	return &net.IPNet{IP: net.IP{100, 100, 100, 200}, Mask: net.CIDRMask(32, 32)}
 }
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to

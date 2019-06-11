@@ -6073,6 +6073,20 @@ func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks"),
 						},
 					},
+					"blockedAddresses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running in the seed cluster.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
+						},
+					},
 					"visible": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Visible labels the Seed cluster as selectable for the seedfinder admission controller.",
@@ -6124,7 +6138,7 @@ func schema_pkg_apis_garden_v1beta1_SeedStatus(ref common.ReferenceCallback) com
 					},
 					"observedGeneration": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ObservedGeneration is the most recent generation observed for this Shoot. It corresponds to the Shoot's generation, which is updated on mutation by the API Server.",
+							Description: "ObservedGeneration is the most recent generation observed for this Seed. It corresponds to the Seed's generation, which is updated on mutation by the API Server.",
 							Type:        []string{"integer"},
 							Format:      "int64",
 						},

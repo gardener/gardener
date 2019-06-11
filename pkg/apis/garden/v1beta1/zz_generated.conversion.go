@@ -4069,6 +4069,7 @@ func autoConvert_v1beta1_SeedSpec_To_garden_SeedSpec(in *SeedSpec, out *garden.S
 	if err := Convert_v1beta1_SeedNetworks_To_garden_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
+	out.BlockCIDRs = *(*[]core.CIDR)(unsafe.Pointer(&in.BlockCIDRs))
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
 	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
 	return nil
@@ -4088,6 +4089,7 @@ func autoConvert_garden_SeedSpec_To_v1beta1_SeedSpec(in *garden.SeedSpec, out *S
 	if err := Convert_garden_SeedNetworks_To_v1beta1_SeedNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
+	out.BlockCIDRs = *(*[]v1alpha1.CIDR)(unsafe.Pointer(&in.BlockCIDRs))
 	out.Visible = (*bool)(unsafe.Pointer(in.Visible))
 	out.Protected = (*bool)(unsafe.Pointer(in.Protected))
 	return nil

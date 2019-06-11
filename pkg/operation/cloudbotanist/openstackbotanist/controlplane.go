@@ -16,7 +16,6 @@ package openstackbotanist
 
 import (
 	"fmt"
-	"net"
 
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
@@ -149,11 +148,6 @@ func (b *OpenStackBotanist) GenerateCloudControllerManagerConfig() (map[string]i
 // GenerateCSIConfig generates the configuration for CSI charts
 func (b *OpenStackBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
 	return nil, nil
-}
-
-// MetadataServiceAddress returns OpenStack's MetadataService address.
-func (b *OpenStackBotanist) MetadataServiceAddress() *net.IPNet {
-	return &net.IPNet{IP: net.IP{169, 254, 169, 254}, Mask: net.CIDRMask(32, 32)}
 }
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to

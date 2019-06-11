@@ -2747,6 +2747,11 @@ func (in *SeedSpec) DeepCopyInto(out *SeedSpec) {
 	out.Cloud = in.Cloud
 	out.SecretRef = in.SecretRef
 	out.Networks = in.Networks
+	if in.BlockCIDRs != nil {
+		in, out := &in.BlockCIDRs, &out.BlockCIDRs
+		*out = make([]core.CIDR, len(*in))
+		copy(*out, *in)
+	}
 	if in.Visible != nil {
 		in, out := &in.Visible, &out.Visible
 		*out = new(bool)

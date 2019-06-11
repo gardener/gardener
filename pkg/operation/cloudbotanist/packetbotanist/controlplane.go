@@ -17,7 +17,6 @@ package packetbotanist
 import (
 	"encoding/base64"
 	"fmt"
-	"net"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -71,11 +70,6 @@ func (b *PacketBotanist) GenerateCloudControllerManagerConfig() (map[string]inte
 	}
 
 	return newConf, chartName, nil
-}
-
-// MetadataServiceAddress returns Packet's MetadataService address.
-func (b *PacketBotanist) MetadataServiceAddress() *net.IPNet {
-	return &net.IPNet{IP: net.IP{192, 80, 8, 124}, Mask: net.CIDRMask(32, 32)}
 }
 
 // GenerateKubeControllerManagerConfig generates the cloud provider specific values which are required to

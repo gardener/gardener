@@ -453,7 +453,7 @@ var _ = Describe("Network Policy Testing", func() {
 			ExpectedPolicies: sets.String{
 				"allow-from-prometheus":     sets.Empty{},
 				"allow-to-dns":              sets.Empty{},
-				"allow-to-metadata":         sets.Empty{},
+				"allow-to-blocked-cidrs":         sets.Empty{},
 				"allow-to-private-networks": sets.Empty{},
 				"allow-to-public-networks":  sets.Empty{},
 				"allow-to-shoot-apiserver":  sets.Empty{},
@@ -484,7 +484,7 @@ var _ = Describe("Network Policy Testing", func() {
 			ExpectedPolicies: sets.String{
 				"allow-from-prometheus":     sets.Empty{},
 				"allow-to-dns":              sets.Empty{},
-				"allow-to-metadata":         sets.Empty{},
+				"allow-to-blocked-cidrs":         sets.Empty{},
 				"allow-to-private-networks": sets.Empty{},
 				"allow-to-public-networks":  sets.Empty{},
 				"allow-to-shoot-apiserver":  sets.Empty{},

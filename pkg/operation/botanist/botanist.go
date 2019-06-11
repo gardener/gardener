@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -70,7 +70,7 @@ func New(o *operation.Operation) (*Botanist, error) {
 }
 
 // RegisterAsSeed registers a Shoot cluster as a Seed in the Garden cluster.
-func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *string) error {
+func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *string, blockCIDRs []gardencorev1alpha1.CIDR) error {
 	if b.Shoot.Info.Spec.DNS.Domain == nil {
 		return errors.New("cannot register Shoot as Seed if it does not specify a domain")
 	}
@@ -138,8 +138,9 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 				Services: *k8sNetworks.Services,
 				Nodes:    *k8sNetworks.Nodes,
 			},
-			Protected: protected,
-			Visible:   visible,
+			BlockCIDRs: blockCIDRs,
+			Protected:  protected,
+			Visible:    visible,
 		},
 	}
 	_, err = b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Create(seed)
@@ -170,7 +171,7 @@ func (b *Botanist) UnregisterAsSeed() error {
 
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
 func (b *Botanist) RequiredExtensionsExist() error {
-	controllerInstallationList := &corev1alpha1.ControllerInstallationList{}
+	controllerInstallationList := &gardencorev1alpha1.ControllerInstallationList{}
 	if err := b.K8sGardenClient.Client().List(context.TODO(), nil, controllerInstallationList); err != nil {
 		return err
 	}
@@ -182,7 +183,7 @@ func (b *Botanist) RequiredExtensionsExist() error {
 			continue
 		}
 
-		controllerRegistration := &corev1alpha1.ControllerRegistration{}
+		controllerRegistration := &gardencorev1alpha1.ControllerRegistration{}
 		if err := b.K8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Name: controllerInstallation.Spec.RegistrationRef.Name}, controllerRegistration); err != nil {
 			return err
 		}
