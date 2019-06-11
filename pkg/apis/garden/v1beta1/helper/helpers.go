@@ -383,6 +383,7 @@ type ShootedSeed struct {
 	Visible           *bool
 	MinimumVolumeSize *string
 	APIServer         *ShootedSeedAPIServer
+	BlockCIDRs        []gardencorev1alpha1.CIDR
 }
 
 type ShootedSeedAPIServer struct {
@@ -434,6 +435,12 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 	shootedSeed.APIServer = apiServer
 
+	blockCIDRs, err := parseShootedSeedBlockCIDRs(settings)
+	if err != nil {
+		return nil, err
+	}
+	shootedSeed.BlockCIDRs = blockCIDRs
+
 	if size, ok := settings["minimumVolumeSize"]; ok {
 		shootedSeed.MinimumVolumeSize = &size
 	}
@@ -452,6 +459,20 @@ func parseShootedSeed(annotation string) (*ShootedSeed, error) {
 	}
 
 	return &shootedSeed, nil
+}
+
+func parseShootedSeedBlockCIDRs(settings map[string]string) ([]gardencorev1alpha1.CIDR, error) {
+	cidrs, ok := settings["blockCIDRs"]
+	if !ok {
+		return nil, nil
+	}
+
+	var addresses []gardencorev1alpha1.CIDR
+	for _, addr := range strings.Split(cidrs, ";") {
+		addresses = append(addresses, gardencorev1alpha1.CIDR(addr))
+	}
+
+	return addresses, nil
 }
 
 func parseShootedSeedAPIServer(settings map[string]string) (*ShootedSeedAPIServer, error) {

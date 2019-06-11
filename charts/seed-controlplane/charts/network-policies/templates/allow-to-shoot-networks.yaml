@@ -6,7 +6,7 @@ metadata:
       Allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-networks=allowed'
       to IPv4 blocks belonging to the Shoot network.
 
-      In practice, this should be used by components which use 'vpn-seed' to comunicate to Pods
+      In practice, this should be used by components which use 'vpn-seed' to communicate to Pods
       in the Shoot cluster.
   name: allow-to-shoot-networks
   namespace: {{ .Release.Namespace }}

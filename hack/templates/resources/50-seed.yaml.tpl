@@ -24,19 +24,26 @@
   annotations = value("metadata.annotations", {}); labels = value("metadata.labels", {})
 
   region=""
+  metadataServiceCIDR=""
   if cloud == "aws":
     region="eu-west-1"
+    metadataServiceCIDR="169.254.169.254/32"
   elif cloud == "azure" or cloud == "az":
     region="westeurope"
+    metadataServiceCIDR="169.254.169.254/32"
   elif cloud == "gcp":
     region="europe-west1"
+    metadataServiceCIDR="169.254.169.254/32"
   elif cloud == "alicloud":
     region="cn-beijing"
+    metadataServiceCIDR="100.100.100.200/32"
     annotations["persistentvolume.garden.sapcloud.io/minimumSize"] = "20Gi"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
+    metadataServiceCIDR="169.254.169.254/32"
   elif cloud == "packet":
     region="ewr1"
+    metadataServiceCIDR="192.80.8.124/32"
 %># Seed cluster registration manifest into which the control planes of Shoot clusters will be deployed.
 ---
 apiVersion: garden.sapcloud.io/v1beta1
@@ -61,3 +68,5 @@ spec:
     nodes: ${value("spec.networks.nodes", "10.240.0.0/16")}
     pods: ${value("spec.networks.pods", "10.241.128.0/17")}
     services: ${value("spec.networks.services", "10.241.0.0/17")}
+  blockCIDRs:
+  - ${value("spec.cloud.region", metadataServiceCIDR)}

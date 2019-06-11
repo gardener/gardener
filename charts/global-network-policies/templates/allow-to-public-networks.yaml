@@ -26,8 +26,10 @@ spec:
         - 172.16.0.0/12
         - 192.168.0.0/16
         - 100.64.0.0/10
-{{- if .Values.metadataService }}
-        - {{ .Values.metadataService }}
+{{- if .Values.blockedAddresses }}
+{{- range $i, $address := .Values.blockedAddresses }}
+        - {{ $address }}
+{{- end }}
 {{- end }}
   policyTypes:
   - Egress

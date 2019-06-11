@@ -1,6 +1,7 @@
-# metadataService: 169.254.169.254/32
+# a list of CIDRs that should be blocked
+blockedAddresses: []
 
-# this controlls if by default all Egress and Ingress is denied for all Pods
+# this controls if by default all Egress and Ingress is denied for all Pods
 # in the namespace
 # If set to false, only pods labeled with 'networking.gardener.cloud/to-all: disallowed'
 # are denied access.

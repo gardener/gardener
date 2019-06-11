@@ -465,6 +465,9 @@ type SeedSpec struct {
 	SecretRef corev1.SecretReference
 	// Networks defines the pod, service and worker network of the Seed cluster.
 	Networks SeedNetworks
+	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
+	// in the seed cluster.
+	BlockCIDRs []gardencore.CIDR
 	// Visible labels the Seed cluster as selectable for the seedfinder admission controller.
 	// +optional
 	Visible *bool

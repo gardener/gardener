@@ -1,6 +1,5 @@
 global-network-policies:
-  metadataService: 0.0.0.0/1
-  # metadataService: 169.254.169.254/32
+  blockedAddresses: []
 clusterNetworks:
 # Seed CIDR
 - network: 10.0.0.0/8

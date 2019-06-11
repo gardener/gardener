@@ -215,19 +215,22 @@ func (b *HybridBotanist) DeployETCD() error {
 
 // DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
 // deny all traffic and allow certain components to use annotations to declare their desire
-// to transmit/recieve traffic to/from other Pods/IP addresses.
+// to transmit/receive traffic to/from other Pods/IP addresses.
 func (b *HybridBotanist) DeployNetworkPolicies(ctx context.Context) error {
-	addr := b.SeedCloudBotanist.MetadataServiceAddress()
+	var (
+		globalNetworkPoliciesValues = map[string]interface{}{
+			"blockedAddresses": b.Seed.Info.Spec.BlockCIDRs,
+		}
+		excludeNets = []gardencorev1alpha1.CIDR{}
 
-	globalNetworkPoliciesValues := map[string]interface{}{}
-	excludeNets := []gardencorev1alpha1.CIDR{}
-	if addr != nil {
-		excludeNets = append(excludeNets, gardencorev1alpha1.CIDR(addr.String()))
-		globalNetworkPoliciesValues["metadataService"] = addr.String()
+		values            = map[string]interface{}{}
+		shootCIDRNetworks = []gardencorev1alpha1.CIDR{}
+	)
+
+	for _, addr := range b.Seed.Info.Spec.BlockCIDRs {
+		excludeNets = append(excludeNets, addr)
 	}
 
-	values := map[string]interface{}{}
-	shootCIDRNetworks := []gardencorev1alpha1.CIDR{}
 	networks, err := b.Shoot.GetK8SNetworks()
 	if err != nil {
 		return err

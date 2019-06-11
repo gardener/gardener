@@ -15,8 +15,6 @@
 package cloudbotanist
 
 import (
-	"net"
-
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -43,7 +41,6 @@ type CloudBotanist interface {
 	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
 	DeployCloudSpecificControlPlane() error
 	GenerateCSIConfig() (map[string]interface{}, error)
-	MetadataServiceAddress() *net.IPNet
 
 	// Addons
 	DeployKube2IAMResources() error

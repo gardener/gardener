@@ -49,7 +49,7 @@ spec:
 {{- if not .Values.enableCSI }}
         networking.gardener.cloud/to-public-networks: allowed
         networking.gardener.cloud/to-private-networks: allowed
-        networking.gardener.cloud/to-metadata: allowed
+        networking.gardener.cloud/to-blocked-cidrs: allowed
 {{- end }}
     spec:
       tolerations:
