@@ -353,8 +353,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		defaultValues["maxReplicas"] = autoscaler.MaxReplicas
 		defaultValues["apiServerResources"] = map[string]interface{}{
 			"limits": map[string]interface{}{
-				"cpu":    "1500m",
-				"memory": "4000Mi",
+				"cpu":    "2000m",
+				"memory": "7000Mi",
 			},
 		}
 	} else {
