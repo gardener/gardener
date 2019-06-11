@@ -5239,8 +5239,8 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should succeed when using IPTables mode", func() {
-				m := garden.ProxyModeIPTables
-				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
+				mode := garden.ProxyModeIPTables
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())
@@ -5248,8 +5248,8 @@ var _ = Describe("validation", func() {
 			})
 
 			It("should succeed when using IPVS mode", func() {
-				m := garden.ProxyModeIPVS
-				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
+				mode := garden.ProxyModeIPVS
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
 				errorList := ValidateShoot(shoot)
 
 				Expect(errorList).To(BeEmpty())
@@ -5266,26 +5266,48 @@ var _ = Describe("validation", func() {
 				}))))
 			})
 
-			It("should fail when using empty proxy mode", func() {
-				m := garden.ProxyMode("")
+			It("should fail when using unknown proxy mode", func() {
+				m := garden.ProxyMode("fooMode")
 				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
 				errorList := ValidateShoot(shoot)
-
 				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
 					"Type":  Equal(field.ErrorTypeNotSupported),
 					"Field": Equal("spec.kubernetes.kubeProxy.mode"),
 				}))))
 			})
 
-			It("should fail when using unknown proxy mode", func() {
-				m := garden.ProxyMode("fooMode")
-				shoot.Spec.Kubernetes.KubeProxy.Mode = &m
-				errorList := ValidateShoot(shoot)
+			It("should fail when using kuberntes version 1.14.2 and proxy mode is changed", func() {
+				mode := garden.ProxyMode("IPVS")
+				kubernetesConfig := garden.KubernetesConfig{nil}
+				config := garden.KubeProxyConfig{
+					KubernetesConfig: kubernetesConfig,
+					Mode:             &mode,
+				}
+				shoot.Spec.Kubernetes.KubeProxy = &config
+				shoot.Spec.Kubernetes.Version = "1.14.2"
+				oldMode := garden.ProxyMode("IPTables")
+				oldConfig := garden.KubeProxyConfig{
+					KubernetesConfig: kubernetesConfig,
+					Mode:             &oldMode,
+				}
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
+				oldShoot := shoot.DeepCopy()
+				oldShoot.Spec.Kubernetes.KubeProxy = &oldConfig
+				errorList := ValidateShootSpecUpdate(&shoot.Spec, &oldShoot.Spec, shoot.DeletionTimestamp != nil, field.NewPath("spec"))
+				Expect(errorList).ToNot(BeEmpty())
+				Expect(errorList).To(ConsistOfFields(Fields{
+					"Type":   Equal(field.ErrorTypeInvalid),
+					"Field":  Equal("spec.kubernetes.kubeProxy.mode"),
+					"Detail": Equal(`field is immutable`),
+				}))
+			})
 
-				Expect(errorList).To(ConsistOf(PointTo(MatchFields(IgnoreExtras, Fields{
-					"Type":  Equal(field.ErrorTypeNotSupported),
-					"Field": Equal("spec.kubernetes.kubeProxy.mode"),
-				}))))
+			It("should be successful when using kuberntes version 1.14.1 and proxy mode stays the same", func() {
+				mode := garden.ProxyMode("IPVS")
+				shoot.Spec.Kubernetes.Version = "1.14.1"
+				shoot.Spec.Kubernetes.KubeProxy.Mode = &mode
+				errorList := ValidateShoot(shoot)
+				Expect(len(errorList)).To(Equal(2))
 			})
 		})
 
@@ -5325,7 +5347,6 @@ var _ = Describe("validation", func() {
 
 				Expect(errorList).To(BeEmpty())
 			})
-
 		})
 
 		It("should require a kubernetes version", func() {
@@ -5570,7 +5591,7 @@ var _ = Describe("validation", func() {
 					Name:      "example-backupinfrastructure",
 					Namespace: "garden",
 					Annotations: map[string]string{
-						common.BackupInfrastructureForceDeletion : "true",
+						common.BackupInfrastructureForceDeletion: "true",
 					},
 				},
 				Spec: garden.BackupInfrastructureSpec{
@@ -5595,10 +5616,10 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeRequired),
 				"Field": Equal("metadata.name"),
 			})),
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeRequired),
-				"Field": Equal("metadata.namespace"),
-			}))))
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeRequired),
+					"Field": Equal("metadata.namespace"),
+				}))))
 		})
 
 		It("should forbid BackupInfrastructure specification with empty or invalid keys", func() {
@@ -5611,10 +5632,10 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
 			})),
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.shootUID"),
-			}))))
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootUID"),
+				}))))
 		})
 
 		It("should forbid updating some keys", func() {
@@ -5628,10 +5649,10 @@ var _ = Describe("validation", func() {
 				"Type":  Equal(field.ErrorTypeInvalid),
 				"Field": Equal("spec.seed"),
 			})),
-			PointTo(MatchFields(IgnoreExtras, Fields{
-				"Type":  Equal(field.ErrorTypeInvalid),
-				"Field": Equal("spec.shootUID"),
-			}))))
+				PointTo(MatchFields(IgnoreExtras, Fields{
+					"Type":  Equal(field.ErrorTypeInvalid),
+					"Field": Equal("spec.shootUID"),
+				}))))
 		})
 	})
 })
