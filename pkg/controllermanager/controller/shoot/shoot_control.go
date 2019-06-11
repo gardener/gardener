@@ -119,7 +119,18 @@ func (c *Controller) reconcileShootKey(key string) error {
 
 	seedName := shoot.Spec.Cloud.Seed
 	if seedName == nil {
-		return fmt.Errorf("shoot has not yet been scheduled on a seed")
+		// accept deletion if shoot has not been scheduled and should be deleted
+		if shoot.DeletionTimestamp != nil {
+			finalizers := sets.NewString(shoot.Finalizers...)
+			finalizers.Delete(gardenv1beta1.GardenerName)
+			shoot.Finalizers = finalizers.UnsortedList()
+
+			if _, err := c.k8sGardenClient.Garden().GardenV1beta1().Shoots(shoot.Namespace).Update(shoot); err != nil {
+				return fmt.Errorf("Failed to remove gardener finalizer from unscheduled shoot that should be deleted : %v ", err)
+			}
+			return nil
+		}
+		return fmt.Errorf("shoot has not yet been scheduled to a seed yet")
 	}
 
 	seed, err := c.seedLister.Get(*seedName)
@@ -127,10 +138,8 @@ func (c *Controller) reconcileShootKey(key string) error {
 		return fmt.Errorf("could not find seed %s: %v", *seedName, err)
 	}
 
-	// Check whether the shoot may be reconciled. We always allow reconciliation if the shoot shall be deleted or
-	// if the shoot shall be created.
+	// Check whether the shoot may be reconciled.
 	reason := health.CheckSeed(seed, c.identity)
-
 	startReconciliation := false
 
 	switch {
