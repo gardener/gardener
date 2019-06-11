@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -510,15 +513,11 @@ func (c *defaultControl) needsWorkerMigration(o *operation.Operation) (bool, err
 			// The Worker resource has not been found - we need to check whether the MCM deployment does still exist.
 			// If it does still exist then we need to migrate. Otherwise there are no machine resources anymore that
 			// need to be deleted, so no migration would be necessary.
-
-			if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, common.MachineControllerManagerDeploymentName), &appsv1.Deployment{}); err != nil {
-				if apierrors.IsNotFound(err) {
-					return false, nil
-				}
+			machineDeployments := &machinev1alpha1.MachineDeploymentList{}
+			if err := o.K8sSeedClient.Client().List(context.TODO(), &client.ListOptions{Raw: &metav1.ListOptions{Limit: 1}}, &machinev1alpha1.MachineDeploymentList{}); err != nil {
 				return false, err
 			}
-
-			return true, nil
+			return len(machineDeployments.Items) != 0, nil
 		}
 
 		return false, err
