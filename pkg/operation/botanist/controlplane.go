@@ -429,7 +429,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			return err
 		}
 	} else {
-		if err := common.DeleteOwnerGrafana(b.K8sSeedClient, b.Shoot.SeedNamespace, "users"); err != nil {
+		if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, "users"); err != nil {
 			return err
 		}
 	}

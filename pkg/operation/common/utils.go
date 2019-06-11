@@ -426,8 +426,8 @@ func DeleteAlertmanager(k8sClient kubernetes.Interface, namespace string) error 
 	return nil
 }
 
-// DeleteOwnerGrafana deletes the monitoring stack for the shoot owner.
-func DeleteOwnerGrafana(k8sClient kubernetes.Interface, namespace, role string) error {
+// DeleteGrafanaByRole deletes the monitoring stack for the shoot owner.
+func DeleteGrafanaByRole(k8sClient kubernetes.Interface, namespace, role string) error {
 	if k8sClient == nil {
 		return fmt.Errorf("require kubernetes client")
 	}

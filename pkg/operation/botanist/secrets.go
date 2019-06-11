@@ -889,21 +889,34 @@ func (b *Botanist) generateShootSecrets(existingSecretsMap map[string]*corev1.Se
 	return nil
 }
 
+const (
+	secretSuffixKubeConfig = "kubeconfig"
+	secretSuffixSSHKeyPair = gardencorev1alpha1.SecretNameSSHKeyPair
+	secretSuffixMonitoring = "monitoring"
+)
+
+func computeProjectSecretName(shootName, suffix string) string {
+	return fmt.Sprintf("%s.%s", shootName, suffix)
+}
+
 // SyncShootCredentialsToGarden copies the kubeconfig generated for the user as well as the SSH keypair to
 // the project namespace in the Garden cluster. If control plane monitoring is enabled, then the
 // monitoring credentials for the user-facing monitoring stack are also copied.
 func (b *Botanist) SyncShootCredentialsToGarden() error {
-
-	projectSecrets := map[string]string{"kubeconfig": "kubecfg", gardencorev1alpha1.SecretNameSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair}
+	projectSecrets := map[string]string{secretSuffixKubeConfig: "kubecfg", secretSuffixSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair}
 
 	if b.Shoot.WantsControlPlaneMonitoring {
-		projectSecrets["monitoring-credentials"] = "monitoring-ingress-credentials-users"
+		projectSecrets[secretSuffixMonitoring] = "monitoring-ingress-credentials-users"
+	} else {
+		if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, computeProjectSecretName(b.Shoot.Info.Name, secretSuffixMonitoring)); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
 	}
 
 	for key, value := range projectSecrets {
 		secretObj := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s.%s", b.Shoot.Info.Name, key),
+				Name:      computeProjectSecretName(b.Shoot.Info.Name, key),
 				Namespace: b.Shoot.Info.Namespace,
 				OwnerReferences: []metav1.OwnerReference{
 					*metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")),
