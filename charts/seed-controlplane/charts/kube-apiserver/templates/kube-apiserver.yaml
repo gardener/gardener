@@ -28,6 +28,11 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: apiserver
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
+        networking.gardener.cloud/to-shoot-networks: allowed
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       priorityClassName: gardener-shoot-controlplane
       tolerations:
@@ -139,10 +144,7 @@ spec:
         terminationMessagePolicy: File
         ports:
         - name: https
-          containerPort: 443
-          protocol: TCP
-        - name: local
-          containerPort: 8080
+          containerPort: {{ required ".securePort is required" .Values.securePort }}
           protocol: TCP
         {{- if .Values.apiServerResources }}
         resources:
@@ -197,7 +199,7 @@ spec:
         - name: OPENVPN_PORT
           value: "4314"
         ports:
-        - name: https
+        - name: tcp-tunnel
           containerPort: 1194
           protocol: TCP
         resources:
@@ -228,7 +230,7 @@ spec:
         ports:
         # port name must be max 15 characters long
         - name: blackbox-export
-          containerPort: 9115
+          containerPort: {{ required ".blackboxExporterPort is required" .Values.blackboxExporterPort }}
           protocol: TCP
         resources:
           requests:

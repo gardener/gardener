@@ -29,6 +29,9 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: etcd-statefulset
         role: {{ .Values.role }}
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
     spec:
       priorityClassName: gardener-shoot-controlplane
       containers:
@@ -53,16 +56,16 @@ spec:
             - --cert=/var/etcd/ssl/client/tls.crt
             - --key=/var/etcd/ssl/client/tls.key
             - --cacert=/var/etcd/ssl/ca/ca.crt
-            - --endpoints=https://etcd-{{ .Values.role }}-0:2379
+            - --endpoints=https://etcd-{{ .Values.role }}-0:{{ .Values.servicePorts.client }}
             - get
             - foo
           initialDelaySeconds: 15
           periodSeconds: 5
         ports:
-        - containerPort: 2380
+        - containerPort: {{ .Values.servicePorts.server }}
           name: serverport
           protocol: TCP
-        - containerPort: 2379
+        - containerPort: {{ .Values.servicePorts.client }}
           name: clientport
           protocol: TCP
         resources:
@@ -101,7 +104,7 @@ spec:
         - --cacert=/var/etcd/ssl/ca/ca.crt
         - --insecure-transport=false
         - --insecure-skip-tls-verify=false
-        - --endpoints=https://etcd-{{ .Values.role }}-0:2379
+        - --endpoints=https://etcd-{{ .Values.role }}-0:{{ .Values.servicePorts.client }}
         - --etcd-connection-timeout=300
         - --delta-snapshot-period-seconds=300
         - --delta-snapshot-memory-limit=104857600 #100MB

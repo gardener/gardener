@@ -81,6 +81,10 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 		return err
 	}
 
+	if len(key.Name) == 0 {
+		return fmt.Errorf("Missing 'metadata.name' in: %+v", desired)
+	}
+
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(desired.GroupVersionKind())
 	err = c.client.Get(ctx, key, current)
@@ -100,6 +104,22 @@ func (c *Applier) applyObject(ctx context.Context, desired *unstructured.Unstruc
 	}
 
 	return c.client.Update(ctx, desired)
+}
+
+func (c *Applier) deleteObject(ctx context.Context, desired *unstructured.Unstructured) error {
+	if desired.GetNamespace() == "" {
+		desired.SetNamespace(metav1.NamespaceDefault)
+	}
+	if len(desired.GetName()) == 0 {
+		return fmt.Errorf("Missing 'metadata.name' in: %+v", desired)
+	}
+
+	err := c.client.Delete(ctx, desired)
+	if err != nil && apierrors.IsNotFound(err) {
+		return nil
+	}
+	return err
+
 }
 
 // DefaultApplierOptions contains options for common k8s objects, e.g. Service, ServiceAccount.
@@ -170,6 +190,28 @@ func (c *Applier) ApplyManifest(ctx context.Context, r UnstructuredReader, optio
 		}
 
 		if err := c.applyObject(ctx, obj, options); err != nil {
+			return err
+		}
+	}
+}
+
+// DeleteManifest is a function which does the same like `kubectl delete -f <file>`. It takes a bunch of manifests <m>,
+// all concatenated in a byte slice, and sends them one after the other to the API server for deletion.
+// It returns an error as soon as the first error occurs.
+func (c *Applier) DeleteManifest(ctx context.Context, r UnstructuredReader) error {
+	for {
+		obj, err := r.Read()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if obj == nil {
+			continue
+		}
+
+		if err := c.deleteObject(ctx, obj); err != nil {
 			return err
 		}
 	}

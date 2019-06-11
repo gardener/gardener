@@ -1,0 +1,21 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Disables all Ingress and Egress traffic into/from this namespace.
+  name: deny-all
+  namespace: {{ .Release.Namespace }}
+spec:
+{{- if .Values.denyAll }}
+  podSelector: {}
+{{- else }}
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-all: disallowed
+{{- end }}
+  policyTypes:
+  - Egress
+  - Ingress
+  egress: []
+  ingress: []

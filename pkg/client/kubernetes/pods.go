@@ -47,7 +47,7 @@ func NewPodExecutor(config *rest.Config) PodExecutor {
 
 // PodExecutor is the pod executor interface
 type PodExecutor interface {
-	Execute(ctx context.Context, name, namespace, containerName, command string) (io.Reader, error)
+	Execute(ctx context.Context, namespace, name, containerName, command string) (io.Reader, error)
 }
 
 type podExecutor struct {
@@ -88,7 +88,7 @@ func (p *podExecutor) Execute(ctx context.Context, namespace, name, containerNam
 		Tty:    false,
 	})
 	if err != nil {
-		return nil, err
+		return &stderr, err
 	}
 
 	return &stdout, nil

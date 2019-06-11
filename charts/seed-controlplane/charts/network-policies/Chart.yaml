@@ -1,0 +1,4 @@
+apiVersion: v1
+description: Helm chart for kubernetes network-policies which are generic enough
+name: network-policies
+version: 0.1.0

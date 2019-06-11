@@ -296,6 +296,7 @@ func (t *Terraformer) deployTerraformerPod(ctx context.Context, scriptName strin
 			pod.Labels = make(map[string]string)
 		}
 		pod.Labels[jobNameLabel] = t.jobName
+		t.addNetworkPolicyLabels(pod.Labels)
 		pod.Spec = *t.podSpec(scriptName)
 		return nil
 	})
@@ -322,6 +323,7 @@ func (t *Terraformer) deployTerraformerJob(ctx context.Context, scriptName strin
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: t.namespace,
 				Name:      t.jobName,
+				Labels:    t.addNetworkPolicyLabels(nil),
 			},
 			Spec: *podSpec,
 		}
@@ -340,6 +342,18 @@ func (t *Terraformer) env() []corev1.EnvVar {
 		envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
 	}
 	return envVars
+}
+
+func (t *Terraformer) addNetworkPolicyLabels(labels map[string]string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels["networking.gardener.cloud/to-dns"] = "allowed"
+	labels["networking.gardener.cloud/to-private-networks"] = "allowed"
+	labels["networking.gardener.cloud/to-public-networks"] = "allowed"
+	labels["networking.gardener.cloud/to-seed-apiserver"] = "allowed"
+
+	return labels
 }
 
 func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {

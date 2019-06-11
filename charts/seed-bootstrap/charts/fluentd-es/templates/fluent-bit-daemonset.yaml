@@ -15,6 +15,8 @@ spec:
         checksum/fluent-bit-configmap: {{ include (print $.Template.BasePath "/fluent-bit-configmap.yaml") . | sha256sum }}
       labels:
 {{ toYaml .Values.fluentbit.labels | indent 8 }}
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
     spec:
       containers:
       - name: fluent-bit

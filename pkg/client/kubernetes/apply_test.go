@@ -20,21 +20,20 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/gardener/gardener/pkg/client/kubernetes"
-	"github.com/ghodss/yaml"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	memcache "k8s.io/client-go/discovery/cached/memory"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/rest"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -115,7 +114,7 @@ var _ = Describe("Apply", func() {
 		d       *fakeDiscovery
 		applier *kubernetes.Applier
 	)
-	BeforeSuite(func() {
+	BeforeEach(func() {
 		c = fake.NewFakeClient()
 		d = &fakeDiscovery{
 			groupListFn: func() *metav1.APIGroupList {
@@ -256,6 +255,69 @@ spec:
 				Expect(actualCMWithNamespace.Namespace).To(Equal("b"))
 			})
 
+		})
+
+		Context("#DeleteManifest", func() {
+			var (
+				result error
+			)
+			BeforeEach(func() {
+				existingServiceAccount := &corev1.ServiceAccount{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ServiceAccount",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-serviceaccount",
+						Namespace: "test-ns",
+					},
+				}
+				existingConfigMap := &corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cm",
+						Namespace: "test-ns",
+					},
+				}
+				notDeletedConfigMap := &corev1.ConfigMap{
+					TypeMeta: metav1.TypeMeta{
+						Kind:       "ConfigMap",
+						APIVersion: "v1",
+					},
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "should-not-be-deleted-cm",
+						Namespace: "test-ns",
+					},
+				}
+				c.Create(context.TODO(), existingServiceAccount)
+				c.Create(context.TODO(), existingConfigMap)
+				c.Create(context.TODO(), notDeletedConfigMap)
+				result = applier.DeleteManifest(context.TODO(), kubernetes.NewManifestReader(rawMultipleObjects))
+
+			})
+			It("should not return error", func() {
+				Expect(result).To(BeNil())
+			})
+
+			It("should delete configmap", func() {
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-cm"}, &corev1.ConfigMap{})
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			})
+
+			It("should delete pod", func() {
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "test-pod"}, &corev1.Pod{})
+				Expect(err).To(HaveOccurred())
+				Expect(apierrors.IsNotFound(err)).To(BeTrue())
+			})
+
+			It("should keep configmap which should not be deleted", func() {
+				err := c.Get(context.TODO(), client.ObjectKey{Name: "should-not-be-deleted-cm"}, &corev1.ConfigMap{})
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 	})
 })

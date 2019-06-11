@@ -1,0 +1,56 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Ingress to the Shoot's Kuberntes API Server from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed'
+      and Prometheus, and Egress to etcd pods.
+  name: allow-kube-apiserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes
+      garden.sapcloud.io/role: controlplane
+      role: apiserver
+  egress:
+  - to:
+    # Allow connection to shoot's etcd instances.
+    - podSelector:
+        matchLabels:
+          app: etcd-statefulset
+          garden.sapcloud.io/role: controlplane
+    ports:
+    - protocol: TCP
+      port: {{ .Values.etcdServicePort }}
+  ingress:
+    # Allow connection from everything which needs to talk to the API server
+  - from:
+    - podSelector:
+        matchLabels:
+          networking.gardener.cloud/to-shoot-apiserver: allowed
+    # Seed Nodes CIDR
+    - ipBlock:
+        cidr: {{ required "seedNetworks.node is required" .Values.seedNetworks.node }}
+    # Seed Pod CIDR Calico workaround for LoadBalancers.
+    # Traffic comes from the tunl0 interface on calico,
+    # and tunl0 is the first address in the pod subnet on every single Node.
+    - ipBlock:
+        cidr: {{ required "seedNetworks.pod is required" .Values.seedNetworks.pod }}
+    ports:
+    - protocol: TCP
+      port: {{ required ".securePort is required" .Values.securePort }}
+  - from:
+    - podSelector:
+        matchLabels:
+          app: prometheus
+          garden.sapcloud.io/role: monitoring
+          role: monitoring
+    ports:
+    - protocol: TCP
+      port: {{ required ".blackboxExporterPort is required" .Values.blackboxExporterPort }}
+    - protocol: TCP
+      port: {{ required ".securePort is required" .Values.securePort }}
+  policyTypes:
+  - Egress
+  - Ingress

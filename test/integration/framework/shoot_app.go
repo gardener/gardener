@@ -159,6 +159,42 @@ func (o *GardenerTestOperation) HTTPGet(ctx context.Context, url string) (*http.
 	return httpClient.Do(httpRequest)
 }
 
+// WaitUntilPodIsRunning waits until the pod with <podName> is running
+func (o *GardenerTestOperation) WaitUntilPodIsRunning(ctx context.Context, podName, podNamespace string, c kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		pod := &corev1.Pod{}
+		if err := c.Client().Get(ctx, client.ObjectKey{Namespace: podNamespace, Name: podName}, pod); err != nil {
+			return retry.SevereError(err)
+		}
+		if !health.IsPodReady(pod) {
+			o.Logger.Infof("Waiting for %s to be ready!!", podName)
+			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, podNamespace, podName, err))
+		}
+
+		return retry.Ok()
+
+	})
+}
+
+// WaitUntilPodIsRunningWithLabels waits until the pod with <podLabels> is running
+func (o *GardenerTestOperation) WaitUntilPodIsRunningWithLabels(ctx context.Context, labels labels.Selector, podNamespace string, c kubernetes.Interface) error {
+	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
+		pod, err := o.GetFirstRunningPodWithLabels(ctx, labels, podNamespace, c)
+
+		if err != nil {
+			return retry.SevereError(err)
+		}
+
+		if !health.IsPodReady(pod) {
+			o.Logger.Infof("Waiting for %s to be ready!!", pod.GetName())
+			return retry.MinorError(fmt.Errorf(`pod "%s/%s" is not ready: %v`, pod.GetNamespace(), pod.GetName(), err))
+		}
+
+		return retry.Ok()
+
+	})
+}
+
 // WaitUntilDeploymentIsRunning waits until the deployment with <deploymentName> is running
 func (o *GardenerTestOperation) WaitUntilDeploymentIsRunning(ctx context.Context, deploymentName, deploymentNamespace string, c kubernetes.Interface) error {
 	return retry.Until(ctx, defaultPollInterval, func(ctx context.Context) (done bool, err error) {
@@ -332,31 +368,12 @@ func EnsureDirectories(helm Helm) error {
 
 // PodExecByLabel executes a command inside pods filtered by label
 func (o *GardenerTestOperation) PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer, command, namespace string, client kubernetes.Interface) (io.Reader, error) {
-	pod, err := o.getFirstRunningPodWithLabels(ctx, podLabels, namespace, client)
+	pod, err := o.GetFirstRunningPodWithLabels(ctx, podLabels, namespace, client)
 	if err != nil {
 		return nil, err
 	}
 
 	return kubernetes.NewPodExecutor(client.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
-}
-
-// GetFirstNodeInternalIP gets the internal IP of the first node
-func (o *GardenerTestOperation) GetFirstNodeInternalIP(ctx context.Context) (string, error) {
-	nodes := &corev1.NodeList{}
-	err := o.ShootClient.Client().List(ctx, &client.ListOptions{}, nodes)
-	if err != nil {
-		return "", err
-	}
-
-	if len(nodes.Items) > 0 {
-		firstNode := nodes.Items[0]
-		for _, address := range firstNode.Status.Addresses {
-			if address.Type == corev1.NodeInternalIP {
-				return address.Address, nil
-			}
-		}
-	}
-	return "", ErrNoInternalIPsForNodeWasFound
 }
 
 // GetDashboardPodIP gets the dashboard IP
@@ -365,7 +382,7 @@ func (o *GardenerTestOperation) GetDashboardPodIP(ctx context.Context) (string, 
 		"app": "kubernetes-dashboard",
 	}))
 
-	dashboardPod, err := o.getFirstRunningPodWithLabels(ctx, dashboardLabels, metav1.NamespaceSystem, o.ShootClient)
+	dashboardPod, err := o.GetFirstRunningPodWithLabels(ctx, dashboardLabels, metav1.NamespaceSystem, o.ShootClient)
 	if err != nil {
 		return "", err
 	}

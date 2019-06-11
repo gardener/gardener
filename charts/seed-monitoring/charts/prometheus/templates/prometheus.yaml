@@ -56,6 +56,11 @@ spec:
         garden.sapcloud.io/role: monitoring
         app: prometheus
         role: monitoring
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-shoot-networks: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/to-seed-apiserver: allowed
     spec:
       # used to talk to Seed's API server.
       serviceAccountName: prometheus
@@ -104,6 +109,10 @@ spec:
           periodSeconds: 5
           successThreshold: 1
           timeoutSeconds: 3
+        ports:
+        - name: web
+          containerPort: 9090
+          protocol: TCP
         resources:
 {{- if .Values.vpa.enabled }}
           requests:

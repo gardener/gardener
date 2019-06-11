@@ -198,6 +198,7 @@ type ApplierOptions struct {
 // Kubernetes objects.
 type ApplierInterface interface {
 	ApplyManifest(ctx context.Context, unstructured UnstructuredReader, options ApplierOptions) error
+	DeleteManifest(ctx context.Context, unstructured UnstructuredReader) error
 }
 
 // Interface is used to wrap the interactions with a Kubernetes cluster

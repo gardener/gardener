@@ -44,6 +44,9 @@ spec:
         garden.sapcloud.io/role: controlplane
         app: kubernetes
         role: scheduler
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-shoot-apiserver: allowed
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       tolerations:
       - effect: NoExecute
@@ -81,6 +84,10 @@ spec:
           initialDelaySeconds: 15
           periodSeconds: 10
           timeoutSeconds: 15
+        ports:
+        - name: metrics
+          containerPort: {{ include "kube-scheduler.port" . }}
+          protocol: TCP
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         {{- if .Values.resources }}

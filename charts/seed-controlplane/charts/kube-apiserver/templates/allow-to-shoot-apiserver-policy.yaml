@@ -1,0 +1,26 @@
+apiVersion: {{ include "networkpolicyversion" . }}
+kind: NetworkPolicy
+metadata:
+  annotations:
+    gardener.cloud/description: |
+      Allows Egress from pods labeled with 'networking.gardener.cloud/to-shoot-apiserver=allowed'
+      to talk to Shoot's Kubernetes API Server.
+  name: allow-to-shoot-apiserver
+  namespace: {{ .Release.Namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      networking.gardener.cloud/to-shoot-apiserver: allowed
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: kubernetes
+          garden.sapcloud.io/role: controlplane
+          role: apiserver
+    ports:
+    - protocol: TCP
+      port: {{ required ".securePort is required" .Values.securePort }}
+  policyTypes:
+  - Egress
+  ingress: []

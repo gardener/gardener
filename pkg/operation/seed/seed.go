@@ -382,6 +382,15 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	applierOptions.MergeFuncs[vpaGK] = retainStatusInformation
 	applierOptions.MergeFuncs[issuerGK] = retainStatusInformation
 
+	privateNetworks, err := common.ToExceptNetworks(
+		common.AllPrivateNetworkBlocks(),
+		seed.Info.Spec.Networks.Nodes,
+		seed.Info.Spec.Networks.Pods,
+		seed.Info.Spec.Networks.Services)
+	if err != nil {
+		return err
+	}
+
 	return chartApplier.ApplyChartWithOptions(context.TODO(), filepath.Join("charts", chartName), common.GardenNamespace, chartName, nil, map[string]interface{}{
 		"cloudProvider": seed.CloudProvider,
 		"global": map[string]interface{}{
@@ -423,6 +432,13 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		"vpa": map[string]interface{}{
 			"enabled":        vpaEnabled,
 			"podAnnotations": vpaPodAnnotations,
+		},
+		"global-network-policies": map[string]interface{}{
+			// TODO (mvladev): Move the Provider specific metadata IP
+			// somewhere else, so it's accessible here.
+			// "metadataService": "169.254.169.254/32"
+			"denyAll":         false,
+			"privateNetworks": privateNetworks,
 		},
 	}, applierOptions)
 }

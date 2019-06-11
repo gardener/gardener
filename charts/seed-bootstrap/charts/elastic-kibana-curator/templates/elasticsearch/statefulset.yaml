@@ -22,6 +22,7 @@ spec:
         garden.sapcloud.io/role: logging
         app: elasticsearch-logging
         role: logging
+        networking.gardener.cloud/from-prometheus: allowed
     spec:
       # Elasticsearch requires vm.max_map_count to be at least 262144.
       # If your OS already sets up this number to a higher value, feel free
@@ -125,7 +126,7 @@ spec:
       labels:
         role: logging
     spec:
-      accessModes: 
+      accessModes:
       - {{ .Values.elasticsearch.persistence.accessMode }}
       resources:
         requests:
