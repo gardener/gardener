@@ -17,7 +17,7 @@
     EnvironmentFile=-/var/lib/kubelet/extra_args
     ExecStartPre=/bin/docker run --rm -v /opt/bin:/opt/bin:rw {{ required "images.hyperkube is required" .Values.images.hyperkube }} cp /hyperkube /opt/bin/
 {{- if .Values.kubernetes.kubelet.hostnameOverride }}
-    ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(echo $HOSTNAME | cut -d '.' -f 1)'
+    ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(cat /etc/hostname | cut -d '.' -f 1)'
 {{- end }}
     ExecStart=/opt/bin/hyperkube kubelet \
 {{ include "kubelet-flags" . | indent 8 }}
