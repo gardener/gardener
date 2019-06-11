@@ -45,7 +45,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.AWS.Networks.Nodes == nil {
 			if cloud.AWS.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.AWS.Networks.Nodes = cloud.AWS.Networks.VPC.CIDR
-			} else if len(cloud.AWS.Networks.Workers) > 0 {
+			} else if len(cloud.AWS.Networks.Workers) == 1 {
 				obj.Spec.Cloud.AWS.Networks.Nodes = &cloud.AWS.Networks.Workers[0]
 			}
 		}
@@ -70,7 +70,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.GCP.Networks.Services == nil {
 			obj.Spec.Cloud.GCP.Networks.Services = &defaultServiceCIDR
 		}
-		if cloud.GCP.Networks.Nodes == nil && len(cloud.GCP.Networks.Workers) > 0 {
+		if cloud.GCP.Networks.Nodes == nil && len(cloud.GCP.Networks.Workers) == 1 {
 			obj.Spec.Cloud.GCP.Networks.Nodes = &cloud.GCP.Networks.Workers[0]
 		}
 	}
@@ -87,7 +87,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.Alicloud.Networks.Nodes == nil {
 			if cloud.Alicloud.Networks.VPC.CIDR != nil {
 				obj.Spec.Cloud.Alicloud.Networks.Nodes = cloud.Alicloud.Networks.VPC.CIDR
-			} else if len(cloud.Alicloud.Networks.Workers) > 0 {
+			} else if len(cloud.Alicloud.Networks.Workers) == 1 {
 				obj.Spec.Cloud.Alicloud.Networks.Nodes = &cloud.Alicloud.Networks.Workers[0]
 			}
 		}
@@ -100,7 +100,7 @@ func SetDefaults_Shoot(obj *Shoot) {
 		if cloud.OpenStack.Networks.Services == nil {
 			obj.Spec.Cloud.OpenStack.Networks.Services = &defaultServiceCIDR
 		}
-		if cloud.OpenStack.Networks.Nodes == nil && len(cloud.OpenStack.Networks.Workers) > 0 {
+		if cloud.OpenStack.Networks.Nodes == nil && len(cloud.OpenStack.Networks.Workers) == 1 {
 			obj.Spec.Cloud.OpenStack.Networks.Nodes = &cloud.OpenStack.Networks.Workers[0]
 		}
 	}
