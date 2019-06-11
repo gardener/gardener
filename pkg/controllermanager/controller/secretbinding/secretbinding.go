@@ -108,7 +108,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("SecretBinding controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconcileSecretBindingKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.secretBindingQueue, "SecretBinding", c.reconcileSecretBindingKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

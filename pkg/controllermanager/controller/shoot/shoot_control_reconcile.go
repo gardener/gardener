@@ -37,9 +37,9 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// reconcileShoot reconciles the Shoot cluster's state.
+// runReconcileShootFlow reconciles the Shoot cluster's state.
 // It receives a Garden object <garden> which stores the Shoot object and the operation type.
-func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1.LastError {
+func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) *gardencorev1alpha1.LastError {
 	// We create the botanists (which will do the actual work).
 	var botanist *botanistpkg.Botanist
 	if err := utilretry.UntilTimeout(context.TODO(), 10*time.Second, 10*time.Minute, func(context.Context) (done bool, err error) {
@@ -331,7 +331,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 	return nil
 }
 
-func (c *defaultControl) updateShootStatusReconcile(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType, state gardencorev1alpha1.LastOperationState, retryCycleStartTime *metav1.Time) error {
+func (c *Controller) updateShootStatusReconcile(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType, state gardencorev1alpha1.LastOperationState, retryCycleStartTime *metav1.Time) error {
 	var (
 		status             = o.Shoot.Info.Status
 		now                = metav1.Now()
@@ -367,12 +367,12 @@ func (c *defaultControl) updateShootStatusReconcile(o *operation.Operation, oper
 	return err
 }
 
-func (c *defaultControl) updateShootStatusResetRetry(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
+func (c *Controller) updateShootStatusResetRetry(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
 	now := metav1.Now()
 	return c.updateShootStatusReconcile(o, operationType, gardencorev1alpha1.LastOperationStateError, &now)
 }
 
-func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
+func (c *Controller) updateShootStatusReconcileStart(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
 	var retryCycleStartTime *metav1.Time
 
 	if o.Shoot.Info.Status.RetryCycleStartTime == nil || o.Shoot.Info.Generation != o.Shoot.Info.Status.ObservedGeneration {
@@ -383,7 +383,7 @@ func (c *defaultControl) updateShootStatusReconcileStart(o *operation.Operation,
 	return c.updateShootStatusReconcile(o, operationType, gardencorev1alpha1.LastOperationStateProcessing, retryCycleStartTime)
 }
 
-func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
+func (c *Controller) updateShootStatusReconcileSuccess(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType) error {
 	// Remove task list from Shoot annotations since reconciliation was successful.
 	newShoot, err := kutil.TryUpdateShootAnnotations(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
@@ -416,7 +416,7 @@ func (c *defaultControl) updateShootStatusReconcileSuccess(o *operation.Operatio
 	return err
 }
 
-func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType, lastError *gardencorev1alpha1.LastError) (gardencorev1alpha1.LastOperationState, error) {
+func (c *Controller) updateShootStatusReconcileError(o *operation.Operation, operationType gardencorev1alpha1.LastOperationType, lastError *gardencorev1alpha1.LastError) error {
 	var (
 		state         = gardencorev1alpha1.LastOperationStateFailed
 		description   = lastError.Description
@@ -458,5 +458,5 @@ func (c *defaultControl) updateShootStatusReconcileError(o *operation.Operation,
 		o.Shoot.Info = newShootAfterLabel
 	}
 
-	return state, err
+	return err
 }

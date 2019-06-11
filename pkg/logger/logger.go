@@ -65,22 +65,12 @@ func AddWriter(logger *logrus.Logger, writer io.Writer) *logrus.Logger {
 // and the project in the Garden cluster to the output. If an <operationID> is provided it will be printed for every
 // log message.
 // Example output: time="2017-06-08T13:00:49+02:00" level=info msg="Creating namespace in seed cluster" shoot=core/crazy-botany.
-func NewShootLogger(logger *logrus.Logger, shoot, project, operationID string) *logrus.Entry {
-	fields := constructFields("shoot", fmt.Sprintf("%s/%s", project, shoot))
-	if operationID != "" {
-		fields["opid"] = operationID
-	}
-	return logger.WithFields(fields)
+func NewShootLogger(logger *logrus.Logger, shoot, project string) *logrus.Entry {
+	return logger.WithField("shoot", fmt.Sprintf("%s/%s", project, shoot))
 }
 
 // NewFieldLogger extends an existing logrus logger and adds the provided additional field.
 // Example output: time="2017-06-08T13:00:49+02:00" level=info msg="something" <fieldKey>=<fieldValue>.
 func NewFieldLogger(logger *logrus.Logger, fieldKey, fieldValue string) *logrus.Entry {
-	return logger.WithFields(constructFields(fieldKey, fieldValue))
-}
-
-func constructFields(key, value string) logrus.Fields {
-	return logrus.Fields{
-		key: value,
-	}
+	return logger.WithField(fieldKey, fieldValue)
 }

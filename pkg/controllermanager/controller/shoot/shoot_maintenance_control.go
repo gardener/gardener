@@ -37,14 +37,6 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-const (
-	// BestGuessMaintenanceMinutes is the average duration of a maintenance operation. It is subtracted from the end
-	// of a maintenance time window to use a best-effort kind of finishing the operation before the end.
-	// Generally, we can't make sure that the maintenance operation is done by the end of the time window anyway (considering large
-	// clusters with hundreds of nodes, a rolling update will take several hours).
-	BestGuessMaintenanceMinutes = 15
-)
-
 func (c *Controller) shootMaintenanceAdd(obj interface{}) {
 	key, err := cache.MetaNamespaceKeyFunc(obj)
 	if err != nil {
@@ -82,32 +74,25 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 	if err != nil {
 		return err
 	}
+	log := logger.NewShootLogger(logger.Logger, name, namespace)
+
 	shoot, err := c.shootLister.Shoots(namespace).Get(name)
 	if apierrors.IsNotFound(err) {
-		logger.Logger.Debugf("[SHOOT MAINTENANCE] %s - skipping because Shoot has been deleted", key)
+		log.Debugf("[SHOOT MAINTENANCE] - skipping because Shoot has been deleted")
 		return nil
 	}
 	if err != nil {
-		logger.Logger.Errorf("[SHOOT MAINTENANCE] %s - unable to retrieve object from store: %v", key, err)
+		log.WithError(err).Error("[SHOOT MAINTENANCE] - unable to retrieve object from store")
 		return err
 	}
 	if shoot.DeletionTimestamp != nil {
-		logger.Logger.Debugf("[SHOOT MAINTENANCE] %s - skipping because Shoot is marked as to be deleted", key)
+		log.Debug("[SHOOT MAINTENANCE] - skipping because Shoot is marked as to be deleted")
 		return nil
 	}
 
-	maintenanceTimeWindow, err := utils.ParseMaintenanceTimeWindow(shoot.Spec.Maintenance.TimeWindow.Begin, shoot.Spec.Maintenance.TimeWindow.End)
-	if err != nil {
-		logger.Logger.Errorf("[SHOOT MAINTENANCE] %s - invalid time window: %v", key, err)
-		return err
-	}
-	maintenanceTimeWindow = maintenanceTimeWindow.WithEnd(maintenanceTimeWindow.End().Add(0, -BestGuessMaintenanceMinutes, 0))
+	defer c.shootMaintenanceRequeue(key, shoot)
 
-	var now = time.Now().UTC()
-
-	defer c.shootMaintenanceRequeue(key, maintenanceTimeWindow, now)
-
-	if mustIgnoreShoot(shoot.Annotations, c.config.Controllers.Shoot.RespectSyncPeriodOverwrite) || !mustMaintainNow(shoot, maintenanceTimeWindow, now) {
+	if common.ShouldIgnoreShoot(c.respectSyncPeriodOverwrite(), shoot) || !mustMaintainNow(shoot) {
 		logger.Logger.Infof("[SHOOT MAINTENANCE] %s - skipping because Shoot (it is either marked as 'to-be-ignored' or must not be maintained now).", key)
 		return nil
 	}
@@ -121,10 +106,10 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 }
 
 // newRandomTimeWindow computes a new random time window either for today or the next day (depending on <today>).
-func (c *Controller) shootMaintenanceRequeue(key string, maintenanceTimeWindow *utils.MaintenanceTimeWindow, now time.Time) {
+func (c *Controller) shootMaintenanceRequeue(key string, shoot *gardenv1beta1.Shoot) {
 	var (
-		duration        = maintenanceTimeWindow.RandomDurationUntilNext(now)
-		nextMaintenance = now.Add(duration)
+		duration        = c.durationUntilNextShootSync(shoot)
+		nextMaintenance = time.Now().Add(duration)
 	)
 	logger.Logger.Infof("[SHOOT MAINTENANCE] %s - Scheduled maintenance in %s at %s", key, duration, nextMaintenance.UTC())
 	c.shootMaintenanceQueue.AddAfter(key, duration)
@@ -161,7 +146,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 
 	var (
 		shoot       = shootObj.DeepCopy()
-		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, operationID)
+		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 		handleError = func(msg string) {
 			c.recorder.Eventf(shoot, corev1.EventTypeWarning, gardenv1beta1.ShootEventMaintenanceError, "[%s] %s", operationID, msg)
 			shootLogger.Error(msg)
@@ -231,8 +216,8 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 	return nil
 }
 
-func mustMaintainNow(shoot *gardenv1beta1.Shoot, maintenanceTimeWindow *utils.MaintenanceTimeWindow, now time.Time) bool {
-	return hasMaintainNowAnnotation(shoot) || maintenanceTimeWindow.Contains(now)
+func mustMaintainNow(shoot *gardenv1beta1.Shoot) bool {
+	return hasMaintainNowAnnotation(shoot) || common.IsNowInEffectiveShootMaintenanceTimeWindow(shoot)
 }
 
 func hasMaintainNowAnnotation(shoot *gardenv1beta1.Shoot) bool {

@@ -105,7 +105,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 
 	// Start the workers
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.cloudProfileQueue, "cloudprofile", c.reconcileCloudProfileKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.cloudProfileQueue, "cloudprofile", c.reconcileCloudProfileKey, &waitGroup, c.workerCh)
 	}
 
 	<-ctx.Done()

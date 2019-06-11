@@ -133,7 +133,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Plant controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.plantQueue, "plant", func(key string) error { return c.reconcilePlantKey(ctx, key) }, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.plantQueue, "plant", func(key string) error { return c.reconcilePlantKey(ctx, key) }, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

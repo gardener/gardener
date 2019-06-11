@@ -799,6 +799,7 @@ func Convert_config_ShootCareControllerConfiguration_To_v1alpha1_ShootCareContro
 
 func autoConvert_v1alpha1_ShootControllerConfiguration_To_config_ShootControllerConfiguration(in *ShootControllerConfiguration, out *config.ShootControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ReconcileInMaintenanceOnly = (*bool)(unsafe.Pointer(in.ReconcileInMaintenanceOnly))
 	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = in.RetryDuration
 	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))
@@ -813,6 +814,7 @@ func Convert_v1alpha1_ShootControllerConfiguration_To_config_ShootControllerConf
 
 func autoConvert_config_ShootControllerConfiguration_To_v1alpha1_ShootControllerConfiguration(in *config.ShootControllerConfiguration, out *ShootControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
+	out.ReconcileInMaintenanceOnly = (*bool)(unsafe.Pointer(in.ReconcileInMaintenanceOnly))
 	out.RespectSyncPeriodOverwrite = (*bool)(unsafe.Pointer(in.RespectSyncPeriodOverwrite))
 	out.RetryDuration = in.RetryDuration
 	out.RetrySyncPeriod = (*v1.Duration)(unsafe.Pointer(in.RetrySyncPeriod))

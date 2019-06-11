@@ -115,7 +115,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Project controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.projectQueue, "Project", c.reconcileProjectKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.projectQueue, "Project", c.reconcileProjectKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

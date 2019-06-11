@@ -168,6 +168,10 @@ type ShootControllerConfiguration struct {
 	// ConcurrentSyncs is the number of workers used for the controller to work on
 	// events.
 	ConcurrentSyncs int
+	// ReconcileInMaintenanceOnly determines whether Shoot reconciliations happen only
+	// during its maintenance time window.
+	// +optional
+	ReconcileInMaintenanceOnly *bool
 	// RespectSyncPeriodOverwrite determines whether a sync period overwrite of a
 	// Shoot (via annotation) is respected or not. Defaults to false.
 	// +optional

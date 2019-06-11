@@ -129,6 +129,9 @@ type MaintenanceTimeWindow struct {
 	end   *MaintenanceTime
 }
 
+// AlwaysTimeWindow is a MaintenanceTimeWindow that contains all durations.
+var AlwaysTimeWindow = NewMaintenanceTimeWindow(NewMaintenanceTime(0, 0, 0), NewMaintenanceTime(23, 59, 59))
+
 // NewMaintenanceTimeWindow takes a begin and an end of a time window and returns a pointer to a MaintenanceTimeWindow structure.
 func NewMaintenanceTimeWindow(begin, end *MaintenanceTime) *MaintenanceTimeWindow {
 	return &MaintenanceTimeWindow{begin, end}

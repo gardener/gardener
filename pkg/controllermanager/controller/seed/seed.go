@@ -127,7 +127,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Seed controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.seedQueue, "Seed", c.reconcileSeedKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling
