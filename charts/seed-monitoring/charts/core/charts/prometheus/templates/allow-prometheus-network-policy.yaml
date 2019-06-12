@@ -36,6 +36,13 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
+    - podSelector:
+        matchLabels:
+          app: vpa-exporter
+          garden.sapcloud.io/role: vpa
+      namespaceSelector:
+        matchLabels:
+          role: garden
   ingress:
   - from:
     - podSelector:
