@@ -86,16 +86,6 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
-		_ = g.Add(flow.Task{
-			Name:         "Removing old deprecated network policies",
-			Fn:           flow.TaskFn(botanist.DeleteDeprecatedCloudMetadataServiceNetworkPolicy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		_ = g.Add(flow.Task{
-			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
@@ -268,6 +258,18 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Name:         "Deploying Dependency Watchdog",
 			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdog).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
+		// TODO: Network policies steps must be moved to the top after one release.
+		// This is needed to ensure smooth migration to new network policies.
+		_ = g.Add(flow.Task{
+			Name:         "Removing old deprecated network policies",
+			Fn:           flow.TaskFn(botanist.DeleteDeprecatedCloudMetadataServiceNetworkPolicy).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
+		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying network policies",
+			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",
