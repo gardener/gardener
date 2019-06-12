@@ -26,6 +26,8 @@ spec:
     ports:
     - protocol: TCP
       port: {{ .Values.servicePorts.client }}
+    - protocol: TCP
+      port: {{ .Values.servicePorts.backuprestore }}
   policyTypes:
   - Ingress
   egress: []
