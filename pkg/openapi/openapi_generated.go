@@ -6073,7 +6073,7 @@ func schema_pkg_apis_garden_v1beta1_SeedSpec(ref common.ReferenceCallback) commo
 							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedNetworks"),
 						},
 					},
-					"blockedAddresses": {
+					"blockCIDRs": {
 						SchemaProps: spec.SchemaProps{
 							Description: "BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running in the seed cluster.",
 							Type:        []string{"array"},

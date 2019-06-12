@@ -465,7 +465,7 @@ type SeedSpec struct {
 	// BlockCIDRs is a list of network addresses tha should be blocked for shoot control plane components running
 	// in the seed cluster.
 	// +optional
-	BlockCIDRs []gardencorev1alpha1.CIDR `json:"blockedAddresses,omitempty"`
+	BlockCIDRs []gardencorev1alpha1.CIDR `json:"blockCIDRs,omitempty"`
 	// Visible labels the Seed cluster as selectable for the seedfinder admission controller.
 	// +optional
 	Visible *bool `json:"visible,omitempty"`
