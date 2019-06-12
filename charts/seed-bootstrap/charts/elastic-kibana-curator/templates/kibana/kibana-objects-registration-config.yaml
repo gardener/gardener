@@ -28,6 +28,9 @@ data:
       do
           # store the whole response with the status at the end
           HTTP_RESPONSE=$(curl --silent \
+{{- if .Values.searchguard.enabled }}
+            --user {{ .Values.kibana.sgUsername }}:{{ .Values.kibana.sgPassword }} \
+{{- end }}
             -H "Content-Type: application/json" \
             -H "kbn-xsrf: true" \
             --write-out "HTTPSTATUS:%{http_code}" \
@@ -54,6 +57,9 @@ data:
     function set_index_pattern_as_default {
       # store the whole response with the status at the end
       HTTP_RESPONSE=$(curl --silent \
+{{- if .Values.searchguard.enabled }}
+        --user {{ .Values.kibana.sgUsername }}:{{ .Values.kibana.sgPassword }} \
+{{- end }}
         -H "Content-Type: application/json" \
         -H "kbn-xsrf: true" \
         --write-out "HTTPSTATUS:%{http_code}" \
@@ -71,6 +77,9 @@ data:
 
     function create_dashboard {
       HTTP_RESPONSE=$(curl --silent \
+{{- if .Values.searchguard.enabled }}
+          --user {{ .Values.kibana.sgUsername }}:{{ .Values.kibana.sgPassword }} \
+{{- end }}
          -H "Content-Type: application/json" \
          -H "kbn-xsrf: true" \
          --write-out "HTTPSTATUS:%{http_code}" \

@@ -542,16 +542,47 @@ func (b *Botanist) DeploySeedLogging() error {
 	}
 
 	var (
-		credentials = b.Secrets["logging-ingress-credentials"]
-		basicAuth   = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
-		kibanaHost  = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
+		kibanaHost                             = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
+		kibanaCredentials                      = b.Secrets["kibana-logging-sg-credentials"]
+		kibanaUserIngressCredentialsSecretName = "logging-ingress-credentials-users"
+		sgKibanaPassword                       = kibanaCredentials.Data[secrets.DataKeyPassword]
+		sgKibanaPasswordHash                   = kibanaCredentials.Data[secrets.DataKeyPasswordBcryptHash]
+		basicAuth                              = utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", kibanaCredentials.Data[secrets.DataKeyUserName], sgKibanaPassword)))
+
+		sgCuratorPassword     = b.Secrets["curator-sg-credentials"].Data[secrets.DataKeyPassword]
+		sgCuratorPasswordHash = b.Secrets["curator-sg-credentials"].Data[secrets.DataKeyPasswordBcryptHash]
+
+		sgUserPasswordHash  = b.Secrets[kibanaUserIngressCredentialsSecretName].Data[secrets.DataKeyPasswordBcryptHash]
+		sgAdminPasswordHash = b.Secrets[common.KibanaAdminIngressCredentialsSecretName].Data[secrets.DataKeyPasswordBcryptHash]
+
+		userIngressBasicAuth  = utils.CreateSHA1Secret(b.Secrets[kibanaUserIngressCredentialsSecretName].Data[secrets.DataKeyUserName], b.Secrets[kibanaUserIngressCredentialsSecretName].Data[secrets.DataKeyPassword])
+		adminIngressBasicAuth = utils.CreateSHA1Secret(b.Secrets[common.KibanaAdminIngressCredentialsSecretName].Data[secrets.DataKeyUserName], b.Secrets[common.KibanaAdminIngressCredentialsSecretName].Data[secrets.DataKeyPassword])
+		ingressBasicAuth      string
+
+		sgFluentdPasswordHash string
+		sgFluentdSecret       *corev1.Secret
 	)
+
+	userIngressBasicAuthDecoded, err := utils.DecodeBase64(userIngressBasicAuth)
+	if err != nil {
+		return err
+	}
+
+	adminIngressBasicAuthDecoded, err := utils.DecodeBase64(adminIngressBasicAuth)
+	if err != nil {
+		return err
+	}
+
+	ingressBasicAuthDecoded := fmt.Sprintf("%s\n%s", string(userIngressBasicAuthDecoded), string(adminIngressBasicAuthDecoded))
+	ingressBasicAuth = utils.EncodeBase64([]byte(ingressBasicAuthDecoded))
 
 	images, err := b.InjectSeedSeedImages(map[string]interface{}{},
 		common.ElasticsearchImageName,
 		common.ElasticsearchMetricsExporterImageName,
+		common.ElasticsearchSearchguardImageName,
 		common.CuratorImageName,
 		common.KibanaImageName,
+		common.SearchguardImageName,
 		common.AlpineImageName,
 	)
 	if err != nil {
@@ -560,16 +591,28 @@ func (b *Botanist) DeploySeedLogging() error {
 
 	ct := b.Shoot.Info.CreationTimestamp.Time
 
+	sgFluentdSecret, err = b.K8sSeedClient.GetSecret(common.GardenNamespace, "fluentd-es-sg-credentials")
+	if err != nil {
+		return err
+	}
+
+	sgFluentdPasswordHash = string(sgFluentdSecret.Data["bcryptPasswordHash"])
+
 	elasticKibanaCurator := map[string]interface{}{
 		"ingress": map[string]interface{}{
-			"basicAuthSecret": basicAuth,
 			"host":            kibanaHost,
+			"basicAuthSecret": ingressBasicAuth,
 		},
 		"elasticsearch": map[string]interface{}{
 			"replicaCount": b.Shoot.GetReplicas(1),
+			"readinessProbe": map[string]interface{}{
+				"httpAuth": basicAuth,
+			},
 		},
 		"kibana": map[string]interface{}{
 			"replicaCount": b.Shoot.GetReplicas(1),
+			"sgUsername":   "kibanaserver",
+			"sgPassword":   string(sgKibanaPassword),
 		},
 		"curator": map[string]interface{}{
 			"hourly": map[string]interface{}{
@@ -579,6 +622,33 @@ func (b *Botanist) DeploySeedLogging() error {
 			"daily": map[string]interface{}{
 				"schedule": fmt.Sprintf("%d 0,6,12,18 * * *", ct.Minute()%54+5),
 				"suspend":  b.Shoot.IsHibernated,
+			},
+			"sgUsername": "curator",
+			"sgPassword": string(sgCuratorPassword),
+		},
+		"searchguard": map[string]interface{}{
+			"enabled":      true,
+			"replicaCount": b.Shoot.GetReplicas(1),
+			"annotations": map[string]interface{}{
+				"checksum/tls-secrets-server": b.CheckSums["elasticsearch-logging-server"],
+				"checksum/sg-admin-client":    b.CheckSums["sg-admin-client"],
+			},
+			"users": map[string]interface{}{
+				"fluentd": map[string]interface{}{
+					"hash": string(sgFluentdPasswordHash),
+				},
+				"kibanaserver": map[string]interface{}{
+					"hash": string(sgKibanaPasswordHash),
+				},
+				"curator": map[string]interface{}{
+					"hash": string(sgCuratorPasswordHash),
+				},
+				"user": map[string]interface{}{
+					"hash": string(sgUserPasswordHash),
+				},
+				"admin": map[string]interface{}{
+					"hash": string(sgAdminPasswordHash),
+				},
 			},
 		},
 		"global": images,

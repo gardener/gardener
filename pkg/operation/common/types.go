@@ -256,6 +256,9 @@ const (
 	// KibanaDeploymentName is the name of the kibana-logging deployment.
 	KibanaDeploymentName = "kibana-logging"
 
+	// KibanaAdminIngressCredentialsSecretName is the name of the secret which holds admin credentials.
+	KibanaAdminIngressCredentialsSecretName = "logging-ingress-credentials"
+
 	// FluentBitDaemonSetName is the name of the fluent-bit daemon set.
 	FluentBitDaemonSetName = "fluent-bit"
 
@@ -518,11 +521,17 @@ const (
 	// ElasticsearchMetricsExporterImageName is the name of the metrics exporter image used to fetch elasticsearch metrics.
 	ElasticsearchMetricsExporterImageName = "elasticsearch-metrics-exporter"
 
+	// ElasticsearchSearchguardImageName is the name of the Elastic-Search image with installed searchguard plugin used for logging
+	ElasticsearchSearchguardImageName = "elasticsearch-searchguard-oss"
+
 	// CuratorImageName is the name of the curator image used to alter the Elastic-search logs
 	CuratorImageName = "curator-es"
 
 	// KibanaImageName is the name of the Kibana image used for logging  UI
 	KibanaImageName = "kibana-oss"
+
+	// SearchguardImageName is the name of the Searchguard image used for updating the users and roles
+	SearchguardImageName = "sg-sgadmin"
 
 	// FluentdEsImageName is the image of the Fluentd image used for logging
 	FluentdEsImageName = "fluentd-es"

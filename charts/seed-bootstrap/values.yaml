@@ -63,6 +63,7 @@ global:
     configmap-reloader: image-repository:image-tag
     curator-es: image-repository:image-tag
     elasticsearch-oss: image-repository:image-tag
+    elasticsearch-searchguard-oss: image-repository:image-tag
     fluentd-es: image-repository:image-tag
     kibana-oss: image-repository:image-tag
     pause-container: image-repository:image-tag

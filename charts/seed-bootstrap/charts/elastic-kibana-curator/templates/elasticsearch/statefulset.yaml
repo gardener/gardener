@@ -18,32 +18,29 @@ spec:
     metadata:
       annotations:
         checksum/es-configmap: {{ include (print $.Template.BasePath "/elasticsearch/configmap.yaml") . | sha256sum }}
+        checksum/searchguard-config: {{ include (print $.Template.BasePath "/elasticsearch/searchguard-configmap.yaml") . | sha256sum }}
+{{- if .Values.searchguard.annotations }}
+        {{- toYaml .Values.searchguard.annotations | nindent 8 }}
+{{- end }}
       labels:
         garden.sapcloud.io/role: logging
         app: elasticsearch-logging
         role: logging
         networking.gardener.cloud/from-prometheus: allowed
     spec:
-      # Elasticsearch requires vm.max_map_count to be at least 262144.
-      # If your OS already sets up this number to a higher value, feel free
-      # to remove this init container.
       initContainers:
-      - name: sysctl
-        image: {{ index .Values.global.images "alpine" }}
-        command: ["sh", "-c", "if [ $(sysctl -n vm.max_map_count) -lt 262144 ]; then sysctl -w vm.max_map_count=262144; fi"]
-        securityContext:
-          privileged: true
-      - name: chown
-        image: {{ index .Values.global.images "elasticsearch-oss" }}
-        command: ["sh", "-c", "chown -R elasticsearch:elasticsearch /data"]
-        securityContext:
-          runAsUser: 0
-        volumeMounts:
-        - name: elasticsearch-logging
-          mountPath: /data
+{{ include "init-containers" . | indent 6 }}
       containers:
       - name: elasticsearch-logging
+{{- if .Values.searchguard.enabled }}
+        image: {{ index .Values.global.images "elasticsearch-searchguard-oss" }}
+        command:
+        - /bin/sh
+        - -c
+        - rm -f /usr/share/elasticsearch/config/*.pem && /usr/local/bin/docker-entrypoint.sh
+{{- else }}
         image: {{ index .Values.global.images "elasticsearch-oss" }}
+{{- end }}
         imagePullPolicy: IfNotPresent
         env:
         - name: ES_JAVA_OPTS
@@ -67,8 +64,7 @@ spec:
             resourceFieldRef:
               resource: limits.cpu
         resources:
-          # Need more cpu upon initialization, therefore burstable class.
-          {{- include "util-templates.resource-quantity" .Values.elasticsearch | nindent 10 }}
+{{- include "util-templates.resource-quantity" .Values.elasticsearch | indent 10 }}
         ports:
         - containerPort: {{ .Values.global.elasticsearchPorts.db }}
           name: http
@@ -79,7 +75,16 @@ spec:
         livenessProbe:
           {{- toYaml .Values.elasticsearch.livenessProbe | nindent 10 }}
         readinessProbe:
-          {{- toYaml .Values.elasticsearch.readinessProbe | nindent 10 }}
+          httpGet:
+            path: /_cluster/health
+            port: http
+{{- if .Values.searchguard.enabled }}
+            httpHeaders:
+              - name: Authorization
+                value: Basic {{ .Values.elasticsearch.readinessProbe.httpAuth }}
+{{- end }}
+          initialDelaySeconds: 20
+          timeoutSeconds: 5
         volumeMounts:
         - name: elasticsearch-logging
           mountPath: /data
@@ -92,6 +97,14 @@ spec:
         - name: config
           mountPath: /usr/share/elasticsearch/config/jvm.options
           subPath: jvm.options
+{{- if .Values.searchguard.enabled }}
+        - name: searchguard-config
+          mountPath: /usr/share/elasticsearch/sgconfig/
+        - name: tls-secrets-server
+          mountPath: /usr/share/elasticsearch/config/certificates-secrets/server/
+        - name: tls-secrets-client
+          mountPath: /usr/share/elasticsearch/config/certificates-secrets/client/
+{{- end }}
       - name: metrics-exporter
         image: {{ index .Values.global.images "elasticsearch-metrics-exporter" }}
         imagePullPolicy: IfNotPresent
@@ -120,6 +133,20 @@ spec:
       - name: config
         configMap:
           name: es-configmap
+{{- if .Values.searchguard.enabled }}
+      - name: searchguard-config
+        defaultMode: 0600
+        configMap:
+          name: searchguard-config
+      - name: tls-secrets-server
+        defaultMode: 0700
+        secret:
+          secretName: elasticsearch-logging-server
+      - name: tls-secrets-client
+        defaultMode: 0700
+        secret:
+          secretName: sg-admin-client
+{{- end }}
   volumeClaimTemplates:
   - metadata:
       name: elasticsearch-logging

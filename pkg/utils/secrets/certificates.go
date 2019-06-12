@@ -55,6 +55,13 @@ const (
 	DataKeyPrivateKeyCA = "ca.key"
 )
 
+const (
+	// PKCS1 certificate format
+	PKCS1 = iota
+	// PKCS8 certificate format
+	PKCS8
+)
+
 // CertificateSecretConfig contains the specification a to-be-generated CA, server, or client certificate.
 // It always contains a 2048-bit RSA private key.
 type CertificateSecretConfig struct {
@@ -67,6 +74,7 @@ type CertificateSecretConfig struct {
 
 	CertType  certType
 	SigningCA *Certificate
+	PKCS      int
 }
 
 // Certificate contains the private key, and the certificate. It does also contain the CA certificate
@@ -117,13 +125,24 @@ func (s *CertificateSecretConfig) GenerateCertificate() (*Certificate, error) {
 		return nil, err
 	}
 
+	var pk []byte
+	if s.PKCS == PKCS1 {
+		pk = utils.EncodePrivateKey(privateKey)
+	} else if s.PKCS == PKCS8 {
+		pk, err = utils.EncodePrivateKeyInPKCS8(privateKey)
+
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Certificate{
 		Name: s.Name,
 
 		CA: s.SigningCA,
 
 		PrivateKey:    privateKey,
-		PrivateKeyPEM: utils.EncodePrivateKey(privateKey),
+		PrivateKeyPEM: pk,
 
 		Certificate:    certificate,
 		CertificatePEM: certificatePEM,

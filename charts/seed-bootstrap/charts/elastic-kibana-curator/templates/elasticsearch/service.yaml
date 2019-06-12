@@ -16,6 +16,10 @@ spec:
   - name: metrics
     port: {{ .Values.global.elasticsearchPorts.metricsExporter }}
     protocol: TCP
+  - name: transport
+    port: {{ .Values.global.elasticsearchPorts.transport }}
+    protocol: TCP
+    targetPort: transport
   selector:
     app: elasticsearch-logging
     role: logging

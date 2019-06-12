@@ -34,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	kutils "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/utils/secrets"
 	utilsecrets "github.com/gardener/gardener/pkg/utils/secrets"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -150,6 +151,14 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 				Username:       "admin",
 				PasswordLength: 32,
 			},
+			&secrets.BasicAuthSecretConfig{
+				Name:   "fluentd-es-sg-credentials",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:                  "fluentd",
+				PasswordLength:            32,
+				BcryptPasswordHashRequest: true,
+			},
 		)
 	}
 
@@ -249,11 +258,13 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 
 	// Logging feature gate
 	var (
-		basicAuth           string
-		kibanaHost          string
-		fluentdReplicaCount int32
-		loggingEnabled      = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
-		existingSecretsMap  = map[string]*corev1.Secret{}
+		basicAuth             string
+		kibanaHost            string
+		sgFluentdPassword     string
+		sgFluentdPasswordHash string
+		fluentdReplicaCount   int32
+		loggingEnabled        = controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
+		existingSecretsMap    = map[string]*corev1.Secret{}
 	)
 
 	if loggingEnabled {
@@ -279,6 +290,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		credentials := deployedSecretsMap["seed-logging-ingress-credentials"]
 		basicAuth = utils.CreateSHA1Secret(credentials.Data[utilsecrets.DataKeyUserName], credentials.Data[utilsecrets.DataKeyPassword])
 		kibanaHost = seed.GetIngressFQDN("k", "", "garden")
+
+		sgFluentdCredentials := deployedSecretsMap["fluentd-es-sg-credentials"]
+		sgFluentdPassword = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPassword])
+		sgFluentdPasswordHash = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPasswordBcryptHash])
 	} else {
 		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
@@ -420,11 +435,20 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 					"size": seed.GetValidVolumeSize("100Gi"),
 				},
 			},
+			"searchguard": map[string]interface{}{
+				"users": map[string]interface{}{
+					"fluentd": map[string]interface{}{
+						"hash": sgFluentdPasswordHash,
+					},
+				},
+			},
 		},
 		"fluentd-es": map[string]interface{}{
 			"enabled": loggingEnabled,
 			"fluentd": map[string]interface{}{
 				"replicaCount": fluentdReplicaCount,
+				"sgUsername":   "fluentd",
+				"sgPassword":   sgFluentdPassword,
 				"storage":      seed.GetValidVolumeSize("9Gi"),
 			},
 		},

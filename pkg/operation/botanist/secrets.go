@@ -655,6 +655,10 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 	loggingEnabled := controllermanagerfeatures.FeatureGate.Enabled(features.Logging)
 	if loggingEnabled {
 		kibanaHost := b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
+		elasticsearchHosts := []string{"elasticsearch-logging",
+			fmt.Sprintf("elasticsearch-logging.%s", b.Shoot.SeedNamespace),
+			fmt.Sprintf("elasticsearch-logging.%s.svc", b.Shoot.SeedNamespace),
+		}
 		secretList = append(secretList,
 			&secrets.CertificateSecretConfig{
 				Name: "kibana-tls",
@@ -667,13 +671,71 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 				CertType:  secrets.ServerCert,
 				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
 			},
+			// Secret for elasticsearch
+			&secrets.CertificateSecretConfig{
+				Name: "elasticsearch-logging-server",
+
+				CommonName:   "elasticsearch",
+				Organization: nil,
+				DNSNames:     elasticsearchHosts,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ServerClientCert,
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
+				PKCS:      secrets.PKCS8,
+			},
 			// Secret definition for logging
+			&secrets.BasicAuthSecretConfig{
+				Name:   "logging-ingress-credentials-users",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:                  "user",
+				PasswordLength:            32,
+				BcryptPasswordHashRequest: true,
+			},
 			&secrets.BasicAuthSecretConfig{
 				Name:   "logging-ingress-credentials",
 				Format: secrets.BasicAuthFormatNormal,
 
-				Username:       "admin",
-				PasswordLength: 32,
+				Username:                  "admin",
+				PasswordLength:            32,
+				BcryptPasswordHashRequest: true,
+			},
+			&secrets.CertificateSecretConfig{
+				Name: "sg-admin-client",
+
+				CommonName:   "elasticsearch-logging",
+				Organization: nil,
+				DNSNames:     elasticsearchHosts,
+				IPAddresses:  nil,
+
+				CertType:  secrets.ClientCert,
+				SigningCA: certificateAuthorities[gardencorev1alpha1.SecretNameCACluster],
+				PKCS:      secrets.PKCS8,
+			},
+			&secrets.BasicAuthSecretConfig{
+				Name:   "kibana-logging-sg-credentials",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:                  "kibanaserver",
+				PasswordLength:            32,
+				BcryptPasswordHashRequest: true,
+			},
+			&secrets.BasicAuthSecretConfig{
+				Name:   "curator-sg-credentials",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:                  "curator",
+				PasswordLength:            32,
+				BcryptPasswordHashRequest: true,
+			},
+			&secrets.BasicAuthSecretConfig{
+				Name:   "admin-sg-credentials",
+				Format: secrets.BasicAuthFormatNormal,
+
+				Username:                  "admin",
+				PasswordLength:            32,
+				BcryptPasswordHashRequest: true,
 			},
 		)
 	}
@@ -694,6 +756,15 @@ func (b *Botanist) DeploySecrets() error {
 
 	if err := b.deleteOldETCDServerCertificate(existingSecretsMap); err != nil {
 		return err
+	}
+
+	loggingIngressAdminCredentials := existingSecretsMap[common.KibanaAdminIngressCredentialsSecretName]
+	if loggingIngressAdminCredentials != nil && len(loggingIngressAdminCredentials.Data[secrets.DataKeyPasswordBcryptHash]) == 0 {
+		if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, common.KibanaAdminIngressCredentialsSecretName); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+
+		delete(existingSecretsMap, common.KibanaAdminIngressCredentialsSecretName)
 	}
 
 	certificateAuthorities, err := b.generateCertificateAuthorities(existingSecretsMap)
@@ -893,6 +964,7 @@ const (
 	secretSuffixKubeConfig = "kubeconfig"
 	secretSuffixSSHKeyPair = gardencorev1alpha1.SecretNameSSHKeyPair
 	secretSuffixMonitoring = "monitoring"
+	secretSuffixLogging    = "logging"
 )
 
 func computeProjectSecretName(shootName, suffix string) string {
@@ -903,7 +975,13 @@ func computeProjectSecretName(shootName, suffix string) string {
 // the project namespace in the Garden cluster and the monitoring credentials for the
 // user-facing monitoring stack are also copied.
 func (b *Botanist) SyncShootCredentialsToGarden() error {
-	projectSecrets := map[string]string{secretSuffixKubeConfig: "kubecfg", secretSuffixSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair, secretSuffixMonitoring: "monitoring-ingress-credentials-users"}
+	projectSecrets := map[string]string{
+		secretSuffixKubeConfig: "kubecfg",
+		secretSuffixSSHKeyPair: gardencorev1alpha1.SecretNameSSHKeyPair,
+		secretSuffixMonitoring: "monitoring-ingress-credentials-users",
+		secretSuffixLogging:    "logging-ingress-credentials-users",
+	}
+
 	for key, value := range projectSecrets {
 		secretObj := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{

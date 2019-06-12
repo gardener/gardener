@@ -789,10 +789,11 @@
   version = "v1.9.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:5b8709c54afe4225c80b5e6668412a23e734fc08eb789e38e7c10f4dbe192843"
+  digest = "1:ed47bea400ebfd3c4eb7b7497e4004482fea5fc060e7dde85d5f21fcfc272f20"
   name = "golang.org/x/crypto"
   packages = [
+    "bcrypt",
+    "blowfish",
     "cast5",
     "curve25519",
     "ed25519",
@@ -813,7 +814,7 @@
     "ssh/terminal",
   ]
   pruneopts = "NUT"
-  revision = "88737f569e3a9c7ab309cdc09a07fe7fc87233c3"
+  revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
 
 [[projects]]
   branch = "master"
@@ -1678,6 +1679,7 @@
     "github.com/golang/mock/gomock",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/hashicorp/go-multierror",
+    "github.com/huandu/xstrings",
     "github.com/json-iterator/go",
     "github.com/mholt/archiver",
     "github.com/onsi/ginkgo",
@@ -1695,6 +1697,7 @@
     "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/pflag",
+    "golang.org/x/crypto/bcrypt",
     "golang.org/x/crypto/ssh",
     "gopkg.in/yaml.v2",
     "k8s.io/api/admission/v1beta1",
@@ -1705,6 +1708,7 @@
     "k8s.io/api/batch/v1beta1",
     "k8s.io/api/core/v1",
     "k8s.io/api/extensions/v1beta1",
+    "k8s.io/api/networking/v1",
     "k8s.io/api/policy/v1beta1",
     "k8s.io/api/rbac/v1",
     "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1",
@@ -1830,6 +1834,10 @@
     "k8s.io/component-base/config",
     "k8s.io/component-base/config/v1alpha1",
     "k8s.io/component-base/logs",
+    "k8s.io/gengo/args",
+    "k8s.io/gengo/generator",
+    "k8s.io/gengo/namer",
+    "k8s.io/gengo/types",
     "k8s.io/helm/pkg/chartutil",
     "k8s.io/helm/pkg/downloader",
     "k8s.io/helm/pkg/engine",

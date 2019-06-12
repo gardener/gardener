@@ -80,11 +80,11 @@ func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsMap l
 
 // getAdminPassword gets the admin password for authenticating against the api
 func (o *GardenerTestOperation) getAdminPassword(ctx context.Context) (string, error) {
-	return getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), kubecfg, password)
+	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), kubecfg, password)
 }
 
 func (o *GardenerTestOperation) getLoggingPassword(ctx context.Context) (string, error) {
-	return getObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), loggingIngressCredentials, password)
+	return GetObjectFromSecret(ctx, o.SeedClient, o.ShootSeedNamespace(), loggingIngressCredentials, password)
 }
 
 func (o *GardenerTestOperation) dashboardAvailable(ctx context.Context, url, userName, password string) error {
@@ -160,7 +160,8 @@ func shootCreationCompleted(newStatus *v1beta1.ShootStatus) bool {
 	return true
 }
 
-func getObjectFromSecret(ctx context.Context, k8sClient kubernetes.Interface, namespace, secretName, objectKey string) (string, error) {
+// GetObjectFromSecret returns object from secret
+func GetObjectFromSecret(ctx context.Context, k8sClient kubernetes.Interface, namespace, secretName, objectKey string) (string, error) {
 	secret := &corev1.Secret{}
 	err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: namespace, Name: secretName}, secret)
 	if err != nil {

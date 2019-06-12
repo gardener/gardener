@@ -42,7 +42,9 @@ data:
       client_cert:
       client_key:
       ssl_no_validate: False
-      http_auth:
+{{- if .Values.searchguard.enabled }}
+      http_auth: '{{ .Values.curator.sgUsername }}:{{ .Values.curator.sgPassword }}'
+{{- end }}
       timeout: 30
       master_only: False
     logging:
@@ -127,7 +129,9 @@ data:
       client_cert:
       client_key:
       ssl_no_validate: False
-      http_auth:
+{{- if .Values.searchguard.enabled }}
+      http_auth: '{{ .Values.curator.sgUsername }}:{{ .Values.curator.sgPassword }}'
+{{- end }}
       timeout: 30
       master_only: False
     logging:

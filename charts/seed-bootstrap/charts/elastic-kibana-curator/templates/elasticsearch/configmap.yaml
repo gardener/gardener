@@ -18,8 +18,7 @@ data:
 
     processors: ${PROCESSORS}
 
-    network:
-      host: ${NETWORK_HOST:0.0.0.0}
+    network.host: ${NETWORK_HOST:0.0.0.0}
 
     path:
       data: ${PATH_DATA:/data}
@@ -34,8 +33,10 @@ data:
 
     discovery:
       zen:
-        ping.unicast.hosts: ${DISCOVERY_SERVICE:elasticsearch-logging}
         minimum_master_nodes: ${NUMBER_OF_MASTERS:1}
+        ping:
+          unicast:
+            hosts: ${DISCOVERY_SERVICE:elasticsearch-logging}
 
     transport:
       tcp:
@@ -50,11 +51,10 @@ data:
         queue_size: ${WRITE_QUEUE_SIZE:200}
 
     cluster:
-      name: ${CLUSTER_NAME:kubernetes-logging}
+      name: ${CLUSTER_NAME:elasticsearch-logging}
       routing:
         allocation:
           disk:
-            # disable disk allocation
             threshold_enabled: ${ALLOW_DISK_ALLOCATION:true}
             watermark:
               # this is the threshold to move shard to other node
@@ -67,6 +67,31 @@ data:
               flood_stage: ${DISK_WATERMARK_FLOOD_STAGE:95%}
           # for single node only allow only primary shard. We don't need replica
           enable: ${SHARD_REBALANCING_FOR:all}
+{{- if .Values.searchguard.enabled }}
+    # Search Guard
+    searchguard:
+      enterprise_modules_enabled: false
+      restapi:
+        roles_enabled: ["sg_all_access"]
+      authcz:
+        admin_dn:
+          - "CN=elasticsearch-logging"
+      nodes_dn:
+        - "CN=elasticsearch"
+      enable_snapshot_restore_privilege: true
+      check_snapshot_restore_write_privileges: true
+      audit:
+        type: internal_elasticsearch
+      ssl:
+        http:
+          enabled: false
+        transport:
+          enforce_hostname_verification: false
+          pemkey_filepath: certificates-secrets/server/tls.key
+          pemcert_filepath: certificates-secrets/server/tls.crt
+          pemtrustedcas_filepath: certificates-secrets/server/ca.crt
+{{- end }}
+
   log4j2.properties: |-
     status = error
 
@@ -201,3 +226,28 @@ data:
     # Set system property '-Des.scripting.exception_for_missing_value=true' 
     # to make behaviour compatible with future major versions.
     -Des.scripting.exception_for_missing_value=true
+
+{{- if .Values.searchguard.enabled }}
+  sgadmin-command.sh: |-
+    #!/bin/bash
+    sgadmin=/usr/share/elasticsearch/plugins/search-guard-6/tools/sgadmin.sh
+    secret_home=/usr/share/elasticsearch/config/certificates-secrets/client
+    ca=${secret_home}/ca.crt
+    crt=${secret_home}/tls.crt
+    key=${secret_home}/tls.key
+
+    rm -f /usr/share/elasticsearch/config/*.pem
+
+    (/usr/local/bin/docker-entrypoint.sh)&
+
+     $sgadmin -cd /usr/share/elasticsearch/sgconfig/ -icl -nhnv -cacert $ca -cert $crt -key $key
+
+      while [[ $? -ne 0 ]] ; do
+        echo "The command exited with status code $?"
+        sleep 2
+        $sgadmin -cd /usr/share/elasticsearch/sgconfig/ -icl -nhnv -cacert $ca -cert $crt -key $key
+      done
+
+      echo "Тhe Searchguard completed successfully"
+
+{{- end }}
