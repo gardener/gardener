@@ -386,7 +386,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		common.ConfigMapReloaderImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
-		common.AlpineImageName,
+		common.AlpineIptablesImageName,
 	)
 	if err != nil {
 		return err

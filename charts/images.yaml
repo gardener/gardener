@@ -155,6 +155,9 @@ images:
 - name: alpine
   repository: alpine
   tag: "3.8"
+- name: alpine-iptables
+  repository: eu.gcr.io/gardener-project/alpine-iptables
+  tag: "3.9"
 
 # CSI
 - name: csi-attacher
