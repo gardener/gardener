@@ -171,11 +171,11 @@ func main() {
 	testLogger.Infof("Successfully created shoot %s", shootName)
 
 
-	backupInfrastructure, err := getBackupInfrastructureOfShoot(ctx, shootGardenerTest, shootObject)
+	backupInfrastructure, err := helper.GetBackupInfrastructureOfShoot(ctx, shootGardenerTest, shootObject)
 	if err != nil {
 		testLogger.Fatal(err)
 	}
-	updateBackupInfrastructureAnnotations(backupInfrastructure)
+	helper.UpdateBackupInfrastructureAnnotations(backupInfrastructure)
 	if err := shootGardenerTest.GardenClient.Client().Update(ctx, backupInfrastructure); err != nil {
 		testLogger.Fatalf("Cannot update annotation of backupinfrastructure %s: %s", backupInfrastructure.Name, err.Error())
 	}
