@@ -542,6 +542,9 @@ const (
 	// AlpineImageName is the name of alpine image
 	AlpineImageName = "alpine"
 
+	// AlpineIptablesImageName is the name of the alpine image with pre-installed iptable rules
+	AlpineIptablesImageName = "alpine-iptables"
+
 	// DependencyWatchdogDeploymentName is the name of the dependency controller resources.
 	DependencyWatchdogDeploymentName = "dependency-watchdog"
 

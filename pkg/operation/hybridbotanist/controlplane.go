@@ -509,7 +509,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		common.HyperkubeImageName,
 		common.VPNSeedImageName,
 		common.BlackboxExporterImageName,
-		common.AlpineImageName,
+		common.AlpineIptablesImageName,
 	)
 	if err != nil {
 		return err

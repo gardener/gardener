@@ -66,8 +66,8 @@ spec:
       serviceAccountName: prometheus
       initContainers:
       - name: set-iptable-rules
-        image: {{ index .Values.images "alpine" }}
-        command: ['/bin/sh', '-c', 'apk update && apk add iptables && iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP']
+        image: {{ index .Values.images "alpine-iptables" }}
+        command: ['/bin/sh', '-c', 'iptables -A INPUT -i tun0 -p icmp -j ACCEPT && iptables -A INPUT -i tun0 -m state --state NEW -j DROP']
         securityContext:
           capabilities:
             add:
