@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 kind: DaemonSet
 apiVersion: {{ include "daemonsetversion" . }}
 metadata:
@@ -131,3 +132,4 @@ spec:
           hostPath:
             path: /usr/share/ca-certificates/
             type: DirectoryOrCreate
+{{- end }}
