@@ -319,7 +319,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		credentialsUsers = b.Secrets["monitoring-ingress-credentials-users"]
 		basicAuth        = utils.CreateSHA1Secret(credentials.Data[secrets.DataKeyUserName], credentials.Data[secrets.DataKeyPassword])
 		basicAuthUsers   = utils.CreateSHA1Secret(credentialsUsers.Data[secrets.DataKeyUserName], credentialsUsers.Data[secrets.DataKeyPassword])
-		prometheusHost   = b.ComputePrometheusIngressFQDN()
+		prometheusHost   = b.ComputePrometheusHost()
 	)
 
 	var (
@@ -420,11 +420,11 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		return err
 	}
 
-	if err := b.deployGrafanaCharts("operators", basicAuth, "g-operators"); err != nil {
+	if err := b.deployGrafanaCharts("operators", basicAuth, common.GrafanaOperatorsPrefix); err != nil {
 		return err
 	}
 
-	if err := b.deployGrafanaCharts("users", basicAuthUsers, "g-users"); err != nil {
+	if err := b.deployGrafanaCharts("users", basicAuthUsers, common.GrafanaUsersPrefix); err != nil {
 		return err
 	}
 
