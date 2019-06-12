@@ -424,14 +424,8 @@ func (b *Botanist) DeploySeedMonitoring() error {
 		return err
 	}
 
-	if b.Shoot.WantsControlPlaneMonitoring {
-		if err := b.deployGrafanaCharts("users", basicAuthUsers, "g-users"); err != nil {
-			return err
-		}
-	} else {
-		if err := common.DeleteGrafanaByRole(b.K8sSeedClient, b.Shoot.SeedNamespace, "users"); err != nil {
-			return err
-		}
+	if err := b.deployGrafanaCharts("users", basicAuthUsers, "g-users"); err != nil {
+		return err
 	}
 
 	// Check if we want to deploy an alertmanager into the shoot namespace.

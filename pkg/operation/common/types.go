@@ -165,10 +165,6 @@ const (
 	// GardenRoleVpa is the value of GardenRole key indicating type 'vpa'.
 	GardenRoleVpa = "vpa"
 
-	// GardenControlPlaneMonitoring is the key for an annotation of a Shoot cluster whose value indicates if
-	// a monitoring stack for the shoot owner should be deployed.
-	GardenControlPlaneMonitoring = "monitoring.shoot.gardener.cloud/enabled"
-
 	// GardenCreatedBy is the key for an annotation of a Shoot cluster whose value indicates contains the username
 	// of the user that created the resource.
 	GardenCreatedBy = "garden.sapcloud.io/createdBy"
@@ -604,6 +600,7 @@ var (
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
 		GrafanaOperatorsDeploymentName,
+		GrafanaUsersDeploymentName,
 		KubeStateMetricsSeedDeploymentName,
 		KubeStateMetricsShootDeploymentName,
 	)
