@@ -206,7 +206,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployCloudProviderConfig, initializeShootClients),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, waitUntilKubeAPIServerIsReady, deployCloudProviderConfig),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Syncing shoot access credentials to project namespace in Garden",

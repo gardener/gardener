@@ -20,5 +20,5 @@
     ExecStartPre=/bin/sh -c 'hostnamectl set-hostname $(cat /etc/hostname | cut -d '.' -f 1)'
 {{- end }}
     ExecStart=/opt/bin/hyperkube kubelet \
-{{ include "kubelet-flags" . | indent 8 }}
+{{ include "kubelet-flags" . | trim | replace "\n" " \\\n" | indent 8 }}
 {{- end -}}
