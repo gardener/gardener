@@ -370,7 +370,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	chartApplier := kubernetes.NewChartApplier(chartRenderer, applier)
 
 	var (
-		applierOptions          = kubernetes.DefaultApplierOptions
+		applierOptions          = kubernetes.CopyApplierOptions(kubernetes.DefaultApplierOptions)
 		retainStatusInformation = func(new, old *unstructured.Unstructured) {
 			// Apply status from old Object to retain status information
 			new.Object["status"] = old.Object["status"]

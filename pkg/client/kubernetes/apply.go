@@ -160,6 +160,19 @@ var DefaultApplierOptions = ApplierOptions{
 	},
 }
 
+// CopyApplierOptions returns a copies of the provided applier options.
+func CopyApplierOptions(in ApplierOptions) ApplierOptions {
+	out := ApplierOptions{
+		MergeFuncs: make(map[schema.GroupKind]MergeFunc, len(in.MergeFuncs)),
+	}
+
+	for k, v := range in.MergeFuncs {
+		out.MergeFuncs[k] = v
+	}
+
+	return out
+}
+
 func (c *Applier) mergeObjects(newObj, oldObj *unstructured.Unstructured, mergeFuncs map[schema.GroupKind]MergeFunc) error {
 	newObj.SetResourceVersion(oldObj.GetResourceVersion())
 
