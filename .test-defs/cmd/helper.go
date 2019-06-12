@@ -128,16 +128,16 @@ func UpdateAnnotations(shoot *gardenv1beta1.Shoot) {
 	shoot.Annotations[common.GardenIgnoreAlerts] = "true"
 }
 
-// updateBackupInfrastructureAnnotations adds default annotations that should be present on any backupinfrastructure created.
-func updateBackupInfrastructureAnnotations(backup *gardenv1beta1.BackupInfrastructure) {
+// UpdateBackupInfrastructureAnnotations adds default annotations that should be present on any backupinfrastructure created.
+func UpdateBackupInfrastructureAnnotations(backup *gardenv1beta1.BackupInfrastructure) {
 	if backup.Annotations == nil {
 		backup.Annotations = map[string]string{}
 	}
 	backup.Annotations[common.BackupInfrastructureForceDeletion] = "true"
 }
 
-// getBackupInfrastructureOfShoot returns the BackupInfrastructure object of the shoot
-func getBackupInfrastructureOfShoot(ctx  context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
+// GetBackupInfrastructureOfShoot returns the BackupInfrastructure object of the shoot
+func GetBackupInfrastructureOfShoot(ctx  context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
 	backups := &gardenv1beta1.BackupInfrastructureList{}
 	err := shootGardenerTest.GardenClient.Client().List(ctx, &client.ListOptions{Namespace: shootObject.Namespace}, backups)
 	if err != nil {
