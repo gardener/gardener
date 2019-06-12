@@ -13,7 +13,7 @@ data:
 {{ toString $bytes | indent 4}}
   {{ end }}
   {{ else }}
-  {{ range $name, $bytes := .Files.Glob "dashboards/operators/**.json" }}
+  {{ range $name, $bytes := .Files.Glob "dashboards/**.json" }}
   {{ base $name }}: |-
 {{ toString $bytes | indent 4}}
   {{ end }}

@@ -55,6 +55,7 @@ allowedMetrics:
   kubeAPIServer:
   - apiserver_request_count
   - apiserver_request_latencies_bucket
+  - etcd_object_counts
   - process_max_fds
   - process_open_fds
   kubeControllerManager:
@@ -128,6 +129,7 @@ allowedMetrics:
   - kube_deployment_status_replicas_unavailable
   - kube_deployment_status_replicas_updated
   - kube_node_info
+  - kube_node_labels
   - kube_node_spec_unschedulable
   - kube_node_status_allocatable_cpu_cores
   - kube_node_status_allocatable_memory_bytes
@@ -169,9 +171,14 @@ allowedMetrics:
   - mcm_cloud_api_requests_failed_total
   - mcm_scrape_failure_total
   nodeExporter:
+  - node_cpu_seconds_total
+  - node_filesystem_avail_bytes
+  - node_filesystem_free_bytes
+  - node_filesystem_size_bytes
   - node_load1
   - node_load5
   - node_load15
+  - node_memory_Active_bytes
   - node_nf_conntrack_entries
   - node_nf_conntrack_entries_limit
   - process_max_fds
