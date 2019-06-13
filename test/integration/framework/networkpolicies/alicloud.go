@@ -112,7 +112,7 @@ func (a *AlicloudNetworkPolicy) ToSources() []Rule {
 		a.newSource(EtcdMainInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(EtcdEventsInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(AlicloudCloudControllerManagerInfoNotSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
-		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer).Build(),
+		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer, ExternalHost).Build(),
 		a.newSource(ElasticSearchInfo).Build(),
 		a.newSource(GrafanaInfo).AllowPod(PrometheusInfo).Build(),
 		a.newSource(KibanaInfo).AllowTargetPod(ElasticSearchInfo.FromPort("http")).Build(),

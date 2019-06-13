@@ -41,6 +41,8 @@ type Pod struct {
 	Name                   string
 	Labels                 labels.Set
 	ShootVersionConstraint string
+	// For which seed clusters this pod is active.
+	SeedClusterConstraints sets.String
 }
 
 // Port holds the data about a single port.
@@ -93,7 +95,7 @@ func NewPod(name string, labels labels.Set, shootVersionContstraints ...string) 
 	if len(shootVersionContstraints) > 0 {
 		constraint = shootVersionContstraints[0]
 	}
-	return Pod{name, labels, constraint}
+	return Pod{name, labels, constraint, nil}
 }
 
 // ToString returns the string represetnation of TargetHost.
@@ -119,7 +121,7 @@ func NewSinglePort(p int32) []Port {
 	return []Port{{Port: p}}
 }
 
-// CheckVersion checks if shoot version  is matched by ShootVersionConstraint.
+// CheckVersion checks if shoot version is matched by ShootVersionConstraint.
 func (p *Pod) CheckVersion(shoot *v1beta1.Shoot) bool {
 	if len(p.ShootVersionConstraint) == 0 {
 		return true
@@ -135,6 +137,11 @@ func (p *Pod) CheckVersion(shoot *v1beta1.Shoot) bool {
 	return c.Check(v)
 }
 
+// CheckSeedCluster checks if Seed cluster is matched by ShootVersionConstraint.
+func (p *Pod) CheckSeedCluster(provider v1beta1.CloudProvider) bool {
+	return p.SeedClusterConstraints.Len() == 0 || p.SeedClusterConstraints.Has(string(provider))
+}
+
 // Selector returns label selector for specific pod.
 func (p *Pod) Selector() labels.Selector {
 	return labels.SelectorFromSet(p.Labels)
@@ -145,6 +152,11 @@ func (p *Pod) Selector() labels.Selector {
 func (s *SourcePod) AsTargetPods() []*TargetPod {
 
 	targetPods := []*TargetPod{}
+
+	// Create a dummy port for testing
+	if len(s.Ports) == 0 {
+		targetPods = append(targetPods, s.DummyPort())
+	}
 	for _, port := range s.Ports {
 		targetPods = append(targetPods, &TargetPod{
 			Pod:  s.Pod,

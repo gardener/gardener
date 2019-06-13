@@ -66,6 +66,12 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 		return nil, errors.Wrap(err, "could not get Seed from Shoot in Garden cluster")
 	}
 
+	seedCloudProfile := &v1beta1.CloudProfile{}
+	err = k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: seed.Spec.Cloud.Profile}, seedCloudProfile)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not get Seed's CloudProvider in Garden cluster")
+	}
+
 	ns := &corev1.Namespace{}
 	if err := k8sGardenClient.Client().Get(ctx, client.ObjectKey{Name: shoot.Namespace}, ns); err != nil {
 		return nil, errors.Wrap(err, "could not get the Shoot namespace in Garden cluster")
@@ -102,15 +108,21 @@ func NewGardenTestOperation(ctx context.Context, k8sGardenClient kubernetes.Inte
 		SeedClient:   seedClient,
 		ShootClient:  k8sShootClient,
 
-		Seed:    seed,
-		Shoot:   shoot,
-		Project: project,
+		Seed:             seed,
+		SeedCloudProfile: seedCloudProfile,
+		Shoot:            shoot,
+		Project:          project,
 	}, nil
 }
 
 // ShootSeedNamespace gets the shoot namespace in the seed
 func (o *GardenerTestOperation) ShootSeedNamespace() string {
 	return shootop.ComputeTechnicalID(o.Project.Name, o.Shoot)
+}
+
+// SeedCloudProvider gets the Seed cluster's CloudProvider
+func (o *GardenerTestOperation) SeedCloudProvider() (v1beta1.CloudProvider, error) {
+	return helper.DetermineCloudProviderInProfile(o.SeedCloudProfile.Spec)
 }
 
 // DownloadKubeconfig downloads the shoot Kubeconfig

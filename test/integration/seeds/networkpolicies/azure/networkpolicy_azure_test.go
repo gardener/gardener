@@ -103,6 +103,9 @@ var _ = Describe("Network Policy Testing", func() {
 			if !targetPod.Pod.CheckVersion(shootTestOperations.Shoot) {
 				Skip("Target pod doesn't match Shoot version contstraints. Skipping.")
 			}
+			if !targetPod.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
+				Skip("Component doesn't match Seed Provider contstraints. Skipping.")
+			}
 			By(fmt.Sprintf("Checking that target Pod: %s is running", targetPod.Pod.Name))
 			err := shootTestOperations.WaitUntilPodIsRunningWithLabels(ctx, targetPod.Pod.Selector(), targetPod.Namespace, shootTestOperations.SeedClient)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
@@ -117,6 +120,9 @@ var _ = Describe("Network Policy Testing", func() {
 		establishConnectionToHost = func(ctx context.Context, nsp *networkpolicies.NamespacedSourcePod, host string, port int32) (io.Reader, error) {
 			if !nsp.Pod.CheckVersion(shootTestOperations.Shoot) {
 				Skip("Source pod doesn't match Shoot version contstraints. Skipping.")
+			}
+			if !nsp.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
+				Skip("Component doesn't match Seed Provider contstraints. Skipping.")
 			}
 			By(fmt.Sprintf("Checking for source Pod: %s is running", nsp.Pod.Name))
 			err := shootTestOperations.WaitUntilPodIsRunningWithLabels(ctx, nsp.Pod.Selector(), nsp.Namespace, shootTestOperations.SeedClient)
@@ -174,7 +180,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "cloud-controller-manager"},
-				ShootVersionConstraint: "< 1.13"},
+				ShootVersionConstraint: "< 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10253,
@@ -192,7 +199,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "cloud-controller-manager"},
-				ShootVersionConstraint: "< 1.13"},
+				ShootVersionConstraint: "< 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10253,
 				Name: ""}}
@@ -203,7 +211,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "cloud-controller-manager"},
-				ShootVersionConstraint: ">= 1.13"},
+				ShootVersionConstraint: ">= 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10258,
@@ -221,7 +230,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "cloud-controller-manager"},
-				ShootVersionConstraint: ">= 1.13"},
+				ShootVersionConstraint: ">= 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10258,
 				Name: ""}}
@@ -230,12 +240,23 @@ var _ = Describe("Network Policy Testing", func() {
 				Name: "dependency-watchdog",
 				Labels: labels.Set{
 					"role": "dependency-watchdog"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port(nil),
 			ExpectedPolicies: sets.String{
 				"allow-to-dns":            sets.Empty{},
 				"allow-to-seed-apiserver": sets.Empty{},
 				"deny-all":                sets.Empty{}}}
+		DependencyWatchdog8080 = &networkpolicies.TargetPod{
+			Pod: networkpolicies.Pod{
+				Name: "dependency-watchdog",
+				Labels: labels.Set{
+					"role": "dependency-watchdog"},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
+			Port: networkpolicies.Port{
+				Port: 8080,
+				Name: "dummy"}}
 		ElasticsearchLogging = &networkpolicies.SourcePod{
 			Pod: networkpolicies.Pod{
 				Name: "elasticsearch-logging",
@@ -243,7 +264,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "elasticsearch-logging",
 					"garden.sapcloud.io/role": "logging",
 					"role":                    "logging"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 9200,
@@ -262,7 +284,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "elasticsearch-logging",
 					"garden.sapcloud.io/role": "logging",
 					"role":                    "logging"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 9114,
 				Name: "metrics"}}
@@ -273,7 +296,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "elasticsearch-logging",
 					"garden.sapcloud.io/role": "logging",
 					"role":                    "logging"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 9200,
 				Name: "http"}}
@@ -284,7 +308,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "etcd-statefulset",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "events"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 2379,
@@ -302,7 +327,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "etcd-statefulset",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "events"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 2379,
 				Name: ""}}
@@ -313,7 +339,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "etcd-statefulset",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "main"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 2379,
@@ -331,7 +358,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "etcd-statefulset",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "main"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 2379,
 				Name: ""}}
@@ -349,7 +377,8 @@ var _ = Describe("Network Policy Testing", func() {
 				Labels: labels.Set{
 					"component":               "grafana",
 					"garden.sapcloud.io/role": "monitoring"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 3000,
@@ -364,7 +393,8 @@ var _ = Describe("Network Policy Testing", func() {
 				Labels: labels.Set{
 					"component":               "grafana",
 					"garden.sapcloud.io/role": "monitoring"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 3000,
 				Name: ""}}
@@ -375,7 +405,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kibana-logging",
 					"garden.sapcloud.io/role": "logging",
 					"role":                    "logging"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 5601,
@@ -392,7 +423,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kibana-logging",
 					"garden.sapcloud.io/role": "logging",
 					"role":                    "logging"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 5601,
 				Name: ""}}
@@ -403,19 +435,33 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "addon-manager"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port(nil),
 			ExpectedPolicies: sets.String{
 				"allow-to-dns":             sets.Empty{},
 				"allow-to-shoot-apiserver": sets.Empty{},
 				"deny-all":                 sets.Empty{}}}
+		KubeAddonManager8080 = &networkpolicies.TargetPod{
+			Pod: networkpolicies.Pod{
+				Name: "kube-addon-manager",
+				Labels: labels.Set{
+					"app":                     "kubernetes",
+					"garden.sapcloud.io/role": "controlplane",
+					"role":                    "addon-manager"},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
+			Port: networkpolicies.Port{
+				Port: 8080,
+				Name: "dummy"}}
 		KubeApiserver = &networkpolicies.SourcePod{
 			Pod: networkpolicies.Pod{
 				Name: "kube-apiserver",
 				Labels: labels.Set{
 					"app":  "kubernetes",
 					"role": "apiserver"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 443,
@@ -434,7 +480,8 @@ var _ = Describe("Network Policy Testing", func() {
 				Labels: labels.Set{
 					"app":  "kubernetes",
 					"role": "apiserver"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 443,
 				Name: ""}}
@@ -445,15 +492,16 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "controller-manager"},
-				ShootVersionConstraint: "< 1.13"},
+				ShootVersionConstraint: "< 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10252,
 					Name: ""}},
 			ExpectedPolicies: sets.String{
 				"allow-from-prometheus":     sets.Empty{},
-				"allow-to-dns":              sets.Empty{},
 				"allow-to-blocked-cidrs":    sets.Empty{},
+				"allow-to-dns":              sets.Empty{},
 				"allow-to-private-networks": sets.Empty{},
 				"allow-to-public-networks":  sets.Empty{},
 				"allow-to-shoot-apiserver":  sets.Empty{},
@@ -465,7 +513,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "controller-manager"},
-				ShootVersionConstraint: "< 1.13"},
+				ShootVersionConstraint: "< 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10252,
 				Name: ""}}
@@ -476,15 +525,16 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "controller-manager"},
-				ShootVersionConstraint: ">= 1.13"},
+				ShootVersionConstraint: ">= 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10257,
 					Name: ""}},
 			ExpectedPolicies: sets.String{
 				"allow-from-prometheus":     sets.Empty{},
-				"allow-to-dns":              sets.Empty{},
 				"allow-to-blocked-cidrs":    sets.Empty{},
+				"allow-to-dns":              sets.Empty{},
 				"allow-to-private-networks": sets.Empty{},
 				"allow-to-public-networks":  sets.Empty{},
 				"allow-to-shoot-apiserver":  sets.Empty{},
@@ -496,7 +546,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "controller-manager"},
-				ShootVersionConstraint: ">= 1.13"},
+				ShootVersionConstraint: ">= 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10257,
 				Name: ""}}
@@ -507,7 +558,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "scheduler"},
-				ShootVersionConstraint: "< 1.13"},
+				ShootVersionConstraint: "< 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10251,
@@ -524,7 +576,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "scheduler"},
-				ShootVersionConstraint: "< 1.13"},
+				ShootVersionConstraint: "< 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10251,
 				Name: ""}}
@@ -535,7 +588,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "scheduler"},
-				ShootVersionConstraint: ">= 1.13"},
+				ShootVersionConstraint: ">= 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10259,
@@ -552,7 +606,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "scheduler"},
-				ShootVersionConstraint: ">= 1.13"},
+				ShootVersionConstraint: ">= 1.13",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10259,
 				Name: ""}}
@@ -563,7 +618,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"component":               "kube-state-metrics",
 					"garden.sapcloud.io/role": "monitoring",
 					"type":                    "seed"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 8080,
@@ -580,7 +636,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"component":               "kube-state-metrics",
 					"garden.sapcloud.io/role": "monitoring",
 					"type":                    "seed"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 8080,
 				Name: ""}}
@@ -591,7 +648,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"component":               "kube-state-metrics",
 					"garden.sapcloud.io/role": "monitoring",
 					"type":                    "shoot"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 8080,
@@ -608,7 +666,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"component":               "kube-state-metrics",
 					"garden.sapcloud.io/role": "monitoring",
 					"type":                    "shoot"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 8080,
 				Name: ""}}
@@ -619,7 +678,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "machine-controller-manager"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 10258,
@@ -639,7 +699,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "kubernetes",
 					"garden.sapcloud.io/role": "controlplane",
 					"role":                    "machine-controller-manager"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 10258,
 				Name: ""}}
@@ -654,7 +715,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "prometheus",
 					"garden.sapcloud.io/role": "monitoring",
 					"role":                    "monitoring"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Ports: []networkpolicies.Port{
 				networkpolicies.Port{
 					Port: 9090,
@@ -674,7 +736,8 @@ var _ = Describe("Network Policy Testing", func() {
 					"app":                     "prometheus",
 					"garden.sapcloud.io/role": "monitoring",
 					"role":                    "monitoring"},
-				ShootVersionConstraint: ""},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
 			Port: networkpolicies.Port{
 				Port: 9090,
 				Name: ""}}
@@ -690,6 +753,10 @@ var _ = Describe("Network Policy Testing", func() {
 
 		setGlobals(ctx)
 		var err error
+
+		By("Getting Seed Cloud Provider")
+		sharedResources.SeedCloudProvider, err = shootTestOperations.SeedCloudProvider()
+		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating namespace for Ingress testing")
 		ns, err := shootTestOperations.SeedClient.CreateNamespace(
@@ -815,7 +882,7 @@ var _ = Describe("Network Policy Testing", func() {
 			go func(pi *networkpolicies.SourcePod) {
 				defer GinkgoRecover()
 				defer wg.Done()
-				if !pi.Pod.CheckVersion(shootTestOperations.Shoot) {
+				if !pi.Pod.CheckVersion(shootTestOperations.Shoot) || !pi.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
 					return
 				}
 				pod, err := shootTestOperations.GetFirstRunningPodWithLabels(ctx, pi.Pod.Selector(), shootTestOperations.ShootSeedNamespace(), shootTestOperations.SeedClient)
@@ -916,6 +983,7 @@ var _ = Describe("Network Policy Testing", func() {
 			deprecatedKubeAPIServerPolicy = "kube-apiserver-default"
 			deprecatedMetadataAppPolicy   = "cloud-metadata-service-deny-blacklist-app"
 			deprecatedMetadataRolePolicy  = "cloud-metadata-service-deny-blacklist-role"
+			deprecatedKibanaLogging       = "kibana-logging"
 		)
 
 		var (
@@ -933,6 +1001,7 @@ var _ = Describe("Network Policy Testing", func() {
 		DefaultCIt(deprecatedKubeAPIServerPolicy, assertPolicyIsGone(deprecatedKubeAPIServerPolicy))
 		DefaultCIt(deprecatedMetadataAppPolicy, assertPolicyIsGone(deprecatedMetadataAppPolicy))
 		DefaultCIt(deprecatedMetadataRolePolicy, assertPolicyIsGone(deprecatedMetadataRolePolicy))
+		DefaultCIt(deprecatedMetadataRolePolicy, assertPolicyIsGone(deprecatedKibanaLogging))
 	})
 
 	Context("components are selected by correct policies", func() {
@@ -941,6 +1010,9 @@ var _ = Describe("Network Policy Testing", func() {
 				return func(ctx context.Context) {
 					if !sourcePod.Pod.CheckVersion(shootTestOperations.Shoot) {
 						Skip("Component doesn't match Shoot version contstraints. Skipping.")
+					}
+					if !sourcePod.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
+						Skip("Component doesn't match Seed Provider contstraints. Skipping.")
 					}
 
 					matched := sets.NewString()
@@ -994,8 +1066,10 @@ var _ = Describe("Network Policy Testing", func() {
 			}
 		)
 
+		DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertBlockIngress(KubeAddonManager8080, false))
 		DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertBlockIngress(CloudControllerManagerHttp10253, false))
 		DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertBlockIngress(CloudControllerManagerHttps10258, false))
+		DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertBlockIngress(DependencyWatchdog8080, false))
 		DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertBlockIngress(ElasticsearchLogging9200, false))
 		DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertBlockIngress(ElasticsearchLogging9114, false))
 		DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertBlockIngress(EtcdEvents2379, false))
@@ -1097,8 +1171,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeApiserver, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should allow connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, true))
@@ -1125,8 +1201,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(EtcdMain, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1152,8 +1230,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(EtcdEvents, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-main" at port 2379`, assertEgresssToMirroredPod(EtcdMain2379, false))
@@ -1179,7 +1259,9 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(CloudControllerManagerHttp, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1206,7 +1288,9 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(CloudControllerManagerHttps, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1233,6 +1317,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(DependencyWatchdog, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
@@ -1251,7 +1336,7 @@ var _ = Describe("Network Policy Testing", func() {
 			DefaultCIt(`should block connection to Pod "machine-controller-manager" at port 10258`, assertEgresssToMirroredPod(MachineControllerManager10258, false))
 			DefaultCIt(`should block connection to Pod "prometheus" at port 9090`, assertEgresssToMirroredPod(Prometheus9090, false))
 			DefaultCIt(`should block connection to "Metadata service" 169.254.169.254:80`, assertEgresssToHost(MetadataservicePort80, false))
-			DefaultCIt(`should block connection to "External host" 8.8.8.8:53`, assertEgresssToHost(ExternalhostPort53, false))
+			DefaultCIt(`should allow connection to "External host" 8.8.8.8:53`, assertEgresssToHost(ExternalhostPort53, true))
 			DefaultCIt(`should block connection to "Garden Prometheus" prometheus-web.garden:80`, assertEgresssToHost(GardenPrometheusPort80, false))
 			DefaultCIt(`should allow connection to "Seed Kube APIServer" kubernetes.default:443`, assertEgresssToHost(SeedKubeAPIServerPort443, true))
 		})
@@ -1262,8 +1347,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(ElasticsearchLogging, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
 			DefaultCIt(`should block connection to Pod "etcd-main" at port 2379`, assertEgresssToMirroredPod(EtcdMain2379, false))
 			DefaultCIt(`should block connection to Pod "grafana" at port 3000`, assertEgresssToMirroredPod(Grafana3000, false))
@@ -1288,8 +1375,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(Grafana, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1315,8 +1404,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KibanaLogging, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should allow connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, true))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1344,6 +1435,7 @@ var _ = Describe("Network Policy Testing", func() {
 
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1370,8 +1462,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeControllerManagerHttp, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1397,8 +1491,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeControllerManagerHttps, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1424,8 +1520,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeSchedulerHttp, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1451,8 +1549,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeSchedulerHttps, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1478,8 +1578,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeStateMetricsShoot, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1505,8 +1607,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeStateMetricsSeed, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1533,8 +1637,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(MachineControllerManager, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, false))
 			DefaultCIt(`should block connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, false))
@@ -1561,8 +1667,10 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(Prometheus, sharedResources.Mirror)
 			})
 
+			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
 			DefaultCIt(`should allow connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, true))
 			DefaultCIt(`should allow connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, true))
+			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
 			DefaultCIt(`should allow connection to Pod "elasticsearch-logging" at port 9114`, assertEgresssToMirroredPod(ElasticsearchLogging9114, true))
 			DefaultCIt(`should allow connection to Pod "etcd-events" at port 2379`, assertEgresssToMirroredPod(EtcdEvents2379, true))
