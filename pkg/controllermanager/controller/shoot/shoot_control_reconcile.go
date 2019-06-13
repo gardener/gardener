@@ -86,6 +86,14 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
+		// TODO: this is only needed to ensure that when old clusters are being reconciled,
+		// existing components don't break due to the new deny-all network policy .
+		// This should be removed after one release.
+		_ = g.Add(flow.Task{
+			Name:         "Deploying limited network policies",
+			Fn:           flow.TaskFn(hybridBotanist.DeployLimitedNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
 			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
