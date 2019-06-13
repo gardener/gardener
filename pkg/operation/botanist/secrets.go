@@ -961,11 +961,14 @@ func (b *Botanist) SyncShootCredentialsToGarden() error {
 			suffix:      secretSuffixMonitoring,
 			annotations: map[string]string{"url": "https://" + b.ComputeGrafanaUsersHost()},
 		},
-		{
+	}
+
+	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
+		projectSecrets = append(projectSecrets, projectSecret{
 			secretName:  "logging-ingress-credentials-users",
 			suffix:      secretSuffixLogging,
 			annotations: map[string]string{"url": "https://" + b.ComputeKibanaHost()},
-		},
+		})
 	}
 
 	for _, projectSecret := range projectSecrets {
