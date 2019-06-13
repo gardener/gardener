@@ -102,7 +102,7 @@ func (t *Terraformer) waitForPod(ctx context.Context) int32 {
 // waitForJob waits for the Terraform Job to be completed (either successful or failed). It checks the
 // Job status field to identify the state.
 func (t *Terraformer) waitForJob(ctx context.Context) bool {
-	ctx, cancel := context.WithTimeout(ctx, time.Hour)
+	ctx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()
 
 	var succeeded = false
