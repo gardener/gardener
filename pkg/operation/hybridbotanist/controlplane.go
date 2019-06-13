@@ -213,13 +213,11 @@ func (b *HybridBotanist) DeployETCD() error {
 	return nil
 }
 
-// DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
-// deny all traffic and allow certain components to use annotations to declare their desire
-// to transmit/receive traffic to/from other Pods/IP addresses.
-func (b *HybridBotanist) DeployNetworkPolicies(ctx context.Context) error {
+func (b *HybridBotanist) deployNetworkPolicies(ctx context.Context, denyAll bool) error {
 	var (
 		globalNetworkPoliciesValues = map[string]interface{}{
 			"blockedAddresses": b.Seed.Info.Spec.BlockCIDRs,
+			"denyAll":          denyAll,
 		}
 		excludeNets = []gardencorev1alpha1.CIDR{}
 
@@ -264,6 +262,21 @@ func (b *HybridBotanist) DeployNetworkPolicies(ctx context.Context) error {
 	values["global-network-policies"] = globalNetworkPoliciesValues
 
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", values, nil)
+}
+
+// DeployLimitedNetworkPolicies creates a network policies in a Shoot cluster's namespace that
+// DOES NOT deny all traffic and allow certain components to use annotations to declare their desire
+// to transmit/receive traffic to/from other Pods/IP addresses.
+// This is needed until migration to the new policies is complete.
+func (b *HybridBotanist) DeployLimitedNetworkPolicies(ctx context.Context) error {
+	return b.deployNetworkPolicies(ctx, false)
+}
+
+// DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
+// deny all traffic and allow certain components to use annotations to declare their desire
+// to transmit/receive traffic to/from other Pods/IP addresses.
+func (b *HybridBotanist) DeployNetworkPolicies(ctx context.Context) error {
+	return b.deployNetworkPolicies(ctx, true)
 }
 
 // DeployCloudProviderConfig asks the Cloud Botanist to provide the cloud specific values for the cloud
