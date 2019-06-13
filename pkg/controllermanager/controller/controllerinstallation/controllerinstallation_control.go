@@ -31,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/controllermanager/apis/config"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
@@ -147,6 +148,8 @@ func (c *defaultControllerInstallationControl) Reconcile(obj *gardencorev1alpha1
 }
 
 func (c *defaultControllerInstallationControl) reconcile(controllerInstallation *gardencorev1alpha1.ControllerInstallation, logger logrus.FieldLogger) error {
+	ctx := context.TODO()
+
 	controllerInstallation, err := kutil.TryUpdateControllerInstallationWithEqualFunc(c.k8sGardenClient.GardenCore(), retry.DefaultBackoff, controllerInstallation.ObjectMeta, func(c *gardencorev1alpha1.ControllerInstallation) (*gardencorev1alpha1.ControllerInstallation, error) {
 		if finalizers := sets.NewString(c.Finalizers...); !finalizers.Has(FinalizerName) {
 			finalizers.Insert(FinalizerName)
@@ -186,6 +189,10 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	if err != nil {
 		return err
 	}
+	seedCloudProvider, err := seedpkg.DetermineCloudProviderForSeed(ctx, c.k8sGardenClient.Client(), seed)
+	if err != nil {
+		return err
+	}
 
 	k8sSeedClient, err := kubernetes.NewClientFromSecret(c.k8sGardenClient, seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name, client.Options{
 		Scheme: kubernetes.SeedScheme,
@@ -211,7 +218,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 	}
 
 	namespace := getNamespaceForControllerInstallation(controllerInstallation)
-	if err := kutil.CreateOrUpdate(context.TODO(), k8sSeedClient.Client(), namespace, func() error {
+	if err := kutil.CreateOrUpdate(ctx, k8sSeedClient.Client(), namespace, func() error {
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, common.GardenerRole, common.GardenRoleExtension)
 		kutil.SetMetaDataLabel(&namespace.ObjectMeta, common.ControllerRegistrationName, controllerRegistration.Name)
 		return nil
@@ -226,8 +233,14 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 				"identity": c.gardenNamespace.UID,
 			},
 			"seed": map[string]interface{}{
-				"identity": seed.Name,
-				"region":   seed.Spec.Cloud.Region,
+				"identity":      seed.Name,
+				"provider":      seedCloudProvider,
+				"region":        seed.Spec.Cloud.Region,
+				"ingressDomain": seed.Spec.IngressDomain,
+				"blockCIDRs":    seed.Spec.BlockCIDRs,
+				"protected":     seed.Spec.Protected,
+				"visible":       seed.Spec.Visible,
+				"networks":      seed.Spec.Networks,
 			},
 		},
 	}

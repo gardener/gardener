@@ -98,6 +98,16 @@ func NewFromName(k8sGardenClient kubernetes.Interface, k8sGardenInformers garden
 	return New(k8sGardenClient, k8sGardenInformers, seed)
 }
 
+// DetermineCloudProviderForSeed determines the cloud provider for the given seed.
+func DetermineCloudProviderForSeed(ctx context.Context, c client.Client, seed *gardenv1beta1.Seed) (gardenv1beta1.CloudProvider, error) {
+	cloudProfile := &gardenv1beta1.CloudProfile{}
+	if err := c.Get(ctx, kutil.Key(seed.Spec.Cloud.Profile), cloudProfile); err != nil {
+		return "", err
+	}
+
+	return helper.DetermineCloudProviderInProfile(cloudProfile.Spec)
+}
+
 // List returns a list of Seed clusters (along with the referenced secrets).
 func List(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformers.Interface) ([]*Seed, error) {
 	var seedList []*Seed
