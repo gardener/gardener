@@ -86,12 +86,18 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.SimpleTaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
+		_ = g.Add(flow.Task{
+			Name:         "Deploying new network policies",
+			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(creationPhase),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		// TODO: this is only needed to ensure that when old clusters are being reconciled,
 		// existing components don't break due to the new deny-all network policy .
 		// This should be removed after one release.
+		// This is skipped on the first creation cycle.
 		_ = g.Add(flow.Task{
 			Name:         "Deploying limited network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployLimitedNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(hybridBotanist.DeployLimitedNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(creationPhase),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
@@ -274,9 +280,10 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 			Fn:           flow.TaskFn(botanist.DeleteDeprecatedCloudMetadataServiceNetworkPolicy).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
+		// This one is skipped for newly created clusters.
 		_ = g.Add(flow.Task{
 			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(creationPhase),
 			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
 		_ = g.Add(flow.Task{
