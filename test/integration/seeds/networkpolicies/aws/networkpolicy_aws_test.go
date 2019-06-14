@@ -56,8 +56,8 @@ var (
 )
 
 const (
-	InitializationTimeout = 600 * time.Second
-	FinalizationTimeout   = 1800 * time.Second
+	InitializationTimeout = 10 * time.Minute
+	FinalizationTimeout   = time.Minute
 	DefaultTestTimeout    = 10 * time.Second
 )
 
@@ -775,7 +775,7 @@ var _ = Describe("Network Policy Testing", func() {
 	)
 
 	SynchronizedBeforeSuite(func() []byte {
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.TODO(), InitializationTimeout)
 		defer cancel()
 
 		setGlobals(ctx)
@@ -965,7 +965,7 @@ var _ = Describe("Network Policy Testing", func() {
 
 		return b
 	}, func(data []byte) {
-		ctx, cancel := context.WithTimeout(context.TODO(), DefaultTestTimeout)
+		ctx, cancel := context.WithTimeout(context.TODO(), InitializationTimeout)
 		defer cancel()
 
 		sr := &networkpolicies.SharedResources{}
@@ -982,7 +982,7 @@ var _ = Describe("Network Policy Testing", func() {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.TODO(), DefaultTestTimeout)
+		ctx, cancel := context.WithTimeout(context.TODO(), FinalizationTimeout)
 		defer cancel()
 
 		setGlobals(ctx)
