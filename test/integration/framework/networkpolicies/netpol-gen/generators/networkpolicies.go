@@ -449,8 +449,8 @@ var (
 )
 
 const (
-	InitializationTimeout = 600 * time.Second
-	FinalizationTimeout   = 1800 * time.Second
+	InitializationTimeout = 10 * time.Minute
+	FinalizationTimeout   = time.Minute
 	DefaultTestTimeout    = 10 * time.Second
 )
 
@@ -572,7 +572,7 @@ var setBody = `
 	)
 
 	SynchronizedBeforeSuite(func() []byte {
-		ctx, cancel := context.WithTimeout(context.TODO(), time.Minute)
+		ctx, cancel := context.WithTimeout(context.TODO(), InitializationTimeout)
 		defer cancel()
 
 		setGlobals(ctx)
@@ -762,7 +762,7 @@ var setBody = `
 
 		return b
 	}, func(data []byte) {
-		ctx, cancel := context.WithTimeout(context.TODO(), DefaultTestTimeout)
+		ctx, cancel := context.WithTimeout(context.TODO(), InitializationTimeout)
 		defer cancel()
 
 		sr := &networkpolicies.SharedResources{}
@@ -779,7 +779,7 @@ var setBody = `
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.TODO(), DefaultTestTimeout)
+		ctx, cancel := context.WithTimeout(context.TODO(), FinalizationTimeout)
 		defer cancel()
 
 		setGlobals(ctx)
