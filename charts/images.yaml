@@ -113,7 +113,7 @@ images:
 - name: packet-controller-manager
   sourceRepository: https://github.com/packethost/packet-ccm
   repository: docker.io/packethost/packet-ccm
-  tag: "d0abe6c"
+  tag: "master"
 
 # Packet Storage Interface
 - name: packet-storage-interface
