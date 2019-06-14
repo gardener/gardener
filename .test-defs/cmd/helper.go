@@ -37,8 +37,37 @@ func UpdateWorkerZone(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.Cl
 		shoot.Spec.Cloud.OpenStack.Zones = []string{zone}
 	case gardenv1beta1.CloudProviderAlicloud:
 		shoot.Spec.Cloud.Alicloud.Zones = []string{zone}
+	case gardenv1beta1.CloudProviderPacket:
+		shoot.Spec.Cloud.Packet.Zones = []string{zone}
 	default:
 		return fmt.Errorf("unsupported cloudprovider %s", cloudprovider)
+	}
+	return nil
+}
+
+// UpdateMachineImage updates the machine image name and version of a shoot if a image is provided.
+func UpdateMachineImage(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.CloudProvider, image, version string) error {
+	if image != "" {
+		machineImage := &gardenv1beta1.MachineImage{
+			Name: image,
+			Version: version,
+		}
+		switch cloudprovider {
+		case gardenv1beta1.CloudProviderAWS:
+			shoot.Spec.Cloud.AWS.MachineImage = machineImage
+		case gardenv1beta1.CloudProviderGCP:
+			shoot.Spec.Cloud.GCP.MachineImage = machineImage
+		case gardenv1beta1.CloudProviderAzure:
+			shoot.Spec.Cloud.Azure.MachineImage = machineImage
+		case gardenv1beta1.CloudProviderOpenStack:
+			shoot.Spec.Cloud.OpenStack.MachineImage = machineImage
+		case gardenv1beta1.CloudProviderAlicloud:
+			shoot.Spec.Cloud.Alicloud.MachineImage = machineImage
+		case gardenv1beta1.CloudProviderPacket:
+			shoot.Spec.Cloud.Packet.MachineImage = machineImage
+		default:
+			return fmt.Errorf("unsupported cloudprovider %s", cloudprovider)
+		}
 	}
 	return nil
 }
@@ -57,6 +86,8 @@ func UpdateMachineType(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1.C
 			shoot.Spec.Cloud.OpenStack.Workers[0].MachineType = machinetype
 		case gardenv1beta1.CloudProviderAlicloud:
 			shoot.Spec.Cloud.Alicloud.Workers[0].MachineType = machinetype
+		case gardenv1beta1.CloudProviderPacket:
+			shoot.Spec.Cloud.Packet.Workers[0].MachineType = machinetype
 		default:
 			return fmt.Errorf("unsupported cloudprovider %s", cloudprovider)
 		}
@@ -78,6 +109,8 @@ func UpdateAutoscalerMax(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1
 			shoot.Spec.Cloud.OpenStack.Workers[0].AutoScalerMax = *max
 		case gardenv1beta1.CloudProviderAlicloud:
 			shoot.Spec.Cloud.Alicloud.Workers[0].AutoScalerMax = *max
+		case gardenv1beta1.CloudProviderPacket:
+			shoot.Spec.Cloud.Packet.Workers[0].AutoScalerMax = *max
 		default:
 			return fmt.Errorf("unsupported cloudprovider %s", cloudprovider)
 		}
@@ -99,6 +132,8 @@ func UpdateAutoscalerMin(shoot *gardenv1beta1.Shoot, cloudprovider gardenv1beta1
 			shoot.Spec.Cloud.OpenStack.Workers[0].AutoScalerMin = *min
 		case gardenv1beta1.CloudProviderAlicloud:
 			shoot.Spec.Cloud.Alicloud.Workers[0].AutoScalerMin = *min
+		case gardenv1beta1.CloudProviderPacket:
+			shoot.Spec.Cloud.Packet.Workers[0].AutoScalerMin = *min
 		default:
 			return fmt.Errorf("unsupported cloudprovider %s", cloudprovider)
 		}

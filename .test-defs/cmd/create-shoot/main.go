@@ -20,11 +20,11 @@ import (
 	"os"
 	"strconv"
 
+	helper "github.com/gardener/gardener/.test-defs/cmd"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/test/integration/framework"
 	"github.com/sirupsen/logrus"
-	helper "github.com/gardener/gardener/.test-defs/cmd"
 )
 
 var (
@@ -39,13 +39,15 @@ var (
 	k8sVersion        string
 
 	// optional parameters
-	shootArtifactPath string
-	machineType       string
-	autoScalerMin     *int
-	autoScalerMax     *int
+	machineImage        string
+	machineImageVersion string
+	shootArtifactPath   string
+	machineType         string
+	autoScalerMin       *int
+	autoScalerMax       *int
 
 	// required for openstack
-	floatingPoolName string
+	floatingPoolName     string
 	loadBalancerProvider string
 
 	testLogger *logrus.Logger
@@ -95,6 +97,14 @@ func init() {
 	if shootArtifactPath == "" {
 		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
 	}
+	machineImage = os.Getenv("MACHINE_IMAGE")
+	machineImageVersion = os.Getenv("MACHINE_IMAGE_VERSION")
+	if machineImage != "" && machineImageVersion == "" {
+		testLogger.Fatalf("MACHINE_IMAGE_VERSION has to be defined if MACHINE_IMAGE is set")
+	}
+	if machineImageVersion != "" && machineImage == "" {
+		testLogger.Fatalf("MACHINE_IMAGE has to be defined if MACHINE_IMAGE_VERSION is set")
+	}
 	machineType = os.Getenv("MACHINE_TYPE")
 	if autoScalerMinEnv := os.Getenv("AUTOSCALER_MIN"); autoScalerMinEnv != "" {
 		autoScalerMinInt, err := strconv.Atoi(autoScalerMinEnv)
@@ -140,6 +150,9 @@ func main() {
 	shootObject.Spec.Cloud.SecretBindingRef.Name = secretBindingName
 	shootObject.Spec.Kubernetes.Version = k8sVersion
 	helper.UpdateAnnotations(shootObject)
+	if err := helper.UpdateMachineImage(shootObject, cloudprovider, machineImage ,machineImageVersion); err != nil {
+		testLogger.Warnf(err.Error())
+	}
 	if err := helper.UpdateWorkerZone(shootObject, cloudprovider, zone); err != nil {
 		testLogger.Warnf(err.Error())
 	}
@@ -170,7 +183,6 @@ func main() {
 	}
 	testLogger.Infof("Successfully created shoot %s", shootName)
 
-
 	backupInfrastructure, err := helper.GetBackupInfrastructureOfShoot(ctx, shootGardenerTest, shootObject)
 	if err != nil {
 		testLogger.Fatal(err)
@@ -179,7 +191,6 @@ func main() {
 	if err := shootGardenerTest.GardenClient.Client().Update(ctx, backupInfrastructure); err != nil {
 		testLogger.Fatalf("Cannot update annotation of backupinfrastructure %s: %s", backupInfrastructure.Name, err.Error())
 	}
-
 
 	shootTestOperations, err := framework.NewGardenTestOperation(ctx, shootGardenerTest.GardenClient, testLogger, shootObject)
 	if err != nil {
