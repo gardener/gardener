@@ -246,7 +246,6 @@ func shootIsScheduledSuccessfully(newSpec *v1beta1.ShootSpec) bool {
 	return false
 }
 
-
 // NewClientFromServiceAccount returns a kubernetes client for a service account.
 func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, account *corev1.ServiceAccount) (kubernetes.Interface, error) {
 	secret := &corev1.Secret{}

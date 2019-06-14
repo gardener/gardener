@@ -3,8 +3,6 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: coredns
   namespace: {{ .Release.Namespace }}
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   maxReplicas: {{ .Values.horizontalPodAutoScaler.spec.maxReplicas }}
   minReplicas: {{ .Values.horizontalPodAutoScaler.spec.minReplicas }}

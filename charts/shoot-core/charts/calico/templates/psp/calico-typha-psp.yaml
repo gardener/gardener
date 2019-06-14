@@ -2,8 +2,6 @@ apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.calico-typha
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   volumes:
   - secret

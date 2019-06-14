@@ -5,8 +5,6 @@ kind: ConfigMap
 metadata:
   name: calico-config
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 data:
   # To enable Typha, set this to "calico-typha" *and* set a non-zero value for Typha replicas
   # below.  We recommend using Typha if you have more than 50 nodes. Above 100 nodes it is

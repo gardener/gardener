@@ -5,8 +5,6 @@ metadata:
   annotations:
     garden.sapcloud.io/description: |
       Allow all authenticated users to use the unprivileged PSP.
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

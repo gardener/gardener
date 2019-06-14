@@ -1,8 +1,6 @@
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
   name: system:coredns
 rules:
 - apiGroups:
@@ -19,8 +17,6 @@ rules:
 apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
   name: system:coredns
 roleRef:
   apiGroup: rbac.authorization.k8s.io

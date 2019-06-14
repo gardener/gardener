@@ -4,8 +4,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: calico-node
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   # The CNI plugin needs to get pods, nodes, and namespaces.
   - apiGroups: [""]
@@ -138,8 +136,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: calico-node
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -159,8 +155,6 @@ kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: calico-kube-controllers
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   # Nodes are watched to monitor for deletions.
   - apiGroups: [""]
@@ -206,8 +200,6 @@ kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: calico-kube-controllers
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

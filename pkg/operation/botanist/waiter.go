@@ -21,14 +21,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gardener/gardener/pkg/utils/retry"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // WaitUntilKubeAPIServerServiceIsReady waits until the external load balancer of the kube-apiserver has
@@ -218,16 +220,18 @@ func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace stri
 
 // WaitUntilKubeAddonManagerDeleted waits until the kube-addon-manager deployment within the Seed cluster has
 // been deleted.
+// +deprecated
+// Can be removed in a future version.
 func (b *Botanist) WaitUntilKubeAddonManagerDeleted(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeAddonManagerDeploymentName); err != nil {
+		if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, "kube-addon-manager"); err != nil {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
 			return retry.SevereError(err)
 		}
-		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", common.KubeAddonManagerDeploymentName)
-		return retry.MinorError(fmt.Errorf("deployment %q is still present", common.KubeAddonManagerDeploymentName))
+		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", "kube-addon-manager")
+		return retry.MinorError(fmt.Errorf("deployment %q is still present", "kube-addon-manager"))
 	})
 }
 
@@ -357,5 +361,27 @@ func (b *Botanist) WaitUntilNodesDeleted(ctx context.Context) error {
 
 		b.Logger.Infof("Waiting until all nodes have been deleted in the shoot cluster...")
 		return retry.MinorError(fmt.Errorf("not all nodes have been deleted in the shoot cluster"))
+	})
+}
+
+// WaitUntilManagedResourcesDeleted waits until all managed resources are gone or the context is cancelled.
+func (b *Botanist) WaitUntilManagedResourcesDeleted(ctx context.Context) error {
+	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
+		managedResources := &resourcesv1alpha1.ManagedResourceList{}
+		if err := b.K8sSeedClient.Client().List(ctx, managedResources, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
+			return retry.SevereError(err)
+		}
+
+		if len(managedResources.Items) == 0 {
+			return retry.Ok()
+		}
+
+		names := make([]string, 0, len(managedResources.Items))
+		for _, resource := range managedResources.Items {
+			names = append(names, resource.Name)
+		}
+
+		b.Logger.Infof("Waiting until all managed resources have been deleted in the shoot cluster...")
+		return retry.MinorError(fmt.Errorf("not all managed resources have been deleted in the shoot cluster (still existing: %s)", names))
 	})
 }

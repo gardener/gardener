@@ -7,7 +7,6 @@ metadata:
     nginx.ingress.kubernetes.io/auth-realm: Authentication Required
     nginx.ingress.kubernetes.io/auth-secret: {{ .Chart.Name }}-basic-auth
     nginx.ingress.kubernetes.io/auth-type: basic
-    addonmanager.kubernetes.io/mode: Reconcile
   name: {{ .Chart.Name }}
   namespace: {{ .Release.Namespace }}
 spec:

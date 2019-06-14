@@ -3,8 +3,6 @@ kind: ConfigMap
 metadata:
   name: coredns
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 data:
   Corefile: |-
     {{ range .Values.configmap.servers }}

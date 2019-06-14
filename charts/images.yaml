@@ -22,10 +22,10 @@ images:
   sourceRepository: github.com/gardener/autoscaler
   repository: eu.gcr.io/gardener-project/gardener/autoscaler/cluster-autoscaler
   tag: "0.4.0"
-- name: kube-addon-manager
-  sourceRepository: github.com/kubernetes/kubernetes/tree/master/cluster/addons/addon-manager
-  repository: k8s.gcr.io/kube-addon-manager
-  tag: v9.0
+- name: gardener-resource-manager
+  sourceRepository: github.com/gardener/gardener-resource-manager
+  repository: eu.gcr.io/gardener-project/gardener/gardener-resource-manager
+  tag: "0.2.0"
 - name: vpn-seed
   sourceRepository: github.com/gardener/vpn
   repository: eu.gcr.io/gardener-project/gardener/vpn-seed

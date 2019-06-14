@@ -3,8 +3,6 @@ apiVersion:  {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: packet.com:csi-node-sa
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -29,17 +27,12 @@ kind: ServiceAccount
 metadata:
   name: csi-node-sa
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
-
 ---
 
 kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: packet.com:csi-node-sa
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
   - kind: ServiceAccount
     name: csi-node-sa
@@ -55,8 +48,6 @@ apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.csi-disk-plugin-packet
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   privileged: true
   allowPrivilegeEscalation: true

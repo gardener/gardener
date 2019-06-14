@@ -4,7 +4,6 @@ metadata:
   name: blackbox-exporter
   namespace: kube-system
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
     component: blackbox-exporter
 spec:
   type: ClusterIP

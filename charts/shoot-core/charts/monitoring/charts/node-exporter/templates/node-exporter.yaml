@@ -4,7 +4,6 @@ metadata:
   name: node-exporter
   namespace: kube-system
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
 ---
 apiVersion: v1
@@ -13,7 +12,6 @@ metadata:
   name: node-exporter
   namespace: kube-system
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
 spec:
   type: ClusterIP
@@ -32,7 +30,6 @@ metadata:
   namespace: kube-system
   labels:
     garden.sapcloud.io/role: monitoring
-    addonmanager.kubernetes.io/mode: Reconcile
     component: node-exporter
     origin: gardener
 spec:

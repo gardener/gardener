@@ -254,12 +254,12 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			},
 		},
 
-		// Secret definition for kube-addon-manager
+		// Secret definition for gardener-resource-manager
 		&secrets.ControlPlaneSecretConfig{
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
-				Name: "kube-addon-manager",
+				Name: "gardener-resource-manager",
 
-				CommonName:   "system:kube-addon-manager",
+				CommonName:   "gardener.cloud:system:gardener-resource-manager",
 				Organization: []string{user.SystemPrivilegedGroup},
 				DNSNames:     nil,
 				IPAddresses:  nil,

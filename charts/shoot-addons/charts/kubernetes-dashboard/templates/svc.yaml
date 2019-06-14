@@ -9,7 +9,6 @@ metadata:
     release: "{{ .Release.Name }}"
     chart: {{ template "kubernetes-dashboard.chart" . }}
     kubernetes.io/cluster-service: "true"
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   type: {{ .Values.serviceType }}
   ports:

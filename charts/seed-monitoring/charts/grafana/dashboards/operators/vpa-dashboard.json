@@ -517,8 +517,8 @@
           },
           {
             "selected": false,
-            "text": "kube-addon-manager",
-            "value": "kube-addon-manager"
+            "text": "gardener-resource-manager",
+            "value": "gardener-resource-manager"
           },
           {
             "selected": false,

@@ -7,7 +7,6 @@ metadata:
   labels:
     garden.sapcloud.io/role: system-component
     app: vpn-shoot
-    addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
 spec:
   revisionHistoryLimit: 0

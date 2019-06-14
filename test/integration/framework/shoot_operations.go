@@ -76,7 +76,7 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, er
 	}
 
 	shoot := s.Shoot
-	err = retry.UntilTimeout(ctx, 20 * time.Second, 5 *time.Minute, func(ctx context.Context) (done bool, err error) {
+	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = s.GardenClient.Client().Create(ctx, shoot)
 		if err != nil {
 			s.Logger.Debugf("unable to create shoot %s: %s", shoot.Name, err.Error())
@@ -106,7 +106,7 @@ func (s *ShootGardenerTest) DeleteShoot(ctx context.Context) error {
 	}
 
 	s.Shoot = shoot
-	err = retry.UntilTimeout(ctx, 20 * time.Second, 5 *time.Minute, func(ctx context.Context) (done bool, err error) {
+	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
 		err = s.RemoveShootAnnotation(ctx, common.ShootIgnore)
 		if err != nil {
 			return retry.MinorError(err)

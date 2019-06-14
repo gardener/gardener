@@ -23,7 +23,6 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/flow"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -37,10 +36,7 @@ func DeleteAll(ctx context.Context, c client.Client, list runtime.Object, opts .
 
 	if err := meta.EachListItem(list, func(obj runtime.Object) error {
 		fns = append(fns, func(ctx context.Context) error {
-			if err := c.Delete(ctx, obj, opts...); err != nil && !apierrors.IsNotFound(err) {
-				return err
-			}
-			return nil
+			return client.IgnoreNotFound(c.Delete(ctx, obj, opts...))
 		})
 		return nil
 	}); err != nil {

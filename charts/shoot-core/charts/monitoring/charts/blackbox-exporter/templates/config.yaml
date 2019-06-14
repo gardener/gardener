@@ -4,7 +4,6 @@ metadata:
   name: blackbox-exporter-config
   namespace: kube-system
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
     app: prometheus
     role: monitoring
 data:

@@ -66,45 +66,47 @@ func MustNewRequirement(key string, op selection.Operator, vals ...string) label
 var (
 	// NotSystemComponent is a requirement that something doesn't have the GardenRole GardenRoleSystemComponent.
 	NotSystemComponent = MustNewRequirement(common.GardenRole, selection.NotEquals, common.GardenRoleSystemComponent)
+	// NoCleanupPrevention is a requirement that the ShootNoCleanup label of something is not true.
+	NoCleanupPrevention = MustNewRequirement(common.ShootNoCleanup, selection.NotEquals, "true")
 	// NotKubernetesProvider is a requirement that the Provider label of something is not KubernetesProvider.
 	NotKubernetesProvider = MustNewRequirement(Provider, selection.NotEquals, KubernetesProvider)
 	// NotKubeAggregatorAutoManaged is a requirement that something is not auto-managed by Kube-Aggregator.
 	NotKubeAggregatorAutoManaged = MustNewRequirement(KubeAggregatorAutoManaged, selection.DoesNotExist)
 
-	// NotSystemComponentSelector is a selector that excludes system components.
-	NotSystemComponentSelector = labels.NewSelector().Add(NotSystemComponent)
+	// CleanupSelector is a selector that excludes system components and all resources not considered for auto cleanup.
+	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention)
 
-	// NotSystemComponentListOptions are ListOptions that exclude system components.
-	NotSystemComponentListOptions = client.ListOptions{
-		LabelSelector: NotSystemComponentSelector,
+	// NoCleanupPreventionListOptions are ListOptions that exclude system components or non-auto clean upped resource.
+	NoCleanupPreventionListOptions = client.ListOptions{
+		LabelSelector: CleanupSelector,
 	}
 
 	// MutatingWebhookConfigurationCleanOptions is the delete selector for MutatingWebhookConfigurations.
-	MutatingWebhookConfigurationCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	MutatingWebhookConfigurationCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// ValidatingWebhookConfigurationCleanOptions is the delete selector for ValidatingWebhookConfigurations.
-	ValidatingWebhookConfigurationCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	ValidatingWebhookConfigurationCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// CustomResourceDefinitionCleanOptions is the delete selector for CustomResources.
-	CustomResourceDefinitionCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	CustomResourceDefinitionCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// DaemonSetCleanOptions is the delete selector for DaemonSets.
-	DaemonSetCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	DaemonSetCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// DeploymentCleanOptions is the delete selector for Deployments.
-	DeploymentCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	DeploymentCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// StatefulSetCleanOptions is the delete selector for StatefulSets.
-	StatefulSetCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	StatefulSetCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// ServiceCleanOptions is the delete selector for Services.
 	ServiceCleanOptions = ListOptions(client.UseListOptions(&client.ListOptions{
-		LabelSelector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent),
+		LabelSelector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention),
 	}))
 
 	// NamespaceCleanOptions is the delete selector for Namespaces.
 	NamespaceCleanOptions = ListOptions(client.UseListOptions(&client.ListOptions{
-		LabelSelector: NotSystemComponentSelector,
+		LabelSelector: CleanupSelector,
 		FieldSelector: fields.AndSelectors(
 			fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespacePublic),
 			fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceSystem),
@@ -119,25 +121,25 @@ var (
 	}))
 
 	// CronJobCleanOptions is the delete selector for CronJobs.
-	CronJobCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	CronJobCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// IngressCleanOptions is the delete selector for Ingresses.
-	IngressCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	IngressCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// JobCleanOptions is the delete selector for Jobs.
-	JobCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	JobCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// PodCleanOptions is the delete selector for Pods.
-	PodCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	PodCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// ReplicaSetCleanOptions is the delete selector for ReplicaSets.
-	ReplicaSetCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	ReplicaSetCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// ReplicationControllerCleanOptions is the delete selector for ReplicationControllers.
-	ReplicationControllerCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	ReplicationControllerCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 
 	// PersistentVolumeClaimCleanOptions is the delete selector for PersistentVolumeClaims.
-	PersistentVolumeClaimCleanOptions = ListOptions(client.UseListOptions(&NotSystemComponentListOptions))
+	PersistentVolumeClaimCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
 )
 
 func cleanResourceFn(c client.Client, list runtime.Object, finalize bool, opts ...CleanOptionFunc) flow.TaskFn {

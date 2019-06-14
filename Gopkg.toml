@@ -24,6 +24,10 @@ ignored = [
   name = "github.com/gardener/gardener-extensions"
   revision = "227adb277fa467b9e805af798a502514ccbe75dd"
 
+[[constraint]]
+  name = "github.com/gardener/gardener-resource-manager"
+  version = "0.2.0"
+
 [[override]]
   name = "k8s.io/api"
   version = "kubernetes-1.14.0"

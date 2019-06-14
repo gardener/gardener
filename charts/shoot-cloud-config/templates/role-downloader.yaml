@@ -4,8 +4,6 @@ kind: Role
 metadata:
   name: cloud-config-downloader
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
 - apiGroups:
   - ""

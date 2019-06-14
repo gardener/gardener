@@ -3,8 +3,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:certificates.k8s.io:certificatesigningrequests:nodeclient
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
 - kind: Group
   name: system:bootstrappers
@@ -18,8 +16,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:node-bootstrapper
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
 - kind: Group
   name: system:bootstrappers

@@ -112,29 +112,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 
 // DeleteExtensionResources deletes all extension resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
-	extensions := &extensionsv1alpha1.ExtensionList{}
-	if err := b.K8sSeedClient.Client().List(ctx, extensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
-		return err
-	}
-
-	fns := make([]flow.TaskFn, 0, len(extensions.Items))
-	for _, extension := range extensions.Items {
-		fns = append(fns, func(ctx context.Context) error {
-			toDelete := extensionsv1alpha1.Extension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      extension.Name,
-					Namespace: extension.Namespace,
-				},
-			}
-
-			if err := b.K8sSeedClient.Client().Delete(ctx, &toDelete); err != nil && !apierrors.IsNotFound(err) {
-				return err
-			}
-			return nil
-		})
-	}
-
-	return flow.Parallel(fns...)(ctx)
+	return DeleteMatching(ctx, b.K8sSeedClient.Client(), &extensionsv1alpha1.ExtensionList{}, ListOptions(client.InNamespace(b.Shoot.SeedNamespace)))
 }
 
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.

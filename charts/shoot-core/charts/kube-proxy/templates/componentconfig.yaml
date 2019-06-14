@@ -4,8 +4,6 @@ kind: ConfigMap
 metadata:
   name: kube-proxy-config
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 data:
   config.yaml: |-
     ---

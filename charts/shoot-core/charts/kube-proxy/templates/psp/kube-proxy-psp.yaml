@@ -2,8 +2,6 @@ apiVersion: {{ include "podsecuritypolicyversion" .}}
 kind: PodSecurityPolicy
 metadata:
   name: gardener.kube-system.kube-proxy
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   privileged: true
   volumes:

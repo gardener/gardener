@@ -214,8 +214,8 @@ const (
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
 
-	// KubeAddonManagerDeploymentName is the name of the kube-addon-manager deployment.
-	KubeAddonManagerDeploymentName = "kube-addon-manager"
+	// GardenerResourceManagerDeploymentName is the name of the gardener-resource-manager deployment.
+	GardenerResourceManagerDeploymentName = "gardener-resource-manager"
 
 	// CalicoTyphaDeploymentName is the name of the calico-typha deployment.
 	CalicoTyphaDeploymentName = "calico-typha"
@@ -320,6 +320,10 @@ const (
 	// of referenced quotas.
 	ShootExpirationTimestamp = "shoot.garden.sapcloud.io/expirationTimestamp"
 
+	// ShootNoCleanup is a constant for a label on a resource indicating the the Gardener cleaner should not delete this
+	// resource when cleaning a shoot during the deletion flow.
+	ShootNoCleanup = "shoot.gardener.cloud/no-cleanup"
+
 	// ShootUseAsSeed is a constant for an annotation on a Shoot resource indicating that the Shoot shall be registered as Seed in the
 	// Garden cluster once successfully created.
 	ShootUseAsSeed = "shoot.garden.sapcloud.io/use-as-seed"
@@ -389,8 +393,8 @@ const (
 	// BackupNamespacePrefix is a constant for backup namespace created for shoot's backup infrastructure related resources.
 	BackupNamespacePrefix = "backup"
 
-	// KubeAddonManagerImageName is the name of the KubeAddonManager image.
-	KubeAddonManagerImageName = "kube-addon-manager"
+	// GardenerResourceManagerImageName is the name of the GardenerResourceManager image.
+	GardenerResourceManagerImageName = "gardener-resource-manager"
 
 	// CalicoNodeImageName is the name of the CalicoNode image.
 	CalicoNodeImageName = "calico-node"
@@ -546,7 +550,7 @@ var (
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
-		KubeAddonManagerDeploymentName,
+		GardenerResourceManagerDeploymentName,
 		KubeAPIServerDeploymentName,
 		KubeControllerManagerDeploymentName,
 		KubeSchedulerDeploymentName,

@@ -4,16 +4,11 @@ kind: ServiceAccount
 metadata:
   name: csi-snapshotter
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
-
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: garden.sapcloud.io:kube-system:csi-snapshotter
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -48,8 +43,6 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: garden.sapcloud.io:csi-snapshotter
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
 - kind: User
   name: system:csi-snapshotter
