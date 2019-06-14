@@ -68,10 +68,10 @@ func (o *GardenerTestOperation) GetFirstRunningPodWithLabels(ctx context.Context
 // GetPodsByLabels fetches all pods with the desired set of labels <labelsMap>
 func (o *GardenerTestOperation) GetPodsByLabels(ctx context.Context, labelsMap labels.Selector, c kubernetes.Interface, namespace string) (*corev1.PodList, error) {
 	podList := &corev1.PodList{}
-	err := c.Client().List(ctx, &client.ListOptions{
+	err := c.Client().List(ctx, podList, client.UseListOptions(&client.ListOptions{
 		Namespace:     namespace,
 		LabelSelector: labelsMap,
-	}, podList)
+	}))
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +129,7 @@ func (s *ShootGardenerTest) mergePatch(ctx context.Context, oldShoot, newShoot *
 
 func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, namespace string, c kubernetes.Interface) (*appsv1.DeploymentList, error) {
 	deploymentList := &appsv1.DeploymentList{}
-	err := c.Client().List(ctx,
-		&client.ListOptions{LabelSelector: labelsMap}, deploymentList)
+	err := c.Client().List(ctx, deploymentList, client.UseListOptions(&client.ListOptions{LabelSelector: labelsMap}))
 	if err != nil {
 		return nil, err
 	}

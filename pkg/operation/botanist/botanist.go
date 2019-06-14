@@ -172,7 +172,7 @@ func (b *Botanist) UnregisterAsSeed() error {
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.
 func (b *Botanist) RequiredExtensionsExist() error {
 	controllerInstallationList := &gardencorev1alpha1.ControllerInstallationList{}
-	if err := b.K8sGardenClient.Client().List(context.TODO(), nil, controllerInstallationList); err != nil {
+	if err := b.K8sGardenClient.Client().List(context.TODO(), controllerInstallationList); err != nil {
 		return err
 	}
 

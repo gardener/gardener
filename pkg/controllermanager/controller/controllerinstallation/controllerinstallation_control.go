@@ -424,7 +424,7 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 	var fns []flow.TaskFn
 
 	objList := &gardenextensionsv1alpha1.ExtensionList{}
-	if err := seedClient.List(ctx, nil, objList); err != nil {
+	if err := seedClient.List(ctx, objList); err != nil {
 		return err
 	}
 

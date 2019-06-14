@@ -267,22 +267,6 @@
   version = "v1.42.0"
 
 [[projects]]
-  digest = "1:53becd66889185091b58ea3fc49294996f2179fb05a89702f4de7d15e581b509"
-  name = "github.com/go-logr/logr"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
-  version = "v0.1.0"
-
-[[projects]]
-  digest = "1:340497a512995aa69c0add901d79a2096b3449d35a44a6f1f1115091a9f8c687"
-  name = "github.com/go-logr/zapr"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "03f06a783fbb7dfaf3f629c7825480e43a7105e6"
-  version = "v0.1.1"
-
-[[projects]]
   digest = "1:260f7ebefc63024c8dfe2c9f1a2935a89fa4213637a1f522f592f80c001cc441"
   name = "github.com/go-openapi/jsonpointer"
   packages = ["."]
@@ -756,37 +740,6 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "48954b6210f8d154cb5f8484d3a3e1f83489309e"
-
-[[projects]]
-  digest = "1:22f696cee54865fb8e9ff91df7b633f6b8f22037a8015253c6b6a71ca82219c7"
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
-  version = "v1.3.2"
-
-[[projects]]
-  digest = "1:58ca93bdf81bac106ded02226b5395a0595d5346cdc4caa8d9c1f3a5f8f9976e"
-  name = "go.uber.org/multierr"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
-  version = "v1.1.0"
-
-[[projects]]
-  digest = "1:85674ac609b704fd4e9f463553b6ffc3a3527a993ae0ba550eb56beaabdfe094"
-  name = "go.uber.org/zap"
-  packages = [
-    ".",
-    "buffer",
-    "internal/bufferpool",
-    "internal/color",
-    "internal/exit",
-    "zapcore",
-  ]
-  pruneopts = "NUT"
-  revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
-  version = "v1.9.1"
 
 [[projects]]
   digest = "1:ed47bea400ebfd3c4eb7b7497e4004482fea5fc060e7dde85d5f21fcfc272f20"
@@ -1616,18 +1569,19 @@
   revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
 
 [[projects]]
-  digest = "1:8967b39f774886a8d7c4540713fce16adcc868342520e49a194ea0ccdd150312"
+  digest = "1:59aa217597329931345928e3c256d92ab2f9c5bd29c4f31b7cea8bc67861ec94"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/client/fake",
-    "pkg/runtime/log",
+    "pkg/internal/objectutil",
+    "pkg/manager/signals",
     "pkg/runtime/signals",
   ]
   pruneopts = "NUT"
-  revision = "12d98582e72927b6cd0123e2b4e819f9341ce62c"
-  version = "v0.1.10"
+  revision = "f60c87ec713cb8da81257228530605457ebf7220"
+  version = "v0.2.0-beta.2"
 
 [[projects]]
   digest = "1:fef5992ddf85e9ccad899b11338339858936a10fbce96b9d5c43767669d95398"

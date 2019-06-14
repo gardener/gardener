@@ -375,15 +375,13 @@ func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error 
 		&appsv1.StatefulSetList{},
 	}
 
-	listOptions := client.InNamespace(namespace).MatchingLabels(map[string]string{
-		GardenRole: GardenRoleLogging,
-	})
-
 	// TODO: Use `DeleteCollection` as soon it is in the controller-runtime:
 	// https://github.com/kubernetes-sigs/controller-runtime/pull/324
 
 	for _, list := range lists {
-		if err := k8sClient.Client().List(context.TODO(), listOptions, list); err != nil {
+		if err := k8sClient.Client().List(context.TODO(), list,
+			client.InNamespace(namespace),
+			client.MatchingLabels(map[string]string{GardenRole: GardenRoleLogging})); err != nil {
 			return err
 		}
 

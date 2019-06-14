@@ -113,7 +113,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 // DeleteExtensionResources deletes all extension resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
 	extensions := &extensionsv1alpha1.ExtensionList{}
-	if err := b.K8sSeedClient.Client().List(ctx, client.InNamespace(b.Shoot.SeedNamespace), extensions); err != nil {
+	if err := b.K8sSeedClient.Client().List(ctx, extensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 
@@ -147,7 +147,7 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 	)
 	defer cancel()
 
-	if err := b.K8sSeedClient.Client().List(ctx, client.InNamespace(b.Shoot.SeedNamespace), extensions); err != nil {
+	if err := b.K8sSeedClient.Client().List(ctx, extensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 

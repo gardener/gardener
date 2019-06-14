@@ -279,7 +279,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 
 	if loggingEnabled {
 		existingSecrets := &corev1.SecretList{}
-		if err = k8sSeedClient.Client().List(context.TODO(), client.InNamespace(common.GardenNamespace), existingSecrets); err != nil {
+		if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(common.GardenNamespace)); err != nil {
 			return err
 		}
 
@@ -318,7 +318,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 
 	if vpaEnabled {
 		existingSecrets := &corev1.SecretList{}
-		if err = k8sSeedClient.Client().List(context.TODO(), client.InNamespace(common.GardenNamespace), existingSecrets); err != nil {
+		if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(common.GardenNamespace)); err != nil {
 			return err
 		}
 
@@ -379,7 +379,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 	}
 
 	nodes := &corev1.NodeList{}
-	if err = k8sSeedClient.Client().List(context.TODO(), nil, nodes); err != nil {
+	if err = k8sSeedClient.Client().List(context.TODO(), nodes); err != nil {
 		return err
 	}
 	nodeCount := len(nodes.Items)

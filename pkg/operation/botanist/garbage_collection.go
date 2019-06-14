@@ -115,7 +115,7 @@ func (b *Botanist) removeStaleOutOfDiskNodeCondition() error {
 	}
 
 	nodeList := &corev1.NodeList{}
-	if err := b.K8sShootClient.Client().List(context.TODO(), nil, nodeList); err != nil {
+	if err := b.K8sShootClient.Client().List(context.TODO(), nodeList); err != nil {
 		return err
 	}
 

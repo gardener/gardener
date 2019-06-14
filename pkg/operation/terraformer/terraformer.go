@@ -37,7 +37,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 
@@ -439,7 +438,7 @@ func (t *Terraformer) podSpec(scriptName string) *corev1.PodSpec {
 // listJobPods lists all pods which have a label 'job-name' whose value is equal to the Terraformer job name.
 func (t *Terraformer) listJobPods(ctx context.Context) (*corev1.PodList, error) {
 	podList := &corev1.PodList{}
-	if err := t.client.List(ctx, &client.ListOptions{LabelSelector: labels.SelectorFromSet(map[string]string{jobNameLabel: t.jobName})}, podList); err != nil {
+	if err := t.client.List(ctx, podList, client.MatchingLabels(map[string]string{jobNameLabel: t.jobName})); err != nil {
 		return nil, err
 	}
 	return podList, nil
