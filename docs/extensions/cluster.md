@@ -5,7 +5,7 @@ These extensions often serve a well-defined purpose, e.g. the management of [DNS
 We have introduced a couple of extension CRDs in the seeds whose specification is written by Gardener, and which are acted up by the extensions.
 
 However, the extensions sometimes require more information that is not directly part of the specification.
-On example of that is the GCP infrastructure controller which needs to know the shoot's pod and service network.
+One example of that is the GCP infrastructure controller which needs to know the shoot's pod and service network.
 Another example is the Azure infrastructure controller which requires some information out of the `CloudProfile` resource.
 The problem is that Gardener does not know which extension requires which information so that it can write it into their specific CRDs.
 

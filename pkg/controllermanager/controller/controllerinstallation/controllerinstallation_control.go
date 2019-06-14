@@ -20,8 +20,11 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/utils/flow"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	gardenextensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
@@ -279,8 +282,8 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 		newResourcesSet.Insert(objectReferenceToString(objectReference))
 	}
 
-	if deletionPending, err := c.cleanOldResources(k8sSeedClient, controllerInstallation, newResourcesSet); err != nil {
-		if deletionPending {
+	if err := c.cleanOldResources(k8sSeedClient, controllerInstallation, newResourcesSet); err != nil {
+		if isDeletionInProgressError(err) {
 			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
 		} else {
 			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
@@ -322,6 +325,7 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 
 func (c *defaultControllerInstallationControl) delete(controllerInstallation *gardencorev1alpha1.ControllerInstallation, logger logrus.FieldLogger) error {
 	var (
+		ctx                = context.TODO()
 		newConditions      = helper.MergeConditions(controllerInstallation.Status.Conditions, helper.InitCondition(gardencorev1alpha1.ControllerInstallationValid), helper.InitCondition(gardencorev1alpha1.ControllerInstallationInstalled))
 		conditionValid     = newConditions[0]
 		conditionInstalled = newConditions[1]
@@ -350,15 +354,34 @@ func (c *defaultControllerInstallationControl) delete(controllerInstallation *ga
 		return err
 	}
 
-	if deletionPending, err := c.cleanOldResources(k8sSeedClient, controllerInstallation, sets.NewString()); err != nil {
-		if deletionPending {
+	controllerRegistration, err := c.controllerRegistrationLister.Get(controllerInstallation.Spec.RegistrationRef.Name)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionFalse, "RegistrationNotFound", fmt.Sprintf("Referenced ControllerRegistration does not exist: %+v", err))
+		} else {
+			conditionValid = helper.UpdatedCondition(conditionValid, gardencorev1alpha1.ConditionUnknown, "RegistrationReadError", fmt.Sprintf("Referenced ControllerRegistration cannot be read: %+v", err))
+		}
+		return err
+	}
+
+	if err := c.cleanOldExtensions(ctx, k8sSeedClient.Client(), controllerRegistration); err != nil {
+		if isDeletionInProgressError(err) {
+			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
+		} else {
+			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of extension kinds failed: %+v", err))
+		}
+		return err
+	}
+
+	if err := c.cleanOldResources(k8sSeedClient, controllerInstallation, sets.NewString()); err != nil {
+		if isDeletionInProgressError(err) {
 			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionPending", err.Error())
 		} else {
 			conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionFailed", fmt.Sprintf("Deletion of old resources failed: %+v", err))
 		}
 		return err
 	}
-	if err := k8sSeedClient.Client().Delete(context.TODO(), getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
+	if err := k8sSeedClient.Client().Delete(ctx, getNamespaceForControllerInstallation(controllerInstallation)); err != nil && !apierrors.IsNotFound(err) {
 		return err
 	}
 	conditionInstalled = helper.UpdatedCondition(conditionInstalled, gardencorev1alpha1.ConditionFalse, "DeletionSuccessful", "Deletion of old resources succeeded.")
@@ -397,15 +420,68 @@ func (c *defaultControllerInstallationControl) isResponsible(controllerInstallat
 	return false, nil
 }
 
-func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient kubernetes.Interface, controllerInstallation *gardencorev1alpha1.ControllerInstallation, newResourcesSet sets.String) (bool, error) {
+func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Context, seedClient client.Client, controllerRegistration *gardencorev1alpha1.ControllerRegistration) error {
+	var fns []flow.TaskFn
+
+	objList := &gardenextensionsv1alpha1.ExtensionList{}
+	if err := seedClient.List(ctx, nil, objList); err != nil {
+		return err
+	}
+
+	for _, res := range controllerRegistration.Spec.Resources {
+		if res.Kind != gardenextensionsv1alpha1.ExtensionResource {
+			continue
+		}
+		for _, item := range objList.Items {
+			if res.Type != item.GetExtensionType() {
+				continue
+			}
+			delFunc := func(ctx context.Context) error {
+				del := &gardenextensionsv1alpha1.Extension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      item.GetName(),
+						Namespace: item.GetNamespace(),
+					},
+				}
+				return seedClient.Delete(ctx, del)
+			}
+			fns = append(fns, delFunc)
+		}
+	}
+
+	var result error
+	if errs := flow.Parallel(fns...)(ctx); errs != nil {
+		multiErrs, ok := errs.(*multierror.Error)
+		if !ok {
+			return errs
+		}
+		for _, err := range multiErrs.WrappedErrors() {
+			if !apierrors.IsNotFound(err) {
+				result = multierror.Append(result, err)
+			}
+		}
+	}
+
+	if result != nil {
+		return result
+	}
+
+	if len(objList.Items) != 0 {
+		return newDeletionInProgressError("deletion of extensions is still pending")
+	}
+
+	return nil
+}
+
+func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient kubernetes.Interface, controllerInstallation *gardencorev1alpha1.ControllerInstallation, newResourcesSet sets.String) error {
 	providerStatus := controllerInstallation.Status.ProviderStatus
 	if providerStatus == nil {
-		return false, nil
+		return nil
 	}
 
 	var oldResources DeployedResources
 	if err := json.Unmarshal(providerStatus.Raw, &oldResources); err != nil {
-		return false, err
+		return err
 	}
 
 	var (
@@ -434,14 +510,14 @@ func (c *defaultControllerInstallationControl) cleanOldResources(k8sSeedClient k
 	}
 
 	if result != nil {
-		return false, result
+		return result
 	}
 
 	if !deleted {
-		return true, fmt.Errorf("deletion of old resources is still pending")
+		return newDeletionInProgressError("deletion of old resources is still pending")
 	}
 
-	return false, nil
+	return nil
 }
 
 func objectReferenceToString(o corev1.ObjectReference) string {
@@ -454,4 +530,23 @@ func getNamespaceForControllerInstallation(controllerInstallation *gardencorev1a
 			Name: fmt.Sprintf("extension-%s", controllerInstallation.Name),
 		},
 	}
+}
+
+type deletionInProgressError struct {
+	reason string
+}
+
+func newDeletionInProgressError(reason string) error {
+	return &deletionInProgressError{
+		reason: reason,
+	}
+}
+
+func (e *deletionInProgressError) Error() string {
+	return e.reason
+}
+
+func isDeletionInProgressError(err error) bool {
+	_, ok := err.(*deletionInProgressError)
+	return ok
 }
