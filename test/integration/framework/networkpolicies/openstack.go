@@ -80,7 +80,7 @@ func (a *OpenStackNetworkPolicy) ToSources() []Rule {
 		a.newSource(EtcdEventsInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(OpenStackCloudControllerManagerNotSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(OpenStackCloudControllerManagerSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
-		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer).Build(),
+		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer, ExternalHost).Build(),
 		a.newSource(ElasticSearchInfo).Build(),
 		a.newSource(GrafanaInfo).AllowPod(PrometheusInfo).Build(),
 		a.newSource(KibanaInfo).AllowTargetPod(ElasticSearchInfo.FromPort("http")).Build(),

@@ -89,9 +89,10 @@ type GardenerTestOperation struct {
 	SeedClient   kubernetes.Interface
 	ShootClient  kubernetes.Interface
 
-	Seed    *v1beta1.Seed
-	Shoot   *v1beta1.Shoot
-	Project *v1beta1.Project
+	Seed             *v1beta1.Seed
+	SeedCloudProfile *v1beta1.CloudProfile
+	Shoot            *v1beta1.Shoot
+	Project          *v1beta1.Project
 }
 
 // HelmAccess is a struct that holds the helm home

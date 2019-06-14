@@ -226,6 +226,9 @@ Context("components are selected by correct policies", func() {
 				if !sourcePod.Pod.CheckVersion(shootTestOperations.Shoot) {
 					Skip("Component doesn't match Shoot version contstraints. Skipping.")
 				}
+				if !sourcePod.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
+					Skip("Component doesn't match Seed Provider contstraints. Skipping.")
+				}
 
 				matched := sets.NewString()
 				var podLabelSet labels.Set
@@ -493,6 +496,9 @@ var _ = Describe("Network Policy Testing", func() {
 			if !targetPod.Pod.CheckVersion(shootTestOperations.Shoot) {
 				Skip("Target pod doesn't match Shoot version contstraints. Skipping.")
 			}
+			if !targetPod.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
+				Skip("Component doesn't match Seed Provider contstraints. Skipping.")
+			}
 			By(fmt.Sprintf("Checking that target Pod: %s is running", targetPod.Pod.Name))
 			err := shootTestOperations.WaitUntilPodIsRunningWithLabels(ctx, targetPod.Pod.Selector(), targetPod.Namespace, shootTestOperations.SeedClient)
 			ExpectWithOffset(1, err).NotTo(HaveOccurred())
@@ -508,6 +514,9 @@ var _ = Describe("Network Policy Testing", func() {
 		establishConnectionToHost = func(ctx context.Context, nsp *networkpolicies.NamespacedSourcePod, host string, port int32) (io.Reader, error) {
 			if !nsp.Pod.CheckVersion(shootTestOperations.Shoot) {
 				Skip("Source pod doesn't match Shoot version contstraints. Skipping.")
+			}
+			if !nsp.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
+				Skip("Component doesn't match Seed Provider contstraints. Skipping.")
 			}
 			By(fmt.Sprintf("Checking for source Pod: %s is running", nsp.Pod.Name))
 			err := shootTestOperations.WaitUntilPodIsRunningWithLabels(ctx, nsp.Pod.Selector(), nsp.Namespace, shootTestOperations.SeedClient)
@@ -568,6 +577,10 @@ var setBody = `
 
 		setGlobals(ctx)
 		var err error
+
+		By("Getting Seed Cloud Provider")
+		sharedResources.SeedCloudProvider, err = shootTestOperations.SeedCloudProvider()
+		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating namespace for Ingress testing")
 		ns, err := shootTestOperations.SeedClient.CreateNamespace(
@@ -693,7 +706,7 @@ var setBody = `
 			go func(pi *networkpolicies.SourcePod) {
 				defer GinkgoRecover()
 				defer wg.Done()
-				if !pi.Pod.CheckVersion(shootTestOperations.Shoot) {
+				if !pi.Pod.CheckVersion(shootTestOperations.Shoot) || !pi.Pod.CheckSeedCluster(sharedResources.SeedCloudProvider) {
 					return
 				}
 				pod, err := shootTestOperations.GetFirstRunningPodWithLabels(ctx, pi.Pod.Selector(), shootTestOperations.ShootSeedNamespace(), shootTestOperations.SeedClient)
@@ -794,6 +807,7 @@ var setBody = `
 			deprecatedKubeAPIServerPolicy = "kube-apiserver-default"
 			deprecatedMetadataAppPolicy   = "cloud-metadata-service-deny-blacklist-app"
 			deprecatedMetadataRolePolicy  = "cloud-metadata-service-deny-blacklist-role"
+			deprecatedKibanaLogging       = "kibana-logging"
 		)
 
 		var (
@@ -811,5 +825,6 @@ var setBody = `
 		DefaultCIt(deprecatedKubeAPIServerPolicy, assertPolicyIsGone(deprecatedKubeAPIServerPolicy))
 		DefaultCIt(deprecatedMetadataAppPolicy, assertPolicyIsGone(deprecatedMetadataAppPolicy))
 		DefaultCIt(deprecatedMetadataRolePolicy, assertPolicyIsGone(deprecatedMetadataRolePolicy))
+		DefaultCIt(deprecatedMetadataRolePolicy, assertPolicyIsGone(deprecatedKibanaLogging))
 	})
 `

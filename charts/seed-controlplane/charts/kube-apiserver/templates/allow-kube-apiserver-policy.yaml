@@ -26,17 +26,11 @@ spec:
   ingress:
     # Allow connection from everything which needs to talk to the API server
   - from:
-    - podSelector:
-        matchLabels:
-          networking.gardener.cloud/to-shoot-apiserver: allowed
-    # Seed Nodes CIDR
+    # allow all other Pods in the Seed cluster to access it.
+    - podSelector: {}
+    # kube-apiserver can be accessed from anywhere using the LoadBalancer.
     - ipBlock:
-        cidr: {{ required "seedNetworks.node is required" .Values.seedNetworks.node }}
-    # Seed Pod CIDR Calico workaround for LoadBalancers.
-    # Traffic comes from the tunl0 interface on calico,
-    # and tunl0 is the first address in the pod subnet on every single Node.
-    - ipBlock:
-        cidr: {{ required "seedNetworks.pod is required" .Values.seedNetworks.pod }}
+        cidr: 0.0.0.0/0
     ports:
     - protocol: TCP
       port: {{ required ".securePort is required" .Values.securePort }}

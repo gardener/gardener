@@ -43,7 +43,7 @@ func (a *AzureNetworkPolicy) ToSources() []Rule {
 		a.newSource(EtcdEventsInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(CloudControllerManagerInfoNotSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(CloudControllerManagerInfoSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
-		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer).Build(),
+		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer, ExternalHost).Build(),
 		a.newSource(ElasticSearchInfo).Build(),
 		a.newSource(GrafanaInfo).AllowPod(PrometheusInfo).Build(),
 		a.newSource(KibanaInfo).AllowTargetPod(ElasticSearchInfo.FromPort("http")).Build(),
@@ -106,5 +106,5 @@ func (a *AzureNetworkPolicy) allPods() []*SourcePod {
 
 // Provider returns Azure cloud provider.
 func (a *AzureNetworkPolicy) Provider() v1beta1.CloudProvider {
-	return v1beta1.CloudProviderAWS
+	return v1beta1.CloudProviderAzure
 }

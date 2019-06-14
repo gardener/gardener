@@ -24,11 +24,14 @@ var (
 
 	// AWSLBReadvertiserInfo points to aws-specific aws-lb-readvertiser.
 	AWSLBReadvertiserInfo = &SourcePod{
-		Pod: NewPod("aws-lb-readvertiser", labels.Set{
-			"app":                     "aws-lb-readvertiser",
-			"garden.sapcloud.io/role": "controlplane",
-		}),
-		Ports: NewSinglePort(8080),
+		Pod: Pod{
+			Name: "aws-lb-readvertiser",
+			Labels: labels.Set{
+				"app":                     "aws-lb-readvertiser",
+				"garden.sapcloud.io/role": "controlplane",
+			},
+			SeedClusterConstraints: sets.NewString(string(v1beta1.CloudProviderAWS)),
+		},
 		ExpectedPolicies: sets.NewString(
 			"allow-to-public-networks",
 			"allow-to-dns",
@@ -60,7 +63,7 @@ func (a *AWSNetworkPolicy) ToSources() []Rule {
 		a.newSource(EtcdEventsInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(CloudControllerManagerInfoNotSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
 		a.newSource(CloudControllerManagerInfoSecured).AllowPod(KubeAPIServerInfo).AllowHost(ExternalHost).Build(),
-		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer).Build(),
+		a.newSource(DependencyWatchdog).AllowHost(SeedKubeAPIServer, ExternalHost).Build(),
 		a.newSource(ElasticSearchInfo).Build(),
 		a.newSource(GrafanaInfo).AllowPod(PrometheusInfo).Build(),
 		a.newSource(KibanaInfo).AllowTargetPod(ElasticSearchInfo.FromPort("http")).Build(),
@@ -76,7 +79,6 @@ func (a *AWSNetworkPolicy) ToSources() []Rule {
 		a.newSource(PrometheusInfo).AllowPod(
 			CloudControllerManagerInfoNotSecured,
 			CloudControllerManagerInfoSecured,
-			ElasticSearchInfo,
 			EtcdEventsInfo,
 			EtcdMainInfo,
 			KubeAPIServerInfo,
@@ -87,7 +89,7 @@ func (a *AWSNetworkPolicy) ToSources() []Rule {
 			KubeStateMetricsSeedInfo,
 			KubeStateMetricsShootInfo,
 			MachineControllerManagerInfo,
-		).AllowHost(SeedKubeAPIServer, ExternalHost, GardenPrometheus).Build(),
+		).AllowTargetPod(ElasticSearchInfo.FromPort("metrics")).AllowHost(SeedKubeAPIServer, ExternalHost, GardenPrometheus).Build(),
 	}
 }
 
