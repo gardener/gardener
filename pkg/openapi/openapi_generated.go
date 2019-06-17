@@ -145,6 +145,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketNetworks":                schema_pkg_apis_garden_v1beta1_PacketNetworks(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketProfile":                 schema_pkg_apis_garden_v1beta1_PacketProfile(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketWorker":                  schema_pkg_apis_garden_v1beta1_PacketWorker(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProfileLoadBalancerClass":      schema_pkg_apis_garden_v1beta1_ProfileLoadBalancerClass(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Project":                       schema_pkg_apis_garden_v1beta1_Project(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProjectList":                   schema_pkg_apis_garden_v1beta1_ProjectList(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProjectSpec":                   schema_pkg_apis_garden_v1beta1_ProjectSpec(ref),
@@ -162,6 +163,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus":                    schema_pkg_apis_garden_v1beta1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot":                         schema_pkg_apis_garden_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootList":                     schema_pkg_apis_garden_v1beta1_ShootList(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootLoadBalancerClass":        schema_pkg_apis_garden_v1beta1_ShootLoadBalancerClass(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootSpec":                     schema_pkg_apis_garden_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootStatus":                   schema_pkg_apis_garden_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType":                    schema_pkg_apis_garden_v1beta1_VolumeType(ref),
@@ -4641,6 +4643,19 @@ func schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
+					"floatingPoolClasses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FloatingPoolClasses available for a dedicated Shoot.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootLoadBalancerClass"),
+									},
+								},
+							},
+						},
+					},
 					"loadBalancerProvider": {
 						SchemaProps: spec.SchemaProps{
 							Description: "LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.",
@@ -4692,7 +4707,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootLoadBalancerClass"},
 	}
 }
 
@@ -4724,6 +4739,19 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
 										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool"),
+									},
+								},
+							},
+						},
+					},
+					"floatingPoolClasses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FloatingPoolClasses contains a list of supported labeled network settings.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProfileLoadBalancerClass"),
 									},
 								},
 							},
@@ -4788,11 +4816,11 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
+				Required: []string{"dnsProviders", "floatingPools", "floatingPoolClasses", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ProfileLoadBalancerClass", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 	}
 }
 
@@ -4800,7 +4828,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackFloatingPool(ref common.ReferenceCa
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.",
+				Description: "OpenStackFloatingPool contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
@@ -4821,7 +4849,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackLoadBalancerProvider(ref common.Ref
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.",
+				Description: "OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
@@ -5441,6 +5469,41 @@ func schema_pkg_apis_garden_v1beta1_PacketWorker(ref common.ReferenceCallback) c
 		},
 		Dependencies: []string{
 			"k8s.io/api/core/v1.Taint", "k8s.io/apimachinery/pkg/util/intstr.IntOrString"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_ProfileLoadBalancerClass(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ProfileLoadBalancerClass defines a restricted network setting for generic LoadBalancer classes usable in CloudProfiles.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the LB class",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"floatingNetworkID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FloatingNetworkID is the network ID of the floating network pool.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"floatingSubnetID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
 	}
 }
 
@@ -6248,6 +6311,48 @@ func schema_pkg_apis_garden_v1beta1_ShootList(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_ShootLoadBalancerClass(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "ShootLoadBalancerClass defines a full set of network settings for a LoadBalancerClass available in Shoot manifests.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the LB class",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"floatingNetworkID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FloatingNetworkID is the network ID of the floating network pool.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"floatingSubnetID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"subnetID": {
+						SchemaProps: spec.SchemaProps{
+							Description: "SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool configuration is done.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
 	}
 }
 

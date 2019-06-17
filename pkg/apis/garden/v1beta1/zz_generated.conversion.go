@@ -905,6 +905,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ProfileLoadBalancerClass)(nil), (*garden.ProfileLoadBalancerClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ProfileLoadBalancerClass_To_garden_ProfileLoadBalancerClass(a.(*ProfileLoadBalancerClass), b.(*garden.ProfileLoadBalancerClass), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ProfileLoadBalancerClass)(nil), (*ProfileLoadBalancerClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ProfileLoadBalancerClass_To_v1beta1_ProfileLoadBalancerClass(a.(*garden.ProfileLoadBalancerClass), b.(*ProfileLoadBalancerClass), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Project)(nil), (*garden.Project)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_Project_To_garden_Project(a.(*Project), b.(*garden.Project), scope)
 	}); err != nil {
@@ -1072,6 +1082,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*garden.ShootList)(nil), (*ShootList)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_ShootList_To_v1beta1_ShootList(a.(*garden.ShootList), b.(*ShootList), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*ShootLoadBalancerClass)(nil), (*garden.ShootLoadBalancerClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootLoadBalancerClass_To_garden_ShootLoadBalancerClass(a.(*ShootLoadBalancerClass), b.(*garden.ShootLoadBalancerClass), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ShootLoadBalancerClass)(nil), (*ShootLoadBalancerClass)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ShootLoadBalancerClass_To_v1beta1_ShootLoadBalancerClass(a.(*garden.ShootLoadBalancerClass), b.(*ShootLoadBalancerClass), scope)
 	}); err != nil {
 		return err
 	}
@@ -3290,6 +3310,7 @@ func Convert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in *garden.OIDCConfig, out 
 
 func autoConvert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(in *OpenStackCloud, out *garden.OpenStackCloud, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
+	out.FloatingPoolClasses = *(*[]garden.ShootLoadBalancerClass)(unsafe.Pointer(&in.FloatingPoolClasses))
 	out.LoadBalancerProvider = in.LoadBalancerProvider
 	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
@@ -3317,6 +3338,7 @@ func Convert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(in *OpenStackCloud,
 
 func autoConvert_garden_OpenStackCloud_To_v1beta1_OpenStackCloud(in *garden.OpenStackCloud, out *OpenStackCloud, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
+	out.FloatingPoolClasses = *(*[]ShootLoadBalancerClass)(unsafe.Pointer(&in.FloatingPoolClasses))
 	out.LoadBalancerProvider = in.LoadBalancerProvider
 	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_OpenStackNetworks_To_v1beta1_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
@@ -3345,6 +3367,7 @@ func Convert_garden_OpenStackCloud_To_v1beta1_OpenStackCloud(in *garden.OpenStac
 func autoConvert_v1beta1_OpenStackConstraints_To_garden_OpenStackConstraints(in *OpenStackConstraints, out *garden.OpenStackConstraints, s conversion.Scope) error {
 	out.DNSProviders = *(*[]garden.DNSProviderConstraint)(unsafe.Pointer(&in.DNSProviders))
 	out.FloatingPools = *(*[]garden.OpenStackFloatingPool)(unsafe.Pointer(&in.FloatingPools))
+	out.FloatingPoolClasses = *(*[]garden.ProfileLoadBalancerClass)(unsafe.Pointer(&in.FloatingPoolClasses))
 	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
@@ -3363,6 +3386,7 @@ func Convert_v1beta1_OpenStackConstraints_To_garden_OpenStackConstraints(in *Ope
 func autoConvert_garden_OpenStackConstraints_To_v1beta1_OpenStackConstraints(in *garden.OpenStackConstraints, out *OpenStackConstraints, s conversion.Scope) error {
 	out.DNSProviders = *(*[]DNSProviderConstraint)(unsafe.Pointer(&in.DNSProviders))
 	out.FloatingPools = *(*[]OpenStackFloatingPool)(unsafe.Pointer(&in.FloatingPools))
+	out.FloatingPoolClasses = *(*[]ProfileLoadBalancerClass)(unsafe.Pointer(&in.FloatingPoolClasses))
 	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
@@ -3712,6 +3736,30 @@ func autoConvert_garden_PacketWorker_To_v1beta1_PacketWorker(in *garden.PacketWo
 // Convert_garden_PacketWorker_To_v1beta1_PacketWorker is an autogenerated conversion function.
 func Convert_garden_PacketWorker_To_v1beta1_PacketWorker(in *garden.PacketWorker, out *PacketWorker, s conversion.Scope) error {
 	return autoConvert_garden_PacketWorker_To_v1beta1_PacketWorker(in, out, s)
+}
+
+func autoConvert_v1beta1_ProfileLoadBalancerClass_To_garden_ProfileLoadBalancerClass(in *ProfileLoadBalancerClass, out *garden.ProfileLoadBalancerClass, s conversion.Scope) error {
+	out.Name = in.Name
+	out.FloatingNetworkID = (*string)(unsafe.Pointer(in.FloatingNetworkID))
+	out.FloatingSubnetID = (*string)(unsafe.Pointer(in.FloatingSubnetID))
+	return nil
+}
+
+// Convert_v1beta1_ProfileLoadBalancerClass_To_garden_ProfileLoadBalancerClass is an autogenerated conversion function.
+func Convert_v1beta1_ProfileLoadBalancerClass_To_garden_ProfileLoadBalancerClass(in *ProfileLoadBalancerClass, out *garden.ProfileLoadBalancerClass, s conversion.Scope) error {
+	return autoConvert_v1beta1_ProfileLoadBalancerClass_To_garden_ProfileLoadBalancerClass(in, out, s)
+}
+
+func autoConvert_garden_ProfileLoadBalancerClass_To_v1beta1_ProfileLoadBalancerClass(in *garden.ProfileLoadBalancerClass, out *ProfileLoadBalancerClass, s conversion.Scope) error {
+	out.Name = in.Name
+	out.FloatingNetworkID = (*string)(unsafe.Pointer(in.FloatingNetworkID))
+	out.FloatingSubnetID = (*string)(unsafe.Pointer(in.FloatingSubnetID))
+	return nil
+}
+
+// Convert_garden_ProfileLoadBalancerClass_To_v1beta1_ProfileLoadBalancerClass is an autogenerated conversion function.
+func Convert_garden_ProfileLoadBalancerClass_To_v1beta1_ProfileLoadBalancerClass(in *garden.ProfileLoadBalancerClass, out *ProfileLoadBalancerClass, s conversion.Scope) error {
+	return autoConvert_garden_ProfileLoadBalancerClass_To_v1beta1_ProfileLoadBalancerClass(in, out, s)
 }
 
 func autoConvert_v1beta1_Project_To_garden_Project(in *Project, out *garden.Project, s conversion.Scope) error {
@@ -4200,6 +4248,32 @@ func autoConvert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out
 // Convert_garden_ShootList_To_v1beta1_ShootList is an autogenerated conversion function.
 func Convert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *ShootList, s conversion.Scope) error {
 	return autoConvert_garden_ShootList_To_v1beta1_ShootList(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootLoadBalancerClass_To_garden_ShootLoadBalancerClass(in *ShootLoadBalancerClass, out *garden.ShootLoadBalancerClass, s conversion.Scope) error {
+	if err := Convert_v1beta1_ProfileLoadBalancerClass_To_garden_ProfileLoadBalancerClass(&in.ProfileLoadBalancerClass, &out.ProfileLoadBalancerClass, s); err != nil {
+		return err
+	}
+	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
+	return nil
+}
+
+// Convert_v1beta1_ShootLoadBalancerClass_To_garden_ShootLoadBalancerClass is an autogenerated conversion function.
+func Convert_v1beta1_ShootLoadBalancerClass_To_garden_ShootLoadBalancerClass(in *ShootLoadBalancerClass, out *garden.ShootLoadBalancerClass, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootLoadBalancerClass_To_garden_ShootLoadBalancerClass(in, out, s)
+}
+
+func autoConvert_garden_ShootLoadBalancerClass_To_v1beta1_ShootLoadBalancerClass(in *garden.ShootLoadBalancerClass, out *ShootLoadBalancerClass, s conversion.Scope) error {
+	if err := Convert_garden_ProfileLoadBalancerClass_To_v1beta1_ProfileLoadBalancerClass(&in.ProfileLoadBalancerClass, &out.ProfileLoadBalancerClass, s); err != nil {
+		return err
+	}
+	out.SubnetID = (*string)(unsafe.Pointer(in.SubnetID))
+	return nil
+}
+
+// Convert_garden_ShootLoadBalancerClass_To_v1beta1_ShootLoadBalancerClass is an autogenerated conversion function.
+func Convert_garden_ShootLoadBalancerClass_To_v1beta1_ShootLoadBalancerClass(in *garden.ShootLoadBalancerClass, out *ShootLoadBalancerClass, s conversion.Scope) error {
+	return autoConvert_garden_ShootLoadBalancerClass_To_v1beta1_ShootLoadBalancerClass(in, out, s)
 }
 
 func autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.ShootSpec, s conversion.Scope) error {

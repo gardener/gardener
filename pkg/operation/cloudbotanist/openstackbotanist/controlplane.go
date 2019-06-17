@@ -17,6 +17,7 @@ package openstackbotanist
 import (
 	"fmt"
 
+	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 
@@ -32,9 +33,7 @@ username=%q
 password=%q
 [LoadBalancer]
 lb-version=v2
-lb-provider=%q
-floating-network-id=%q
-subnet-id=%q
+lb-provider=%q%s%s%s%s
 create-monitor=true
 monitor-delay=60s
 monitor-timeout=30s
@@ -45,6 +44,8 @@ monitor-max-retries=5
 // See this for more details:
 // https://github.com/kubernetes/kubernetes/blob/master/pkg/cloudprovider/providers/openstack/openstack.go
 func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
+	var fnid, fsid, sid, classes string
+
 	// This code will only exist temporarily until we have introduced the `ControlPlane` extension. Gardener
 	// will no longer compute the cloud-provider-config but instead the provider specific controller will be
 	// responsible.
@@ -60,6 +61,45 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 		return "", err
 	}
 
+	if infrastructureStatus.Networks.FloatingPool.ID != "" {
+		fnid = infrastructureStatus.Networks.FloatingPool.ID
+	} else {
+		for _, class := range b.Shoot.Info.Spec.Cloud.OpenStack.FloatingPoolClasses {
+			if class.Name == garden.DefaultLoadBalancerClass {
+				fnid = utils.StringValue(class.FloatingNetworkID)
+				fsid = utils.StringValue(class.FloatingSubnetID)
+				sid = utils.StringValue(class.SubnetID)
+			}
+		}
+	}
+
+	if sid == "" {
+		sid = nodesSubnet.ID
+	}
+
+	for _, class := range b.Shoot.Info.Spec.Cloud.OpenStack.FloatingPoolClasses {
+		classes = fmt.Sprintf("%s\n[LoadBalancerClass %q]", classes, class.Name)
+		if !utils.IsEmptyString(class.FloatingNetworkID) {
+			classes = fmt.Sprintf("%s\nfloating-network-id=%q", classes, *class.FloatingNetworkID)
+		}
+		if !utils.IsEmptyString(class.FloatingSubnetID) {
+			classes = fmt.Sprintf("%s\nfloating-subnet-id=%q", classes, *class.FloatingSubnetID)
+		}
+		if !utils.IsEmptyString(class.SubnetID) {
+			classes = fmt.Sprintf("%s\nsubnet-id=%q", classes, *class.SubnetID)
+		}
+	}
+
+	if fnid != "" {
+		fnid = fmt.Sprintf("floating-network-id=%q", fnid)
+	}
+	if fsid != "" {
+		fsid = fmt.Sprintf("floating-subnet-id=%q", fsid)
+	}
+	if sid != "" {
+		sid = fmt.Sprintf("subnet-id=%q", sid)
+	}
+
 	cloudProviderConfig := fmt.Sprintf(
 		cloudProviderConfigTemplate,
 		b.Shoot.CloudProfile.Spec.OpenStack.KeyStoneURL,
@@ -68,8 +108,7 @@ func (b *OpenStackBotanist) GenerateCloudProviderConfig() (string, error) {
 		string(b.Shoot.Secret.Data[UserName]),
 		string(b.Shoot.Secret.Data[Password]),
 		b.Shoot.Info.Spec.Cloud.OpenStack.LoadBalancerProvider,
-		infrastructureStatus.Networks.FloatingPool.ID,
-		nodesSubnet.ID,
+		fnid, fsid, sid, classes,
 	)
 
 	// https://github.com/kubernetes/kubernetes/pull/63903#issue-188306465

@@ -4,6 +4,10 @@ kind: Service
 metadata:
   name: vpn-shoot
   namespace: kube-system
+{{- if .Values.vpnLoadBalancerClass }}
+  annotations:
+    loadbalancer.openstack.org/class: {{ .Values.vpnLoadBalancerClass }}
+{{- end }}
   labels:
     addonmanager.kubernetes.io/mode: Reconcile
     app: vpn-shoot

@@ -15,6 +15,7 @@
 package openstackbotanist
 
 import (
+	"github.com/gardener/gardener/pkg/apis/garden"
 	"github.com/gardener/gardener/pkg/operation/common"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,5 +65,15 @@ func (b *OpenStackBotanist) GenerateNginxIngressConfig() (map[string]interface{}
 
 // GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for openstack
 func (b *OpenStackBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
-	return nil, nil
+	var vpnShootConfig map[string]interface{}
+	// Check wether a default VPN LoadBalancerClass is defined
+	// If yes use this class for the VPN service. Otherwise go on as is.
+	for _, class := range b.Shoot.Info.Spec.Cloud.OpenStack.FloatingPoolClasses {
+		if class.Name == garden.VPNLoadBalancerClass {
+			vpnShootConfig = map[string]interface{}{
+				"vpnLoadBalancerClass": class.Name,
+			}
+		}
+	}
+	return vpnShootConfig, nil
 }

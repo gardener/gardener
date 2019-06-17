@@ -193,6 +193,8 @@ type OpenStackConstraints struct {
 	DNSProviders []DNSProviderConstraint `json:"dnsProviders"`
 	// FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
 	FloatingPools []OpenStackFloatingPool `json:"floatingPools"`
+	// FloatingPoolClasses contains a list of supported labeled network settings.
+	FloatingPoolClasses []ProfileLoadBalancerClass `json:"floatingPoolClasses"`
 	// Kubernetes contains constraints regarding allowed values of the 'kubernetes' block in the Shoot specification.
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
@@ -205,13 +207,35 @@ type OpenStackConstraints struct {
 	Zones []Zone `json:"zones"`
 }
 
-// FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
+// ProfileLoadBalancerClass defines a restricted network setting for generic LoadBalancer classes usable in CloudProfiles.
+type ProfileLoadBalancerClass struct {
+	// Name is the name of the LB class
+	Name string `json:"name"`
+	// FloatingNetworkID is the network ID of the floating network pool.
+	// +optional
+	FloatingNetworkID *string `json:"floatingNetworkID,omitempty"`
+	// FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.
+	// +optional
+	FloatingSubnetID *string `json:"floatingSubnetID,omitempty"`
+}
+
+// ShootLoadBalancerClass defines a full set of network settings for a LoadBalancerClass available in Shoot manifests.
+type ShootLoadBalancerClass struct {
+	// ProfileLoadBalancerClass is the standard floating pool configuration for a LoadBalancerClass.
+	ProfileLoadBalancerClass `json:",inline"`
+	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
+	// configuration is done.
+	// +optional
+	SubnetID *string `json:"subnetID"`
+}
+
+// OpenStackFloatingPool contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
 type OpenStackFloatingPool struct {
 	// Name is the name of the floating pool.
 	Name string `json:"name"`
 }
 
-// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
+// OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 type OpenStackLoadBalancerProvider struct {
 	// Name is the name of the load balancer provider.
 	Name string `json:"name"`
@@ -932,6 +956,9 @@ type GCPWorker struct {
 type OpenStackCloud struct {
 	// FloatingPoolName is the name of the floating pool to get FIPs from.
 	FloatingPoolName string `json:"floatingPoolName"`
+	// FloatingPoolClasses available for a dedicated Shoot.
+	// +optional
+	FloatingPoolClasses []ShootLoadBalancerClass `json:"floatingPoolClasses"`
 	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
 	LoadBalancerProvider string `json:"loadBalancerProvider"`
 	// MachineImage holds information about the machine image to use for all workers.

@@ -182,14 +182,34 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 		allErrs = append(allErrs, validateZones(spec.OpenStack.Constraints.Zones, fldPath.Child("openstack", "constraints", "zones"))...)
 
 		floatingPoolPath := fldPath.Child("openstack", "constraints", "floatingPools")
-		if len(spec.OpenStack.Constraints.FloatingPools) == 0 {
-			allErrs = append(allErrs, field.Required(floatingPoolPath, "must provide at least one floating pool"))
+		if len(spec.OpenStack.Constraints.FloatingPools) == 0 && len(spec.OpenStack.Constraints.FloatingPoolClasses) == 0 {
+			allErrs = append(allErrs, field.Required(floatingPoolPath, "must provide at least one floating pool or floating pool class"))
 		}
+		floatingPoolClassesPath := fldPath.Child("openstack", "constraints", "floatingPoolClasses")
 		for i, pool := range spec.OpenStack.Constraints.FloatingPools {
-			idxPath := floatingPoolPath.Index(i)
-			namePath := idxPath.Child("name")
 			if len(pool.Name) == 0 {
-				allErrs = append(allErrs, field.Required(namePath, "must provide a name"))
+				idxPath := floatingPoolPath.Index(i)
+				allErrs = append(allErrs, field.Required(idxPath, "must provide a name"))
+			}
+		}
+
+		for i, class := range spec.OpenStack.Constraints.FloatingPoolClasses {
+			if utils.IsEmptyString(class.FloatingNetworkID) {
+				idxPath := floatingPoolPath.Index(i)
+				allErrs = append(allErrs, field.Required(idxPath, "floatingNetworkID must be specified for floating pool class"))
+			}
+		}
+
+		if len(spec.OpenStack.Constraints.FloatingPools) == 0 {
+			found := false
+			for _, class := range spec.OpenStack.Constraints.FloatingPoolClasses {
+				if class.Name == garden.DefaultLoadBalancerClass || class.Name == garden.VPNLoadBalancerClass {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allErrs = append(allErrs, field.Invalid(floatingPoolClassesPath, spec.OpenStack.Constraints.FloatingPoolClasses, fmt.Sprintf("class %q or %q must be specified if no floatingPoolName is specified", garden.DefaultLoadBalancerClass, garden.VPNLoadBalancerClass)))
 			}
 		}
 
@@ -1182,8 +1202,31 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	openStack := cloud.OpenStack
 	openStackPath := fldPath.Child("openstack")
 	if openStack != nil {
+		if len(openStack.FloatingPoolName) == 0 && len(openStack.FloatingPoolClasses) == 0 {
+			allErrs = append(allErrs, field.Required(openStackPath.Child("floatingPoolName"), "must specify a floating pool name or at least one floating pool class"))
+		}
+		floatingPoolClassesPath := openStackPath.Child("floatingPoolClasses")
+		for i, class := range openStack.FloatingPoolClasses {
+			idxPath := floatingPoolClassesPath.Index(i)
+			if utils.IsEmptyString(class.FloatingNetworkID) && utils.IsEmptyString(class.SubnetID) {
+				allErrs = append(allErrs, field.Required(idxPath, "floatingNetworkID or subnetID must be specified for floating pool class"))
+			}
+			if utils.IsEmptyString(class.FloatingNetworkID) && !utils.IsEmptyString(class.FloatingSubnetID) {
+				allErrs = append(allErrs, field.Required(idxPath, "floatingNetworkID must be specified if floatingSubnetID is specified for floating pool class"))
+			}
+		}
+
 		if len(openStack.FloatingPoolName) == 0 {
-			allErrs = append(allErrs, field.Required(openStackPath.Child("floatingPoolName"), "must specify a floating pool name"))
+			found := false
+			for _, class := range openStack.FloatingPoolClasses {
+				if class.Name == garden.DefaultLoadBalancerClass || class.Name == garden.VPNLoadBalancerClass {
+					found = true
+					break
+				}
+			}
+			if !found {
+				allErrs = append(allErrs, field.Invalid(floatingPoolClassesPath, openStack.FloatingPoolClasses, fmt.Sprintf("class %q or %q must be specified if no floatingPoolName is specified", garden.DefaultLoadBalancerClass, garden.VPNLoadBalancerClass)))
+			}
 		}
 
 		if len(openStack.LoadBalancerProvider) == 0 {
