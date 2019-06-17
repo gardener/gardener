@@ -13,8 +13,8 @@ import (
 type BackupBucketLister interface {
 	// List lists all BackupBuckets in the indexer.
 	List(selector labels.Selector) (ret []*v1alpha1.BackupBucket, err error)
-	// BackupBuckets returns an object that can list and get BackupBuckets.
-	BackupBuckets(namespace string) BackupBucketNamespaceLister
+	// Get retrieves the BackupBucket from the index for a given name.
+	Get(name string) (*v1alpha1.BackupBucket, error)
 	BackupBucketListerExpansion
 }
 
@@ -36,38 +36,9 @@ func (s *backupBucketLister) List(selector labels.Selector) (ret []*v1alpha1.Bac
 	return ret, err
 }
 
-// BackupBuckets returns an object that can list and get BackupBuckets.
-func (s *backupBucketLister) BackupBuckets(namespace string) BackupBucketNamespaceLister {
-	return backupBucketNamespaceLister{indexer: s.indexer, namespace: namespace}
-}
-
-// BackupBucketNamespaceLister helps list and get BackupBuckets.
-type BackupBucketNamespaceLister interface {
-	// List lists all BackupBuckets in the indexer for a given namespace.
-	List(selector labels.Selector) (ret []*v1alpha1.BackupBucket, err error)
-	// Get retrieves the BackupBucket from the indexer for a given namespace and name.
-	Get(name string) (*v1alpha1.BackupBucket, error)
-	BackupBucketNamespaceListerExpansion
-}
-
-// backupBucketNamespaceLister implements the BackupBucketNamespaceLister
-// interface.
-type backupBucketNamespaceLister struct {
-	indexer   cache.Indexer
-	namespace string
-}
-
-// List lists all BackupBuckets in the indexer for a given namespace.
-func (s backupBucketNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.BackupBucket, err error) {
-	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.BackupBucket))
-	})
-	return ret, err
-}
-
-// Get retrieves the BackupBucket from the indexer for a given namespace and name.
-func (s backupBucketNamespaceLister) Get(name string) (*v1alpha1.BackupBucket, error) {
-	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
+// Get retrieves the BackupBucket from the index for a given name.
+func (s *backupBucketLister) Get(name string) (*v1alpha1.BackupBucket, error) {
+	obj, exists, err := s.indexer.GetByKey(name)
 	if err != nil {
 		return nil, err
 	}

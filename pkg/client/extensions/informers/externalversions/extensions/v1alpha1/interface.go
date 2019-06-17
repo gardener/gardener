@@ -41,12 +41,12 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 
 // BackupBuckets returns a BackupBucketInformer.
 func (v *version) BackupBuckets() BackupBucketInformer {
-	return &backupBucketInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &backupBucketInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // BackupEntries returns a BackupEntryInformer.
 func (v *version) BackupEntries() BackupEntryInformer {
-	return &backupEntryInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
+	return &backupEntryInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // Clusters returns a ClusterInformer.

@@ -16,7 +16,7 @@ import (
 // BackupBucketsGetter has a method to return a BackupBucketInterface.
 // A group's client should implement this interface.
 type BackupBucketsGetter interface {
-	BackupBuckets(namespace string) BackupBucketInterface
+	BackupBuckets() BackupBucketInterface
 }
 
 // BackupBucketInterface has methods to work with BackupBucket resources.
@@ -36,14 +36,12 @@ type BackupBucketInterface interface {
 // backupBuckets implements BackupBucketInterface
 type backupBuckets struct {
 	client rest.Interface
-	ns     string
 }
 
 // newBackupBuckets returns a BackupBuckets
-func newBackupBuckets(c *ExtensionsV1alpha1Client, namespace string) *backupBuckets {
+func newBackupBuckets(c *ExtensionsV1alpha1Client) *backupBuckets {
 	return &backupBuckets{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -51,7 +49,6 @@ func newBackupBuckets(c *ExtensionsV1alpha1Client, namespace string) *backupBuck
 func (c *backupBuckets) Get(name string, options v1.GetOptions) (result *v1alpha1.BackupBucket, err error) {
 	result = &v1alpha1.BackupBucket{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -68,7 +65,6 @@ func (c *backupBuckets) List(opts v1.ListOptions) (result *v1alpha1.BackupBucket
 	}
 	result = &v1alpha1.BackupBucketList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -85,7 +81,6 @@ func (c *backupBuckets) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -96,7 +91,6 @@ func (c *backupBuckets) Watch(opts v1.ListOptions) (watch.Interface, error) {
 func (c *backupBuckets) Create(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
 	result = &v1alpha1.BackupBucket{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		Body(backupBucket).
 		Do().
@@ -108,7 +102,6 @@ func (c *backupBuckets) Create(backupBucket *v1alpha1.BackupBucket) (result *v1a
 func (c *backupBuckets) Update(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
 	result = &v1alpha1.BackupBucket{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		Name(backupBucket.Name).
 		Body(backupBucket).
@@ -123,7 +116,6 @@ func (c *backupBuckets) Update(backupBucket *v1alpha1.BackupBucket) (result *v1a
 func (c *backupBuckets) UpdateStatus(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
 	result = &v1alpha1.BackupBucket{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		Name(backupBucket.Name).
 		SubResource("status").
@@ -136,7 +128,6 @@ func (c *backupBuckets) UpdateStatus(backupBucket *v1alpha1.BackupBucket) (resul
 // Delete takes name of the backupBucket and deletes it. Returns an error if one occurs.
 func (c *backupBuckets) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		Name(name).
 		Body(options).
@@ -151,7 +142,6 @@ func (c *backupBuckets) DeleteCollection(options *v1.DeleteOptions, listOptions 
 		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -164,7 +154,6 @@ func (c *backupBuckets) DeleteCollection(options *v1.DeleteOptions, listOptions 
 func (c *backupBuckets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.BackupBucket, err error) {
 	result = &v1alpha1.BackupBucket{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("backupbuckets").
 		SubResource(subresources...).
 		Name(name).
