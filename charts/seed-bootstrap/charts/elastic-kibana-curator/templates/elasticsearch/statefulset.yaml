@@ -110,7 +110,11 @@ spec:
         imagePullPolicy: IfNotPresent
         command: ["elasticsearch_exporter"]
         args:
+{{- if .Values.searchguard.enabled }}
+          - -es.uri=http://{{ .Values.elasticsearch.metricsExporter.username }}:{{ .Values.elasticsearch.metricsExporter.password }}@localhost:{{ .Values.global.elasticsearchPorts.db }}
+{{- else }}
           - -es.uri=http://localhost:{{ .Values.global.elasticsearchPorts.db }}
+{{- end }}
           - -es.all=true
           - -es.indices=true
           - -es.timeout=30s

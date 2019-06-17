@@ -101,8 +101,9 @@ elasticsearch:
         port: metrics
       initialDelaySeconds: 10
       timeoutSeconds: 10
-    httpAuth: YWRtaW46YWRtaW4K
-    
+  # username: USERNAME
+  # password: PASSWORD
+
   sgadmin:
     resources:
       requests:
