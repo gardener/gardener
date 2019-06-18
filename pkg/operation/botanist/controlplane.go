@@ -545,9 +545,10 @@ func (b *Botanist) DeploySeedLogging() error {
 		kibanaHost                             = b.Seed.GetIngressFQDN("k", b.Shoot.Info.Name, b.Garden.Project.Name)
 		kibanaCredentials                      = b.Secrets["kibana-logging-sg-credentials"]
 		kibanaUserIngressCredentialsSecretName = "logging-ingress-credentials-users"
+		sgKibanaUsername                       = kibanaCredentials.Data[secrets.DataKeyUserName]
 		sgKibanaPassword                       = kibanaCredentials.Data[secrets.DataKeyPassword]
 		sgKibanaPasswordHash                   = kibanaCredentials.Data[secrets.DataKeyPasswordBcryptHash]
-		basicAuth                              = utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", kibanaCredentials.Data[secrets.DataKeyUserName], sgKibanaPassword)))
+		basicAuth                              = utils.EncodeBase64([]byte(fmt.Sprintf("%s:%s", sgKibanaUsername, sgKibanaPassword)))
 
 		sgCuratorPassword     = b.Secrets["curator-sg-credentials"].Data[secrets.DataKeyPassword]
 		sgCuratorPasswordHash = b.Secrets["curator-sg-credentials"].Data[secrets.DataKeyPasswordBcryptHash]
@@ -607,6 +608,10 @@ func (b *Botanist) DeploySeedLogging() error {
 			"replicaCount": b.Shoot.GetReplicas(1),
 			"readinessProbe": map[string]interface{}{
 				"httpAuth": basicAuth,
+			},
+			"metricsExporter": map[string]interface{}{
+				"username": string(sgKibanaUsername),
+				"password": string(sgKibanaPassword),
 			},
 		},
 		"kibana": map[string]interface{}{
