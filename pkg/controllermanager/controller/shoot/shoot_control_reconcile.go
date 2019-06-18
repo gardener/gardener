@@ -83,7 +83,7 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deployNamespace = g.Add(flow.Task{
 			Name:         "Deploying Shoot namespace in Seed",
-			Fn:           flow.SimpleTaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		_ = g.Add(flow.Task{
@@ -255,17 +255,17 @@ func (c *defaultControl) reconcileShoot(o *operation.Operation, operationType ga
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
-			Fn:           flow.SimpleTaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady),
 		})
 		deploySeedLogging = g.Add(flow.Task{
 			Name:         "Deploying shoot logging stack in Seed",
-			Fn:           flow.SimpleTaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeploySeedLogging).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady),
 		})
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
-			Fn:           flow.SimpleTaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployKubeAddonManager, deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{

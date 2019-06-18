@@ -15,6 +15,7 @@
 package webhooks
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -24,6 +25,7 @@ import (
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"k8s.io/api/admission/v1beta1"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
@@ -131,7 +133,8 @@ func (h *namespaceDeletionHandler) admitNamespaces(request *v1beta1.AdmissionReq
 	}
 
 	// We do not receive the namespace object in the `.object` field of the admission request. Hence, we need to get it ourselves.
-	namespace, err := h.k8sGardenClient.GetNamespace(request.Name)
+	namespace := &corev1.Namespace{}
+	err = h.k8sGardenClient.Client().Get(context.TODO(), client.ObjectKey{Name: request.Name}, namespace)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return admissionResponse(true, "")

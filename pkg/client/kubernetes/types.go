@@ -106,6 +106,11 @@ var (
 		client.PropagationPolicy(metav1.DeletePropagationForeground),
 		client.GracePeriodSeconds(60),
 	}
+	// ForceDeleteOptionFuncs use background propagation policy and grace period of 0 seconds.
+	ForceDeleteOptionFuncs = []client.DeleteOptionFunc{
+		client.PropagationPolicy(metav1.DeletePropagationBackground),
+		client.GracePeriodSeconds(0),
+	}
 
 	propagationPolicy    = metav1.DeletePropagationForeground
 	gracePeriodSeconds   = int64(60)

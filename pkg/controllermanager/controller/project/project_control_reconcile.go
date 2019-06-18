@@ -85,7 +85,7 @@ func (c *defaultControl) reconcile(project *gardenv1beta1.Project, projectLogger
 			// If we failed to update the namespace in the project specification we should try to delete
 			// our created namespace again to prevent an inconsistent state.
 			if err := utilretry.UntilTimeout(ctx, time.Second, time.Minute, func(context.Context) (done bool, err error) {
-				if err := c.k8sGardenClient.DeleteNamespace(namespace.Name); err != nil {
+				if err := c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptionFuncs...); err != nil {
 					if apierrors.IsNotFound(err) {
 						return utilretry.Ok()
 					}
@@ -155,14 +155,16 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardenv1beta1.Pro
 	)
 
 	if namespaceName == nil {
-		return c.k8sGardenClient.CreateNamespace(&corev1.Namespace{
+		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName:    fmt.Sprintf("%s%s-", common.ProjectPrefix, project.Name),
 				OwnerReferences: []metav1.OwnerReference{*ownerReference},
 				Labels:          projectLabels,
 				Annotations:     projectAnnotations,
 			},
-		}, false)
+		}
+		err := c.k8sGardenClient.Client().Create(context.TODO(), obj)
+		return obj, err
 	}
 
 	namespace, err := kutils.TryUpdateNamespace(c.k8sGardenClient.Kubernetes(), retry.DefaultBackoff, metav1.ObjectMeta{Name: *namespaceName}, func(ns *corev1.Namespace) (*corev1.Namespace, error) {
@@ -184,14 +186,16 @@ func (c *defaultControl) reconcileNamespaceForProject(project *gardenv1beta1.Pro
 			return nil, err
 		}
 
-		return c.k8sGardenClient.CreateNamespace(&corev1.Namespace{
+		obj := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            *namespaceName,
 				OwnerReferences: []metav1.OwnerReference{*ownerReference},
 				Labels:          projectLabels,
 				Annotations:     projectAnnotations,
 			},
-		}, false)
+		}
+		err := c.k8sGardenClient.Client().Create(context.TODO(), obj)
+		return obj, err
 	}
 
 	return namespace, nil

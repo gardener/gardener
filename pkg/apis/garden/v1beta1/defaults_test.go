@@ -89,7 +89,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							})
 						})
 
-						Context("wtih more than one workers", func() {
+						Context("with more than one workers", func() {
 							BeforeEach(func() {
 								aws.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
 							})
@@ -175,7 +175,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 						})
 					})
 
-					Context("wtih more than one workers", func() {
+					Context("with more than one workers", func() {
 						BeforeEach(func() {
 							gcp.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
 						})
@@ -239,7 +239,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 							})
 						})
 
-						Context("wtih more than one workers", func() {
+						Context("with more than one workers", func() {
 							BeforeEach(func() {
 								alicloud.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
 							})
@@ -292,7 +292,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 						})
 					})
 
-					Context("wtih more than one workers", func() {
+					Context("with more than one workers", func() {
 						BeforeEach(func() {
 							openstack.Networks.Workers = []v1alpha1.CIDR{"1.1.0.0/24", "1.1.2.0/24"}
 						})
@@ -328,7 +328,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 	})
 
 	Context("kubernetes", func() {
-		It("should enable priviliged containers by default", func() {
+		It("should enable privileged containers by default", func() {
 			Expect(shoot.Spec.Kubernetes.AllowPrivilegedContainers).To(PointTo(BeTrue()))
 		})
 
@@ -342,7 +342,7 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 					shoot.Spec.Kubernetes.KubeProxy = &v1beta1.KubeProxyConfig{}
 				})
 				It("should use iptables as default mode", func() {
-					// Don't change this value to guarantee backwards compability.
+					// Don't change this value to guarantee backwards compatibility.
 					defaultMode := v1beta1.ProxyMode("IPTables")
 					Expect(shoot.Spec.Kubernetes.KubeProxy.Mode).To(PointTo(Equal(defaultMode)))
 				})
@@ -368,11 +368,11 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 		})
 
 		Context("with provided maitanence", func() {
-			var maintanence *v1beta1.Maintenance
+			var maintenance *v1beta1.Maintenance
 
 			BeforeEach(func() {
-				maintanence = &v1beta1.Maintenance{}
-				shoot.Spec.Maintenance = maintanence
+				maintenance = &v1beta1.Maintenance{}
+				shoot.Spec.Maintenance = maintenance
 			})
 
 			It("should automatically update the Kubernetes version", func() {
@@ -386,7 +386,6 @@ var _ = Describe("#SetDefaults_Shoot", func() {
 			It("should have a valid mataince end time", func() {
 				Expect(utils.ParseMaintenanceTime(shoot.Spec.Maintenance.TimeWindow.End)).ShouldNot(PointTo(BeNil()))
 			})
-
 		})
 
 	})

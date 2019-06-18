@@ -58,8 +58,8 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 	if err != nil {
 		return nil, err
 	}
-	secret, err = k8sGardenClient.GetSecret(binding.SecretRef.Namespace, binding.SecretRef.Name)
-	if err != nil {
+	secret = &corev1.Secret{}
+	if err = k8sGardenClient.Client().Get(context.TODO(), kutil.Key(binding.SecretRef.Namespace, binding.SecretRef.Name), secret); err != nil {
 		return nil, err
 	}
 
@@ -418,7 +418,7 @@ func ConstructExternalDomain(ctx context.Context, client client.Client, shoot *g
 }
 
 // ExtensionDefaultTimeout is the default timeout and defines how long Gardener should wait
-// for a successful reconcilation of this extension resource.
+// for a successful reconciliation of this extension resource.
 const ExtensionDefaultTimeout = 10 * time.Minute
 
 // MergeExtensions merges the given controller registrations with the given extensions, expecting that each type in extensions is also represented in the registration.

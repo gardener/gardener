@@ -34,10 +34,13 @@ import (
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane", "charts")
@@ -45,24 +48,28 @@ var chartPathControlPlane = filepath.Join(common.ChartPath, "seed-controlplane",
 // DeployNamespace creates a namespace in the Seed cluster which is used to deploy all the control plane
 // components for the Shoot cluster. Moreover, the cloud provider configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
-func (b *Botanist) DeployNamespace() error {
-	namespace, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
+func (b *Botanist) DeployNamespace(ctx context.Context) error {
+	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Annotations: getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID),
-			Name:        b.Shoot.SeedNamespace,
-			Labels: map[string]string{
-				common.GardenRole:                 common.GardenRoleShoot,
-				common.GardenerRole:               common.GardenRoleShoot,
-				common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
-				gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
-				gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),
-				gardencorev1alpha1.ShootProvider:  string(b.Shoot.CloudProvider),
-			},
+			Name: b.Shoot.SeedNamespace,
 		},
-	}, true)
-	if err != nil {
+	}
+
+	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+		namespace.Annotations = getShootAnnotations(b.Shoot.Info.Annotations, b.Shoot.Info.Status.UID)
+		namespace.Labels = map[string]string{
+			common.GardenRole:                 common.GardenRoleShoot,
+			common.GardenerRole:               common.GardenRoleShoot,
+			common.ShootHibernated:            strconv.FormatBool(b.Shoot.IsHibernated),
+			gardencorev1alpha1.BackupProvider: string(b.Seed.CloudProvider),
+			gardencorev1alpha1.SeedProvider:   string(b.Seed.CloudProvider),
+			gardencorev1alpha1.ShootProvider:  string(b.Shoot.CloudProvider),
+		}
+		return nil
+	}); err != nil {
 		return err
 	}
+
 	b.SeedNamespaceObject = namespace
 	return nil
 }
@@ -82,33 +89,41 @@ func getShootAnnotations(annotations map[string]string, uid types.UID) map[strin
 // DeployBackupNamespace creates a namespace in the Seed cluster from info in shoot object, which is used to deploy all the backup infrastructure
 // realted resources for shoot cluster. Moreover, the terraform configuration and all the secrets will be
 // stored as ConfigMaps/Secrets.
-func (b *Botanist) DeployBackupNamespace() error {
-	_, err := b.K8sSeedClient.CreateNamespace(&corev1.Namespace{
+func (b *Botanist) DeployBackupNamespace(ctx context.Context) error {
+	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name),
-			Labels: map[string]string{
-				common.GardenRole: common.GardenRoleBackup,
-			},
 		},
-	}, true)
-	return err
+	}
+
+	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), namespace, func() error {
+		namespace.Labels = map[string]string{
+			common.GardenRole: common.GardenRoleBackup,
+		}
+		return nil
+	})
 }
 
 // DeleteNamespace deletes the namespace in the Seed cluster which holds the control plane components. The built-in
 // garbage collection in Kubernetes will automatically delete all resources which belong to this namespace. This
 // comprises volumes and load balancers as well.
-func (b *Botanist) DeleteNamespace() error {
-	return b.deleteNamespace(b.Shoot.SeedNamespace)
+func (b *Botanist) DeleteNamespace(ctx context.Context) error {
+	return b.deleteNamespace(ctx, b.Shoot.SeedNamespace)
 }
 
 // DeleteBackupNamespace deletes the namespace in the Seed cluster which holds the backup infrastructure state. The built-in
 // garbage collection in Kubernetes will automatically delete all resources which belong to this namespace.
-func (b *Botanist) DeleteBackupNamespace() error {
-	return b.deleteNamespace(common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name))
+func (b *Botanist) DeleteBackupNamespace(ctx context.Context) error {
+	return b.deleteNamespace(ctx, common.GenerateBackupNamespaceName(b.BackupInfrastructure.Name))
 }
 
-func (b *Botanist) deleteNamespace(name string) error {
-	err := b.K8sSeedClient.DeleteNamespace(name)
+func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
+	namespace := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+	}
+	err := b.K8sSeedClient.Client().Delete(ctx, namespace, kubernetes.DefaultDeleteOptionFuncs...)
 	if apierrors.IsNotFound(err) || apierrors.IsConflict(err) {
 		return nil
 	}
@@ -124,17 +139,20 @@ func (b *Botanist) DeleteDeprecatedCloudMetadataServiceNetworkPolicy(ctx context
 }
 
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
-func (b *Botanist) DeleteKubeAPIServer() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
-	if apierrors.IsNotFound(err) {
-		return nil
+func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.KubeAPIServerDeploymentName,
+			Namespace: b.Shoot.SeedNamespace,
+		},
 	}
-	return err
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...))
 }
 
 // RefreshCloudControllerManagerChecksums updates the cloud provider checksum in the cloud-controller-manager pod spec template.
-func (b *Botanist) RefreshCloudControllerManagerChecksums() error {
-	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName); err != nil {
+func (b *Botanist) RefreshCloudControllerManagerChecksums(ctx context.Context) error {
+	deploy := &appsv1.Deployment{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName), deploy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -144,8 +162,9 @@ func (b *Botanist) RefreshCloudControllerManagerChecksums() error {
 }
 
 // RefreshKubeControllerManagerChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
-func (b *Botanist) RefreshKubeControllerManagerChecksums() error {
-	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName); err != nil {
+func (b *Botanist) RefreshKubeControllerManagerChecksums(ctx context.Context) error {
+	deploy := &appsv1.Deployment{}
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName), deploy); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
 		}
@@ -163,7 +182,7 @@ func (b *Botanist) DeployBackupInfrastructure(ctx context.Context) error {
 		backupInfrastructure = &gardenv1beta1.BackupInfrastructure{}
 	)
 
-	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupInfrastructure); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupInfrastructure); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 
@@ -186,21 +205,20 @@ func (b *Botanist) DeployBackupInfrastructure(ctx context.Context) error {
 // which is responsible for actual deletion of cloud resource for Shoot's backup infrastructure.
 func (b *Botanist) DeleteBackupInfrastructure() error {
 	err := b.K8sGardenClient.Garden().GardenV1beta1().BackupInfrastructures(b.Shoot.Info.Namespace).Delete(common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID), nil)
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-	return err
+	return client.IgnoreNotFound(err)
 }
 
 // DeleteKubeAddonManager deletes the kube-addon-manager deployment in the Seed cluster which holds the Shoot's control plane. It
 // needs to be deleted before trying to remove any resources in the Shoot cluster, otherwise it will automatically recreate
 // them and block the infrastructure deletion.
-func (b *Botanist) DeleteKubeAddonManager() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, common.KubeAddonManagerDeploymentName)
-	if apierrors.IsNotFound(err) {
-		return nil
+func (b *Botanist) DeleteKubeAddonManager(ctx context.Context) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.KubeAddonManagerDeploymentName,
+			Namespace: b.Shoot.SeedNamespace,
+		},
 	}
-	return err
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...))
 }
 
 // Supported CA flags
@@ -220,9 +238,9 @@ var (
 
 // DeployClusterAutoscaler deploys the cluster-autoscaler into the Shoot namespace in the Seed cluster. It is responsible
 // for automatically scaling the worker pools of the Shoot.
-func (b *Botanist) DeployClusterAutoscaler() error {
+func (b *Botanist) DeployClusterAutoscaler(ctx context.Context) error {
 	if !b.Shoot.WantsClusterAutoscaler {
-		return b.DeleteClusterAutoscaler()
+		return b.DeleteClusterAutoscaler(ctx)
 	}
 
 	var workerPools []map[string]interface{}
@@ -303,17 +321,19 @@ func appendOrDefaultFlag(flags []map[string]interface{}, flagName string, value,
 }
 
 // DeleteClusterAutoscaler deletes the cluster-autoscaler deployment in the Seed cluster which holds the Shoot's control plane.
-func (b *Botanist) DeleteClusterAutoscaler() error {
-	err := b.K8sSeedClient.DeleteDeployment(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameClusterAutoscaler)
-	if apierrors.IsNotFound(err) {
-		return nil
+func (b *Botanist) DeleteClusterAutoscaler(ctx context.Context) error {
+	deploy := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gardencorev1alpha1.DeploymentNameClusterAutoscaler,
+			Namespace: b.Shoot.SeedNamespace,
+		},
 	}
-	return err
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...))
 }
 
 // DeploySeedMonitoring will install the Helm release "seed-monitoring" in the Seed clusters. It comprises components
 // to monitor the Shoot cluster whose control plane runs in the Seed cluster.
-func (b *Botanist) DeploySeedMonitoring() error {
+func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 	var (
 		credentials      = b.Secrets["monitoring-ingress-credentials"]
 		credentialsUsers = b.Secrets["monitoring-ingress-credentials-users"]
@@ -464,7 +484,7 @@ func (b *Botanist) DeploySeedMonitoring() error {
 			return err
 		}
 	} else {
-		if err := common.DeleteAlertmanager(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
+		if err := common.DeleteAlertmanager(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace); err != nil {
 			return err
 		}
 	}
@@ -490,19 +510,24 @@ func (b *Botanist) deployGrafanaCharts(role, basicAuth, subDomain string) error 
 // DeleteSeedMonitoring will delete the monitoring stack from the Seed cluster to avoid phantom alerts
 // during the deletion process. More precisely, the Alertmanager and Prometheus StatefulSets will be
 // deleted.
-func (b *Botanist) DeleteSeedMonitoring() error {
-	err := b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.AlertManagerStatefulSetName)
-	if apierrors.IsNotFound(err) {
-		return nil
+func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
+	alertManagerStatefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.AlertManagerStatefulSetName,
+			Namespace: b.Shoot.SeedNamespace,
+		},
 	}
-	if err != nil {
+	if err := b.K8sSeedClient.Client().Delete(ctx, alertManagerStatefulSet, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	err = b.K8sSeedClient.DeleteStatefulSet(b.Shoot.SeedNamespace, common.PrometheusStatefulSetName)
-	if apierrors.IsNotFound(err) {
-		return nil
+
+	prometheusStatefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      common.PrometheusStatefulSetName,
+			Namespace: b.Shoot.SeedNamespace,
+		},
 	}
-	return err
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, prometheusStatefulSet, kubernetes.DefaultDeleteOptionFuncs...))
 }
 
 // patchDeploymentCloudProviderChecksums updates the cloud provider checksums on the given deployment.
@@ -536,9 +561,9 @@ func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) 
 }
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.
-func (b *Botanist) DeploySeedLogging() error {
+func (b *Botanist) DeploySeedLogging(ctx context.Context) error {
 	if !controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
-		return common.DeleteLoggingStack(b.K8sSeedClient, b.Shoot.SeedNamespace)
+		return common.DeleteLoggingStack(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace)
 	}
 
 	var (
@@ -561,7 +586,6 @@ func (b *Botanist) DeploySeedLogging() error {
 		ingressBasicAuth      string
 
 		sgFluentdPasswordHash string
-		sgFluentdSecret       *corev1.Secret
 	)
 
 	userIngressBasicAuthDecoded, err := utils.DecodeBase64(userIngressBasicAuth)
@@ -592,8 +616,8 @@ func (b *Botanist) DeploySeedLogging() error {
 
 	ct := b.Shoot.Info.CreationTimestamp.Time
 
-	sgFluentdSecret, err = b.K8sSeedClient.GetSecret(common.GardenNamespace, "fluentd-es-sg-credentials")
-	if err != nil {
+	sgFluentdSecret := &corev1.Secret{}
+	if err = b.K8sSeedClient.Client().Get(ctx, kutil.Key(common.GardenNamespace, "fluentd-es-sg-credentials"), sgFluentdSecret); err != nil {
 		return err
 	}
 

@@ -15,6 +15,7 @@
 package seed
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -39,6 +40,7 @@ import (
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *Controller) seedAdd(obj interface{}) {
@@ -192,7 +194,7 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 				secretFinalizers := sets.NewString(secret.Finalizers...)
 				secretFinalizers.Delete(gardenv1beta1.ExternalGardenerName)
 				secret.Finalizers = secretFinalizers.UnsortedList()
-				if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil && !apierrors.IsNotFound(err) {
+				if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); client.IgnoreNotFound(err) != nil {
 					seedLogger.Error(err.Error())
 					return err
 				}
@@ -235,11 +237,11 @@ func (c *defaultControl) ReconcileSeed(obj *gardenv1beta1.Seed, key string) erro
 	secretFinalizers := sets.NewString(secret.Finalizers...)
 	if !secretFinalizers.Has(gardenv1beta1.ExternalGardenerName) {
 		secretFinalizers.Insert(gardenv1beta1.ExternalGardenerName)
-	}
-	secret.Finalizers = secretFinalizers.UnsortedList()
-	if _, err := c.k8sGardenClient.UpdateSecretObject(secret); err != nil {
-		seedLogger.Error(err.Error())
-		return err
+		secret.Finalizers = secretFinalizers.UnsortedList()
+		if err := c.k8sGardenClient.Client().Update(context.TODO(), secret); err != nil {
+			seedLogger.Error(err.Error())
+			return err
+		}
 	}
 
 	// Initialize conditions based on the current status.

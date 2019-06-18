@@ -24,7 +24,7 @@ const (
 // As of this writing, Packet does not have an object store of its own. In the future, it may have one, and thus
 // this will start to use it.
 // Conversely, Gardener is working towards supporting object stores in a different provider than the one whose infra
-// is being deployed. Once that is in, this woudl (optionally) run backups to AWS S3, Google Cloud, etc.
+// is being deployed. Once that is in, this would (optionally) run backups to AWS S3, Google Cloud, etc.
 // See https://github.com/gardener/gardener/pull/932
 func (b *PacketBotanist) DeployBackupInfrastructure() error {
 	return nil
