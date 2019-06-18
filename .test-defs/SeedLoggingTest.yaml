@@ -8,7 +8,7 @@ spec:
   description: Tests shoot control plane logging.
 
   activeDeadlineSeconds: 600
-  labels: ["default"]
+  labels: [ "logging", "beta" ]
 
   command: [bash, -c]
   args:

@@ -6,7 +6,7 @@ spec:
   description: Tests NetworkPolicies between various components.
 
   activeDeadlineSeconds: 1800
-  labels: ["default"]
+  labels: ["beta"]
   behavior: ["serial"]
 
   command: [bash, -c]
