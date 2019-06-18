@@ -134,14 +134,6 @@ func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
 	return err
 }
 
-// DeleteDeprecatedCloudMetadataServiceNetworkPolicy deletes old DEPRECATED Shoot network policy that allows access to the meta-data service only from
-// the cloud-controller-manager and the kube-controller-manager
-// DEPRECATED.
-// TODO: Remove this after several releases.
-func (b *Botanist) DeleteDeprecatedCloudMetadataServiceNetworkPolicy(ctx context.Context) error {
-	return b.ChartApplierSeed.DeleteChart(ctx, filepath.Join(chartPathControlPlane, "deprecated-network-policies"), b.Shoot.SeedNamespace, "deprecated-network-policies")
-}
-
 // DeleteKubeAPIServer deletes the kube-apiserver deployment in the Seed cluster which holds the Shoot's control plane.
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	deploy := &appsv1.Deployment{
