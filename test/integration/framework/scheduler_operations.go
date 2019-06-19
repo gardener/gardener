@@ -17,12 +17,13 @@ package framework
 import (
 	"context"
 	"fmt"
+	"time"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -56,7 +57,7 @@ func NewGardenSchedulerTest(ctx context.Context, shootGardenTest *ShootGardenerT
 	}
 
 	allSeeds := &gardenv1beta1.SeedList{}
-	if err := shootGardenTest.GardenClient.Client().List(ctx, &client.ListOptions{}, allSeeds); err != nil {
+	if err := shootGardenTest.GardenClient.Client().List(ctx, allSeeds); err != nil {
 		return nil, err
 	}
 

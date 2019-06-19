@@ -66,12 +66,14 @@ func FinalizeAll(ctx context.Context, c client.Client, list runtime.Object) erro
 		}
 
 		fns = append(fns, func(ctx context.Context) error {
-			// TODO: Use `Patch` instead of `Update` once there is a release of `Patch`.
-			accessor.SetFinalizers(nil)
-			if err := c.Update(ctx, obj); !apierrors.IsNotFound(err) {
+			objCopy := obj.DeepCopyObject()
+			copyAccessor, err := meta.Accessor(objCopy)
+			if err != nil {
 				return err
 			}
-			return nil
+
+			copyAccessor.SetFinalizers(nil)
+			return c.Patch(ctx, obj, client.MergeFrom(objCopy))
 		})
 		return nil
 	}); err != nil {
@@ -148,10 +150,10 @@ func CheckObjectsRemaining(list runtime.Object) error {
 func CheckObjectsRemainingMatching(
 	ctx context.Context,
 	c client.Client,
-	opts *client.ListOptions,
 	list runtime.Object,
+	opts ...client.ListOptionFunc,
 ) error {
-	if err := c.List(ctx, opts, list); err != nil {
+	if err := c.List(ctx, list, opts...); err != nil {
 		return err
 	}
 
@@ -164,12 +166,12 @@ func CheckObjectsRemainingMatching(
 func DeleteMatching(
 	ctx context.Context,
 	c client.Client,
-	selector *client.ListOptions,
 	list runtime.Object,
-	finalize bool,
-	opts ...client.DeleteOptionFunc,
+	opts ...CleanOptionFunc,
 ) error {
-	if err := c.List(ctx, selector, list); err != nil {
+	cleanOptions := &CleanOptions{}
+	cleanOptions.ApplyOptions(opts)
+	if err := c.List(ctx, list, cleanOptions.ListOpts...); err != nil {
 		return err
 	}
 
@@ -177,7 +179,7 @@ func DeleteMatching(
 		return nil
 	}
 
-	if finalize {
+	if cleanOptions.Finalize {
 		if err := FinalizeAll(ctx, c, list); err != nil {
 			return err
 		}
@@ -185,24 +187,61 @@ func DeleteMatching(
 
 	// TODO: Make this a `DeleteCollection` as soon it is in the controller-runtime:
 	// https://github.com/kubernetes-sigs/controller-runtime/pull/324
-	return DeleteAll(ctx, c, list, opts...)
+	return DeleteAll(ctx, c, list, cleanOptions.DeleteOpts...)
+}
+
+// CleanOptions are options for cleaning a set of resources.
+// TODO: Adapt / remove this once `DeleteCollection` is in the controller-runtime.
+type CleanOptions struct {
+	Finalize   bool
+	DeleteOpts []client.DeleteOptionFunc
+	ListOpts   []client.ListOptionFunc
+}
+
+// ApplyOptions applies the given optFuncs to the CleanOptions.
+func (o *CleanOptions) ApplyOptions(optFuncs []CleanOptionFunc) {
+	for _, optFunc := range optFuncs {
+		optFunc(o)
+	}
+}
+
+// CleanOptionFunc is a function that modifies the given CleanOptions.
+type CleanOptionFunc func(*CleanOptions)
+
+// DeleteOptions creates a CleanOptionFunc that adds all the DeleteOptionFuncs to the CleanOptions.
+func DeleteOptions(deleteOpts ...client.DeleteOptionFunc) CleanOptionFunc {
+	return func(opts *CleanOptions) {
+		opts.DeleteOpts = append(opts.DeleteOpts, deleteOpts...)
+	}
+}
+
+// ListOptions creates a CleanOptionFunc that adds all the ListOptionFuncs to the CleanOptions.
+func ListOptions(listOpts ...client.ListOptionFunc) CleanOptionFunc {
+	return func(opts *CleanOptions) {
+		opts.ListOpts = append(opts.ListOpts, listOpts...)
+	}
+}
+
+// Finalize enforces finalizing objects before cleaning them.
+var Finalize = func(o *CleanOptions) {
+	o.Finalize = true
 }
 
 // CleanMatching deletes all objects matching `deleteOpts`, then it checks if there are no objects left matching `checkOpts`.
 func CleanMatching(
 	ctx context.Context,
 	c client.Client,
-	deleteOpts,
-	checkOpts *client.ListOptions,
 	list runtime.Object,
-	finalize bool,
-	opts ...client.DeleteOptionFunc,
+	opts ...CleanOptionFunc,
 ) error {
-	if err := DeleteMatching(ctx, c, deleteOpts, list, finalize, opts...); err != nil {
+	if err := DeleteMatching(ctx, c, list, opts...); err != nil {
 		return err
 	}
 
-	return CheckObjectsRemainingMatching(ctx, c, checkOpts, list)
+	cleanOptions := &CleanOptions{}
+	cleanOptions.ApplyOptions(opts)
+
+	return CheckObjectsRemainingMatching(ctx, c, list, cleanOptions.ListOpts...)
 }
 
 // RetryCleanMatchingUntil repeatedly tries to `CleanMatching` objects.
@@ -210,14 +249,11 @@ func RetryCleanMatchingUntil(
 	ctx context.Context,
 	interval time.Duration,
 	c client.Client,
-	deleteOpts,
-	checkOpts *client.ListOptions,
 	list runtime.Object,
-	finalize bool,
-	opts ...client.DeleteOptionFunc,
+	opts ...CleanOptionFunc,
 ) error {
 	return retry.Until(ctx, interval, func(ctx context.Context) (done bool, err error) {
-		if err := CleanMatching(ctx, c, deleteOpts, checkOpts, list, finalize, opts...); err != nil {
+		if err := CleanMatching(ctx, c, list, opts...); err != nil {
 			if AreObjectsRemaining(err) {
 				return retry.MinorError(err)
 			}

@@ -17,8 +17,9 @@ package plant
 import (
 	"context"
 	"fmt"
-	"k8s.io/client-go/discovery"
 	"sync"
+
+	"k8s.io/client-go/discovery"
 
 	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
 
@@ -49,7 +50,7 @@ type HealthChecker struct {
 // CheckPlantClusterNodes checks whether cluster nodes in the given listers are complete and healthy.
 func (h *HealthChecker) CheckPlantClusterNodes(ctx context.Context, condition gardencorev1alpha1.Condition) gardencorev1alpha1.Condition {
 	nodeList := &corev1.NodeList{}
-	err := h.plantClient.List(ctx, &client.ListOptions{}, nodeList)
+	err := h.plantClient.List(ctx, nodeList)
 	if err != nil {
 		return helper.UpdatedConditionUnknownError(condition, err)
 	}
@@ -87,7 +88,7 @@ func (h *HealthChecker) makePlantNodeLister(ctx context.Context, options *client
 
 		onceBody = func() {
 			nodeList := &corev1.NodeList{}
-			err = h.plantClient.List(ctx, options, nodeList)
+			err = h.plantClient.List(ctx, nodeList, client.UseListOptions(options))
 			if err != nil {
 				return
 			}

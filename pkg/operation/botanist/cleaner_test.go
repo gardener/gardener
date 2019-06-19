@@ -18,6 +18,8 @@ import (
 	"context"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -28,7 +30,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var _ = Describe("Cleaner", func() {
@@ -78,7 +79,7 @@ var _ = Describe("Cleaner", func() {
 		It("should update the finalizers of all objects, if necessary", func() {
 			ctx := context.TODO()
 
-			c.EXPECT().Update(ctx, &cm2)
+			c.EXPECT().Patch(ctx, &cm2WithFinalizer, client.MergeFrom(&cm2))
 
 			Expect(FinalizeAll(ctx, c, &cmListWithFinalizer)).To(Succeed())
 		})
@@ -98,25 +99,23 @@ var _ = Describe("Cleaner", func() {
 		It("should fetch the items and succeed if there are no items", func() {
 			var (
 				ctx  = context.TODO()
-				opts *client.ListOptions
 				list = &corev1.ConfigMapList{}
 			)
 
-			c.EXPECT().List(ctx, opts, list)
+			c.EXPECT().List(ctx, list)
 
-			Expect(CheckObjectsRemainingMatching(ctx, c, opts, list)).To(Succeed())
+			Expect(CheckObjectsRemainingMatching(ctx, c, list)).To(Succeed())
 		})
 
 		It("should fetch the items and fail if there are items left", func() {
 			var (
 				ctx  = context.TODO()
-				opts *client.ListOptions
 				list = &corev1.ConfigMapList{}
 			)
 
-			c.EXPECT().List(ctx, opts, list).SetArg(2, cmList)
+			c.EXPECT().List(ctx, list).SetArg(1, cmList)
 
-			err := CheckObjectsRemainingMatching(ctx, c, opts, list)
+			err := CheckObjectsRemainingMatching(ctx, c, list)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(NewObjectsRemaining(cmObjects)))
 		})
@@ -126,30 +125,28 @@ var _ = Describe("Cleaner", func() {
 		It("should delete the matching items", func() {
 			var (
 				ctx  = context.TODO()
-				opts *client.ListOptions
 				list = &corev1.ConfigMapList{}
 			)
 
-			listCall := c.EXPECT().List(ctx, opts, list).SetArg(2, cmList)
+			listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
 			c.EXPECT().Delete(ctx, &cm1).After(listCall)
 			c.EXPECT().Delete(ctx, &cm2).After(listCall)
 
-			Expect(DeleteMatching(ctx, c, opts, list, false)).To(Succeed())
+			Expect(DeleteMatching(ctx, c, list)).To(Succeed())
 		})
 
 		It("should finalize and delete the matching items", func() {
 			var (
 				ctx  = context.TODO()
-				opts *client.ListOptions
 				list = &corev1.ConfigMapList{}
 			)
 
-			listCall := c.EXPECT().List(ctx, opts, list).SetArg(2, cmListWithFinalizer)
-			updateCall := c.EXPECT().Update(ctx, &cm2).After(listCall)
-			c.EXPECT().Delete(ctx, &cm1).After(updateCall)
-			c.EXPECT().Delete(ctx, &cm2).After(updateCall)
+			listCall := c.EXPECT().List(ctx, list, gomock.Any()).SetArg(1, cmListWithFinalizer)
+			patchCall := c.EXPECT().Patch(ctx, &cm2WithFinalizer, client.MergeFrom(&cm2)).After(listCall).SetArg(1, cm2)
+			c.EXPECT().Delete(ctx, &cm1).After(patchCall)
+			c.EXPECT().Delete(ctx, &cm2).After(patchCall)
 
-			Expect(DeleteMatching(ctx, c, opts, list, true)).To(Succeed())
+			Expect(DeleteMatching(ctx, c, list, Finalize)).To(Succeed())
 		})
 	})
 
@@ -157,35 +154,33 @@ var _ = Describe("Cleaner", func() {
 		It("should delete the matching items and then check whether something is left", func() {
 			var (
 				ctx  = context.TODO()
-				opts *client.ListOptions
 				list = &corev1.ConfigMapList{}
 			)
 
-			listCall := c.EXPECT().List(ctx, opts, list).SetArg(2, cmList)
+			listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
 
 			deleteCall1 := c.EXPECT().Delete(ctx, &cm1).After(listCall)
 			deleteCall2 := c.EXPECT().Delete(ctx, &cm2).After(listCall)
 
-			c.EXPECT().List(ctx, opts, &cmList).SetArg(2, corev1.ConfigMapList{}).After(deleteCall1).After(deleteCall2)
+			c.EXPECT().List(ctx, &cmList).SetArg(1, corev1.ConfigMapList{}).After(deleteCall1).After(deleteCall2)
 
-			Expect(CleanMatching(ctx, c, opts, opts, list, false)).To(Succeed())
+			Expect(CleanMatching(ctx, c, list)).To(Succeed())
 		})
 
 		It("should delete the matching items and fail if something is left", func() {
 			var (
 				ctx  = context.TODO()
-				opts *client.ListOptions
 				list = &corev1.ConfigMapList{}
 			)
 
-			listCall := c.EXPECT().List(ctx, opts, list).SetArg(2, cmList)
+			listCall := c.EXPECT().List(ctx, list).SetArg(1, cmList)
 
 			deleteCall1 := c.EXPECT().Delete(ctx, &cm1).After(listCall)
 			deleteCall2 := c.EXPECT().Delete(ctx, &cm2).After(listCall)
 
-			c.EXPECT().List(ctx, opts, &cmList).After(deleteCall1).After(deleteCall2)
+			c.EXPECT().List(ctx, &cmList).After(deleteCall1).After(deleteCall2)
 
-			err := CleanMatching(ctx, c, opts, opts, list, false)
+			err := CleanMatching(ctx, c, list)
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(Equal(NewObjectsRemaining(cmObjects)))
 		})
@@ -194,27 +189,25 @@ var _ = Describe("Cleaner", func() {
 	Describe("#RetryCleanMatchingUntil", func() {
 		It("should retry cleaning until there are no resources left", func() {
 			var (
-				ctx        = context.TODO()
-				deleteOpts *client.ListOptions
-				checkOpts  *client.ListOptions
-				list       = corev1.ConfigMapList{}
+				ctx  = context.TODO()
+				list = corev1.ConfigMapList{}
 			)
 
-			listCall1 := c.EXPECT().List(ctx, deleteOpts, &list).SetArg(2, cmList)
+			listCall1 := c.EXPECT().List(ctx, &list).SetArg(1, cmList)
 
 			deleteCall1 := c.EXPECT().Delete(ctx, &cm1).After(listCall1)
 			deleteCall2 := c.EXPECT().Delete(ctx, &cm2).After(listCall1)
 
-			listCall2 := c.EXPECT().List(ctx, checkOpts, &cmList).After(deleteCall1).After(deleteCall2)
+			listCall2 := c.EXPECT().List(ctx, &cmList).After(deleteCall1).After(deleteCall2)
 
-			listCall3 := c.EXPECT().List(ctx, deleteOpts, &cmList).After(listCall2)
+			listCall3 := c.EXPECT().List(ctx, &cmList).After(listCall2)
 
 			deleteCall3 := c.EXPECT().Delete(ctx, &cm1).After(listCall3)
 			deleteCall4 := c.EXPECT().Delete(ctx, &cm2).After(listCall3)
 
-			c.EXPECT().List(ctx, checkOpts, &list).SetArg(2, list).After(deleteCall3).After(deleteCall4)
+			c.EXPECT().List(ctx, &list).SetArg(1, list).After(deleteCall3).After(deleteCall4)
 
-			Expect(RetryCleanMatchingUntil(ctx, 0*time.Second, c, deleteOpts, checkOpts, &list, false)).To(Succeed())
+			Expect(RetryCleanMatchingUntil(ctx, 0*time.Second, c, &list)).To(Succeed())
 		})
 	})
 })

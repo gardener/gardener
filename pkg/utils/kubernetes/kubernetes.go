@@ -66,6 +66,16 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj runtime.Object, tr
 	return c.Update(ctx, obj)
 }
 
+// Limit sets the given Limit on client.ListOptions.
+func Limit(limit int64) client.ListOptionFunc {
+	return func(options *client.ListOptions) {
+		if options.Raw == nil {
+			options.Raw = &metav1.ListOptions{}
+		}
+		options.Raw.Limit = limit
+	}
+}
+
 func nameAndNamespace(namespaceOrName string, nameOpt ...string) (namespace, name string) {
 	if len(nameOpt) > 1 {
 		panic(fmt.Sprintf("more than name/namespace for key specified: %s/%v", namespaceOrName, nameOpt))

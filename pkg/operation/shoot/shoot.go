@@ -119,7 +119,7 @@ func New(k8sGardenClient kubernetes.Interface, k8sGardenInformers gardeninformer
 
 func calculateExtensions(gardenClient client.Client, shoot *gardenv1beta1.Shoot, seedNamespace string) (map[string]Extension, error) {
 	var controllerRegistrations = &corev1alpha1.ControllerRegistrationList{}
-	if err := gardenClient.List(context.TODO(), nil, controllerRegistrations); err != nil {
+	if err := gardenClient.List(context.TODO(), controllerRegistrations); err != nil {
 		return nil, err
 	}
 	return MergeExtensions(controllerRegistrations.Items, shoot.Spec.Extensions, seedNamespace)
