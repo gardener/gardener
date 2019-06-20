@@ -61,7 +61,11 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
+        {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - controller-manager
+        {{- else }}
+        - kube-controller-manager
+        {{- end }}
         - --allocate-node-cidrs=true
         - --attach-detach-reconcile-sync-period=1m0s
         - --controllers=*,bootstrapsigner,tokencleaner
