@@ -1,0 +1,15 @@
+apiVersion: {{ include "rbacversion" . }}
+kind: RoleBinding
+metadata:
+  name: garden.sapcloud.io:psp:calico-kube-controllers
+  namespace: kube-system
+  labels:
+    addonmanager.kubernetes.io/mode: Reconcile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: garden.sapcloud.io:psp:kube-system:calico-kube-controllers
+subjects:
+- kind: ServiceAccount
+  name: calico-kube-controllers
+  namespace: kube-system

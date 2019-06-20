@@ -413,26 +413,37 @@ spec:
       nodeSelector:
         beta.kubernetes.io/os: linux
       tolerations:
-        # Mark the pod as a critical add-on for rescheduling.
-        - key: CriticalAddonsOnly
-          operator: Exists
-        - key: node-role.kubernetes.io/master
-          effect: NoSchedule
+      # Mark the pod as a critical add-on for rescheduling.
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
       serviceAccountName: calico-kube-controllers
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
       containers:
-        - name: calico-kube-controllers
-          image: {{ index .Values.images "calico-kube-controllers" }}
-          env:
-            # Choose which controllers to run.
-            - name: ENABLED_CONTROLLERS
-              value: node
-            - name: DATASTORE_TYPE
-              value: kubernetes
-          readinessProbe:
-            exec:
-              command:
-              - /usr/bin/check-status
-              - -r
+      - name: calico-kube-controllers
+        image: {{ index .Values.images "calico-kube-controllers" }}
+        env:
+        # Choose which controllers to run.
+        - name: ENABLED_CONTROLLERS
+          value: node
+        - name: DATASTORE_TYPE
+          value: kubernetes
+        readinessProbe:
+          exec:
+            command:
+            - /usr/bin/check-status
+            - -r
+        securityContext:
+          capabilities:
+            drop:
+            - ALL
+          allowPrivilegeEscalation: true
+          # Health checks are written on a file which is
+          # writable only to root
+          privileged: true
 
 ---
 # Create all the CustomResourceDefinitions needed for
