@@ -37,6 +37,9 @@ type LastError struct {
 	// Well-defined error codes of the last error(s).
 	// +optional
 	Codes []ErrorCode `json:"codes,omitempty"`
+	// Last time the error was reported
+	// +optional
+	LastUpdateTime *metav1.Time `json:"lastUpdateTime,omitempty"`
 }
 
 // LastOperationType is a string alias.

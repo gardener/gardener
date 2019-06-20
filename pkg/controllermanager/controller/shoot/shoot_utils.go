@@ -66,12 +66,6 @@ func (s Status) OrWorse(other Status) Status {
 	return s
 }
 
-func formatError(message string, err error) *gardencorev1alpha1.LastError {
-	return &gardencorev1alpha1.LastError{
-		Description: fmt.Sprintf("%s (%s)", message, err.Error()),
-	}
-}
-
 // StatusLabelTransform transforms the shoot labels depending on the given Status.
 func StatusLabelTransform(status Status) func(*gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 	return func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {

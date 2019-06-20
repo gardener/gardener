@@ -14,7 +14,9 @@
 
 package core
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 // ErrorCode is a string alias.
 type ErrorCode string
@@ -37,6 +39,8 @@ type LastError struct {
 	// Well-defined error codes of the last error(s).
 	// +optional
 	Codes []ErrorCode
+	// Last time the error was reported
+	LastUpdateTime *metav1.Time
 }
 
 // LastOperationType is a string alias.

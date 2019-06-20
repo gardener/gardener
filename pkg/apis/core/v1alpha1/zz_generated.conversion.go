@@ -612,6 +612,7 @@ func Convert_core_Kubernetes_To_v1alpha1_Kubernetes(in *core.Kubernetes, out *Ku
 func autoConvert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastError, s conversion.Scope) error {
 	out.Description = in.Description
 	out.Codes = *(*[]core.ErrorCode)(unsafe.Pointer(&in.Codes))
+	out.LastUpdateTime = (*v1.Time)(unsafe.Pointer(in.LastUpdateTime))
 	return nil
 }
 
@@ -623,6 +624,7 @@ func Convert_v1alpha1_LastError_To_core_LastError(in *LastError, out *core.LastE
 func autoConvert_core_LastError_To_v1alpha1_LastError(in *core.LastError, out *LastError, s conversion.Scope) error {
 	out.Description = in.Description
 	out.Codes = *(*[]ErrorCode)(unsafe.Pointer(&in.Codes))
+	out.LastUpdateTime = (*v1.Time)(unsafe.Pointer(in.LastUpdateTime))
 	return nil
 }
 

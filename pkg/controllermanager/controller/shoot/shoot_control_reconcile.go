@@ -16,6 +16,7 @@ package shoot
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
@@ -49,23 +50,23 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		}
 		return utilretry.Ok()
 	}); err != nil {
-		return formatError("Failed to create a Botanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
 	}
 	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
-		return formatError("Failed to create a Seed CloudBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
 	}
 	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
 	if err != nil {
-		return formatError("Failed to create a Shoot CloudBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Shoot CloudBotanist (%s)", err.Error()))
 	}
 	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
 	if err != nil {
-		return formatError("Failed to create a HybridBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
 	}
 
 	if err := botanist.RequiredExtensionsExist(); err != nil {
-		return formatError("Failed to check whether all required extensions exist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether all required extensions exist (%s)", err.Error()))
 	}
 
 	var (
@@ -307,11 +308,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	err = f.Run(flow.Opts{Logger: o.Logger, ProgressReporter: o.ReportShootProgress})
 	if err != nil {
 		o.Logger.Errorf("Failed to reconcile Shoot %q: %+v", o.Shoot.Info.Name, err)
-
-		return &gardencorev1alpha1.LastError{
-			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err)),
-			Description: gardencorev1alpha1helper.FormatLastErrDescription(err),
-		}
+		return gardencorev1alpha1helper.LastError(gardencorev1alpha1helper.FormatLastErrDescription(err), gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err))...)
 	}
 
 	// Register the Shoot as Seed cluster if it was annotated properly and in the garden namespace

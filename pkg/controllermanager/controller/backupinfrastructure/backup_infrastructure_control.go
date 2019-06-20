@@ -258,11 +258,11 @@ func (c *defaultControl) reconcileBackupInfrastructure(o *operation.Operation) *
 	// We create botanists (which will do the actual work).
 	botanist, err := botanistpkg.New(o)
 	if err != nil {
-		return formatError("Failed to create a Botanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
 	}
 	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
-		return formatError("Failed to create a Seed CloudBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
 	}
 
 	var (
@@ -290,11 +290,7 @@ func (c *defaultControl) reconcileBackupInfrastructure(o *operation.Operation) *
 	})
 	if err != nil {
 		o.Logger.Errorf("Failed to reconcile backup infrastructure %q: %+v", o.BackupInfrastructure.Name, err)
-
-		return &gardencorev1alpha1.LastError{
-			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err)),
-			Description: gardencorev1alpha1helper.FormatLastErrDescription(err),
-		}
+		return gardencorev1alpha1helper.LastError(gardencorev1alpha1helper.FormatLastErrDescription(err), gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err))...)
 	}
 
 	o.Logger.Infof("Successfully reconciled backup infrastructure %q", o.BackupInfrastructure.Name)
@@ -306,7 +302,7 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 	// We create botanists (which will do the actual work).
 	botanist, err := botanistpkg.New(o)
 	if err != nil {
-		return formatError("Failed to create a Botanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
 	}
 
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
@@ -319,12 +315,12 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 		return nil
 	}
 	if err != nil {
-		return formatError("Failed to retrieve the backup namespace in the Seed cluster", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the backup namespace in the Seed cluster (%s)", err.Error()))
 	}
 
 	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
-		return formatError("Failed to create a Seed CloudBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
 	}
 
 	// We check whether the Backup namespace in the Seed cluster is already in a terminating state, i.e. whether
@@ -358,11 +354,7 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 	})
 	if err != nil {
 		o.Logger.Errorf("Failed to delete backup infrastructure %q: %+v", o.BackupInfrastructure.Name, err)
-
-		return &gardencorev1alpha1.LastError{
-			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(err),
-			Description: err.Error(),
-		}
+		return gardencorev1alpha1helper.LastError(err.Error(), gardencorev1alpha1helper.ExtractErrorCodes(err)...)
 	}
 
 	o.Logger.Infof("Successfully deleted backup infrastructure %q", o.BackupInfrastructure.Name)
@@ -425,12 +417,6 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 
 func computeGracePeriod(config *config.ControllerManagerConfiguration) time.Duration {
 	return time.Hour * 24 * time.Duration(*config.Controllers.BackupInfrastructure.DeletionGracePeriodDays)
-}
-
-func formatError(message string, err error) *gardencorev1alpha1.LastError {
-	return &gardencorev1alpha1.LastError{
-		Description: fmt.Sprintf("%s (%s)", message, err.Error()),
-	}
 }
 
 func nextReconcileScheduleReached(obj *gardenv1beta1.BackupInfrastructure, syncPeriod time.Duration) bool {
