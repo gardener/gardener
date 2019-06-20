@@ -666,15 +666,6 @@ func (b *Botanist) DeploySeedLogging() error {
 func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 	dependencyWatchdogConfig := map[string]interface{}{
 		"replicas": b.Shoot.GetReplicas(1),
-		"dependencywatchdog": map[string]interface{}{
-			"service": map[string]interface{}{
-				"name": "etcd-main-client",
-				"labels": map[string]interface{}{
-					"app":  "etcd-statefulset",
-					"role": "main",
-				},
-			},
-		},
 	}
 
 	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependencyWatchdogDeploymentName)

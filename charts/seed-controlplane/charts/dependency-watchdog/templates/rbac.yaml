@@ -4,16 +4,12 @@ kind: ServiceAccount
 metadata:
   name: dependency-watchdog
   namespace: {{ .Release.Namespace }}
-  labels:
-{{ toYaml .Values.dependencywatchdog.labels | indent 4 }}
 ---
 apiVersion: {{ include "rbacversion" . }}
 kind: RoleBinding
 metadata:
   name: gardener.cloud:dependency-watchdog:role-binding
   namespace: {{ .Release.Namespace }}
-  labels:
-{{ toYaml .Values.dependencywatchdog.labels | indent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
@@ -28,8 +24,6 @@ kind: Role
 metadata:
   name: gardener.cloud:dependency-watchdog:role
   namespace: {{ .Release.Namespace }}
-  labels:
-{{ toYaml .Values.dependencywatchdog.labels | indent 4 }}
 rules:
 - apiGroups:
   - ""
