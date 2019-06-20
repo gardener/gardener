@@ -174,7 +174,7 @@ func UpdateBackupInfrastructureAnnotations(backup *gardenv1beta1.BackupInfrastru
 // GetBackupInfrastructureOfShoot returns the BackupInfrastructure object of the shoot
 func GetBackupInfrastructureOfShoot(ctx  context.Context, shootGardenerTest *framework.ShootGardenerTest, shootObject *gardenv1beta1.Shoot) (*gardenv1beta1.BackupInfrastructure, error) {
 	backups := &gardenv1beta1.BackupInfrastructureList{}
-	err := shootGardenerTest.GardenClient.Client().List(ctx, &client.ListOptions{Namespace: shootObject.Namespace}, backups)
+	err := shootGardenerTest.GardenClient.Client().List(ctx, backups, client.InNamespace(shootObject.Namespace))
 	if err != nil {
 		return nil, err
 	}
