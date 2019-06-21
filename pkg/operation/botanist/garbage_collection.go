@@ -25,17 +25,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // PerformGarbageCollectionSeed performs garbage collection in the Shoot namespace in the Seed cluster,
 // i.e., it deletes old machine sets which have a desired=actual=0 replica count.
 func (b *Botanist) PerformGarbageCollectionSeed() error {
-	podList, err := b.K8sSeedClient.ListPods(b.Shoot.SeedNamespace, metav1.ListOptions{})
-	if err != nil {
+	podList := &corev1.PodList{}
+	if err := b.K8sSeedClient.Client().List(context.TODO(), podList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
 	}
 
-	if err := b.deleteStalePods(b.K8sSeedClient, podList); err != nil {
+	if err := b.deleteStalePods(b.K8sSeedClient.Client(), podList); err != nil {
 		return err
 	}
 
@@ -72,21 +73,21 @@ func (b *Botanist) PerformGarbageCollectionShoot() error {
 		namespace = metav1.NamespaceAll
 	}
 
-	podList, err := b.K8sShootClient.ListPods(namespace, metav1.ListOptions{})
-	if err != nil {
+	podList := &corev1.PodList{}
+	if err := b.K8sShootClient.Client().List(context.TODO(), podList, client.InNamespace(namespace)); err != nil {
 		return err
 	}
 
-	return b.deleteStalePods(b.K8sShootClient, podList)
+	return b.deleteStalePods(b.K8sShootClient.Client(), podList)
 }
 
-func (b *Botanist) deleteStalePods(client kubernetes.Interface, podList *corev1.PodList) error {
+func (b *Botanist) deleteStalePods(k8sClient client.Client, podList *corev1.PodList) error {
 	var result error
 
 	for _, pod := range podList.Items {
 		if strings.Contains(pod.Status.Reason, "Evicted") {
 			b.Logger.Debugf("Deleting pod %s as its reason is %s.", pod.Name, pod.Status.Reason)
-			if err := client.DeletePod(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 			continue
@@ -94,7 +95,7 @@ func (b *Botanist) deleteStalePods(client kubernetes.Interface, podList *corev1.
 
 		if common.ShouldObjectBeRemoved(&pod, common.GardenerDeletionGracePeriod) {
 			b.Logger.Debugf("Deleting stuck terminating pod %q", pod.Name)
-			if err := client.DeletePodForcefully(pod.Namespace, pod.Name); err != nil && !apierrors.IsNotFound(err) {
+			if err := k8sClient.Delete(context.TODO(), &pod, kubernetes.ForceDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 				result = multierror.Append(result, err)
 			}
 		}

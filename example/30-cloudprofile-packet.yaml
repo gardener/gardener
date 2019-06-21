@@ -15,7 +15,8 @@ spec:
       - name: unmanaged
       kubernetes:
         versions:
-        - 1.13.3
+        - 1.14.3
+        - 1.13.7
       machineImages:
       - name: coreos
         version: 2079.3.0

@@ -15,12 +15,17 @@
 package project
 
 import (
+	"context"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/sirupsen/logrus"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (c *defaultControl) delete(project *gardenv1beta1.Project, projectLogger logrus.FieldLogger) (bool, error) {
@@ -70,8 +75,6 @@ func (c *defaultControl) deleteNamespace(project *gardenv1beta1.Project, namespa
 		return true, nil
 	}
 
-	if err := c.k8sGardenClient.DeleteNamespace(namespaceName); err != nil && !apierrors.IsNotFound(err) {
-		return false, err
-	}
-	return false, nil
+	err = c.k8sGardenClient.Client().Delete(context.TODO(), namespace, kubernetes.DefaultDeleteOptionFuncs...)
+	return false, client.IgnoreNotFound(err)
 }

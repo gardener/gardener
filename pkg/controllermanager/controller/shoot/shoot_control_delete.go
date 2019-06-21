@@ -21,6 +21,7 @@ import (
 
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -79,7 +80,8 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 	// all resources have already been deleted. We can delete the Shoot resource as a consequence.
-	namespace, err := botanist.K8sSeedClient.GetNamespace(o.Shoot.SeedNamespace)
+	namespace := &corev1.Namespace{}
+	err := botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: o.Shoot.SeedNamespace}, namespace)
 	if apierrors.IsNotFound(err) {
 		o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", o.Shoot.SeedNamespace)
 		return nil
@@ -154,12 +156,12 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		refreshCloudControllerManager = g.Add(flow.Task{
 			Name:         "Refreshing cloud controller manager checksums",
-			Fn:           flow.SimpleTaskFn(botanist.RefreshCloudControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.RefreshCloudControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
 		})
 		refreshKubeControllerManager = g.Add(flow.Task{
 			Name:         "Refreshing Kubernetes controller manager checksums",
-			Fn:           flow.SimpleTaskFn(botanist.RefreshKubeControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.RefreshKubeControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
 		})
 		deploySecrets = g.Add(flow.Task{
@@ -220,12 +222,12 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		// resources).
 		deleteSeedMonitoring = g.Add(flow.Task{
 			Name:         "Deleting Shoot monitoring stack in Seed",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteSeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeleteSeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deleteKubeAddonManager = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes addon manager",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeleteKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		deleteExtensionResources = g.Add(flow.Task{
@@ -240,7 +242,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		deleteClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deleting cluster autoscaler",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeleteClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients),
 		})
 		waitUntilKubeAddonManagerDeleted = g.Add(flow.Task{
@@ -281,7 +283,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
+			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilWorkerDeleted),
 		})
 
@@ -331,7 +333,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 		})
 		deleteNamespace = g.Add(flow.Task{
 			Name:         "Deleting Shoot namespace in Seed",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
+			Fn:           flow.TaskFn(botanist.DeleteNamespace).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(syncPoint, destroyInternalDomainDNSRecord, deleteBackupInfrastructure, deleteKubeAPIServer),
 		})
 		_ = g.Add(flow.Task{

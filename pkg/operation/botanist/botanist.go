@@ -25,8 +25,10 @@ import (
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -101,15 +103,16 @@ func (b *Botanist) RegisterAsSeed(protected, visible *bool, minimumVolumeSize *s
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            secretName,
-			Namespace:       secretNamespace,
-			OwnerReferences: ownerReferences,
+			Name:      secretName,
+			Namespace: secretNamespace,
 		},
-		Type: corev1.SecretTypeOpaque,
-		Data: secretData,
 	}
-
-	if _, err := b.K8sGardenClient.CreateSecretObject(secret, true); err != nil {
+	if err := kutil.CreateOrUpdate(context.TODO(), b.K8sGardenClient.Client(), secret, func() error {
+		secret.ObjectMeta.OwnerReferences = ownerReferences
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = secretData
+		return nil
+	}); err != nil {
 		return err
 	}
 
@@ -160,13 +163,16 @@ func (b *Botanist) UnregisterAsSeed() error {
 		return err
 	}
 
-	if err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Delete(seed.Name, nil); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.Garden().GardenV1beta1().Seeds().Delete(seed.Name, nil); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	if err := b.K8sGardenClient.DeleteSecret(seed.Spec.SecretRef.Namespace, seed.Spec.SecretRef.Name); err != nil && !apierrors.IsNotFound(err) {
-		return err
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      seed.Spec.SecretRef.Name,
+			Namespace: seed.Spec.SecretRef.Namespace,
+		},
 	}
-	return nil
+	return client.IgnoreNotFound(b.K8sGardenClient.Client().Delete(context.TODO(), secret, kubernetes.DefaultDeleteOptionFuncs...))
 }
 
 // RequiredExtensionsExist checks whether all required extensions needed for an shoot operation exist.

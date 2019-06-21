@@ -354,7 +354,7 @@ func InjectCSIFeatureGates(kubeVersion string, featureGates map[string]bool) (ma
 }
 
 // DeleteLoggingStack deletes all resource of the EFK logging stack in the given namespace.
-func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error {
+func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace string) error {
 	if k8sClient == nil {
 		return errors.New("must provide non-nil kubernetes client to common.DeleteLoggingStack")
 	}
@@ -379,17 +379,14 @@ func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error 
 	// https://github.com/kubernetes-sigs/controller-runtime/pull/324
 
 	for _, list := range lists {
-		if err := k8sClient.Client().List(context.TODO(), list,
+		if err := k8sClient.List(ctx, list,
 			client.InNamespace(namespace),
 			client.MatchingLabels(map[string]string{GardenRole: GardenRoleLogging})); err != nil {
 			return err
 		}
 
 		if err := meta.EachListItem(list, func(obj runtime.Object) error {
-			if err := k8sClient.Client().Delete(context.TODO(), obj, kubernetes.DefaultDeleteOptionFuncs...); err != nil && !apierrors.IsNotFound(err) {
-				return err
-			}
-			return nil
+			return client.IgnoreNotFound(k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptionFuncs...))
 		}); err != nil {
 			return err
 		}
@@ -399,28 +396,58 @@ func DeleteLoggingStack(k8sClient kubernetes.Interface, namespace string) error 
 }
 
 // DeleteAlertmanager deletes all resources of the Alertmanager in a given namespace.
-func DeleteAlertmanager(k8sClient kubernetes.Interface, namespace string) error {
-	var (
-		services = []string{"alertmanager-client", "alertmanager"}
-		secrets  = []string{"alertmanager-basic-auth", "alertmanager-tls", "alertmanager-config"}
-	)
+func DeleteAlertmanager(ctx context.Context, k8sClient client.Client, namespace string) error {
+	objs := []runtime.Object{
+		&appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      AlertManagerStatefulSetName,
+				Namespace: namespace,
+			},
+		},
+		&extensionsv1beta1.Ingress{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager",
+				Namespace: namespace,
+			},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-client",
+				Namespace: namespace,
+			},
+		},
+		&corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager",
+				Namespace: namespace,
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-basic-auth",
+				Namespace: namespace,
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-tls",
+				Namespace: namespace,
+			},
+		},
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "alertmanager-config",
+				Namespace: namespace,
+			},
+		},
+	}
 
-	if err := k8sClient.DeleteStatefulSet(namespace, AlertManagerStatefulSetName); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	if err := k8sClient.DeleteIngress(namespace, "alertmanager"); err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
-	for _, svc := range services {
-		if err := k8sClient.DeleteService(namespace, svc); err != nil && !apierrors.IsNotFound(err) {
+	for _, obj := range objs {
+		if err := k8sClient.Delete(ctx, obj, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
-	for _, secret := range secrets {
-		if err := k8sClient.DeleteSecret(namespace, secret); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-	}
+
 	return nil
 }
 

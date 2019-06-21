@@ -23,6 +23,7 @@ import (
 	"time"
 
 	utilretry "github.com/gardener/gardener/pkg/utils/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -272,7 +273,7 @@ func (c *defaultControl) reconcileBackupInfrastructure(o *operation.Operation) *
 
 		deployBackupNamespace = g.Add(flow.Task{
 			Name: "Deploying backup namespace",
-			Fn:   flow.SimpleTaskFn(botanist.DeployBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:   flow.TaskFn(botanist.DeployBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 		})
 
 		_ = g.Add(flow.Task{
@@ -310,7 +311,9 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
 	// all resources have already been deleted. We can delete the BackupInfrastructure resource as a consequence.
-	namespace, err := botanist.K8sSeedClient.GetNamespace(common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name))
+	namespace := &corev1.Namespace{}
+	namespaceName := common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name)
+	err = botanist.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: namespaceName}, namespace)
 	if apierrors.IsNotFound(err) {
 		o.Logger.Infof("Did not find '%s' namespace in the Seed cluster - nothing to be done", common.GenerateBackupNamespaceName(o.BackupInfrastructure.Name))
 		return nil
@@ -339,7 +342,7 @@ func (c *defaultControl) deleteBackupInfrastructure(o *operation.Operation) *gar
 		})
 		deleteBackupNamespace = g.Add(flow.Task{
 			Name:         "Deleting backup namespace",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeleteBackupNamespace).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(destroyBackupInfrastructure),
 		})
 		_ = g.Add(flow.Task{

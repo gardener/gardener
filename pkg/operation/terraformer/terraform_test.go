@@ -15,6 +15,9 @@
 package terraformer
 
 import (
+	"context"
+	"testing"
+
 	mockclient "github.com/gardener/gardener/pkg/mock/controller-runtime/client"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/golang/mock/gomock"
@@ -24,7 +27,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"testing"
 )
 
 func TestTerraformer(t *testing.T) {
@@ -81,7 +83,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateConfigurationConfigMap(nil, client, namespace, name, main, variables)
+			actual, err := CreateOrUpdateConfigurationConfigMap(context.TODO(), client, namespace, name, main, variables)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -114,7 +116,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateStateConfigMap(nil, client, namespace, name, state)
+			actual, err := CreateOrUpdateStateConfigMap(context.TODO(), client, namespace, name, state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})
@@ -146,7 +148,7 @@ var _ = Describe("terraformer", func() {
 					Create(gomock.Any(), expected.DeepCopy()),
 			)
 
-			actual, err := CreateOrUpdateTFVarsSecret(nil, client, namespace, name, tfVars)
+			actual, err := CreateOrUpdateTFVarsSecret(context.TODO(), client, namespace, name, tfVars)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actual).To(Equal(expected))
 		})

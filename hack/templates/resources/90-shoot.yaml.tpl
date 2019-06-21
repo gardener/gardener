@@ -6,7 +6,7 @@
     values=yaml.load(open(context.get("values", "")), Loader=yaml.Loader)
 
   if context.get("cloud", "") == "":
-    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet,local} flag")
+    raise Exception("missing --var cloud={aws,azure,gcp,alicloud,openstack,packet} flag")
 
   def value(path, default):
     keys=str.split(path, ".")
@@ -25,25 +25,22 @@
   kubernetesVersion=""
   if cloud == "aws":
     region="eu-west-1"
-    kubernetesVersion="1.14.0"
+    kubernetesVersion="1.14.3"
   elif cloud == "azure" or cloud == "az":
     region="westeurope"
-    kubernetesVersion="1.14.0"
+    kubernetesVersion="1.14.3"
   elif cloud == "gcp":
     region="europe-west1"
-    kubernetesVersion="1.14.0"
+    kubernetesVersion="1.14.3"
   elif cloud == "alicloud":
     region="cn-beijing"
-    kubernetesVersion="1.14.0"
+    kubernetesVersion="1.14.3"
   elif cloud == "packet":
     region="ewr1"
-    kubernetesVersion="1.14.0"
+    kubernetesVersion="1.14.3"
   elif cloud == "openstack" or cloud == "os":
     region="europe-1"
-    kubernetesVersion="1.14.0"
-  elif cloud == "local":
-    region="local"
-    kubernetesVersion="1.14.0"
+    kubernetesVersion="1.14.3"
 %>---
 apiVersion: garden.sapcloud.io/v1beta1
 kind: Shoot
@@ -269,14 +266,6 @@ spec:
       % endif
       zones: ${value("spec.cloud.openstack.zones", ["europe-1a"])}
     % endif
-    % if cloud == "local":
-    local:
-      endpoint: ${value("spec.cloud.local.endpoint", "localhost:3777")} # endpoint service pointing to gardener-local-provider
-      networks:
-        workers: ${value("spec.cloud.local.networks.workers", ["192.168.99.200/25"])}
-  #   machineImage:
-  #     name: coreos
-    % endif
   kubernetes:
   # clusterAutoscaler:
   #   scaleDownUtilizationThreshold: 0.5
@@ -372,12 +361,8 @@ spec:
   #     SomeKubernetesFeature: true
   % endif
   dns:
-  % if cloud != "local":
   # provider: ${value("spec.dns.provider", "aws-route53")}
-  % else:
-    provider: unmanaged
-  % endif
-    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com") if cloud != "local" else "<local-kubernetes-ip>.nip.io"}<% hibernation = value("spec.hibernation", {}) %>
+    domain: ${value("spec.dns.domain", value("metadata.name", "johndoe-" + cloud) + "." + value("metadata.namespace", "garden-dev") + ".example.com")}<% hibernation = value("spec.hibernation", {}) %>
   % if hibernation != {}:
   hibernation: ${yaml.dump(hibernation, width=10000, default_flow_style=None)}
   % else:
@@ -394,7 +379,6 @@ spec:
       end: ${value("spec.maintenance.timeWindow.end", "230000+0100")}
     autoUpdate:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
-  % if cloud != "local":
   # Backup configuration for Shoot clusters is deprecated and no longer supported.
   # The responsibility for these settings has been shifted to Garden administrators.
   # This field will be removed in the future and is only kept for API compatibility reasons. It is not
@@ -402,7 +386,6 @@ spec:
   backup:
     schedule: ${value("backup.schedule", "\"0 */24 * * *\"")}
     maximum: ${value("backup.maximum", "7")}
-  % endif
   addons:
     # nginx-ingress addon is still supported but deprecated.
     # This field will be removed in the future. You should deploy your own ingress controller

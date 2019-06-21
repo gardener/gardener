@@ -68,8 +68,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.14.0
-        - 1.13.6
+        - 1.14.3
+        - 1.13.7
         - 1.12.9
         - 1.11.10
         - 1.10.13
@@ -170,8 +170,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.14.0
-        - 1.13.6
+        - 1.14.3
+        - 1.13.7
         - 1.12.9
         - 1.11.10
         - 1.10.13
@@ -269,8 +269,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.14.0
-        - 1.13.6
+        - 1.14.3
+        - 1.13.7
         - 1.12.9
         - 1.11.10
         - 1.10.13
@@ -360,8 +360,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
-        - 1.14.0
-        - 1.13.6
+        - 1.14.3
+        - 1.13.7
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -443,7 +443,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         versions:
-        - 1.13.3
+        - 1.14.3
+        - 1.13.7
         % endif
       machineImages:<% machineImages=value("spec.packet.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -528,8 +529,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % if kubernetesVersions != []:
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
-        - 1.14.0
-        - 1.13.6
+        - 1.14.3
+        - 1.13.7
         - 1.12.9
         - 1.11.10
         - 1.10.13

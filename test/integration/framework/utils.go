@@ -103,7 +103,7 @@ func (o *GardenerTestOperation) dashboardAvailable(ctx context.Context, url, use
 	}
 
 	httpRequest.SetBasicAuth(userName, password)
-	httpRequest.WithContext(ctx)
+	httpRequest = httpRequest.WithContext(ctx)
 
 	r, err := httpClient.Do(httpRequest)
 	if err != nil {

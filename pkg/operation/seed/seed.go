@@ -305,7 +305,7 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		sgFluentdPassword = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPassword])
 		sgFluentdPasswordHash = string(sgFluentdCredentials.Data[utilsecrets.DataKeyPasswordBcryptHash])
 	} else {
-		if err := common.DeleteLoggingStack(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
+		if err := common.DeleteLoggingStack(context.TODO(), k8sSeedClient.Client(), common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 	}
