@@ -58,6 +58,8 @@ allowedMetrics:
   - etcd_object_counts
   - process_max_fds
   - process_open_fds
+  - apiserver_audit_event_total
+  - apiserver_audit_error_total
   kubeControllerManager:
   - process_max_fds
   - process_open_fds
