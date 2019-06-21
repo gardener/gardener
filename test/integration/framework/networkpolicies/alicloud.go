@@ -33,9 +33,9 @@ var (
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-from-prometheus",
-			"allow-to-shoot-apiserver",
 			"allow-to-dns",
 			"allow-to-public-networks",
+			"allow-to-shoot-apiserver",
 			"deny-all",
 		),
 	}
@@ -116,7 +116,7 @@ func (a *AlicloudNetworkPolicy) ToSources() []Rule {
 		a.newSource(ElasticSearchInfo).Build(),
 		a.newSource(GrafanaInfo).AllowPod(PrometheusInfo).Build(),
 		a.newSource(KibanaInfo).AllowTargetPod(ElasticSearchInfo.FromPort("http")).Build(),
-		a.newSource(AddonManagerInfo).AllowPod(KubeAPIServerInfo).Build(),
+		a.newSource(AddonManagerInfo).AllowPod(KubeAPIServerInfo).AllowHost(SeedKubeAPIServer, ExternalHost).Build(),
 		a.newSource(AlicloudKubeControllerManagerInfoSecured).AllowPod(KubeAPIServerInfo).Build(),
 		a.newSource(AlicloudKubeControllerManagerInfoNotSecured).AllowPod(KubeAPIServerInfo).Build(),
 		a.newSource(KubeSchedulerInfoNotSecured).AllowPod(KubeAPIServerInfo).Build(),

@@ -303,6 +303,7 @@ var (
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-dns",
+			"allow-to-seed-apiserver",
 			"allow-to-shoot-apiserver",
 			"deny-all",
 		),

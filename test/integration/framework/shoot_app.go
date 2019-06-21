@@ -18,13 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/gardener/gardener/test/integration/framework/executor"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -51,7 +52,6 @@ const (
 	dashboardUserName    = "admin"
 	loggingUserName      = "admin"
 	elasticsearchLogging = "elasticsearch-logging"
-	elasticsearchPort    = 9200
 )
 
 // NewGardenTestOperation initializes a new test operation from created shoot Objects that can be used to issue commands against seeds and shoots
@@ -379,16 +379,6 @@ func EnsureDirectories(helm Helm) error {
 	return nil
 }
 
-// PodExecByLabel executes a command inside pods filtered by label
-func (o *GardenerTestOperation) PodExecByLabel(ctx context.Context, podLabels labels.Selector, podContainer, command, namespace string, client kubernetes.Interface) (io.Reader, error) {
-	pod, err := o.GetFirstRunningPodWithLabels(ctx, podLabels, namespace, client)
-	if err != nil {
-		return nil, err
-	}
-
-	return kubernetes.NewPodExecutor(client.RESTConfig()).Execute(ctx, pod.Namespace, pod.Name, podContainer, command)
-}
-
 // GetDashboardPodIP gets the dashboard IP
 func (o *GardenerTestOperation) GetDashboardPodIP(ctx context.Context) (string, error) {
 	dashboardLabels := labels.SelectorFromSet(labels.Set(map[string]string{
@@ -418,15 +408,29 @@ func (o *GardenerTestOperation) GetElasticsearchLogs(ctx context.Context, elasti
 		return nil, err
 	}
 
-	command := fmt.Sprintf("curl http://localhost:%d/%s/_search?q=kubernetes.pod_name:%s --user %s:%s", elasticsearchPort, index, podName, loggingUserName, loggingPassword)
-	reader, err := o.PodExecByLabel(ctx, elasticsearchLabels, elasticsearchLogging,
-		command, elasticsearchNamespace, client)
+	command := []string{
+		"curl",
+		fmt.Sprintf("http://localhost:9200/%s/_search?q=kubernetes.pod_name:%s", index, podName),
+		"--user",
+		fmt.Sprintf("%s:%s", loggingUserName, loggingPassword),
+	}
+	pod, err := o.GetFirstRunningPodWithLabels(ctx, elasticsearchLabels, elasticsearchNamespace, client)
+	if err != nil {
+		return nil, err
+	}
+	stdout, _, err := executor.NewExecutor(client).ExecCommandInContainerWithFullOutput(ctx,
+		elasticsearchNamespace,
+		pod.Name,
+		elasticsearchLogging,
+		command...,
+	)
+
 	if err != nil {
 		return nil, err
 	}
 
 	search := &SearchResponse{}
-	if err = json.NewDecoder(reader).Decode(search); err != nil {
+	if err = json.Unmarshal([]byte(stdout), search); err != nil {
 		return nil, err
 	}
 

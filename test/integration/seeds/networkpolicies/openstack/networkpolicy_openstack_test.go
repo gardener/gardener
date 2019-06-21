@@ -23,8 +23,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +32,7 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/test/integration/framework"
+	"github.com/gardener/gardener/test/integration/framework/executor"
 	networkpolicies "github.com/gardener/gardener/test/integration/framework/networkpolicies"
 	. "github.com/gardener/gardener/test/integration/shoots"
 	. "github.com/onsi/ginkgo"
@@ -118,7 +118,7 @@ var _ = Describe("Network Policy Testing", func() {
 			return trgPod
 		}
 
-		establishConnectionToHost = func(ctx context.Context, nsp *networkpolicies.NamespacedSourcePod, host string, port int32) (io.Reader, error) {
+		establishConnectionToHost = func(ctx context.Context, nsp *networkpolicies.NamespacedSourcePod, host string, port int32) (stdout, stderr string, err error) {
 			if !nsp.Pod.CheckVersion(shootTestOperations.Shoot) {
 				Skip("Source pod doesn't match Shoot version contstraints. Skipping.")
 			}
@@ -126,43 +126,35 @@ var _ = Describe("Network Policy Testing", func() {
 				Skip("Component doesn't match Seed Provider contstraints. Skipping.")
 			}
 			By(fmt.Sprintf("Checking for source Pod: %s is running", nsp.Pod.Name))
-			err := shootTestOperations.WaitUntilPodIsRunningWithLabels(ctx, nsp.Pod.Selector(), nsp.Namespace, shootTestOperations.SeedClient)
-			ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			ExpectWithOffset(1, shootTestOperations.WaitUntilPodIsRunningWithLabels(ctx, nsp.Pod.Selector(), nsp.Namespace, shootTestOperations.SeedClient)).NotTo(HaveOccurred())
 
-			By(fmt.Sprintf("Executing connectivity command from %s/%s to %s:%d", nsp.Namespace, nsp.Pod.Name, host, port))
-			command := fmt.Sprintf("nc -v -z -w 3 %s %d", host, port)
+			command := []string{"nc", "-vznw", "3", host, fmt.Sprint(port)}
+			By(fmt.Sprintf("Executing connectivity command in %s/%s to %s", nsp.Namespace, nsp.Pod.Name, strings.Join(command, " ")))
 
-			return shootTestOperations.PodExecByLabel(ctx, nsp.Pod.Selector(), "busybox-0", command, nsp.Namespace, shootTestOperations.SeedClient)
+			return executor.NewExecutor(shootTestOperations.SeedClient).
+				ExecCommandInContainerWithFullOutput(ctx, nsp.Namespace, nsp.Pod.Name, "busybox-0", command...)
 		}
 
 		assertCannotConnectToHost = func(ctx context.Context, sourcePod *networkpolicies.NamespacedSourcePod, host string, port int32) {
-			r, err := establishConnectionToHost(ctx, sourcePod, host, port)
+			_, stderr, err := establishConnectionToHost(ctx, sourcePod, host, port)
 			ExpectWithOffset(1, err).To(HaveOccurred())
-			bytes, err := ioutil.ReadAll(r)
-			ExpectWithOffset(1, err).NotTo(HaveOccurred())
-
 			By("Connection message is timed out\n")
-			ExpectWithOffset(1, string(bytes)).To(SatisfyAny(ContainSubstring("Connection timed out"), ContainSubstring("nc: bad address")))
+			ExpectWithOffset(1, stderr).To(SatisfyAny(ContainSubstring("Connection timed out"), ContainSubstring("nc: bad address")))
+		}
+
+		assertConnectToHost = func(ctx context.Context, sourcePod *networkpolicies.NamespacedSourcePod, targetHost *networkpolicies.Host, allowed bool) {
+			_, stderr, err := establishConnectionToHost(ctx, sourcePod, targetHost.HostName, targetHost.Port)
+			if allowed {
+				ExpectWithOffset(1, err).NotTo(HaveOccurred())
+			} else {
+				ExpectWithOffset(1, err).To(HaveOccurred())
+				ExpectWithOffset(1, stderr).To(SatisfyAny(BeEmpty(), ContainSubstring("Connection timed out"), ContainSubstring("nc: bad address")), "stderr has correct message")
+			}
 		}
 
 		assertCannotConnectToPod = func(ctx context.Context, sourcePod *networkpolicies.NamespacedSourcePod, targetPod *networkpolicies.NamespacedTargetPod) {
 			pod := getTargetPod(ctx, targetPod)
 			assertCannotConnectToHost(ctx, sourcePod, pod.Status.PodIP, targetPod.Port.Port)
-		}
-
-		assertConnectToHost = func(ctx context.Context, sourcePod *networkpolicies.NamespacedSourcePod, targetHost *networkpolicies.Host, allowed bool) {
-			r, err := establishConnectionToHost(ctx, sourcePod, targetHost.HostName, targetHost.Port)
-			if allowed {
-				ExpectWithOffset(1, err).NotTo(HaveOccurred())
-				ExpectWithOffset(1, r).NotTo(BeNil())
-			} else {
-				ExpectWithOffset(1, err).To(HaveOccurred())
-				bytes, err := ioutil.ReadAll(r)
-				ExpectWithOffset(1, err).NotTo(HaveOccurred())
-
-				By("Connection message is timed out\n")
-				ExpectWithOffset(1, string(bytes)).To(SatisfyAny(ContainSubstring("Connection timed out"), ContainSubstring("nc: bad address")))
-			}
 		}
 
 		assertConnectToPod = func(ctx context.Context, sourcePod *networkpolicies.NamespacedSourcePod, targetPod *networkpolicies.NamespacedTargetPod, allowed bool) {
@@ -385,6 +377,7 @@ var _ = Describe("Network Policy Testing", func() {
 			Ports: []networkpolicies.Port(nil),
 			ExpectedPolicies: sets.String{
 				"allow-to-dns":             sets.Empty{},
+				"allow-to-seed-apiserver":  sets.Empty{},
 				"allow-to-shoot-apiserver": sets.Empty{},
 				"deny-all":                 sets.Empty{}}}
 		GardenerResourceManager8080 = &networkpolicies.TargetPod{
@@ -1452,8 +1445,9 @@ var _ = Describe("Network Policy Testing", func() {
 			DefaultCIt(`should block connection to Pod "machine-controller-manager" at port 10258`, assertEgresssToMirroredPod(MachineControllerManager10258, false))
 			DefaultCIt(`should block connection to Pod "prometheus" at port 9090`, assertEgresssToMirroredPod(Prometheus9090, false))
 			DefaultCIt(`should block connection to "Metadata service" 169.254.169.254:80`, assertEgresssToHost(MetadataservicePort80, false))
-			DefaultCIt(`should block connection to "External host" 8.8.8.8:53`, assertEgresssToHost(ExternalhostPort53, false))
+			DefaultCIt(`should allow connection to "External host" 8.8.8.8:53`, assertEgresssToHost(ExternalhostPort53, true))
 			DefaultCIt(`should block connection to "Garden Prometheus" prometheus-web.garden:80`, assertEgresssToHost(GardenPrometheusPort80, false))
+			DefaultCIt(`should allow connection to "Seed Kube APIServer" kubernetes.default:443`, assertEgresssToHost(SeedKubeAPIServerPort443, true))
 		})
 
 		Context("kube-controller-manager-http", func() {
