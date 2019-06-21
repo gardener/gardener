@@ -32,7 +32,7 @@ spec:
         - {{ $address }}
 {{- end }}
 {{- end }}
-{{ template "global-network-policies.except-networks" .Values.privateNetworks }}
+{{ template "global-network-policies.except-to-networks" .Values.privateNetworks }}
   # TODO (mvladev): discover ports on every Seed cluster dynamically.
   # ports:
   # - protocol: TCP

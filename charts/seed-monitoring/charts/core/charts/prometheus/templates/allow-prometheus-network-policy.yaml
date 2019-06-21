@@ -17,10 +17,14 @@ spec:
     - podSelector:
         matchLabels:
           networking.gardener.cloud/from-prometheus: allowed
+  # TODO (mvladev): Remove this extra -to block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - to:
     - podSelector:
         matchLabels:
           app: etcd-statefulset
           garden.sapcloud.io/role: controlplane
+  # TODO (mvladev): Remove this extra -to block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - to:
     - podSelector:
         matchLabels:
           app: prometheus
@@ -28,6 +32,8 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
+  # TODO (mvladev): Remove this extra -to block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - to:
     - podSelector:
         matchLabels:
           component: alertmanager
@@ -36,6 +42,8 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
+  # TODO (mvladev): Remove this extra -to block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - to:
     - podSelector:
         matchLabels:
           app: vpa-exporter
@@ -49,6 +57,8 @@ spec:
         matchLabels:
           component: grafana
           garden.sapcloud.io/role: monitoring
+  # TODO (mvladev): Remove this extra -from block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - from:
     - podSelector:
         matchLabels:
           app: nginx-ingress

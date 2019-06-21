@@ -18,6 +18,13 @@ spec:
           app: kubernetes
           garden.sapcloud.io/role: controlplane
           role: apiserver
+    ports:
+    - protocol: TCP
+      port: {{ .Values.servicePorts.client }}
+    - protocol: TCP
+      port: {{ .Values.servicePorts.backuprestore }}
+  # TODO (mvladev): Remove this extra -from block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - from:
     - podSelector:
         matchLabels:
           app: prometheus

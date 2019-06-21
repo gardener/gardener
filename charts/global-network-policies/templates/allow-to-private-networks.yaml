@@ -14,9 +14,12 @@ spec:
   podSelector:
     matchLabels:
       networking.gardener.cloud/to-private-networks: allowed
+{{- if .Values.clusterNetworks }}
   egress:
-  - to:
-{{ template "global-network-policies.except-networks" .Values.privateNetworks }}
+{{ template "global-network-policies.except-to-networks" .Values.clusterNetworks }}
+{{- else }}
+  egress: []
+{{- end }}
   policyTypes:
   - Egress
   ingress: []

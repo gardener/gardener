@@ -23,6 +23,11 @@ spec:
       namespaceSelector:
         matchLabels:
           role: garden
+    ports:
+    - protocol: TCP
+      port: {{ .Values.global.elasticsearchPorts.db }}
+  # TODO (mvladev): Remove this extra -from block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - from:
     - podSelector:
         matchLabels:
           networking.gardener.cloud/to-elasticsearch: allowed

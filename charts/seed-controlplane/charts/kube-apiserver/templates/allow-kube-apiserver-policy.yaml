@@ -28,6 +28,11 @@ spec:
   - from:
     # allow all other Pods in the Seed cluster to access it.
     - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: {{ required ".securePort is required" .Values.securePort }}
+  # TODO (mvladev): Remove this extra -from block once Gardener stops supporting Kubernetes 1.10 for Seed clusters.
+  - from:
     # kube-apiserver can be accessed from anywhere using the LoadBalancer.
     - ipBlock:
         cidr: 0.0.0.0/0
