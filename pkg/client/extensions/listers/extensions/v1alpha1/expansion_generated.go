@@ -2,6 +2,14 @@
 
 package v1alpha1
 
+// BackupBucketListerExpansion allows custom methods to be added to
+// BackupBucketLister.
+type BackupBucketListerExpansion interface{}
+
+// BackupEntryListerExpansion allows custom methods to be added to
+// BackupEntryLister.
+type BackupEntryListerExpansion interface{}
+
 // ClusterListerExpansion allows custom methods to be added to
 // ClusterLister.
 type ClusterListerExpansion interface{}
