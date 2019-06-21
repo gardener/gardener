@@ -121,7 +121,7 @@ func shootClientInitializer(b *botanistpkg.Botanist) func() error {
 func (c *defaultCareControl) Care(shootObj *gardenv1beta1.Shoot, key string) error {
 	var (
 		shoot       = shootObj.DeepCopy()
-		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
+		shootLogger = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)
 	shootLogger.Debugf("[SHOOT CARE] %s", key)
 

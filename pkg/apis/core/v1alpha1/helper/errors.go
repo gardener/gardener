@@ -98,3 +98,8 @@ func FormatLastErrDescription(err error) string {
 	}
 	return errString
 }
+
+// LastError creates a new LastError with the given description and optional codes.
+func LastError(description string, codes ...gardencorev1alpha1.ErrorCode) *gardencorev1alpha1.LastError {
+	return &gardencorev1alpha1.LastError{Description: description, Codes: codes}
+}

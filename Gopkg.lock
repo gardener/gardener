@@ -1569,7 +1569,7 @@
   revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
 
 [[projects]]
-  digest = "1:59aa217597329931345928e3c256d92ab2f9c5bd29c4f31b7cea8bc67861ec94"
+  digest = "1:ba0b3fc2a9fe8bf70b1f1ece8f4c157f6508e1b21ee4d7532ccd59ec4afd7064"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/client",
@@ -1577,6 +1577,7 @@
     "pkg/client/fake",
     "pkg/internal/objectutil",
     "pkg/manager/signals",
+    "pkg/reconcile",
     "pkg/runtime/signals",
   ]
   pruneopts = "NUT"
@@ -1809,8 +1810,10 @@
     "k8s.io/kube-aggregator/pkg/controllers/autoregister",
     "k8s.io/kube-openapi/cmd/openapi-gen",
     "k8s.io/kube-openapi/pkg/common",
+    "k8s.io/utils/pointer",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/fake",
+    "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/runtime/signals",
   ]
   solver-name = "gps-cdcl"

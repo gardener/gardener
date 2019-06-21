@@ -105,7 +105,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("Quota controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.quotaQueue, "Quota", c.reconcileQuotaKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.quotaQueue, "Quota", c.reconcileQuotaKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

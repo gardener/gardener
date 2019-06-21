@@ -78,7 +78,7 @@ func (c *defaultQuotaControl) CheckQuota(shootObj *gardenv1beta1.Shoot, key stri
 	var (
 		clusterLifeTime *int
 		shoot           = shootObj.DeepCopy()
-		shootLogger     = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace, "")
+		shootLogger     = logger.NewShootLogger(logger.Logger, shoot.Name, shoot.Namespace)
 	)
 
 	secretBinding, err := c.k8sGardenInformers.SecretBindings().Lister().SecretBindings(shoot.Namespace).Get(shoot.Spec.Cloud.SecretBindingRef.Name)

@@ -20,8 +20,11 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gardener/gardener/pkg/version"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -571,4 +574,96 @@ func CurrentReplicaCount(client client.Client, namespace, deploymentName string)
 		return 0, nil
 	}
 	return *deployment.Spec.Replicas, nil
+}
+
+// RespectShootSyncPeriodOverwrite checks whether to respect the sync period overwrite of a Shoot or not.
+func RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite bool, shoot *gardenv1beta1.Shoot) bool {
+	return respectSyncPeriodOverwrite || shoot.Namespace == GardenNamespace
+}
+
+// ShouldIgnoreShoot determines whether a Shoot should be ignored or not.
+func ShouldIgnoreShoot(respectSyncPeriodOverwrite bool, shoot *gardenv1beta1.Shoot) bool {
+	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
+		return false
+	}
+
+	value, ok := shoot.Annotations[ShootIgnore]
+	if !ok {
+		return false
+	}
+
+	ignore, _ := strconv.ParseBool(value)
+	return ignore
+}
+
+// IsShootFailed checks if a Shoot is failed.
+func IsShootFailed(shoot *gardenv1beta1.Shoot) bool {
+	lastOperation := shoot.Status.LastOperation
+
+	return lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateFailed &&
+		shoot.Generation == shoot.Status.ObservedGeneration &&
+		shoot.Status.Gardener.Version == version.Get().GitVersion
+}
+
+// IsNowInEffectiveShootMaintenanceTimeWindow checks if the current time is in the effective
+// maintenance time window of the Shoot.
+func IsNowInEffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) bool {
+	return EffectiveShootMaintenanceTimeWindow(shoot).Contains(time.Now())
+}
+
+// IsUpToDate checks whether the Shoot's generation has changed or if the LastOperation status
+// is not Succeeded.
+func IsUpToDate(shoot *gardenv1beta1.Shoot) bool {
+	lastOperation := shoot.Status.LastOperation
+	return shoot.Generation != shoot.Status.ObservedGeneration ||
+		(lastOperation != nil && lastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded)
+}
+
+// SyncPeriodOfShoot determines the sync period of the given shoot.
+//
+// If no overwrite is allowed, the defaultMinSyncPeriod is returned.
+// Otherwise, the overwrite is parsed. If an error occurs or it is smaller than the defaultMinSyncPeriod,
+// the defaultMinSyncPeriod is returned. Otherwise, the overwrite is returned.
+func SyncPeriodOfShoot(respectSyncPeriodOverwrite bool, defaultMinSyncPeriod time.Duration, shoot *gardenv1beta1.Shoot) time.Duration {
+	if !RespectShootSyncPeriodOverwrite(respectSyncPeriodOverwrite, shoot) {
+		return defaultMinSyncPeriod
+	}
+
+	syncPeriodOverwrite, ok := shoot.Annotations[ShootSyncPeriod]
+	if !ok {
+		return defaultMinSyncPeriod
+	}
+
+	syncPeriod, err := time.ParseDuration(syncPeriodOverwrite)
+	if err != nil {
+		return defaultMinSyncPeriod
+	}
+
+	if syncPeriod < defaultMinSyncPeriod {
+		return defaultMinSyncPeriod
+	}
+	return syncPeriod
+}
+
+// EffectiveMaintenanceTimeWindow cuts a maintenance time window at the end with a guess of 15 minutes. It is subtracted from the end
+// of a maintenance time window to use a best-effort kind of finishing the operation before the end.
+// Generally, we can't make sure that the maintenance operation is done by the end of the time window anyway (considering large
+// clusters with hundreds of nodes, a rolling update will take several hours).
+func EffectiveMaintenanceTimeWindow(timeWindow *utils.MaintenanceTimeWindow) *utils.MaintenanceTimeWindow {
+	return timeWindow.WithEnd(timeWindow.End().Add(0, -15, 0))
+}
+
+// EffectiveShootMaintenanceTimeWindow returns the effective MaintenanceTimeWindow of the given Shoot.
+func EffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) *utils.MaintenanceTimeWindow {
+	maintenance := shoot.Spec.Maintenance
+	if maintenance == nil || maintenance.TimeWindow == nil {
+		return utils.AlwaysTimeWindow
+	}
+
+	timeWindow, err := utils.ParseMaintenanceTimeWindow(maintenance.TimeWindow.Begin, maintenance.TimeWindow.End)
+	if err != nil {
+		return utils.AlwaysTimeWindow
+	}
+
+	return EffectiveMaintenanceTimeWindow(timeWindow)
 }

@@ -63,20 +63,9 @@ var _ = Describe("logger", func() {
 				namespace := "core"
 				name := "shoot01"
 
-				shootLogger := NewShootLogger(logger, name, namespace, "")
+				shootLogger := NewShootLogger(logger, name, namespace)
 
 				Expect(shootLogger.Data).To(HaveKeyWithValue("shoot", fmt.Sprintf("%s/%s", namespace, name)))
-			})
-
-			It("should return an Entry object with additional fields (w/ operationID)", func() {
-				logger := NewLogger("info")
-				namespace := "core"
-				name := "shoot01"
-				operationID := "1234"
-
-				shootLogger := NewShootLogger(logger, name, namespace, operationID)
-
-				Expect(shootLogger.Data).To(HaveKeyWithValue("opid", operationID))
 			})
 		})
 

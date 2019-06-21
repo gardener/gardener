@@ -44,9 +44,9 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// deleteShoot deletes a Shoot cluster entirely.
+// runDeleteShootFlow deletes a Shoot cluster entirely.
 // It receives a Garden object <garden> which stores the Shoot object.
-func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1.LastError {
+func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alpha1.LastError {
 	// If the .status.uid field is empty, then we assume that there has never been any operation running for this Shoot
 	// cluster. This implies that there can not be any resource which we have to delete.
 	// We accept the deletion.
@@ -366,7 +366,7 @@ func (c *defaultControl) deleteShoot(o *operation.Operation) *gardencorev1alpha1
 	return nil
 }
 
-func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) error {
+func (c *Controller) updateShootStatusDeleteStart(o *operation.Operation) error {
 	var (
 		status = o.Shoot.Info.Status
 		now    = metav1.Now()
@@ -398,7 +398,7 @@ func (c *defaultControl) updateShootStatusDeleteStart(o *operation.Operation) er
 	return err
 }
 
-func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) error {
+func (c *Controller) updateShootStatusDeleteSuccess(o *operation.Operation) error {
 	newShoot, err := kutil.TryUpdateShootStatus(c.k8sGardenClient.Garden(), retry.DefaultRetry, o.Shoot.Info.ObjectMeta,
 		func(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
 			shoot.Status.RetryCycleStartTime = nil
@@ -430,7 +430,7 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 	// Wait until the above modifications are reflected in the cache to prevent unwanted reconcile
 	// operations (sometimes the cache is not synced fast enough).
 	return utilretry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(context.Context) (done bool, err error) {
-		shoot, err := c.k8sGardenInformers.Shoots().Lister().Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
+		shoot, err := c.shootLister.Shoots(o.Shoot.Info.Namespace).Get(o.Shoot.Info.Name)
 		if apierrors.IsNotFound(err) {
 			return utilretry.Ok()
 		}
@@ -445,7 +445,7 @@ func (c *defaultControl) updateShootStatusDeleteSuccess(o *operation.Operation) 
 	})
 }
 
-func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, lastError *gardencorev1alpha1.LastError) (gardencorev1alpha1.LastOperationState, error) {
+func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, lastError *gardencorev1alpha1.LastError) error {
 	var (
 		state       = gardencorev1alpha1.LastOperationStateFailed
 		description = lastError.Description
@@ -478,10 +478,10 @@ func (c *defaultControl) updateShootStatusDeleteError(o *operation.Operation, la
 	if err == nil {
 		o.Shoot.Info = newShootAfterLabel
 	}
-	return state, err
+	return err
 }
 
-func (c *defaultControl) needsInfrastructureMigration(o *operation.Operation) (bool, error) {
+func (c *Controller) needsInfrastructureMigration(o *operation.Operation) (bool, error) {
 	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, o.Shoot.Info.Name), &extensionsv1alpha1.Infrastructure{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			// The infrastructure resource has not been found - we need to check whether the Terraform state does still exist.
@@ -507,7 +507,7 @@ func (c *defaultControl) needsInfrastructureMigration(o *operation.Operation) (b
 	return false, nil
 }
 
-func (c *defaultControl) needsWorkerMigration(o *operation.Operation) (bool, error) {
+func (c *Controller) needsWorkerMigration(o *operation.Operation) (bool, error) {
 	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, o.Shoot.Info.Name), &extensionsv1alpha1.Worker{}); err != nil {
 		if apierrors.IsNotFound(err) {
 			// The Worker resource has not been found - we need to check whether the MCM deployment does still exist.

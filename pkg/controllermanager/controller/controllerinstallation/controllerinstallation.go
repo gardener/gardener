@@ -137,7 +137,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("ControllerInstallation controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.controllerInstallationQueue, "ControllerInstallation", c.reconcileControllerInstallationKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

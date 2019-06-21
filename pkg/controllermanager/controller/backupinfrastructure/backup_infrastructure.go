@@ -111,7 +111,7 @@ func (c *Controller) Run(ctx context.Context, workers int) {
 	logger.Logger.Info("BackupInfrastructure controller initialized.")
 
 	for i := 0; i < workers; i++ {
-		controllerutils.CreateWorker(ctx, c.backupInfrastructureQueue, "backupinfrastructure", c.reconcileBackupInfrastructureKey, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.backupInfrastructureQueue, "backupinfrastructure", c.reconcileBackupInfrastructureKey, &waitGroup, c.workerCh)
 	}
 
 	// Shutdown handling

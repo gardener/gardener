@@ -16,18 +16,42 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
+
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/gardener/gardener/pkg/logger"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+// DeprecatedCreateWorker creates and runs a worker thread that just processes items in the
+// specified queue. The worker will run until stopCh is closed. The worker will be
+// added to the wait group when started and marked done when finished.
+// Deprecated: Use CreateWorker instead.
+func DeprecatedCreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error, waitGroup *sync.WaitGroup, workerCh chan int) {
+	CreateWorker(ctx, queue, resourceType, reconcile.Func(func(req reconcile.Request) (reconcile.Result, error) {
+		meta := kutil.ObjectMeta(req.Namespace, req.Name)
+		key, err := cache.MetaNamespaceKeyFunc(&meta)
+		if err != nil {
+			logger.Logger.WithError(err).Error("Could not create key from meta")
+			return reconcile.Result{}, nil
+		}
+
+		return reconcile.Result{}, reconciler(key)
+	}), waitGroup, workerCh)
+}
 
 // CreateWorker creates and runs a worker thread that just processes items in the
 // specified queue. The worker will run until stopCh is closed. The worker will be
 // added to the wait group when started and marked done when finished.
-func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error, waitGroup *sync.WaitGroup, workerCh chan int) {
+func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler, waitGroup *sync.WaitGroup, workerCh chan int) {
 	waitGroup.Add(1)
 	workerCh <- 1
 	go func() {
@@ -37,9 +61,25 @@ func CreateWorker(ctx context.Context, queue workqueue.RateLimitingInterface, re
 	}()
 }
 
+func requestFromKey(key interface{}) (reconcile.Request, error) {
+	switch v := key.(type) {
+	case string:
+		namespace, name, err := cache.SplitMetaNamespaceKey(key.(string))
+		if err != nil {
+			return reconcile.Request{}, err
+		}
+
+		return reconcile.Request{NamespacedName: types.NamespacedName{Namespace: namespace, Name: name}}, nil
+	case reconcile.Request:
+		return v, nil
+	default:
+		return reconcile.Request{}, fmt.Errorf("unknown key type %T", key)
+	}
+}
+
 // worker runs a worker thread that just dequeues items, processes them, and marks them done.
 // It enforces that the reconciler is never invoked concurrently with the same key.
-func worker(queue workqueue.RateLimitingInterface, resourceType string, reconciler func(key string) error) func() {
+func worker(queue workqueue.RateLimitingInterface, resourceType string, reconciler reconcile.Reconciler) func() {
 	return func() {
 		exit := false
 		for !exit {
@@ -50,14 +90,29 @@ func worker(queue workqueue.RateLimitingInterface, resourceType string, reconcil
 				}
 				defer queue.Done(key)
 
-				err := reconciler(key.(string))
-				if err == nil {
+				req, err := requestFromKey(key)
+				if err != nil {
+					logger.Logger.WithError(err).Error("Cannot obtain request from key")
 					queue.Forget(key)
 					return false
 				}
 
-				logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
-				queue.AddRateLimited(key)
+				res, err := reconciler.Reconcile(req)
+				if err != nil {
+					logger.Logger.Infof("Error syncing %s %v: %v", resourceType, key, err)
+					queue.AddRateLimited(key)
+					return false
+				}
+
+				if res.RequeueAfter > 0 {
+					queue.AddAfter(key, res.RequeueAfter)
+					return false
+				}
+				if res.Requeue {
+					queue.AddRateLimited(key)
+					return false
+				}
+				queue.Forget(key)
 				return false
 			}()
 		}

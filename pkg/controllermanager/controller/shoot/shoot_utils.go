@@ -16,7 +16,6 @@ package shoot
 
 import (
 	"fmt"
-	"strconv"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
@@ -86,20 +85,6 @@ func StatusLabelTransform(status Status) func(*gardenv1beta1.Shoot) (*gardenv1be
 		kubernetes.SetMetaDataLabel(&shoot.ObjectMeta, common.ShootStatus, string(status))
 		return shoot, nil
 	}
-}
-
-func mustIgnoreShoot(annotations map[string]string, respectSyncPeriodOverwrite *bool) bool {
-	ignore := false
-	if value, ok := annotations[common.ShootIgnore]; ok {
-		ignore, _ = strconv.ParseBool(value)
-	}
-
-	return respectSyncPeriodOverwrite != nil && *respectSyncPeriodOverwrite && ignore
-}
-
-func shootIsFailed(shoot *gardenv1beta1.Shoot) bool {
-	lastOperation := shoot.Status.LastOperation
-	return lastOperation != nil && lastOperation.State == gardencorev1alpha1.LastOperationStateFailed && shoot.Generation == shoot.Status.ObservedGeneration
 }
 
 // ConditionStatusToStatus converts the given ConditionStatus to a shoot label Status.

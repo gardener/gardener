@@ -115,7 +115,7 @@ func (c *SchedulerController) Run(ctx context.Context, k8sGardenInformers garden
 	}()
 
 	for i := 0; i < *c.config.ConcurrentSyncs; i++ {
-		controllerutils.CreateWorker(ctx, c.shootQueue, "gardener-scheduler", func(key string) error { return c.reconcileShootKey(ctx, key) }, &waitGroup, c.workerCh)
+		controllerutils.DeprecatedCreateWorker(ctx, c.shootQueue, "gardener-scheduler", func(key string) error { return c.reconcileShootKey(ctx, key) }, &waitGroup, c.workerCh)
 	}
 
 	logger.Logger.Infof("Scheduler controller initialized with %d workers", *c.config.ConcurrentSyncs)
