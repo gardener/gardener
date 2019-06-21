@@ -8,20 +8,36 @@ metadata:
     app: dependency-watchdog
 data:
   dep-config.yaml: |-
-      service: {{ .Values.dependencywatchdog.service.name }}
       namespace: {{ .Release.Namespace }}
-      labels:
-{{ toYaml .Values.dependencywatchdog.service.labels | indent 8 }}
-      dependantPods:
-      - name: controlplane
-        selector:
-          matchExpressions:
-          - key: garden.sapcloud.io/role
-            operator: In
-            values:
-            - controlplane
-          - key: role
-            operator: NotIn
-            values:
-            - main
-            - events
+      services:
+        kube-apiserver:
+          dependantPods:
+          - name: controlplane
+            selector:
+              matchExpressions:
+              - key: garden.sapcloud.io/role
+                operator: In
+                values:
+                - controlplane
+              - key: role
+                operator: NotIn
+                values:
+                - main
+              - key: role
+                operator: NotIn
+                values:
+                - apiserver
+        etcd-main-client:
+          dependantPods:
+          - name: controlplane
+            selector:
+              matchExpressions:
+              - key: garden.sapcloud.io/role
+                operator: In
+                values:
+                - controlplane
+              - key: role
+                operator: In
+                values:
+                - apiserver
+

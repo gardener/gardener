@@ -34,6 +34,7 @@ spec:
         command:
         - /usr/local/bin/dependency-watchdog
         - --config-file=/etc/dependency-watchdog/config/dep-config.yaml
+        - --watch-duration=5m
         resources:
           requests:
             cpu: 50m
