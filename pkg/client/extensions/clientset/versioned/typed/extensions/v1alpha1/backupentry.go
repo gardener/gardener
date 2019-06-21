@@ -16,7 +16,7 @@ import (
 // BackupEntriesGetter has a method to return a BackupEntryInterface.
 // A group's client should implement this interface.
 type BackupEntriesGetter interface {
-	BackupEntries(namespace string) BackupEntryInterface
+	BackupEntries() BackupEntryInterface
 }
 
 // BackupEntryInterface has methods to work with BackupEntry resources.
@@ -36,14 +36,12 @@ type BackupEntryInterface interface {
 // backupEntries implements BackupEntryInterface
 type backupEntries struct {
 	client rest.Interface
-	ns     string
 }
 
 // newBackupEntries returns a BackupEntries
-func newBackupEntries(c *ExtensionsV1alpha1Client, namespace string) *backupEntries {
+func newBackupEntries(c *ExtensionsV1alpha1Client) *backupEntries {
 	return &backupEntries{
 		client: c.RESTClient(),
-		ns:     namespace,
 	}
 }
 
@@ -51,7 +49,6 @@ func newBackupEntries(c *ExtensionsV1alpha1Client, namespace string) *backupEntr
 func (c *backupEntries) Get(name string, options v1.GetOptions) (result *v1alpha1.BackupEntry, err error) {
 	result = &v1alpha1.BackupEntry{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("backupentries").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -68,7 +65,6 @@ func (c *backupEntries) List(opts v1.ListOptions) (result *v1alpha1.BackupEntryL
 	}
 	result = &v1alpha1.BackupEntryList{}
 	err = c.client.Get().
-		Namespace(c.ns).
 		Resource("backupentries").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -85,7 +81,6 @@ func (c *backupEntries) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	}
 	opts.Watch = true
 	return c.client.Get().
-		Namespace(c.ns).
 		Resource("backupentries").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -96,7 +91,6 @@ func (c *backupEntries) Watch(opts v1.ListOptions) (watch.Interface, error) {
 func (c *backupEntries) Create(backupEntry *v1alpha1.BackupEntry) (result *v1alpha1.BackupEntry, err error) {
 	result = &v1alpha1.BackupEntry{}
 	err = c.client.Post().
-		Namespace(c.ns).
 		Resource("backupentries").
 		Body(backupEntry).
 		Do().
@@ -108,7 +102,6 @@ func (c *backupEntries) Create(backupEntry *v1alpha1.BackupEntry) (result *v1alp
 func (c *backupEntries) Update(backupEntry *v1alpha1.BackupEntry) (result *v1alpha1.BackupEntry, err error) {
 	result = &v1alpha1.BackupEntry{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("backupentries").
 		Name(backupEntry.Name).
 		Body(backupEntry).
@@ -123,7 +116,6 @@ func (c *backupEntries) Update(backupEntry *v1alpha1.BackupEntry) (result *v1alp
 func (c *backupEntries) UpdateStatus(backupEntry *v1alpha1.BackupEntry) (result *v1alpha1.BackupEntry, err error) {
 	result = &v1alpha1.BackupEntry{}
 	err = c.client.Put().
-		Namespace(c.ns).
 		Resource("backupentries").
 		Name(backupEntry.Name).
 		SubResource("status").
@@ -136,7 +128,6 @@ func (c *backupEntries) UpdateStatus(backupEntry *v1alpha1.BackupEntry) (result 
 // Delete takes name of the backupEntry and deletes it. Returns an error if one occurs.
 func (c *backupEntries) Delete(name string, options *v1.DeleteOptions) error {
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("backupentries").
 		Name(name).
 		Body(options).
@@ -151,7 +142,6 @@ func (c *backupEntries) DeleteCollection(options *v1.DeleteOptions, listOptions 
 		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
-		Namespace(c.ns).
 		Resource("backupentries").
 		VersionedParams(&listOptions, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -164,7 +154,6 @@ func (c *backupEntries) DeleteCollection(options *v1.DeleteOptions, listOptions 
 func (c *backupEntries) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.BackupEntry, err error) {
 	result = &v1alpha1.BackupEntry{}
 	err = c.client.Patch(pt).
-		Namespace(c.ns).
 		Resource("backupentries").
 		SubResource(subresources...).
 		Name(name).

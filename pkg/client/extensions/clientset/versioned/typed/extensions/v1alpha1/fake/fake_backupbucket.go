@@ -15,7 +15,6 @@ import (
 // FakeBackupBuckets implements BackupBucketInterface
 type FakeBackupBuckets struct {
 	Fake *FakeExtensionsV1alpha1
-	ns   string
 }
 
 var backupbucketsResource = schema.GroupVersionResource{Group: "extensions.gardener.cloud", Version: "v1alpha1", Resource: "backupbuckets"}
@@ -25,8 +24,7 @@ var backupbucketsKind = schema.GroupVersionKind{Group: "extensions.gardener.clou
 // Get takes name of the backupBucket, and returns the corresponding backupBucket object, and an error if there is any.
 func (c *FakeBackupBuckets) Get(name string, options v1.GetOptions) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewGetAction(backupbucketsResource, c.ns, name), &v1alpha1.BackupBucket{})
-
+		Invokes(testing.NewRootGetAction(backupbucketsResource, name), &v1alpha1.BackupBucket{})
 	if obj == nil {
 		return nil, err
 	}
@@ -36,8 +34,7 @@ func (c *FakeBackupBuckets) Get(name string, options v1.GetOptions) (result *v1a
 // List takes label and field selectors, and returns the list of BackupBuckets that match those selectors.
 func (c *FakeBackupBuckets) List(opts v1.ListOptions) (result *v1alpha1.BackupBucketList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewListAction(backupbucketsResource, backupbucketsKind, c.ns, opts), &v1alpha1.BackupBucketList{})
-
+		Invokes(testing.NewRootListAction(backupbucketsResource, backupbucketsKind, opts), &v1alpha1.BackupBucketList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -58,15 +55,13 @@ func (c *FakeBackupBuckets) List(opts v1.ListOptions) (result *v1alpha1.BackupBu
 // Watch returns a watch.Interface that watches the requested backupBuckets.
 func (c *FakeBackupBuckets) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewWatchAction(backupbucketsResource, c.ns, opts))
-
+		InvokesWatch(testing.NewRootWatchAction(backupbucketsResource, opts))
 }
 
 // Create takes the representation of a backupBucket and creates it.  Returns the server's representation of the backupBucket, and an error, if there is any.
 func (c *FakeBackupBuckets) Create(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewCreateAction(backupbucketsResource, c.ns, backupBucket), &v1alpha1.BackupBucket{})
-
+		Invokes(testing.NewRootCreateAction(backupbucketsResource, backupBucket), &v1alpha1.BackupBucket{})
 	if obj == nil {
 		return nil, err
 	}
@@ -76,8 +71,7 @@ func (c *FakeBackupBuckets) Create(backupBucket *v1alpha1.BackupBucket) (result 
 // Update takes the representation of a backupBucket and updates it. Returns the server's representation of the backupBucket, and an error, if there is any.
 func (c *FakeBackupBuckets) Update(backupBucket *v1alpha1.BackupBucket) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateAction(backupbucketsResource, c.ns, backupBucket), &v1alpha1.BackupBucket{})
-
+		Invokes(testing.NewRootUpdateAction(backupbucketsResource, backupBucket), &v1alpha1.BackupBucket{})
 	if obj == nil {
 		return nil, err
 	}
@@ -88,8 +82,7 @@ func (c *FakeBackupBuckets) Update(backupBucket *v1alpha1.BackupBucket) (result 
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeBackupBuckets) UpdateStatus(backupBucket *v1alpha1.BackupBucket) (*v1alpha1.BackupBucket, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceAction(backupbucketsResource, "status", c.ns, backupBucket), &v1alpha1.BackupBucket{})
-
+		Invokes(testing.NewRootUpdateSubresourceAction(backupbucketsResource, "status", backupBucket), &v1alpha1.BackupBucket{})
 	if obj == nil {
 		return nil, err
 	}
@@ -99,14 +92,13 @@ func (c *FakeBackupBuckets) UpdateStatus(backupBucket *v1alpha1.BackupBucket) (*
 // Delete takes name of the backupBucket and deletes it. Returns an error if one occurs.
 func (c *FakeBackupBuckets) Delete(name string, options *v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewDeleteAction(backupbucketsResource, c.ns, name), &v1alpha1.BackupBucket{})
-
+		Invokes(testing.NewRootDeleteAction(backupbucketsResource, name), &v1alpha1.BackupBucket{})
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeBackupBuckets) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
-	action := testing.NewDeleteCollectionAction(backupbucketsResource, c.ns, listOptions)
+	action := testing.NewRootDeleteCollectionAction(backupbucketsResource, listOptions)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.BackupBucketList{})
 	return err
@@ -115,8 +107,7 @@ func (c *FakeBackupBuckets) DeleteCollection(options *v1.DeleteOptions, listOpti
 // Patch applies the patch and returns the patched backupBucket.
 func (c *FakeBackupBuckets) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.BackupBucket, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceAction(backupbucketsResource, c.ns, name, pt, data, subresources...), &v1alpha1.BackupBucket{})
-
+		Invokes(testing.NewRootPatchSubresourceAction(backupbucketsResource, name, pt, data, subresources...), &v1alpha1.BackupBucket{})
 	if obj == nil {
 		return nil, err
 	}

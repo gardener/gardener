@@ -12,12 +12,12 @@ type FakeExtensionsV1alpha1 struct {
 	*testing.Fake
 }
 
-func (c *FakeExtensionsV1alpha1) BackupBuckets(namespace string) v1alpha1.BackupBucketInterface {
-	return &FakeBackupBuckets{c, namespace}
+func (c *FakeExtensionsV1alpha1) BackupBuckets() v1alpha1.BackupBucketInterface {
+	return &FakeBackupBuckets{c}
 }
 
-func (c *FakeExtensionsV1alpha1) BackupEntries(namespace string) v1alpha1.BackupEntryInterface {
-	return &FakeBackupEntries{c, namespace}
+func (c *FakeExtensionsV1alpha1) BackupEntries() v1alpha1.BackupEntryInterface {
+	return &FakeBackupEntries{c}
 }
 
 func (c *FakeExtensionsV1alpha1) Clusters() v1alpha1.ClusterInterface {

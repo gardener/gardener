@@ -27,12 +27,12 @@ type ExtensionsV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *ExtensionsV1alpha1Client) BackupBuckets(namespace string) BackupBucketInterface {
-	return newBackupBuckets(c, namespace)
+func (c *ExtensionsV1alpha1Client) BackupBuckets() BackupBucketInterface {
+	return newBackupBuckets(c)
 }
 
-func (c *ExtensionsV1alpha1Client) BackupEntries(namespace string) BackupEntryInterface {
-	return newBackupEntries(c, namespace)
+func (c *ExtensionsV1alpha1Client) BackupEntries() BackupEntryInterface {
+	return newBackupEntries(c)
 }
 
 func (c *ExtensionsV1alpha1Client) Clusters() ClusterInterface {
