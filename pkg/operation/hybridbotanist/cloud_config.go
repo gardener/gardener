@@ -301,7 +301,7 @@ func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.Ren
 
 func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err error) {
 	var (
-		tokenID    = utils.ComputeSHA256Hex([]byte(time.Now().Format("2006-01-02-15")))[:6]
+		tokenID    = utils.ComputeSHA256Hex([]byte(time.Now().Format("2006-01-02")))[:6]
 		secretName = bootstraptokenutil.BootstrapTokenSecretName(tokenID)
 	)
 
