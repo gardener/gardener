@@ -244,7 +244,7 @@ func (e *execution) reportProgress() {
 
 func (e *execution) run(ctx context.Context) error {
 	defer close(e.done)
-	e.log.Infof("Starting flow")
+	e.log.Info("Starting")
 	e.reportProgress()
 
 	var (
@@ -272,7 +272,7 @@ func (e *execution) run(ctx context.Context) error {
 		e.reportProgress()
 	}
 
-	e.log.Infof("Finished flow")
+	e.log.Info("Finished")
 	return e.result(cancelErr)
 }
 

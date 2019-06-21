@@ -9,6 +9,8 @@ kind: OperatingSystemConfig
 metadata:
   name: {{ required "secretName is required" .Values.secretName }}-downloader
   namespace: {{ .Release.Namespace }}
+  annotations:
+    gardener.cloud/operation: reconcile
 spec:
   type: {{ required "type is required" .Values.type }}
   purpose: {{ required "purpose is required" .Values.purpose }}

@@ -19,14 +19,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	"github.com/gardener/gardener/pkg/utils/retry"
+
+	"github.com/gardener/gardener/pkg/operation/common"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	controllerutils "github.com/gardener/gardener/pkg/controllermanager/controller/utils"
 	"github.com/gardener/gardener/pkg/migration"
-	"github.com/gardener/gardener/pkg/operation/common"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
@@ -99,44 +102,24 @@ func (b *Botanist) DestroyInfrastructure(ctx context.Context) error {
 
 // WaitUntilInfrastructureReady waits until the infrastructure resource has been reconciled successfully.
 func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
-	var (
-		lastError            *gardencorev1alpha1.LastError
-		infrastructureStatus []byte
-	)
-
 	if err := retry.UntilTimeout(ctx, DefaultInterval, InfrastructureDefaultTimeout, func(ctx context.Context) (bool, error) {
 		infrastructure := &extensionsv1alpha1.Infrastructure{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, infrastructure); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if lastErr := infrastructure.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Infrastructure did not get ready yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
+		if err := health.CheckExtensionObject(infrastructure); err != nil {
+			b.Logger.WithError(err).Error("Infrastructure did not get ready yet")
+			return retry.MinorError(err)
 		}
 
-		if lastOperation := infrastructure.Status.LastOperation; lastOperation != nil &&
-			lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded &&
-			infrastructure.Status.ObservedGeneration == infrastructure.Generation &&
-			!metav1.HasAnnotation(infrastructure.ObjectMeta, gardencorev1alpha1.GardenerOperation) {
-
-			if providerStatus := infrastructure.Status.ProviderStatus; providerStatus != nil {
-				infrastructureStatus = providerStatus.Raw
-			}
-			return retry.Ok()
+		if infrastructure.Status.ProviderStatus != nil {
+			b.Shoot.InfrastructureStatus = infrastructure.Status.ProviderStatus.Raw
 		}
-
-		b.Logger.Infof("Waiting for infrastructure to be ready...")
-		return retry.MinorError(wrapWithLastError(fmt.Errorf("infrastructure is not yet ready"), lastError))
+		return retry.Ok()
 	}); err != nil {
-		message := fmt.Sprintf("Failed to create infrastructure")
-		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("failed to create infrastructure: %v", err))
 	}
-
-	b.Shoot.InfrastructureStatus = infrastructureStatus
 	return nil
 }
 

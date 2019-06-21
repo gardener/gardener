@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -721,6 +723,7 @@ func (b *Botanist) DeployControlPlane(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
+		metav1.SetMetaDataAnnotation(&cp.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
 		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: string(b.Shoot.CloudProvider),
@@ -749,43 +752,24 @@ func (b *Botanist) DestroyControlPlane(ctx context.Context) error {
 
 // WaitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
 func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
-	var (
-		lastError *gardencorev1alpha1.LastError
-		cpStatus  []byte
-	)
-
 	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if lastErr := cp.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Control plane did not get ready yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
+		if err := health.CheckExtensionObject(cp); err != nil {
+			b.Logger.WithError(err).Error("Control plane did not get ready yet")
+			return retry.MinorError(err)
 		}
 
-		if lastOperation := cp.Status.LastOperation; lastOperation != nil &&
-			lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded &&
-			cp.Status.ObservedGeneration == cp.Generation {
-
-			if providerStatus := cp.Status.ProviderStatus; providerStatus != nil {
-				cpStatus = providerStatus.Raw
-			}
-			return retry.Ok()
+		if cp.Status.ProviderStatus != nil {
+			b.Shoot.ControlPlaneStatus = cp.Status.ProviderStatus.Raw
 		}
-
-		b.Logger.Infof("Waiting for control plane to be ready...")
-		return retry.MinorError(wrapWithLastError(fmt.Errorf("control plane is not yet ready"), lastError))
+		return retry.Ok()
 	}); err != nil {
-		message := fmt.Sprintf("Failed to create control plane")
-		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("failed to create control plane: %v", err))
 	}
-
-	b.Shoot.ControlPlaneStatus = cpStatus
 	return nil
 }
 

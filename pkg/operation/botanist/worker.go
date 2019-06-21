@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -86,6 +88,8 @@ func (b *Botanist) DeployWorker(ctx context.Context) error {
 	}
 
 	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), worker, func() error {
+		metav1.SetMetaDataAnnotation(&worker.ObjectMeta, gardencorev1alpha1.GardenerOperation, gardencorev1alpha1.GardenerOperationReconcile)
+
 		worker.Spec = extensionsv1alpha1.WorkerSpec{
 			DefaultSpec: extensionsv1alpha1.DefaultSpec{
 				Type: string(b.Shoot.CloudProvider),
@@ -116,41 +120,22 @@ func (b *Botanist) DestroyWorker(ctx context.Context) error {
 
 // WaitUntilWorkerReady waits until the worker extension resource has been successfully reconciled.
 func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
-	var (
-		lastError          *gardencorev1alpha1.LastError
-		machineDeployments []extensionsv1alpha1.MachineDeployment
-	)
-
 	if err := retry.UntilTimeout(ctx, DefaultInterval, WorkerDefaultTimeout, func(ctx context.Context) (bool, error) {
 		worker := &extensionsv1alpha1.Worker{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, worker); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if lastErr := worker.Status.LastError; lastErr != nil {
-			b.Logger.Errorf("Worker did not get ready yet, lastError is: %s", lastErr.Description)
-			lastError = lastErr
+		if err := health.CheckExtensionObject(worker); err != nil {
+			b.Logger.WithError(err).Error("Worker did not get ready yet")
+			return retry.MinorError(err)
 		}
 
-		if lastOperation := worker.Status.LastOperation; lastOperation != nil &&
-			lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded &&
-			worker.Status.ObservedGeneration == worker.Generation {
-
-			machineDeployments = worker.Status.MachineDeployments
-			return retry.Ok()
-		}
-
-		b.Logger.Infof("Waiting for worker to be ready...")
-		return retry.MinorError(wrapWithLastError(fmt.Errorf("worker is not yet ready"), lastError))
+		b.Shoot.MachineDeployments = worker.Status.MachineDeployments
+		return retry.Ok()
 	}); err != nil {
-		message := fmt.Sprintf("Error while waiting for worker object to become ready")
-		if lastError != nil {
-			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
-		}
-		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("Error while waiting for worker object to become ready: %v", err))
 	}
-
-	b.Shoot.MachineDeployments = machineDeployments
 	return nil
 }
 

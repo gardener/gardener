@@ -51,3 +51,16 @@ func (d *DefaultStatus) GetLastOperation() LastOperation {
 	}
 	return d.LastOperation
 }
+
+// GetLastError implements Status.
+func (d *DefaultStatus) GetLastError() LastError {
+	if d.LastError == nil {
+		return nil
+	}
+	return d.LastError
+}
+
+// GetObservedGeneration implements Status.
+func (d *DefaultStatus) GetObservedGeneration() int64 {
+	return d.ObservedGeneration
+}

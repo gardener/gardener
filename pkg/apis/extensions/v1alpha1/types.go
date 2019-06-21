@@ -24,6 +24,11 @@ type Status interface {
 	// GetLastOperation retrieves the LastOperation of a status.
 	// LastOperation may be nil.
 	GetLastOperation() LastOperation
+	// GetObservedGeneration retrieves the last generation observed by the extension controller.
+	GetObservedGeneration() int64
+	// GetLastError retrieves the LastError of a status.
+	// LastError may be nil.
+	GetLastError() LastError
 }
 
 // LastOperation is the last operation on an object.
@@ -40,6 +45,16 @@ type LastOperation interface {
 	GetType() gardencorev1alpha1.LastOperationType
 }
 
+// LastError is the last error on an object.
+type LastError interface {
+	// GetDescription gets the description of the last occurred error.
+	GetDescription() string
+	// GetCodes gets the error codes of the last error.
+	GetCodes() []gardencorev1alpha1.ErrorCode
+	// GetLastUpdateTime retrieves the last time the error was updated.
+	GetLastUpdateTime() *metav1.Time
+}
+
 // Spec is the spec section of an Object.
 type Spec interface {
 	// GetExtensionType retrieves the extension type.
@@ -48,6 +63,7 @@ type Spec interface {
 
 // Object is an extension object resource.
 type Object interface {
+	metav1.Object
 	// GetExtensionStatus retrieves the object's status.
 	GetExtensionStatus() Status
 	// GetExtensionSpec retrieves the object's spec.

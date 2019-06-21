@@ -21,6 +21,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/kubernetes/health"
+
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -195,33 +197,37 @@ func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []g
 }
 
 func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, name string, values map[string]interface{}) (*shoot.CloudConfigData, error) {
-	var result *shoot.CloudConfigData
-
 	if err := b.ApplyChartSeed(chartPath, b.Shoot.SeedNamespace, name, values, nil); err != nil {
 		return nil, err
 	}
 
-	return result, retry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
-		var osc extensionsv1alpha1.OperatingSystemConfig
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, &osc); err != nil {
+	var oscStatus extensionsv1alpha1.OperatingSystemConfigStatus
+	if err := retry.UntilTimeout(context.TODO(), time.Second, 30*time.Second, func(ctx context.Context) (done bool, err error) {
+		osc := &extensionsv1alpha1.OperatingSystemConfig{}
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: name, Namespace: b.Shoot.SeedNamespace}, osc); err != nil {
 			return retry.SevereError(err)
 		}
 
-		if osc.Status.ObservedGeneration == osc.Generation && osc.Status.LastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded && osc.Status.CloudConfig != nil {
-			var secret corev1.Secret
-			if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: osc.Status.CloudConfig.SecretRef.Name, Namespace: osc.Status.CloudConfig.SecretRef.Namespace}, &secret); err != nil {
-				return retry.SevereError(err)
-			}
-			result = &shoot.CloudConfigData{
-				Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
-				Command: osc.Status.Command,
-				Units:   osc.Status.Units,
-			}
-			return retry.Ok()
+		if err := health.CheckExtensionObject(osc); err != nil {
+			b.Logger.WithError(err).Error("Operating system config did not become ready yet")
+			return retry.MinorError(err)
 		}
-		return retry.MinorError(fmt.Errorf("operating system config %q is not ready (generation up to date=%t, last operation=%v, cloud config present=%t",
-			osc.Name, osc.Status.ObservedGeneration == osc.Generation, osc.Status.LastOperation, osc.Status.CloudConfig != nil))
-	})
+		oscStatus = osc.Status
+		return retry.Ok()
+	}); err != nil {
+		return nil, err
+	}
+
+	secret := &corev1.Secret{}
+	if err := b.K8sSeedClient.Client().Get(context.TODO(), client.ObjectKey{Name: oscStatus.CloudConfig.SecretRef.Name, Namespace: oscStatus.CloudConfig.SecretRef.Namespace}, secret); err != nil {
+		return nil, err
+	}
+
+	return &shoot.CloudConfigData{
+		Content: string(secret.Data[extensionsv1alpha1.OperatingSystemConfigSecretDataKey]),
+		Command: oscStatus.Command,
+		Units:   oscStatus.Units,
+	}, nil
 }
 
 // generateCloudConfigExecutionChart renders the gardener-resource-manager configuration for the cloud config user data.
