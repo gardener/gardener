@@ -71,11 +71,11 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		}
 		return utilretry.Ok()
 	}); err != nil {
-		return formatError("Failed to create a Botanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Botanist (%s)", err.Error()))
 	}
 
 	if err := botanist.RequiredExtensionsExist(); err != nil {
-		return formatError("Failed to check whether all required extensions exist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether all required extensions exist (%s)", err.Error()))
 	}
 
 	// We first check whether the namespace in the Seed cluster does exist - if it does not, then we assume that
@@ -87,20 +87,20 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		return nil
 	}
 	if err != nil {
-		return formatError("Failed to retrieve the Shoot namespace in the Seed cluster", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the Shoot namespace in the Seed cluster (%s)", err.Error()))
 	}
 
 	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
-		return formatError("Failed to create a Seed CloudBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
 	}
 	shootCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeShoot)
 	if err != nil {
-		return formatError("Failed to create a Shoot CloudBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Shoot CloudBotanist (%s)", err.Error()))
 	}
 	hybridBotanist, err := hybridbotanistpkg.New(o, botanist, seedCloudBotanist, shootCloudBotanist)
 	if err != nil {
-		return formatError("Failed to create a HybridBotanist", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
 	}
 
 	// We check whether the shoot namespace in the seed cluster is already in a terminating state, i.e. whether
@@ -113,18 +113,18 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	kubeAPIServerDeploymentFound := true
 	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), &appsv1.Deployment{}); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return formatError("Failed to retrieve the kube-apiserver deployment in the shoot namespace in the seed cluster", err)
+			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-apiserver deployment in the shoot namespace in the seed cluster (%s)", err.Error()))
 		}
 		kubeAPIServerDeploymentFound = false
 	}
 
 	infrastructureMigrationNeeded, err := c.needsInfrastructureMigration(o)
 	if err != nil {
-		return formatError("Failed to check whether infrastructure migration is needed", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether infrastructure migration is needed (%s)", err.Error()))
 	}
 	workerMigrationNeeded, err := c.needsWorkerMigration(o)
 	if err != nil {
-		return formatError("Failed to check whether worker migration is needed", err)
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether worker migration is needed (%s)", err.Error()))
 	}
 
 	var (
@@ -355,11 +355,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 	})
 	if err != nil {
 		o.Logger.Errorf("Error deleting Shoot %q: %+v", o.Shoot.Info.Name, err)
-
-		return &gardencorev1alpha1.LastError{
-			Codes:       gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err)),
-			Description: gardencorev1alpha1helper.FormatLastErrDescription(err),
-		}
+		return gardencorev1alpha1helper.LastError(gardencorev1alpha1helper.FormatLastErrDescription(err), gardencorev1alpha1helper.ExtractErrorCodes(flow.Causes(err))...)
 	}
 
 	o.Logger.Infof("Successfully deleted Shoot %q", o.Shoot.Info.Name)

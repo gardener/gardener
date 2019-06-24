@@ -390,6 +390,10 @@ func (in *LastError) DeepCopyInto(out *LastError) {
 		*out = make([]ErrorCode, len(*in))
 		copy(*out, *in)
 	}
+	if in.LastUpdateTime != nil {
+		in, out := &in.LastUpdateTime, &out.LastUpdateTime
+		*out = (*in).DeepCopy()
+	}
 	return
 }
 

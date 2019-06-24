@@ -71,6 +71,10 @@ spec:
                   description: A human readable message indicating details about the
                     last error.
                   type: string
+                lastUpdateTime:
+                  description: Last time the error was reported
+                  format: date-time
+                  type: string
               required:
               - description
               type: object
