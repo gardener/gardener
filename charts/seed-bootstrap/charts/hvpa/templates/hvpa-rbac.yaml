@@ -31,17 +31,39 @@ rules:
   - patch
   - delete
 - apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - replicationcontrollers
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
   - apps
   resources:
+  - daemonsets
+  - replicasets
+  - statefulsets
   - deployments
   verbs:
   - get
   - list
   - watch
-  - create
   - update
   - patch
-  - delete
 - apiGroups:
   - autoscaling.k8s.io
   resources:

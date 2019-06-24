@@ -68,13 +68,10 @@ spec:
         - containerPort: {{ .Values.servicePorts.client }}
           name: clientport
           protocol: TCP
+        {{- if .Values.etcd }}
         resources:
-          requests:
-            cpu: 500m
-            memory: 1000Mi
-          limits:
-            cpu: 2500m
-            memory: 20Gi
+{{ toYaml .Values.etcd | indent 10 }}
+        {{- end }}
         volumeMounts:
 {{- if eq .Values.role "main" }}
         - name: {{ .Values.role }}-etcd

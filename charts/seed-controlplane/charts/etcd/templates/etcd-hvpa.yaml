@@ -1,6 +1,7 @@
 {{ if .Values.hvpa.enabled }}
 {{- /* .Values.replicas is of type 'float64', so let's cast it to string to have proper types for comparison */}}
 {{- if ne (.Values.replicas | toString) "0" }}
+{{- if eq .Values.role "main" }}
 apiVersion: autoscaling.k8s.io/v1alpha1
 kind: Hvpa
 metadata:
@@ -9,20 +10,20 @@ metadata:
     #"enable-vertical-scale-down": "true"
   labels:
     controller-tools.k8s.io: "1.0"
-  name: kube-apiserver
+  name: etcd-{{ .Values.role }}
   namespace: {{ .Release.Namespace }}
 spec:
   scaleUpStabilizationWindow: {{ .Values.scaleUpStabilizationWindow }}
   scaleDownStabilizationWindow: {{ .Values.scaleDownStabilizationWindow }}
   minCpuChange:
-    value: 300m
+    value: 100m
     percentage: 80
   minMemChange:
     value: 200M
     percentage: 80
   hpaTemplate:
-    maxReplicas: {{ .Values.maxReplicas }}
-    minReplicas: {{ .Values.minReplicas }}
+    maxReplicas: {{ .Values.replicas }}
+    minReplicas: {{ .Values.replicas }}
     metrics:
     - type: Resource
       resource:
@@ -35,23 +36,21 @@ spec:
   vpaTemplate:
     resourcePolicy:
       containerPolicies:
-      - containerName: kube-apiserver
+      - containerName: etcd
         minAllowed:
-          memory: 400M
-          cpu: 400m
+          memory: 1000Mi
+          cpu: 500m
         maxAllowed:
-          memory: 16000M
-          cpu: 8
+          memory: 20Gi
+          cpu: 2500m
   weightBasedScalingIntervals:
-    - vpaWeight: 0
-      startReplicaCount: {{ .Values.minReplicas }}
-      lastReplicaCount: {{ .Values.lastReplicaCountForHpa }}
     - vpaWeight: 1
-      startReplicaCount: {{ .Values.maxReplicas }}
-      lastReplicaCount: {{ .Values.maxReplicas }}
+      startReplicaCount: {{ .Values.replicas }}
+      lastReplicaCount: {{ .Values.replicas }}
   targetRef:
-    apiVersion: {{ include "deploymentversion" . }}
-    kind: Deployment
-    name: kube-apiserver
+    apiVersion:  {{ include "statefulsetversion" . }}
+    kind: StatefulSet
+    name: etcd-{{ .Values.role }}
+{{ end }}
 {{ end }}
 {{ end }}

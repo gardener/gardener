@@ -30,10 +30,14 @@ spec:
       containers:
       - name: hvpa-controller
         image: {{ index .Values.global.images "hvpa-controller" }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
+        command:
+          - ./manager
+          - --logtostderr=true
+          - --v=4
         resources:
           limits:
-            cpu: 200m
+            cpu: 500m
             memory: 1000Mi
           requests:
             cpu: 50m
