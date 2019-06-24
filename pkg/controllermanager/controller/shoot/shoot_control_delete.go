@@ -254,7 +254,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		cleanupWebhooks = g.Add(flow.Task{
 			Name:         "Cleaning up webhooks",
 			Fn:           flow.TaskFn(botanist.CleanWebhooks).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControlPlane, waitUntilKubeAddonManagerDeleted),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControlPlane, waitUntilKubeAddonManagerDeleted),
 		})
 		waitForControllersToBeActive = g.Add(flow.Task{
 			Name:         "Waiting until both cloud-controller-manager and kube-controller-manager are active",
@@ -264,7 +264,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
 			Fn:           flow.TaskFn(botanist.CleanExtendedAPIs).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive, waitUntilExtensionResourcesDeleted),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilKubeAddonManagerDeleted, deleteClusterAutoscaler, waitForControllersToBeActive, waitUntilExtensionResourcesDeleted),
 		})
 		cleanKubernetesResources = g.Add(flow.Task{
 			Name:         "Cleaning kubernetes resources",
