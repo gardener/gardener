@@ -4,6 +4,7 @@
 
 [![Slack channel #gardener](https://img.shields.io/badge/slack-gardener-brightgreen.svg?logo=slack)](https://kubernetes.slack.com/messages/gardener)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gardener/gardener)](https://goreportcard.com/report/github.com/gardener/gardener)
+[![GoDoc](https://godoc.org/github.com/gardener/gardener?status.svg)](https://godoc.org/github.com/gardener/gardener)
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/1822/badge)](https://bestpractices.coreinfrastructure.org/projects/1822)
 
 Gardener implements the automated management and operation of [Kubernetes](https://kubernetes.io/) clusters as a service and provides support for multiple cloud providers (Alicloud, AWS, Azure, GCP, OpenStack, ...). Its main principle is to leverage Kubernetes concepts for all of its tasks.
