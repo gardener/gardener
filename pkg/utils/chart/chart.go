@@ -17,8 +17,9 @@ package chart
 import (
 	"context"
 
-	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/chartrenderer"
 	gardenerkubernetes "github.com/gardener/gardener/pkg/client/kubernetes"
+	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 
 	"github.com/pkg/errors"
@@ -29,12 +30,11 @@ import (
 
 // Chart represents a Helm chart (and its sub-charts) that can be applied and deleted.
 type Chart struct {
-	Name       string
-	Path       string
-	Images     []string
-	ValuesFunc func(string, *gardenv1beta1.Shoot, map[string]string) (map[string]interface{}, error)
-	Objects    []*Object
-	SubCharts  []*Chart
+	Name      string
+	Path      string
+	Images    []string
+	Objects   []*Object
+	SubCharts []*Chart
 }
 
 // Object represents an object deployed by a Chart.
@@ -43,22 +43,19 @@ type Object struct {
 	Name string
 }
 
-// Apply applies this chart into the given namespace using the given chartApplier. Before applying the chart,
-// it collects its values, starting with values returned by ValuesFunc, and injecting images, subchart values,
-// and provider values as needed.
+// Apply applies this chart in the given namespace using the given ChartApplier. Before applying the chart,
+// it collects its values, injecting images and merging the given values as needed.
 func (c *Chart) Apply(
 	ctx context.Context,
-	k8sClient gardenerkubernetes.Interface,
 	chartApplier gardenerkubernetes.ChartApplier,
 	namespace string,
-	shoot *gardenv1beta1.Shoot,
 	imageVector imagevector.ImageVector,
-	checksums map[string]string,
+	runtimeVersion, targetVersion string,
 	additionalValues map[string]interface{},
 ) error {
 
-	// Get chart values
-	values, err := c.getValues(namespace, k8sClient.Version(), shoot, imageVector, checksums)
+	// Get values with injected images
+	values, err := c.injectImages(imageVector, runtimeVersion, targetVersion)
 	if err != nil {
 		return err
 	}
@@ -71,37 +68,49 @@ func (c *Chart) Apply(
 	return nil
 }
 
-// getValues collects and returns this chart's values, starting with values returned by ValuesFunc, and injecting
-// images and subchart values as needed.
-func (c *Chart) getValues(
-	clusterName string,
-	k8sVersion string,
-	shoot *gardenv1beta1.Shoot,
+// Render renders this chart in the given namespace using the given chartRenderer. Before rendering the chart,
+// it collects its values, injecting images and merging the given values as needed.
+func (c *Chart) Render(
+	chartRenderer chartrenderer.Interface,
+	namespace string,
 	imageVector imagevector.ImageVector,
-	checksums map[string]string,
-) (map[string]interface{}, error) {
+	runtimeVersion, targetVersion string,
+	additionalValues map[string]interface{},
+) (string, []byte, error) {
 
-	// Get default values
-	values := make(map[string]interface{})
-	var err error
-	if c.ValuesFunc != nil {
-		values, err = c.ValuesFunc(clusterName, shoot, checksums)
-		if err != nil {
-			return nil, errors.Wrapf(err, "could not get chart '%s' default values for cluster '%s'", c.Name, clusterName)
-		}
+	// Get values with injected images
+	values, err := c.injectImages(imageVector, runtimeVersion, targetVersion)
+	if err != nil {
+		return "", nil, err
 	}
 
+	// Apply chart
+	rc, err := chartRenderer.Render(c.Path, c.Name, namespace, utils.MergeMaps(values, additionalValues))
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "could not render chart '%s' in namespace '%s'", c.Name, namespace)
+	}
+	return rc.ChartName, rc.Manifest(), nil
+}
+
+// injectImages collects returns a values map with injected images, including sub-charts.
+func (c *Chart) injectImages(
+	imageVector imagevector.ImageVector,
+	runtimeVersion, targetVersion string,
+) (map[string]interface{}, error) {
+
 	// Inject images
+	values := make(map[string]interface{})
+	var err error
 	if len(c.Images) > 0 {
-		values, err = InjectImages(values, imageVector, c.Images, imagevector.RuntimeVersion(k8sVersion), imagevector.TargetVersion(shoot.Spec.Kubernetes.Version))
+		values, err = InjectImages(values, imageVector, c.Images, imagevector.RuntimeVersion(runtimeVersion), imagevector.TargetVersion(targetVersion))
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not inject chart '%s' images for cluster '%s'", c.Name, clusterName)
+			return nil, errors.Wrapf(err, "could not inject chart '%s' images", c.Name)
 		}
 	}
 
 	// Add subchart values
 	for _, sc := range c.SubCharts {
-		scValues, err := sc.getValues(clusterName, k8sVersion, shoot, imageVector, checksums)
+		scValues, err := sc.injectImages(imageVector, runtimeVersion, targetVersion)
 		if err != nil {
 			return nil, err
 		}
