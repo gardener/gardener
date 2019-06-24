@@ -30,6 +30,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -265,8 +266,16 @@ func generateCA(k8sClusterClient kubernetes.Interface, config *CertificateSecret
 		return nil, nil, err
 	}
 
-	secret, err := k8sClusterClient.CreateSecret(namespace, config.GetName(), corev1.SecretTypeOpaque, certificate.SecretData(), false)
-	if err != nil {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      config.GetName(),
+			Namespace: namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: certificate.SecretData(),
+	}
+
+	if err := k8sClusterClient.Client().Create(context.TODO(), secret); err != nil {
 		return nil, nil, err
 	}
 	return secret, certificate, nil

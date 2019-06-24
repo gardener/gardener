@@ -148,7 +148,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		deploySecrets = g.Add(flow.Task{
@@ -215,7 +215,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		waitForControllersToBeActive = g.Add(flow.Task{
 			Name:         "Waiting until kube-controller-manager is active",
-			Fn:           flow.SimpleTaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, cleanupWebhooks, waitUntilControlPlaneReady, deployKubeControllerManager),
 		})
 		cleanExtendedAPIs = g.Add(flow.Task{
@@ -332,7 +332,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deleting Garden secrets",
-			Fn:           flow.SimpleTaskFn(botanist.DeleteGardenSecrets).Retry(defaultInterval),
+			Fn:           flow.TaskFn(botanist.DeleteGardenSecrets).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(deleteNamespace),
 		})
 

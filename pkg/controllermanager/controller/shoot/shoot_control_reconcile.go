@@ -94,7 +94,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeployCloudProviderSecret).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployKubeAPIServerService = g.Add(flow.Task{
@@ -193,7 +193,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Syncing shoot access credentials to project namespace in Garden",
-			Fn:           flow.SimpleTaskFn(botanist.SyncShootCredentialsToGarden).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.SyncShootCredentialsToGarden).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployKubeControllerManager),
 		})
 		computeShootOSConfig = g.Add(flow.Task{

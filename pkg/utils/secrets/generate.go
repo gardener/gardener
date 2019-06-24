@@ -15,11 +15,13 @@
 package secrets
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GenerateClusterSecrets try to deploy in the k8s cluster each secret in the wantedSecretsList. If the secret already exist it jumps to the next one.
@@ -60,7 +62,15 @@ func GenerateClusterSecrets(k8sClusterClient kubernetes.Interface, existingSecre
 				secretType = corev1.SecretTypeTLS
 			}
 
-			secret, err := k8sClusterClient.CreateSecret(namespace, s.GetName(), secretType, obj.SecretData(), false)
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      s.GetName(),
+					Namespace: namespace,
+				},
+				Type: secretType,
+				Data: obj.SecretData(),
+			}
+			err = k8sClusterClient.Client().Create(context.TODO(), secret)
 			results <- &secretOutput{secret: secret, err: err}
 		}(s)
 	}

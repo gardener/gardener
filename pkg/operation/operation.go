@@ -236,8 +236,8 @@ func (o *Operation) InitializeMonitoringClient() error {
 	}
 
 	// Read the CA.
-	tlsSecret, err := o.K8sSeedClient.GetSecret(o.Shoot.SeedNamespace, "prometheus-tls")
-	if err != nil {
+	tlsSecret := &corev1.Secret{}
+	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, "prometheus-tls"), tlsSecret); err != nil {
 		return err
 	}
 
@@ -245,8 +245,8 @@ func (o *Operation) InitializeMonitoringClient() error {
 	ca.AppendCertsFromPEM(tlsSecret.Data[secrets.DataKeyCertificateCA])
 
 	// Read the basic auth credentials.
-	credentials, err := o.K8sSeedClient.GetSecret(o.Shoot.SeedNamespace, "monitoring-ingress-credentials")
-	if err != nil {
+	credentials := &corev1.Secret{}
+	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, "monitoring-ingress-credentials"), credentials); err != nil {
 		return err
 	}
 

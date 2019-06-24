@@ -108,7 +108,7 @@ var _ = Describe("helper", func() {
 
 				result := MergeConditions(oldConditions, gardencorev1alpha1.Condition{Type: typeFoo}, gardencorev1alpha1.Condition{Type: typeBar})
 
-				Expect(result).To(Equal([]gardencorev1alpha1.Condition{gardencorev1alpha1.Condition{Type: typeFoo}, gardencorev1alpha1.Condition{Type: typeBar}}))
+				Expect(result).To(Equal([]gardencorev1alpha1.Condition{{Type: typeFoo}, {Type: typeBar}}))
 			})
 		})
 

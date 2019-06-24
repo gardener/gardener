@@ -63,7 +63,7 @@ type PodRule struct {
 	Allowed bool
 }
 
-// Host containts host with port and optional description.
+// Host contains host with port and optional description.
 type Host struct {
 	Description string
 	HostName    string
@@ -98,7 +98,7 @@ func NewPod(name string, labels labels.Set, shootVersionContstraints ...string) 
 	return Pod{name, labels, constraint, nil}
 }
 
-// ToString returns the string represetnation of TargetHost.
+// ToString returns the string representation of TargetHost.
 func (t *HostRule) ToString() string {
 	action := "block"
 	if t.Allowed {
@@ -107,7 +107,7 @@ func (t *HostRule) ToString() string {
 	return fmt.Sprintf("should %s connection to %q %s:%d", action, t.Host.Description, t.Host.HostName, t.Host.Port)
 }
 
-// ToString returns the string represetnation of TargetPod.
+// ToString returns the string representation of TargetPod.
 func (p *PodRule) ToString() string {
 	action := "block"
 	if p.Allowed {

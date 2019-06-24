@@ -15,6 +15,7 @@
 package garden
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -23,8 +24,11 @@ import (
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	kubeinformers "k8s.io/client-go/informers"
 )
@@ -207,14 +211,21 @@ func VerifyInternalDomainSecret(k8sGardenClient kubernetes.Interface, numberOfSh
 		return fmt.Errorf("error getting information out of current internal domain secret: %+v", err)
 	}
 
-	internalConfigMap, err := k8sGardenClient.GetConfigMap(common.GardenNamespace, common.ControllerManagerInternalConfigMapName)
+	internalConfigMap := &corev1.ConfigMap{}
+	err = k8sGardenClient.Client().Get(context.TODO(), kutil.Key(common.GardenNamespace, common.ControllerManagerInternalConfigMapName), internalConfigMap)
 	if apierrors.IsNotFound(err) || numberOfShoots == 0 {
-		if _, err := k8sGardenClient.CreateConfigMap(common.GardenNamespace, common.ControllerManagerInternalConfigMapName, map[string]string{
-			common.GardenRoleInternalDomain: currentDomain,
-		}, true); err != nil {
-			return err
+		configMap := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      common.ControllerManagerInternalConfigMapName,
+				Namespace: common.GardenNamespace,
+			},
 		}
-		return nil
+		return kutil.CreateOrUpdate(context.TODO(), k8sGardenClient.Client(), configMap, func() error {
+			configMap.Data = map[string]string{
+				common.GardenRoleInternalDomain: currentDomain,
+			}
+			return nil
+		})
 	}
 	if err != nil {
 		return err
