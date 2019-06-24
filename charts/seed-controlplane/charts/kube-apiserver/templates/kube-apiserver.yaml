@@ -53,7 +53,11 @@ spec:
         imagePullPolicy: IfNotPresent
         command:
         - /hyperkube
+        {{- if semverCompare "< 1.15" .Values.kubernetesVersion }}
         - apiserver
+        {{- else }}
+        - kube-apiserver
+        {{- end }}
         - --enable-admission-plugins={{ include "kube-apiserver.admissionPlugins" . | trimSuffix "," }}
         {{- if .Values.enableCSI }}
         # Needed due to https://github.com/kubernetes/kubernetes/pull/73102

@@ -45,6 +45,7 @@ configmap:
         pods insecure
         upstream
         fallthrough in-addr.arpa ip6.arpa
+        ttl 30
     - name: prometheus
       parameters: 0.0.0.0:9153
     - name: forward
