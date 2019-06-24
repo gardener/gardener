@@ -136,21 +136,24 @@ func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, n
 	return deploymentList, nil
 }
 
-func shootCreationCompleted(newStatus *v1beta1.ShootStatus) bool {
-	if len(newStatus.Conditions) == 0 && newStatus.LastOperation == nil {
+func shootCreationCompleted(newShoot *v1beta1.Shoot) bool {
+	if newShoot.Generation != newShoot.Status.ObservedGeneration {
+		return false
+	}
+	if len(newShoot.Status.Conditions) == 0 && newShoot.Status.LastOperation == nil {
 		return false
 	}
 
-	for _, condition := range newStatus.Conditions {
+	for _, condition := range newShoot.Status.Conditions {
 		if condition.Status != gardencorev1alpha1.ConditionTrue {
 			return false
 		}
 	}
 
-	if newStatus.LastOperation != nil {
-		if newStatus.LastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate ||
-			newStatus.LastOperation.Type == gardencorev1alpha1.LastOperationTypeReconcile {
-			if newStatus.LastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded {
+	if newShoot.Status.LastOperation != nil {
+		if newShoot.Status.LastOperation.Type == gardencorev1alpha1.LastOperationTypeCreate ||
+			newShoot.Status.LastOperation.Type == gardencorev1alpha1.LastOperationTypeReconcile {
+			if newShoot.Status.LastOperation.State != gardencorev1alpha1.LastOperationStateSucceeded {
 				return false
 			}
 		}

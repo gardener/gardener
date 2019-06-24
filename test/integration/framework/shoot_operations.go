@@ -76,7 +76,14 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, er
 	}
 
 	shoot := s.Shoot
-	err = s.GardenClient.Client().Create(ctx, shoot)
+	err = retry.UntilTimeout(ctx, 20 * time.Second, 5 *time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = s.GardenClient.Client().Create(ctx, shoot)
+		if err != nil {
+			s.Logger.Debugf("unable to create shoot %s: %s", shoot.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -99,20 +106,27 @@ func (s *ShootGardenerTest) DeleteShoot(ctx context.Context) error {
 	}
 
 	s.Shoot = shoot
-	err = s.RemoveShootAnnotation(ctx, common.ShootIgnore)
-	if err != nil {
-		return err
-	}
+	err = retry.UntilTimeout(ctx, 20 * time.Second, 5 *time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = s.RemoveShootAnnotation(ctx, common.ShootIgnore)
+		if err != nil {
+			return retry.MinorError(err)
+		}
 
-	// First we annotate the shoot to be deleted.
-	err = s.AnnotateShoot(ctx, map[string]string{
-		common.ConfirmationDeletion: "true",
+		// First we annotate the shoot to be deleted.
+		err = s.AnnotateShoot(ctx, map[string]string{
+			common.ConfirmationDeletion: "true",
+		})
+		if err != nil {
+			return retry.MinorError(err)
+		}
+
+		err = s.GardenClient.Client().Delete(ctx, s.Shoot)
+		if err != nil {
+			return retry.MinorError(err)
+		}
+
+		return retry.Ok()
 	})
-	if err != nil {
-		return err
-	}
-
-	err = s.GardenClient.Client().Delete(ctx, s.Shoot)
 	if err != nil {
 		return err
 	}
@@ -165,9 +179,10 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 		shoot := &v1beta1.Shoot{}
 		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
 		if err != nil {
-			return retry.SevereError(err)
+			s.Logger.Infof("Error while waiting for shoot to be created: %s", err.Error())
+			return retry.MinorError(err)
 		}
-		if shootCreationCompleted(&shoot.Status) {
+		if shootCreationCompleted(shoot) {
 			return retry.Ok()
 		}
 		s.Logger.Infof("Waiting for shoot %s to be created", s.Shoot.Name)
@@ -187,7 +202,8 @@ func (s *ShootGardenerTest) WaitForShootToBeDeleted(ctx context.Context) error {
 			if apierrors.IsNotFound(err) {
 				return retry.Ok()
 			}
-			return retry.SevereError(err)
+			s.Logger.Infof("Error while waiting for shoot to be deleted: %s", err.Error())
+			return retry.MinorError(err)
 		}
 		s.Logger.Infof("waiting for shoot %s to be deleted", s.Shoot.Name)
 		if shoot.Status.LastOperation != nil {
