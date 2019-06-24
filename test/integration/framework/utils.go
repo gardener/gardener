@@ -17,6 +17,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"k8s.io/client-go/rest"
 	"net/http"
 	"os"
 	"strings"
@@ -240,4 +241,27 @@ func shootIsScheduledSuccessfully(newSpec *v1beta1.ShootSpec) bool {
 		return true
 	}
 	return false
+}
+
+
+// NewClientFromServiceAccount returns a kubernetes client for a service account.
+func NewClientFromServiceAccount(ctx context.Context, k8sClient kubernetes.Interface, account *corev1.ServiceAccount) (kubernetes.Interface, error) {
+	secret := &corev1.Secret{}
+	err := k8sClient.Client().Get(ctx, client.ObjectKey{Namespace: account.Namespace, Name: account.Secrets[0].Name}, secret)
+	if err != nil {
+		return nil, err
+	}
+
+	serviceAccountConfig := &rest.Config{
+		Host: k8sClient.RESTConfig().Host,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure: false,
+			CAData:   secret.Data["ca.crt"],
+		},
+		BearerToken: string(secret.Data["token"]),
+	}
+
+	return kubernetes.NewForConfig(serviceAccountConfig, client.Options{
+		Scheme: kubernetes.GardenScheme,
+	})
 }
