@@ -34,7 +34,7 @@ var _ = Describe("Controller Manager", func() {
 			defer test.WithEnvVar(imagevector.OverrideEnv, "")()
 			defer test.WithWd("../../..")()
 
-			_, err := ReadGlobalImageVectorWithEnvOverride()
+			_, err := imagevector.ReadGlobalImageVectorWithEnvOverride("charts/images.yaml")
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

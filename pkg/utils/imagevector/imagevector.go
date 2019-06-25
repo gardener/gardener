@@ -50,6 +50,16 @@ func ReadFile(name string) (ImageVector, error) {
 	return Read(file)
 }
 
+// ReadGlobalImageVectorWithEnvOverride reads the global image vector and applies the env override. Exposed for testing.
+func ReadGlobalImageVectorWithEnvOverride(filePath string) (ImageVector, error) {
+	imageVector, err := ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return WithEnvOverride(imageVector)
+}
+
 // mergeImageSources merges the two given ImageSources.
 //
 // If the tag of the override is non-empty, it immediately returns the override.
