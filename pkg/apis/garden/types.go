@@ -208,9 +208,11 @@ type OpenStackConstraints struct {
 type OpenStackFloatingPool struct {
 	// Name is the name of the floating pool.
 	Name string
+	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
+	LoadBalancerClasses []OpenStackLoadBalancerClass
 }
 
-// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
+// OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 type OpenStackLoadBalancerProvider struct {
 	// Name is the name of the load balancer provider.
 	Name string
@@ -947,10 +949,11 @@ type OpenStackCloud struct {
 	FloatingPoolName string
 	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
 	LoadBalancerProvider string
+	// LoadBalancerClasses available for a dedicated Shoot.
+	LoadBalancerClasses []OpenStackLoadBalancerClass
 	// MachineImage holds information about the machine image to use for all workers.
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
-	// +optional
 	MachineImage *MachineImage
 	// Networks holds information about the Kubernetes and infrastructure networks.
 	Networks OpenStackNetworks
@@ -960,11 +963,23 @@ type OpenStackCloud struct {
 	Zones []string
 }
 
+// OpenStackLoadBalancerClass defines a restricted network setting for generic LoadBalancer classes usable in CloudProfiles.
+type OpenStackLoadBalancerClass struct {
+	// Name is the name of the LB class
+	Name string
+	// FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.
+	FloatingSubnetID *string
+	// FloatingNetworkID is the network ID of the floating network pool.
+	FloatingNetworkID *string
+	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
+	// configuration is done.
+	SubnetID *string
+}
+
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.
 type OpenStackNetworks struct {
 	gardencore.K8SNetworks
 	// Router indicates whether to use an existing router or create a new one.
-	// +optional
 	Router *OpenStackRouter
 	// Workers is a list of CIDRs of worker subnets (private) to create (used for the VMs).
 	Workers []gardencore.CIDR
