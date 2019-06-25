@@ -3,18 +3,8 @@ replicas: 1
 
 images:
   etcd: image-repository:image-tag
-  etcd-backup-restore: image-repository:image-tag
 
-storageClassName: default
 storageCapacity: 16Gi
-
-backup:
-  schedule: "0 */24 * * *" # cron standard schedule
-  storageProvider: ""  # Abs,Gcs,S3,Swift empty means no backup,
-  backupSecret: etcd-backup
-  storageContainer: ""
-  env: []         # Follow comments below
-  volumeMounts: []
 
 tlsServerSecretName: etcd-server-tls
 tlsClientSecretName: etcd-client-tls
@@ -29,76 +19,3 @@ vpa:
 
 metrics: basic
 
-# Aws S3 storage configuration
-# Note: No volumeMounts variable needed
-# storageProvider: "S3"
-# env:
-# - name: "AWS_REGION"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "region"
-# - name: "AWS_SECRET_ACCESS_KEY"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "secretAccessKey"
-# - name: "AWS_ACCESS_KEY_ID
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "accessKeyID"
-
-# Azure ABS storage configuration
-# Note: No volumeMounts needed
-# storageProvider: "ABS"
-# env:
-# - name: "STORAGE_ACCOUNT"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "storage-account"
-# - name: "STORAGE_KEY"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "storage-key"
-
-# Google Cloud storage configuration
-# storageProvider: "GCS"
-# env:
-# - name: "GOOGLE_APPLICATION_CREDENTIALS"
-#   value: "/root/.gcp/serviceaccount.json"
-# volumeMount:
-# - name: etcd-backup
-#   mountPath: "/root/.gcp/"
-
-# Openstack Swift configuration
-# Note: No volumeMounts variable needed
-# storageProvider: "Swift"
-# env:
-# - name: "OS_AUTH_URL"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "authURL"
-# - name: "OS_DOMAIN_NAME"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "domainName"
-# -	name: "OS_USERNAME"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "username"
-# - name: "OS_PASSWORD"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "password"
-# - name: "OS_TENANT_NAME"
-#   valueFrom:
-#     secretKeyRef:
-#       name: etcd-backup
-#       key: "tenantName"

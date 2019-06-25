@@ -246,8 +246,8 @@ func (b *Botanist) WaitUntilClusterAutoscalerDeleted(ctx context.Context) error 
 	})
 }
 
-// WaitForControllersToBeActive checks whether the kube-controller-manager and the cloud-controller-manager have
-// recently written to the Endpoint object holding the leader information. If yes, they are active.
+// WaitForControllersToBeActive checks whether kube-controller-manager has
+// recently written to the Endpoint object holding the leader information. If yes, it is active.
 func (b *Botanist) WaitForControllersToBeActive() error {
 	type controllerInfo struct {
 		name          string
@@ -264,16 +264,6 @@ func (b *Botanist) WaitForControllersToBeActive() error {
 		controllers  = []controllerInfo{}
 		pollInterval = 5 * time.Second
 	)
-
-	// Check whether the cloud-controller-manager deployment exists
-	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName); err == nil {
-		controllers = append(controllers, controllerInfo{
-			name:          common.CloudControllerManagerDeploymentName,
-			labelSelector: "app=kubernetes,role=cloud-controller-manager",
-		})
-	} else if err != nil && !apierrors.IsNotFound(err) {
-		return err
-	}
 
 	// Check whether the kube-controller-manager deployment exists
 	if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName); err == nil {

@@ -156,10 +156,10 @@ const (
 	// GardenRoleMembers is the value of GardenRole key indicating type 'members'.
 	GardenRoleMembers = "members"
 
-	//GardenRoleProject is the value of GardenRole key indicating type 'project'.
+	// GardenRoleProject is the value of GardenRole key indicating type 'project'.
 	GardenRoleProject = "project"
 
-	//GardenRoleBackup is the value of GardenRole key indicating type 'backup'.
+	// GardenRoleBackup is the value of GardenRole key indicating type 'backup'.
 	GardenRoleBackup = "backup"
 
 	// GardenRoleVpa is the value of GardenRole key indicating type 'vpa'.
@@ -198,12 +198,6 @@ const (
 
 	// AWSLBReadvertiserDeploymentName is the name for the aws-lb-readvertiser
 	AWSLBReadvertiserDeploymentName = "aws-lb-readvertiser"
-
-	// CloudControllerManagerDeploymentName is the name of the cloud-controller-manager deployment.
-	CloudControllerManagerDeploymentName = "cloud-controller-manager"
-
-	// CloudControllerManagerServerName is the name of the cloud-controller-manager server.
-	CloudControllerManagerServerName = "cloud-controller-manager-server"
 
 	// KubeControllerManagerDeploymentName is the name of the kube-controller-manager deployment.
 	KubeControllerManagerDeploymentName = "kube-controller-manager"
@@ -470,47 +464,14 @@ const (
 	// ETCDImageName is the name of the ETCD image.
 	ETCDImageName = "etcd"
 
-	// ETCDBackupRestoreImageName is the name of the ETCDBackupRestore image.
-	ETCDBackupRestoreImageName = "etcd-backup-restore"
-
-	// AlicloudControllerManagerImageName is the name of the AlicloudControllerManager image.
-	AlicloudControllerManagerImageName = "alicloud-controller-manager"
-
-	// PacketControllerManagerImageName is the name of the PacketControllerManager image.
-	PacketControllerManagerImageName = "packet-controller-manager"
-
-	// CSI Images
-
-	// CSIAttacherImageName is the name of csi attacher - https://github.com/kubernetes-csi/external-attacher
-	CSIAttacherImageName = "csi-attacher"
-	// CSIAttacher is the name of CSI Attacher
-	CSIAttacher = "csi-attacher"
-
 	// CSINodeDriverRegistrarImageName is the name of driver registrar - https://github.com/kubernetes-csi/node-driver-registrar
 	CSINodeDriverRegistrarImageName = "csi-node-driver-registrar"
 
-	// CSIProvisionerImageName is the name of csi provisioner - https://github.com/kubernetes-csi/external-provisioner
-	CSIProvisionerImageName = "csi-provisioner"
-	// CSIProvisioner is the name of CSI Provisioner
-	CSIProvisioner = "csi-provisioner"
-
-	// CSISnapshotterImageName is the name of csi plugin for Alicloud - https://github.com/kubernetes-csi/external-snapshotter
-	CSISnapshotterImageName = "csi-snapshotter"
-	// CSISnapshotter is the name of CSI Snapshotter
-	CSISnapshotter = "csi-snapshotter"
-
 	// CSIPluginAlicloudImageName is the name of csi plugin for Alicloud - https://github.com/AliyunContainerService/csi-plugin
 	CSIPluginAlicloudImageName = "csi-plugin-alicloud"
-	// CSIPluginAlicloud is the name of Alicloud CSI Plugin
-	CSIPluginAlicloud = "csi-disk-plugin-alicloud"
 
 	// CSIPluginPacketImageName is the name of csi plugin for Packet - https://github.com/packethost/csi-packet
 	CSIPluginPacketImageName = "packet-storage-interface"
-	// CSIPluginPacket is the name of Packet CSI Plugin
-	CSIPluginPacket = "csi-disk-plugin-packet"
-
-	// CSIPluginController is the name of CSI plugin controller
-	CSIPluginController = "csi-plugin-controller"
 
 	// AWSLBReadvertiserImageName is the name of the AWSLBReadvertiser image.
 	AWSLBReadvertiserImageName = "aws-lb-readvertiser"
@@ -585,7 +546,6 @@ var (
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
-		CloudControllerManagerDeploymentName,
 		KubeAddonManagerDeploymentName,
 		KubeAPIServerDeploymentName,
 		KubeControllerManagerDeploymentName,
@@ -638,13 +598,3 @@ var (
 		KibanaDeploymentName,
 	)
 )
-
-// CloudConfigUserDataConfig is a struct containing cloud-specific configuration required to
-// render the shoot-cloud-config chart properly.
-type CloudConfigUserDataConfig struct {
-	ProvisionCloudProviderConfig bool
-	KubeletParameters            []string
-	HostnameOverride             bool
-	EnableCSI                    bool
-	ProviderIDProvided           bool
-}

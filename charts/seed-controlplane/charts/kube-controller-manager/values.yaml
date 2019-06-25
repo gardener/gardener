@@ -1,11 +1,8 @@
-cloudProvider: aws
 replicas: 1
 kubernetesVersion: 1.7.5
 serviceNetwork: 10.0.0.0/24
 podNetwork: 192.168.0.0/16
 clusterName: shoot-foo-bar
-environment: []
-additionalParameters: []
 podAnnotations: {}
 featureGates: {}
   # CustomResourceValidation: true
@@ -20,8 +17,6 @@ horizontalPodAutoscaler:
   downscaleStabilization: 5m0s
   readinessDelay: 30s
   cpuInitializationPeriod: 5m0s
-
-enableCSI: false
 
 objectCount: 4
 resources:

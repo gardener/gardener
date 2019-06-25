@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: cloud-provider-config
-  namespace: {{ .Release.Namespace }}
-data:
-  cloudprovider.conf: |
-{{ .Values.cloudProviderConfig | indent 4 }}

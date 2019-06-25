@@ -3,18 +3,6 @@
 --allow-privileged=true
 {{- end }}
 --bootstrap-kubeconfig=/var/lib/kubelet/kubeconfig-bootstrap
-{{- if .Values.kubernetes.kubelet.providerIDProvided }}
---provider-id=${PROVIDER_ID}
-{{- end }}
-{{- if .Values.kubernetes.kubelet.enableCSI }}
---cloud-provider=external
---enable-controller-attach-detach=true
-{{- else }}
---cloud-provider={{ .Values.cloudProvider.name }}
-{{- if .Values.cloudProvider.config }}
---cloud-config=/var/lib/kubelet/cloudprovider.conf
-{{- end }}
-{{- end }}
 --config=/var/lib/kubelet/config/kubelet
 --cni-bin-dir=/opt/cni/bin/
 --cni-conf-dir=/etc/cni/net.d/
@@ -37,9 +25,6 @@
 {{- end }}
 {{- if semverCompare "< 1.11" .Values.kubernetes.version }}
 --rotate-certificates=true
-{{- end }}
-{{- range $index, $param := .Values.kubernetes.kubelet.parameters }}
-{{ $param }}
 {{- end }}
 --v=2 $KUBELET_EXTRA_ARGS
 {{- end -}}

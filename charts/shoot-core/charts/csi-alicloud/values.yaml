@@ -1,5 +1,5 @@
 images:
-  csi-driver-registrar: image-repository:image-tag
+  csi-node-driver-registrar: image-repository:image-tag
   csi-plugin-alicloud: image-repository:image-tag
 credential:
   accessKeyID: keyID

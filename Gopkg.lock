@@ -220,7 +220,7 @@
   version = "0.1.0"
 
 [[projects]]
-  digest = "1:d551f6f75ca03af75445b20a824d28f1da653fa410ccc8488ac64b147af1901c"
+  digest = "1:909977177effbf602c7a0b525b030e011cb86d019585433d7d9db24d58270468"
   name = "github.com/gardener/gardener-extensions"
   packages = [
     "controllers/provider-alicloud/pkg/apis/alicloud",
@@ -237,7 +237,7 @@
     "controllers/provider-packet/pkg/apis/packet/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "f09dd7bc8d2fee9f4cfff1d95d39e7713728bf81"
+  revision = "227adb277fa467b9e805af798a502514ccbe75dd"
 
 [[projects]]
   digest = "1:b678acaf8766b6df36723a4adefc3302191a34c22b7a38b0abaf5f6d3dd24090"

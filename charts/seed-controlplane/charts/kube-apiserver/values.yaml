@@ -10,18 +10,12 @@ seedNetworks:
   service: 10.0.0.0/24
   pod: 192.168.0.0/1
   node: 172.16.0.0/20
-additionalParameters: []
 podAnnotations: {}
 featureGates: {}
   # CustomResourceValidation: true
   # RotateKubeletServerCertificate: false
 runtimeConfig: {}
   # autoscaling/v2alpha1: true
-environment: []
-
-# Needed due to https://github.com/kubernetes/kubernetes/pull/73102
-cloudProvider: ""
-enableCSI: false
 
 oidcConfig: {}
   # caBundle: |

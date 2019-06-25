@@ -91,59 +91,6 @@ spec:
           mountPath: /var/etcd/ssl/server
         - name: etcd-client-tls
           mountPath: /var/etcd/ssl/client
-      - name: backup-restore
-        command:
-        - etcdbrctl
-        - server
-        - --schedule={{ .Values.backup.schedule }}
-        - --data-dir=/var/etcd/data/new.etcd
-        - --storage-provider={{ .Values.backup.storageProvider }}
-        - --store-prefix=etcd-{{ .Values.role }}
-        - --cert=/var/etcd/ssl/client/tls.crt
-        - --key=/var/etcd/ssl/client/tls.key
-        - --cacert=/var/etcd/ssl/ca/ca.crt
-        - --insecure-transport=false
-        - --insecure-skip-tls-verify=false
-        - --endpoints=https://etcd-{{ .Values.role }}-0:{{ .Values.servicePorts.client }}
-        - --etcd-connection-timeout=300
-        - --delta-snapshot-period-seconds=300
-        - --delta-snapshot-memory-limit=104857600 #100MB
-        - --garbage-collection-period-seconds=43200
-        - --snapstore-temp-directory=/var/etcd/data/temp
-        image: {{ index .Values.images "etcd-backup-restore" }}
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 8080
-          name: server
-          protocol: TCP
-        resources:
-          requests:
-            cpu: 100m
-            memory: 128Mi
-          limits:
-            cpu: 500m
-            memory: 2Gi
-        env:
-        - name: STORAGE_CONTAINER
-          value: {{ .Values.backup.storageContainer }}
-{{- if .Values.backup.env }}
-{{ toYaml .Values.backup.env | indent 8 }}
-{{- end }}
-        volumeMounts:
-{{- if eq .Values.role "main" }}
-        - name: {{ .Values.role }}-etcd
-          mountPath: /var/etcd/data
-{{- else }}
-        - name: etcd-{{ .Values.role }}
-          mountPath: /var/etcd/data
-{{- end}}
-        - name: ca-etcd
-          mountPath: /var/etcd/ssl/ca
-        - name: etcd-client-tls
-          mountPath: /var/etcd/ssl/client
-{{- if .Values.backup.volumeMounts }}
-{{ toYaml .Values.backup.volumeMounts | indent 8 }}
-{{- end }}
       volumes:
       - name: etcd-bootstrap
         configMap:
@@ -158,29 +105,16 @@ spec:
       - name: ca-etcd
         secret:
           secretName: ca-etcd
-{{- if .Values.backup.storageProvider }}
-      - name: {{ .Values.backup.backupSecret }}
-        secret:
-          secretName: {{ .Values.backup.backupSecret }}
-{{- end }}
   volumeClaimTemplates:
+  - metadata:
 {{- if eq .Values.role "main" }}
-  - metadata:
       name: {{ .Values.role }}-etcd
-    spec:
-      accessModes:
-      - "ReadWriteOnce"
-      storageClassName: {{ .Values.storageClassName }}
-      resources:
-        requests:
-          storage: {{ .Values.storageCapacity }}
 {{- else }}
-  - metadata:
       name: etcd-{{ .Values.role }}
+{{- end }}
     spec:
       accessModes:
       - "ReadWriteOnce"
       resources:
         requests:
           storage: {{ .Values.storageCapacity }}
-{{- end }}

@@ -124,23 +124,13 @@ func (b *HybridBotanist) generateDownloaderConfig(machineImageName string) map[s
 
 func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error) {
 	var (
-		userDataConfig = b.ShootCloudBotanist.GenerateCloudConfigUserDataConfig()
 		serviceNetwork = b.Shoot.GetServiceNetwork()
 
-		cloudProvider = map[string]interface{}{
-			"name": b.ShootCloudBotanist.GetCloudProviderName(),
-		}
-
 		kubelet = map[string]interface{}{
-			"caCert":             string(b.Secrets[gardencorev1alpha1.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
-			"parameters":         userDataConfig.KubeletParameters,
-			"hostnameOverride":   userDataConfig.HostnameOverride,
-			"enableCSI":          userDataConfig.EnableCSI,
-			"providerIDProvided": userDataConfig.ProviderIDProvided,
+			"caCert": string(b.Secrets[gardencorev1alpha1.SecretNameCAKubelet].Data[secrets.DataKeyCertificateCA]),
 		}
 
 		originalConfig = map[string]interface{}{
-			"cloudProvider": cloudProvider,
 			"kubernetes": map[string]interface{}{
 				"clusterDNS": common.ComputeClusterIP(serviceNetwork, 10),
 				"domain":     gardenv1beta1.DefaultDomain,
@@ -149,14 +139,6 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 			},
 		}
 	)
-
-	if userDataConfig.ProvisionCloudProviderConfig {
-		cloudProviderConfig, err := b.ShootCloudBotanist.GenerateCloudProviderConfig()
-		if err != nil {
-			return nil, err
-		}
-		cloudProvider["config"] = cloudProviderConfig
-	}
 
 	if kubeletConfig := b.Shoot.Info.Spec.Kubernetes.Kubelet; kubeletConfig != nil {
 		if featureGates := kubeletConfig.FeatureGates; featureGates != nil {
@@ -171,19 +153,6 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 		if cpuManagerPolicy := kubeletConfig.CPUManagerPolicy; cpuManagerPolicy != nil {
 			kubelet["cpuManagerPolicy"] = *cpuManagerPolicy
 		}
-	}
-
-	if b.Shoot.UsesCSI() {
-		var existingFeatureGates map[string]bool
-		if fg, ok := kubelet["featureGates"]; ok {
-			existingFeatureGates = fg.(map[string]bool)
-		}
-
-		featureGates, err := common.InjectCSIFeatureGates(b.ShootVersion(), existingFeatureGates)
-		if err != nil {
-			return nil, err
-		}
-		kubelet["featureGates"] = featureGates
 	}
 
 	if caBundle := b.Shoot.CloudProfile.Spec.CABundle; caBundle != nil {

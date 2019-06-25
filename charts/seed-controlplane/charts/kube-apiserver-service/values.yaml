@@ -1,4 +1,3 @@
 type: LoadBalancer
-annotations: {}
 targetPort: 443
 # nodePort: 31443

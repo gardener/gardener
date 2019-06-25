@@ -14,10 +14,6 @@
 
 package cloudbotanist
 
-import (
-	"github.com/gardener/gardener/pkg/operation/common"
-)
-
 // CloudBotanist is an interface which must be implemented by cloud-specific Botanists. The Cloud Botanist
 // is responsible for all operations which require IaaS specific knowledge.
 type CloudBotanist interface {
@@ -28,17 +24,7 @@ type CloudBotanist interface {
 	DestroyBackupInfrastructure() error
 
 	// Control Plane
-	GenerateCloudProviderConfig() (string, error)
-	RefreshCloudProviderConfig(map[string]string) map[string]string
-	GenerateCloudConfigUserDataConfig() *common.CloudConfigUserDataConfig
-	GenerateETCDStorageClassConfig() map[string]interface{}
-	GenerateEtcdBackupConfig() (map[string][]byte, map[string]interface{}, error)
-	GenerateKubeAPIServerServiceConfig() (map[string]interface{}, error)
-	GenerateKubeAPIServerExposeConfig() (map[string]interface{}, error)
-	GenerateKubeAPIServerConfig() (map[string]interface{}, error)
-	GenerateCloudControllerManagerConfig() (map[string]interface{}, string, error)
-	GenerateKubeControllerManagerConfig() (map[string]interface{}, error)
-	GenerateKubeSchedulerConfig() (map[string]interface{}, error)
+	GenerateEtcdBackupConfig() (map[string][]byte, error)
 	DeployCloudSpecificControlPlane() error
 	GenerateCSIConfig() (map[string]interface{}, error)
 

@@ -16,8 +16,6 @@ package azurebotanist
 
 import (
 	"errors"
-	"fmt"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -60,50 +58,6 @@ func init() {
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
 
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
-}
-
-func infrastructureStatusFromInfrastructure(raw []byte) (*azurev1alpha1.InfrastructureStatus, error) {
-	config := &azurev1alpha1.InfrastructureStatus{}
-	if _, _, err := decoder.Decode(raw, nil, config); err != nil {
-		return nil, err
-	}
-	return config, nil
-}
-
-func findSubnetByPurpose(subnets []azurev1alpha1.Subnet, purpose azurev1alpha1.Purpose) (*azurev1alpha1.Subnet, error) {
-	for _, subnet := range subnets {
-		if subnet.Purpose == purpose {
-			return &subnet, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find subnet with purpose %q", purpose)
-}
-
-func findSecurityGroupByPurpose(securityGroups []azurev1alpha1.SecurityGroup, purpose azurev1alpha1.Purpose) (*azurev1alpha1.SecurityGroup, error) {
-	for _, securityGroup := range securityGroups {
-		if securityGroup.Purpose == purpose {
-			return &securityGroup, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find security group with purpose %q", purpose)
-}
-
-func findRouteTableByPurpose(routeTables []azurev1alpha1.RouteTable, purpose azurev1alpha1.Purpose) (*azurev1alpha1.RouteTable, error) {
-	for _, routeTable := range routeTables {
-		if routeTable.Purpose == purpose {
-			return &routeTable, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find route table with purpose %q", purpose)
-}
-
-func findAvailabilitySetByPurpose(availabilitySets []azurev1alpha1.AvailabilitySet, purpose azurev1alpha1.Purpose) (*azurev1alpha1.AvailabilitySet, error) {
-	for _, availabilitySet := range availabilitySets {
-		if availabilitySet.Purpose == purpose {
-			return &availabilitySet, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find availability set with purpose %q", purpose)
 }
 
 // IMPORTANT NOTICE

@@ -15,10 +15,6 @@ images:
   sourceRepository: github.com/coreos/etcd
   repository: quay.io/coreos/etcd
   tag: v3.3.13
-- name: etcd-backup-restore
-  sourceRepository: github.com/gardener/etcd-backup-restore
-  repository: eu.gcr.io/gardener-project/gardener/etcdbrctl
-  tag: "0.6.4"
 - name: hyperkube
   sourceRepository: github.com/kubernetes/kubernetes
   repository: k8s.gcr.io/hyperkube
@@ -103,18 +99,6 @@ images:
   repository: coredns/coredns
   tag: "1.4.0"
 
-# Alicloud Controller Manger
-- name: alicloud-controller-manager
-  sourceRepository: https://github.com/kubernetes/cloud-provider-alibaba-cloud
-  repository: registry.eu-central-1.aliyuncs.com/gardener-de/alibaba-cloud-controller-manager
-  tag: "1.9.8"
-
-# Packet Controller Manager
-- name: packet-controller-manager
-  sourceRepository: https://github.com/packethost/packet-ccm
-  repository: docker.io/packethost/packet-ccm
-  tag: "master"
-
 # Packet Storage Interface
 - name: packet-storage-interface
   sourceRepository: https://github.com/packethost/csi-packet
@@ -159,17 +143,6 @@ images:
   repository: eu.gcr.io/gardener-project/alpine-iptables
   tag: "3.9"
 
-# CSI
-- name: csi-attacher
-  sourceRepository: https://github.com/kubernetes-csi/external-attacher
-  repository: quay.io/k8scsi/csi-attacher
-  tag: v1.0.1
-  runtimeVersion: 1.13.x
-- name: csi-attacher
-  sourceRepository: https://github.com/kubernetes-csi/external-attacher
-  repository: quay.io/k8scsi/csi-attacher
-  tag: v1.1.0
-  runtimeVersion: 1.14.x
 - name: csi-node-driver-registrar
   sourceRepository: https://github.com/kubernetes-csi/node-driver-registrar
   repository: quay.io/k8scsi/csi-node-driver-registrar
@@ -178,26 +151,6 @@ images:
 - name: csi-node-driver-registrar
   sourceRepository: https://github.com/kubernetes-csi/node-driver-registrar
   repository: quay.io/k8scsi/csi-node-driver-registrar
-  tag: v1.1.0
-  runtimeVersion: 1.14.x
-- name: csi-provisioner
-  sourceRepository: https://github.com/kubernetes-csi/external-provisioner
-  repository: quay.io/k8scsi/csi-provisioner
-  tag: v1.0.1
-  runtimeVersion: 1.13.x
-- name: csi-provisioner
-  sourceRepository: https://github.com/kubernetes-csi/external-provisioner
-  repository: quay.io/k8scsi/csi-provisioner
-  tag: v1.1.0
-  runtimeVersion: 1.14.x
-- name: csi-snapshotter
-  sourceRepository: https://github.com/kubernetes-csi/external-snapshotter
-  repository: quay.io/k8scsi/csi-snapshotter
-  tag: v1.0.1
-  runtimeVersion: 1.13.x
-- name: csi-snapshotter
-  sourceRepository: https://github.com/kubernetes-csi/external-snapshotter
-  repository: quay.io/k8scsi/csi-snapshotter
   tag: v1.1.0
   runtimeVersion: 1.14.x
 - name: csi-plugin-alicloud

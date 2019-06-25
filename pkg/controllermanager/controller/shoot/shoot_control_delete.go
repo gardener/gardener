@@ -19,10 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-	machinev1alpha1 "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -35,6 +31,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // runDeleteShootFlow deletes a Shoot cluster entirely.
@@ -103,10 +101,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
 	}
 
-	// We check whether the shoot namespace in the seed cluster is already in a terminating state, i.e. whether
-	// we have tried to delete it in a previous run. In that case, we do not need to cleanup shoot resource because
-	// that would have already been done.
-	// We also check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
+	// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
 	// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
 	// cleaned up. We follow that no (more) resources can have been deployed in the shoot cluster, thus there is nothing
 	// to delete anymore.
@@ -118,13 +113,20 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		kubeAPIServerDeploymentFound = false
 	}
 
-	infrastructureMigrationNeeded, err := c.needsInfrastructureMigration(o)
-	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether infrastructure migration is needed (%s)", err.Error()))
+	// We check whether the kube-controller-manager deployment exists in the shoot namespace. If it does not, then we assume
+	// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
+	// cleaned up.
+	kubeControllerManagerDeploymentFound := true
+	if err := botanist.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName), &appsv1.Deployment{}); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the kube-controller-manager deployment in the shoot namespace in the seed cluster (%s)", err))
+		}
+		kubeControllerManagerDeploymentFound = false
 	}
-	workerMigrationNeeded, err := c.needsWorkerMigration(o)
+
+	controlPlaneDeploymentNeeded, err := c.needsControlPlaneDeployment(o)
 	if err != nil {
-		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether worker migration is needed (%s)", err.Error()))
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether control plane deployment is needed (%s)", err.Error()))
 	}
 
 	var (
@@ -149,29 +151,9 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
-		refreshCloudProviderConfig = g.Add(flow.Task{
-			Name:         "Refreshing cloud provider configuration",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.RefreshCloudProviderConfig).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret),
-		})
-		refreshCloudControllerManager = g.Add(flow.Task{
-			Name:         "Refreshing cloud controller manager checksums",
-			Fn:           flow.TaskFn(botanist.RefreshCloudControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
-		})
-		refreshKubeControllerManager = g.Add(flow.Task{
-			Name:         "Refreshing Kubernetes controller manager checksums",
-			Fn:           flow.TaskFn(botanist.RefreshKubeControllerManagerChecksums).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig),
-		})
 		deploySecrets = g.Add(flow.Task{
 			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets).DoIf(infrastructureMigrationNeeded || workerMigrationNeeded || (cleanupShootResources && botanist.Shoot.UsesCSI())),
-		})
-		refreshCSIControllers = g.Add(flow.Task{
-			Name:         "Refreshing CSI Controllers checksums",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.RefreshCSIControllersChecksums).DoIf(cleanupShootResources && botanist.Shoot.UsesCSI()).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, deploySecrets, refreshCloudProviderConfig),
+			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets),
 		})
 
 		wakeUpControlPlane = g.Add(flow.Task{
@@ -183,39 +165,26 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		initializeShootClients = g.Add(flow.Task{
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, 2*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, refreshCloudProviderConfig, refreshCloudControllerManager, refreshKubeControllerManager, refreshCSIControllers, wakeUpControlPlane),
+			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, wakeUpControlPlane),
 		})
 
-		// Only needed for migration from in-tree infrastructure management to out-of-tree mgmt by an extension controller.
-		// If a shoot is already marked for deletion then the new Infrastructure resources might not exist, so
-		// let's just quickly deploy it. If it already existed then nothing happens, but we can make sure that the
-		// extension controller cleans up. If it did not exist then the resource is just created, and can be
-		// safely deleted by latter steps.
-		deployInfrastructure = g.Add(flow.Task{
-			Name:         "Deploying Shoot infrastructure",
-			Fn:           flow.TaskFn(botanist.DeployInfrastructure).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(infrastructureMigrationNeeded),
+		// Redeploy the custom control plane to make sure cloud-controller-manager is restarted if the cloud provider secret changes.
+		deployControlPlane = g.Add(flow.Task{
+			Name:         "Deploying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
 		})
-		waitUntilInfrastructureReady = g.Add(flow.Task{
-			Name:         "Waiting until shoot infrastructure has been reconciled",
-			Fn:           flow.TaskFn(botanist.WaitUntilInfrastructureReady).DoIf(infrastructureMigrationNeeded || workerMigrationNeeded),
-			Dependencies: flow.NewTaskIDs(deployInfrastructure),
+		waitUntilControlPlaneReady = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been reconciled",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
+			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
 
-		// Only needed for migration from in-tree worker management to out-of-tree mgmt by an extension controller.
-		// If a shoot is already marked for deletion then the new Worker resource might not exist, so
-		// let's just quickly deploy it. If it already existed then nothing happens, but we can make sure that the
-		// extension controller cleans up. If it did not exist then the resource is just created, and can be
-		// safely deleted by latter steps.
-		computeShootOSConfig = g.Add(flow.Task{
-			Name:         "Computing operating system specific configuration for shoot workers",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(workerMigrationNeeded),
-			Dependencies: flow.NewTaskIDs(deploySecrets, initializeShootClients, deployInfrastructure),
-		})
-		deployWorker = g.Add(flow.Task{
-			Name:         "Configuring shoot worker pools",
-			Fn:           flow.TaskFn(botanist.DeployWorker).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(workerMigrationNeeded),
-			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, waitUntilInfrastructureReady, initializeShootClients, computeShootOSConfig),
+		// Redeploy the kube-controller-manager to make sure that it's restarted if the cloud provider secret changes.
+		deployKubeControllerManager = g.Add(flow.Task{
+			Name:         "Deploying Kubernetes controller manager",
+			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, initializeShootClients),
 		})
 
 		// Deletion of monitoring stack (to avoid false positive alerts) and kube-addon-manager (to avoid redeploying
@@ -254,12 +223,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		cleanupWebhooks = g.Add(flow.Task{
 			Name:         "Cleaning up webhooks",
 			Fn:           flow.TaskFn(botanist.CleanWebhooks).DoIf(cleanupShootResources),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, refreshKubeControllerManager, refreshCloudControllerManager, wakeUpControlPlane, waitUntilKubeAddonManagerDeleted),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, wakeUpControlPlane, waitUntilKubeAddonManagerDeleted),
 		})
 		waitForControllersToBeActive = g.Add(flow.Task{
-			Name:         "Waiting until both cloud-controller-manager and kube-controller-manager are active",
+			Name:         "Waiting until kube-controller-manager is active",
 			Fn:           flow.SimpleTaskFn(botanist.WaitForControllersToBeActive).DoIf(cleanupShootResources).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanupWebhooks),
+			Dependencies: flow.NewTaskIDs(cleanupWebhooks, waitUntilControlPlaneReady, deployKubeControllerManager),
 		})
 		cleanExtendedAPIs = g.Add(flow.Task{
 			Name:         "Cleaning extended API groups",
@@ -274,7 +243,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		destroyWorker = g.Add(flow.Task{
 			Name:         "Destroying Shoot workers",
 			Fn:           flow.TaskFn(botanist.DestroyWorker).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, deployWorker),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources),
 		})
 		waitUntilWorkerDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot worker nodes have been terminated",
@@ -285,6 +254,16 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
 			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilWorkerDeleted),
+		})
+		destroyControlPlane = g.Add(flow.Task{
+			Name:         "Destroying Shoot control plane",
+			Fn:           flow.TaskFn(botanist.DestroyControlPlane),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, deleteKubeAPIServer),
+		})
+		waitUntilControlPlaneDeleted = g.Add(flow.Task{
+			Name:         "Waiting until shoot control plane has been destroyed",
+			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneDeleted),
+			Dependencies: flow.NewTaskIDs(destroyControlPlane),
 		})
 
 		destroyNginxIngressResources = g.Add(flow.Task{
@@ -300,7 +279,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		destroyInfrastructure = g.Add(flow.Task{
 			Name:         "Destroying Shoot infrastructure",
 			Fn:           flow.TaskFn(botanist.DestroyInfrastructure),
-			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilWorkerDeleted, waitUntilInfrastructureReady),
+			Dependencies: flow.NewTaskIDs(cleanKubernetesResources, waitUntilWorkerDeleted, waitUntilControlPlaneDeleted),
 		})
 		waitUntilInfrastructureDeleted = g.Add(flow.Task{
 			Name:         "Waiting until shoot infrastructure has been destroyed",
@@ -315,6 +294,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		syncPoint = flow.NewTaskIDs(
 			deleteSeedMonitoring,
 			deleteKubeAPIServer,
+			waitUntilControlPlaneDeleted,
 			destroyNginxIngressResources,
 			destroyKube2IAMResources,
 			destroyExternalDomainDNSRecord,
@@ -477,48 +457,24 @@ func (c *Controller) updateShootStatusDeleteError(o *operation.Operation, lastEr
 	return err
 }
 
-func (c *Controller) needsInfrastructureMigration(o *operation.Operation) (bool, error) {
-	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, o.Shoot.Info.Name), &extensionsv1alpha1.Infrastructure{}); err != nil {
+func (c *Controller) needsControlPlaneDeployment(o *operation.Operation) (bool, error) {
+	// Get the infrastructure resource
+	infrastructure := &extensionsv1alpha1.Infrastructure{}
+	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, o.Shoot.Info.Name), infrastructure); err != nil {
 		if apierrors.IsNotFound(err) {
-			// The infrastructure resource has not been found - we need to check whether the Terraform state does still exist.
-			// If it does still exist then we need to migrate. Otherwise there are no infrastructures resources anymore that
-			// need to be deleted, so no migration would be necessary.
-
-			tf, err := o.NewShootTerraformer(common.TerraformerPurposeInfraDeprecated)
-			if err != nil {
-				return false, err
-			}
-
-			configExists, err := tf.ConfigExists()
-			if err != nil {
-				return false, err
-			}
-
-			return configExists, nil
+			// The infrastructure resource has not been found, no need to redeploy the control plane
+			return false, nil
 		}
 		return false, err
 	}
 
-	// The infrastructure resource has been found - no need to migrate as it already exists.
-	return false, nil
-}
-
-func (c *Controller) needsWorkerMigration(o *operation.Operation) (bool, error) {
-	if err := o.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(o.Shoot.SeedNamespace, o.Shoot.Info.Name), &extensionsv1alpha1.Worker{}); err != nil {
-		if apierrors.IsNotFound(err) {
-			// The Worker resource has not been found - we need to check whether the MCM deployment does still exist.
-			// If it does still exist then we need to migrate. Otherwise there are no machine resources anymore that
-			// need to be deleted, so no migration would be necessary.
-			machineDeployments := &machinev1alpha1.MachineDeploymentList{}
-			if err := o.K8sSeedClient.Client().List(context.TODO(), machineDeployments, kutil.Limit(1)); err != nil {
-				return false, err
-			}
-			return len(machineDeployments.Items) != 0, nil
-		}
-
-		return false, err
+	if providerStatus := infrastructure.Status.ProviderStatus; providerStatus != nil {
+		// The infrastructure resource has been found with a non-nil provider status, so redeploy the control plane
+		o.Shoot.InfrastructureStatus = providerStatus.Raw
+		return true, nil
 	}
 
-	// The Worker resource has been found - no need to migrate as it already exists.
+	// The infrastructure resource has been found, but its provider status is nil
+	// In this case the control plane could not have been created at all, so no need to redeploy it
 	return false, nil
 }

@@ -55,3 +55,28 @@ func GardenV1beta1ShootToOpenStackV1alpha1InfrastructureConfig(shoot *gardenv1be
 		},
 	}, nil
 }
+
+// GardenV1beta1ShootToOpenStackV1alpha1ControlPlaneConfig converts a garden.sapcloud.io/v1beta1.Shoot to openstackv1alpha1.ControlPlaneConfig.
+// This function is only required temporarily for migration purposes and can be removed in the future when we switched to
+// core.gardener.cloud/v1alpha1.Shoot.
+func GardenV1beta1ShootToOpenStackV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoot) (*openstackv1alpha1.ControlPlaneConfig, error) {
+	if shoot.Spec.Cloud.OpenStack == nil {
+		return nil, fmt.Errorf("shoot is not of type OpenStack")
+	}
+
+	var cloudControllerManager *openstackv1alpha1.CloudControllerManagerConfig
+	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
+		cloudControllerManager = &openstackv1alpha1.CloudControllerManagerConfig{
+			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+		}
+	}
+
+	return &openstackv1alpha1.ControlPlaneConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: openstackv1alpha1.SchemeGroupVersion.String(),
+			Kind:       controlPlaneConfig,
+		},
+		LoadBalancerProvider:   shoot.Spec.Cloud.OpenStack.LoadBalancerProvider,
+		CloudControllerManager: cloudControllerManager,
+	}, nil
+}

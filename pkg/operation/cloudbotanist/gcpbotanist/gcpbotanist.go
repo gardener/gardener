@@ -18,8 +18,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
-
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -62,23 +60,6 @@ func init() {
 	utilruntime.Must(schemeBuilder.AddToScheme(scheme))
 
 	decoder = serializer.NewCodecFactory(scheme).UniversalDecoder()
-}
-
-func infrastructureStatusFromInfrastructure(raw []byte) (*gcpv1alpha1.InfrastructureStatus, error) {
-	config := &gcpv1alpha1.InfrastructureStatus{}
-	if _, _, err := decoder.Decode(raw, nil, config); err != nil {
-		return nil, err
-	}
-	return config, nil
-}
-
-func findSubnetByPurpose(subnets []gcpv1alpha1.Subnet, purpose gcpv1alpha1.SubnetPurpose) (*gcpv1alpha1.Subnet, error) {
-	for _, subnet := range subnets {
-		if subnet.Purpose == purpose {
-			return &subnet, nil
-		}
-	}
-	return nil, fmt.Errorf("cannot find subnet with purpose %q", purpose)
 }
 
 // IMPORTANT NOTICE

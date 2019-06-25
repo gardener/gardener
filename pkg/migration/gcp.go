@@ -55,3 +55,28 @@ func GardenV1beta1ShootToGCPV1alpha1InfrastructureConfig(shoot *gardenv1beta1.Sh
 		},
 	}, nil
 }
+
+// GardenV1beta1ShootToGCPV1alpha1ControlPlaneConfig converts a garden.sapcloud.io/v1beta1.Shoot to gcpv1alpha1.ControlPlaneConfig.
+// This function is only required temporarily for migration purposes and can be removed in the future when we switched to
+// core.gardener.cloud/v1alpha1.Shoot.
+func GardenV1beta1ShootToGCPV1alpha1ControlPlaneConfig(shoot *gardenv1beta1.Shoot) (*gcpv1alpha1.ControlPlaneConfig, error) {
+	if shoot.Spec.Cloud.GCP == nil {
+		return nil, fmt.Errorf("shoot is not of type GCP")
+	}
+
+	var cloudControllerManager *gcpv1alpha1.CloudControllerManagerConfig
+	if shoot.Spec.Kubernetes.CloudControllerManager != nil {
+		cloudControllerManager = &gcpv1alpha1.CloudControllerManagerConfig{
+			KubernetesConfig: shoot.Spec.Kubernetes.CloudControllerManager.KubernetesConfig,
+		}
+	}
+
+	return &gcpv1alpha1.ControlPlaneConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: gcpv1alpha1.SchemeGroupVersion.String(),
+			Kind:       controlPlaneConfig,
+		},
+		Zone:                   shoot.Spec.Cloud.GCP.Zones[0],
+		CloudControllerManager: cloudControllerManager,
+	}, nil
+}

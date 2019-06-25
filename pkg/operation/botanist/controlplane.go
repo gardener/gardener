@@ -25,10 +25,13 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
+	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
+	"github.com/gardener/gardener/pkg/migration"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -38,8 +41,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -147,30 +151,6 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 		},
 	}
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...))
-}
-
-// RefreshCloudControllerManagerChecksums updates the cloud provider checksum in the cloud-controller-manager pod spec template.
-func (b *Botanist) RefreshCloudControllerManagerChecksums(ctx context.Context) error {
-	deploy := &appsv1.Deployment{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.CloudControllerManagerDeploymentName), deploy); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return b.patchDeploymentCloudProviderChecksums(common.CloudControllerManagerDeploymentName)
-}
-
-// RefreshKubeControllerManagerChecksums updates the cloud provider checksum in the kube-controller-manager pod spec template.
-func (b *Botanist) RefreshKubeControllerManagerChecksums(ctx context.Context) error {
-	deploy := &appsv1.Deployment{}
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName), deploy); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
-		}
-		return err
-	}
-	return b.patchDeploymentCloudProviderChecksums(common.KubeControllerManagerDeploymentName)
 }
 
 // DeployBackupInfrastructure creates a BackupInfrastructure resource into the project namespace of shoot on garden cluster.
@@ -703,9 +683,7 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 // * etcd-events
 // * etcd-main
 // * kube-apiserver
-// * cloud-controller-manager
 // * kube-controller-manager
-// * csi-controllers
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
 
@@ -725,11 +703,7 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName, common.CloudControllerManagerDeploymentName}
-	if b.Shoot.UsesCSI() {
-		controllerManagerDeployments = append(controllerManagerDeployments, common.CSIPluginController)
-	}
-
+	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName}
 	for _, deployment := range controllerManagerDeployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
 			return err
@@ -756,12 +730,8 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 
 	deployments := []string{
 		common.KubeAddonManagerDeploymentName,
-		common.CloudControllerManagerDeploymentName,
 		common.KubeControllerManagerDeploymentName,
 		common.KubeAPIServerDeploymentName,
-	}
-	if b.Shoot.UsesCSI() {
-		deployments = append(deployments, common.CSIPluginController)
 	}
 	for _, deployment := range deployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); err != nil && !apierrors.IsNotFound(err) {
@@ -773,6 +743,138 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 0); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
+	}
+
+	return nil
+}
+
+// ControlPlaneDefaultTimeout is the default timeout and defines how long Gardener should wait
+// for a successful reconciliation of a control plane resource.
+const ControlPlaneDefaultTimeout = 10 * time.Minute
+
+// DeployControlPlane creates the `ControlPlane` extension resource in the shoot namespace in the seed
+// cluster. Gardener waits until an external controller did reconcile the cluster successfully.
+func (b *Botanist) DeployControlPlane(ctx context.Context) error {
+	var (
+		cp = &extensionsv1alpha1.ControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      b.Shoot.Info.Name,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+	)
+
+	// In the future the providerConfig will be blindly copied from the core.gardener.cloud/v1alpha1.Shoot
+	// resource. However, until we have completely moved to this resource, we have to compute the needed
+	// configuration ourselves from garden.sapcloud.io/v1beta1.Shoot.
+	providerConfig, err := migration.ShootToControlPlaneConfig(b.Shoot.Info)
+	if err != nil {
+		return err
+	}
+
+	return kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), cp, func() error {
+		cp.Spec = extensionsv1alpha1.ControlPlaneSpec{
+			DefaultSpec: extensionsv1alpha1.DefaultSpec{
+				Type: string(b.Shoot.CloudProvider),
+			},
+			Region: b.Shoot.Info.Spec.Cloud.Region,
+			SecretRef: corev1.SecretReference{
+				Name:      gardencorev1alpha1.SecretNameCloudProvider,
+				Namespace: cp.Namespace,
+			},
+			ProviderConfig: &runtime.RawExtension{
+				Object: providerConfig,
+			},
+			InfrastructureProviderStatus: &runtime.RawExtension{
+				Raw: b.Shoot.InfrastructureStatus,
+			},
+		}
+		return nil
+	})
+}
+
+// DestroyControlPlane deletes the `ControlPlane` extension resource in the shoot namespace in the seed cluster,
+// and it waits for a maximum of 10m until it is deleted.
+func (b *Botanist) DestroyControlPlane(ctx context.Context) error {
+	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, &extensionsv1alpha1.ControlPlane{ObjectMeta: metav1.ObjectMeta{Namespace: b.Shoot.SeedNamespace, Name: b.Shoot.Info.Name}}))
+}
+
+// WaitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
+func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
+	var (
+		timedContext, cancel = context.WithTimeout(ctx, ControlPlaneDefaultTimeout)
+		lastError            *gardencorev1alpha1.LastError
+		cpStatus             []byte
+	)
+
+	defer cancel()
+
+	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+		cp := &extensionsv1alpha1.ControlPlane{}
+		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
+			return false, err
+		}
+
+		if lastErr := cp.Status.LastError; lastErr != nil {
+			b.Logger.Errorf("Control plane did not get ready yet, lastError is: %s", lastErr.Description)
+			lastError = lastErr
+		}
+
+		if lastOperation := cp.Status.LastOperation; lastOperation != nil &&
+			lastOperation.State == gardencorev1alpha1.LastOperationStateSucceeded &&
+			cp.Status.ObservedGeneration == cp.Generation {
+
+			if providerStatus := cp.Status.ProviderStatus; providerStatus != nil {
+				cpStatus = providerStatus.Raw
+			}
+			return true, nil
+		}
+
+		b.Logger.Infof("Waiting for control plane to be ready...")
+		return false, nil
+	}, timedContext.Done()); err != nil {
+		message := fmt.Sprintf("Failed to create control plane")
+		if lastError != nil {
+			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+		}
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
+	}
+
+	b.Shoot.ControlPlaneStatus = cpStatus
+	return nil
+}
+
+// WaitUntilControlPlaneDeleted waits until the control plane resource has been deleted.
+func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
+	var (
+		timedContext, cancel = context.WithTimeout(ctx, ControlPlaneDefaultTimeout)
+		lastError            *gardencorev1alpha1.LastError
+	)
+
+	defer cancel()
+
+	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+		cp := &extensionsv1alpha1.ControlPlane{}
+		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			return false, err
+		}
+
+		if lastErr := cp.Status.LastError; lastErr != nil {
+			b.Logger.Errorf("Control plane did not get deleted yet, lastError is: %s", lastErr.Description)
+			lastError = lastErr
+		}
+
+		b.Logger.Infof("Waiting for control plane to be deleted...")
+		return false, nil
+	}, timedContext.Done()); err != nil {
+		message := fmt.Sprintf("Failed to delete control plane")
+		if lastError != nil {
+			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
+		}
+		return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, err.Error()))
 	}
 
 	return nil
