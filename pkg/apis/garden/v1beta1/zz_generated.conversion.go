@@ -7,6 +7,8 @@ package v1beta1
 import (
 	unsafe "unsafe"
 
+	openstack "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack"
+	openstackv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 	core "github.com/gardener/gardener/pkg/apis/core"
 	v1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	garden "github.com/gardener/gardener/pkg/apis/garden"
@@ -3291,6 +3293,7 @@ func Convert_garden_OIDCConfig_To_v1beta1_OIDCConfig(in *garden.OIDCConfig, out 
 func autoConvert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(in *OpenStackCloud, out *garden.OpenStackCloud, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
 	out.LoadBalancerProvider = in.LoadBalancerProvider
+	out.LoadBalancerClasses = *(*[]openstack.ShootLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
@@ -3318,6 +3321,7 @@ func Convert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(in *OpenStackCloud,
 func autoConvert_garden_OpenStackCloud_To_v1beta1_OpenStackCloud(in *garden.OpenStackCloud, out *OpenStackCloud, s conversion.Scope) error {
 	out.FloatingPoolName = in.FloatingPoolName
 	out.LoadBalancerProvider = in.LoadBalancerProvider
+	out.LoadBalancerClasses = *(*[]openstackv1alpha1.ShootLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_OpenStackNetworks_To_v1beta1_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
@@ -3349,6 +3353,7 @@ func autoConvert_v1beta1_OpenStackConstraints_To_garden_OpenStackConstraints(in 
 		return err
 	}
 	out.LoadBalancerProviders = *(*[]garden.OpenStackLoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
+	out.LoadBalancerClasses = *(*[]openstack.ProfileLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
 	out.MachineTypes = *(*[]garden.OpenStackMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
@@ -3367,6 +3372,7 @@ func autoConvert_garden_OpenStackConstraints_To_v1beta1_OpenStackConstraints(in 
 		return err
 	}
 	out.LoadBalancerProviders = *(*[]OpenStackLoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
+	out.LoadBalancerClasses = *(*[]openstackv1alpha1.ProfileLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
 	out.MachineTypes = *(*[]OpenStackMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))

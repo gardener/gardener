@@ -4656,6 +4656,19 @@ func schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref common.ReferenceCallback)
 							Format:      "",
 						},
 					},
+					"loadBalancerClasses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerClasses available for a dedicated Shoot.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.ShootLoadBalancerClass"),
+									},
+								},
+							},
+						},
+					},
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
@@ -4700,7 +4713,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker"},
+			"github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.ShootLoadBalancerClass", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker"},
 	}
 }
 
@@ -4756,6 +4769,19 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 							},
 						},
 					},
+					"loadBalancerClasses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerClasses contains a list of supported labeled load balancer network settings.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.ProfileLoadBalancerClass"),
+									},
+								},
+							},
+						},
+					},
 					"machineImages": {
 						SchemaProps: spec.SchemaProps{
 							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
@@ -4796,11 +4822,11 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
+				Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "loadBalancerClasses", "machineImages", "machineTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+			"github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.ProfileLoadBalancerClass", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 	}
 }
 
@@ -4829,7 +4855,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackLoadBalancerProvider(ref common.Ref
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.",
+				Description: "OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {

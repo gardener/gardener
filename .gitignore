@@ -2,6 +2,7 @@
 /bin
 /.kube-secrets
 /tmp/*
+/local
 /dev
 
 *.coverprofile

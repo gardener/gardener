@@ -19,6 +19,7 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
+	openstackapi "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -197,6 +198,8 @@ type OpenStackConstraints struct {
 	Kubernetes KubernetesConstraints `json:"kubernetes"`
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 	LoadBalancerProviders []OpenStackLoadBalancerProvider `json:"loadBalancerProviders"`
+	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
+	LoadBalancerClasses []openstackapi.ProfileLoadBalancerClass `json:"loadBalancerClasses"`
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
 	MachineImages []MachineImage `json:"machineImages"`
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.
@@ -211,7 +214,7 @@ type OpenStackFloatingPool struct {
 	Name string `json:"name"`
 }
 
-// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
+// OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 type OpenStackLoadBalancerProvider struct {
 	// Name is the name of the load balancer provider.
 	Name string `json:"name"`
@@ -934,6 +937,9 @@ type OpenStackCloud struct {
 	FloatingPoolName string `json:"floatingPoolName"`
 	// LoadBalancerProvider is the name of the load balancer provider in the OpenStack environment.
 	LoadBalancerProvider string `json:"loadBalancerProvider"`
+	// LoadBalancerClasses available for a dedicated Shoot.
+	// +optional
+	LoadBalancerClasses []openstackapi.ShootLoadBalancerClass `json:"loadBalancerClasses,omitempty"`
 	// MachineImage holds information about the machine image to use for all workers.
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
