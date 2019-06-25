@@ -4,15 +4,11 @@ kind: ServiceAccount
 metadata:
   name: csi-provisioner
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 ---
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: garden.sapcloud.io:kube-system:csi-provisioner
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -50,8 +46,6 @@ kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: garden.sapcloud.io:csi-provisioner
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
 - kind: User
   name: system:csi-provisioner

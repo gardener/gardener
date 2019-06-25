@@ -81,7 +81,7 @@ global:
           - kubelet
           - system:kube-controller-manager
           - system:kube-scheduler
-          - system:kube-addon-manager
+          - system:gardener-resource-manager
           - system:kube-aggregator
           - system:kube-proxy
           - system:apiserver

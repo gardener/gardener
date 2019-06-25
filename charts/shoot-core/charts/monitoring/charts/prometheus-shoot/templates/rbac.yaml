@@ -2,8 +2,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: garden.sapcloud.io:monitoring:prometheus
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
 - apiGroups: [""]
   resources:
@@ -30,8 +28,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: garden.sapcloud.io:monitoring:prometheus
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

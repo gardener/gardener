@@ -295,12 +295,11 @@ var (
 		),
 	}
 
-	// AddonManagerInfo points to kube-addon-manager instance.
+	// AddonManagerInfo points to gardener-resource-manager instance.
 	AddonManagerInfo = &SourcePod{
-		Pod: NewPod("kube-addon-manager", labels.Set{
-			"app":                     "kubernetes",
+		Pod: NewPod("gardener-resource-manager", labels.Set{
+			"app":                     "gardener-resource-manager",
 			"garden.sapcloud.io/role": "controlplane",
-			"role":                    "addon-manager",
 		}),
 		ExpectedPolicies: sets.NewString(
 			"allow-to-dns",

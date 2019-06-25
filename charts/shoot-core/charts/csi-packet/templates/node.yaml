@@ -4,8 +4,6 @@ apiVersion: {{ include "daemonsetversion" . }}
 metadata:
   name: csi-node
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   selector:
     matchLabels:

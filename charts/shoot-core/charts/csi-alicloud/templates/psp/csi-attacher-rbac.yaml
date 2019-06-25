@@ -13,16 +13,12 @@ kind: ServiceAccount
 metadata:
   name: csi-attacher
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 ---
 # Attacher must be able to work with PVs, nodes and VolumeAttachments
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: garden.sapcloud.io:kube-system:csi-attacher
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -51,8 +47,6 @@ kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: garden.sapcloud.io:csi-attacher
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
 - kind: User
   name: system:csi-attacher
@@ -69,8 +63,6 @@ apiVersion: {{ include "rbacversion" . }}
 metadata:
   namespace: kube-system
   name: csi-attacher
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
 - apiGroups: [""]
   resources: ["configmaps"]
@@ -82,8 +74,6 @@ apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: csi-attacher
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
 - kind: User
   name: system:csi-attacher

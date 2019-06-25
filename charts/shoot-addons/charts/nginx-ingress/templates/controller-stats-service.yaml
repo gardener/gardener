@@ -12,7 +12,6 @@ metadata:
     component: "{{ .Values.controller.name }}"
     heritage: {{ .Release.Service }}
     release: {{ .Release.Name }}
-    addonmanager.kubernetes.io/mode: Reconcile
   name: {{ template "nginx-ingress.controller.fullname" . }}-stats
   namespace: kube-system
 spec:

@@ -246,7 +246,7 @@ data:
 
     [FILTER]
         Name                parser
-        Match               kubernetes.kube-addon-manager*kube-addon-manager*
+        Match               kubernetes.gardener-resource-manager*gardener-resource-manager*
         Key_Name            log
         Parser              addonmanagerParser
         Reserve_Data        True

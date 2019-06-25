@@ -6,7 +6,6 @@ metadata:
   labels:
     garden.sapcloud.io/role: system-component
     component: blackbox-exporter
-    addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
 spec:
   revisionHistoryLimit: 0

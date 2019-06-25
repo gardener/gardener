@@ -6,8 +6,6 @@ metadata:
     seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
     garden.sapcloud.io/description: |
       gardener.privileged allows full unrestricted access to Pod features, as if the PodSecurityPolicy controller was not enabled.
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   privileged: true
   allowPrivilegeEscalation: true

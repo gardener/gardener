@@ -240,6 +240,18 @@
   revision = "227adb277fa467b9e805af798a502514ccbe75dd"
 
 [[projects]]
+  digest = "1:0d3a2667b4bd06201dfdfe0fb91606c2978bd80b3b7eee7e2270415f94c4c9bb"
+  name = "github.com/gardener/gardener-resource-manager"
+  packages = [
+    "pkg/apis/resources",
+    "pkg/apis/resources/v1alpha1",
+    "pkg/manager",
+  ]
+  pruneopts = "NUT"
+  revision = "88b3ecd6d03af43d89c2649ab981eaa6d6bbdc1d"
+  version = "0.2.0"
+
+[[projects]]
   digest = "1:b678acaf8766b6df36723a4adefc3302191a34c22b7a38b0abaf5f6d3dd24090"
   name = "github.com/gardener/machine-controller-manager"
   packages = [
@@ -1569,12 +1581,13 @@
   revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
 
 [[projects]]
-  digest = "1:ba0b3fc2a9fe8bf70b1f1ece8f4c157f6508e1b21ee4d7532ccd59ec4afd7064"
+  digest = "1:5f98eeb212234f1028e1be770552fefcd750b6bde7728cfd2233dec3f124c7d9"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/client/fake",
+    "pkg/controller/controllerutil",
     "pkg/internal/objectutil",
     "pkg/manager/signals",
     "pkg/reconcile",
@@ -1628,6 +1641,8 @@
     "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack",
     "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
     "github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1",
+    "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1",
+    "github.com/gardener/gardener-resource-manager/pkg/manager",
     "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1",
     "github.com/ghodss/yaml",
     "github.com/go-openapi/spec",

@@ -2,8 +2,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: garden.sapcloud.io:psp:kube-system:vpn-shoot
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
 - apiGroups:
   - policy

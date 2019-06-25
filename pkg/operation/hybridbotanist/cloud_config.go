@@ -223,9 +223,8 @@ func (b *HybridBotanist) applyAndWaitForShootOperatingSystemConfig(chartPath, na
 	})
 }
 
-// generateCloudConfigExecutionChart renders the kube-addon-manager configuration for the cloud config user data.
-// It will be stored as a Secret and mounted into the Pod. The configuration contains
-// specially labelled Kubernetes manifests which will be created and periodically reconciled.
+// generateCloudConfigExecutionChart renders the gardener-resource-manager configuration for the cloud config user data.
+// After that it creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *HybridBotanist) generateCloudConfigExecutionChart() (*chartrenderer.RenderedChart, error) {
 	bootstrapTokenSecret, err := b.computeBootstrapToken()
 	if err != nil {

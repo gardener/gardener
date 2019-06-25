@@ -15,6 +15,7 @@
 package hybridbotanist
 
 import (
+	"context"
 	"path/filepath"
 
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
@@ -22,51 +23,22 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// DeployKubeAddonManager deploys the Kubernetes Addon Manager which will use labeled Kubernetes resources in order
+// DeployGardenerResourceManager deploys the gardener-resource-manager which will use CRD resources in order
 // to ensure that they exist in a cluster/reconcile them in case somebody changed something.
-func (b *HybridBotanist) DeployKubeAddonManager() error {
-	var name = "kube-addon-manager"
-
-	cloudConfig, err := b.generateCloudConfigExecutionChart()
-	if err != nil {
-		return err
-	}
-	storageClasses, err := b.generateStorageClassesChart()
-	if err != nil {
-		return err
-	}
-	coreAddons, err := b.generateCoreAddonsChart()
-	if err != nil {
-		return err
-	}
-	optionalAddons, err := b.generateOptionalAddonsChart()
-	if err != nil {
-		return err
-	}
+func (b *HybridBotanist) DeployGardenerResourceManager(ctx context.Context) error {
+	var name = "gardener-resource-manager"
 
 	defaultValues := map[string]interface{}{
-		"cloudConfigContent":    cloudConfig.Files(),
-		"storageClassesContent": storageClasses.Files(),
-		"coreAddonsContent":     coreAddons.Files(),
-		"optionalAddonsContent": optionalAddons.Files(),
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-kube-addon-manager": b.CheckSums[name],
+			"checksum/secret-" + name: b.CheckSums[name],
 		},
 		"replicas": b.Shoot.GetReplicas(1),
-		// we need to add capabilities for Shoot's API server.
-		"shootAPIServer": map[string]interface{}{
-			"Capabilities": map[string]interface{}{
-				"KubeVersion": map[string]interface{}{
-					"GitVersion": b.Shoot.Info.Spec.Kubernetes.Version,
-				},
-			},
-		},
 		"vpa": map[string]interface{}{
 			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
 	}
 
-	values, err := b.InjectSeedShootImages(defaultValues, common.KubeAddonManagerImageName)
+	values, err := b.InjectSeedShootImages(defaultValues, common.GardenerResourceManagerImageName)
 	if err != nil {
 		return err
 	}

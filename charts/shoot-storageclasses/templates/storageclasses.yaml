@@ -8,8 +8,6 @@ metadata:
   annotations:
     storageclass.kubernetes.io/is-default-class: "true"
   {{- end }}
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 provisioner: {{ $storageClass.Provisioner }}
 parameters:
 {{- if $storageClass.Parameters }}

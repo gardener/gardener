@@ -4,15 +4,11 @@ kind: ServiceAccount
 metadata:
   name: csi-disk-plugin-alicloud
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 ---
 kind: ClusterRole
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: garden.sapcloud.io:psp:kube-system:csi-disk-plugin-alicloud
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
   - apiGroups: [""]
     resources: ["nodes"]
@@ -41,8 +37,6 @@ kind: ClusterRoleBinding
 apiVersion: {{ include "rbacversion" . }}
 metadata:
   name: garden.sapcloud.io:psp:csi-disk-plugin-alicloud
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 subjects:
   - kind: ServiceAccount
     name: csi-disk-plugin-alicloud

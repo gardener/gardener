@@ -188,17 +188,32 @@ func (b *Botanist) DeleteBackupInfrastructure() error {
 	return client.IgnoreNotFound(err)
 }
 
-// DeleteKubeAddonManager deletes the kube-addon-manager deployment in the Seed cluster which holds the Shoot's control plane. It
-// needs to be deleted before trying to remove any resources in the Shoot cluster, otherwise it will automatically recreate
-// them and block the infrastructure deletion.
+// DeleteKubeAddonManager deletes the kube-addon-manager deployment in the Seed cluster which holds the Shoot's control plane.
+// +deprecated
+// Can be removed in a future version.
 func (b *Botanist) DeleteKubeAddonManager(ctx context.Context) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.KubeAddonManagerDeploymentName,
+			Name:      "kube-addon-manager",
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
-	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...))
+	if err := b.K8sSeedClient.Client().Delete(ctx, deploy, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
+		return err
+	}
+
+	for _, name := range []string{
+		"kube-addon-manager",
+		"kube-addon-manager-cloud-config",
+		"kube-addon-manager-core-addons",
+		"kube-addon-manager-optional-addons",
+		"kube-addon-manager-storageclasses",
+	} {
+		if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, name); err != nil && !apierrors.IsNotFound(err) {
+			return err
+		}
+	}
+	return nil
 }
 
 // Supported CA flags
@@ -729,7 +744,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	deployments := []string{
-		common.KubeAddonManagerDeploymentName,
+		common.GardenerResourceManagerDeploymentName,
 		common.KubeControllerManagerDeploymentName,
 		common.KubeAPIServerDeploymentName,
 	}

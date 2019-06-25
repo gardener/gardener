@@ -15,23 +15,75 @@
 package hybridbotanist
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 
+	"github.com/gardener/gardener-resource-manager/pkg/manager"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// generateCoreAddonsChart renders the kube-addon-manager configuration for the core addons. It will be
-// stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration contains
-// specially labelled Kubernetes manifests which will be created and periodically reconciled.
+// DeployManagedResources deploys all the ManagedResource CRDs for the gardener-resource-manager.
+func (b *HybridBotanist) DeployManagedResources(ctx context.Context) error {
+	type chartRenderFunc func() (*chartrenderer.RenderedChart, error)
+
+	var (
+		labels = map[string]string{
+			common.ShootNoCleanup: "true",
+		}
+		charts = map[string]chartRenderFunc{
+			"storageclasses":               b.generateStorageClassesChart,
+			"shoot-cloud-config-execution": b.generateCloudConfigExecutionChart,
+			"shoot-core":                   b.generateCoreAddonsChart,
+			"addons":                       b.generateOptionalAddonsChart,
+		}
+	)
+
+	for name, renderFunc := range charts {
+		renderedChart, err := renderFunc()
+		if err != nil {
+			return fmt.Errorf("error rendering %q chart: %+v", name, err)
+		}
+
+		data := make(map[string][]byte, len(renderedChart.Files()))
+		for fileName, fileContent := range renderedChart.Files() {
+			data[strings.Replace(fileName, "/", "_", -1)] = []byte(fileContent)
+		}
+
+		secretName := "managedresource-" + name
+
+		if err := manager.
+			NewSecret(b.K8sSeedClient.Client()).
+			WithNamespacedName(b.Shoot.SeedNamespace, secretName).
+			WithKeyValues(data).
+			Reconcile(ctx); err != nil {
+			return err
+		}
+
+		if err := manager.
+			NewManagedResource(b.K8sSeedClient.Client()).
+			WithNamespacedName(b.Shoot.SeedNamespace, name).
+			WithSecretRef(secretName).
+			WithInjectedLabels(labels).
+			Reconcile(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// generateCoreAddonsChart renders the gardener-resource-manager configuration for the core addons. After that it
+// creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart, error) {
 	var (
 		kubeProxySecret  = b.Secrets["kube-proxy"]
@@ -163,9 +215,8 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 	})
 }
 
-// generateOptionalAddonsChart renders the kube-addon-manager chart for the optional addons. It
-// will be stored as a Secret (as it may contain credentials) and mounted into the Pod. The configuration
-// contains specially labelled Kubernetes manifests which will be created and periodically reconciled.
+// generateOptionalAddonsChart renders the gardener-resource-manager chart for the optional addons. After that it
+// creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedChart, error) {
 	kubeLegoConfig, err := b.Botanist.GenerateKubeLegoConfig()
 	if err != nil {
@@ -223,24 +274,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 		return nil, err
 	}
 
-	// From https://github.com/kubernetes/kubernetes/blob/677f740adf61f9c56d0719eacabfeae3b0787256/cluster/addons/addon-manager/README.md:
-	// "Addons with label addonmanager.kubernetes.io/mode=EnsureExists will be checked for existence only. Users can edit these addons as they want. In particular:"
-	// "* Addon will only be created/re-created with the given template file when there is no instance of the resource with that name."
-	// "* Addon will not be deleted when the manifest file is deleted from the $ADDON_PATH."
-	// --> As we used the 'addonmanager.kubernetes.io/mode=EnsureExists' label for the Heapster deployment in previous versions we have to delete it ourselves now.
-	//     This behavior can be removed in a future release.
-	heapsterDeployments, err := b.K8sShootClient.ListDeployments(metav1.NamespaceSystem, metav1.ListOptions{
-		LabelSelector: "chart=heapster-0.1.1,origin=gardener",
-	})
-	if err != nil {
-		return nil, err
-	}
-	for _, deployment := range heapsterDeployments.Items {
-		if err := b.K8sShootClient.DeleteDeployment(metav1.NamespaceSystem, deployment.Name); err != nil && !apierrors.IsNotFound(err) {
-			return nil, err
-		}
-	}
-
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{
 		"kube-lego":            kubeLego,
 		"kube2iam":             kube2IAM,
@@ -249,9 +282,8 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	})
 }
 
-// generateStorageClassesChart renders the kube-addon-manager configuration for the storage classes.
-// It will be stored as a ConfigMap and mounted into the Pod. The configuration contains specially labelled
-// Kubernetes manifests which will be created and periodically reconciled.
+// generateStorageClassesChart renders the gardener-resource-manager configuration for the storage classes. After that it
+// creates a ManagedResource CRD that references the rendered manifests and creates it.
 func (b *HybridBotanist) generateStorageClassesChart() (*chartrenderer.RenderedChart, error) {
 	config, err := b.ShootCloudBotanist.GenerateStorageClassesConfig()
 	if err != nil {

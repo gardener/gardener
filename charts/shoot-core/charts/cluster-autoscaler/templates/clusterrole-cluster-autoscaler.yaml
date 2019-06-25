@@ -4,8 +4,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRole
 metadata:
   name: system:cluster-autoscaler-shoot
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 rules:
 - apiGroups:
   - ""

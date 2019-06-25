@@ -9,7 +9,6 @@ metadata:
     chart: {{ template "kubernetes-dashboard.chart" . }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
-    addonmanager.kubernetes.io/mode: Reconcile
     origin: gardener
 spec:
   revisionHistoryLimit: 0

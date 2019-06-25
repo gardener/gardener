@@ -8,7 +8,6 @@ metadata:
     origin: gardener
     garden.sapcloud.io/role: system-component
     app: csi-disk-plugin-alicloud
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   selector:
     matchLabels:

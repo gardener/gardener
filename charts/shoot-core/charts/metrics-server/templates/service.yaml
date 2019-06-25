@@ -5,7 +5,6 @@ metadata:
   name: metrics-server
   namespace: kube-system
   labels:
-    addonmanager.kubernetes.io/mode: Reconcile
     kubernetes.io/name: "metrics-server"
 spec:
   selector:

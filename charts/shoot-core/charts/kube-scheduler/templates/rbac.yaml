@@ -3,8 +3,6 @@ apiVersion: {{ include "rbacversion" . }}
 kind: ClusterRoleBinding
 metadata:
   name: system:controller:kube-scheduler
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -18,8 +16,6 @@ kind: RoleBinding
 metadata:
   name: system:controller:kube-scheduler:auth-reader
   namespace: kube-system
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role

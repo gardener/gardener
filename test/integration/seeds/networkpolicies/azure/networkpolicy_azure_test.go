@@ -373,6 +373,30 @@ var _ = Describe("Network Policy Testing", func() {
 			Description: "Garden Prometheus",
 			HostName:    "prometheus-web.garden",
 			Port:        80}
+		GardenerResourceManager = &networkpolicies.SourcePod{
+			Pod: networkpolicies.Pod{
+				Name: "gardener-resource-manager",
+				Labels: labels.Set{
+					"app":                     "gardener-resource-manager",
+					"garden.sapcloud.io/role": "controlplane"},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
+			Ports: []networkpolicies.Port(nil),
+			ExpectedPolicies: sets.String{
+				"allow-to-dns":             sets.Empty{},
+				"allow-to-shoot-apiserver": sets.Empty{},
+				"deny-all":                 sets.Empty{}}}
+		GardenerResourceManager8080 = &networkpolicies.TargetPod{
+			Pod: networkpolicies.Pod{
+				Name: "gardener-resource-manager",
+				Labels: labels.Set{
+					"app":                     "gardener-resource-manager",
+					"garden.sapcloud.io/role": "controlplane"},
+				ShootVersionConstraint: "",
+				SeedClusterConstraints: sets.String(nil)},
+			Port: networkpolicies.Port{
+				Port: 8080,
+				Name: "dummy"}}
 		Grafana = &networkpolicies.SourcePod{
 			Pod: networkpolicies.Pod{
 				Name: "grafana",
@@ -430,32 +454,6 @@ var _ = Describe("Network Policy Testing", func() {
 			Port: networkpolicies.Port{
 				Port: 5601,
 				Name: ""}}
-		KubeAddonManager = &networkpolicies.SourcePod{
-			Pod: networkpolicies.Pod{
-				Name: "kube-addon-manager",
-				Labels: labels.Set{
-					"app":                     "kubernetes",
-					"garden.sapcloud.io/role": "controlplane",
-					"role":                    "addon-manager"},
-				ShootVersionConstraint: "",
-				SeedClusterConstraints: sets.String(nil)},
-			Ports: []networkpolicies.Port(nil),
-			ExpectedPolicies: sets.String{
-				"allow-to-dns":             sets.Empty{},
-				"allow-to-shoot-apiserver": sets.Empty{},
-				"deny-all":                 sets.Empty{}}}
-		KubeAddonManager8080 = &networkpolicies.TargetPod{
-			Pod: networkpolicies.Pod{
-				Name: "kube-addon-manager",
-				Labels: labels.Set{
-					"app":                     "kubernetes",
-					"garden.sapcloud.io/role": "controlplane",
-					"role":                    "addon-manager"},
-				ShootVersionConstraint: "",
-				SeedClusterConstraints: sets.String(nil)},
-			Port: networkpolicies.Port{
-				Port: 8080,
-				Name: "dummy"}}
 		KubeApiserver = &networkpolicies.SourcePod{
 			Pod: networkpolicies.Pod{
 				Name: "kube-apiserver",
@@ -1047,7 +1045,7 @@ var _ = Describe("Network Policy Testing", func() {
 		DefaultCIt(`elasticsearch-logging`, assertHasNetworkPolicy(ElasticsearchLogging))
 		DefaultCIt(`grafana`, assertHasNetworkPolicy(Grafana))
 		DefaultCIt(`kibana-logging`, assertHasNetworkPolicy(KibanaLogging))
-		DefaultCIt(`kube-addon-manager`, assertHasNetworkPolicy(KubeAddonManager))
+		DefaultCIt(`gardener-resource-manager`, assertHasNetworkPolicy(GardenerResourceManager))
 		DefaultCIt(`kube-controller-manager-http`, assertHasNetworkPolicy(KubeControllerManagerHttp))
 		DefaultCIt(`kube-controller-manager-https`, assertHasNetworkPolicy(KubeControllerManagerHttps))
 		DefaultCIt(`kube-scheduler-http`, assertHasNetworkPolicy(KubeSchedulerHttp))
@@ -1068,7 +1066,7 @@ var _ = Describe("Network Policy Testing", func() {
 			}
 		)
 
-		DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertBlockIngress(KubeAddonManager8080, false))
+		DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertBlockIngress(GardenerResourceManager8080, false))
 		DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertBlockIngress(CloudControllerManagerHttp10253, false))
 		DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertBlockIngress(CloudControllerManagerHttps10258, false))
 		DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertBlockIngress(DependencyWatchdog8080, false))
@@ -1108,7 +1106,7 @@ var _ = Describe("Network Policy Testing", func() {
 		DefaultCIt(`should block connectivity from elasticsearch-logging to busybox`, assertBlockEgresss(ElasticsearchLogging))
 		DefaultCIt(`should block connectivity from grafana to busybox`, assertBlockEgresss(Grafana))
 		DefaultCIt(`should block connectivity from kibana-logging to busybox`, assertBlockEgresss(KibanaLogging))
-		DefaultCIt(`should block connectivity from kube-addon-manager to busybox`, assertBlockEgresss(KubeAddonManager))
+		DefaultCIt(`should block connectivity from gardener-resource-manager to busybox`, assertBlockEgresss(GardenerResourceManager))
 		DefaultCIt(`should block connectivity from kube-controller-manager-http to busybox`, assertBlockEgresss(KubeControllerManagerHttp))
 		DefaultCIt(`should block connectivity from kube-controller-manager-https to busybox`, assertBlockEgresss(KubeControllerManagerHttps))
 		DefaultCIt(`should block connectivity from kube-scheduler-http to busybox`, assertBlockEgresss(KubeSchedulerHttp))
@@ -1138,7 +1136,7 @@ var _ = Describe("Network Policy Testing", func() {
 		DefaultCIt(`should block connectivity from elasticsearch-logging`, assertBlockToSeedNodes(ElasticsearchLogging))
 		DefaultCIt(`should block connectivity from grafana`, assertBlockToSeedNodes(Grafana))
 		DefaultCIt(`should block connectivity from kibana-logging`, assertBlockToSeedNodes(KibanaLogging))
-		DefaultCIt(`should block connectivity from kube-addon-manager`, assertBlockToSeedNodes(KubeAddonManager))
+		DefaultCIt(`should block connectivity from gardener-resource-manager`, assertBlockToSeedNodes(GardenerResourceManager))
 		DefaultCIt(`should block connectivity from kube-controller-manager-http`, assertBlockToSeedNodes(KubeControllerManagerHttp))
 		DefaultCIt(`should block connectivity from kube-controller-manager-https`, assertBlockToSeedNodes(KubeControllerManagerHttps))
 		DefaultCIt(`should block connectivity from kube-scheduler-http`, assertBlockToSeedNodes(KubeSchedulerHttp))
@@ -1173,7 +1171,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeApiserver, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1203,7 +1201,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(EtcdMain, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1232,7 +1230,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(EtcdEvents, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1261,7 +1259,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(CloudControllerManagerHttp, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
@@ -1290,7 +1288,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(CloudControllerManagerHttps, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
@@ -1319,7 +1317,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(DependencyWatchdog, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "elasticsearch-logging" at port 9200`, assertEgresssToMirroredPod(ElasticsearchLogging9200, false))
@@ -1349,7 +1347,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(ElasticsearchLogging, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1377,7 +1375,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(Grafana, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1406,7 +1404,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KibanaLogging, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1429,10 +1427,10 @@ var _ = Describe("Network Policy Testing", func() {
 			DefaultCIt(`should block connection to "Garden Prometheus" prometheus-web.garden:80`, assertEgresssToHost(GardenPrometheusPort80, false))
 		})
 
-		Context("kube-addon-manager", func() {
+		Context("gardener-resource-manager", func() {
 
 			BeforeEach(func() {
-				from = networkpolicies.NewNamespacedSourcePod(KubeAddonManager, sharedResources.Mirror)
+				from = networkpolicies.NewNamespacedSourcePod(GardenerResourceManager, sharedResources.Mirror)
 			})
 
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
@@ -1464,7 +1462,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeControllerManagerHttp, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1493,7 +1491,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeControllerManagerHttps, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1522,7 +1520,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeSchedulerHttp, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1551,7 +1549,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeSchedulerHttps, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1580,7 +1578,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeStateMetricsShoot, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1609,7 +1607,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(KubeStateMetricsSeed, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1639,7 +1637,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(MachineControllerManager, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, false))
 			DefaultCIt(`should block connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, false))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))
@@ -1669,7 +1667,7 @@ var _ = Describe("Network Policy Testing", func() {
 				from = networkpolicies.NewNamespacedSourcePod(Prometheus, sharedResources.Mirror)
 			})
 
-			DefaultCIt(`should block connection to Pod "kube-addon-manager" at port 8080`, assertEgresssToMirroredPod(KubeAddonManager8080, false))
+			DefaultCIt(`should block connection to Pod "gardener-resource-manager" at port 8080`, assertEgresssToMirroredPod(GardenerResourceManager8080, false))
 			DefaultCIt(`should allow connection to Pod "cloud-controller-manager-http" at port 10253`, assertEgresssToMirroredPod(CloudControllerManagerHttp10253, true))
 			DefaultCIt(`should allow connection to Pod "cloud-controller-manager-https" at port 10258`, assertEgresssToMirroredPod(CloudControllerManagerHttps10258, true))
 			DefaultCIt(`should block connection to Pod "dependency-watchdog" at port 8080`, assertEgresssToMirroredPod(DependencyWatchdog8080, false))

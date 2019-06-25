@@ -10,8 +10,6 @@ metadata:
     garden.sapcloud.io/description: |
       gardener.unprivileged grants the mininimum amount of privileges necessary to run non-privileged Pods.
       This policy cannot be tuned down, but can be used as a template.
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
 spec:
   privileged: false
   allowPrivilegeEscalation: false

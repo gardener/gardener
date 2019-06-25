@@ -210,10 +210,27 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.SimpleTaskFn(hybridBotanist.ComputeShootOperatingSystemConfig).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady),
 		})
-		deployKubeAddonManager = g.Add(flow.Task{
-			Name:         "Deploying Kubernetes addon manager",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(initializeShootClients, waitUntilInfrastructureReady, computeShootOSConfig),
+		// Needed due to migration from kube-addon-manager to gardener-resource-manager. This can
+		// be removed in a future version of Gardener.
+		deleteKubeAddonManager = g.Add(flow.Task{
+			Name:         "Deleting Kubernetes addon manager",
+			Fn:           flow.TaskFn(botanist.DeleteKubeAddonManager).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		waitUntilKubeAddonManagerDeleted = g.Add(flow.Task{
+			Name:         "Waiting until Kubernetes addon manager has been deleted",
+			Fn:           botanist.WaitUntilKubeAddonManagerDeleted,
+			Dependencies: flow.NewTaskIDs(deleteKubeAddonManager),
+		})
+		deployGardenerResourceManager = g.Add(flow.Task{
+			Name:         "Deploying gardener-resource-manager",
+			Fn:           flow.TaskFn(hybridBotanist.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
+			Dependencies: flow.NewTaskIDs(initializeShootClients),
+		})
+		deployManagedResources = g.Add(flow.Task{
+			Name:         "Deploying managed resources",
+			Fn:           flow.TaskFn(hybridBotanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, waitUntilKubeAddonManagerDeleted),
 		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
@@ -233,12 +250,12 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		_ = g.Add(flow.Task{
 			Name:         "Ensuring ingress DNS record",
 			Fn:           flow.TaskFn(botanist.EnsureIngressDNSRecord).DoIf(managedExternalDNS).RetryUntilTimeout(defaultInterval, 10*time.Minute),
-			Dependencies: flow.NewTaskIDs(deployKubeAddonManager),
+			Dependencies: flow.NewTaskIDs(deployManagedResources),
 		})
 		waitUntilVPNConnectionExists = g.Add(flow.Task{
 			Name:         "Waiting until the Kubernetes API server can connect to the Shoot workers",
 			Fn:           flow.TaskFn(botanist.WaitUntilVPNConnectionExists).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(deployKubeAddonManager, waitUntilWorkerReady),
+			Dependencies: flow.NewTaskIDs(deployManagedResources, waitUntilWorkerReady),
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
@@ -253,7 +270,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deployClusterAutoscaler = g.Add(flow.Task{
 			Name:         "Deploying cluster autoscaler",
 			Fn:           flow.TaskFn(botanist.DeployClusterAutoscaler).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployKubeAddonManager, deploySeedMonitoring),
+			Dependencies: flow.NewTaskIDs(waitUntilWorkerReady, deployManagedResources, deploySeedMonitoring),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Dependency Watchdog",
