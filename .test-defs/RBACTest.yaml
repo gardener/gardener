@@ -1,0 +1,19 @@
+kind: TestDefinition
+metadata:
+  name: rbac-test
+spec:
+  owner: gardener-oq@listserv.sap.com
+  description: Tests if rbac is enabled for the gardener and if a service acount has acccess to the garden ns
+
+  activeDeadlineSeconds: 1800
+  labels: ["default", "release"]
+
+  command: [bash, -c]
+  args:
+  - >-
+    /tm/setup github.com/gardener gardener &&
+    go test $GOPATH/src/github.com/gardener/gardener/test/integration/gardener/rbac
+    --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
+    -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
+    -project-namespace=garden-it
+  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0
