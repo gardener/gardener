@@ -1204,8 +1204,8 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 	openStack := cloud.OpenStack
 	openStackPath := fldPath.Child("openstack")
 	if openStack != nil {
-		if len(openStack.FloatingPoolName) == 0 && len(openStack.LoadBalancerClasses) == 0 {
-			allErrs = append(allErrs, field.Required(openStackPath.Child("floatingPoolName"), "must specify a floating pool name or at least one load balancer class"))
+		if len(openStack.FloatingPoolName) == 0 {
+			allErrs = append(allErrs, field.Required(openStackPath.Child("floatingPoolName"), "must specify a floating pool name"))
 		}
 
 		loadBalancerClassesPath := openStackPath.Child("loadBalancerClasses")
@@ -1214,21 +1214,8 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 			if utils2.IsEmptyString(class.FloatingNetworkID) && utils2.IsEmptyString(class.SubnetID) {
 				allErrs = append(allErrs, field.Required(idxPath, "floatingNetworkID or subnetID must be specified for floating pool class"))
 			}
-			if utils2.IsEmptyString(class.FloatingNetworkID) && !utils2.IsEmptyString(class.FloatingSubnetID) {
-				allErrs = append(allErrs, field.Required(idxPath, "floatingNetworkID must be specified if floatingSubnetID is specified for floating pool class"))
-			}
-		}
-
-		if len(openStack.FloatingPoolName) == 0 {
-			found := false
-			for _, class := range openStack.LoadBalancerClasses {
-				if class.Name == openstackapi.DefaultLoadBalancerClass || class.Name == openstackapi.VPNLoadBalancerClass {
-					found = true
-					break
-				}
-			}
-			if !found {
-				allErrs = append(allErrs, field.Invalid(loadBalancerClassesPath, openStack.LoadBalancerClasses, fmt.Sprintf("class %q or %q must be specified if no floatingPoolName is specified", openstackapi.DefaultLoadBalancerClass, openstackapi.VPNLoadBalancerClass)))
+			if !utils2.IsEmptyString(class.SubnetID) && !utils2.IsEmptyString(class.FloatingSubnetID) {
+				allErrs = append(allErrs, field.Required(idxPath, "only floatingSubnetID or subnetID can be specidied for floating pool class"))
 			}
 		}
 

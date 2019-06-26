@@ -3386,6 +3386,7 @@ func Convert_garden_OpenStackConstraints_To_v1beta1_OpenStackConstraints(in *gar
 
 func autoConvert_v1beta1_OpenStackFloatingPool_To_garden_OpenStackFloatingPool(in *OpenStackFloatingPool, out *garden.OpenStackFloatingPool, s conversion.Scope) error {
 	out.Name = in.Name
+	out.LoadBalancerClasses = *(*[]openstack.PoolLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	return nil
 }
 
@@ -3396,6 +3397,7 @@ func Convert_v1beta1_OpenStackFloatingPool_To_garden_OpenStackFloatingPool(in *O
 
 func autoConvert_garden_OpenStackFloatingPool_To_v1beta1_OpenStackFloatingPool(in *garden.OpenStackFloatingPool, out *OpenStackFloatingPool, s conversion.Scope) error {
 	out.Name = in.Name
+	out.LoadBalancerClasses = *(*[]openstackv1alpha1.PoolLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	return nil
 }
 

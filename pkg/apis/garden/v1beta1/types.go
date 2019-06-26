@@ -212,6 +212,8 @@ type OpenStackConstraints struct {
 type OpenStackFloatingPool struct {
 	// Name is the name of the floating pool.
 	Name string `json:"name"`
+	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
+	LoadBalancerClasses []openstackapi.PoolLoadBalancerClass
 }
 
 // OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.

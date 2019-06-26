@@ -4844,10 +4844,25 @@ func schema_pkg_apis_garden_v1beta1_OpenStackFloatingPool(ref common.ReferenceCa
 							Format:      "",
 						},
 					},
+					"LoadBalancerClasses": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LoadBalancerClasses contains a list of supported labeled load balancer network settings.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.PoolLoadBalancerClass"),
+									},
+								},
+							},
+						},
+					},
 				},
-				Required: []string{"name"},
+				Required: []string{"name", "LoadBalancerClasses"},
 			},
 		},
+		Dependencies: []string{
+			"github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.PoolLoadBalancerClass"},
 	}
 }
 
