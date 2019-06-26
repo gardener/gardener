@@ -17,6 +17,7 @@ package gardener_rbac_test
 import (
 	"context"
 	"flag"
+	"github.com/gardener/gardener/pkg/utils/retry"
 	"time"
 
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -103,7 +104,17 @@ var _ = Describe("RBAC testing", func() {
 			Expect(gardenClient.Client().Delete(ctx, serviceAccount)).ToNot(HaveOccurred())
 		}()
 
-		err = gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name}, serviceAccount)
+		err = retry.UntilTimeout(ctx, 10*time.Second, ServiceAccountPermissionTimeout, func(ctx context.Context) (bool, error) {
+			newServiceAccount := &corev1.ServiceAccount{}
+			if err := gardenClient.Client().Get(ctx, client.ObjectKey{Namespace: serviceAccount.Namespace, Name: serviceAccount.Name}, newServiceAccount); err != nil {
+				return retry.MinorError(err)
+			}
+			serviceAccount = newServiceAccount
+			if len(serviceAccount.Secrets) != 0 {
+				return retry.Ok()
+			}
+			return retry.NotOk()
+		})
 		Expect(err).ToNot(HaveOccurred())
 
 		saClient, err := framework.NewClientFromServiceAccount(ctx, gardenClient, serviceAccount)
