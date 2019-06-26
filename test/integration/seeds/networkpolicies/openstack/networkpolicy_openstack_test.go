@@ -28,13 +28,12 @@ import (
 	"sync"
 	"time"
 
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/logger"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	. "github.com/gardener/gardener/test/integration/framework"
-	"github.com/gardener/gardener/test/integration/framework/networkpolicies"
+	networkpolicies "github.com/gardener/gardener/test/integration/framework/networkpolicies"
 	. "github.com/gardener/gardener/test/integration/shoots"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -813,7 +812,6 @@ var _ = Describe("Network Policy Testing", func() {
 		getFirstNodeInternalIP := func(ctx context.Context, cl kubernetes.Interface) (string, error) {
 			nodes := &corev1.NodeList{}
 			err := cl.Client().List(ctx, nodes, kutil.Limit(1))
-
 			if err != nil {
 				return "", err
 			}

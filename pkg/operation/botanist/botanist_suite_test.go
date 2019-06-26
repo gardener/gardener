@@ -243,12 +243,14 @@ var _ = Describe("health check", func() {
 		}
 
 		// system component deployments
-		calicoTyphaDeployment   = newDeployment(shootNamespace, common.CalicoTyphaDeploymentName, common.GardenRoleSystemComponent, true)
-		coreDNSDeployment       = newDeployment(shootNamespace, common.CoreDNSDeploymentName, common.GardenRoleSystemComponent, true)
-		vpnShootDeployment      = newDeployment(shootNamespace, common.VPNShootDeploymentName, common.GardenRoleSystemComponent, true)
-		metricsServerDeployment = newDeployment(shootNamespace, common.MetricsServerDeploymentName, common.GardenRoleSystemComponent, true)
+		calicoKubeControllersDeployment = newDeployment(shootNamespace, common.CalicoKubeControllersDeploymentName, common.GardenRoleSystemComponent, true)
+		calicoTyphaDeployment           = newDeployment(shootNamespace, common.CalicoTyphaDeploymentName, common.GardenRoleSystemComponent, true)
+		coreDNSDeployment               = newDeployment(shootNamespace, common.CoreDNSDeploymentName, common.GardenRoleSystemComponent, true)
+		vpnShootDeployment              = newDeployment(shootNamespace, common.VPNShootDeploymentName, common.GardenRoleSystemComponent, true)
+		metricsServerDeployment         = newDeployment(shootNamespace, common.MetricsServerDeploymentName, common.GardenRoleSystemComponent, true)
 
 		requiredSystemComponentDeployments = []*appsv1.Deployment{
+			calicoKubeControllersDeployment,
 			calicoTyphaDeployment,
 			coreDNSDeployment,
 			vpnShootDeployment,
@@ -435,6 +437,7 @@ var _ = Describe("health check", func() {
 			BeNil()),
 		Entry("missing required deployment",
 			[]*appsv1.Deployment{
+				calicoKubeControllersDeployment,
 				calicoTyphaDeployment,
 				coreDNSDeployment,
 				vpnShootDeployment,
@@ -449,6 +452,7 @@ var _ = Describe("health check", func() {
 			beConditionWithStatus(gardencorev1alpha1.ConditionFalse)),
 		Entry("required deployment not healthy",
 			[]*appsv1.Deployment{
+				calicoKubeControllersDeployment,
 				newDeployment(calicoTyphaDeployment.Namespace, calicoTyphaDeployment.Name, roleOf(calicoTyphaDeployment), false),
 				coreDNSDeployment,
 				vpnShootDeployment,
