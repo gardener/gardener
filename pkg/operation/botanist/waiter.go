@@ -202,23 +202,6 @@ func (b *Botanist) waitUntilNamespaceDeleted(ctx context.Context, namespace stri
 	})
 }
 
-// WaitUntilKubeAddonManagerDeleted waits until the kube-addon-manager deployment within the Seed cluster has
-// been deleted.
-// +deprecated
-// Can be removed in a future version.
-func (b *Botanist) WaitUntilKubeAddonManagerDeleted(ctx context.Context) error {
-	return retry.UntilTimeout(ctx, 5*time.Second, 600*time.Second, func(ctx context.Context) (done bool, err error) {
-		if _, err := b.K8sSeedClient.GetDeployment(b.Shoot.SeedNamespace, "kube-addon-manager"); err != nil {
-			if apierrors.IsNotFound(err) {
-				return retry.Ok()
-			}
-			return retry.SevereError(err)
-		}
-		b.Logger.Infof("Waiting until the %s has been deleted in the Seed cluster...", "kube-addon-manager")
-		return retry.MinorError(fmt.Errorf("deployment %q is still present", "kube-addon-manager"))
-	})
-}
-
 // WaitUntilClusterAutoscalerDeleted waits until the cluster-autoscaler deployment within the Seed cluster has
 // been deleted.
 func (b *Botanist) WaitUntilClusterAutoscalerDeleted(ctx context.Context) error {
