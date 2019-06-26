@@ -387,6 +387,7 @@ metadata:
   annotations:
     scheduler.alpha.kubernetes.io/critical-pod: ''
 spec:
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       k8s-app: calico-kube-controllers

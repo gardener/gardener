@@ -8,6 +8,7 @@ metadata:
     app: kibana-logging
     role: logging
 spec:
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       app: kibana-logging

@@ -9,6 +9,7 @@ metadata:
     k8s-app: metrics-server
     origin: gardener
 spec:
+  revisionHistoryLimit: 0
   selector:
     matchLabels:
       k8s-app: metrics-server
