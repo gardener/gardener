@@ -88,17 +88,8 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		_ = g.Add(flow.Task{
-			Name:         "Deploying new network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(creationPhase),
-			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		// TODO: this is only needed to ensure that when old clusters are being reconciled,
-		// existing components don't break due to the new deny-all network policy .
-		// This should be removed after one release.
-		// This is skipped on the first creation cycle.
-		_ = g.Add(flow.Task{
-			Name:         "Deploying limited network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployLimitedNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(creationPhase),
+			Name:         "Deploying network policies",
+			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
 		})
 		deployCloudProviderSecret = g.Add(flow.Task{
@@ -276,19 +267,6 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Deploying Dependency Watchdog",
 			Fn:           flow.TaskFn(botanist.DeployDependencyWatchdog).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deployNamespace),
-		})
-		// TODO: Network policies steps must be moved to the top after one release.
-		// This is needed to ensure smooth migration to new network policies.
-		_ = g.Add(flow.Task{
-			Name:         "Removing old deprecated network policies",
-			Fn:           flow.TaskFn(botanist.DeleteDeprecatedCloudMetadataServiceNetworkPolicy).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
-		})
-		// This one is skipped for newly created clusters.
-		_ = g.Add(flow.Task{
-			Name:         "Deploying network policies",
-			Fn:           flow.TaskFn(hybridBotanist.DeployNetworkPolicies).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(creationPhase),
-			Dependencies: flow.NewTaskIDs(deploySeedMonitoring, deploySeedLogging, deployClusterAutoscaler),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Hibernating control plane",

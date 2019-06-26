@@ -215,14 +215,6 @@ func (b *HybridBotanist) deployNetworkPolicies(ctx context.Context, denyAll bool
 	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, "network-policies"), b.Shoot.SeedNamespace, "network-policies", values, nil)
 }
 
-// DeployLimitedNetworkPolicies creates a network policies in a Shoot cluster's namespace that
-// DOES NOT deny all traffic and allow certain components to use annotations to declare their desire
-// to transmit/receive traffic to/from other Pods/IP addresses.
-// This is needed until migration to the new policies is complete.
-func (b *HybridBotanist) DeployLimitedNetworkPolicies(ctx context.Context) error {
-	return b.deployNetworkPolicies(ctx, false)
-}
-
 // DeployNetworkPolicies creates a network policies in a Shoot cluster's namespace that
 // deny all traffic and allow certain components to use annotations to declare their desire
 // to transmit/receive traffic to/from other Pods/IP addresses.
