@@ -19,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var _ Object = (*Extension)(nil)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -32,9 +34,14 @@ type Extension struct {
 	Status ExtensionStatus `json:"status"`
 }
 
-// GetExtensionType returns the type of this Extension resource.
-func (g *Extension) GetExtensionType() string {
-	return g.Spec.Type
+// GetExtensionSpec implements Object.
+func (i *Extension) GetExtensionSpec() Spec {
+	return &i.Spec
+}
+
+// GetExtensionStatus implements Object.
+func (i *Extension) GetExtensionStatus() Status {
+	return &i.Status
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

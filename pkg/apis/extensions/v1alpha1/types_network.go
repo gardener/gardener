@@ -19,6 +19,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var _ Object = (*Network)(nil)
+
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -30,6 +32,16 @@ type Network struct {
 
 	Spec   NetworkSpec   `json:"spec"`
 	Status NetworkStatus `json:"status"`
+}
+
+// GetExtensionSpec implements Object.
+func (i *Network) GetExtensionSpec() Spec {
+	return &i.Spec
+}
+
+// GetExtensionStatus implements Object.
+func (i *Network) GetExtensionStatus() Status {
+	return &i.Status
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

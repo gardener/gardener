@@ -19,6 +19,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var _ Object = (*BackupEntry)(nil)
+
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -33,9 +35,14 @@ type BackupEntry struct {
 	Status BackupEntryStatus `json:"status"`
 }
 
-// GetExtensionType returns the type of this BackupEntry resource.
-func (i *BackupEntry) GetExtensionType() string {
-	return i.Spec.Type
+// GetExtensionSpec implements Object.
+func (i *BackupEntry) GetExtensionSpec() Spec {
+	return &i.Spec
+}
+
+// GetExtensionStatus implements Object.
+func (i *BackupEntry) GetExtensionStatus() Status {
+	return &i.Status
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

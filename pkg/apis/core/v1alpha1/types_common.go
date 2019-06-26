@@ -83,3 +83,28 @@ type LastOperation struct {
 	// Type of the last operation, one of Create, Reconcile, Delete.
 	Type LastOperationType `json:"type"`
 }
+
+// GetDescription implements LastOperation.
+func (l *LastOperation) GetDescription() string {
+	return l.Description
+}
+
+// GetLastUpdateTime implements LastOperation.
+func (l *LastOperation) GetLastUpdateTime() metav1.Time {
+	return l.LastUpdateTime
+}
+
+// GetProgress implements LastOperation.
+func (l *LastOperation) GetProgress() int {
+	return l.Progress
+}
+
+// GetState implements LastOperation.
+func (l *LastOperation) GetState() LastOperationState {
+	return l.State
+}
+
+// GetType implements LastOperation.
+func (l *LastOperation) GetType() LastOperationType {
+	return l.Type
+}
