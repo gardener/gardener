@@ -433,7 +433,7 @@ func (c *defaultControllerInstallationControl) cleanOldExtensions(ctx context.Co
 			continue
 		}
 		for _, item := range objList.Items {
-			if res.Type != item.GetExtensionType() {
+			if res.Type != item.Spec.Type {
 				continue
 			}
 			delFunc := func(ctx context.Context) error {

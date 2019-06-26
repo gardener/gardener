@@ -20,6 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var _ Object = (*Infrastructure)(nil)
+
 // InfrastructureResource is a constant for the name of the Infrastructure resource.
 const InfrastructureResource = "Infrastructure"
 
@@ -36,9 +38,14 @@ type Infrastructure struct {
 	Status InfrastructureStatus `json:"status"`
 }
 
-// GetExtensionType returns the type of this Infrastructure resource.
-func (i *Infrastructure) GetExtensionType() string {
-	return i.Spec.Type
+// GetExtensionSpec implements Object.
+func (i *Infrastructure) GetExtensionSpec() Spec {
+	return &i.Spec
+}
+
+// GetExtensionStatus implements Object.
+func (i *Infrastructure) GetExtensionStatus() Status {
+	return &i.Status
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
