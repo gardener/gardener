@@ -159,6 +159,7 @@ func (g *genTest) Imports(c *generator.Context) (imports []string) {
 		"io/ioutil",
 		"sync",
 		"time",
+		`kutil "github.com/gardener/gardener/pkg/utils/kubernetes"`,
 		`. "github.com/gardener/gardener/test/integration/framework"`,
 		`. "github.com/gardener/gardener/test/integration/shoots"`,
 		`. "github.com/onsi/ginkgo"`,
@@ -613,7 +614,7 @@ var setBody = `
 
 		By(fmt.Sprintf("Getting all network policies in namespace %q", shootTestOperations.ShootSeedNamespace()))
 		list := &networkingv1.NetworkPolicyList{}
-		err = shootTestOperations.SeedClient.Client().List(ctx, &client.ListOptions{Namespace: shootTestOperations.ShootSeedNamespace()}, list)
+		err = shootTestOperations.SeedClient.Client().List(ctx, list, client.InNamespace(shootTestOperations.ShootSeedNamespace()))
 		Expect(err).ToNot(HaveOccurred())
 
 		sharedResources.Policies = list.Items
@@ -634,7 +635,7 @@ var setBody = `
 
 		getFirstNodeInternalIP := func(ctx context.Context, cl kubernetes.Interface) (string, error) {
 			nodes := &corev1.NodeList{}
-			err := cl.Client().List(ctx, &client.ListOptions{Raw: &metav1.ListOptions{Limit: 1}}, nodes)
+			err := cl.Client().List(ctx, nodes, kutil.Limit(1))
 			if err != nil {
 				return "", err
 			}
@@ -790,7 +791,7 @@ var setBody = `
 				"gardener-e2e-test": "networkpolicies",
 			}),
 		}
-		err := shootTestOperations.SeedClient.Client().List(ctx, selector, namespaces)
+		err := shootTestOperations.SeedClient.Client().List(ctx, namespaces, client.UseListOptions(selector))
 		Expect(err).NotTo(HaveOccurred())
 
 		for _, ns := range namespaces.Items {

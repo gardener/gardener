@@ -217,6 +217,9 @@ const (
 	// GardenerResourceManagerDeploymentName is the name of the gardener-resource-manager deployment.
 	GardenerResourceManagerDeploymentName = "gardener-resource-manager"
 
+	// CalicoKubeControllersDeploymentName is the name of calico-kube-controllers deployment.
+	CalicoKubeControllersDeploymentName = "calico-kube-controllers"
+
 	// CalicoTyphaDeploymentName is the name of the calico-typha deployment.
 	CalicoTyphaDeploymentName = "calico-typha"
 
@@ -567,6 +570,7 @@ var (
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
 	RequiredSystemComponentDeployments = sets.NewString(
+		CalicoKubeControllersDeploymentName,
 		CalicoTyphaDeploymentName,
 		CoreDNSDeploymentName,
 		VPNShootDeploymentName,
