@@ -36,7 +36,6 @@
 
 ## Usage
 
-* [Creating, deleting and updating Shoot clusters](usage/shoots.md)
 * [Audit a Kubernetes Cluster](usage/shoot_auditpolicy.md)
 * [Supported Kubernetes versions](usage/supported_k8s_versions.md)
 
