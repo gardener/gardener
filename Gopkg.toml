@@ -26,7 +26,7 @@ ignored = [
 
 [[constraint]]
   name = "github.com/gardener/gardener-resource-manager"
-  version = "0.2.0"
+  revision = "b43a76cdf9a7fa740f5e5fb83d931d0a086a1892"
 
 [[override]]
   name = "k8s.io/api"
