@@ -255,7 +255,7 @@ var _ = Describe("shoot", func() {
 			fooRegistration          = corev1alpha1.ControllerRegistration{
 				Spec: corev1alpha1.ControllerRegistrationSpec{
 					Resources: []corev1alpha1.ControllerResource{
-						corev1alpha1.ControllerResource{
+						{
 							Kind:             extensionKind,
 							Type:             fooExtensionType,
 							ReconcileTimeout: &fooReconciliationTimeout,
@@ -271,7 +271,7 @@ var _ = Describe("shoot", func() {
 			barRegistration  = corev1alpha1.ControllerRegistration{
 				Spec: corev1alpha1.ControllerRegistrationSpec{
 					Resources: []corev1alpha1.ControllerResource{
-						corev1alpha1.ControllerResource{
+						{
 							Kind:            extensionKind,
 							Type:            barExtensionType,
 							GloballyEnabled: test.MakeBoolPointer(true),
@@ -291,7 +291,7 @@ var _ = Describe("shoot", func() {
 				Expect(err).To(BeNil())
 			},
 			Entry("No extensions", nil, nil, shootNamespace, BeEmpty()),
-			Entry("Extension w/o registration", nil, []gardenv1beta1.Extension{gardenv1beta1.Extension{Type: fooExtensionType}}, shootNamespace, BeEmpty()),
+			Entry("Extension w/o registration", nil, []gardenv1beta1.Extension{{Type: fooExtensionType}}, shootNamespace, BeEmpty()),
 			Entry("Extensions w/ registration",
 				[]corev1alpha1.ControllerRegistration{
 					fooRegistration,
@@ -352,10 +352,10 @@ var _ = Describe("shoot", func() {
 				[]corev1alpha1.ControllerRegistration{
 					fooRegistration,
 					barRegistration,
-					corev1alpha1.ControllerRegistration{
+					{
 						Spec: corev1alpha1.ControllerRegistrationSpec{
 							Resources: []corev1alpha1.ControllerResource{
-								corev1alpha1.ControllerResource{
+								{
 									Kind: "kind",
 									Type: "type",
 								},

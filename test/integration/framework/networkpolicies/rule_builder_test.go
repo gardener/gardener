@@ -52,7 +52,7 @@ var _ = Describe("SourceBuilder test", func() {
 			}
 		)
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.DenyTargetPod(denyPod1, denyPod2).AllowTargetPod(denyPod2).Build()
 			expected := Rule{source, []PodRule{
 				{*denyPod1, false},
@@ -61,7 +61,7 @@ var _ = Describe("SourceBuilder test", func() {
 			Expect(result).To(Equal(expected))
 		})
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.DenyTargetPod(denyPod1, denyPod3, denyPod2).AllowTargetPod(denyPod1).Build()
 			expected := Rule{source, []PodRule{
 				{*denyPod1, true},
@@ -71,7 +71,7 @@ var _ = Describe("SourceBuilder test", func() {
 			Expect(result).To(Equal(expected))
 		})
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.AllowTargetPod(denyPod1, denyPod3, denyPod2).Build()
 			expected := Rule{source, []PodRule{
 				{*denyPod1, true},
@@ -129,7 +129,7 @@ var _ = Describe("SourceBuilder test", func() {
 			}
 		)
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.DenyPod(denyTargetPod).AllowPod(denyTargetPod2).Build()
 			expected := Rule{source, []PodRule{
 				{*denyPod1, false},
@@ -138,7 +138,7 @@ var _ = Describe("SourceBuilder test", func() {
 			Expect(result).To(Equal(expected))
 		})
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.DenyPod(denyTargetPod, denyTargetPod3).AllowPod(denyTargetPod).Build()
 			expected := Rule{source, []PodRule{
 				{*denyPod1, true},
@@ -148,7 +148,7 @@ var _ = Describe("SourceBuilder test", func() {
 			Expect(result).To(Equal(expected))
 		})
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.AllowPod(denyTargetPod, denyTargetPod3).Build()
 			expected := Rule{source, []PodRule{
 				{*denyPod1, true},
@@ -194,7 +194,7 @@ var _ = Describe("SourceBuilder test", func() {
 			}
 		)
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.DenyHost(denyHost1, denyHost2).AllowHost(denyHost2).Build()
 			expected := Rule{source, nil, []HostRule{
 				{*denyHost1, false},
@@ -203,7 +203,7 @@ var _ = Describe("SourceBuilder test", func() {
 			Expect(result).To(Equal(expected))
 		})
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.DenyHost(denyHost1, denyHost3, denyHost2).AllowHost(denyHost1).Build()
 			expected := Rule{source, nil, []HostRule{
 				{*denyHost1, true},
@@ -213,7 +213,7 @@ var _ = Describe("SourceBuilder test", func() {
 			Expect(result).To(Equal(expected))
 		})
 
-		It("should accept multipe entries", func() {
+		It("should accept multiple entries", func() {
 			result := builder.AllowHost(denyHost1, denyHost3, denyHost2).Build()
 			expected := Rule{source, nil, []HostRule{
 				{*denyHost1, true},

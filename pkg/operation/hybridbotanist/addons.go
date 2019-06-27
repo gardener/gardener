@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/chartrenderer"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	corev1 "k8s.io/api/core/v1"
@@ -194,7 +195,17 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
-	if _, err := b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, "vpn-shoot", corev1.SecretTypeOpaque, vpnShootSecret.Data, true); err != nil {
+	newVpnShootSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "vpn-shoot",
+			Namespace: metav1.NamespaceSystem,
+		},
+	}
+	if err := kutil.CreateOrUpdate(context.TODO(), b.K8sShootClient.Client(), newVpnShootSecret, func() error {
+		newVpnShootSecret.Type = corev1.SecretTypeOpaque
+		newVpnShootSecret.Data = vpnShootSecret.Data
+		return nil
+	}); err != nil {
 		return nil, err
 	}
 

@@ -16,6 +16,7 @@ package botanist
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -24,14 +25,16 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
+	"github.com/gardener/gardener/pkg/client/kubernetes"
 	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
 	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/secrets"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
@@ -657,7 +660,13 @@ func (b *Botanist) DeploySecrets() error {
 	// This can be removed in a future Gardener version.
 	loggingIngressAdminCredentials := existingSecretsMap[common.KibanaAdminIngressCredentialsSecretName]
 	if loggingIngressAdminCredentials != nil && len(loggingIngressAdminCredentials.Data[secrets.DataKeyPasswordBcryptHash]) == 0 {
-		if err := b.K8sSeedClient.DeleteSecret(b.Shoot.SeedNamespace, common.KibanaAdminIngressCredentialsSecretName); err != nil && !apierrors.IsNotFound(err) {
+		kibanaIngressCredentials := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      common.KibanaAdminIngressCredentialsSecretName,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+		if err := b.K8sSeedClient.Client().Delete(context.TODO(), kibanaIngressCredentials, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 		delete(existingSecretsMap, common.KibanaAdminIngressCredentialsSecretName)
@@ -698,23 +707,25 @@ func (b *Botanist) DeploySecrets() error {
 
 // DeployCloudProviderSecret creates or updates the cloud provider secret in the Shoot namespace
 // in the Seed cluster.
-func (b *Botanist) DeployCloudProviderSecret() error {
+func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	var (
 		checksum = computeSecretCheckSum(b.Shoot.Secret.Data)
 		secret   = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      gardencorev1alpha1.SecretNameCloudProvider,
 				Namespace: b.Shoot.SeedNamespace,
-				Annotations: map[string]string{
-					"checksum/data": checksum,
-				},
 			},
-			Type: corev1.SecretTypeOpaque,
-			Data: b.Shoot.Secret.Data,
 		}
 	)
 
-	if _, err := b.K8sSeedClient.CreateSecretObject(secret, true); err != nil {
+	if err := kutil.CreateOrUpdate(ctx, b.K8sSeedClient.Client(), secret, func() error {
+		secret.Annotations = map[string]string{
+			"checksum/data": checksum,
+		}
+		secret.Type = corev1.SecretTypeOpaque
+		secret.Data = b.Shoot.Secret.Data
+		return nil
+	}); err != nil {
 		return err
 	}
 
@@ -730,19 +741,34 @@ func (b *Botanist) DeployCloudProviderSecret() error {
 // DeleteGardenSecrets deletes the Shoot-specific secrets from the project namespace in the Garden cluster.
 // TODO: https://github.com/gardener/gardener/pull/353: This can be removed in a future version as we are now using owner
 // references for the Garden secrets (also remove the actual invocation of the function in the deletion flow of a Shoot).
-func (b *Botanist) DeleteGardenSecrets() error {
-	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, "kubeconfig")); err != nil && !apierrors.IsNotFound(err) {
+func (b *Botanist) DeleteGardenSecrets(ctx context.Context) error {
+	var (
+		kubeconfigSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      generateGardenSecretName(b.Shoot.Info.Name, "kubeconfig"),
+				Namespace: b.Shoot.Info.Namespace,
+			},
+		}
+		sshKeyPairSecret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      generateGardenSecretName(b.Shoot.Info.Name, gardencorev1alpha1.SecretNameSSHKeyPair),
+				Namespace: b.Shoot.Info.Namespace,
+			},
+		}
+	)
+
+	if err := b.K8sGardenClient.Client().Delete(ctx, kubeconfigSecret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
-	if err := b.K8sGardenClient.DeleteSecret(b.Shoot.Info.Namespace, generateGardenSecretName(b.Shoot.Info.Name, gardencorev1alpha1.SecretNameSSHKeyPair)); err != nil && !apierrors.IsNotFound(err) {
+	if err := b.K8sGardenClient.Client().Delete(ctx, sshKeyPairSecret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 	return nil
 }
 
 func (b *Botanist) fetchExistingSecrets() (map[string]*corev1.Secret, error) {
-	secretList, err := b.K8sSeedClient.ListSecrets(b.Shoot.SeedNamespace, metav1.ListOptions{})
-	if err != nil {
+	secretList := &corev1.SecretList{}
+	if err := b.K8sSeedClient.Client().List(context.TODO(), secretList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return nil, err
 	}
 
@@ -798,13 +824,22 @@ func (b *Botanist) generateBasicAuthAPIServer(existingSecretsMap map[string]*cor
 		return nil, err
 	}
 
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      basicAuthSecretAPIServer.Name,
+			Namespace: b.Shoot.SeedNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: basicAuth.SecretData(),
+	}
+	if err := b.K8sSeedClient.Client().Create(context.TODO(), secret); err != nil {
+		return nil, err
+	}
+
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	b.Secrets[basicAuthSecretAPIServer.Name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, basicAuthSecretAPIServer.Name, corev1.SecretTypeOpaque, basicAuth.SecretData(), false)
-	if err != nil {
-		return nil, err
-	}
+	b.Secrets[basicAuthSecretAPIServer.Name] = secret
 
 	return basicAuth.(*secrets.BasicAuth), nil
 }
@@ -845,7 +880,7 @@ type projectSecret struct {
 // SyncShootCredentialsToGarden copies the kubeconfig generated for the user, the SSH keypair to
 // the project namespace in the Garden cluster and the monitoring credentials for the
 // user-facing monitoring stack are also copied.
-func (b *Botanist) SyncShootCredentialsToGarden() error {
+func (b *Botanist) SyncShootCredentialsToGarden(ctx context.Context) error {
 	kubecfgURL := b.Shoot.InternalClusterDomain
 	if b.Shoot.ExternalClusterDomain != nil {
 		kubecfgURL = *b.Shoot.ExternalClusterDomain
@@ -881,15 +916,18 @@ func (b *Botanist) SyncShootCredentialsToGarden() error {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      computeProjectSecretName(b.Shoot.Info.Name, projectSecret.suffix),
 				Namespace: b.Shoot.Info.Namespace,
-				OwnerReferences: []metav1.OwnerReference{
-					*metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")),
-				},
-				Annotations: projectSecret.annotations,
 			},
-			Type: corev1.SecretTypeOpaque,
-			Data: b.Secrets[projectSecret.secretName].Data,
 		}
-		if _, err := b.K8sGardenClient.CreateSecretObject(secretObj, true); err != nil {
+
+		if err := kutil.CreateOrUpdate(ctx, b.K8sGardenClient.Client(), secretObj, func() error {
+			secretObj.OwnerReferences = []metav1.OwnerReference{
+				*metav1.NewControllerRef(b.Shoot.Info, gardenv1beta1.SchemeGroupVersion.WithKind("Shoot")),
+			}
+			secretObj.Annotations = projectSecret.annotations
+			secretObj.Type = corev1.SecretTypeOpaque
+			secretObj.Data = b.Secrets[projectSecret.secretName].Data
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
@@ -916,11 +954,24 @@ func (b *Botanist) deployOpenVPNTLSAuthSecret(existingSecretsMap map[string]*cor
 		"vpn.tlsauth": tlsAuthKey,
 	}
 
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: b.Shoot.SeedNamespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: data,
+	}
+	if err := b.K8sSeedClient.Client().Create(context.TODO(), secret); err != nil {
+		return err
+	}
+
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
-	b.Secrets[name], err = b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, name, corev1.SecretTypeOpaque, data, false)
-	return err
+	b.Secrets[name] = secret
+
+	return nil
 }
 
 func generateOpenVPNTLSAuth() ([]byte, error) {

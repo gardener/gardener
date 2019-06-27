@@ -35,12 +35,12 @@ var _ = Describe("Types", func() {
 		var (
 			host = Host{HostName: "foo.bar", Port: 1234, Description: "Some service"}
 		)
-		It("should return correct responce when allowed", func() {
+		It("should return correct response when allowed", func() {
 			hr := HostRule{Host: host, Allowed: true}
 			Expect(hr.ToString()).To(Equal(`should allow connection to "Some service" foo.bar:1234`))
 		})
 
-		It("should return correct responce when not allowed", func() {
+		It("should return correct response when not allowed", func() {
 			hr := HostRule{Host: host, Allowed: false}
 			Expect(hr.ToString()).To(Equal(`should block connection to "Some service" foo.bar:1234`))
 		})
@@ -50,12 +50,12 @@ var _ = Describe("Types", func() {
 		var (
 			pod = TargetPod{Pod: NewPod("test", map[string]string{"foo": "bar"}, "> 1.0"), Port: Port{Port: 1234}}
 		)
-		It("should return correct responce when allowed", func() {
+		It("should return correct response when allowed", func() {
 			pr := PodRule{TargetPod: pod, Allowed: true}
 			Expect(pr.ToString()).To(Equal(`should allow connection to Pod "test" at port 1234`))
 		})
 
-		It("should return correct responce when not allowed", func() {
+		It("should return correct response when not allowed", func() {
 			pr := PodRule{TargetPod: pod, Allowed: false}
 			Expect(pr.ToString()).To(Equal(`should block connection to Pod "test" at port 1234`))
 		})

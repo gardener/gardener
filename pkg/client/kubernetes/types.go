@@ -27,10 +27,7 @@ import (
 	machinescheme "github.com/gardener/gardener/pkg/client/machine/clientset/versioned/scheme"
 
 	resourcesscheme "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
-	appsv1 "k8s.io/api/apps/v1"
-	batchv1 "k8s.io/api/batch/v1"
-	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsscheme "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/scheme"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -111,19 +108,6 @@ var (
 	ForceDeleteOptionFuncs = []client.DeleteOptionFunc{
 		client.PropagationPolicy(metav1.DeletePropagationBackground),
 		client.GracePeriodSeconds(0),
-	}
-
-	propagationPolicy    = metav1.DeletePropagationForeground
-	gracePeriodSeconds   = int64(60)
-	defaultDeleteOptions = metav1.DeleteOptions{
-		PropagationPolicy:  &propagationPolicy,
-		GracePeriodSeconds: &gracePeriodSeconds,
-	}
-	zero               int64
-	backgroundDeletion = metav1.DeletePropagationBackground
-	forceDeleteOptions = metav1.DeleteOptions{
-		GracePeriodSeconds: &zero,
-		PropagationPolicy:  &backgroundDeletion,
 	}
 )
 
@@ -226,119 +210,9 @@ type Interface interface {
 	APIExtension() apiextensionsclientset.Interface
 	APIRegistration() apiregistrationclientset.Interface
 
-	// Namespaces
-	// Deprecated: Use `Client()` and utils instead.
-	CreateNamespace(*corev1.Namespace, bool) (*corev1.Namespace, error)
-	// Deprecated: Use `Client()` and utils instead.
-	GetNamespace(string) (*corev1.Namespace, error)
-	// Deprecated: Use `Client()` and utils instead.
-	ListNamespaces(metav1.ListOptions) (*corev1.NamespaceList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	PatchNamespace(name string, body []byte) (*corev1.Namespace, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteNamespace(string) error
-
-	// Secrets
-	// Deprecated: Use `Client()` and utils instead.
-	CreateSecret(string, string, corev1.SecretType, map[string][]byte, bool) (*corev1.Secret, error)
-	// Deprecated: Use `Client()` and utils instead.
-	CreateSecretObject(*corev1.Secret, bool) (*corev1.Secret, error)
-	// Deprecated: Use `Client()` and utils instead.
-	UpdateSecretObject(*corev1.Secret) (*corev1.Secret, error)
-	// Deprecated: Use `Client()` and utils instead.
-	ListSecrets(string, metav1.ListOptions) (*corev1.SecretList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	GetSecret(string, string) (*corev1.Secret, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteSecret(string, string) error
-
-	// ConfigMaps
-	// Deprecated: Use `Client()` and utils instead.
-	CreateConfigMap(string, string, map[string]string, bool) (*corev1.ConfigMap, error)
-	// Deprecated: Use `Client()` and utils instead.
-	UpdateConfigMap(string, string, map[string]string) (*corev1.ConfigMap, error)
-	// Deprecated: Use `Client()` and utils instead.
-	GetConfigMap(string, string) (*corev1.ConfigMap, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteConfigMap(string, string) error
-
-	// Services
-	// Deprecated: Use `Client()` and utils instead.
-	GetService(string, string) (*corev1.Service, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteService(string, string) error
-
-	// Deployments
-	// Deprecated: Use `Client()` and utils instead.
-	GetDeployment(string, string) (*appsv1.Deployment, error)
-	// Deprecated: Use `Client()` and utils instead.
-	ListDeployments(string, metav1.ListOptions) (*appsv1.DeploymentList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	PatchDeployment(string, string, []byte) (*appsv1.Deployment, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteDeployment(string, string) error
-
-	// StatefulSets
-	// Deprecated: Use `Client()` and utils instead.
-	ListStatefulSets(string, metav1.ListOptions) (*appsv1.StatefulSetList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteStatefulSet(string, string) error
-
-	// DaemonSets
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteDaemonSet(string, string) error
-
-	// Jobs
-	// Deprecated: Use `Client()` and utils instead.
-	GetJob(string, string) (*batchv1.Job, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteJob(string, string) error
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteCronJob(string, string) error
-
-	// Pods
-	// Deprecated: Use `Client()` and utils instead.
-	GetPod(string, string) (*corev1.Pod, error)
-	// Deprecated: Use `Client()` and utils instead.
-	ListPods(string, metav1.ListOptions) (*corev1.PodList, error)
-
 	// Deprecated: Use `Client()` and utils instead.
 	ForwardPodPort(string, string, int, int) (chan struct{}, error)
 	CheckForwardPodPort(string, string, int, int) error
-	// Deprecated: Use `Client()` and utils instead.
-	DeletePod(string, string) error
-	// Deprecated: Use `Client()` and utils instead.
-	DeletePodForcefully(string, string) error
-
-	// Nodes
-	// Deprecated: Use `Client()` and utils instead.
-	ListNodes(metav1.ListOptions) (*corev1.NodeList, error)
-
-	// RBAC
-	// Deprecated: Use `Client()` and utils instead.
-	ListRoleBindings(string, metav1.ListOptions) (*rbacv1.RoleBindingList, error)
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteClusterRole(name string) error
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteClusterRoleBinding(name string) error
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteRoleBinding(namespace, name string) error
-
-	// ServiceAccounts
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteServiceAccount(namespace, name string) error
-
-	// HorizontalPodAutoscalers
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteHorizontalPodAutoscaler(namespace, name string) error
-
-	// Ingresses
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteIngress(namespace, name string) error
-
-	// NetworkPolicies
-	// Deprecated: Use `Client()` and utils instead.
-	DeleteNetworkPolicy(namespace, name string) error
 
 	Version() string
 }

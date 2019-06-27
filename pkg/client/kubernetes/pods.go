@@ -22,14 +22,12 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
@@ -107,23 +105,6 @@ func GetPodLogs(podInterface corev1client.PodInterface, name string, options *co
 	return ioutil.ReadAll(stream)
 }
 
-// GetPod will return the Pod object for the given <name> in the given <namespace>.
-func (c *Clientset) GetPod(namespace, name string) (*corev1.Pod, error) {
-	return c.kubernetes.CoreV1().Pods(namespace).Get(name, metav1.GetOptions{})
-}
-
-// ListPods will list all the Pods in the given <namespace> for the given <listOptions>.
-func (c *Clientset) ListPods(namespace string, listOptions metav1.ListOptions) (*corev1.PodList, error) {
-	pods, err := c.kubernetes.CoreV1().Pods(namespace).List(listOptions)
-	if err != nil {
-		return nil, err
-	}
-	sort.Slice(pods.Items, func(i, j int) bool {
-		return pods.Items[i].ObjectMeta.CreationTimestamp.Before(&pods.Items[j].ObjectMeta.CreationTimestamp)
-	})
-	return pods, nil
-}
-
 // ForwardPodPort tries to forward the <remote> port of the pod with name <name> in namespace <namespace> to
 // the <local> port. If <local> equals zero, a free port will be chosen randomly.
 // It returns the stop channel which must be closed when the port forward connection should be terminated.
@@ -158,16 +139,6 @@ func (c *Clientset) CheckForwardPodPort(namespace, name string, local, remote in
 	case <-time.After(time.Second * 5):
 		return errors.New("port forward connection could not be established within five seconds")
 	}
-}
-
-// DeletePod will delete a Pod with the given <name> in the given <namespace>.
-func (c *Clientset) DeletePod(namespace, name string) error {
-	return c.kubernetes.CoreV1().Pods(namespace).Delete(name, &defaultDeleteOptions)
-}
-
-// DeletePodForcefully will forcefully delete a Pod with the given <name> in the given <namespace>.
-func (c *Clientset) DeletePodForcefully(namespace, name string) error {
-	return c.kubernetes.CoreV1().Pods(namespace).Delete(name, &forceDeleteOptions)
 }
 
 func (c *Clientset) setupForwardPodPort(namespace, name string, local, remote int) (*portforward.PortForwarder, chan struct{}, error) {

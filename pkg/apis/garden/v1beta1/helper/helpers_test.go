@@ -238,7 +238,7 @@ var _ = Describe("helper", func() {
 
 	var (
 		alertingSecrets = map[string]*corev1.Secret{
-			common.GardenRoleAlertingSMTP: &corev1.Secret{},
+			common.GardenRoleAlertingSMTP: {},
 		}
 	)
 

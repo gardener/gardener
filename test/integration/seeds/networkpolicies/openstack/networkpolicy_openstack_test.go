@@ -760,30 +760,29 @@ var _ = Describe("Network Policy Testing", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("Creating namespace for Ingress testing")
-		ns, err := shootTestOperations.SeedClient.CreateNamespace(
-			&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "gardener-e2e-network-policies-",
-					Labels: map[string]string{
-						"gardener-e2e-test": "networkpolicies",
-					},
+		ns := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "gardener-e2e-network-policies-",
+				Labels: map[string]string{
+					"gardener-e2e-test": "networkpolicies",
 				},
-			}, true)
-
+			},
+		}
+		err = shootTestOperations.SeedClient.Client().Create(ctx, ns)
 		Expect(err).NotTo(HaveOccurred())
 
 		sharedResources.External = ns.GetName()
 
 		By("Creating mirror namespace for pod2pod network testing")
-		mirrorNamespace, err := shootTestOperations.SeedClient.CreateNamespace(
-			&corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "gardener-e2e-mirror-network-policies-",
-					Labels: map[string]string{
-						"gardener-e2e-test": "networkpolicies",
-					},
+		mirrorNamespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "gardener-e2e-mirror-network-policies-",
+				Labels: map[string]string{
+					"gardener-e2e-test": "networkpolicies",
 				},
-			}, true)
+			},
+		}
+		err = shootTestOperations.SeedClient.Client().Create(ctx, mirrorNamespace)
 		Expect(err).NotTo(HaveOccurred())
 
 		sharedResources.Mirror = mirrorNamespace.GetName()

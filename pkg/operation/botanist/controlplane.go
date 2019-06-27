@@ -16,7 +16,6 @@ package botanist
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"reflect"
@@ -487,36 +486,6 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 		},
 	}
 	return client.IgnoreNotFound(b.K8sSeedClient.Client().Delete(ctx, prometheusStatefulSet, kubernetes.DefaultDeleteOptionFuncs...))
-}
-
-// patchDeploymentCloudProviderChecksums updates the cloud provider checksums on the given deployment.
-func (b *Botanist) patchDeploymentCloudProviderChecksums(deploymentName string) error {
-	type jsonPatch struct {
-		Op    string `json:"op"`
-		Path  string `json:"path"`
-		Value string `json:"value"`
-	}
-
-	patch := []jsonPatch{
-		{
-			Op:    "replace",
-			Path:  "/spec/template/metadata/annotations/checksum~1secret-cloudprovider",
-			Value: b.CheckSums[gardencorev1alpha1.SecretNameCloudProvider],
-		},
-		{
-			Op:    "replace",
-			Path:  "/spec/template/metadata/annotations/checksum~1configmap-cloud-provider-config",
-			Value: b.CheckSums[common.CloudProviderConfigName],
-		},
-	}
-
-	body, err := json.Marshal(patch)
-	if err != nil {
-		return err
-	}
-
-	_, err = b.K8sSeedClient.PatchDeployment(b.Shoot.SeedNamespace, deploymentName, body)
-	return err
 }
 
 // DeploySeedLogging will install the Helm release "seed-bootstrap/charts/elastic-kibana-curator" in the Seed clusters.

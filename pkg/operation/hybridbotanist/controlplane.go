@@ -29,8 +29,11 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
@@ -38,6 +41,7 @@ import (
 	auditv1alpha1 "k8s.io/apiserver/pkg/apis/audit/v1alpha1"
 	auditv1beta1 "k8s.io/apiserver/pkg/apis/audit/v1beta1"
 	auditvalidation "k8s.io/apiserver/pkg/apis/audit/validation"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -114,7 +118,18 @@ func (b *HybridBotanist) DeployETCD() error {
 
 	// Some cloud botanists do not yet support backup and won't return secret data.
 	if secretData != nil {
-		if _, err := b.K8sSeedClient.CreateSecret(b.Shoot.SeedNamespace, common.BackupSecretName, corev1.SecretTypeOpaque, secretData, true); err != nil {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      common.BackupSecretName,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+
+		if err := kutil.CreateOrUpdate(context.TODO(), b.K8sSeedClient.Client(), secret, func() error {
+			secret.Type = corev1.SecretTypeOpaque
+			secret.Data = secretData
+			return nil
+		}); err != nil {
 			return err
 		}
 	}
@@ -365,7 +380,13 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 
 	// If shoot is hibernated we don't want the HPA to interfer with our scaling decisions.
 	if b.Shoot.IsHibernated {
-		if err := b.K8sSeedClient.DeleteHorizontalPodAutoscaler(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName); err != nil && !apierrors.IsNotFound(err) {
+		hpa := &autoscalingv1.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      common.KubeAPIServerDeploymentName,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+		if err := b.K8sSeedClient.Client().Delete(context.TODO(), hpa, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -381,7 +402,13 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"kube-apiserver-allow-etcd",
 		"kube-apiserver-allow-gardener-admission-controller",
 	} {
-		if err := b.K8sSeedClient.DeleteNetworkPolicy(b.Shoot.SeedNamespace, name); err != nil && !apierrors.IsNotFound(err) {
+		networkPolicy := &networkingv1.NetworkPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: b.Shoot.SeedNamespace,
+			},
+		}
+		if err := b.K8sSeedClient.Client().Delete(context.TODO(), networkPolicy, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
 			return err
 		}
 	}
@@ -389,8 +416,8 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 }
 
 func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) {
-	auditPolicyCm, err := b.K8sGardenClient.GetConfigMap(namespace, name)
-	if err != nil {
+	auditPolicyCm := &corev1.ConfigMap{}
+	if err := b.K8sGardenClient.Client().Get(context.TODO(), kutil.Key(namespace, name), auditPolicyCm); err != nil {
 		return "", err
 	}
 	auditPolicy, ok := auditPolicyCm.Data[auditPolicyConfigMapDataKey]

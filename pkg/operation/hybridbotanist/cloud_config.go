@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	"github.com/gardener/gardener/pkg/utils/retry"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -273,7 +274,13 @@ func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err err
 		secretName = bootstraptokenutil.BootstrapTokenSecretName(tokenID)
 	)
 
-	secret, err = b.K8sShootClient.GetSecret(metav1.NamespaceSystem, secretName)
+	secret = &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: metav1.NamespaceSystem,
+		},
+	}
+	err = b.K8sShootClient.Client().Get(context.TODO(), kutil.Key(secret.Namespace, secret.Name), secret)
 	if apierrors.IsNotFound(err) {
 		bootstrapTokenSecretKey, err := utils.GenerateRandomStringFromCharset(16, "0123456789abcdefghijklmnopqrstuvwxyz")
 		if err != nil {
@@ -287,7 +294,14 @@ func (b *HybridBotanist) computeBootstrapToken() (secret *corev1.Secret, err err
 			bootstraptokenapi.BootstrapTokenUsageAuthentication: []byte("true"),
 			bootstraptokenapi.BootstrapTokenUsageSigningKey:     []byte("true"),
 		}
-		return b.K8sShootClient.CreateSecret(metav1.NamespaceSystem, secretName, bootstraptokenapi.SecretTypeBootstrapToken, data, true)
+
+		err = kutil.CreateOrUpdate(context.TODO(), b.K8sShootClient.Client(), secret, func() error {
+			secret.Type = bootstraptokenapi.SecretTypeBootstrapToken
+			secret.Data = data
+			return nil
+		})
+
+		return secret, err
 	}
 	return secret, err
 }

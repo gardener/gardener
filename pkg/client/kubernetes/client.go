@@ -15,6 +15,7 @@
 package kubernetes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -24,6 +25,7 @@ import (
 	gardenclientset "github.com/gardener/gardener/pkg/client/garden/clientset/versioned"
 	machineclientset "github.com/gardener/gardener/pkg/client/machine/clientset/versioned"
 	"github.com/gardener/gardener/pkg/utils"
+	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	kubernetesclientset "k8s.io/client-go/kubernetes"
@@ -86,8 +88,8 @@ func NewClientFromBytes(kubeconfig []byte, opts client.Options) (Interface, erro
 // read the Secret <secretName> in <namespace>. The Secret must contain a field "kubeconfig" which will
 // be used.
 func NewClientFromSecret(k8sClient Interface, namespace, secretName string, opts client.Options) (Interface, error) {
-	secret, err := k8sClient.GetSecret(namespace, secretName)
-	if err != nil {
+	secret := &corev1.Secret{}
+	if err := k8sClient.Client().Get(context.TODO(), kutil.Key(namespace, secretName), secret); err != nil {
 		return nil, err
 	}
 	return NewClientFromSecretObject(secret, opts)
