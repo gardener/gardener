@@ -4769,22 +4769,9 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 							},
 						},
 					},
-					"loadBalancerClasses": {
-						SchemaProps: spec.SchemaProps{
-							Description: "LoadBalancerClasses contains a list of supported labeled load balancer network settings.",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.ProfileLoadBalancerClass"),
-									},
-								},
-							},
-						},
-					},
 					"machineImages": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
+							Description: "future extension option, support provider network usage besides router configuration // LoadBalancerClasses contains a list of supported labeled load balancer network settings. LoadBalancerClasses []openstackapi.ProfileLoadBalancerClass `json:\"loadBalancerClasses\"` MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.",
 							Type:        []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
@@ -4822,11 +4809,11 @@ func schema_pkg_apis_garden_v1beta1_OpenStackConstraints(ref common.ReferenceCal
 						},
 					},
 				},
-				Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "loadBalancerClasses", "machineImages", "machineTypes", "zones"},
+				Required: []string{"dnsProviders", "floatingPools", "kubernetes", "loadBalancerProviders", "machineImages", "machineTypes", "zones"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1.ProfileLoadBalancerClass", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.DNSProviderConstraint", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackFloatingPool", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerProvider", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackMachineType", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.Zone"},
 	}
 }
 

@@ -198,8 +198,9 @@ type OpenStackConstraints struct {
 	Kubernetes KubernetesConstraints
 	// LoadBalancerProviders contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
 	LoadBalancerProviders []OpenStackLoadBalancerProvider
-	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
-	LoadBalancerClasses []openstackapi.ProfileLoadBalancerClass
+	// future extension option, support provider network usage besides router configuration
+	// // LoadBalancerClasses contains a list of supported labeled load balancer network settings.
+	// LoadBalancerClasses []openstackapi.ProfileLoadBalancerClass
 	// MachineImages contains constraints regarding allowed values for machine images in the Shoot specification.
 	MachineImages []MachineImage
 	// MachineTypes contains constraints regarding allowed values for machine types in the 'workers' block in the Shoot specification.

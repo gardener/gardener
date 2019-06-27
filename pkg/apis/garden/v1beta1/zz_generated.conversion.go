@@ -3353,7 +3353,6 @@ func autoConvert_v1beta1_OpenStackConstraints_To_garden_OpenStackConstraints(in 
 		return err
 	}
 	out.LoadBalancerProviders = *(*[]garden.OpenStackLoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
-	out.LoadBalancerClasses = *(*[]openstack.ProfileLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
 	out.MachineTypes = *(*[]garden.OpenStackMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
@@ -3372,7 +3371,6 @@ func autoConvert_garden_OpenStackConstraints_To_v1beta1_OpenStackConstraints(in 
 		return err
 	}
 	out.LoadBalancerProviders = *(*[]OpenStackLoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
-	out.LoadBalancerClasses = *(*[]openstackv1alpha1.ProfileLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
 	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
 	out.MachineTypes = *(*[]OpenStackMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))

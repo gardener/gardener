@@ -2082,13 +2082,6 @@ func (in *OpenStackConstraints) DeepCopyInto(out *OpenStackConstraints) {
 		*out = make([]OpenStackLoadBalancerProvider, len(*in))
 		copy(*out, *in)
 	}
-	if in.LoadBalancerClasses != nil {
-		in, out := &in.LoadBalancerClasses, &out.LoadBalancerClasses
-		*out = make([]openstackv1alpha1.ProfileLoadBalancerClass, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
-		}
-	}
 	if in.MachineImages != nil {
 		in, out := &in.MachineImages, &out.MachineImages
 		*out = make([]MachineImage, len(*in))
