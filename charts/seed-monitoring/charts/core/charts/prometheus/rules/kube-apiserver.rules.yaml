@@ -71,3 +71,15 @@ groups:
     annotations:
       description: 'The API server ({{ $labels.instance }}) is using {{ $value }}% of the available file/socket descriptors.'
       summary: 'The API server has too many open file descriptors'
+  ### API auditlog ###
+  - alert: KubeApiServerTooManyAuditlogFailures
+    expr: sum(rate (apiserver_audit_error_total{plugin="webhook"} [5m])) by (app ,role) / ignoring(plugin) sum(rate(apiserver_audit_event_total [5m])) by (app, role) > 0.02
+    for: 15m
+    labels:
+      severity: critical
+      type: seed
+      job: kube-apiserver
+      visibility: operator
+    annotations:
+      description: 'The API server reached {{ $value }}% failures to log audit events.'
+      summary: 'The API server has too many failed attempts to log audit events'
