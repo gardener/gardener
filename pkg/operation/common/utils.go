@@ -24,19 +24,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gardener/gardener/pkg/version"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	gardenlisters "github.com/gardener/gardener/pkg/client/garden/listers/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	"github.com/gardener/gardener/pkg/version"
 
 	jsoniter "github.com/json-iterator/go"
-
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	extensionsv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -48,7 +46,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -341,7 +338,7 @@ func DeleteLoggingStack(ctx context.Context, k8sClient client.Client, namespace 
 		&rbacv1.ClusterRoleBindingList{},
 		&appsv1.DaemonSetList{},
 		&appsv1.DeploymentList{},
-		&autoscalingv1.HorizontalPodAutoscalerList{},
+		&autoscalingv2beta1.HorizontalPodAutoscalerList{},
 		&extensionsv1beta1.IngressList{},
 		&corev1.SecretList{},
 		&corev1.ServiceAccountList{},

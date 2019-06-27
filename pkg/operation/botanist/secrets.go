@@ -738,34 +738,6 @@ func (b *Botanist) DeployCloudProviderSecret(ctx context.Context) error {
 	return nil
 }
 
-// DeleteGardenSecrets deletes the Shoot-specific secrets from the project namespace in the Garden cluster.
-// TODO: https://github.com/gardener/gardener/pull/353: This can be removed in a future version as we are now using owner
-// references for the Garden secrets (also remove the actual invocation of the function in the deletion flow of a Shoot).
-func (b *Botanist) DeleteGardenSecrets(ctx context.Context) error {
-	var (
-		kubeconfigSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      generateGardenSecretName(b.Shoot.Info.Name, "kubeconfig"),
-				Namespace: b.Shoot.Info.Namespace,
-			},
-		}
-		sshKeyPairSecret = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      generateGardenSecretName(b.Shoot.Info.Name, gardencorev1alpha1.SecretNameSSHKeyPair),
-				Namespace: b.Shoot.Info.Namespace,
-			},
-		}
-	)
-
-	if err := b.K8sGardenClient.Client().Delete(ctx, kubeconfigSecret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-	if err := b.K8sGardenClient.Client().Delete(ctx, sshKeyPairSecret, kubernetes.DefaultDeleteOptionFuncs...); client.IgnoreNotFound(err) != nil {
-		return err
-	}
-	return nil
-}
-
 func (b *Botanist) fetchExistingSecrets() (map[string]*corev1.Secret, error) {
 	secretList := &corev1.SecretList{}
 	if err := b.K8sSeedClient.Client().List(context.TODO(), secretList, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {

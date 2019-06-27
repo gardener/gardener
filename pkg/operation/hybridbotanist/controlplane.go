@@ -29,7 +29,7 @@ import (
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	autoscalingv2beta1 "k8s.io/api/autoscaling/v2beta1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -380,7 +380,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 
 	// If shoot is hibernated we don't want the HPA to interfer with our scaling decisions.
 	if b.Shoot.IsHibernated {
-		hpa := &autoscalingv1.HorizontalPodAutoscaler{
+		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      common.KubeAPIServerDeploymentName,
 				Namespace: b.Shoot.SeedNamespace,
