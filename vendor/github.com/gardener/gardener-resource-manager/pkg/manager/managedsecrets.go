@@ -52,7 +52,7 @@ func (s *Secret) WithKeyValues(keyValues map[string][]byte) *Secret {
 }
 
 func (s *Secret) Reconcile(ctx context.Context) error {
-	secret := s.secret.DeepCopy()
+	secret := &corev1.Secret{ObjectMeta: s.secret.ObjectMeta}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, s.client, secret, func() error {
 		secret.Data = s.secret.Data
