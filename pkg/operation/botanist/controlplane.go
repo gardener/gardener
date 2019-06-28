@@ -651,8 +651,10 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	controllerManagerDeployments := []string{common.KubeControllerManagerDeploymentName}
-	for _, deployment := range controllerManagerDeployments {
+	for _, deployment := range []string{
+		common.KubeControllerManagerDeploymentName,
+		common.GardenerResourceManagerDeploymentName,
+	} {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
 			return err
 		}
