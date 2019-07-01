@@ -379,6 +379,7 @@ spec:
       end: ${value("spec.maintenance.timeWindow.end", "230000+0100")}
     autoUpdate:
       kubernetesVersion: ${value("maintenance.autoUpdate.kubernetesVersion", "true")}
+      machineImageVersion: ${value("maintenance.autoUpdate.machineImageVersion", "true")}
   # Backup configuration for Shoot clusters is deprecated and no longer supported.
   # The responsibility for these settings has been shifted to Garden administrators.
   # This field will be removed in the future and is only kept for API compatibility reasons. It is not

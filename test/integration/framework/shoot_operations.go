@@ -68,7 +68,18 @@ func (s *ShootGardenerTest) GetShoot(ctx context.Context) (*v1beta1.Shoot, error
 	return shoot, err
 }
 
-// CreateShoot Creates a shoot from a shoot Object
+// CreateShootResource creates a shoot from a shoot Object
+func (s *ShootGardenerTest) CreateShootResource(ctx context.Context, shootToCreate *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+	shoot := s.Shoot
+	if err := s.GardenClient.Client().Create(ctx, shoot); err != nil {
+		return nil, err
+	}
+
+	s.Logger.Infof("Shoot resource %s was created!", shoot.Name)
+	return shoot, nil
+}
+
+// CreateShoot Creates a shoot from a shoot Object and waits until it is successfully reconciled
 func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, error) {
 	_, err := s.GetShoot(ctx)
 	if !apierrors.IsNotFound(err) {
@@ -77,7 +88,7 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, er
 
 	shoot := s.Shoot
 	err = retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
-		err = s.GardenClient.Client().Create(ctx, shoot)
+		_, err = s.CreateShootResource(ctx, shoot)
 		if err != nil {
 			s.Logger.Debugf("unable to create shoot %s: %s", shoot.Name, err.Error())
 			return retry.MinorError(err)

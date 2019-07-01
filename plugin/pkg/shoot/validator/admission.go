@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -214,22 +215,22 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 			Spec: garden.ShootSpec{
 				Cloud: garden.Cloud{
 					AWS: &garden.AWSCloud{
-						MachineImage: &garden.MachineImage{},
+						MachineImage: &garden.ShootMachineImage{},
 					},
 					Azure: &garden.AzureCloud{
-						MachineImage: &garden.MachineImage{},
+						MachineImage: &garden.ShootMachineImage{},
 					},
 					GCP: &garden.GCPCloud{
-						MachineImage: &garden.MachineImage{},
+						MachineImage: &garden.ShootMachineImage{},
 					},
 					Packet: &garden.PacketCloud{
-						MachineImage: &garden.MachineImage{},
+						MachineImage: &garden.ShootMachineImage{},
 					},
 					OpenStack: &garden.OpenStackCloud{
-						MachineImage: &garden.MachineImage{},
+						MachineImage: &garden.ShootMachineImage{},
 					},
 					Alicloud: &garden.Alicloud{
-						MachineImage: &garden.MachineImage{},
+						MachineImage: &garden.ShootMachineImage{},
 					},
 				},
 			},
@@ -255,7 +256,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 	switch cloudProviderInShoot {
 	case garden.CloudProviderAWS:
 		if shoot.Spec.Cloud.AWS.MachineImage == nil {
-			image, err := getMachineImage(cloudProfile.Spec.AWS.Constraints.MachineImages)
+			image, err := getDefaultMachineImage(cloudProfile.Spec.AWS.Constraints.MachineImages)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
@@ -265,7 +266,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	case garden.CloudProviderAzure:
 		if shoot.Spec.Cloud.Azure.MachineImage == nil {
-			image, err := getMachineImage(cloudProfile.Spec.Azure.Constraints.MachineImages)
+			image, err := getDefaultMachineImage(cloudProfile.Spec.Azure.Constraints.MachineImages)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
@@ -275,7 +276,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	case garden.CloudProviderGCP:
 		if shoot.Spec.Cloud.GCP.MachineImage == nil {
-			image, err := getMachineImage(cloudProfile.Spec.GCP.Constraints.MachineImages)
+			image, err := getDefaultMachineImage(cloudProfile.Spec.GCP.Constraints.MachineImages)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
@@ -285,7 +286,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	case garden.CloudProviderOpenStack:
 		if shoot.Spec.Cloud.OpenStack.MachineImage == nil {
-			image, err := getMachineImage(cloudProfile.Spec.OpenStack.Constraints.MachineImages)
+			image, err := getDefaultMachineImage(cloudProfile.Spec.OpenStack.Constraints.MachineImages)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
@@ -295,7 +296,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	case garden.CloudProviderPacket:
 		if shoot.Spec.Cloud.Packet.MachineImage == nil {
-			image, err := getMachineImage(cloudProfile.Spec.Packet.Constraints.MachineImages)
+			image, err := getDefaultMachineImage(cloudProfile.Spec.Packet.Constraints.MachineImages)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
@@ -305,7 +306,7 @@ func (v *ValidateShoot) Admit(a admission.Attributes, o admission.ObjectInterfac
 
 	case garden.CloudProviderAlicloud:
 		if shoot.Spec.Cloud.Alicloud.MachineImage == nil {
-			image, err := getMachineImage(cloudProfile.Spec.Alicloud.Constraints.MachineImages)
+			image, err := getDefaultMachineImage(cloudProfile.Spec.Alicloud.Constraints.MachineImages)
 			if err != nil {
 				return apierrors.NewBadRequest(err.Error())
 			}
@@ -932,28 +933,38 @@ func validateLoadBalancerProviderConstraints(providers []garden.OpenStackLoadBal
 	return false, validValues
 }
 
-func getMachineImage(machineImages []garden.MachineImage) (*garden.MachineImage, error) {
+// getDefaultMachineImage determines the latest machine image version from the first machine image in the CloudProfile and considers that as the default image
+func getDefaultMachineImage(machineImages []garden.MachineImage) (*garden.ShootMachineImage, error) {
 	if len(machineImages) == 0 {
 		return nil, errors.New("the cloud profile does not contain any machine image - cannot create shoot cluster")
 	}
-	// If the shoot does not specify a machine image then we consider the first one specified in the cloud profile to be the
-	// default machine image and return it.
-	return &machineImages[0], nil
+	firstMachineImageInCloudProfile := machineImages[0]
+	latestMachineImageVersion, err := helper.DetermineLatestMachineImageVersion(firstMachineImageInCloudProfile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to determine latest machine image from cloud profile: %s", err.Error())
+	}
+	return &garden.ShootMachineImage{Name: firstMachineImageInCloudProfile.Name, Version: latestMachineImageVersion.Version}, nil
 }
 
-func validateMachineImagesConstraints(constraints []garden.MachineImage, image, oldImage *garden.MachineImage) (bool, []string) {
+func validateMachineImagesConstraints(constraints []garden.MachineImage, image, oldImage *garden.ShootMachineImage) (bool, []string) {
 	if apiequality.Semantic.DeepEqual(*image, *oldImage) {
 		return true, nil
 	}
 
 	validValues := []string{}
+	for _, machineImage := range constraints {
+		if machineImage.Name == image.Name {
+			for _, machineVersion := range machineImage.Versions {
+				if machineVersion.ExpirationDate != nil && machineVersion.ExpirationDate.Time.UTC().Before(time.Now().UTC()) {
+					continue
+				}
+				validValues = append(validValues, fmt.Sprintf("machineImage(%s:%s)", machineImage.Name, machineVersion.Version))
 
-	for _, v := range constraints {
-		validValues = append(validValues, fmt.Sprintf("%+v", v))
-		if apiequality.Semantic.DeepEqual(v, *image) {
-			return true, nil
+				if machineVersion.Version == image.Version {
+					return true, nil
+				}
+			}
 		}
 	}
-
 	return false, validValues
 }

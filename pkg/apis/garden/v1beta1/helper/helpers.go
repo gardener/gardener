@@ -17,6 +17,7 @@ package helper
 import (
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"sort"
 	"strings"
 
@@ -158,8 +159,8 @@ func GetShootCloudProviderWorkers(cloudProvider gardenv1beta1.CloudProvider, sho
 	return workers
 }
 
-// GetMachineImageFromShoot returns the machine image used in a shoot manifest, however, it requires the cloudprovider as input.
-func GetMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) *gardenv1beta1.MachineImage {
+// GetMachineImageFromShoot returns the machine image used in a shoot manifest, however, it requires the cloud provider as input.
+func GetMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot) *gardenv1beta1.ShootMachineImage {
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		return shoot.Spec.Cloud.AWS.MachineImage
@@ -178,7 +179,7 @@ func GetMachineImageFromShoot(cloudProvider gardenv1beta1.CloudProvider, shoot *
 }
 
 // GetShootMachineImage returns the machine image used in a shoot manifest.
-func GetShootMachineImage(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.MachineImage, error) {
+func GetShootMachineImage(shoot *gardenv1beta1.Shoot) (*gardenv1beta1.ShootMachineImage, error) {
 	cloudProvider, err := DetermineCloudProviderInShoot(shoot.Spec.Cloud)
 	if err != nil {
 		return nil, err
@@ -209,6 +210,60 @@ func GetMachineTypesFromCloudProfile(cloudProvider gardenv1beta1.CloudProvider, 
 	}
 
 	return machineTypes
+}
+
+// GetMachineImagesFromCloudProfile returns a list of machine images from the cloud profile
+func GetMachineImagesFromCloudProfile(profile *gardenv1beta1.CloudProfile) ([]gardenv1beta1.MachineImage, error) {
+	cloudProvider, err := DetermineCloudProviderInProfile(profile.Spec)
+	if err != nil {
+		return nil, err
+	}
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		return profile.Spec.AWS.Constraints.MachineImages, nil
+	case gardenv1beta1.CloudProviderAzure:
+		return profile.Spec.Azure.Constraints.MachineImages, nil
+	case gardenv1beta1.CloudProviderGCP:
+		return profile.Spec.GCP.Constraints.MachineImages, nil
+	case gardenv1beta1.CloudProviderPacket:
+		return profile.Spec.Packet.Constraints.MachineImages, nil
+	case gardenv1beta1.CloudProviderOpenStack:
+		return profile.Spec.OpenStack.Constraints.MachineImages, nil
+	}
+	return nil, fmt.Errorf("no known cloud provider found in cloud profile")
+}
+
+// SetMachineImages sets imageVersions to the matching imageName in the machineImages.
+func SetMachineImages(profile *gardenv1beta1.CloudProfile, images []gardenv1beta1.MachineImage) error {
+	cloudProvider, err := DetermineCloudProviderInProfile(profile.Spec)
+	if err != nil {
+		return err
+	}
+
+	switch cloudProvider {
+	case gardenv1beta1.CloudProviderAWS:
+		profile.Spec.AWS.Constraints.MachineImages = images
+	case gardenv1beta1.CloudProviderGCP:
+		profile.Spec.GCP.Constraints.MachineImages = images
+	case gardenv1beta1.CloudProviderOpenStack:
+		profile.Spec.OpenStack.Constraints.MachineImages = images
+	case gardenv1beta1.CloudProviderAlicloud:
+		profile.Spec.Alicloud.Constraints.MachineImages = images
+	case gardenv1beta1.CloudProviderPacket:
+		profile.Spec.Packet.Constraints.MachineImages = images
+	}
+	return nil
+}
+
+// SetMachineImages sets imageVersions to the matching imageName in the machineImages.
+func SetMachineImageVersionsToMachineImage(machineImages []gardenv1beta1.MachineImage, imageName string, imageVersions []gardenv1beta1.MachineImageVersion) ([]gardenv1beta1.MachineImage, error) {
+	for index, image := range machineImages {
+		if strings.ToLower(image.Name) == strings.ToLower(imageName) {
+			machineImages[index].Versions = imageVersions
+			return machineImages, nil
+		}
+	}
+	return nil, fmt.Errorf("machine image with name '%s' could not be found", imageName)
 }
 
 // DetermineCloudProviderInShoot takes a Shoot cloud object and returns the cloud provider this profile is used for.
@@ -250,46 +305,26 @@ func DetermineCloudProviderInShoot(cloudObj gardenv1beta1.Cloud) (gardenv1beta1.
 	return cloud, nil
 }
 
-// DetermineMachineImage finds the cloud specific machine image in the <cloudProfile> for the given <name> and
-// region. In case it does not find a machine image with the <name>, it returns false. Otherwise, true and the
-// cloud-specific machine image object will be returned.
-func DetermineMachineImage(cloudProfile gardenv1beta1.CloudProfile, name string) (bool, *gardenv1beta1.MachineImage, error) {
-	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
+// DetermineMachineImageForName finds the cloud specific machine image in the <cloudProfile> for the given <name> and
+// region. In case it does not find the machine image with the <name>, it returns false. Otherwise, true and the
+// cloud-specific machine image will be returned.
+func DetermineMachineImageForName(cloudProfile gardenv1beta1.CloudProfile, name string) (bool, gardenv1beta1.MachineImage, error) {
+	machineImages, err := GetMachineImagesFromCloudProfile(&cloudProfile)
 	if err != nil {
-		return false, nil, err
-	}
-
-	var machineImages []gardenv1beta1.MachineImage
-
-	switch cloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		machineImages = cloudProfile.Spec.AWS.Constraints.MachineImages
-	case gardenv1beta1.CloudProviderAzure:
-		machineImages = cloudProfile.Spec.Azure.Constraints.MachineImages
-	case gardenv1beta1.CloudProviderGCP:
-		machineImages = cloudProfile.Spec.GCP.Constraints.MachineImages
-	case gardenv1beta1.CloudProviderOpenStack:
-		machineImages = cloudProfile.Spec.OpenStack.Constraints.MachineImages
-	case gardenv1beta1.CloudProviderAlicloud:
-		machineImages = cloudProfile.Spec.Alicloud.Constraints.MachineImages
-	case gardenv1beta1.CloudProviderPacket:
-		machineImages = cloudProfile.Spec.Packet.Constraints.MachineImages
-	default:
-		return false, nil, fmt.Errorf("unknown cloud provider %s", cloudProvider)
+		return false, gardenv1beta1.MachineImage{}, err
 	}
 
 	for _, image := range machineImages {
 		if strings.ToLower(image.Name) == strings.ToLower(name) {
-			ptr := image
-			return true, &ptr, nil
+			return true, image, nil
 		}
 	}
 
-	return false, nil, nil
+	return false, gardenv1beta1.MachineImage{}, nil
 }
 
 // UpdateMachineImage updates the machine image for the given cloud provider.
-func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage *gardenv1beta1.MachineImage) func(*gardenv1beta1.Cloud) {
+func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage *gardenv1beta1.ShootMachineImage) func(*gardenv1beta1.Cloud) {
 	switch cloudProvider {
 	case gardenv1beta1.CloudProviderAWS:
 		return func(s *gardenv1beta1.Cloud) { s.AWS.MachineImage = machineImage }
@@ -712,4 +747,46 @@ func SetZoneForShoot(shoot *gardenv1beta1.Shoot, cloudProvider gardenv1beta1.Clo
 	case gardenv1beta1.CloudProviderPacket:
 		shoot.Spec.Cloud.Packet.Zones = zones
 	}
+}
+
+// DetermineLatestMachineImageVersion determines the latest MachineImageVersion from a MachineImage
+func DetermineLatestMachineImageVersion(image gardenv1beta1.MachineImage) (*semver.Version, gardenv1beta1.MachineImageVersion, error) {
+	var (
+		latestSemVerVersion       *semver.Version
+		latestMachineImageVersion gardenv1beta1.MachineImageVersion
+	)
+
+	for _, imageVersion := range image.Versions {
+		v, err := semver.NewVersion(imageVersion.Version)
+		if err != nil {
+			return nil, gardenv1beta1.MachineImageVersion{}, fmt.Errorf("error while parsing machine image version '%s' of machine image '%s': version not valid: %s", imageVersion.Version, image.Name, err.Error())
+		}
+		if latestSemVerVersion == nil || v.GreaterThan(latestSemVerVersion) {
+			latestSemVerVersion = v
+			latestMachineImageVersion = imageVersion
+		}
+	}
+	return latestSemVerVersion, latestMachineImageVersion, nil
+}
+
+// ShootMachineImageVersionExists checks if the shoot machine image (name, version) exists in the machine image constraint and returns true if yes and the index in the versions slice
+func ShootMachineImageVersionExists(constraint gardenv1beta1.MachineImage, image gardenv1beta1.ShootMachineImage) (bool, int) {
+	if constraint.Name != image.Name {
+		return false, 0
+	}
+	for index, v := range constraint.Versions {
+		if v.Version == image.Version {
+			return true, index
+		}
+	}
+	return false, 0
+}
+
+// GetShootMachineImageFromLatestMachineImageVersion determines the latest version in a machine image and returns that as a ShootMachineImage
+func GetShootMachineImageFromLatestMachineImageVersion(image gardenv1beta1.MachineImage) (*semver.Version, gardenv1beta1.ShootMachineImage, error) {
+	latestSemVerVersion, latestImage, err := DetermineLatestMachineImageVersion(image)
+	if err != nil {
+		return nil, gardenv1beta1.ShootMachineImage{}, err
+	}
+	return latestSemVerVersion, gardenv1beta1.ShootMachineImage{Name: image.Name, Version: latestImage.Version}, nil
 }

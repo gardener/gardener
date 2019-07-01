@@ -80,7 +80,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
-        version: 2023.5.0
+        versions:
+        - version: 2023.5.0
         # Proper mappings to region-specific AMIs must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.aws.constraints.machineTypes", []) %>
@@ -183,7 +184,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
         % else:
       - name: coreos
-        version: 2023.5.0
+        versions:
+        - version: 2023.5.0
         # Proper mappings to publisher, offer, and SKU names must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.azure.constraints.machineTypes", []) %>
@@ -283,7 +285,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
-        version: 2023.5.0
+        versions:
+        - version: 2023.5.0
         # Proper mappings to GCP image URLs must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.gcp.constraints.machineTypes", []) %>
@@ -372,7 +375,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos-alicloud
-        version: 2023.5.0
+        versions:
+        - version: 2023.5.0
         # Proper mappings to Alicloud image VHD IDs must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.alicloud.constraints.machineTypes", []) %>
@@ -456,7 +460,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
-        version: 2079.3.0
+        versions:
+        - version: 2079.3.0
         # Proper mappings to Packet image IDs must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.packet.constraints.machineTypes", []) %>
@@ -552,7 +557,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
       ${yaml.dump(machineImages, width=10000, default_flow_style=None)}
       % else:
       - name: coreos
-        version: 2023.5.0
+        versions:
+        - version: 2023.5.0
         # Proper mappings to OpenStack Glance image names for this CloudProfile must exist in the `Worker` controller of the provider extension.
       % endif
       machineTypes:<% machineTypes=value("spec.openstack.constraints.machineTypes", []) %>

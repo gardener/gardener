@@ -102,13 +102,7 @@ func (s *SchedulerGardenerTest) CreateShoot(ctx context.Context) (*gardenv1beta1
 		return nil, err
 	}
 
-	shoot := s.ShootGardenerTest.Shoot
-	if err := s.ShootGardenerTest.GardenClient.Client().Create(ctx, shoot); err != nil {
-		return nil, err
-	}
-
-	s.ShootGardenerTest.Logger.Infof("Shoot %s was created!", shoot.Name)
-	return shoot, nil
+	return s.ShootGardenerTest.CreateShootResource(ctx, s.ShootGardenerTest.Shoot)
 }
 
 // ScheduleShoot set the Spec.Cloud.Seed of a shoot to the specified seed.

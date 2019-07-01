@@ -18,6 +18,14 @@ import (
 	"fmt"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions/garden/v1beta1"
@@ -29,12 +37,6 @@ import (
 	"github.com/gardener/gardener/pkg/utils"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-	corev1 "k8s.io/api/core/v1"
-	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/cache"
-	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 )
 
 func (c *Controller) shootMaintenanceAdd(obj interface{}) {
@@ -97,11 +99,6 @@ func (c *Controller) reconcileShootMaintenanceKey(key string) error {
 		return nil
 	}
 
-	// if shoot has not been scheduled, requeue
-	if shoot.Spec.Cloud.Seed == nil {
-		return nil
-	}
-
 	return c.maintenanceControl.Maintain(shoot, key)
 }
 
@@ -161,15 +158,14 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 		return nil
 	}
 
-	// Check if the CloudProfile contains another version of the machine image.
-	machineImageFound, machineImage, err := helper.DetermineMachineImage(*operation.Shoot.CloudProfile, operation.Shoot.GetMachineImage().Name)
+	updateImage, machineImage, err := MaintainMachineImage(operation.Shoot.Info, operation.Shoot.CloudProfile, operation.Shoot.GetMachineImage())
 	if err != nil {
-		handleError(fmt.Sprintf("Failure while determining the machine image in the CloudProfile: %s", err.Error()))
-		return nil
+		// continue execution to allow the kubernetes version update
+		handleError(fmt.Sprintf("Could not maintain machine image version: %s", err.Error()))
 	}
 
 	var updateMachineImage func(s *gardenv1beta1.Cloud)
-	if machineImageFound {
+	if updateImage {
 		updateMachineImage = helper.UpdateMachineImage(operation.Shoot.CloudProvider, machineImage)
 	}
 
@@ -223,4 +219,64 @@ func mustMaintainNow(shoot *gardenv1beta1.Shoot) bool {
 func hasMaintainNowAnnotation(shoot *gardenv1beta1.Shoot) bool {
 	operation, ok := shoot.Annotations[common.ShootOperation]
 	return ok && operation == common.ShootOperationMaintain
+}
+
+// MaintainMachineImage determines if a shoots machine image has to be maintained and in case returns the target image
+func MaintainMachineImage(shoot *gardenv1beta1.Shoot, cloudProfile *gardenv1beta1.CloudProfile, shootCurrentImage *gardenv1beta1.ShootMachineImage) (bool, *gardenv1beta1.ShootMachineImage, error) {
+	machineImagesFound, machineImageFromCloudProfile, err := helper.DetermineMachineImageForName(*cloudProfile, shootCurrentImage.Name)
+	if err != nil {
+		return false, nil, fmt.Errorf("failure while determining the machine image in the CloudProfile: %s", err.Error())
+	}
+	if !machineImagesFound {
+		return false, nil, fmt.Errorf("failure while determining the machine image in the CloudProfile: no machineImage with name '%s' (specified in shoot) could be found in the cloud cloudProfile '%s'", shootCurrentImage.Name, cloudProfile.Name)
+	}
+
+	versionExistsInCloudProfile, err := shootMachineImageExistsInCloudProfile(shoot, machineImageFromCloudProfile)
+	if err != nil {
+		return false, nil, fmt.Errorf("failure while checking if the shoot's machine image exists in the CloudProfile: %s", err.Error())
+	}
+
+	if !versionExistsInCloudProfile || *shoot.Spec.Maintenance.AutoUpdate.MachineImageVersion || ForceUpdateRequired(shootCurrentImage, machineImageFromCloudProfile) {
+		return updateToLatestMachineImageVersion(machineImageFromCloudProfile)
+	}
+
+	return false, nil, nil
+}
+
+func shootMachineImageExistsInCloudProfile(shoot *gardenv1beta1.Shoot, machineImageFromCloudProfile gardenv1beta1.MachineImage) (bool, error) {
+	cloudProvider, err := helper.GetShootCloudProvider(shoot)
+	if err != nil {
+		return false, err
+	}
+	shootMachineImage := helper.GetMachineImageFromShoot(cloudProvider, shoot)
+	exists, _ := helper.ShootMachineImageVersionExists(machineImageFromCloudProfile, *shootMachineImage)
+	return exists, nil
+}
+
+// updateToLatestMachineImageVersion returns the latest machine image and requiring an image update
+func updateToLatestMachineImageVersion(machineImage gardenv1beta1.MachineImage) (bool, *gardenv1beta1.ShootMachineImage, error) {
+	_, latestMachineImage, err := helper.GetShootMachineImageFromLatestMachineImageVersion(machineImage)
+	if err != nil {
+		return false, nil, fmt.Errorf("failed to determine latest machine image in cloud profile: %s", err.Error())
+	}
+	return true, &latestMachineImage, nil
+}
+
+// ForceUpdateRequired checks if the shoots current machine image has to be forcefully updated
+func ForceUpdateRequired(shootCurrentImage *gardenv1beta1.ShootMachineImage, imageCloudProvider gardenv1beta1.MachineImage) bool {
+	for _, image := range imageCloudProvider.Versions {
+		if shootCurrentImage.Version != image.Version {
+			continue
+		}
+		return ExpirationDateExpired(image.ExpirationDate)
+	}
+	return false
+}
+
+// ExpirationDateExpired returns if now is equal or after the given expirationDate
+func ExpirationDateExpired(timestamp *metav1.Time) bool {
+	if timestamp == nil {
+		return false
+	}
+	return time.Now().UTC().After(timestamp.Time) || time.Now().UTC().Equal(timestamp.Time)
 }

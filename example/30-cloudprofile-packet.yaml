@@ -20,7 +20,8 @@ spec:
         - 1.13.8
       machineImages:
       - name: coreos
-        version: 2079.3.0
+        versions:
+        - version: 2079.3.0
         # Proper mappings to Packet image IDs must exist in the `Worker` controller of the provider extension.
       machineTypes:
       - name: t1.small

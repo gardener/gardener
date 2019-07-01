@@ -167,7 +167,7 @@ func (b *HybridBotanist) generateOriginalConfig() (map[string]interface{}, error
 	return b.InjectShootShootImages(originalConfig, common.HyperkubeImageName, common.PauseContainerImageName)
 }
 
-func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.MachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
+func (b *HybridBotanist) computeOperatingSystemConfigsForWorker(machineTypes []gardenv1beta1.MachineType, machineImage *gardenv1beta1.ShootMachineImage, downloaderConfig, originalConfig map[string]interface{}, worker gardenv1beta1.Worker) (*shoot.CloudConfig, error) {
 	var (
 		evictionHardMemoryAvailable, evictionSoftMemoryAvailable = getEvictionMemoryAvailable(machineTypes, worker.MachineType)
 		secretName                                               = b.Shoot.ComputeCloudConfigSecretName(worker.Name)

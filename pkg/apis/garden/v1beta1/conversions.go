@@ -48,6 +48,46 @@ func Convert_garden_Worker_To_v1beta1_Worker(in *garden.Worker, out *Worker, s c
 	return nil
 }
 
+// Convert_v1beta1_MachineVersion_To_garden_MachineVersion
+func Convert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
+	autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in, out, s)
+	if len(in.Version) > 0 {
+		out.Versions = make([]garden.MachineImageVersion, len(in.Versions)+1)
+		out.Versions[0] = garden.MachineImageVersion{
+			Version: in.Version,
+		}
+	} else {
+		out.Versions = make([]garden.MachineImageVersion, len(in.Versions))
+	}
+
+	for index, externalVersion := range in.Versions {
+		internalVersion := &garden.MachineImageVersion{}
+		if err := autoConvert_v1beta1_MachineImageVersion_To_garden_MachineImageVersion(&externalVersion, internalVersion, s); err != nil {
+			return err
+		}
+		if len(in.Version) > 0 {
+			out.Versions[index+1] = *internalVersion
+		} else {
+			out.Versions[index] = *internalVersion
+		}
+	}
+	return nil
+}
+
+// Convert_garden_MachineImage_To_v1beta1_MachineImage
+func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
+	autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in, out, s)
+	out.Versions = make([]MachineImageVersion, len(in.Versions))
+	for index, internalVersion := range in.Versions {
+		externalVersion := &MachineImageVersion{}
+		if err := autoConvert_garden_MachineImageVersion_To_v1beta1_MachineImageVersion(&internalVersion, externalVersion, s); err != nil {
+			return err
+		}
+		out.Versions[index] = *externalVersion
+	}
+	return nil
+}
+
 func addConversionFuncs(scheme *runtime.Scheme) error {
 
 	// Add field conversion funcs.

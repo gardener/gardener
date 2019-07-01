@@ -15,6 +15,8 @@
 package helper_test
 
 import (
+	"github.com/Masterminds/semver"
+
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	. "github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	"github.com/gardener/gardener/pkg/operation/common"
@@ -107,14 +109,14 @@ var _ = Describe("helper", func() {
 	var (
 		machineImageName    = "some-machineImage"
 		machineImageVersion = "some-version"
-		machineImage        = &gardenv1beta1.MachineImage{
+		machineImage        = &gardenv1beta1.ShootMachineImage{
 			Name:    machineImageName,
 			Version: machineImageVersion,
 		}
 	)
 
 	DescribeTable("#GetMachineImageFromShoot",
-		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected *gardenv1beta1.MachineImage) {
+		func(cloudProvider gardenv1beta1.CloudProvider, shoot *gardenv1beta1.Shoot, expected *gardenv1beta1.ShootMachineImage) {
 			Expect(GetMachineImageFromShoot(cloudProvider, shoot)).To(Equal(expected))
 		},
 		Entry("AWS",
@@ -677,6 +679,106 @@ var _ = Describe("helper", func() {
 
 			_, err := ReadShootedSeed(shoot)
 			Expect(err).To(HaveOccurred())
+		})
+	})
+	Describe("#GetShootMachineImageFromLatestMachineImageVersion", func() {
+		It("should return the Machine Image containing only the latest machine image version", func() {
+			latestVersion := "1.0.0"
+			inputImage := gardenv1beta1.MachineImage{
+				Name: "coreos",
+				Versions: []gardenv1beta1.MachineImageVersion{
+					{
+						Version: "0.0.2",
+					},
+					{
+						Version: latestVersion,
+					},
+					{
+						Version: "0.0.2",
+					},
+				},
+			}
+
+			version, image, err := GetShootMachineImageFromLatestMachineImageVersion(inputImage)
+			Expect(err).NotTo(HaveOccurred())
+
+			latestSemverVersion, _ := semver.NewVersion(latestVersion)
+			Expect(version).To(Equal(latestSemverVersion))
+			Expect(image.Name).To(Equal("coreos"))
+			Expect(image.Version).To(Equal(latestVersion))
+		})
+
+		It("should return the Machine Image", func() {
+			latestVersion := "1.1"
+			inputImage := gardenv1beta1.MachineImage{
+				Name: "coreos",
+				Versions: []gardenv1beta1.MachineImageVersion{
+					{
+						Version: latestVersion,
+					},
+				},
+			}
+
+			version, image, err := GetShootMachineImageFromLatestMachineImageVersion(inputImage)
+			Expect(err).NotTo(HaveOccurred())
+
+			latestSemverVersion, err := semver.NewVersion(latestVersion)
+			Expect(version).To(Equal(latestSemverVersion))
+			Expect(image.Version).To(Equal(latestVersion))
+		})
+
+		It("should return an error for invalid semVerVersion", func() {
+			inputImage := gardenv1beta1.MachineImage{
+				Name: "coreos",
+				Versions: []gardenv1beta1.MachineImageVersion{
+					{
+						Version: "0.0.XX",
+					},
+				},
+			}
+
+			_, _, err := GetShootMachineImageFromLatestMachineImageVersion(inputImage)
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
+	Describe("#ShootMachineImageVersionExists", func() {
+		var (
+			constraint        gardenv1beta1.MachineImage
+			shootMachineImage gardenv1beta1.ShootMachineImage
+		)
+		BeforeEach(func() {
+			constraint = gardenv1beta1.MachineImage{
+				Name: "coreos",
+				Versions: []gardenv1beta1.MachineImageVersion{
+					{
+						Version: "0.0.2",
+					},
+					{
+						Version: "0.0.3",
+					},
+				},
+			}
+
+			shootMachineImage = gardenv1beta1.ShootMachineImage{
+				Name:    "coreos",
+				Version: "0.0.2",
+			}
+		})
+		It("should determine that the version exists", func() {
+			exists, index := ShootMachineImageVersionExists(constraint, shootMachineImage)
+			Expect(exists).To(Equal(trueVar))
+			Expect(index).To(Equal(0))
+		})
+		It("should determine that the version does not exist", func() {
+			shootMachineImage.Name = "xy"
+			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
+			Expect(exists).To(Equal(false))
+		})
+		It("should determine that the version does not exist", func() {
+			shootMachineImage.Version = "0.0.4"
+			exists, _ := ShootMachineImageVersionExists(constraint, shootMachineImage)
+			Expect(exists).To(Equal(false))
 		})
 	})
 })

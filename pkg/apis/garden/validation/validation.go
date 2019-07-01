@@ -312,41 +312,59 @@ func validateAlicloudMachineTypeConstraints(machineTypes []garden.AlicloudMachin
 	return allErrs
 }
 
-func validateMachineImageNames(names []string, fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-
-	if len(names) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
-		return allErrs
-	}
-
-	imageNames := map[string]bool{}
-	for i, name := range names {
-		idxPath := fldPath.Index(i)
-
-		if imageNames[name] {
-			allErrs = append(allErrs, field.Duplicate(idxPath, name))
-		}
-		imageNames[name] = true
-	}
-
-	return allErrs
-}
-
 func validateMachineImages(machineImages []garden.MachineImage, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	machineImageNames := []string{}
-	for i, image := range machineImages {
-		machineImageNames = append(machineImageNames, image.Name)
-		idxPath := fldPath.Index(i)
+	if len(machineImages) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, "must provide at least one machine image"))
+	}
 
-		if len(image.Version) == 0 {
-			allErrs = append(allErrs, field.Required(idxPath.Child("version"), image.Version))
+	latestMachineImages, err := helper.DetermineLatestMachineImageVersions(machineImages)
+	if err != nil {
+		allErrs = append(allErrs, field.Invalid(fldPath, latestMachineImages, "failed to determine latest machine images from cloud profile"))
+	}
+
+	for imageName, latestImage := range latestMachineImages {
+		if latestImage.ExpirationDate != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("expirationDate"), latestImage.ExpirationDate, fmt.Sprintf("expiration date of latest image ('%s','%s') must not be set", imageName, latestImage.Version)))
 		}
 	}
 
-	allErrs = append(allErrs, validateMachineImageNames(machineImageNames, fldPath)...)
+	duplicateNameVersion := sets.String{}
+	duplicateName := sets.String{}
+	for i, image := range machineImages {
+		idxPath := fldPath.Index(i)
+		if duplicateName.Has(image.Name) {
+			allErrs = append(allErrs, field.Duplicate(idxPath, image.Name))
+		}
+		duplicateName.Insert(image.Name)
+
+		if len(image.Name) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("name"), "machine image name must not be empty"))
+		}
+
+		if len(image.Versions) == 0 {
+			allErrs = append(allErrs, field.Required(idxPath.Child("versions"), fmt.Sprintf("must provide at least one version for the machine image '%s'", image.Name)))
+		}
+
+		for index, machineVersion := range image.Versions {
+			versionsPath := idxPath.Child("versions").Index(index)
+			key := fmt.Sprintf("%s-%s", image.Name, machineVersion.Version)
+			if duplicateNameVersion.Has(key) {
+				allErrs = append(allErrs, field.Duplicate(versionsPath, key))
+			}
+			duplicateNameVersion.Insert(key)
+			if len(machineVersion.Version) == 0 {
+				allErrs = append(allErrs, field.Required(versionsPath.Child("version"), machineVersion.Version))
+			}
+
+			_, err := semver.NewVersion(machineVersion.Version)
+			if err != nil {
+				allErrs = append(allErrs, field.Invalid(versionsPath.Child("version"), machineVersion.Version, "could not parse version. Use SemanticVersioning. In case there is no semVer version for this image use the extensibility provider (define mapping in the ControllerRegistration) to map to the actual non-semVer version"))
+			}
+		}
+	}
+
 	return allErrs
 }
 

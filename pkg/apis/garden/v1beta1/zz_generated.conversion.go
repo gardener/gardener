@@ -695,6 +695,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*MachineImageVersion)(nil), (*garden.MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineImageVersion_To_garden_MachineImageVersion(a.(*MachineImageVersion), b.(*garden.MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.MachineImageVersion)(nil), (*MachineImageVersion)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_MachineImageVersion_To_v1beta1_MachineImageVersion(a.(*garden.MachineImageVersion), b.(*MachineImageVersion), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*MachineType)(nil), (*garden.MachineType)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_MachineType_To_garden_MachineType(a.(*MachineType), b.(*garden.MachineType), scope)
 	}); err != nil {
@@ -1085,6 +1095,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*ShootMachineImage)(nil), (*garden.ShootMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(a.(*ShootMachineImage), b.(*garden.ShootMachineImage), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*garden.ShootMachineImage)(nil), (*ShootMachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(a.(*garden.ShootMachineImage), b.(*ShootMachineImage), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*ShootSpec)(nil), (*garden.ShootSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1beta1_ShootSpec_To_garden_ShootSpec(a.(*ShootSpec), b.(*garden.ShootSpec), scope)
 	}); err != nil {
@@ -1135,8 +1155,18 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*garden.MachineImage)(nil), (*MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_garden_MachineImage_To_v1beta1_MachineImage(a.(*garden.MachineImage), b.(*MachineImage), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*garden.Worker)(nil), (*Worker)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_garden_Worker_To_v1beta1_Worker(a.(*garden.Worker), b.(*Worker), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*MachineImage)(nil), (*garden.MachineImage)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1beta1_MachineImage_To_garden_MachineImage(a.(*MachineImage), b.(*garden.MachineImage), scope)
 	}); err != nil {
 		return err
 	}
@@ -1149,7 +1179,7 @@ func RegisterConversions(s *runtime.Scheme) error {
 }
 
 func autoConvert_v1beta1_AWSCloud_To_garden_AWSCloud(in *AWSCloud, out *garden.AWSCloud, s conversion.Scope) error {
-	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_AWSNetworks_To_garden_AWSNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -1174,7 +1204,7 @@ func Convert_v1beta1_AWSCloud_To_garden_AWSCloud(in *AWSCloud, out *garden.AWSCl
 }
 
 func autoConvert_garden_AWSCloud_To_v1beta1_AWSCloud(in *garden.AWSCloud, out *AWSCloud, s conversion.Scope) error {
-	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_AWSNetworks_To_v1beta1_AWSNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -1203,7 +1233,17 @@ func autoConvert_v1beta1_AWSConstraints_To_garden_AWSConstraints(in *AWSConstrai
 	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]garden.MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineImage_To_garden_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]garden.MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]garden.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
@@ -1220,7 +1260,17 @@ func autoConvert_garden_AWSConstraints_To_v1beta1_AWSConstraints(in *garden.AWSC
 	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineImage_To_v1beta1_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
@@ -1443,7 +1493,7 @@ func Convert_garden_AdmissionPlugin_To_v1beta1_AdmissionPlugin(in *garden.Admiss
 }
 
 func autoConvert_v1beta1_Alicloud_To_garden_Alicloud(in *Alicloud, out *garden.Alicloud, s conversion.Scope) error {
-	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_AlicloudNetworks_To_garden_AlicloudNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -1468,7 +1518,7 @@ func Convert_v1beta1_Alicloud_To_garden_Alicloud(in *Alicloud, out *garden.Alicl
 }
 
 func autoConvert_garden_Alicloud_To_v1beta1_Alicloud(in *garden.Alicloud, out *Alicloud, s conversion.Scope) error {
-	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_AlicloudNetworks_To_v1beta1_AlicloudNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -1497,7 +1547,17 @@ func autoConvert_v1beta1_AlicloudConstraints_To_garden_AlicloudConstraints(in *A
 	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]garden.MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineImage_To_garden_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]garden.AlicloudMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]garden.AlicloudVolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
@@ -1514,7 +1574,17 @@ func autoConvert_garden_AlicloudConstraints_To_v1beta1_AlicloudConstraints(in *g
 	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineImage_To_v1beta1_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]AlicloudMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]AlicloudVolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
@@ -1727,7 +1797,7 @@ func Convert_garden_AuditPolicy_To_v1beta1_AuditPolicy(in *garden.AuditPolicy, o
 }
 
 func autoConvert_v1beta1_AzureCloud_To_garden_AzureCloud(in *AzureCloud, out *garden.AzureCloud, s conversion.Scope) error {
-	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_AzureNetworks_To_garden_AzureNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -1752,7 +1822,7 @@ func Convert_v1beta1_AzureCloud_To_garden_AzureCloud(in *AzureCloud, out *garden
 }
 
 func autoConvert_garden_AzureCloud_To_v1beta1_AzureCloud(in *garden.AzureCloud, out *AzureCloud, s conversion.Scope) error {
-	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_AzureNetworks_To_v1beta1_AzureNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -1781,7 +1851,17 @@ func autoConvert_v1beta1_AzureConstraints_To_garden_AzureConstraints(in *AzureCo
 	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]garden.MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineImage_To_garden_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]garden.MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]garden.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	return nil
@@ -1797,7 +1877,17 @@ func autoConvert_garden_AzureConstraints_To_v1beta1_AzureConstraints(in *garden.
 	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineImage_To_v1beta1_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	return nil
@@ -2294,7 +2384,17 @@ func Convert_garden_CloudProfile_To_v1beta1_CloudProfile(in *garden.CloudProfile
 
 func autoConvert_v1beta1_CloudProfileList_To_garden_CloudProfileList(in *CloudProfileList, out *garden.CloudProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]garden.CloudProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]garden.CloudProfile, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_CloudProfile_To_garden_CloudProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2305,7 +2405,17 @@ func Convert_v1beta1_CloudProfileList_To_garden_CloudProfileList(in *CloudProfil
 
 func autoConvert_garden_CloudProfileList_To_v1beta1_CloudProfileList(in *garden.CloudProfileList, out *CloudProfileList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
-	out.Items = *(*[]CloudProfile)(unsafe.Pointer(&in.Items))
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]CloudProfile, len(*in))
+		for i := range *in {
+			if err := Convert_garden_CloudProfile_To_v1beta1_CloudProfile(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.Items = nil
+	}
 	return nil
 }
 
@@ -2315,12 +2425,60 @@ func Convert_garden_CloudProfileList_To_v1beta1_CloudProfileList(in *garden.Clou
 }
 
 func autoConvert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudProfileSpec, out *garden.CloudProfileSpec, s conversion.Scope) error {
-	out.AWS = (*garden.AWSProfile)(unsafe.Pointer(in.AWS))
-	out.Azure = (*garden.AzureProfile)(unsafe.Pointer(in.Azure))
-	out.GCP = (*garden.GCPProfile)(unsafe.Pointer(in.GCP))
-	out.OpenStack = (*garden.OpenStackProfile)(unsafe.Pointer(in.OpenStack))
-	out.Alicloud = (*garden.AlicloudProfile)(unsafe.Pointer(in.Alicloud))
-	out.Packet = (*garden.PacketProfile)(unsafe.Pointer(in.Packet))
+	if in.AWS != nil {
+		in, out := &in.AWS, &out.AWS
+		*out = new(garden.AWSProfile)
+		if err := Convert_v1beta1_AWSProfile_To_garden_AWSProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.AWS = nil
+	}
+	if in.Azure != nil {
+		in, out := &in.Azure, &out.Azure
+		*out = new(garden.AzureProfile)
+		if err := Convert_v1beta1_AzureProfile_To_garden_AzureProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Azure = nil
+	}
+	if in.GCP != nil {
+		in, out := &in.GCP, &out.GCP
+		*out = new(garden.GCPProfile)
+		if err := Convert_v1beta1_GCPProfile_To_garden_GCPProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.GCP = nil
+	}
+	if in.OpenStack != nil {
+		in, out := &in.OpenStack, &out.OpenStack
+		*out = new(garden.OpenStackProfile)
+		if err := Convert_v1beta1_OpenStackProfile_To_garden_OpenStackProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.OpenStack = nil
+	}
+	if in.Alicloud != nil {
+		in, out := &in.Alicloud, &out.Alicloud
+		*out = new(garden.AlicloudProfile)
+		if err := Convert_v1beta1_AlicloudProfile_To_garden_AlicloudProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Alicloud = nil
+	}
+	if in.Packet != nil {
+		in, out := &in.Packet, &out.Packet
+		*out = new(garden.PacketProfile)
+		if err := Convert_v1beta1_PacketProfile_To_garden_PacketProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Packet = nil
+	}
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
 }
@@ -2331,12 +2489,60 @@ func Convert_v1beta1_CloudProfileSpec_To_garden_CloudProfileSpec(in *CloudProfil
 }
 
 func autoConvert_garden_CloudProfileSpec_To_v1beta1_CloudProfileSpec(in *garden.CloudProfileSpec, out *CloudProfileSpec, s conversion.Scope) error {
-	out.AWS = (*AWSProfile)(unsafe.Pointer(in.AWS))
-	out.Azure = (*AzureProfile)(unsafe.Pointer(in.Azure))
-	out.GCP = (*GCPProfile)(unsafe.Pointer(in.GCP))
-	out.OpenStack = (*OpenStackProfile)(unsafe.Pointer(in.OpenStack))
-	out.Alicloud = (*AlicloudProfile)(unsafe.Pointer(in.Alicloud))
-	out.Packet = (*PacketProfile)(unsafe.Pointer(in.Packet))
+	if in.AWS != nil {
+		in, out := &in.AWS, &out.AWS
+		*out = new(AWSProfile)
+		if err := Convert_garden_AWSProfile_To_v1beta1_AWSProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.AWS = nil
+	}
+	if in.Azure != nil {
+		in, out := &in.Azure, &out.Azure
+		*out = new(AzureProfile)
+		if err := Convert_garden_AzureProfile_To_v1beta1_AzureProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Azure = nil
+	}
+	if in.GCP != nil {
+		in, out := &in.GCP, &out.GCP
+		*out = new(GCPProfile)
+		if err := Convert_garden_GCPProfile_To_v1beta1_GCPProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.GCP = nil
+	}
+	if in.OpenStack != nil {
+		in, out := &in.OpenStack, &out.OpenStack
+		*out = new(OpenStackProfile)
+		if err := Convert_garden_OpenStackProfile_To_v1beta1_OpenStackProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.OpenStack = nil
+	}
+	if in.Alicloud != nil {
+		in, out := &in.Alicloud, &out.Alicloud
+		*out = new(AlicloudProfile)
+		if err := Convert_garden_AlicloudProfile_To_v1beta1_AlicloudProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Alicloud = nil
+	}
+	if in.Packet != nil {
+		in, out := &in.Packet, &out.Packet
+		*out = new(PacketProfile)
+		if err := Convert_garden_PacketProfile_To_v1beta1_PacketProfile(*in, *out, s); err != nil {
+			return err
+		}
+	} else {
+		out.Packet = nil
+	}
 	out.CABundle = (*string)(unsafe.Pointer(in.CABundle))
 	return nil
 }
@@ -2445,7 +2651,7 @@ func Convert_garden_Extension_To_v1beta1_Extension(in *garden.Extension, out *Ex
 }
 
 func autoConvert_v1beta1_GCPCloud_To_garden_GCPCloud(in *GCPCloud, out *garden.GCPCloud, s conversion.Scope) error {
-	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_GCPNetworks_To_garden_GCPNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -2470,7 +2676,7 @@ func Convert_v1beta1_GCPCloud_To_garden_GCPCloud(in *GCPCloud, out *garden.GCPCl
 }
 
 func autoConvert_garden_GCPCloud_To_v1beta1_GCPCloud(in *garden.GCPCloud, out *GCPCloud, s conversion.Scope) error {
-	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_GCPNetworks_To_v1beta1_GCPNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -2499,7 +2705,17 @@ func autoConvert_v1beta1_GCPConstraints_To_garden_GCPConstraints(in *GCPConstrai
 	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]garden.MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineImage_To_garden_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]garden.MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]garden.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
@@ -2516,7 +2732,17 @@ func autoConvert_garden_GCPConstraints_To_v1beta1_GCPConstraints(in *garden.GCPC
 	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineImage_To_v1beta1_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
@@ -3100,26 +3326,37 @@ func Convert_garden_KubernetesDashboard_To_v1beta1_KubernetesDashboard(in *garde
 
 func autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Version = in.Version
-	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	// WARNING: in.Version requires manual conversion: does not exist in peer-type
+	out.Versions = *(*[]garden.MachineImageVersion)(unsafe.Pointer(&in.Versions))
 	return nil
-}
-
-// Convert_v1beta1_MachineImage_To_garden_MachineImage is an autogenerated conversion function.
-func Convert_v1beta1_MachineImage_To_garden_MachineImage(in *MachineImage, out *garden.MachineImage, s conversion.Scope) error {
-	return autoConvert_v1beta1_MachineImage_To_garden_MachineImage(in, out, s)
 }
 
 func autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
 	out.Name = in.Name
-	out.Version = in.Version
-	out.ProviderConfig = (*v1alpha1.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	out.Versions = *(*[]MachineImageVersion)(unsafe.Pointer(&in.Versions))
 	return nil
 }
 
-// Convert_garden_MachineImage_To_v1beta1_MachineImage is an autogenerated conversion function.
-func Convert_garden_MachineImage_To_v1beta1_MachineImage(in *garden.MachineImage, out *MachineImage, s conversion.Scope) error {
-	return autoConvert_garden_MachineImage_To_v1beta1_MachineImage(in, out, s)
+func autoConvert_v1beta1_MachineImageVersion_To_garden_MachineImageVersion(in *MachineImageVersion, out *garden.MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	return nil
+}
+
+// Convert_v1beta1_MachineImageVersion_To_garden_MachineImageVersion is an autogenerated conversion function.
+func Convert_v1beta1_MachineImageVersion_To_garden_MachineImageVersion(in *MachineImageVersion, out *garden.MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_v1beta1_MachineImageVersion_To_garden_MachineImageVersion(in, out, s)
+}
+
+func autoConvert_garden_MachineImageVersion_To_v1beta1_MachineImageVersion(in *garden.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	out.Version = in.Version
+	out.ExpirationDate = (*metav1.Time)(unsafe.Pointer(in.ExpirationDate))
+	return nil
+}
+
+// Convert_garden_MachineImageVersion_To_v1beta1_MachineImageVersion is an autogenerated conversion function.
+func Convert_garden_MachineImageVersion_To_v1beta1_MachineImageVersion(in *garden.MachineImageVersion, out *MachineImageVersion, s conversion.Scope) error {
+	return autoConvert_garden_MachineImageVersion_To_v1beta1_MachineImageVersion(in, out, s)
 }
 
 func autoConvert_v1beta1_MachineType_To_garden_MachineType(in *MachineType, out *garden.MachineType, s conversion.Scope) error {
@@ -3174,6 +3411,7 @@ func Convert_garden_Maintenance_To_v1beta1_Maintenance(in *garden.Maintenance, o
 
 func autoConvert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(in *MaintenanceAutoUpdate, out *garden.MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
+	out.MachineImageVersion = (*bool)(unsafe.Pointer(in.MachineImageVersion))
 	return nil
 }
 
@@ -3184,6 +3422,7 @@ func Convert_v1beta1_MaintenanceAutoUpdate_To_garden_MaintenanceAutoUpdate(in *M
 
 func autoConvert_garden_MaintenanceAutoUpdate_To_v1beta1_MaintenanceAutoUpdate(in *garden.MaintenanceAutoUpdate, out *MaintenanceAutoUpdate, s conversion.Scope) error {
 	out.KubernetesVersion = in.KubernetesVersion
+	out.MachineImageVersion = (*bool)(unsafe.Pointer(in.MachineImageVersion))
 	return nil
 }
 
@@ -3304,7 +3543,7 @@ func autoConvert_v1beta1_OpenStackCloud_To_garden_OpenStackCloud(in *OpenStackCl
 	out.FloatingPoolName = in.FloatingPoolName
 	out.LoadBalancerProvider = in.LoadBalancerProvider
 	out.LoadBalancerClasses = *(*[]garden.OpenStackLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
-	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_OpenStackNetworks_To_garden_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -3332,7 +3571,7 @@ func autoConvert_garden_OpenStackCloud_To_v1beta1_OpenStackCloud(in *garden.Open
 	out.FloatingPoolName = in.FloatingPoolName
 	out.LoadBalancerProvider = in.LoadBalancerProvider
 	out.LoadBalancerClasses = *(*[]OpenStackLoadBalancerClass)(unsafe.Pointer(&in.LoadBalancerClasses))
-	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_OpenStackNetworks_To_v1beta1_OpenStackNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -3363,7 +3602,17 @@ func autoConvert_v1beta1_OpenStackConstraints_To_garden_OpenStackConstraints(in 
 		return err
 	}
 	out.LoadBalancerProviders = *(*[]garden.OpenStackLoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
-	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]garden.MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineImage_To_garden_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]garden.OpenStackMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
 	return nil
@@ -3381,7 +3630,17 @@ func autoConvert_garden_OpenStackConstraints_To_v1beta1_OpenStackConstraints(in 
 		return err
 	}
 	out.LoadBalancerProviders = *(*[]OpenStackLoadBalancerProvider)(unsafe.Pointer(&in.LoadBalancerProviders))
-	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineImage_To_v1beta1_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]OpenStackMachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
 	return nil
@@ -3595,7 +3854,7 @@ func Convert_garden_OpenStackWorker_To_v1beta1_OpenStackWorker(in *garden.OpenSt
 }
 
 func autoConvert_v1beta1_PacketCloud_To_garden_PacketCloud(in *PacketCloud, out *garden.PacketCloud, s conversion.Scope) error {
-	out.MachineImage = (*garden.MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*garden.ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_v1beta1_PacketNetworks_To_garden_PacketNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -3620,7 +3879,7 @@ func Convert_v1beta1_PacketCloud_To_garden_PacketCloud(in *PacketCloud, out *gar
 }
 
 func autoConvert_garden_PacketCloud_To_v1beta1_PacketCloud(in *garden.PacketCloud, out *PacketCloud, s conversion.Scope) error {
-	out.MachineImage = (*MachineImage)(unsafe.Pointer(in.MachineImage))
+	out.MachineImage = (*ShootMachineImage)(unsafe.Pointer(in.MachineImage))
 	if err := Convert_garden_PacketNetworks_To_v1beta1_PacketNetworks(&in.Networks, &out.Networks, s); err != nil {
 		return err
 	}
@@ -3649,7 +3908,17 @@ func autoConvert_v1beta1_PacketConstraints_To_garden_PacketConstraints(in *Packe
 	if err := Convert_v1beta1_KubernetesConstraints_To_garden_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]garden.MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]garden.MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_v1beta1_MachineImage_To_garden_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]garden.MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]garden.VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]garden.Zone)(unsafe.Pointer(&in.Zones))
@@ -3666,7 +3935,17 @@ func autoConvert_garden_PacketConstraints_To_v1beta1_PacketConstraints(in *garde
 	if err := Convert_garden_KubernetesConstraints_To_v1beta1_KubernetesConstraints(&in.Kubernetes, &out.Kubernetes, s); err != nil {
 		return err
 	}
-	out.MachineImages = *(*[]MachineImage)(unsafe.Pointer(&in.MachineImages))
+	if in.MachineImages != nil {
+		in, out := &in.MachineImages, &out.MachineImages
+		*out = make([]MachineImage, len(*in))
+		for i := range *in {
+			if err := Convert_garden_MachineImage_To_v1beta1_MachineImage(&(*in)[i], &(*out)[i], s); err != nil {
+				return err
+			}
+		}
+	} else {
+		out.MachineImages = nil
+	}
 	out.MachineTypes = *(*[]MachineType)(unsafe.Pointer(&in.MachineTypes))
 	out.VolumeTypes = *(*[]VolumeType)(unsafe.Pointer(&in.VolumeTypes))
 	out.Zones = *(*[]Zone)(unsafe.Pointer(&in.Zones))
@@ -4242,6 +4521,30 @@ func autoConvert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out
 // Convert_garden_ShootList_To_v1beta1_ShootList is an autogenerated conversion function.
 func Convert_garden_ShootList_To_v1beta1_ShootList(in *garden.ShootList, out *ShootList, s conversion.Scope) error {
 	return autoConvert_garden_ShootList_To_v1beta1_ShootList(in, out, s)
+}
+
+func autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in *ShootMachineImage, out *garden.ShootMachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.ProviderConfig = (*core.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	return nil
+}
+
+// Convert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage is an autogenerated conversion function.
+func Convert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in *ShootMachineImage, out *garden.ShootMachineImage, s conversion.Scope) error {
+	return autoConvert_v1beta1_ShootMachineImage_To_garden_ShootMachineImage(in, out, s)
+}
+
+func autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in *garden.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
+	out.Name = in.Name
+	out.Version = in.Version
+	out.ProviderConfig = (*v1alpha1.ProviderConfig)(unsafe.Pointer(in.ProviderConfig))
+	return nil
+}
+
+// Convert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage is an autogenerated conversion function.
+func Convert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in *garden.ShootMachineImage, out *ShootMachineImage, s conversion.Scope) error {
+	return autoConvert_garden_ShootMachineImage_To_v1beta1_ShootMachineImage(in, out, s)
 }
 
 func autoConvert_v1beta1_ShootSpec_To_garden_ShootSpec(in *ShootSpec, out *garden.ShootSpec, s conversion.Scope) error {

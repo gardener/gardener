@@ -124,6 +124,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesConstraints":         schema_pkg_apis_garden_v1beta1_KubernetesConstraints(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.KubernetesDashboard":           schema_pkg_apis_garden_v1beta1_KubernetesDashboard(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage":                  schema_pkg_apis_garden_v1beta1_MachineImage(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImageVersion":           schema_pkg_apis_garden_v1beta1_MachineImageVersion(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineType":                   schema_pkg_apis_garden_v1beta1_MachineType(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Maintenance":                   schema_pkg_apis_garden_v1beta1_Maintenance(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MaintenanceAutoUpdate":         schema_pkg_apis_garden_v1beta1_MaintenanceAutoUpdate(ref),
@@ -163,6 +164,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.SeedStatus":                    schema_pkg_apis_garden_v1beta1_SeedStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot":                         schema_pkg_apis_garden_v1beta1_Shoot(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootList":                     schema_pkg_apis_garden_v1beta1_ShootList(ref),
+		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage":             schema_pkg_apis_garden_v1beta1_ShootMachineImage(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootSpec":                     schema_pkg_apis_garden_v1beta1_ShootSpec(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootStatus":                   schema_pkg_apis_garden_v1beta1_ShootStatus(ref),
 		"github.com/gardener/gardener/pkg/apis/garden/v1beta1.VolumeType":                    schema_pkg_apis_garden_v1beta1_VolumeType(ref),
@@ -1269,8 +1271,8 @@ func schema_pkg_apis_garden_v1beta1_AWSCloud(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"),
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
 						},
 					},
 					"networks": {
@@ -1311,7 +1313,7 @@ func schema_pkg_apis_garden_v1beta1_AWSCloud(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AWSWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"},
 	}
 }
 
@@ -1785,8 +1787,8 @@ func schema_pkg_apis_garden_v1beta1_Alicloud(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"),
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
 						},
 					},
 					"networks": {
@@ -1827,7 +1829,7 @@ func schema_pkg_apis_garden_v1beta1_Alicloud(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AlicloudWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"},
 	}
 }
 
@@ -2297,8 +2299,8 @@ func schema_pkg_apis_garden_v1beta1_AzureCloud(ref common.ReferenceCallback) com
 				Properties: map[string]spec.Schema{
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"),
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
 						},
 					},
 					"networks": {
@@ -2331,7 +2333,7 @@ func schema_pkg_apis_garden_v1beta1_AzureCloud(ref common.ReferenceCallback) com
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureResourceGroup", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.AzureWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"},
 	}
 }
 
@@ -3294,8 +3296,8 @@ func schema_pkg_apis_garden_v1beta1_GCPCloud(ref common.ReferenceCallback) commo
 				Properties: map[string]spec.Schema{
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"),
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
 						},
 					},
 					"networks": {
@@ -3336,7 +3338,7 @@ func schema_pkg_apis_garden_v1beta1_GCPCloud(ref common.ReferenceCallback) commo
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.GCPWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"},
 	}
 }
 
@@ -4341,7 +4343,7 @@ func schema_pkg_apis_garden_v1beta1_MachineImage(ref common.ReferenceCallback) c
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "MachineImage defines the name and the version of the machine image in any environment.",
+				Description: "MachineImage defines the name and multiple versions of the machine image in any environment.",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
@@ -4353,23 +4355,59 @@ func schema_pkg_apis_garden_v1beta1_MachineImage(ref common.ReferenceCallback) c
 					},
 					"version": {
 						SchemaProps: spec.SchemaProps{
+							Description: "DEPRECATED: This field will be removed in a future version.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"versions": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Versions contains versions and expiration dates of the machine image",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImageVersion"),
+									},
+								},
+							},
+						},
+					},
+				},
+				Required: []string{"name"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImageVersion"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_MachineImageVersion(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImageVersion contains a version and an expiration date of a machine image",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"version": {
+						SchemaProps: spec.SchemaProps{
 							Description: "Version is the version of the image.",
 							Type:        []string{"string"},
 							Format:      "",
 						},
 					},
-					"providerConfig": {
+					"expirationDate": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ProviderConfig is the configuration passed to extension resource.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+							Description: "ExpirationDate defines the time at which a shoot that opted out of automatic operating system updates and that is running this image version will be forcefully updated to the latest version specified in the referenced cloud profile.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
 						},
 					},
 				},
-				Required: []string{"name", "version"},
+				Required: []string{"version"},
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 
@@ -4458,6 +4496,13 @@ func schema_pkg_apis_garden_v1beta1_MaintenanceAutoUpdate(ref common.ReferenceCa
 					"kubernetesVersion": {
 						SchemaProps: spec.SchemaProps{
 							Description: "KubernetesVersion indicates whether the patch Kubernetes version may be automatically updated.",
+							Type:        []string{"boolean"},
+							Format:      "",
+						},
+					},
+					"machineImageVersion": {
+						SchemaProps: spec.SchemaProps{
+							Description: "MachineImageVersion indicates whether the machine image version may be automatically updated (default: true).",
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -4680,8 +4725,8 @@ func schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref common.ReferenceCallback)
 					},
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"),
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
 						},
 					},
 					"networks": {
@@ -4722,7 +4767,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackCloud(ref common.ReferenceCallback)
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerClass", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackLoadBalancerClass", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.OpenStackWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"},
 	}
 }
 
@@ -5229,8 +5274,8 @@ func schema_pkg_apis_garden_v1beta1_PacketCloud(ref common.ReferenceCallback) co
 				Properties: map[string]spec.Schema{
 					"machineImage": {
 						SchemaProps: spec.SchemaProps{
-							Description: "MachineImage holds information about the machine image to use for all workers. It will default to the first image stated in the referenced CloudProfile if no value has been provided.",
-							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage"),
+							Description: "ShootMachineImage holds information about the machine image to use for all workers. It will default to the latest version of the first image stated in the referenced CloudProfile if no value has been provided.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"),
 						},
 					},
 					"networks": {
@@ -5271,7 +5316,7 @@ func schema_pkg_apis_garden_v1beta1_PacketCloud(ref common.ReferenceCallback) co
 			},
 		},
 		Dependencies: []string{
-			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.MachineImage", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketWorker"},
+			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketNetworks", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.PacketWorker", "github.com/gardener/gardener/pkg/apis/garden/v1beta1.ShootMachineImage"},
 	}
 }
 
@@ -6335,6 +6380,42 @@ func schema_pkg_apis_garden_v1beta1_ShootList(ref common.ReferenceCallback) comm
 		},
 		Dependencies: []string{
 			"github.com/gardener/gardener/pkg/apis/garden/v1beta1.Shoot", "k8s.io/apimachinery/pkg/apis/meta/v1.ListMeta"},
+	}
+}
+
+func schema_pkg_apis_garden_v1beta1_ShootMachineImage(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "MachineImage defines the name and the version of the shoot's machine image in any environment. Has to be defined in the respective CloudProfile.",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"name": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name is the name of the image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"version": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Version is the version of the shoot's image.",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"providerConfig": {
+						SchemaProps: spec.SchemaProps{
+							Description: "ProviderConfig is the shoot's individual configuration passed to an extension resource.",
+							Ref:         ref("github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"),
+						},
+					},
+				},
+				Required: []string{"name", "version"},
+			},
+		},
+		Dependencies: []string{
+			"github.com/gardener/gardener/pkg/apis/core/v1alpha1.ProviderConfig"},
 	}
 }
 
