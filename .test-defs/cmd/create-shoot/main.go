@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/ghodss/yaml"
 	"os"
 	"strconv"
 
@@ -39,6 +40,7 @@ var (
 	k8sVersion        string
 
 	// optional parameters
+	seed                string
 	machineImage        string
 	machineImageVersion string
 	shootArtifactPath   string
@@ -97,6 +99,7 @@ func init() {
 	if shootArtifactPath == "" {
 		shootArtifactPath = fmt.Sprintf("example/90-shoot-%s.yaml", cloudprovider)
 	}
+	seed = os.Getenv("SEED")
 	machineImage = os.Getenv("MACHINE_IMAGE")
 	machineImageVersion = os.Getenv("MACHINE_IMAGE_VERSION")
 	if machineImage != "" && machineImageVersion == "" {
@@ -149,8 +152,12 @@ func main() {
 	shootObject.Spec.Cloud.Region = region
 	shootObject.Spec.Cloud.SecretBindingRef.Name = secretBindingName
 	shootObject.Spec.Kubernetes.Version = k8sVersion
+
+	if seed != "" {
+		shootObject.Spec.Cloud.Seed = &seed
+	}
 	helper.UpdateAnnotations(shootObject)
-	if err := helper.UpdateMachineImage(shootObject, cloudprovider, machineImage ,machineImageVersion); err != nil {
+	if err := helper.UpdateMachineImage(shootObject, cloudprovider, machineImage, machineImageVersion); err != nil {
 		testLogger.Warnf(err.Error())
 	}
 	if err := helper.UpdateWorkerZone(shootObject, cloudprovider, zone); err != nil {
@@ -176,6 +183,10 @@ func main() {
 	}
 
 	testLogger.Infof("Create shoot %s in namespace %s", shootName, projectNamespace)
+	if err := printShoot(shootObject); err != nil {
+		testLogger.Fatalf("Cannot decode shoot %s: %s", shootName, err)
+	}
+
 	shootGardenerTest.Shoot = shootObject
 	shootObject, err = shootGardenerTest.CreateShoot(ctx)
 	if err != nil {
@@ -206,4 +217,13 @@ func main() {
 		testLogger.Fatalf("Cannot download seed kubeconfig: %s", err.Error())
 	}
 	testLogger.Infof("Finished creating shoot %s", shootName)
+}
+
+func printShoot(shoot *gardenv1beta1.Shoot) error {
+	d, err := yaml.Marshal(shoot)
+	if err != nil {
+		return err
+	}
+	fmt.Print(string(d))
+	return nil
 }
