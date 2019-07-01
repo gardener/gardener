@@ -34,9 +34,11 @@ spec:
           requests:
             cpu: 50m
             memory: 200Mi
+{{ if not .Values.enabled }}
           limits:
             cpu: 500m
             memory: 1Gi
+{{ end }}
 ---
 apiVersion: v1
 kind: Service

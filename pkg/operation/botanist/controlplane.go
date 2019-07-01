@@ -353,9 +353,15 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
+			"vpa": map[string]interface{}{
+				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+			},
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
+			"vpa": map[string]interface{}{
+				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
+			},
 		}
 	)
 
