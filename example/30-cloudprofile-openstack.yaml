@@ -21,7 +21,6 @@ spec:
         - 1.13.8
         - 1.12.10
         - 1.11.10
-        - 1.10.13
       loadBalancerProviders:
       - name: haproxy
       machineImages:
@@ -51,5 +50,6 @@ spec:
         - europe-1b
         - europe-1c
     keystoneURL: https://url-to-keystone/v3/
+    # dhcpDomain field is deprecated and no longer supported with v1.10 EOL. It will be removed in a future version.
   # dhcpDomain: nova.local # DHCP domain of OpenStack system (only meaningful for Kubernetes 1.10.1, see https://github.com/kubernetes/kubernetes/pull/61890 for details)
   # requestTimeout: 180s # Kubernetes OpenStack Cloudprovider Request Timeout

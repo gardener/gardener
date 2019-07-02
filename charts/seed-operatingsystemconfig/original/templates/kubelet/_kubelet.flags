@@ -9,9 +9,6 @@
 {{- if semverCompare "< 1.12" .Values.kubernetes.version }}
 --cadvisor-port=0
 {{- end }}
-{{- if semverCompare "< 1.11" .Values.kubernetes.version }}
---feature-gates=PodPriority=true
-{{- end }}
 {{- if semverCompare "< 1.14" .Values.kubernetes.version }}
 --feature-gates=SupportPodPidsLimit=true
 {{- end }}
@@ -22,9 +19,6 @@
 --node-labels="kubernetes.io/role=node,node-role.kubernetes.io/node=,worker.garden.sapcloud.io/group={{ required "worker.name is required" .Values.worker.name }},worker.gardener.cloud/pool={{ required "worker.name is required" .Values.worker.name }}"
 {{- else }}
 --node-labels="node.kubernetes.io/role=node,worker.garden.sapcloud.io/group={{ required "worker.name is required" .Values.worker.name }},worker.gardener.cloud/pool={{ required "worker.name is required" .Values.worker.name }}"
-{{- end }}
-{{- if semverCompare "< 1.11" .Values.kubernetes.version }}
---rotate-certificates=true
 {{- end }}
 --v=2 $KUBELET_EXTRA_ARGS
 {{- end -}}

@@ -602,8 +602,8 @@ issues:
       state: Processing
       type: Create
 $ kubectl -n garden-dev get shoot johndoe-azure
-NAMESPACE    NAME            SEED      DOMAIN                                       VERSION   CONTROL   NODES     SYSTEM    LATEST
-garden-dev   johndoe-azure   azure     johndoe-azure.garden-dev.your.domain.here   1.10.1    True      True      True      Succeeded
+NAMESPACE    NAME            SEED      DOMAIN                                      VERSION   CONTROL   NODES     SYSTEM    LATEST
+garden-dev   johndoe-azure   azure     johndoe-azure.garden-dev.your.domain.here   1.12.3    True      True      True      Succeeded
 $ kubectl -n garden-dev describe shoot johndoe-azure
 ...
 Events:

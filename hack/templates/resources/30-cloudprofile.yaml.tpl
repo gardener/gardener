@@ -73,7 +73,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.8
         - 1.12.10
         - 1.11.10
-        - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.aws.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -177,7 +176,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.8
         - 1.12.10
         - 1.11.10
-        - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.azure.constraints.machineImages", []) %>
         % if machineImages != []:
@@ -278,7 +276,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.8
         - 1.12.10
         - 1.11.10
-        - 1.10.13
         % endif
       machineImages:<% machineImages=value("spec.gcp.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -544,7 +541,6 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         - 1.13.8
         - 1.12.10
         - 1.11.10
-        - 1.10.13
         % endif
       loadBalancerProviders:<% loadBalancerProviders=value("spec.openstack.constraints.loadBalancerProviders", []) %>
       % if loadBalancerProviders != []:
@@ -594,6 +590,7 @@ spec:<% caBundle=value("spec.caBundle", "") %>
     % if dnsServers != []:
     dnsServers: ${dnsServers}
     % endif
+    # dhcpDomain field is deprecated and no longer supported with v1.10 EOL. It will be removed in a future version.
     % if dhcpDomain != "":
     dhcpDomain: ${dhcpDomain}
     % else:

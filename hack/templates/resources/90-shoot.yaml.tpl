@@ -332,7 +332,6 @@ spec:
   #     usernameClaim: username-claim
   #     usernamePrefix: username-prefix
   #     signingAlgs: RS256,some-other-algorithm
-  #-#-# only usable with Kubernetes >= 1.11
   #     requiredClaims:
   #       key: value
   #   admissionPlugins:

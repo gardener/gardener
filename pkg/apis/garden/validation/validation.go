@@ -209,10 +209,6 @@ func ValidateCloudProfileSpec(spec *garden.CloudProfileSpec, fldPath *field.Path
 			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "keyStoneURL"), "must provide the URL to KeyStone"))
 		}
 
-		if spec.OpenStack.DHCPDomain != nil && len(*spec.OpenStack.DHCPDomain) == 0 {
-			allErrs = append(allErrs, field.Required(fldPath.Child("openstack", "dhcpDomain"), "must provide a dhcp domain when the key is specified"))
-		}
-
 		if spec.OpenStack.RequestTimeout != nil {
 			_, err := time.ParseDuration(*spec.OpenStack.RequestTimeout)
 			if err != nil {
@@ -1613,11 +1609,6 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 		if oidc := kubeAPIServer.OIDCConfig; oidc != nil {
 			oidcPath := fldPath.Child("kubeAPIServer", "oidcConfig")
 
-			geqKubernetes111, err := utils.CheckVersionMeetsConstraint(kubernetes.Version, ">= 1.11")
-			if err != nil {
-				geqKubernetes111 = false
-			}
-
 			if oidc.CABundle != nil {
 				if _, err := utils.DecodeCertificate([]byte(*oidc.CABundle)); err != nil {
 					allErrs = append(allErrs, field.Invalid(oidcPath.Child("caBundle"), *oidc.CABundle, "caBundle is not a valid PEM-encoded certificate"))
@@ -1637,9 +1628,6 @@ func validateKubernetes(kubernetes garden.Kubernetes, fldPath *field.Path) field
 			}
 			if oidc.SigningAlgs != nil && len(oidc.SigningAlgs) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("signingAlgs"), oidc.SigningAlgs, "signings algs cannot be empty when key is provided"))
-			}
-			if !geqKubernetes111 && oidc.RequiredClaims != nil {
-				allErrs = append(allErrs, field.Forbidden(oidcPath.Child("requiredClaims"), "required claims cannot be provided when version is not greater or equal 1.11"))
 			}
 			if oidc.UsernameClaim != nil && len(*oidc.UsernameClaim) == 0 {
 				allErrs = append(allErrs, field.Invalid(oidcPath.Child("usernameClaim"), *oidc.UsernameClaim, "username claim cannot be empty when key is provided"))

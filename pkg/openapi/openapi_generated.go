@@ -4665,7 +4665,7 @@ func schema_pkg_apis_garden_v1beta1_OIDCConfig(ref common.ReferenceCallback) com
 					},
 					"requiredClaims": {
 						SchemaProps: spec.SchemaProps{
-							Description: "ATTENTION: Only meaningful for Kubernetes >= 1.11 key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
+							Description: "key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.",
 							Type:        []string{"object"},
 							AdditionalProperties: &spec.SchemaOrBool{
 								Allows: true,
@@ -5147,7 +5147,7 @@ func schema_pkg_apis_garden_v1beta1_OpenStackProfile(ref common.ReferenceCallbac
 					},
 					"dhcpDomain": {
 						SchemaProps: spec.SchemaProps{
-							Description: "DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.",
+							Description: "DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details. DEPRECATED: This field will be removed in a future version.",
 							Type:        []string{"string"},
 							Format:      "",
 						},

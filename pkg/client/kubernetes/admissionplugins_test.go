@@ -24,7 +24,7 @@ import (
 
 var _ = Describe("kubernetes", func() {
 	Describe("#GetAdmissionPluginsForVersion", func() {
-		It("should return the list for 1.10 (non-parseable version)", func() {
+		It("should return the list for 1.11 (non-parseable version)", func() {
 			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("not-1-a-semver-version")
@@ -34,7 +34,7 @@ var _ = Describe("kubernetes", func() {
 			}
 		})
 
-		It("should return the list for 1.10 (lowest supported version)", func() {
+		It("should return the list for 1.11 (lowest supported version)", func() {
 			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
 			plugins := GetAdmissionPluginsForVersion("1.7.4")
@@ -44,20 +44,20 @@ var _ = Describe("kubernetes", func() {
 			}
 		})
 
-		It("should return the list for 1.10", func() {
+		It("should return the list for 1.11", func() {
 			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
-			plugins := GetAdmissionPluginsForVersion("1.10.99")
+			plugins := GetAdmissionPluginsForVersion("1.11.99")
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardenv1beta1.AdmissionPlugin{Name: plugin}))
 			}
 		})
 
-		It("should return the list for 1.11 or higher", func() {
+		It("should return the list for 1.12 or higher", func() {
 			expected := []string{"Priority", "NamespaceLifecycle", "LimitRanger", "ServiceAccount", "NodeRestriction", "DefaultStorageClass", "Initializers", "DefaultTolerationSeconds", "ResourceQuota", "StorageObjectInUseProtection", "MutatingAdmissionWebhook", "ValidatingAdmissionWebhook"}
 
-			plugins := GetAdmissionPluginsForVersion("1.11.23")
+			plugins := GetAdmissionPluginsForVersion("1.12.23")
 
 			for _, plugin := range expected {
 				Expect(plugins).To(ContainElement(gardenv1beta1.AdmissionPlugin{Name: plugin}))

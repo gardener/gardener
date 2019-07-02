@@ -178,6 +178,7 @@ type OpenStackProfile struct {
 	DNSServers []string
 	// DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for
 	// Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.
+	// DEPRECATED: This field will be removed in a future version.
 	DHCPDomain *string
 	// RequestTimeout specifies the HTTP timeout against the OpenStack API.
 	RequestTimeout *string
@@ -201,7 +202,7 @@ type OpenStackConstraints struct {
 	Zones []Zone
 }
 
-// FloatingPools contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
+// OpenStackFloatingPool contains constraints regarding allowed values of the 'floatingPoolName' block in the Shoot specification.
 type OpenStackFloatingPool struct {
 	// Name is the name of the floating pool.
 	Name string
@@ -1206,7 +1207,6 @@ type OIDCConfig struct {
 	GroupsPrefix *string
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
 	IssuerURL *string
-	// ATTENTION: Only meaningful for Kubernetes >= 1.11
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	RequiredClaims map[string]string
 	// List of allowed JOSE asymmetric signing algorithms. JWTs with a 'alg' header value not in this list will be rejected. Values are defined by RFC 7518 https://tools.ietf.org/html/rfc7518#section-3.1

@@ -36,9 +36,6 @@ var _ = Describe("controlplane", func() {
 
 			It("should return false without error because of version incompatibility", func() {
 				incompatibilityMatrix := map[string][]schema.GroupVersionKind{
-					"1.10.0": {
-						auditv1.SchemeGroupVersion.WithKind(kind),
-					},
 					"1.11.0": {
 						auditv1.SchemeGroupVersion.WithKind(kind),
 					},
@@ -55,10 +52,6 @@ var _ = Describe("controlplane", func() {
 
 			It("should return true without error because of version compatibility", func() {
 				compatibilityMatrix := map[string][]schema.GroupVersionKind{
-					"1.10.0": {
-						auditv1alpha1.SchemeGroupVersion.WithKind(kind),
-						auditv1beta1.SchemeGroupVersion.WithKind(kind),
-					},
 					"1.11.0": {
 						auditv1alpha1.SchemeGroupVersion.WithKind(kind),
 						auditv1beta1.SchemeGroupVersion.WithKind(kind),

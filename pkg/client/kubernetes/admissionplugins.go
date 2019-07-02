@@ -38,11 +38,10 @@ var (
 	}
 	defaultPluginsWithInitializers = append(defaultPlugins, gardenv1beta1.AdmissionPlugin{Name: "Initializers"})
 
-	lowestSupportedKubernetesVersionMajorMinor = "1.10"
+	lowestSupportedKubernetesVersionMajorMinor = "1.11"
 	lowestSupportedKubernetesVersion, _        = semver.NewVersion(lowestSupportedKubernetesVersionMajorMinor)
 
 	admissionPlugins = map[string][]gardenv1beta1.AdmissionPlugin{
-		"1.10": defaultPluginsWithInitializers,
 		"1.11": defaultPluginsWithInitializers,
 		"1.12": defaultPluginsWithInitializers,
 		"1.13": defaultPluginsWithInitializers,

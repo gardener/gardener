@@ -87,9 +87,7 @@ readOnlyPort: 0
 registryPullQPS: 5
 registryBurst: 10
 resolvConf: /etc/resolv.conf
-{{- if semverCompare ">= 1.11" .Values.kubernetes.version }}
 rotateCertificates: true
-{{- end }}
 runtimeRequestTimeout: 2m0s
 serializeImagePulls: true
 syncFrequency: 1m0s

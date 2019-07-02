@@ -96,9 +96,9 @@ spec:
   - type: unmanaged
   kubernetes:
     versions:
+    - 1.13.7
     - 1.12.1
     - 1.11.0
-    - 1.10.5
   machineTypes:
   - name: m4.large
     cpu: "2"

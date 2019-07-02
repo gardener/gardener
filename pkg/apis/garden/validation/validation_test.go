@@ -1416,20 +1416,6 @@ var _ = Describe("validation", func() {
 				})
 			})
 
-			Context("dhcp domain validation", func() {
-				It("should forbid not specifying a value when the key is present", func() {
-					openStackCloudProfile.Spec.OpenStack.DHCPDomain = makeStringPointer("")
-
-					errorList := ValidateCloudProfile(openStackCloudProfile)
-
-					Expect(errorList).To(HaveLen(1))
-					Expect(*errorList[0]).To(MatchFields(IgnoreExtras, Fields{
-						"Type":  Equal(field.ErrorTypeRequired),
-						"Field": Equal(fmt.Sprintf("spec.%s.dhcpDomain", fldPath)),
-					}))
-				})
-			})
-
 			Context("requestTimeout validation", func() {
 				It("should reject invalid durations", func() {
 					openStackCloudProfile.Spec.OpenStack.RequestTimeout = makeStringPointer("1GiB")
@@ -2977,11 +2963,14 @@ var _ = Describe("validation", func() {
 						Version: "1.11.2",
 						KubeAPIServer: &garden.KubeAPIServerConfig{
 							OIDCConfig: &garden.OIDCConfig{
-								CABundle:       makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
-								ClientID:       makeStringPointer("client-id"),
-								GroupsClaim:    makeStringPointer("groups-claim"),
-								GroupsPrefix:   makeStringPointer("groups-prefix"),
-								IssuerURL:      makeStringPointer("https://some-endpoint.com"),
+								CABundle:     makeStringPointer("-----BEGIN CERTIFICATE-----\nMIICRzCCAfGgAwIBAgIJALMb7ecMIk3MMA0GCSqGSIb3DQEBCwUAMH4xCzAJBgNV\nBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNVBAcMBkxvbmRvbjEYMBYGA1UE\nCgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1JVCBEZXBhcnRtZW50MRswGQYD\nVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwIBcNMTcwNDI2MjMyNjUyWhgPMjExNzA0\nMDIyMzI2NTJaMH4xCzAJBgNVBAYTAkdCMQ8wDQYDVQQIDAZMb25kb24xDzANBgNV\nBAcMBkxvbmRvbjEYMBYGA1UECgwPR2xvYmFsIFNlY3VyaXR5MRYwFAYDVQQLDA1J\nVCBEZXBhcnRtZW50MRswGQYDVQQDDBJ0ZXN0LWNlcnRpZmljYXRlLTAwXDANBgkq\nhkiG9w0BAQEFAANLADBIAkEAtBMa7NWpv3BVlKTCPGO/LEsguKqWHBtKzweMY2CV\ntAL1rQm913huhxF9w+ai76KQ3MHK5IVnLJjYYA5MzP2H5QIDAQABo1AwTjAdBgNV\nHQ4EFgQU22iy8aWkNSxv0nBxFxerfsvnZVMwHwYDVR0jBBgwFoAU22iy8aWkNSxv\n0nBxFxerfsvnZVMwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAANBAEOefGbV\nNcHxklaW06w6OBYJPwpIhCVozC1qdxGX1dg8VkEKzjOzjgqVD30m59OFmSlBmHsl\nnkVA6wyOSDYBf3o=\n-----END CERTIFICATE-----"),
+								ClientID:     makeStringPointer("client-id"),
+								GroupsClaim:  makeStringPointer("groups-claim"),
+								GroupsPrefix: makeStringPointer("groups-prefix"),
+								IssuerURL:    makeStringPointer("https://some-endpoint.com"),
+								RequiredClaims: map[string]string{
+									"some": "claim",
+								},
 								UsernameClaim:  makeStringPointer("user-claim"),
 								UsernamePrefix: makeStringPointer("user-prefix"),
 							},
@@ -5479,6 +5468,7 @@ var _ = Describe("validation", func() {
 					"Field": Equal("spec.kubernetes.kubeAPIServer.oidcConfig.usernamePrefix"),
 				}))))
 			})
+<<<<<<< HEAD
 
 			It("should forbid unsupported OIDC configuration (for K8S >= v1.10)", func() {
 				shoot.Spec.Kubernetes.Version = "1.10.1"
@@ -5503,6 +5493,8 @@ var _ = Describe("validation", func() {
 
 				Expect(errorList).To(HaveLen(0))
 			})
+=======
+>>>>>>> Drop support for Kubernetes 1.10
 		})
 
 		Context("admission plugin validation", func() {
@@ -5785,7 +5777,9 @@ var _ = Describe("validation", func() {
 
 		It("should forbid kubernetes version upgrades skipping a minor version", func() {
 			newShoot := prepareShootForUpdate(shoot)
-			newShoot.Spec.Kubernetes.Version = "1.10.1"
+			newShoot.Spec.Kubernetes.Version = "1.13.1"
+			newShoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.DownscaleDelay = nil
+			newShoot.Spec.Kubernetes.KubeControllerManager.HorizontalPodAutoscalerConfig.UpscaleDelay = nil
 
 			errorList := ValidateShootUpdate(newShoot, shoot)
 

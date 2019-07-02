@@ -4,8 +4,8 @@ Currently, the Gardener supports the following Kubernetes versions:
 
 ## Garden cluster version
 
-:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.10.x`**.
-The reason for that is that the least supported Kubernetes version in Gardener is `1.10`.
+:warning: The minimum version of the garden cluster that can be used to run Gardener is **`1.11.x`**.
+The reason for that is that the least supported Kubernetes version in Gardener is `1.11`.
 
 ## Seed cluster versions
 
@@ -14,11 +14,11 @@ The reason for that is that we require CRD status subresources for the extension
 
 ## Shoot cluster versions
 
-| Cloud provider | Kubernetes 1.10 | Kubernetes 1.11 | Kubernetes 1.12 | Kubernetes 1.13 | Kubernetes 1.14 | Kubernetes 1.15 |
-| -------------- | --------------- | --------------- | --------------- | --------------- | --------------- | --------------- |
-| AWS            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
-| Azure          | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
-| GCP            | 1.10.0+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
-| OpenStack      | 1.10.1+         | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
-| Alicloud       | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         | 1.15.0+         |
-| Packet         | unsupported     | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         | 1.15.0+         |
+| Cloud provider | Kubernetes 1.11 | Kubernetes 1.12 | Kubernetes 1.13 | Kubernetes 1.14 | Kubernetes 1.15 |
+| -------------- | --------------- | --------------- | --------------- | --------------- | --------------- |
+| AWS            | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
+| Azure          | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
+| GCP            | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
+| OpenStack      | 1.11.0+         | 1.12.1+         | 1.13.0+         | 1.14.0+         | 1.15.0+         |
+| Alicloud       | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         | 1.15.0+         |
+| Packet         | unsupported     | unsupported     | 1.13.0+         | 1.14.0+         | 1.15.0+         |

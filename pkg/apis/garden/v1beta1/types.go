@@ -195,6 +195,7 @@ type OpenStackProfile struct {
 	DNSServers []string `json:"dnsServers,omitempty"`
 	// DHCPDomain is the dhcp domain of the OpenStack system configured in nova.conf. Only meaningful for
 	// Kubernetes 1.10.1+. See https://github.com/kubernetes/kubernetes/pull/61890 for details.
+	// DEPRECATED: This field will be removed in a future version.
 	// +optional
 	DHCPDomain *string `json:"dhcpDomain,omitempty"`
 	// RequestTimeout specifies the HTTP timeout against the OpenStack API.
@@ -1340,7 +1341,6 @@ type OIDCConfig struct {
 	// The URL of the OpenID issuer, only HTTPS scheme will be accepted. If set, it will be used to verify the OIDC JSON Web Token (JWT).
 	// +optional
 	IssuerURL *string `json:"issuerURL,omitempty"`
-	// ATTENTION: Only meaningful for Kubernetes >= 1.11
 	// key=value pairs that describes a required claim in the ID Token. If set, the claim is verified to be present in the ID Token with a matching value.
 	// +optional
 	RequiredClaims map[string]string `json:"requiredClaims,omitempty"`

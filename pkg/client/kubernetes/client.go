@@ -105,7 +105,6 @@ func NewClientFromSecretObject(secret *corev1.Secret, opts client.Options) (Inte
 }
 
 var supportedKubernetesVersions = []string{
-	"1.10",
 	"1.11",
 	"1.12",
 	"1.13",
