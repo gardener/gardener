@@ -635,3 +635,11 @@ func EffectiveShootMaintenanceTimeWindow(shoot *gardenv1beta1.Shoot) *utils.Main
 
 	return EffectiveMaintenanceTimeWindow(timeWindow)
 }
+
+// GetPersistentVolumeProvider gets the Persistent Volume Provider of seed cluster. If it is not specified, return ""
+func GetPersistentVolumeProvider(seed *gardenv1beta1.Seed) string {
+	if seed.Annotations == nil {
+		return ""
+	}
+	return seed.Annotations[AnnotatePersistentVolumeProvider]
+}
