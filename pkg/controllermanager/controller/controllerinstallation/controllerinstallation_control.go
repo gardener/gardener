@@ -20,8 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gardener/gardener/pkg/utils/flow"
-
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	gardenextensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -36,6 +34,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 	seedpkg "github.com/gardener/gardener/pkg/operation/seed"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/flow"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
 
 	multierror "github.com/hashicorp/go-multierror"
@@ -236,14 +235,15 @@ func (c *defaultControllerInstallationControl) reconcile(controllerInstallation 
 				"identity": c.gardenNamespace.UID,
 			},
 			"seed": map[string]interface{}{
-				"identity":      seed.Name,
-				"provider":      seedCloudProvider,
-				"region":        seed.Spec.Cloud.Region,
-				"ingressDomain": seed.Spec.IngressDomain,
-				"blockCIDRs":    seed.Spec.BlockCIDRs,
-				"protected":     seed.Spec.Protected,
-				"visible":       seed.Spec.Visible,
-				"networks":      seed.Spec.Networks,
+				"identity":       seed.Name,
+				"provider":       seedCloudProvider,
+				"volumeProvider": common.GetPersistentVolumeProvider(seed),
+				"region":         seed.Spec.Cloud.Region,
+				"ingressDomain":  seed.Spec.IngressDomain,
+				"blockCIDRs":     seed.Spec.BlockCIDRs,
+				"protected":      seed.Spec.Protected,
+				"visible":        seed.Spec.Visible,
+				"networks":       seed.Spec.Networks,
 			},
 		},
 	}
