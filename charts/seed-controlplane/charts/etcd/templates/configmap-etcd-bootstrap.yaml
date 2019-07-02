@@ -42,10 +42,14 @@ data:
                   sleep 1;
                   continue;;
             "Failed")
+                 sleep 1;
                   continue;;
             "Successful")
                   start_managed_etcd
                   break
+                  ;;
+            *)
+                  sleep 1;
                   ;;
             esac;
           done
