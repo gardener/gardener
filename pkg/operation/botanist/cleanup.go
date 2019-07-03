@@ -19,6 +19,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils/flow"
 
@@ -64,6 +68,12 @@ func MustNewRequirement(key string, op selection.Operator, vals ...string) label
 }
 
 var (
+	// FinalizeAfterFiveMinutes is an option to finalize resources after five minutes.
+	FinalizeAfterFiveMinutes = utilclient.FinalizeGracePeriod(5 * 60)
+
+	// ZeroGracePeriod is an option to delete resources with no grace period.
+	ZeroGracePeriod = utilclient.DeleteWith(utilclient.GracePeriodSeconds(0))
+
 	// NotSystemComponent is a requirement that something doesn't have the GardenRole GardenRoleSystemComponent.
 	NotSystemComponent = MustNewRequirement(common.GardenRole, selection.NotEquals, common.GardenRoleSystemComponent)
 	// NoCleanupPrevention is a requirement that the ShootNoCleanup label of something is not true.
@@ -76,36 +86,36 @@ var (
 	// CleanupSelector is a selector that excludes system components and all resources not considered for auto cleanup.
 	CleanupSelector = labels.NewSelector().Add(NotSystemComponent).Add(NoCleanupPrevention)
 
-	// NoCleanupPreventionListOptions are ListOptions that exclude system components or non-auto clean upped resource.
+	// NoCleanupPreventionListOptions are CollectionMatching that exclude system components or non-auto clean upped resource.
 	NoCleanupPreventionListOptions = client.ListOptions{
 		LabelSelector: CleanupSelector,
 	}
 
 	// MutatingWebhookConfigurationCleanOptions is the delete selector for MutatingWebhookConfigurations.
-	MutatingWebhookConfigurationCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	MutatingWebhookConfigurationCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// ValidatingWebhookConfigurationCleanOptions is the delete selector for ValidatingWebhookConfigurations.
-	ValidatingWebhookConfigurationCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	ValidatingWebhookConfigurationCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// CustomResourceDefinitionCleanOptions is the delete selector for CustomResources.
-	CustomResourceDefinitionCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	CustomResourceDefinitionCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// DaemonSetCleanOptions is the delete selector for DaemonSets.
-	DaemonSetCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	DaemonSetCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// DeploymentCleanOptions is the delete selector for Deployments.
-	DeploymentCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	DeploymentCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// StatefulSetCleanOptions is the delete selector for StatefulSets.
-	StatefulSetCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	StatefulSetCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// ServiceCleanOptions is the delete selector for Services.
-	ServiceCleanOptions = ListOptions(client.UseListOptions(&client.ListOptions{
+	ServiceCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&client.ListOptions{
 		LabelSelector: labels.NewSelector().Add(NotKubernetesProvider, NotSystemComponent, NoCleanupPrevention),
-	}))
+	})))
 
 	// NamespaceCleanOptions is the delete selector for Namespaces.
-	NamespaceCleanOptions = ListOptions(client.UseListOptions(&client.ListOptions{
+	NamespaceCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&client.ListOptions{
 		LabelSelector: CleanupSelector,
 		FieldSelector: fields.AndSelectors(
 			fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespacePublic),
@@ -113,65 +123,47 @@ var (
 			fields.OneTermNotEqualSelector(MetadataNameField, metav1.NamespaceDefault),
 			fields.OneTermNotEqualSelector(MetadataNameField, corev1.NamespaceNodeLease),
 		),
-	}))
+	})))
 
 	// APIServiceCleanOptions is the delete selector for APIServices.
-	APIServiceCleanOptions = ListOptions(client.UseListOptions(&client.ListOptions{
+	APIServiceCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&client.ListOptions{
 		LabelSelector: labels.NewSelector().Add(NotSystemComponent, NotKubeAggregatorAutoManaged),
-	}))
+	})))
 
 	// CronJobCleanOptions is the delete selector for CronJobs.
-	CronJobCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	CronJobCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// IngressCleanOptions is the delete selector for Ingresses.
-	IngressCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	IngressCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// JobCleanOptions is the delete selector for Jobs.
-	JobCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	JobCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// PodCleanOptions is the delete selector for Pods.
-	PodCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	PodCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// ReplicaSetCleanOptions is the delete selector for ReplicaSets.
-	ReplicaSetCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	ReplicaSetCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// ReplicationControllerCleanOptions is the delete selector for ReplicationControllers.
-	ReplicationControllerCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	ReplicationControllerCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 
 	// PersistentVolumeClaimCleanOptions is the delete selector for PersistentVolumeClaims.
-	PersistentVolumeClaimCleanOptions = ListOptions(client.UseListOptions(&NoCleanupPreventionListOptions))
+	PersistentVolumeClaimCleanOptions = utilclient.DeleteWith(utilclient.CollectionMatching(client.UseListOptions(&NoCleanupPreventionListOptions)))
 )
 
-func cleanResourceFn(c client.Client, list runtime.Object, finalize bool, opts ...CleanOptionFunc) flow.TaskFn {
-	mkCleaner := func(finalize bool) flow.TaskFn {
-		newOpts := make([]CleanOptionFunc, len(opts), len(opts)+1)
-		copy(newOpts, opts)
-
-		if !finalize {
-			newOpts = append(newOpts, DeleteOptions(client.GracePeriodSeconds(0)))
-		} else {
-			newOpts = append(newOpts, Finalize)
-		}
-
-		return func(ctx context.Context) error {
-			return RetryCleanMatchingUntil(ctx, DefaultInterval, c, list, newOpts...)
-		}
-	}
-	if !finalize {
-		return mkCleaner(false).Retry(5 * time.Second)
-	}
-
+func cleanResourceFn(c client.Client, list runtime.Object, opts ...utilclient.CleanOptionFunc) flow.TaskFn {
 	return func(ctx context.Context) error {
-		timeout := splitTimeout(ctx, 5*time.Minute)
-		return mkCleaner(false).RetryUntilTimeout(5*time.Second, timeout).Recover(mkCleaner(true).Retry(5 * time.Second).ToRecoverFn())(ctx)
+		return retry.Until(ctx, DefaultInterval, func(ctx context.Context) (done bool, err error) {
+			if err := utilclient.CleanAndEnsureGone(ctx, c, list, opts...); err != nil {
+				if utilclient.AreObjectsRemaining(err) {
+					return retry.MinorError(err)
+				}
+				return retry.SevereError(err)
+			}
+			return retry.Ok()
+		})
 	}
-}
-
-func splitTimeout(deadlineCtx context.Context, fallback time.Duration) time.Duration {
-	if deadline, ok := deadlineCtx.Deadline(); ok {
-		return deadline.Sub(time.Now()) / 2
-	}
-	return fallback
 }
 
 // CleanWebhooks deletes all Webhooks in the Shoot cluster that are not being managed by the addon manager.
@@ -179,8 +171,8 @@ func (b *Botanist) CleanWebhooks(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
 
 	return flow.Parallel(
-		cleanResourceFn(c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, true, MutatingWebhookConfigurationCleanOptions),
-		cleanResourceFn(c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, true, ValidatingWebhookConfigurationCleanOptions),
+		cleanResourceFn(c, &admissionregistrationv1beta1.MutatingWebhookConfigurationList{}, MutatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &admissionregistrationv1beta1.ValidatingWebhookConfigurationList{}, ValidatingWebhookConfigurationCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 	)(ctx)
 }
 
@@ -189,8 +181,8 @@ func (b *Botanist) CleanExtendedAPIs(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
 
 	return flow.Parallel(
-		cleanResourceFn(c, &apiregistrationv1beta1.APIServiceList{}, true, APIServiceCleanOptions),
-		cleanResourceFn(c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, true, CustomResourceDefinitionCleanOptions),
+		cleanResourceFn(c, &apiregistrationv1beta1.APIServiceList{}, APIServiceCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
+		cleanResourceFn(c, &apiextensionsv1beta1.CustomResourceDefinitionList{}, CustomResourceDefinitionCleanOptions, ZeroGracePeriod, FinalizeAfterFiveMinutes),
 	)(ctx)
 }
 
@@ -202,18 +194,18 @@ func (b *Botanist) CleanKubernetesResources(ctx context.Context) error {
 	c := b.K8sShootClient.Client()
 
 	return flow.Parallel(
-		cleanResourceFn(c, &batchv1beta1.CronJobList{}, false, CronJobCleanOptions),
-		cleanResourceFn(c, &appsv1.DaemonSetList{}, false, DaemonSetCleanOptions),
-		cleanResourceFn(c, &appsv1.DeploymentList{}, false, DeploymentCleanOptions),
-		cleanResourceFn(c, &extensionsv1beta1.IngressList{}, false, IngressCleanOptions),
-		cleanResourceFn(c, &batchv1.JobList{}, false, JobCleanOptions),
-		cleanResourceFn(c, &corev1.NamespaceList{}, false, NamespaceCleanOptions),
-		cleanResourceFn(c, &corev1.PodList{}, false, PodCleanOptions),
-		cleanResourceFn(c, &appsv1.ReplicaSetList{}, false, ReplicaSetCleanOptions),
-		cleanResourceFn(c, &corev1.ReplicationControllerList{}, false, ReplicationControllerCleanOptions),
-		cleanResourceFn(c, &corev1.ServiceList{}, false, ServiceCleanOptions),
-		cleanResourceFn(c, &appsv1.StatefulSetList{}, false, StatefulSetCleanOptions),
-		cleanResourceFn(c, &corev1.PersistentVolumeClaimList{}, false, PersistentVolumeClaimCleanOptions),
+		cleanResourceFn(c, &batchv1beta1.CronJobList{}, CronJobCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &appsv1.DaemonSetList{}, DaemonSetCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &appsv1.DeploymentList{}, DeploymentCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &extensionsv1beta1.IngressList{}, IngressCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &batchv1.JobList{}, JobCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &corev1.NamespaceList{}, NamespaceCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &corev1.PodList{}, PodCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &appsv1.ReplicaSetList{}, ReplicaSetCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &corev1.ReplicationControllerList{}, ReplicationControllerCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &corev1.ServiceList{}, ServiceCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &appsv1.StatefulSetList{}, StatefulSetCleanOptions, ZeroGracePeriod),
+		cleanResourceFn(c, &corev1.PersistentVolumeClaimList{}, PersistentVolumeClaimCleanOptions, ZeroGracePeriod),
 	)(ctx)
 }
 

@@ -215,7 +215,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 
 		cleanupWebhooks = g.Add(flow.Task{
 			Name:         "Cleaning up webhooks",
-			Fn:           flow.TaskFn(botanist.CleanWebhooks).DoIf(cleanupShootResources),
+			Fn:           flow.TaskFn(botanist.CleanWebhooks).Timeout(10 * time.Minute).DoIf(cleanupShootResources),
 			Dependencies: flow.NewTaskIDs(initializeShootClients, wakeUpControlPlane),
 		})
 		waitForControllersToBeActive = g.Add(flow.Task{
