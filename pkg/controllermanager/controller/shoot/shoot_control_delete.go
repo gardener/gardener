@@ -261,7 +261,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		deleteKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deleting Kubernetes API server",
 			Fn:           flow.TaskFn(botanist.DeleteKubeAPIServer).Retry(defaultInterval),
-			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilWorkerDeleted),
+			Dependencies: flow.NewTaskIDs(syncPointCleaned, waitUntilManagedResourcesDeleted),
 		})
 		destroyControlPlane = g.Add(flow.Task{
 			Name:         "Destroying Shoot control plane",
