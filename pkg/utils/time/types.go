@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package context
+package time
 
-import (
-	"context"
-	"time"
-)
+import "time"
 
-type ops struct{}
-
-// WithTimeout returns the context with the given timeout and a CancelFunc to cleanup its resources.
-func (ops) WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, timeout)
-}
-
-// DefaultOps returns the default Ops implementation.
-func DefaultOps() Ops {
-	return ops{}
+// Ops are time related operations.
+type Ops interface {
+	// Now returns the current time.
+	Now() time.Time
 }

@@ -100,6 +100,11 @@ func Key(namespaceOrName string, nameOpt ...string) client.ObjectKey {
 	return client.ObjectKey{Namespace: namespace, Name: name}
 }
 
+// KeyFromObject obtains the client.ObjectKey from the given metav1.Object.
+func KeyFromObject(obj metav1.Object) client.ObjectKey {
+	return Key(obj.GetNamespace(), obj.GetName())
+}
+
 // ObjectMeta creates a new metav1.ObjectMeta from the given parameters.
 // There are only two ways to call this function:
 // - If only namespaceOrName is set, then a metav1.ObjectMeta with name set to namespaceOrName is returned.

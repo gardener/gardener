@@ -17,11 +17,13 @@ package botanist
 import (
 	"context"
 
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+
 	resourcesv1alpha1 "github.com/gardener/gardener-resource-manager/pkg/apis/resources/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // DeleteManagedResources deletes all managed resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteManagedResources(ctx context.Context) error {
-	return DeleteMatching(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, ListOptions(client.InNamespace(b.Shoot.SeedNamespace)))
+	return utilclient.Delete(ctx, b.K8sSeedClient.Client(), &resourcesv1alpha1.ManagedResourceList{}, utilclient.CollectionMatching(client.InNamespace(b.Shoot.SeedNamespace)))
 }
