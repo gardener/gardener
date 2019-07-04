@@ -411,8 +411,10 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 			"reserve-excess-capacity": DesiredExcessCapacity(numberOfAssociatedShoots),
 		},
 		"prometheus": map[string]interface{}{
-			"objectCount": nodeCount,
-			"storage":     seed.GetValidVolumeSize("10Gi"),
+			"storage": seed.GetValidVolumeSize("10Gi"),
+		},
+		"aggregatePrometheus": map[string]interface{}{
+			"storage": seed.GetValidVolumeSize("20Gi"),
 		},
 		"elastic-kibana-curator": map[string]interface{}{
 			"enabled": loggingEnabled,

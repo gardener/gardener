@@ -3,4 +3,5 @@ kind: ConfigMap
 metadata:
   name: prometheus-rules
   namespace: {{ .Release.Namespace }}
-data: {}
+data:
+{{ (.Files.Glob "prometheus-rules/**").AsConfig | indent 2 }}

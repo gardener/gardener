@@ -65,3 +65,6 @@ groups:
       description: Etcd3 pod {{ $labels.pod }} has seen {{ $value }} proposal failures
         within the last hour.
       summary: High number of failed etcd proposals
+
+  - record: shoot:etcd_object_counts:sum_by_resource
+    expr: sum(etcd_object_counts) by (resource)

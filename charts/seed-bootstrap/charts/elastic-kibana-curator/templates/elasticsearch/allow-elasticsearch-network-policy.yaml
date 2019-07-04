@@ -25,10 +25,19 @@ spec:
           role: garden
     - podSelector:
         matchLabels:
+          app: aggregate-prometheus
+          role: monitoring
+      namespaceSelector:
+        matchLabels:
+          role: garden
+    - podSelector:
+        matchLabels:
           networking.gardener.cloud/to-elasticsearch: allowed
     ports:
     - protocol: TCP
       port: {{ .Values.global.elasticsearchPorts.db }}
+    - protocol: TCP
+      port: {{ .Values.global.elasticsearchPorts.metricsExporter }}
   policyTypes:
   - Ingress
   egress: []
