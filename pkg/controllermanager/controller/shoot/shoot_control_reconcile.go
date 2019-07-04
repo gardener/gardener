@@ -238,7 +238,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		})
 		deploySeedMonitoring = g.Add(flow.Task{
 			Name:         "Deploying Shoot monitoring stack in Seed",
-			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.TaskFn(botanist.DeploySeedMonitoring).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, initializeShootClients, waitUntilVPNConnectionExists, waitUntilWorkerReady),
 		})
 		deploySeedLogging = g.Add(flow.Task{
