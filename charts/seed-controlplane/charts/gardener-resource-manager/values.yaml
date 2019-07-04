@@ -9,9 +9,6 @@ resources:
     cpu: 400m
     memory: 512Mi
 
-vpa:
-  enabled: true
-
 replicas: 1
 syncPeriod: 1m0s
 concurrentSyncs: 20

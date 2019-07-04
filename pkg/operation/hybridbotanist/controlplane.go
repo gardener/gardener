@@ -21,8 +21,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/client/kubernetes"
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -139,9 +137,6 @@ func (b *HybridBotanist) DeployETCD() error {
 			"checksum/secret-etcd-ca":         b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
 			"checksum/secret-etcd-server-tls": b.CheckSums["etcd-server-tls"],
 			"checksum/secret-etcd-client-tls": b.CheckSums["etcd-client-tls"],
-		},
-		"vpa": map[string]interface{}{
-			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
 		"storageCapacity": b.Seed.GetValidVolumeSize("10Gi"),
 	}
@@ -275,9 +270,6 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-service-account-key":       b.CheckSums["service-account-key"],
 			"checksum/secret-etcd-ca":                   b.CheckSums[gardencorev1alpha1.SecretNameCAETCD],
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
-		},
-		"vpa": map[string]interface{}{
-			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
 	}
 
@@ -456,9 +448,6 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
 		},
 		"objectCount": b.Shoot.GetNodeCount(),
-		"vpa": map[string]interface{}{
-			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-		},
 	}
 
 	if b.Shoot.IsHibernated {
@@ -494,9 +483,6 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-kube-scheduler":        b.CheckSums[common.KubeSchedulerDeploymentName],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
-		},
-		"vpa": map[string]interface{}{
-			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
 		},
 	}
 

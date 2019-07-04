@@ -45,7 +45,6 @@ spec:
     component: kube-state-metrics
     type: seed
 ---
-{{ if .Values.vpa.enabled }}
 apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
@@ -58,7 +57,6 @@ spec:
     name: kube-state-metrics-seed
   updatePolicy:
     updateMode: "Auto"
-{{ end }}
 ---
 apiVersion: {{ include "deploymentversion" . }}
 kind: Deployment
@@ -118,8 +116,3 @@ spec:
           requests:
             cpu: 10m
             memory: 32Mi
-{{ if not .Values.vpa.enabled }}
-          limits:
-            cpu: 50m
-            memory: 64Mi
-{{ end }}

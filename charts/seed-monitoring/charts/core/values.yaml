@@ -12,8 +12,6 @@ prometheus:
     prometheus: image-repository:image-tag
     configmap-reloader: image-repository:image-tag
     vpn-seed: image-repository:image-tag
-  vpa:
-    enabled: false
 kube-state-metrics-seed:
   replicas: 1
   images:

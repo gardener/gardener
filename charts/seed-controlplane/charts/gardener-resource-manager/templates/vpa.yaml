@@ -1,4 +1,3 @@
-{{ if .Values.vpa.enabled }}
 apiVersion: "autoscaling.k8s.io/v1beta2"
 kind: VerticalPodAutoscaler
 metadata:
@@ -14,4 +13,3 @@ spec:
     name: gardener-resource-manager
   updatePolicy:
     updateMode: "Off"
-{{ end }}

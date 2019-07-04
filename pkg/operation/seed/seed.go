@@ -136,7 +136,19 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 		return nil, fmt.Errorf("missing certificate authorities")
 	}
 
-	secretList := []utilsecrets.ConfigInterface{}
+	secretList := []utilsecrets.ConfigInterface{
+		&utilsecrets.CertificateSecretConfig{
+			Name: "vpa-tls-certs",
+
+			CommonName:   "vpa-webhook.garden.svc",
+			Organization: nil,
+			DNSNames:     []string{"vpa-webhook.garden.svc", "vpa-webhook"},
+			IPAddresses:  nil,
+
+			CertType:  utilsecrets.ServerCert,
+			SigningCA: certificateAuthorities[caSeed],
+		},
+	}
 
 	// Logging feature gate
 	if controllermanagerfeatures.FeatureGate.Enabled(features.Logging) {
@@ -168,23 +180,6 @@ func generateWantedSecrets(seed *Seed, certificateAuthorities map[string]*utilse
 				Username:                  "fluentd",
 				PasswordLength:            32,
 				BcryptPasswordHashRequest: true,
-			},
-		)
-	}
-
-	// VPA feature gate
-	if controllermanagerfeatures.FeatureGate.Enabled(features.VPA) {
-		secretList = append(secretList,
-			&utilsecrets.CertificateSecretConfig{
-				Name: "vpa-tls-certs",
-
-				CommonName:   "vpa-webhook.garden.svc",
-				Organization: nil,
-				DNSNames:     []string{"vpa-webhook.garden.svc", "vpa-webhook"},
-				IPAddresses:  nil,
-
-				CertType:  utilsecrets.ServerCert,
-				SigningCA: certificateAuthorities[caSeed],
 			},
 		)
 	}
@@ -310,39 +305,29 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		}
 	}
 
-	// VPA feature gate
-	var (
-		vpaEnabled        = controllermanagerfeatures.FeatureGate.Enabled(features.VPA)
-		vpaPodAnnotations map[string]interface{}
-	)
+	var vpaPodAnnotations map[string]interface{}
 
-	if vpaEnabled {
-		existingSecrets := &corev1.SecretList{}
-		if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(common.GardenNamespace)); err != nil {
-			return err
-		}
+	existingSecrets := &corev1.SecretList{}
+	if err = k8sSeedClient.Client().List(context.TODO(), existingSecrets, client.InNamespace(common.GardenNamespace)); err != nil {
+		return err
+	}
 
-		for _, secret := range existingSecrets.Items {
-			secretObj := secret
-			existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
-		}
+	for _, secret := range existingSecrets.Items {
+		secretObj := secret
+		existingSecretsMap[secret.ObjectMeta.Name] = &secretObj
+	}
 
-		deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
-		if err != nil {
-			return err
-		}
-		jsonString, err := json.Marshal(deployedSecretsMap["vpa-tls-certs"].Data)
-		if err != nil {
-			return err
-		}
+	deployedSecretsMap, err := deployCertificates(seed, k8sSeedClient, existingSecretsMap)
+	if err != nil {
+		return err
+	}
+	jsonString, err := json.Marshal(deployedSecretsMap["vpa-tls-certs"].Data)
+	if err != nil {
+		return err
+	}
 
-		vpaPodAnnotations = map[string]interface{}{
-			"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
-		}
-	} else {
-		if err := common.DeleteVpa(k8sSeedClient, common.GardenNamespace); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
+	vpaPodAnnotations = map[string]interface{}{
+		"checksum/secret-vpa-tls-certs": utils.ComputeSHA256Hex(jsonString),
 	}
 
 	// Cleanup legacy external admission controller (no longer needed).
@@ -464,7 +449,6 @@ func BootstrapCluster(seed *Seed, secrets map[string]*corev1.Secret, imageVector
 		},
 		"alertmanager": alertManagerConfig,
 		"vpa": map[string]interface{}{
-			"enabled":        vpaEnabled,
 			"podAnnotations": vpaPodAnnotations,
 		},
 		"global-network-policies": map[string]interface{}{

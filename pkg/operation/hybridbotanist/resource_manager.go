@@ -18,8 +18,6 @@ import (
 	"context"
 	"path/filepath"
 
-	controllermanagerfeatures "github.com/gardener/gardener/pkg/controllermanager/features"
-	"github.com/gardener/gardener/pkg/features"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -33,9 +31,6 @@ func (b *HybridBotanist) DeployGardenerResourceManager(ctx context.Context) erro
 			"checksum/secret-" + name: b.CheckSums[name],
 		},
 		"replicas": b.Shoot.GetReplicas(1),
-		"vpa": map[string]interface{}{
-			"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-		},
 	}
 
 	values, err := b.InjectSeedShootImages(defaultValues, common.GardenerResourceManagerImageName)

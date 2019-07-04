@@ -114,13 +114,9 @@ spec:
           containerPort: 9090
           protocol: TCP
         resources:
-{{- if .Values.vpa.enabled }}
           requests:
             cpu: 30m
             memory: 500Mi
-{{- else }}
-{{- include "util-templates.resource-quantity" .Values | indent 10 -}}
-{{ end }}
         volumeMounts:
         - mountPath: /srv/kubernetes/prometheus-kubelet
           name: prometheus-kubelet
