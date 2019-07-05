@@ -17,7 +17,8 @@ package botanist
 import (
 	"context"
 	"fmt"
-	"time"
+
+	"github.com/gardener/gardener/pkg/utils/retry"
 
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
@@ -29,7 +30,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -68,19 +68,16 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 	fns := make([]flow.TaskFn, 0, len(b.Shoot.Extensions))
 	for _, extension := range b.Shoot.Extensions {
 		var (
-			name                 = extension.Name
-			namespace            = extension.Namespace
-			timedContext, cancel = context.WithTimeout(ctx, extension.Timeout)
+			name      = extension.Name
+			namespace = extension.Namespace
 		)
 		fns = append(fns, func(ctx context.Context) error {
-			defer cancel()
-
 			var lastError *gardencorev1alpha1.LastError
 
-			if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+			if err := retry.UntilTimeout(ctx, DefaultInterval, shoot.ExtensionDefaultTimeout, func(ctx context.Context) (bool, error) {
 				req := &extensionsv1alpha1.Extension{}
 				if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(namespace, name), req); err != nil {
-					return false, err
+					return retry.SevereError(err)
 				}
 
 				if lastErr := req.Status.LastError; lastErr != nil {
@@ -91,12 +88,12 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 				if req.Status.LastOperation != nil &&
 					req.Status.LastOperation.State == corev1alpha1.LastOperationStateSucceeded &&
 					req.Status.ObservedGeneration == req.Generation {
-					return true, nil
+					return retry.Ok()
 				}
 
 				b.Logger.Infof("Waiting for extension %s/%s to be ready...", namespace, name)
-				return false, nil
-			}, timedContext.Done()); err != nil {
+				return retry.MinorError(wrapWithLastError(fmt.Errorf("extension %s/%s is not yet ready", namespace, name), lastError))
+			}); err != nil {
 				message := fmt.Sprintf("Failed waiting for extension %s is ready", name)
 				if lastError != nil {
 					return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
@@ -118,12 +115,9 @@ func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.
 func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error {
 	var (
-		lastError *gardencorev1alpha1.LastError
-
-		extensions           = &extensionsv1alpha1.ExtensionList{}
-		timedContext, cancel = context.WithTimeout(ctx, shoot.ExtensionDefaultTimeout)
+		lastError  *gardencorev1alpha1.LastError
+		extensions = &extensionsv1alpha1.ExtensionList{}
 	)
-	defer cancel()
 
 	if err := b.K8sSeedClient.Client().List(ctx, extensions, client.InNamespace(b.Shoot.SeedNamespace)); err != nil {
 		return err
@@ -138,12 +132,12 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 		)
 
 		fns = append(fns, func(ctx context.Context) error {
-			if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+			if err := retry.UntilTimeout(ctx, DefaultInterval, shoot.ExtensionDefaultTimeout, func(ctx context.Context) (bool, error) {
 				if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(namespace, name), &extensionsv1alpha1.Extension{}); err != nil {
 					if apierrors.IsNotFound(err) {
-						return true, nil
+						return retry.Ok()
 					}
-					return false, err
+					return retry.SevereError(err)
 				}
 
 				if lastErr := status.LastError; lastErr != nil {
@@ -151,8 +145,8 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 					lastError = lastErr
 				}
 
-				return false, nil
-			}, ctx.Done()); err != nil {
+				return retry.MinorError(wrapWithLastError(fmt.Errorf("extension %s is still present", name), lastError))
+			}); err != nil {
 				message := fmt.Sprintf("Failed waiting for extension delete")
 				if lastError != nil {
 					return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
@@ -163,5 +157,5 @@ func (b *Botanist) WaitUntilExtensionResourcesDeleted(ctx context.Context) error
 		})
 	}
 
-	return flow.Parallel(fns...)(timedContext)
+	return flow.Parallel(fns...)(ctx)
 }

@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -32,7 +34,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -99,17 +100,14 @@ func (b *Botanist) DestroyInfrastructure(ctx context.Context) error {
 // WaitUntilInfrastructureReady waits until the infrastructure resource has been reconciled successfully.
 func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 	var (
-		timedContext, cancel = context.WithTimeout(ctx, InfrastructureDefaultTimeout)
 		lastError            *gardencorev1alpha1.LastError
 		infrastructureStatus []byte
 	)
 
-	defer cancel()
-
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, DefaultInterval, InfrastructureDefaultTimeout, func(ctx context.Context) (bool, error) {
 		infrastructure := &extensionsv1alpha1.Infrastructure{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, infrastructure); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if lastErr := infrastructure.Status.LastError; lastErr != nil {
@@ -125,12 +123,12 @@ func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 			if providerStatus := infrastructure.Status.ProviderStatus; providerStatus != nil {
 				infrastructureStatus = providerStatus.Raw
 			}
-			return true, nil
+			return retry.Ok()
 		}
 
 		b.Logger.Infof("Waiting for infrastructure to be ready...")
-		return false, nil
-	}, timedContext.Done()); err != nil {
+		return retry.MinorError(wrapWithLastError(fmt.Errorf("infrastructure is not yet ready"), lastError))
+	}); err != nil {
 		message := fmt.Sprintf("Failed to create infrastructure")
 		if lastError != nil {
 			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
@@ -144,20 +142,15 @@ func (b *Botanist) WaitUntilInfrastructureReady(ctx context.Context) error {
 
 // WaitUntilInfrastructureDeleted waits until the infrastructure resource has been deleted.
 func (b *Botanist) WaitUntilInfrastructureDeleted(ctx context.Context) error {
-	var (
-		timedContext, cancel = context.WithTimeout(ctx, InfrastructureDefaultTimeout)
-		lastError            *gardencorev1alpha1.LastError
-	)
+	var lastError *gardencorev1alpha1.LastError
 
-	defer cancel()
-
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, DefaultInterval, InfrastructureDefaultTimeout, func(ctx context.Context) (bool, error) {
 		infrastructure := &extensionsv1alpha1.Infrastructure{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, infrastructure); err != nil {
 			if apierrors.IsNotFound(err) {
-				return true, nil
+				return retry.Ok()
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if lastErr := infrastructure.Status.LastError; lastErr != nil {
@@ -166,8 +159,8 @@ func (b *Botanist) WaitUntilInfrastructureDeleted(ctx context.Context) error {
 		}
 
 		b.Logger.Infof("Waiting for infrastructure to be deleted...")
-		return false, nil
-	}, timedContext.Done()); err != nil {
+		return retry.MinorError(wrapWithLastError(fmt.Errorf("infrastructure is still present"), lastError))
+	}); err != nil {
 		message := fmt.Sprintf("Failed to delete infrastructure")
 		if lastError != nil {
 			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))

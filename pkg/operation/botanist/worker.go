@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -29,7 +31,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -116,17 +117,14 @@ func (b *Botanist) DestroyWorker(ctx context.Context) error {
 // WaitUntilWorkerReady waits until the worker extension resource has been successfully reconciled.
 func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 	var (
-		timedContext, cancel = context.WithTimeout(ctx, WorkerDefaultTimeout)
-		lastError            *gardencorev1alpha1.LastError
-		machineDeployments   []extensionsv1alpha1.MachineDeployment
+		lastError          *gardencorev1alpha1.LastError
+		machineDeployments []extensionsv1alpha1.MachineDeployment
 	)
 
-	defer cancel()
-
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, DefaultInterval, WorkerDefaultTimeout, func(ctx context.Context) (bool, error) {
 		worker := &extensionsv1alpha1.Worker{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, worker); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if lastErr := worker.Status.LastError; lastErr != nil {
@@ -139,12 +137,12 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 			worker.Status.ObservedGeneration == worker.Generation {
 
 			machineDeployments = worker.Status.MachineDeployments
-			return true, nil
+			return retry.Ok()
 		}
 
 		b.Logger.Infof("Waiting for worker to be ready...")
-		return false, nil
-	}, timedContext.Done()); err != nil {
+		return retry.MinorError(wrapWithLastError(fmt.Errorf("worker is not yet ready"), lastError))
+	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for worker object to become ready")
 		if lastError != nil {
 			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
@@ -158,20 +156,15 @@ func (b *Botanist) WaitUntilWorkerReady(ctx context.Context) error {
 
 // WaitUntilWorkerDeleted waits until the worker extension resource has been deleted.
 func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
-	var (
-		timedContext, cancel = context.WithTimeout(ctx, WorkerDefaultTimeout)
-		lastError            *gardencorev1alpha1.LastError
-	)
+	var lastError *gardencorev1alpha1.LastError
 
-	defer cancel()
-
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, DefaultInterval, WorkerDefaultTimeout, func(ctx context.Context) (bool, error) {
 		worker := &extensionsv1alpha1.Worker{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, worker); err != nil {
 			if apierrors.IsNotFound(err) {
-				return true, nil
+				return retry.Ok()
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if lastErr := worker.Status.LastError; lastErr != nil {
@@ -180,8 +173,8 @@ func (b *Botanist) WaitUntilWorkerDeleted(ctx context.Context) error {
 		}
 
 		b.Logger.Infof("Waiting for worker to be deleted...")
-		return false, nil
-	}, timedContext.Done()); err != nil {
+		return retry.MinorError(wrapWithLastError(fmt.Errorf("worker is still present"), lastError))
+	}); err != nil {
 		message := fmt.Sprintf("Error while waiting for worker object to be deleted")
 		if lastError != nil {
 			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
