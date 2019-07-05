@@ -20,6 +20,8 @@ import (
 
 	"github.com/gardener/gardener/pkg/utils/retry"
 
+	utilclient "github.com/gardener/gardener/pkg/utils/kubernetes/client"
+
 	corev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
@@ -109,7 +111,7 @@ func (b *Botanist) WaitUntilExtensionResourcesReady(ctx context.Context) error {
 
 // DeleteExtensionResources deletes all extension resources from the Shoot namespace in the Seed.
 func (b *Botanist) DeleteExtensionResources(ctx context.Context) error {
-	return DeleteMatching(ctx, b.K8sSeedClient.Client(), &extensionsv1alpha1.ExtensionList{}, ListOptions(client.InNamespace(b.Shoot.SeedNamespace)))
+	return utilclient.Delete(ctx, b.K8sSeedClient.Client(), &extensionsv1alpha1.ExtensionList{}, utilclient.CollectionMatching(client.InNamespace(b.Shoot.SeedNamespace)))
 }
 
 // WaitUntilExtensionResourcesDeleted waits until all extension resources are gone or the context is cancelled.

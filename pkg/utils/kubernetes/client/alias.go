@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package context
+package client
 
-import (
-	"context"
-	"time"
+var (
+	// Clean is an alias for `DefaultCleaner().Clean`.
+	Clean = DefaultCleaner().Clean
+
+	// CleanAndEnsureGone is an alias for `DefaultCleanOps().CleanAndEnsureGone`.
+	CleanAndEnsureGone = DefaultCleanOps().CleanAndEnsureGone
 )
-
-type ops struct{}
-
-// WithTimeout returns the context with the given timeout and a CancelFunc to cleanup its resources.
-func (ops) WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, timeout)
-}
-
-// DefaultOps returns the default Ops implementation.
-func DefaultOps() Ops {
-	return ops{}
-}

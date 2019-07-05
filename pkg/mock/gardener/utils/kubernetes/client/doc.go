@@ -12,21 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package context
+//go:generate mockgen -package=client -destination=mocks.go github.com/gardener/gardener/pkg/utils/kubernetes/client Cleaner,GoneEnsurer
 
-import (
-	"context"
-	"time"
-)
-
-type ops struct{}
-
-// WithTimeout returns the context with the given timeout and a CancelFunc to cleanup its resources.
-func (ops) WithTimeout(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
-	return context.WithTimeout(ctx, timeout)
-}
-
-// DefaultOps returns the default Ops implementation.
-func DefaultOps() Ops {
-	return ops{}
-}
+package client
