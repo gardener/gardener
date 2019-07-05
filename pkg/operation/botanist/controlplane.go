@@ -347,22 +347,13 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 				"apiserver": fmt.Sprintf("https://%s", b.Shoot.InternalClusterDomain),
 				"provider":  b.Shoot.CloudProvider,
 			},
-			"vpa": map[string]interface{}{
-				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-			},
 			"ignoreAlerts": b.Shoot.IgnoreAlerts,
 		}
 		kubeStateMetricsSeedConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
-			"vpa": map[string]interface{}{
-				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-			},
 		}
 		kubeStateMetricsShootConfig = map[string]interface{}{
 			"replicas": b.Shoot.GetReplicas(1),
-			"vpa": map[string]interface{}{
-				"enabled": controllermanagerfeatures.FeatureGate.Enabled(features.VPA),
-			},
 		}
 	)
 

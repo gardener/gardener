@@ -30,9 +30,4 @@ const (
 	// owner @mvladev, @ialidzhikov
 	// alpha: v0.13.0
 	Logging utilfeature.Feature = "Logging"
-
-	// VPA enables vertical pod autoscaling in Seed clusters.
-	// owner @wyb1
-	// alpha: v0.1.0
-	VPA utilfeature.Feature = "VPA"
 )

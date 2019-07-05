@@ -282,6 +282,3 @@ resources:
       perObject: 60
       weight: 5
       unit: Mi
-
-vpa:
-  enabled: true
