@@ -23,6 +23,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardencorev1alpha1helper "github.com/gardener/gardener/pkg/apis/core/v1alpha1/helper"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
@@ -42,7 +44,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -758,17 +759,14 @@ func (b *Botanist) DestroyControlPlane(ctx context.Context) error {
 // WaitUntilControlPlaneReady waits until the control plane resource has been reconciled successfully.
 func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
 	var (
-		timedContext, cancel = context.WithTimeout(ctx, ControlPlaneDefaultTimeout)
-		lastError            *gardencorev1alpha1.LastError
-		cpStatus             []byte
+		lastError *gardencorev1alpha1.LastError
+		cpStatus  []byte
 	)
 
-	defer cancel()
-
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if lastErr := cp.Status.LastError; lastErr != nil {
@@ -783,12 +781,12 @@ func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
 			if providerStatus := cp.Status.ProviderStatus; providerStatus != nil {
 				cpStatus = providerStatus.Raw
 			}
-			return true, nil
+			return retry.Ok()
 		}
 
 		b.Logger.Infof("Waiting for control plane to be ready...")
-		return false, nil
-	}, timedContext.Done()); err != nil {
+		return retry.MinorError(wrapWithLastError(fmt.Errorf("control plane is not yet ready"), lastError))
+	}); err != nil {
 		message := fmt.Sprintf("Failed to create control plane")
 		if lastError != nil {
 			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))
@@ -802,20 +800,15 @@ func (b *Botanist) WaitUntilControlPlaneReady(ctx context.Context) error {
 
 // WaitUntilControlPlaneDeleted waits until the control plane resource has been deleted.
 func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
-	var (
-		timedContext, cancel = context.WithTimeout(ctx, ControlPlaneDefaultTimeout)
-		lastError            *gardencorev1alpha1.LastError
-	)
+	var lastError *gardencorev1alpha1.LastError
 
-	defer cancel()
-
-	if err := wait.PollUntil(5*time.Second, func() (bool, error) {
+	if err := retry.UntilTimeout(ctx, DefaultInterval, ControlPlaneDefaultTimeout, func(ctx context.Context) (bool, error) {
 		cp := &extensionsv1alpha1.ControlPlane{}
 		if err := b.K8sSeedClient.Client().Get(ctx, client.ObjectKey{Name: b.Shoot.Info.Name, Namespace: b.Shoot.SeedNamespace}, cp); err != nil {
 			if apierrors.IsNotFound(err) {
-				return true, nil
+				return retry.Ok()
 			}
-			return false, err
+			return retry.SevereError(err)
 		}
 
 		if lastErr := cp.Status.LastError; lastErr != nil {
@@ -824,8 +817,8 @@ func (b *Botanist) WaitUntilControlPlaneDeleted(ctx context.Context) error {
 		}
 
 		b.Logger.Infof("Waiting for control plane to be deleted...")
-		return false, nil
-	}, timedContext.Done()); err != nil {
+		return retry.MinorError(wrapWithLastError(fmt.Errorf("control plane is not yet deleted"), lastError))
+	}); err != nil {
 		message := fmt.Sprintf("Failed to delete control plane")
 		if lastError != nil {
 			return gardencorev1alpha1helper.DetermineError(fmt.Sprintf("%s: %s", message, lastError.Description))

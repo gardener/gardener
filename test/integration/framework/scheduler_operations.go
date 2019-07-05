@@ -19,12 +19,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/gardener/gardener/pkg/utils/retry"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/util/wait"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -206,7 +206,7 @@ func GetAllAzureRegions(domainCounts []gardenv1beta1.AzureDomainCount) []string 
 
 // WaitForShootToBeUnschedulable waits for the shoot to be unschedulable. This is indicated by Events created by the scheduler on the shoot
 func (s *SchedulerGardenerTest) WaitForShootToBeUnschedulable(ctx context.Context) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
 		shoot := &gardenv1beta1.Shoot{}
 		err := s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.ShootGardenerTest.Shoot.Namespace, Name: s.ShootGardenerTest.Shoot.Name}, shoot)
 		if err != nil {
@@ -229,26 +229,26 @@ func (s *SchedulerGardenerTest) WaitForShootToBeUnschedulable(ctx context.Contex
 			s.ShootGardenerTest.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
 		return false, nil
-	}, ctx.Done())
+	})
 }
 
 // WaitForShootToBeScheduled waits for the shoot to be scheduled successfully
 func (s *SchedulerGardenerTest) WaitForShootToBeScheduled(ctx context.Context) error {
-	return wait.PollImmediateUntil(2*time.Second, func() (bool, error) {
+	return retry.Until(ctx, 2*time.Second, func(ctx context.Context) (bool, error) {
 		shoot := &gardenv1beta1.Shoot{}
 		err := s.ShootGardenerTest.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.ShootGardenerTest.Shoot.Namespace, Name: s.ShootGardenerTest.Shoot.Name}, shoot)
 		if err != nil {
-			return false, err
+			return retry.SevereError(err)
 		}
 		if shootIsScheduledSuccessfully(&shoot.Spec) {
-			return true, nil
+			return retry.Ok()
 		}
 		s.ShootGardenerTest.Logger.Infof("waiting for shoot %s to be scheduled", s.ShootGardenerTest.Shoot.Name)
 		if shoot.Status.LastOperation != nil {
 			s.ShootGardenerTest.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
-		return false, nil
-	}, ctx.Done())
+		return retry.MinorError(fmt.Errorf("shoot %s is not yet scheduled", s.ShootGardenerTest.Shoot.Name))
+	})
 }
 
 // GenerateInvalidShoot generates a shoot with an invalid dummy name
