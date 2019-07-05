@@ -3,8 +3,8 @@ images:
 
 resources:
   requests:
-    cpu: 100m
-    memory: 32Mi
+    cpu: 23m
+    memory: 47Mi
   limits:
     cpu: 400m
     memory: 512Mi
