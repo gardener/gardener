@@ -20,6 +20,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
+var _ Object = (*ControlPlane)(nil)
+
 // ControlPlaneResource is a constant for the name of the ControlPlane resource.
 const ControlPlaneResource = "ControlPlane"
 
@@ -33,6 +35,16 @@ type ControlPlane struct {
 
 	Spec   ControlPlaneSpec   `json:"spec"`
 	Status ControlPlaneStatus `json:"status"`
+}
+
+// GetExtensionSpec implements Object.
+func (i *ControlPlane) GetExtensionSpec() Spec {
+	return &i.Spec
+}
+
+// GetExtensionStatus implements Object.
+func (i *ControlPlane) GetExtensionStatus() Status {
+	return &i.Status
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
