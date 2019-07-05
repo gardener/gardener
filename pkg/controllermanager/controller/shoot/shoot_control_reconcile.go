@@ -209,7 +209,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",
 			Fn:           flow.TaskFn(hybridBotanist.DeployManagedResources).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager),
+			Dependencies: flow.NewTaskIDs(deployGardenerResourceManager, computeShootOSConfig),
 		})
 		deployWorker = g.Add(flow.Task{
 			Name:         "Configuring shoot worker pools",
