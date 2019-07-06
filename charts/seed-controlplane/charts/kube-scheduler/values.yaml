@@ -8,8 +8,8 @@ images:
   hyperkube: image-repository
 resources:
   requests:
-    cpu: 100m
-    memory: 32Mi
+    cpu: 23m
+    memory: 64Mi
   limits:
     cpu: 400m
     memory: 512Mi

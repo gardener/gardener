@@ -115,8 +115,8 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 30m
-            memory: 500Mi
+            cpu: 50m
+            memory: 350Mi
         volumeMounts:
         - mountPath: /srv/kubernetes/prometheus-kubelet
           name: prometheus-kubelet
@@ -148,8 +148,8 @@ spec:
           protocol: TCP
         resources:
           requests:
-            cpu: 100m
-            memory: 128Mi
+            cpu: 11m
+            memory: 16Mi
           limits:
             cpu: 300m
             memory: 512Mi
@@ -180,7 +180,7 @@ spec:
         resources:
           requests:
             cpu: 5m
-            memory: 16Mi
+            memory: 35Mi
           limits:
             cpu: 50m
             memory: 128Mi
