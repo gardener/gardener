@@ -64,7 +64,7 @@ func validateFlags() {
 var _ = Describe("Shoot reconciliation testing", func() {
 	var (
 		gardenClient kubernetes.Interface
-		testLogger *logrus.Logger
+		testLogger   *logrus.Logger
 	)
 
 	CBeforeSuite(func(ctx context.Context) {

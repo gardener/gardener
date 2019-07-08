@@ -10,3 +10,5 @@
 !VERSION
 !.git
 !assets
+!go.mod
+!go.sum

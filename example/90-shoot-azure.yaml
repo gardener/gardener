@@ -43,7 +43,7 @@ spec:
   #   scaleDownDelayAfterFailure: 10m
   #   scaleDownDelayAfterDelete: 10s
   #   scanInterval: 10s
-    version: 1.15.0
+    version: 1.15.1
     allowPrivilegedContainers: true # 'true' means that all authenticated users can use the "gardener.privileged" PodSecurityPolicy, allowing full unrestricted access to Pod features.
   # kubeAPIServer:
   #   featureGates:
