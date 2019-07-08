@@ -17,9 +17,9 @@ spec:
       kubernetes:
         versions:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
-        - 1.12.9
+        - 1.14.4
+        - 1.13.8
+        - 1.12.10
         - 1.11.10
         - 1.10.13
       loadBalancerProviders:
