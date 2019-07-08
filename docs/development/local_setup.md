@@ -208,10 +208,10 @@ secret/internal-domain-unmanaged created
 
 #### Run the Gardener API Server and the Gardener Controller Manager
 
-Next, run the Gardener API Server, the Gardener Controller Manager and the Gardener Scheduler in different terminals using rules in the `Makefile`.
+Next, run the Gardener API Server, the Gardener Controller Manager and the Gardener Scheduler (optionally) in different terminals using rules in the `Makefile`.
 
 ```bash
-$ make start-api
+$ make start-apiserver
 Found Minikube ...
 I0306 15:23:51.044421   74536 plugins.go:84] Registered admission plugin "ResourceReferenceManager"
 I0306 15:23:51.044523   74536 plugins.go:84] Registered admission plugin "DeletionConfirmation"
@@ -223,7 +223,7 @@ I0306 15:23:51.626836   74536 secure_serving.go:116] Serving securely on [::]:84
 Now you are ready to launch the Gardener Controller Manager
 
 ```bash
-$ make start
+$ make start-controller-manager
 time="2019-03-06T15:24:17+02:00" level=info msg="Starting Gardener controller manager..."
 time="2019-03-06T15:24:17+02:00" level=info msg="Feature Gates: CertificateManagement=false,Logging=true"
 time="2019-03-06T15:24:17+02:00" level=info msg="Starting HTTP server on 0.0.0.0:2718"
@@ -244,7 +244,7 @@ time="2019-03-06T15:24:18+02:00" level=info msg="CloudProfile controller initial
 [...]
 ```
 
-Launch the Gardener Scheduler
+Optionally, you can also launch the Gardener Scheduler
 
 ```bash
 $ make start-scheduler
