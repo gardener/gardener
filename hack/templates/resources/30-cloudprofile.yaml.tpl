@@ -69,9 +69,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
-        - 1.12.9
+        - 1.14.4
+        - 1.13.8
+        - 1.12.10
         - 1.11.10
         - 1.10.13
         % endif
@@ -172,9 +172,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
-        - 1.12.9
+        - 1.14.4
+        - 1.13.8
+        - 1.12.10
         - 1.11.10
         - 1.10.13
         % endif
@@ -272,9 +272,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
-        - 1.12.9
+        - 1.14.4
+        - 1.13.8
+        - 1.12.10
         - 1.11.10
         - 1.10.13
         % endif
@@ -364,8 +364,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % else:
         versions:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
+        - 1.14.4
+        - 1.13.8
         % endif
       machineImages:<% machineImages=value("spec.alicloud.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -448,8 +448,8 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         % else:
         versions:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
+        - 1.14.4
+        - 1.13.8
         % endif
       machineImages:<% machineImages=value("spec.packet.constraints.machineImages", []) %>
       % if machineImages != []:
@@ -535,9 +535,9 @@ spec:<% caBundle=value("spec.caBundle", "") %>
         ${yaml.dump(kubernetesVersions, width=10000, default_flow_style=None)}
         % else:
         - 1.15.0
-        - 1.14.3
-        - 1.13.7
-        - 1.12.9
+        - 1.14.4
+        - 1.13.8
+        - 1.12.10
         - 1.11.10
         - 1.10.13
         % endif

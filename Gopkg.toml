@@ -162,12 +162,6 @@ ignored = [
   name = "golang.org/x/crypto"
   revision = "a5d413f7728c81fb97d96a2b722368945f651e78"
 
-# use the same version that is referenced by k8s.io, mainly required by Helm
-# https://github.com/kubernetes/kubernetes/blob/v1.13.1/Godeps/Godeps.json#L2996
-[[override]]
-  name = "github.com/russross/blackfriday"
-  revision = "300106c228d52c8941d4b3de6054a6062a86dda3"
-
 [prune]
   unused-packages = true
   go-tests = true
