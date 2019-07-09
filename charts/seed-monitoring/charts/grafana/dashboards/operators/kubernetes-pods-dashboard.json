@@ -80,6 +80,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Memory Usage",
       "tooltip": {
@@ -189,6 +190,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "CPU Usage",
       "tooltip": {
@@ -236,7 +238,7 @@
       "datasource": "prometheus",
       "editable": true,
       "error": false,
-      "fill": 1,
+      "fill": 7,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -270,16 +272,24 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sort_desc(sum by (pod_name) (rate (container_network_receive_bytes_total{pod_name=\"$pod\"}[1m]) ))",
+          "expr": "sum(rate(container_network_receive_bytes_total{pod_name=~\"$pod\"}[1m])) by (pod_name)",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "Current",
+          "legendFormat": "Received",
           "refId": "A",
           "step": 20
+        },
+        {
+          "expr": "- sum(rate(container_network_transmit_bytes_total{pod_name=~\"$pod\"}[1m])) by (pod_name)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "Sent",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Network I/O",
       "tooltip": {
@@ -385,6 +395,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Pod File System Usage",
       "tooltip": {
