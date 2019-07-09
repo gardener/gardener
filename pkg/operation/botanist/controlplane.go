@@ -391,11 +391,6 @@ func (b *Botanist) DeploySeedMonitoring(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: Cleanup logic. Remove once all old grafana artifacts have been removed from all landscapes
-	if err := common.DeleteOldGrafanaStack(b.K8sSeedClient, b.Shoot.SeedNamespace); err != nil {
-		return err
-	}
-
 	if err := b.deployGrafanaCharts("operators", basicAuth, common.GrafanaOperatorsPrefix); err != nil {
 		return err
 	}
