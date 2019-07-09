@@ -137,7 +137,8 @@ func getDeploymentListByLabels(ctx context.Context, labelsMap labels.Selector, n
 	return deploymentList, nil
 }
 
-func shootCreationCompleted(newShoot *v1beta1.Shoot) bool {
+// ShootCreationCompleted checks if a shoot is successfully reconciled.
+func ShootCreationCompleted(newShoot *v1beta1.Shoot) bool {
 	if newShoot.Generation != newShoot.Status.ObservedGeneration {
 		return false
 	}

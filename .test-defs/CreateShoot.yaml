@@ -2,7 +2,7 @@ kind: TestDefinition
 metadata:
   name: create-shoot
 spec:
-  owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com
+  owner: gardener-oq@listserv.sap.com
   description: Tests the creation of a shoot.
 
   activeDeadlineSeconds: 3600

@@ -2,7 +2,7 @@ kind: TestDefinition
 metadata:
   name: shootapp-test
 spec:
-  owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com # OutputQualification DL
+  owner: gardener-oq@listserv.sap.com
   description: Tests the deployment of a guestbook.
 
   activeDeadlineSeconds: 1800

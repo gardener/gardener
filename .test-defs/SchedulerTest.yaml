@@ -2,7 +2,7 @@ kind: TestDefinition
 metadata:
   name: scheduler-test
 spec:
-  owner: DL_5C5BE3E2970B9F404D0E2F50@sap.com
+  owner: gardener-oq@listserv.sap.com
   description: Tests the scheduler.
 
   activeDeadlineSeconds: 5400
