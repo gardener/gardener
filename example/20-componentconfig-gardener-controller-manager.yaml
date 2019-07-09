@@ -46,7 +46,7 @@ controllers:
   backupInfrastructure:
     concurrentSyncs: 20
     syncPeriod: 24h
-    deletionGracePeriodDays: 0
+    deletionGracePeriodHours: 0
 leaderElection:
   leaderElect: true
   leaseDuration: 15s

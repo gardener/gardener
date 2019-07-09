@@ -244,10 +244,13 @@ type BackupInfrastructureControllerConfiguration struct {
 	ConcurrentSyncs int
 	// SyncPeriod is the duration how often the existing resources are reconciled.
 	SyncPeriod metav1.Duration
-	// DeletionGracePeriodDays holds the period in number of days to delete the Backup Infrastructure after deletion timestamp is set.
+	// DeletionGracePeriodHours holds the period in number of hours to delete the Backup Infrastructure after deletion timestamp is set.
 	// If value is set to 0 then the BackupInfrastructureController will trigger deletion immediately.
 	// +optional
-	DeletionGracePeriodDays *int
+	DeletionGracePeriodHours *int
+	// DeletionGracePeriodHoursByPurpose holds various shoot purposes mapped to the respective deletion grace periods in hours for the backup infrastructure associated with the shoot
+	// +optional
+	DeletionGracePeriodHoursByPurpose map[string]int
 }
 
 // DiscoveryConfiguration defines the configuration of how to discover API groups.

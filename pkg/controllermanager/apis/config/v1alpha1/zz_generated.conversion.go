@@ -284,7 +284,8 @@ func RegisterConversions(s *runtime.Scheme) error {
 func autoConvert_v1alpha1_BackupInfrastructureControllerConfiguration_To_config_BackupInfrastructureControllerConfiguration(in *BackupInfrastructureControllerConfiguration, out *config.BackupInfrastructureControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.SyncPeriod = in.SyncPeriod
-	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
+	out.DeletionGracePeriodHours = (*int)(unsafe.Pointer(in.DeletionGracePeriodHours))
+	out.DeletionGracePeriodHoursByPurpose = *(*map[string]int)(unsafe.Pointer(&in.DeletionGracePeriodHoursByPurpose))
 	return nil
 }
 
@@ -296,7 +297,8 @@ func Convert_v1alpha1_BackupInfrastructureControllerConfiguration_To_config_Back
 func autoConvert_config_BackupInfrastructureControllerConfiguration_To_v1alpha1_BackupInfrastructureControllerConfiguration(in *config.BackupInfrastructureControllerConfiguration, out *BackupInfrastructureControllerConfiguration, s conversion.Scope) error {
 	out.ConcurrentSyncs = in.ConcurrentSyncs
 	out.SyncPeriod = in.SyncPeriod
-	out.DeletionGracePeriodDays = (*int)(unsafe.Pointer(in.DeletionGracePeriodDays))
+	out.DeletionGracePeriodHours = (*int)(unsafe.Pointer(in.DeletionGracePeriodHours))
+	out.DeletionGracePeriodHoursByPurpose = *(*map[string]int)(unsafe.Pointer(&in.DeletionGracePeriodHoursByPurpose))
 	return nil
 }
 
