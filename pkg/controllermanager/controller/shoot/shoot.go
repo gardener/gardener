@@ -22,7 +22,6 @@ import (
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
 	gardencoreinformers "github.com/gardener/gardener/pkg/client/core/informers/externalversions"
 	gardencorelisters "github.com/gardener/gardener/pkg/client/core/listers/core/v1alpha1"
 	gardeninformers "github.com/gardener/gardener/pkg/client/garden/informers/externalversions"
@@ -33,20 +32,15 @@ import (
 	gardenmetrics "github.com/gardener/gardener/pkg/controllermanager/metrics"
 	"github.com/gardener/gardener/pkg/logger"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
-	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
-
-	"github.com/pkg/errors"
 
 	"github.com/prometheus/client_golang/prometheus"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	kubeinformers "k8s.io/client-go/informers"
 	kubecorev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -249,10 +243,6 @@ func (c *Controller) Run(ctx context.Context, shootWorkers, shootCareWorkers, sh
 				panic(fmt.Sprintf("Failed to update shoot status [%v]: %v ", newShoot.Name, err.Error()))
 			}
 		}
-
-		// Migration from old machine image specification to new one (was incompatibly changed with worker extension controllers).
-		// This code can be removed in a future version.
-		utilruntime.Must(errors.Wrapf(c.migrateMachineImages(newShoot), "Failed to migrate machine image for shoot %q", shoot.Name))
 	}
 
 	logger.Logger.Info("Shoot controller initialized.")
@@ -335,57 +325,4 @@ func (c *Controller) getShootQueue(obj interface{}) workqueue.RateLimitingInterf
 		return c.shootSeedQueue
 	}
 	return c.shootQueue
-}
-
-func (c *Controller) migrateMachineImages(shoot *gardenv1beta1.Shoot) error {
-	cloudProfile, err := c.k8sGardenInformers.Garden().V1beta1().CloudProfiles().Lister().Get(shoot.Spec.Cloud.Profile)
-	if err != nil {
-		return err
-	}
-	cloudProvider, err := helper.DetermineCloudProviderInShoot(shoot.Spec.Cloud)
-	if err != nil {
-		return err
-	}
-
-	// Only do the migration once
-	var version string
-	switch cloudProvider {
-	case gardenv1beta1.CloudProviderAWS:
-		version = shoot.Spec.Cloud.AWS.MachineImage.Version
-	case gardenv1beta1.CloudProviderAzure:
-		version = shoot.Spec.Cloud.Azure.MachineImage.Version
-	case gardenv1beta1.CloudProviderGCP:
-		version = shoot.Spec.Cloud.GCP.MachineImage.Version
-	case gardenv1beta1.CloudProviderOpenStack:
-		version = shoot.Spec.Cloud.OpenStack.MachineImage.Version
-	case gardenv1beta1.CloudProviderAlicloud:
-		version = shoot.Spec.Cloud.Alicloud.MachineImage.Version
-	case gardenv1beta1.CloudProviderPacket:
-		version = shoot.Spec.Cloud.Packet.MachineImage.Version
-	}
-	if len(version) > 0 {
-		return nil
-	}
-
-	machineImage := helper.GetMachineImageFromShoot(cloudProvider, shoot)
-	machineImageFound, machineImage, err := helper.DetermineMachineImage(*cloudProfile, machineImage.Name)
-	if err != nil {
-		return err
-	}
-	if !machineImageFound {
-		return fmt.Errorf("machine image %q was not found in the cloud profile %q", machineImage.Name, cloudProfile.Name)
-	}
-	if len(machineImage.Version) == 0 {
-		return fmt.Errorf("machine images in cloudprofile %q have not been changed to the (name,version)-tuple: %#+v", cloudProfile.Name, machineImage)
-	}
-
-	if updateMachineImage := helper.UpdateMachineImage(cloudProvider, machineImage); updateMachineImage != nil {
-		_, err = kutil.TryUpdateShoot(c.k8sGardenClient.Garden(), retry.DefaultBackoff, shoot.ObjectMeta, func(s *gardenv1beta1.Shoot) (*gardenv1beta1.Shoot, error) {
-			updateMachineImage(&s.Spec.Cloud)
-			return s, nil
-		})
-		return err
-	}
-
-	return nil
 }
