@@ -113,7 +113,7 @@ func (c *Controller) reconcileBackupInfrastructureKey(key string) error {
 	if reconcileErr != nil {
 		durationToNextSync = 15 * time.Second
 	} else if deleted {
-		gracePeriod := computeGracePeriod(c.config)
+		gracePeriod := computeGracePeriod(c.config, backupInfrastructure)
 		durationToActualDeletion := gracePeriod - time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time)
 		// We don't set durationToNextSync directly to durationToActualDeletion since,
 		// we want reconciliation to update status as per sync period. This will help in adjusting
@@ -193,7 +193,7 @@ func (c *defaultControl) ReconcileBackupInfrastructure(obj *gardenv1beta1.Backup
 	// it has to be ensured that no infrastructure resources are depending on the BackupInfrastructure anymore.
 	// When this happens the controller will remove the finalizer from the BackupInfrastructure so that it can be garbage collected.
 	if backupInfrastructure.DeletionTimestamp != nil {
-		gracePeriod := computeGracePeriod(c.config)
+		gracePeriod := computeGracePeriod(c.config, backupInfrastructure)
 		present, _ := strconv.ParseBool(backupInfrastructure.ObjectMeta.Annotations[common.BackupInfrastructureForceDeletion])
 		if present || time.Now().Sub(backupInfrastructure.DeletionTimestamp.Time) > gracePeriod {
 			if updateErr := c.updateBackupInfrastructureStatus(op, gardencorev1alpha1.LastOperationStateProcessing, operationType, "Deletion of Backup Infrastructure in progress.", 1, nil); updateErr != nil {
@@ -415,8 +415,17 @@ func (c *defaultControl) removeFinalizer(op *operation.Operation) error {
 	})
 }
 
-func computeGracePeriod(config *config.ControllerManagerConfiguration) time.Duration {
-	return time.Hour * 24 * time.Duration(*config.Controllers.BackupInfrastructure.DeletionGracePeriodDays)
+func computeGracePeriod(config *config.ControllerManagerConfiguration, backupInfrastructure *gardenv1beta1.BackupInfrastructure) time.Duration {
+	var (
+		shootPurpose                      = backupInfrastructure.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
+		deletionGracePeriodHoursByPurpose = config.Controllers.BackupInfrastructure.DeletionGracePeriodHoursByPurpose
+	)
+
+	if deletionGracePeriodHours, ok := deletionGracePeriodHoursByPurpose[shootPurpose]; ok {
+		return time.Hour * time.Duration(deletionGracePeriodHours)
+	}
+
+	return time.Hour * time.Duration(*config.Controllers.BackupInfrastructure.DeletionGracePeriodHours)
 }
 
 func nextReconcileScheduleReached(obj *gardenv1beta1.BackupInfrastructure, syncPeriod time.Duration) bool {

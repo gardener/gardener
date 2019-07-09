@@ -29,10 +29,17 @@ import (
 func (in *BackupInfrastructureControllerConfiguration) DeepCopyInto(out *BackupInfrastructureControllerConfiguration) {
 	*out = *in
 	out.SyncPeriod = in.SyncPeriod
-	if in.DeletionGracePeriodDays != nil {
-		in, out := &in.DeletionGracePeriodDays, &out.DeletionGracePeriodDays
+	if in.DeletionGracePeriodHours != nil {
+		in, out := &in.DeletionGracePeriodHours, &out.DeletionGracePeriodHours
 		*out = new(int)
 		**out = **in
+	}
+	if in.DeletionGracePeriodHoursByPurpose != nil {
+		in, out := &in.DeletionGracePeriodHoursByPurpose, &out.DeletionGracePeriodHoursByPurpose
+		*out = make(map[string]int, len(*in))
+		for key, val := range *in {
+			(*out)[key] = val
+		}
 	}
 	return
 }

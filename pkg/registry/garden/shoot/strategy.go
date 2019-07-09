@@ -20,6 +20,7 @@ import (
 
 	"github.com/gardener/gardener/pkg/api"
 	gardencore "github.com/gardener/gardener/pkg/apis/core"
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	"github.com/gardener/gardener/pkg/apis/garden"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/validation"
@@ -72,6 +73,10 @@ func (shootStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Obje
 }
 
 func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
+	var (
+		oldPurpose, newPurpose string
+	)
+
 	// The Shoot specification changes.
 	if !apiequality.Semantic.DeepEqual(oldShoot.Spec, newShoot.Spec) {
 		return true
@@ -102,6 +107,12 @@ func mustIncreaseGeneration(oldShoot, newShoot *garden.Shoot) bool {
 			delete(newShoot.Annotations, common.ShootOperation)
 			return true
 		}
+	}
+
+	oldPurpose = oldShoot.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
+	newPurpose = newShoot.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
+	if oldPurpose != newPurpose {
+		return true
 	}
 
 	return false

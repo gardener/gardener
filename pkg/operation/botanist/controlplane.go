@@ -149,14 +149,19 @@ func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 // BackupInfrastructure controller acting on resource will actually create required cloud resources and updates the status.
 func (b *Botanist) DeployBackupInfrastructure(ctx context.Context) error {
 	var (
-		name = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
-
+		name                 = common.GenerateBackupInfrastructureName(b.Shoot.SeedNamespace, b.Shoot.Info.Status.UID)
 		backupInfrastructure = &gardenv1beta1.BackupInfrastructure{}
+		shootPurpose         = b.Shoot.Info.ObjectMeta.Annotations[gardencorev1alpha1.GardenPurpose]
 	)
 
 	if err := b.K8sGardenClient.Client().Get(ctx, kutil.Key(b.Shoot.Info.Namespace, name), backupInfrastructure); client.IgnoreNotFound(err) != nil {
 		return err
 	}
+
+	if backupInfrastructure.Annotations == nil {
+		backupInfrastructure.Annotations = map[string]string{}
+	}
+	backupInfrastructure.Annotations[gardencorev1alpha1.GardenPurpose] = shootPurpose
 
 	return b.ApplyChartGarden(filepath.Join(common.ChartPath, "garden-project", "charts", "backup-infrastructure"), b.Shoot.Info.Namespace, "backup-infrastructure", nil, map[string]interface{}{
 		"backupInfrastructure": map[string]interface{}{
