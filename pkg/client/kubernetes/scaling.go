@@ -16,8 +16,8 @@ package kubernetes
 
 import (
 	"context"
-
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -37,6 +37,9 @@ func ScaleStatefulSet(ctx context.Context, c client.Client, key client.ObjectKey
 func ScaleDeployment(ctx context.Context, c client.Client, key client.ObjectKey, replicas int32) error {
 	deployment := &appsv1.Deployment{}
 	if err := c.Get(ctx, key, deployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		return err
 	}
 
