@@ -33,13 +33,13 @@ dev-setup:
 dev-setup-extensions:
 	@./hack/dev-setup-extensions
 
-.PHONY: start-api
-start-api:
-	@./hack/start-api
+.PHONY: start-apiserver
+start-apiserver:
+	@./hack/start-apiserver
 
-.PHONY: start
-start:
-	@./hack/start
+.PHONY: start-controller-manager
+start-controller-manager:
+	@./hack/start-controller-manager
 
 .PHONY: start-scheduler
 start-scheduler:
