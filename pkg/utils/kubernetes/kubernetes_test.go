@@ -97,6 +97,27 @@ var _ = Describe("kubernetes", func() {
 		})
 	})
 
+	Describe("#HasDeletionTimestamp", func() {
+		var namespace = &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "foo",
+			},
+		}
+		It("should return false if no deletion timestamp is set", func() {
+		  result, err := HasDeletionTimestamp(namespace)
+		  Expect(err).NotTo(HaveOccurred())
+		  Expect(result).To(BeFalse())
+		})
+
+		It("should return true if timestamp is set", func() {
+			now := metav1.Now()
+			namespace.ObjectMeta.DeletionTimestamp = &now
+			result, err := HasDeletionTimestamp(namespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeTrue())
+		})
+	})
+
 	Describe("#CreateOrUpdate", func() {
 		const (
 			namespace = "foo"
