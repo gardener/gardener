@@ -10,6 +10,7 @@ rules:
 - apiGroups:
   - garden.sapcloud.io
   - core.gardener.cloud
+  - dashboard.gardener.cloud
   resources:
   - '*'
   verbs:
