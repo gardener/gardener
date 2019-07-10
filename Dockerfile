@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go install \
   -ldflags "-X github.com/gardener/gardener/pkg/version.gitVersion=$(cat VERSION) \
             -X github.com/gardener/gardener/pkg/version.gitTreeState=$([ -z git status --porcelain 2>/dev/null ] && echo clean || echo dirty) \
             -X github.com/gardener/gardener/pkg/version.gitCommit=$(git rev-parse --verify HEAD) \
-            -X github.com/gardener/gardener/pkg/version.buildDate=$(date --rfc-3339=seconds | sed 's/ /T/')" \
+            -X github.com/gardener/gardener/pkg/version.buildDate=$(date --iso-8601=seconds)" \
   ./...
 
 #############      apiserver     #############
