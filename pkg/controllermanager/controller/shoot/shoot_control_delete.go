@@ -88,6 +88,11 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to retrieve the Shoot namespace in the Seed cluster (%s)", err.Error()))
 	}
 
+	shootNamespaceInDeletion, err := kutil.HasDeletionTimestamp(namespace)
+	if err != nil {
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check the deletion timestamp for the Shoot namespace (%s)", err.Error()))
+	}
+
 	seedCloudBotanist, err := cloudbotanistpkg.New(o, common.CloudPurposeSeed)
 	if err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a Seed CloudBotanist (%s)", err.Error()))
@@ -148,12 +153,12 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		// existing machine class secrets.
 		deployCloudProviderSecret = g.Add(flow.Task{
 			Name:         "Deploying cloud provider account secret",
-			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources),
+			Fn:           flow.SimpleTaskFn(botanist.DeployCloudProviderSecret).DoIf(cleanupShootResources && !shootNamespaceInDeletion),
 			Dependencies: flow.NewTaskIDs(syncClusterResourceToSeed),
 		})
 		deploySecrets = g.Add(flow.Task{
 			Name: "Deploying Shoot certificates / keys",
-			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets),
+			Fn:   flow.SimpleTaskFn(botanist.DeploySecrets).DoIf(!shootNamespaceInDeletion),
 		})
 
 		wakeUpControlPlane = g.Add(flow.Task{
@@ -171,7 +176,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		// Redeploy the custom control plane to make sure cloud-controller-manager is restarted if the cloud provider secret changes.
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
-			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded),
+			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret),
 		})
 		waitUntilControlPlaneReady = g.Add(flow.Task{
@@ -183,7 +188,7 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		// Redeploy the kube-controller-manager to make sure that it's restarted if the cloud provider secret changes.
 		deployKubeControllerManager = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes controller manager",
-			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeControllerManager).DoIf(cleanupShootResources && kubeControllerManagerDeploymentFound && !shootNamespaceInDeletion).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(deploySecrets, deployCloudProviderSecret, initializeShootClients),
 		})
 
