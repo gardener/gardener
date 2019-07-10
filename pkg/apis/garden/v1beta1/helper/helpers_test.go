@@ -197,6 +197,230 @@ var _ = Describe("helper", func() {
 		),
 	)
 
+	var (
+		kubernetesConstraint = gardenv1beta1.KubernetesConstraints{
+			Versions: []string{
+				"1.15.1",
+				"1.14.4",
+				"1.12.9",
+			},
+		}
+	)
+
+	DescribeTable("#DetermineLatestKubernetesPatchVersion",
+		func(cloudProfile gardenv1beta1.CloudProfile, currentVersion, expectedVersion string, expectVersion bool) {
+			ok, newVersion, err := DetermineLatestKubernetesPatchVersion(cloudProfile, currentVersion)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ok).To(Equal(expectVersion))
+			Expect(newVersion).To(Equal(expectedVersion))
+		},
+		Entry("version = 1.15.1",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					AWS: &gardenv1beta1.AWSProfile{
+						Constraints: gardenv1beta1.AWSConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.15.0",
+			"1.15.1",
+			true,
+		),
+		Entry("version = 1.12.9",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					AWS: &gardenv1beta1.AWSProfile{
+						Constraints: gardenv1beta1.AWSConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.4",
+			"1.12.9",
+			true,
+		),
+		Entry("no new version",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					AWS: &gardenv1beta1.AWSProfile{
+						Constraints: gardenv1beta1.AWSConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.15.1",
+			"",
+			false,
+		),
+		Entry("GCP",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					GCP: &gardenv1beta1.GCPProfile{
+						Constraints: gardenv1beta1.GCPConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.4",
+			"1.12.9",
+			true,
+		),
+		Entry("Azure",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					Azure: &gardenv1beta1.AzureProfile{
+						Constraints: gardenv1beta1.AzureConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.4",
+			"1.12.9",
+			true,
+		),
+		Entry("Openstack",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					OpenStack: &gardenv1beta1.OpenStackProfile{
+						Constraints: gardenv1beta1.OpenStackConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.4",
+			"1.12.9",
+			true,
+		),
+		Entry("Packet",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					Packet: &gardenv1beta1.PacketProfile{
+						Constraints: gardenv1beta1.PacketConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.4",
+			"1.12.9",
+			true,
+		),
+	)
+
+	DescribeTable("#DetermineNextKubernetesMinorVersion",
+		func(cloudProfile gardenv1beta1.CloudProfile, currentVersion, expectedVersion string, expectVersion bool) {
+			ok, newVersion, err := DetermineNextKubernetesMinorVersion(cloudProfile, currentVersion)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ok).To(Equal(expectVersion))
+			Expect(newVersion).To(Equal(expectedVersion))
+		},
+		Entry("version = 1.15.1",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					AWS: &gardenv1beta1.AWSProfile{
+						Constraints: gardenv1beta1.AWSConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.14.4",
+			"1.15.1",
+			true,
+		),
+		Entry("version = 1.12.9",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					AWS: &gardenv1beta1.AWSProfile{
+						Constraints: gardenv1beta1.AWSConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.11.0",
+			"1.12.9",
+			true,
+		),
+		Entry("no new version",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					AWS: &gardenv1beta1.AWSProfile{
+						Constraints: gardenv1beta1.AWSConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.15.1",
+			"",
+			false,
+		),
+		Entry("GCP",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					GCP: &gardenv1beta1.GCPProfile{
+						Constraints: gardenv1beta1.GCPConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.9",
+			"1.14.4",
+			true,
+		),
+		Entry("Azure",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					Azure: &gardenv1beta1.AzureProfile{
+						Constraints: gardenv1beta1.AzureConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.9",
+			"1.14.4",
+			true,
+		),
+		Entry("Openstack",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					OpenStack: &gardenv1beta1.OpenStackProfile{
+						Constraints: gardenv1beta1.OpenStackConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.9",
+			"1.14.4",
+			true,
+		),
+		Entry("Packet",
+			gardenv1beta1.CloudProfile{
+				Spec: gardenv1beta1.CloudProfileSpec{
+					Packet: &gardenv1beta1.PacketProfile{
+						Constraints: gardenv1beta1.PacketConstraints{
+							Kubernetes: kubernetesConstraint,
+						},
+					},
+				},
+			},
+			"1.12.9",
+			"1.14.4",
+			true,
+		),
+	)
+
 	DescribeTable("#ShootWantsClusterAutoscaler",
 		func(shoot *gardenv1beta1.Shoot, wantsAutoscaler bool) {
 			actualWantsAutoscaler, err := ShootWantsClusterAutoscaler(shoot)

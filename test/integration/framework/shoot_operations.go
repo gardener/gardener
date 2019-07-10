@@ -98,6 +98,32 @@ func (s *ShootGardenerTest) CreateShoot(ctx context.Context) (*v1beta1.Shoot, er
 	return shoot, nil
 }
 
+// UpdateShoot Updates a shoot from a shoot Object and waits for its reconciliation
+func (s *ShootGardenerTest) UpdateShoot(ctx context.Context, newShoot *v1beta1.Shoot) (*v1beta1.Shoot, error) {
+	err := retry.UntilTimeout(ctx, 20*time.Second, 5*time.Minute, func(ctx context.Context) (done bool, err error) {
+		err = s.GardenClient.Client().Update(ctx, newShoot)
+		if err != nil {
+			s.Logger.Debugf("unable to update shoot %s: %s", newShoot.Name, err.Error())
+			return retry.MinorError(err)
+		}
+		return retry.Ok()
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	s.Shoot = newShoot
+
+	// Then we wait for the shoot to be created
+	err = s.WaitForShootToBeReconciled(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	s.Logger.Infof("Shoot %s was successfully updated!", newShoot.Name)
+	return s.Shoot, nil
+}
+
 // DeleteShoot deletes the test shoot
 func (s *ShootGardenerTest) DeleteShoot(ctx context.Context) error {
 	shoot, err := s.GetShoot(ctx)
@@ -186,6 +212,26 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 			return retry.Ok()
 		}
 		s.Logger.Infof("Waiting for shoot %s to be created", s.Shoot.Name)
+		if shoot.Status.LastOperation != nil {
+			s.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
+		}
+		return retry.MinorError(fmt.Errorf("shoot %q was not successfully reconciled", shoot.Name))
+	})
+}
+
+// WaitForShootToBeReconciled waits for the shoot to be successfully reconciled
+func (s *ShootGardenerTest) WaitForShootToBeReconciled(ctx context.Context) error {
+	return retry.Until(ctx, 30*time.Second, func(ctx context.Context) (done bool, err error) {
+		shoot := &v1beta1.Shoot{}
+		err = s.GardenClient.Client().Get(ctx, client.ObjectKey{Namespace: s.Shoot.Namespace, Name: s.Shoot.Name}, shoot)
+		if err != nil {
+			s.Logger.Infof("Error while waiting for shoot to be reconciled: %s", err.Error())
+			return retry.MinorError(err)
+		}
+		if ShootCreationCompleted(shoot) {
+			return retry.Ok()
+		}
+		s.Logger.Infof("Waiting for shoot %s to be reconciled", s.Shoot.Name)
 		if shoot.Status.LastOperation != nil {
 			s.Logger.Debugf("%d%%: Shoot State: %s, Description: %s", shoot.Status.LastOperation.Progress, shoot.Status.LastOperation.State, shoot.Status.LastOperation.Description)
 		}
