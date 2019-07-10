@@ -77,7 +77,20 @@ func GardenV1beta1ShootToOpenStackV1alpha1ControlPlaneConfig(shoot *gardenv1beta
 			Kind:       controlPlaneConfig,
 		},
 		LoadBalancerProvider:   shoot.Spec.Cloud.OpenStack.LoadBalancerProvider,
-		LoadBalancerClasses: shoot.Spec.Cloud.OpenStack.LoadBalancerClasses,
+		LoadBalancerClasses:    gardenV1beta1OpenStackLoadBalancerClassToOpenStackV1alpha1LoadBalancerClass(shoot.Spec.Cloud.OpenStack.LoadBalancerClasses),
 		CloudControllerManager: cloudControllerManager,
 	}, nil
+}
+
+func gardenV1beta1OpenStackLoadBalancerClassToOpenStackV1alpha1LoadBalancerClass(loadBalancerClasses []gardenv1beta1.OpenStackLoadBalancerClass) []openstackv1alpha1.LoadBalancerClass {
+	out := make([]openstackv1alpha1.LoadBalancerClass, 0, len(loadBalancerClasses))
+	for _, loadBalancerClass := range loadBalancerClasses {
+		out = append(out, openstackv1alpha1.LoadBalancerClass{
+			Name:              loadBalancerClass.Name,
+			FloatingSubnetID:  loadBalancerClass.FloatingSubnetID,
+			FloatingNetworkID: loadBalancerClass.FloatingNetworkID,
+			SubnetID:          loadBalancerClass.SubnetID,
+		})
+	}
+	return out
 }

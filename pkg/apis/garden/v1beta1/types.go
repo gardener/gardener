@@ -19,7 +19,6 @@ import (
 	"time"
 
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
-	openstackapi "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1"
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -214,7 +213,7 @@ type OpenStackFloatingPool struct {
 	// Name is the name of the floating pool.
 	Name string `json:"name"`
 	// LoadBalancerClasses contains a list of supported labeled load balancer network settings.
-	LoadBalancerClasses []openstackapi.PoolLoadBalancerClass
+	LoadBalancerClasses []OpenStackLoadBalancerClass
 }
 
 // OpenStackLoadBalancerProvider contains constraints regarding allowed values of the 'loadBalancerProvider' block in the Shoot specification.
@@ -942,7 +941,7 @@ type OpenStackCloud struct {
 	LoadBalancerProvider string `json:"loadBalancerProvider"`
 	// LoadBalancerClasses available for a dedicated Shoot.
 	// +optional
-	LoadBalancerClasses []openstackapi.ShootLoadBalancerClass `json:"loadBalancerClasses,omitempty"`
+	LoadBalancerClasses []OpenStackLoadBalancerClass `json:"loadBalancerClasses,omitempty"`
 	// MachineImage holds information about the machine image to use for all workers.
 	// It will default to the first image stated in the referenced CloudProfile if no
 	// value has been provided.
@@ -954,6 +953,22 @@ type OpenStackCloud struct {
 	Workers []OpenStackWorker `json:"workers"`
 	// Zones is a list of availability zones to deploy the Shoot cluster to.
 	Zones []string `json:"zones"`
+}
+
+// OpenStackLoadBalancerClass defines a restricted network setting for generic LoadBalancer classes usable in CloudProfiles.
+type OpenStackLoadBalancerClass struct {
+	// Name is the name of the LB class
+	Name string `json:"name"`
+	// FloatingSubnetID is the subnetwork ID of a dedicated subnet in floating network pool.
+	// +optional
+	FloatingSubnetID *string `json:"floatingSubnetID,omitempty"`
+	// FloatingNetworkID is the network ID of the floating network pool.
+	// +optional
+	FloatingNetworkID *string
+	// SubnetID is the ID of a local subnet used for LoadBalancer provisioning. Only usable if no FloatingPool
+	// configuration is done.
+	// +optional
+	SubnetID *string `json:"subnetID,omitempty"`
 }
 
 // OpenStackNetworks holds information about the Kubernetes and infrastructure networks.

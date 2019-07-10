@@ -220,7 +220,7 @@
   version = "0.1.0"
 
 [[projects]]
-  digest = "1:909977177effbf602c7a0b525b030e011cb86d019585433d7d9db24d58270468"
+  digest = "1:39abdea318bf913b572738b113af1b95919cf886b20e6bf73ae6d8e25be02a10"
   name = "github.com/gardener/gardener-extensions"
   packages = [
     "controllers/provider-alicloud/pkg/apis/alicloud",
@@ -233,11 +233,13 @@
     "controllers/provider-gcp/pkg/apis/gcp/v1alpha1",
     "controllers/provider-openstack/pkg/apis/openstack",
     "controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
+    "controllers/provider-openstack/pkg/utils",
     "controllers/provider-packet/pkg/apis/packet",
     "controllers/provider-packet/pkg/apis/packet/v1alpha1",
   ]
   pruneopts = "NUT"
-  revision = "227adb277fa467b9e805af798a502514ccbe75dd"
+  revision = "b0ae0eb41fcd65833fcd54640e2c09331be25228"
+  source = "github.com/afritzler/gardener-extensions"
 
 [[projects]]
   digest = "1:b678acaf8766b6df36723a4adefc3302191a34c22b7a38b0abaf5f6d3dd24090"
@@ -1627,6 +1629,7 @@
     "github.com/gardener/gardener-extensions/controllers/provider-gcp/pkg/apis/gcp/v1alpha1",
     "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack",
     "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/apis/openstack/v1alpha1",
+    "github.com/gardener/gardener-extensions/controllers/provider-openstack/pkg/utils",
     "github.com/gardener/gardener-extensions/controllers/provider-packet/pkg/apis/packet/v1alpha1",
     "github.com/gardener/machine-controller-manager/pkg/apis/machine/v1alpha1",
     "github.com/ghodss/yaml",
