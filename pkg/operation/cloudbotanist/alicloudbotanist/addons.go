@@ -54,7 +54,7 @@ func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{
 		return nil, err
 	}
 	for _, sc := range storageclassList.Items {
-		if sc.Provisioner == "diskplugin.csi.alibabacloud.com" {
+		if sc.Provisioner == "diskplugin.csi.alibabacloud.com" && (sc.Name == "default" || sc.Name == "gardener.cloud-fast") {
 			if _, ok := sc.Parameters["encrypted"]; !ok {
 				if deleteErr := b.Operation.K8sShootClient.Kubernetes().StorageV1().StorageClasses().Delete(sc.Name, &metav1.DeleteOptions{}); deleteErr != nil {
 					return nil, err
