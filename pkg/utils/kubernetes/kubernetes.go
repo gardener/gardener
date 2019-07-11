@@ -45,7 +45,7 @@ func HasMetaDataAnnotation(meta *metav1.ObjectMeta, key, value string) bool {
 
 // HasDeletionTimestamp checks if an object has a deletion timestamp
 func HasDeletionTimestamp(obj runtime.Object) (bool, error) {
-	metadata, err  := meta.Accessor(obj)
+	metadata, err := meta.Accessor(obj)
 	if err != nil {
 		return false, err
 	}
