@@ -56,6 +56,7 @@ func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{
 					"csi.storage.k8s.io/fstype": "ext4",
 					"type":                      "cloud_ssd",
 					"readOnly":                  "false",
+					"encrypted":                 "true",
 				},
 			},
 		},
