@@ -16,6 +16,8 @@ package alicloudbotanist
 
 import (
 	"github.com/gardener/gardener/pkg/operation/common"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DeployKube2IAMResources - Not needed on Alicloud
@@ -46,6 +48,21 @@ func (b *AlicloudBotanist) GenerateNginxIngressConfig() (map[string]interface{},
 
 // GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
 func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
+	//TODO Delete in next release. Add encrypted flag in storge class
+	storageclassList, err := b.Operation.K8sShootClient.Kubernetes().StorageV1().StorageClasses().List(metav1.ListOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, err
+	}
+	for _, sc := range storageclassList.Items {
+		if sc.Provisioner == "diskplugin.csi.alibabacloud.com" {
+			if _, ok := sc.Parameters["encrypted"]; !ok {
+				if deleteErr := b.Operation.K8sShootClient.Kubernetes().StorageV1().StorageClasses().Delete(sc.Name, &metav1.DeleteOptions{}); deleteErr != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+
 	return map[string]interface{}{
 		"StorageClasses": []map[string]interface{}{
 			{
@@ -56,6 +73,7 @@ func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{
 					"csi.storage.k8s.io/fstype": "ext4",
 					"type":                      "cloud_ssd",
 					"readOnly":                  "false",
+					"encrypted":                 "true",
 				},
 			},
 		},
