@@ -1,5 +1,5 @@
 gardener:
-  variants:
+  jobs:
     head-update:
       traits:
         version: ~
