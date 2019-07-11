@@ -100,8 +100,11 @@ data:
       backupInfrastructure:
         concurrentSyncs: {{ required ".Values.global.controller.config.controllers.backupInfrastructure.concurrentSyncs is required" .Values.global.controller.config.controllers.backupInfrastructure.concurrentSyncs }}
         syncPeriod: {{ required ".Values.global.controller.config.controllers.backupInfrastructure.syncPeriod is required" .Values.global.controller.config.controllers.backupInfrastructure.syncPeriod }}
-        {{- if .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodDays }}
-        deletionGracePeriodDays: {{ .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodDays }}
+        {{- if .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHours }}
+        deletionGracePeriodHours: {{ .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHours }}
+        {{- end }}
+        {{- if .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose }}
+        deletionGracePeriodHoursByPurpose: {{ .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose }}
         {{- end }}
     leaderElection:
       leaderElect: {{ required ".Values.global.controller.config.leaderElection.leaderElect is required" .Values.global.controller.config.leaderElection.leaderElect }}

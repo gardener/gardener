@@ -120,9 +120,9 @@ func SetDefaults_ControllerManagerConfiguration(obj *ControllerManagerConfigurat
 		obj.Controllers.Shoot.RetrySyncPeriod = &durationVar
 	}
 
-	if obj.Controllers.BackupInfrastructure.DeletionGracePeriodDays == nil || *obj.Controllers.BackupInfrastructure.DeletionGracePeriodDays < 0 {
-		var defaultBackupInfrastructureDeletionGracePeriodDays = DefaultBackupInfrastructureDeletionGracePeriodDays
-		obj.Controllers.BackupInfrastructure.DeletionGracePeriodDays = &defaultBackupInfrastructureDeletionGracePeriodDays
+	if obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours == nil || *obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours < 0 {
+		var defaultBackupInfrastructureDeletionGracePeriodHours = DefaultBackupInfrastructureDeletionGracePeriodHours
+		obj.Controllers.BackupInfrastructure.DeletionGracePeriodHours = &defaultBackupInfrastructureDeletionGracePeriodHours
 	}
 
 	if obj.Controllers.Plant == nil {
