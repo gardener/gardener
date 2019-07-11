@@ -17,6 +17,7 @@ package kubernetes
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"time"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
@@ -40,6 +41,15 @@ func SetMetaDataLabel(meta *metav1.ObjectMeta, key, value string) {
 func HasMetaDataAnnotation(meta *metav1.ObjectMeta, key, value string) bool {
 	val, ok := meta.Annotations[key]
 	return ok && val == value
+}
+
+// HasDeletionTimestamp checks if an object has a deletion timestamp
+func HasDeletionTimestamp(obj runtime.Object) (bool, error) {
+	metadata, err  := meta.Accessor(obj)
+	if err != nil {
+		return false, err
+	}
+	return metadata.GetDeletionTimestamp() != nil, nil
 }
 
 // CreateOrUpdate creates or updates the object. Optionally, it executes a transformation function before the
