@@ -9,4 +9,4 @@ spec:
     kind: Deployment
     name: kube-controller-manager
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"

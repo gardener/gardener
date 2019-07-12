@@ -151,3 +151,16 @@ spec:
       resources:
         requests:
           storage: {{ .Values.storage }}
+---
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: alertmanager-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: StatefulSet
+    name: alertmanager
+  updatePolicy:
+    updateMode: "Off"
