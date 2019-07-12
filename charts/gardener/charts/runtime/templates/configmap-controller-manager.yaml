@@ -104,7 +104,8 @@ data:
         deletionGracePeriodHours: {{ .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHours }}
         {{- end }}
         {{- if .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose }}
-        deletionGracePeriodHoursByPurpose: {{ .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose }}
+        deletionGracePeriodHoursByPurpose:
+{{ toYaml .Values.global.controller.config.controllers.backupInfrastructure.deletionGracePeriodHoursByPurpose | indent 10 }}
         {{- end }}
     leaderElection:
       leaderElect: {{ required ".Values.global.controller.config.leaderElection.leaderElect is required" .Values.global.controller.config.leaderElection.leaderElect }}
