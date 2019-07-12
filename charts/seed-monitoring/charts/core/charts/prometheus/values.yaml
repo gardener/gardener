@@ -54,6 +54,7 @@ allowedMetrics:
   - process_open_fds
   kubeAPIServer:
   - apiserver_request_count
+  - apiserver_request_total
   - apiserver_request_latencies_bucket
   - etcd_object_counts
   - process_max_fds
