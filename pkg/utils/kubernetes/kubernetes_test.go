@@ -104,9 +104,9 @@ var _ = Describe("kubernetes", func() {
 			},
 		}
 		It("should return false if no deletion timestamp is set", func() {
-		  result, err := HasDeletionTimestamp(namespace)
-		  Expect(err).NotTo(HaveOccurred())
-		  Expect(result).To(BeFalse())
+			result, err := HasDeletionTimestamp(namespace)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(result).To(BeFalse())
 		})
 
 		It("should return true if timestamp is set", func() {
