@@ -33,6 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	audit_internal "k8s.io/apiserver/pkg/apis/audit"
 	auditv1 "k8s.io/apiserver/pkg/apis/audit/v1"
@@ -423,6 +424,13 @@ func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("Failed to decode the provided audit policy err=%v", err)
 	}
+
+	if isValidVersion, err := IsValidAuditPolicyVersion(b.ShootVersion(), schemaVersion); err != nil {
+		return "", err
+	} else if !isValidVersion {
+		return "", fmt.Errorf("Your shoot cluster version %q is not compatible with audit policy version %q", b.ShootVersion(), schemaVersion.GroupVersion().String())
+	}
+
 	auditPolicyInternal, ok := auditPolicyObj.(*audit_internal.Policy)
 	if !ok {
 		return "", fmt.Errorf("Failure to cast to audit Policy type: %v", schemaVersion)
@@ -432,6 +440,16 @@ func (b *HybridBotanist) getAuditPolicy(name, namespace string) (string, error) 
 		return "", fmt.Errorf("Provided invalid audit policy err=%v", errList)
 	}
 	return auditPolicy, nil
+}
+
+// IsValidAuditPolicyVersion checks whether the api server support the provided audit policy apiVersion
+func IsValidAuditPolicyVersion(shootVersion string, schemaVersion *schema.GroupVersionKind) (bool, error) {
+	auditGroupVersion := schemaVersion.GroupVersion().String()
+
+	if auditGroupVersion == "audit.k8s.io/v1" {
+		return utils.CheckVersionMeetsConstraint(shootVersion, ">= v1.12")
+	}
+	return true, nil
 }
 
 // DeployKubeControllerManager deploys kube-controller-manager deployment.
