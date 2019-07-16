@@ -241,16 +241,13 @@ func (o *cleaner) doClean(ctx context.Context, c client.Client, obj runtime.Obje
 		return err
 	}
 
-	if acc.GetDeletionTimestamp().IsZero() || (acc.GetDeletionGracePeriodSeconds() != nil && cleanOptions.GracePeriodSeconds != nil && *acc.GetDeletionGracePeriodSeconds() > *cleanOptions.GracePeriodSeconds) {
-		return delete(ctx, c, obj, &cleanOptions.DeleteOptions)
-	}
-
-	if cleanOptions.FinalizeGracePeriod != nil && len(acc.GetFinalizers()) != 0 && acc.GetDeletionTimestamp().Time.Add(time.Duration(*cleanOptions.FinalizeGracePeriod)*time.Second).Before(o.time.Now()) {
+	if !acc.GetDeletionTimestamp().IsZero() && acc.GetDeletionTimestamp().Time.Add(time.Duration(*cleanOptions.FinalizeGracePeriod)*time.Second).Before(o.time.Now()) && len(acc.GetFinalizers()) > 0 {
 		withFinalizers := obj.DeepCopyObject()
 		acc.SetFinalizers(nil)
 		return c.Patch(ctx, obj, client.MergeFrom(withFinalizers))
 	}
-	return nil
+
+	return delete(ctx, c, obj, &cleanOptions.DeleteOptions)
 }
 
 var defaultGoneEnsurer = GoneEnsurerFunc(EnsureGone)
