@@ -19,6 +19,7 @@ set -e
 DOCKER_FOR_DESKTOP="docker-for-desktop"
 MINIKUBE="minikube"
 KIND="kind"
+KIND_NODE_NAME_SUFFIX="-control-plane"
 
 API_SERVER_SECURE_PORT="${API_SERVER_SECURE_PORT:-8443}"
 
@@ -37,7 +38,7 @@ k8s_env() {
         echo "$MINIKUBE"
         return
     fi
-    if [[ "$node_name" == "$KIND"* ]]; then
+    if [[ "$node_name" == *"$KIND_NODE_NAME_SUFFIX" ]]; then
         echo "$KIND"
         return
     fi
