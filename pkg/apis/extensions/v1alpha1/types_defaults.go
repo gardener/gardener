@@ -46,5 +46,8 @@ type DefaultStatus struct {
 
 // GetLastOperation implements Status.
 func (d *DefaultStatus) GetLastOperation() LastOperation {
+	if d.LastOperation == nil {
+		return nil
+	}
 	return d.LastOperation
 }
