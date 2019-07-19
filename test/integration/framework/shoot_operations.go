@@ -182,7 +182,7 @@ func (s *ShootGardenerTest) WaitForShootToBeCreated(ctx context.Context) error {
 			s.Logger.Infof("Error while waiting for shoot to be created: %s", err.Error())
 			return retry.MinorError(err)
 		}
-		if shootCreationCompleted(shoot) {
+		if ShootCreationCompleted(shoot) {
 			return retry.Ok()
 		}
 		s.Logger.Infof("Waiting for shoot %s to be created", s.Shoot.Name)

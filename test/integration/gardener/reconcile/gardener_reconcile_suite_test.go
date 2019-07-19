@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gardener_rbac_test
+package gardener_reconcile_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func TestPlant(t *testing.T) {
+func TestReconcile(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "RBAC Test Suite")
+	RunSpecs(t, "Reconcile Test Suite")
 }

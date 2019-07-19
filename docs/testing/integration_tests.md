@@ -308,3 +308,43 @@ ginkgo \
     --shootNamespace="garden-dev" \
     --cleanup=true
 ```
+
+## Gardener
+
+Currently the gardener tests consists of:
+
+- RBAC test
+- shoots reconcile test
+
+### Gardener RBAC test
+
+The gardener RBAC test is meant to test if RBAC is enabled on the gardener cluster.
+This is tested by:
+1. Check if the RBAC API-Resource is available
+2. Check if a service account in a project namespace can access the `garden` project.
+
+#### Example Run
+```console
+cd test/integration/gardener/rbac
+ginkgo \
+    --progress \
+    -v \
+    --noColor \
+    -kubeconfig=$HOME/.kube/config \
+    -project-namespace=garden-core
+```
+
+### Gardener reconcile test
+
+The gardener reconcile test checks if all shoots of a gardener cluster are successfully reconciled after the gardener version was updated.
+
+#### Example Run
+```console
+cd test/integration/gardener/rbac
+ginkgo \
+    --progress \
+    -v \
+    --noColor \
+    -kubeconfig=$HOME/.kube/config \
+    -version=0.26.4
+```
