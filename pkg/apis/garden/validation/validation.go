@@ -1199,10 +1199,6 @@ func validateCloud(cloud garden.Cloud, fldPath *field.Path) field.ErrorList {
 		nodes, _, _, networkErrors := transformK8SNetworks(openStack.Networks.K8SNetworks, openStackPath.Child("networks"))
 		allErrs = append(allErrs, networkErrors...)
 
-		if len(openStack.Networks.Workers) != zoneCount {
-			allErrs = append(allErrs, field.Invalid(openStackPath.Child("networks", "workers"), openStack.Networks.Workers, "must specify as many workers networks as zones"))
-		}
-
 		workerCIDRs := make([]cidrvalidation.CIDR, 0, len(openStack.Networks.Workers))
 		for i, cidr := range openStack.Networks.Workers {
 			workerCIDR := cidrvalidation.NewCIDR(cidr, openStackPath.Child("networks", "workers").Index(i))
