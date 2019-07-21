@@ -9,4 +9,4 @@ spec:
     kind: Deployment
     name: kube-scheduler
   updatePolicy:
-    updateMode: "Off"
+    updateMode: "Auto"

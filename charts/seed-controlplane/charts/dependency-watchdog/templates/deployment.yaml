@@ -50,3 +50,16 @@ spec:
       - name: config
         configMap:
           name: dependency-watchdog-config
+---
+apiVersion: "autoscaling.k8s.io/v1beta2"
+kind: VerticalPodAutoscaler
+metadata:
+  name: dependency-watchdog-vpa
+  namespace: {{ .Release.Namespace }}
+spec:
+  targetRef:
+    apiVersion: {{ include "deploymentversion" . }}
+    kind: Deployment
+    name: dependency-watchdog
+  updatePolicy:
+    updateMode: "Auto"
