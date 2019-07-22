@@ -90,7 +90,7 @@ func (s *BasicAuthSecretConfig) GenerateBasicAuth() (*BasicAuth, error) {
 	}
 
 	if s.BcryptPasswordHashRequest != false {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 16)
 		if err != nil {
 			return nil, err
 		}
