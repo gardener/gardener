@@ -70,11 +70,11 @@ spec:
             - NET_ADMIN
         resources:
           requests:
-            cpu: 50m
-            memory: 50Mi
-          limits:
             cpu: 100m
             memory: 100Mi
+          limits:
+            cpu: 1000m
+            memory: 1000Mi
         volumeMounts:
         - mountPath: /srv/secrets/vpn-shoot
           name: vpn-shoot
