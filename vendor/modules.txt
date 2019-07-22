@@ -83,7 +83,7 @@ github.com/gardener/controller-manager-library/pkg/utils
 github.com/gardener/external-dns-management/pkg/client/dns/clientset/versioned/scheme
 github.com/gardener/external-dns-management/pkg/apis/dns/v1alpha1
 github.com/gardener/external-dns-management/pkg/apis/dns
-# github.com/gardener/gardener-extensions v0.0.0-20190620142130-227adb277fa4 => github.com/gardener/gardener-extensions v0.0.0-20190620142130-227adb277fa4
+# github.com/gardener/gardener-extensions v0.0.0-20190723052030-9ed92be580b5 => github.com/gardener/gardener-extensions v0.0.0-20190723052030-9ed92be580b5
 github.com/gardener/gardener-extensions/controllers/provider-alicloud/pkg/apis/alicloud/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1
 github.com/gardener/gardener-extensions/controllers/provider-azure/pkg/apis/azure/v1alpha1
@@ -482,10 +482,10 @@ k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/version
 k8s.io/apimachinery/pkg/fields
 k8s.io/apimachinery/pkg/selection
-k8s.io/apimachinery/pkg/api/meta/table
-k8s.io/apimachinery/pkg/apis/meta/v1beta1
 k8s.io/apimachinery/pkg/runtime/serializer/json
 k8s.io/apimachinery/pkg/runtime/serializer/versioning
+k8s.io/apimachinery/pkg/api/meta/table
+k8s.io/apimachinery/pkg/apis/meta/v1beta1
 k8s.io/apimachinery/pkg/util/rand
 k8s.io/apimachinery/pkg/util/strategicpatch
 k8s.io/apimachinery/pkg/util/waitgroup
@@ -503,11 +503,11 @@ k8s.io/apimachinery/pkg/util/diff
 k8s.io/apimachinery/pkg/util/httpstream
 k8s.io/apimachinery/pkg/util/remotecommand
 k8s.io/apimachinery/pkg/util/httpstream/spdy
+k8s.io/apimachinery/pkg/util/framer
 k8s.io/apimachinery/pkg/util/duration
 k8s.io/apimachinery/pkg/api/validation/path
 k8s.io/apimachinery/pkg/apis/meta/internalversion
 k8s.io/apimachinery/pkg/util/uuid
-k8s.io/apimachinery/pkg/util/framer
 k8s.io/apimachinery/pkg/util/mergepatch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
@@ -518,6 +518,7 @@ k8s.io/apiserver/pkg/endpoints/openapi
 k8s.io/apiserver/pkg/server/options
 k8s.io/apiserver/pkg/util/feature
 k8s.io/apiserver/pkg/authorization/authorizer
+k8s.io/apiserver/pkg/apis/config/v1
 k8s.io/apiserver/pkg/authentication/user
 k8s.io/apiserver/pkg/apis/audit
 k8s.io/apiserver/pkg/apis/audit/v1
@@ -567,6 +568,7 @@ k8s.io/apiserver/plugin/pkg/audit/dynamic/enforced
 k8s.io/apiserver/plugin/pkg/audit/log
 k8s.io/apiserver/plugin/pkg/audit/truncate
 k8s.io/apiserver/plugin/pkg/audit/webhook
+k8s.io/apiserver/pkg/apis/config
 k8s.io/apiserver/pkg/storage/cacher
 k8s.io/apiserver/pkg/storage/errors
 k8s.io/apiserver/pkg/storage/etcd
@@ -907,10 +909,10 @@ k8s.io/utils/pointer
 sigs.k8s.io/controller-runtime/pkg/client
 sigs.k8s.io/controller-runtime/pkg/runtime/signals
 sigs.k8s.io/controller-runtime/pkg/reconcile
+sigs.k8s.io/controller-runtime/pkg/controller/controllerutil
 sigs.k8s.io/controller-runtime/pkg/client/apiutil
 sigs.k8s.io/controller-runtime/pkg/manager/signals
 sigs.k8s.io/controller-runtime/pkg/client/fake
-sigs.k8s.io/controller-runtime/pkg/controller/controllerutil
 sigs.k8s.io/controller-runtime/pkg/internal/objectutil
 # sigs.k8s.io/structured-merge-diff v0.0.0-20190302045857-e85c7b244fd2
 sigs.k8s.io/structured-merge-diff/fieldpath

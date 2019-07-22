@@ -44,26 +44,6 @@ func (b *AlicloudBotanist) GenerateNginxIngressConfig() (map[string]interface{},
 	}, b.Shoot.NginxIngressEnabled()), nil
 }
 
-// GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
-func (b *AlicloudBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"StorageClasses": []map[string]interface{}{
-			{
-				"Name":           "default",
-				"IsDefaultClass": true,
-				"Provisioner":    "diskplugin.csi.alibabacloud.com",
-				"Parameters": map[string]interface{}{
-					"csi.storage.k8s.io/fstype": "ext4",
-					"type":                      "cloud_ssd",
-					"readOnly":                  "false",
-					"encrypted":                 "true",
-				},
-			},
-		},
-	}, nil
-
-}
-
 // GenerateVPNShootConfig generate cloud-specific vpn override - nothing unique for alicloud
 func (b *AlicloudBotanist) GenerateVPNShootConfig() (map[string]interface{}, error) {
 	return nil, nil

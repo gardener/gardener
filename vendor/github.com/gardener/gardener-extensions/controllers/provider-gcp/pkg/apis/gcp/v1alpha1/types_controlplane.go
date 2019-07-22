@@ -25,7 +25,7 @@ import (
 type ControlPlaneConfig struct {
 	metav1.TypeMeta `json:",inline"`
 
-	// Zone is the GCP zone
+	// Zone is the GCP zone.
 	Zone string `json:"zone"`
 
 	// CloudControllerManager contains configuration settings for the cloud-controller-manager.

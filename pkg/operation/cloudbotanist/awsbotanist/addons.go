@@ -148,30 +148,6 @@ func (b *AWSBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(values, enabled), nil
 }
 
-// GenerateStorageClassesConfig generates values which are required to render the chart shoot-storageclasses properly.
-func (b *AWSBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"StorageClasses": []map[string]interface{}{
-			{
-				"Name":           "default",
-				"IsDefaultClass": true,
-				"Provisioner":    "kubernetes.io/aws-ebs",
-				"Parameters": map[string]interface{}{
-					"type": "gp2",
-				},
-			},
-			{
-				"Name":           "gp2",
-				"IsDefaultClass": false,
-				"Provisioner":    "kubernetes.io/aws-ebs",
-				"Parameters": map[string]interface{}{
-					"type": "gp2",
-				},
-			},
-		},
-	}, nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *AWSBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(map[string]interface{}{

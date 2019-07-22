@@ -33,30 +33,6 @@ func (b *PacketBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error
 	return common.GenerateAddonConfig(nil, false), nil
 }
 
-// GenerateStorageClassesConfig generates values which are required to render the chart storage-classes properly.
-func (b *PacketBotanist) GenerateStorageClassesConfig() (map[string]interface{}, error) {
-	return map[string]interface{}{
-		"StorageClasses": []map[string]interface{}{
-			{
-				"Name":           "csi-packet-standard",
-				"IsDefaultClass": true,
-				"Provisioner":    "net.packet.csi",
-				"Parameters": map[string]interface{}{
-					"type": "standard",
-				},
-			},
-			{
-				"Name":           "csi-packet-performance",
-				"IsDefaultClass": false,
-				"Provisioner":    "net.packet.csi",
-				"Parameters": map[string]interface{}{
-					"plan": "performance",
-				},
-			},
-		},
-	}, nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *PacketBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil
