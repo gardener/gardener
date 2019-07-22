@@ -83,8 +83,8 @@ and have a instance of that struct added to `defaultRegistry()` function in `net
 
 After this code generation should be ran with
 
-```
-go generate $GOPATH/src/github.com/gardener/gardener/test/integration/framework/networkpolicies
+```console
+go generate ./test/integration/framework/networkpolicies
 ```
 
 producing a generated test suite like

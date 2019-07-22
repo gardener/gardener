@@ -13,7 +13,7 @@ If you need specific audit policy for your shoot cluster, then you could deploy 
 For example, deploy the auditpolicy `ConfigMap` in the same namespace as your `Shoot` resource:
 
 ```
-kubectl apply -f $GOPATH/src/github.com/gardener/gardener/example/95-configmap-custom-audit-policy.yaml
+kubectl apply -f example/95-configmap-custom-audit-policy.yaml
 ```
 
 then set your shoot to refer that `ConfigMap` (only related fields are shown):

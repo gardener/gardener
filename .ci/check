@@ -2,6 +2,8 @@
 
 set -e
 
+export GO111MODULE=on
+
 # For the check step concourse will set the following environment variables:
 # SOURCE_PATH - path to component repository root directory.
 
@@ -31,29 +33,10 @@ else
   fi
 fi
 
-# The `go <cmd>` commands requires to see the target repository to be part of a
-# Go workspace. Thus, if we are not yet in a Go workspace, let's create one
-# temporarily by using symbolic links.
-if [[ "${SOURCE_PATH}" != *"src/github.com/gardener/gardener" ]]; then
-  SOURCE_SYMLINK_PATH="${SOURCE_PATH}/tmp/src/github.com/gardener/gardener"
-  if [[ -d "${SOURCE_PATH}/tmp" ]]; then
-    rm -rf "${SOURCE_PATH}/tmp"
-  fi
-  mkdir -p "${SOURCE_PATH}/tmp/src/github.com/gardener"
-  ln -s "${SOURCE_PATH}" "${SOURCE_SYMLINK_PATH}"
-  cd "${SOURCE_SYMLINK_PATH}"
+cd "${SOURCE_PATH}"
 
-  export GOPATH="${SOURCE_PATH}/tmp"
-  export GOBIN="${SOURCE_PATH}/tmp/bin"
-  export PATH="${GOBIN}:${PATH}"
-fi
-
-# Install Golint.
-if ! which golint 1>/dev/null; then
-  echo -n "Installing golint... "
-  go get -u golang.org/x/lint/golint
-  echo "done."
-fi
+# Build Golint.
+go install -mod=vendor ./vendor/golang.org/x/lint/golint
 
 # Install Helm (see https://docs.helm.sh/using_helm/#from-script).
 if ! which helm 1>/dev/null; then
@@ -68,18 +51,25 @@ fi
 
 ###############################################################################
 
-PACKAGES="$(go list -e ./... | grep -vE '/tmp/|/vendor/|/pkg/apis|/pkg/controllermanager/apis|/pkg/scheduler/apis|/pkg/client/garden|/pkg/client/machine|/pkg/openapi')"
-LINT_FOLDERS="$(echo ${PACKAGES} | sed "s|github.com/gardener/gardener|.|g")"
+PACKAGES="$(go list -mod=vendor -e ./... | grep -vE '/pkg/apis|/pkg/controllermanager/apis|/pkg/scheduler/apis|/pkg/client/garden|/pkg/client/machine|/pkg/openapi')"
+PACKAGES_DIRS="$(echo ${PACKAGES} | sed "s|github.com/gardener/gardener|.|g")"
 
 # Execute static code checks.
-go vet ${PACKAGES}
+echo "Running go vet..."
+go vet -mod=vendor ${PACKAGES}
+
+# go fmt ignores -mod=vendor and performs module lookup (https://github.com/golang/go/issues/27841).
+# Also go fmt is just alias for gofmt -l -w and does not support flags that gofmt does.
+# That is why gofmt is used.
 
 # Execute automatic code formatting directive.
-go fmt ${PACKAGES}
+echo "Running gofmt..."
+gofmt -l -w ${PACKAGES_DIRS}
 
 # Execute lint checks.
-for package in ${LINT_FOLDERS}; do
-  golint -set_exit_status $(find $package -maxdepth 1 -name "*.go" | grep -vE 'zz_generated|_test.go')
+echo "Running golint..."
+for dir in ${PACKAGES_DIRS}; do
+  golint -set_exit_status $(find $dir -maxdepth 1 -name "*.go" | grep -vE 'zz_generated|_test.go')
 done
 
 # Check for chart symlink errors

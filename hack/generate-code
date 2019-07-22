@@ -32,11 +32,31 @@ limitations under the License.
 '''
 }
 
-rm -f $GOPATH/bin/*-gen
+rm -f ${GOPATH}/bin/*-gen
+
+CURRENT_DIR=$(dirname $0)
+PROJECT_ROOT="${CURRENT_DIR}"/..
+
+# Go modules are not able to properly vendor k8s.io/code-generator@kubernetes-1.14.0 (build with godep)
+# to include also generate-groups.sh and generate-internal-groups.sh scripts under vendor/.
+# However this is fixed with kubernetes-1.15.0 (k8s.io/code-generator@kubernetes-1.15.0 is opted in go modules).
+# The workaround for now is to have a kubernetes-1.14.0 copy of the 2 scripts under hack/code-generator and
+# to copy them to vendor/vendor/k8s.io/code-generator/ for the generation.
+# And respectively clean up them after execution.
+# The workaround should be removed adopting kubernetes-1.15.0.
+# Similar thing is also done in https://github.com/heptio/contour/pull/1010.
+
+cp "${CURRENT_DIR}"/code-generator/generate-*.sh "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/
+
+cleanup() {
+  rm -f "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh
+  rm -f "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh
+}
+trap "cleanup" EXIT SIGINT
 
 # core.gardener.cloud API clients
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   all \
   github.com/gardener/gardener/pkg/client/core \
   github.com/gardener/gardener/pkg/apis \
@@ -44,7 +64,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   core:v1alpha1 \
   -h <(headers)
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
   "deepcopy,client,informer,lister" \
   github.com/gardener/gardener/pkg/client/extensions \
   github.com/gardener/gardener/pkg/apis \
@@ -53,7 +73,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-groups.sh \
 
 # garden.sapcloud.io API clients
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   all \
   github.com/gardener/gardener/pkg/client/garden \
   github.com/gardener/gardener/pkg/apis \
@@ -63,7 +83,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
 
 # Componentconfig for controller-manager
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   deepcopy,defaulter \
   github.com/gardener/gardener/pkg/client/componentconfig \
   github.com/gardener/gardener/pkg/controllermanager/apis \
@@ -71,7 +91,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   "config:v1alpha1" \
   -h <(headers)
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   conversion \
   github.com/gardener/gardener/pkg/client/componentconfig \
   github.com/gardener/gardener/pkg/controllermanager/apis \
@@ -82,7 +102,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
 
 # Configuration for gardener scheduler
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   deepcopy,defaulter \
   github.com/gardener/gardener/pkg/scheduler/client \
   github.com/gardener/gardener/pkg/scheduler/apis \
@@ -91,7 +111,7 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
   -h <(headers)
 
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-internal-groups.sh \
   conversion \
   github.com/gardener/gardener/pkg/scheduler/client \
   github.com/gardener/gardener/pkg/scheduler/apis \
@@ -102,15 +122,15 @@ $(dirname $0)/../vendor/k8s.io/code-generator/generate-internal-groups.sh \
 
 # Machine API clients
 
-$(dirname $0)/../vendor/k8s.io/code-generator/generate-groups.sh \
+bash "${PROJECT_ROOT}"/vendor/k8s.io/code-generator/generate-groups.sh \
   client,lister,informer \
   github.com/gardener/gardener/pkg/client/machine \
   github.com/gardener/machine-controller-manager/pkg/apis \
   machine:v1alpha1 \
   -h <(headers)
 
-rm -Rf ./$(dirname "${0}")/../openapi/openapi_generated.go
-go install ./$(dirname "${0}")/../vendor/k8s.io/kube-openapi/cmd/openapi-gen
+rm -Rf ./${PROJECT_ROOT}/openapi/openapi_generated.go
+go install ./${PROJECT_ROOT}/vendor/k8s.io/kube-openapi/cmd/openapi-gen
 
 echo "Generating openapi definitions"
 ${GOPATH}/bin/openapi-gen "$@" \
@@ -126,7 +146,7 @@ ${GOPATH}/bin/openapi-gen "$@" \
   --input-dirs=k8s.io/apimachinery/pkg/version \
   --input-dirs=k8s.io/apimachinery/pkg/runtime \
   --input-dirs=k8s.io/apimachinery/pkg/util/intstr \
-  --report-filename=./$(dirname "${0}")/../pkg/openapi/api_violations.report \
+  --report-filename=${PROJECT_ROOT}/pkg/openapi/api_violations.report \
   --output-package=github.com/gardener/gardener/pkg/openapi \
   -h <(headers)
 

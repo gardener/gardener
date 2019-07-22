@@ -124,7 +124,6 @@ func Packages(p *generator.Context, arguments *args.GeneratorArgs) generator.Pac
 				}
 
 				packages = append(packages, pkg, suitePkg)
-
 			}
 		}
 	}

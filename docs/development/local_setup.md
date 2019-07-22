@@ -8,7 +8,7 @@ Further details could be found in
 1. [Kubernetes Development Guide](https://github.com/kubernetes/community/tree/master/contributors/devel)
 1. [Architecture of the Garden](https://github.com/gardener/documentation/wiki/Architecture)
 
-This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kubernetes cluster running on a single node. Docker Desktop Edge is also supported.
+This setup is based on [minikube](https://github.com/kubernetes/minikube), a Kubernetes cluster running on a single node. Docker Desktop Edge and [kind](https://github.com/kubernetes-sigs/kind) are also supported.
 
 ## Installing Golang environment
 
@@ -19,36 +19,6 @@ $ brew install golang
 ```
 
 For other OS, please check [Go installation documentation](https://golang.org/doc/install).
-
-Make sure to set your `$GOPATH` environment variable properly (conventionally, it points to `$HOME/go`).
-
-For your convenience, you can add the `bin` directory of the `$GOPATH` to your `$PATH`: `PATH=$PATH:$GOPATH/bin`, but it is not necessarily required.
-
-We use [Dep](https://github.com/golang/dep) for managing Golang package dependencies. Please install it
-on Mac OS via
-
-```bash
-$ brew install dep
-```
-
-On other OS please check the [Dep installation documentation](https://golang.github.io/dep/docs/installation.html) and the [Dep releases page](https://github.com/golang/dep/releases). After downloading the appropriate release in your `$GOPATH/bin` folder you need to make it executable via `chmod +x <dep-release>` and to rename it to dep via `mv dep-<release> dep`.
-
-### Golint
-
-In order to perform linting on the Go source code, please install [Golint](https://github.com/golang/lint):
-
-```bash
-$ go get -u golang.org/x/lint/golint
-```
-
-### Ginkgo and Gomega
-
-In order to perform tests on the Go source code, please install [Ginkgo](https://onsi.github.io/ginkgo/) and [Gomega](http://onsi.github.io/gomega/). Please make yourself familiar with both frameworks and read their introductions after installation:
-
-```bash
-$ go get -u github.com/onsi/ginkgo/ginkgo
-$ go get -u github.com/onsi/gomega
-```
 
 ## Installing kubectl and helm
 
@@ -143,11 +113,9 @@ This setup is only meant to be used for developing purposes, which means that on
 
 ### Get the sources
 
-Clone the repository from GitHub into your `$GOPATH`.
+Clone the repository from GitHub.
 
 ```bash
-$ mkdir -p $GOPATH/src/github.com/gardener
-$ cd $GOPATH/src/github.com/gardener
 $ git clone git@github.com:gardener/gardener.git
 $ cd gardener
 ```

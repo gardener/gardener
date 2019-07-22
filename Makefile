@@ -51,7 +51,8 @@ start-scheduler:
 
 .PHONY: revendor
 revendor:
-	@dep ensure -update
+	@GO111MODULE=on go mod vendor
+	@GO111MODULE=on go mod tidy
 	# The machine-controller-manager repository references different version of the k8s.io packages which results in
 	# vendoring issues. To circumvent them and to avoid the necessity of copying their content into our repository we
 	# delete troubling files here (in fact, we are only requiring the types.go file).
@@ -59,15 +60,18 @@ revendor:
 
 .PHONY: build
 build:
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+		-mod=vendor \
 		-ldflags "$(LD_FLAGS)" \
 		-o bin/gardener-apiserver \
 		cmd/gardener-apiserver/*.go
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+		-mod=vendor \
 		-ldflags "$(LD_FLAGS)" \
 		-o bin/gardener-controller-manager \
 		cmd/gardener-controller-manager/*.go
-	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+	@CGO_ENABLED=0 GOOS=linux GOARCH=amd64 GO111MODULE=on go build \
+		-mod=vendor \
 		-ldflags "$(LD_FLAGS)" \
 		-o bin/gardener-scheduler \
 		cmd/gardener-scheduler/*.go
