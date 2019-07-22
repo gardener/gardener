@@ -173,7 +173,8 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Dependencies: flow.NewTaskIDs(deployCloudProviderSecret, wakeUpControlPlane),
 		})
 
-		// Redeploy the custom control plane to make sure cloud-controller-manager is restarted if the cloud provider secret changes.
+		// Redeploy the custom control plane to make sure all components that depend on the cloud provider secret are restarted
+		// in case it has changed.
 		deployControlPlane = g.Add(flow.Task{
 			Name:         "Deploying Shoot control plane",
 			Fn:           flow.TaskFn(botanist.DeployControlPlane).RetryUntilTimeout(defaultInterval, defaultTimeout).DoIf(cleanupShootResources && controlPlaneDeploymentNeeded && !shootNamespaceInDeletion),
