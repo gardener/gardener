@@ -68,6 +68,10 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 	if err := botanist.RequiredExtensionsExist(); err != nil {
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check whether all required extensions exist (%s)", err.Error()))
 	}
+	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(botanist.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+	if err != nil {
+		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to check version constraint (%s)", err.Error()))
+	}
 
 	var (
 		defaultTimeout            = 30 * time.Second
@@ -161,10 +165,15 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilControlPlaneReady),
 			Dependencies: flow.NewTaskIDs(deployControlPlane),
 		})
+		createOrUpdateEtcdEncryptionConfiguration = g.Add(flow.Task{
+			Name:         "Applying etcd encryption configuration",
+			Fn:           flow.TaskFn(botanist.ApplyEncryptionConfiguration).DoIf(enableEtcdEncryption),
+			Dependencies: flow.NewTaskIDs(deployNamespace),
+		})
 		deployKubeAPIServer = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes API server",
 			Fn:           flow.SimpleTaskFn(hybridBotanist.DeployKubeAPIServer).RetryUntilTimeout(defaultInterval, defaultTimeout),
-			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady),
+			Dependencies: flow.NewTaskIDs(deploySecrets, deployETCD, waitUntilEtcdReady, waitUntilKubeAPIServerServiceIsReady, waitUntilControlPlaneReady, createOrUpdateEtcdEncryptionConfiguration),
 		})
 		waitUntilKubeAPIServerIsReady = g.Add(flow.Task{
 			Name:         "Waiting until Kubernetes API server reports readiness",
@@ -180,6 +189,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Name:         "Initializing connection to Shoot",
 			Fn:           flow.SimpleTaskFn(botanist.InitializeShootClients).RetryUntilTimeout(defaultInterval, 2*time.Minute),
 			Dependencies: flow.NewTaskIDs(waitUntilKubeAPIServerIsReady, deployCloudSpecificControlPlane),
+		})
+		rewriteSecrets = g.Add(flow.Task{
+			Name:         "Rewriting Shoot secrets if EncryptionConfiguration has changed",
+			Fn:           flow.TaskFn(botanist.RewriteShootSecretsIfEncryptionConfigurationChanged).DoIf(enableEtcdEncryption),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, createOrUpdateEtcdEncryptionConfiguration),
 		})
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kubernetes scheduler",
@@ -204,7 +218,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		deployGardenerResourceManager = g.Add(flow.Task{
 			Name:         "Deploying gardener-resource-manager",
 			Fn:           flow.TaskFn(hybridBotanist.DeployGardenerResourceManager).RetryUntilTimeout(defaultInterval, defaultTimeout).SkipIf(o.Shoot.IsHibernated),
-			Dependencies: flow.NewTaskIDs(initializeShootClients),
+			Dependencies: flow.NewTaskIDs(initializeShootClients, rewriteSecrets),
 		})
 		deployManagedResources = g.Add(flow.Task{
 			Name:         "Deploying managed resources",

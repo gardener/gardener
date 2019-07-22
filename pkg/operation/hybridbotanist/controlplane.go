@@ -273,6 +273,15 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 			"checksum/secret-etcd-client-tls":           b.CheckSums["etcd-client-tls"],
 		},
 	}
+	enableEtcdEncryption, err := utils.CheckVersionMeetsConstraint(b.Shoot.Info.Spec.Kubernetes.Version, ">= 1.13")
+	if err != nil {
+		return err
+	}
+	if enableEtcdEncryption {
+		defaultValues["enableEtcdEncryption"] = true
+		podAnotationMap := defaultValues["podAnnotations"].(map[string]interface{})
+		podAnotationMap["checksum/secret-etcd-encryption"] = b.CheckSums[common.EtcdEncryptionSecretName]
+	}
 
 	if b.ShootedSeed != nil {
 		var (

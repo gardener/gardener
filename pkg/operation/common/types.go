@@ -105,6 +105,40 @@ const (
 	// EtcdEventsStatefulSetName is the constant defining the statefulset name for the events etcd.
 	EtcdEventsStatefulSetName = "etcd-events"
 
+	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
+	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
+	// which the shoot's apiserver uses for encrypting selected etcd content.
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	EtcdEncryptionSecretName = "etcd-encryption-secret"
+
+	// EtcdEncryptionSecretFileName is the name of the file within the EncryptionConfiguration
+	// which is made available as volume mount to the shoot's apiserver.
+	// Should match charts/seed-controlplane/charts/kube-apiserver/templates/kube-apiserver.yaml
+	EtcdEncryptionSecretFileName = "encryption-configuration.yaml"
+
+	// EtcdEncryptionChecksumAnnotationName is the name of the annotation with which to annotate
+	// the EncryptionConfiguration secret to denote the checksum of the EncryptionConfiguration
+	// that was used when last rewriting secrets.
+	EtcdEncryptionChecksumAnnotationName = "shoot.gardener.cloud/etcd-encryption-configuration-checksum"
+
+	// EtcdEncryptionChecksumLabelName is the name of the label which is added to the shoot
+	// secrets after rewriting them to ensure that successfully rewritten secrets are not
+	// (unnecessarily) rewritten during each reconciliation.
+	EtcdEncryptionChecksumLabelName = "shoot.gardener.cloud/etcd-encryption-configuration-checksum"
+
+	// EtcdEncryptionForcePlaintextAnnotationName is the name of the annotation with which to annotate
+	// the EncryptionConfiguration secret to force the decryption of shoot secrets
+	EtcdEncryptionForcePlaintextAnnotationName = "shoot.gardener.cloud/etcd-encryption-force-plaintext-secrets"
+
+	// EtcdEncryptionEncryptedResourceSecrets is the name of the secret resource to be encrypted
+	EtcdEncryptionEncryptedResourceSecrets = "secrets"
+
+	// EtcdEncryptionKeyPrefix is the prefix for the key name of the EncryptionConfiguration's key
+	EtcdEncryptionKeyPrefix = "key"
+
+	// EtcdEncryptionKeySecretLen is the expected length in bytes of the EncryptionConfiguration's key
+	EtcdEncryptionKeySecretLen = 32
+
 	// GardenNamespace is the namespace in which the configuration and secrets for
 	// the Gardener controller manager will be stored (e.g., secrets for the Seed clusters).
 	// It is also used by the gardener-apiserver.

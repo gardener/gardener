@@ -17,8 +17,9 @@ package kubernetes
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/meta"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	"github.com/gardener/gardener/pkg/utils/retry"
 
@@ -28,18 +29,39 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// SetMetaDataLabel sets the key value pair in the labels section of the given ObjectMeta.
-// If the given ObjectMeta did not yet have labels, they are initialized.
-func SetMetaDataLabel(meta *metav1.ObjectMeta, key, value string) {
-	if meta.Labels == nil {
-		meta.Labels = make(map[string]string)
+// TruncateLabelValue truncates a string at 63 characters so it's suitable for a label value.
+func TruncateLabelValue(s string) string {
+	if len(s) > 63 {
+		return s[:63]
 	}
-	meta.Labels[key] = value
+	return s
+}
+
+// SetMetaDataLabel sets the key value pair in the labels section of the given Object.
+// If the given Object did not yet have labels, they are initialized.
+func SetMetaDataLabel(meta metav1.Object, key, value string) {
+	labels := meta.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+	labels[key] = value
+	meta.SetLabels(labels)
+}
+
+// SetMetaDataAnnotation sets the annotation on the given object.
+// If the given Object did not yet have annotations, they are initialized.
+func SetMetaDataAnnotation(meta metav1.Object, key, value string) {
+	annotations := meta.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	annotations[key] = value
+	meta.SetAnnotations(annotations)
 }
 
 // HasMetaDataAnnotation checks if the passed meta object has the given key, value set in the annotations section.
-func HasMetaDataAnnotation(meta *metav1.ObjectMeta, key, value string) bool {
-	val, ok := meta.Annotations[key]
+func HasMetaDataAnnotation(meta metav1.Object, key, value string) bool {
+	val, ok := meta.GetAnnotations()[key]
 	return ok && val == value
 }
 
@@ -124,6 +146,11 @@ func KeyFromObject(obj metav1.Object) client.ObjectKey {
 func ObjectMeta(namespaceOrName string, nameOpt ...string) metav1.ObjectMeta {
 	namespace, name := nameAndNamespace(namespaceOrName, nameOpt...)
 	return metav1.ObjectMeta{Namespace: namespace, Name: name}
+}
+
+// ObjectMetaFromKey returns an ObjectMeta with the namespace and name set to the values from the key.
+func ObjectMetaFromKey(key client.ObjectKey) metav1.ObjectMeta {
+	return ObjectMeta(key.Namespace, key.Name)
 }
 
 // WaitUntilResourceDeleted deletes the given resource and then waits until it has been deleted. It respects the
