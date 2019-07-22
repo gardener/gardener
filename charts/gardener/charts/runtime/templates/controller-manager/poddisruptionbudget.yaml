@@ -1,0 +1,22 @@
+{{- if gt (int .Values.global.controller.replicaCount) 1 }}
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  name: gardener-controller-manager
+  namespace: garden
+  labels:
+    app: gardener
+    role: controller-manager
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    release: "{{ .Release.Name }}"
+    heritage: "{{ .Release.Service }}"
+spec:
+  maxUnavailable: {{ sub (int .Values.global.controller.replicaCount) 1 }}
+  selector:
+    matchLabels:
+      app: gardener
+      role: controller-manager
+      chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+      release: "{{ .Release.Name }}"
+      heritage: "{{ .Release.Service }}"
+{{- end }}

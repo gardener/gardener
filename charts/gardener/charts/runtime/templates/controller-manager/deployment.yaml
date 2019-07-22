@@ -20,11 +20,11 @@ spec:
     metadata:
       annotations:
         {{- if .Values.global.controller.imageVectorOverwrite }}
-        checksum/configmap-gardener-controller-manager-imagevector-overwrite: {{ include (print $.Template.BasePath "/configmap-controller-manager-imagevector-overwrite.yaml") . | sha256sum }}
+        checksum/configmap-gardener-controller-manager-imagevector-overwrite: {{ include (print $.Template.BasePath "/controller-manager/configmap-imagevector-overwrite.yaml") . | sha256sum }}
         {{- end }}
-        checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/configmap-controller-manager.yaml") . | sha256sum }}
-        checksum/secret-gardener-controller-manager-cert: {{ include (print $.Template.BasePath "/secret-controller-manager-cert.yaml") . | sha256sum }}
-        checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/secret-controller-manager-kubeconfig.yaml") . | sha256sum }}
+        checksum/configmap-gardener-controller-manager-config: {{ include (print $.Template.BasePath "/controller-manager/configmap-componentconfig.yaml") . | sha256sum }}
+        checksum/secret-gardener-controller-manager-cert: {{ include (print $.Template.BasePath "/controller-manager/secret-cert.yaml") . | sha256sum }}
+        checksum/secret-gardener-controller-manager-kubeconfig: {{ include (print $.Template.BasePath "/controller-manager/secret-kubeconfig.yaml") . | sha256sum }}
         checksum/secret-default-domain: {{ include "gardener.secret-default-domain" . | sha256sum }}
         checksum/secret-internal-domain: {{ include "gardener.secret-internal-domain" . | sha256sum }}
         checksum/secret-alerting-smtp: {{ include "gardener.secret-alerting-smtp" . | sha256sum }}
@@ -39,6 +39,20 @@ spec:
       {{- if not .Values.global.controller.kubeconfig }}
       serviceAccountName: {{ required ".Values.global.controller.serviceAccountName is required" .Values.global.controller.serviceAccountName }}
       {{- end }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - gardener
+              - key: role
+                operator: In
+                values:
+                - controller-manager
+            topologyKey: kubernetes.io/hostname
       containers:
       - name: gardener-controller-manager
         image: {{ required ".Values.global.controller.image.repository is required" .Values.global.controller.image.repository }}:{{ required ".Values.global.controller.image.tag is required" .Values.global.controller.image.tag }}
