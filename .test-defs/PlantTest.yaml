@@ -8,15 +8,19 @@ spec:
   activeDeadlineSeconds: 600
   labels: ["default"]
 
+  config:
+  - name: GO111MODULE
+    value: "on"
+    type: env
+
   command: [bash, -c]
   args:
     - >-
-      /tm/setup github.com/gardener gardener &&
-      go test $GOPATH/src/github.com/gardener/gardener/test/integration/plants
+      go test -mod=vendor ./test/integration/plants
       --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
       -kubeconfig-path=$TM_KUBECONFIG_PATH/gardener.config
       -kubeconfig-path-externalcluster=$TM_KUBECONFIG_PATH/shoot.config
       -plant-path=$GOPATH/src/github.com/gardener/gardener/example/100-plant.yaml
       -plant-test-namespace=$PROJECT_NAMESPACE
 
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0
+  image: golang:1.12.7
