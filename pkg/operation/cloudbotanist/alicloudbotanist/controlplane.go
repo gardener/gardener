@@ -15,7 +15,6 @@
 package alicloudbotanist
 
 import (
-	"encoding/base64"
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
@@ -38,23 +37,6 @@ func (b *AlicloudBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error)
 	}
 
 	return secretData, nil
-}
-
-// GenerateCSIConfig generates the configuration for CSI charts
-func (b *AlicloudBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
-	conf := map[string]interface{}{
-		"credential": map[string]interface{}{
-			"accessKeyID":     base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeyID]),
-			"accessKeySecret": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[AccessKeySecret]),
-		},
-		"kubernetesVersion": b.ShootVersion(),
-		"enabled":           true,
-	}
-
-	return b.InjectShootShootImages(conf,
-		common.CSIPluginAlicloudImageName,
-		common.CSINodeDriverRegistrarImageName,
-	)
 }
 
 // DeployCloudSpecificControlPlane does nothing currently for Alicloud

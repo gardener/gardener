@@ -26,7 +26,6 @@ type CloudBotanist interface {
 	// Control Plane
 	GenerateEtcdBackupConfig() (map[string][]byte, error)
 	DeployCloudSpecificControlPlane() error
-	GenerateCSIConfig() (map[string]interface{}, error)
 
 	// Addons
 	DeployKube2IAMResources() error

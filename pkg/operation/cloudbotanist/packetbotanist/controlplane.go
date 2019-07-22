@@ -14,28 +14,6 @@
 
 package packetbotanist
 
-import (
-	"encoding/base64"
-	"github.com/gardener/gardener/pkg/operation/common"
-)
-
-// GenerateCSIConfig generates the configuration for CSI charts
-func (b *PacketBotanist) GenerateCSIConfig() (map[string]interface{}, error) {
-	conf := map[string]interface{}{
-		"credential": map[string]interface{}{
-			"apiToken":  base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[PacketAPIKey]),
-			"projectID": base64.StdEncoding.EncodeToString(b.Shoot.Secret.Data[ProjectID]),
-		},
-		"kubernetesVersion": b.ShootVersion(),
-		"enabled":           true,
-	}
-
-	return b.InjectShootShootImages(conf,
-		common.CSIPluginPacketImageName,
-		common.CSINodeDriverRegistrarImageName,
-	)
-}
-
 // GenerateEtcdBackupConfig returns the etcd backup configuration for the etcd Helm chart.
 func (b *PacketBotanist) GenerateEtcdBackupConfig() (map[string][]byte, error) {
 	return map[string][]byte{}, nil

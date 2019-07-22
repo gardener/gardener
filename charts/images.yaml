@@ -99,12 +99,6 @@ images:
   repository: coredns/coredns
   tag: "1.4.0"
 
-# Packet Storage Interface
-- name: packet-storage-interface
-  sourceRepository: https://github.com/packethost/csi-packet
-  repository: docker.io/packethost/csi-packet
-  tag: "73641b0"
-
 # Shoot optional addons
 - name: kubernetes-dashboard
   sourceRepository: github.com/kubernetes/dashboard
@@ -142,20 +136,6 @@ images:
 - name: alpine-iptables
   repository: eu.gcr.io/gardener-project/alpine-iptables
   tag: "3.9"
-
-- name: csi-node-driver-registrar
-  sourceRepository: https://github.com/kubernetes-csi/node-driver-registrar
-  repository: quay.io/k8scsi/csi-node-driver-registrar
-  tag: v1.0.1
-  runtimeVersion: 1.13.x
-- name: csi-node-driver-registrar
-  sourceRepository: https://github.com/kubernetes-csi/node-driver-registrar
-  repository: quay.io/k8scsi/csi-node-driver-registrar
-  tag: v1.1.0
-- name: csi-plugin-alicloud
-  sourceRepository: https://github.com/AliyunContainerService/csi-plugin
-  repository: registry.eu-central-1.aliyuncs.com/gardener-de/csi-plugin-alicloud
-  tag: v1.13.2
 
 # Logging
 - name: fluentd-es

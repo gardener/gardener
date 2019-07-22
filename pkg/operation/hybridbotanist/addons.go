@@ -190,11 +190,6 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		return nil, err
 	}
 
-	csiPlugin, err := b.ShootCloudBotanist.GenerateCSIConfig()
-	if err != nil {
-		return nil, err
-	}
-
 	newVpnShootSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "vpn-shoot",
@@ -214,11 +209,10 @@ func (b *HybridBotanist) generateCoreAddonsChart() (*chartrenderer.RenderedChart
 		"cluster-autoscaler":  clusterAutoscaler,
 		"podsecuritypolicies": podsecuritypolicies,
 		"coredns":             coreDNS,
-		fmt.Sprintf("csi-%s", b.ShootCloudBotanist.GetCloudProviderName()): csiPlugin,
-		"kube-proxy":     kubeProxy,
-		"vpn-shoot":      vpnShoot,
-		"calico":         calico,
-		"metrics-server": metricsServer,
+		"kube-proxy":          kubeProxy,
+		"vpn-shoot":           vpnShoot,
+		"calico":              calico,
+		"metrics-server":      metricsServer,
 		"monitoring": map[string]interface{}{
 			"node-exporter":     nodeExporter,
 			"blackbox-exporter": blackboxExporter,
