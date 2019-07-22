@@ -308,13 +308,38 @@ func UpdateMachineImage(cloudProvider gardenv1beta1.CloudProvider, machineImage 
 	return nil
 }
 
-// DetermineLatestKubernetesVersion finds the latest Kubernetes patch version in the <cloudProfile> compared
+// DetermineLatestKubernetesPatchVersion finds the latest Kubernetes patch version in the <cloudProfile> compared
 // to the given <currentVersion>. In case it does not find a newer patch version, it returns false. Otherwise,
 // true and the found version will be returned.
-func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, string, error) {
+func DetermineLatestKubernetesPatchVersion(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, string, error) {
+	ok, newerVersions, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "~")
+	if err != nil || !ok {
+		return ok, "", err
+	}
+	sort.Strings(newerVersions)
+	return true, newerVersions[len(newerVersions)-1], nil
+}
+
+// DetermineNextKubernetesMinorVersion finds the next available Kubernetes minor version in the <cloudProfile> compared
+// to the given <currentVersion>. In case it does not find a newer minor version, it returns false. Otherwise,
+// true and the found version will be returned.
+func DetermineNextKubernetesMinorVersion(cloudProfile gardenv1beta1.CloudProfile, currentVersion string) (bool, string, error) {
+	ok, newerVersions, err := determineNextKubernetesVersions(cloudProfile, currentVersion, "^")
+	if err != nil || !ok {
+		return ok, "", err
+	}
+	sort.Strings(newerVersions)
+	return true, newerVersions[0], nil
+}
+
+// determineNextKubernetesVersions finds newer Kubernetes version in the <cloudProfile> compared
+// with the <operator> to the given <currentVersion>. The <operator> has to be a github.com/Masterminds/semver
+// range comparison symbol. In case it does not find a newer version, it returns false. Otherwise,
+// true and the found version will be returned.
+func determineNextKubernetesVersions(cloudProfile gardenv1beta1.CloudProfile, currentVersion, operator string) (bool, []string, error) {
 	cloudProvider, err := DetermineCloudProviderInProfile(cloudProfile.Spec)
 	if err != nil {
-		return false, "", err
+		return false, []string{}, err
 	}
 
 	var (
@@ -348,25 +373,24 @@ func DetermineLatestKubernetesVersion(cloudProfile gardenv1beta1.CloudProfile, c
 			versions = append(versions, version)
 		}
 	default:
-		return false, "", fmt.Errorf("unknown cloud provider %s", cloudProvider)
+		return false, []string{}, fmt.Errorf("unknown cloud provider %s", cloudProvider)
 	}
 
 	for _, version := range versions {
-		ok, err := utils.CompareVersions(version, "~", currentVersion)
+		ok, err := utils.CompareVersions(version, operator, currentVersion)
 		if err != nil {
-			return false, "", err
+			return false, []string{}, err
 		}
 		if version != currentVersion && ok {
 			newerVersions = append(newerVersions, version)
 		}
 	}
 
-	if len(newerVersions) > 0 {
-		sort.Strings(newerVersions)
-		return true, newerVersions[len(newerVersions)-1], nil
+	if len(newerVersions) == 0 {
+		return false, []string{}, nil
 	}
 
-	return false, "", nil
+	return true, newerVersions, nil
 }
 
 type ShootedSeed struct {

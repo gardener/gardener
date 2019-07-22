@@ -176,7 +176,7 @@ func (c *defaultMaintenanceControl) Maintain(shootObj *gardenv1beta1.Shoot, key 
 	// Check if the CloudProfile contains a newer Kubernetes patch version.
 	var updateKubernetesVersion func(s *gardenv1beta1.Kubernetes)
 	if shoot.Spec.Maintenance.AutoUpdate.KubernetesVersion {
-		newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesVersion(*operation.Shoot.CloudProfile, operation.Shoot.Info.Spec.Kubernetes.Version)
+		newerPatchVersionFound, latestPatchVersion, err := helper.DetermineLatestKubernetesPatchVersion(*operation.Shoot.CloudProfile, operation.Shoot.Info.Spec.Kubernetes.Version)
 		if err != nil {
 			handleError(fmt.Sprintf("Failure while determining the latest Kubernetes patch version in the CloudProfile: %s", err.Error()))
 			return nil
