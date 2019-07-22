@@ -6,12 +6,14 @@ spec:
   description: Tests the creation of a shoot.
 
   activeDeadlineSeconds: 3600
-  labels: []
+
+  config:
+  - name: GO111MODULE
+    value: "on"
+    type: env
 
   command: [bash, -c]
   args:
-  - >-
-    /tm/setup github.com/gardener gardener &&
-    go run $GOPATH/src/github.com/gardener/gardener/.test-defs/cmd/create-shoot
+  - go run -mod=vendor ./.test-defs/cmd/create-shoot
 
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0
+  image: golang:1.12.7

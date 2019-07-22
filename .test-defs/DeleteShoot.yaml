@@ -6,12 +6,14 @@ spec:
   description: Tests the deletion of a shoot.
 
   activeDeadlineSeconds: 1800
-  labels: []
+
+  config:
+  - name: GO111MODULE
+    value: "on"
+    type: env
 
   command: [bash, -c]
   args:
-  - >-
-    /tm/setup github.com/gardener gardener &&
-    go run $GOPATH/src/github.com/gardener/gardener/.test-defs/cmd/delete-shoot
+  - go run -mod=vendor ./.test-defs/cmd/delete-shoot
 
-  image: eu.gcr.io/gardener-project/gardener/testmachinery/golang:0.42.0
+  image: golang:1.12.7
