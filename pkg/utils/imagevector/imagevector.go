@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/gardener/gardener/pkg/utils"
+
 	"gopkg.in/yaml.v2"
 )
 
@@ -75,9 +76,15 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 		runtimeVersion = old.RuntimeVersion
 	}
 
+	targetVersion := override.TargetVersion
+	if targetVersion == nil {
+		targetVersion = old.TargetVersion
+	}
+
 	return &ImageSource{
 		Name:           override.Name,
 		RuntimeVersion: runtimeVersion,
+		TargetVersion:  targetVersion,
 		Repository:     override.Repository,
 		Tag:            tag,
 	}
@@ -86,17 +93,23 @@ func mergeImageSources(old, override *ImageSource) *ImageSource {
 type imageSourceKey struct {
 	Name           string
 	RuntimeVersion string
+	TargetVersion  string
 }
 
 func computeKey(source *ImageSource) imageSourceKey {
-	var runtimeVersion string
+	var runtimeVersion, targetVersion string
+
 	if source.RuntimeVersion != nil {
 		runtimeVersion = *source.RuntimeVersion
+	}
+	if source.TargetVersion != nil {
+		targetVersion = *source.TargetVersion
 	}
 
 	return imageSourceKey{
 		Name:           source.Name,
 		RuntimeVersion: runtimeVersion,
+		TargetVersion:  targetVersion,
 	}
 }
 
@@ -123,6 +136,7 @@ func Merge(vectors ...ImageVector) ImageVector {
 			out = append(out, image)
 		}
 	}
+
 	return out
 }
 
@@ -192,8 +206,13 @@ func match(source *ImageSource, name string, opts *FindOptions) (score int, ok b
 	if err != nil || !ok {
 		return 0, false, err
 	}
-
 	score += runtimeScore
+
+	targetScore, ok, err := checkConstraint(source.TargetVersion, opts.TargetVersion)
+	if err != nil || !ok {
+		return 0, false, err
+	}
+	score += targetScore
 
 	return score, true, nil
 }
