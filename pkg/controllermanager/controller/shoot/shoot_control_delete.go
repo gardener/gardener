@@ -26,6 +26,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
@@ -285,9 +286,11 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 			Fn:           botanist.DestroyIngressDNSRecord,
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
+		// kube2iam is deprecated and is kept here only for backwards compatibility reasons because some end-users may depend
+		// on it. It will be removed very soon in the future.
 		destroyKube2IAMResources = g.Add(flow.Task{
 			Name:         "Destroying Kube2IAM resources",
-			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DestroyKube2IAMResources),
+			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DestroyKube2IAMResources(o) }).DoIf(o.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS),
 			Dependencies: flow.NewTaskIDs(syncPointCleaned),
 		})
 		destroyInfrastructure = g.Add(flow.Task{

@@ -16,21 +16,6 @@ package gcpbotanist
 
 import "github.com/gardener/gardener/pkg/operation/common"
 
-// DeployKube2IAMResources - Not needed on GCP
-func (b *GCPBotanist) DeployKube2IAMResources() error {
-	return nil
-}
-
-// DestroyKube2IAMResources - Not needed on GCP.
-func (b *GCPBotanist) DestroyKube2IAMResources() error {
-	return nil
-}
-
-// GenerateKube2IAMConfig - Not needed on GCP.
-func (b *GCPBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *GCPBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil

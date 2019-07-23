@@ -18,21 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// DeployKube2IAMResources - Not needed on Packet
-func (b *PacketBotanist) DeployKube2IAMResources() error {
-	return nil
-}
-
-// DestroyKube2IAMResources - Not needed on Packet.
-func (b *PacketBotanist) DestroyKube2IAMResources() error {
-	return nil
-}
-
-// GenerateKube2IAMConfig - Not needed on Packet.
-func (b *PacketBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *PacketBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil

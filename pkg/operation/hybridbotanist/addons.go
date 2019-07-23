@@ -23,6 +23,7 @@ import (
 	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/chartrenderer"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	"github.com/gardener/gardener/pkg/utils"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
@@ -235,10 +236,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-	kube2IAMConfig, err := b.ShootCloudBotanist.GenerateKube2IAMConfig()
-	if err != nil {
-		return nil, err
-	}
 	kubernetesDashboardConfig, err := b.Botanist.GenerateKubernetesDashboardConfig()
 	if err != nil {
 		return nil, err
@@ -274,10 +271,6 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	if err != nil {
 		return nil, err
 	}
-	kube2IAM, err := b.InjectShootShootImages(kube2IAMConfig, common.Kube2IAMImageName)
-	if err != nil {
-		return nil, err
-	}
 	kubernetesDashboard, err := b.InjectShootShootImages(kubernetesDashboardConfig, common.KubernetesDashboardImageName)
 	if err != nil {
 		return nil, err
@@ -285,6 +278,16 @@ func (b *HybridBotanist) generateOptionalAddonsChart() (*chartrenderer.RenderedC
 	nginxIngress, err := b.InjectShootShootImages(nginxIngressConfig, common.NginxIngressControllerImageName, common.IngressDefaultBackendImageName)
 	if err != nil {
 		return nil, err
+	}
+
+	// kube2iam is deprecated and will be removed in the future.
+	kube2IAM := common.GenerateAddonConfig(nil, false)
+	if b.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS {
+		kube2IAMConfig, err := awsbotanist.GenerateKube2IAMConfig(b.Operation)
+		if err != nil {
+			return nil, err
+		}
+		kube2IAM = kube2IAMConfig
 	}
 
 	return b.ChartApplierShoot.Render(filepath.Join(common.ChartPath, "shoot-addons"), "addons", metav1.NamespaceSystem, map[string]interface{}{

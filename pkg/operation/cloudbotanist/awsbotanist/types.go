@@ -15,7 +15,6 @@
 package awsbotanist
 
 import (
-	"github.com/gardener/gardener/pkg/client/aws"
 	"github.com/gardener/gardener/pkg/operation"
 )
 
@@ -23,7 +22,6 @@ import (
 type AWSBotanist struct {
 	*operation.Operation
 	CloudProviderName string
-	AWSClient         aws.ClientInterface
 	AMI               string
 }
 

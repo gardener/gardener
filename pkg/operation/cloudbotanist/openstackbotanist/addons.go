@@ -18,21 +18,6 @@ import (
 	"github.com/gardener/gardener/pkg/operation/common"
 )
 
-// DeployKube2IAMResources - Not needed on OpenStack
-func (b *OpenStackBotanist) DeployKube2IAMResources() error {
-	return nil
-}
-
-// DestroyKube2IAMResources - Not needed on OpenStack.
-func (b *OpenStackBotanist) DestroyKube2IAMResources() error {
-	return nil
-}
-
-// GenerateKube2IAMConfig - Not needed on OpenStack.
-func (b *OpenStackBotanist) GenerateKube2IAMConfig() (map[string]interface{}, error) {
-	return common.GenerateAddonConfig(nil, false), nil
-}
-
 // GenerateNginxIngressConfig generates values which are required to render the chart nginx-ingress properly.
 func (b *OpenStackBotanist) GenerateNginxIngressConfig() (map[string]interface{}, error) {
 	return common.GenerateAddonConfig(nil, b.Shoot.NginxIngressEnabled()), nil

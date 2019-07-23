@@ -19,14 +19,12 @@ import (
 	"fmt"
 
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
-	awsclient "github.com/gardener/gardener/pkg/client/aws"
 	"github.com/gardener/gardener/pkg/operation"
 	"github.com/gardener/gardener/pkg/operation/common"
 
 	"github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws"
 	awsv1alpha1 "github.com/gardener/gardener-extensions/controllers/provider-aws/pkg/apis/aws/v1alpha1"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -88,21 +86,12 @@ func findRoleByPurpose(roles []awsv1alpha1.Role, purpose string) (*awsv1alpha1.R
 
 // New takes an operation object <o> and creates a new AWSBotanist object.
 func New(o *operation.Operation, purpose string) (*AWSBotanist, error) {
-	var (
-		cloudProvider gardenv1beta1.CloudProvider
-		secret        *corev1.Secret
-		region        string
-	)
-
+	var cloudProvider gardenv1beta1.CloudProvider
 	switch purpose {
 	case common.CloudPurposeShoot:
 		cloudProvider = o.Shoot.CloudProvider
-		secret = o.Shoot.Secret
-		region = o.Shoot.Info.Spec.Cloud.Region
 	case common.CloudPurposeSeed:
 		cloudProvider = o.Seed.CloudProvider
-		secret = o.Seed.Secret
-		region = o.Seed.Info.Spec.Cloud.Region
 	}
 
 	if cloudProvider != gardenv1beta1.CloudProviderAWS {
@@ -112,7 +101,6 @@ func New(o *operation.Operation, purpose string) (*AWSBotanist, error) {
 	return &AWSBotanist{
 		Operation:         o,
 		CloudProviderName: "aws",
-		AWSClient:         awsclient.NewClient(string(secret.Data[AccessKeyID]), string(secret.Data[SecretAccessKey]), region),
 	}, nil
 }
 

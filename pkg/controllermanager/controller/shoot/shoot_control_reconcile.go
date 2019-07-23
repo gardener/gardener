@@ -28,6 +28,7 @@ import (
 	"github.com/gardener/gardener/pkg/operation"
 	botanistpkg "github.com/gardener/gardener/pkg/operation/botanist"
 	cloudbotanistpkg "github.com/gardener/gardener/pkg/operation/cloudbotanist"
+	"github.com/gardener/gardener/pkg/operation/cloudbotanist/awsbotanist"
 	"github.com/gardener/gardener/pkg/operation/common"
 	hybridbotanistpkg "github.com/gardener/gardener/pkg/operation/hybridbotanist"
 	"github.com/gardener/gardener/pkg/utils"
@@ -79,7 +80,7 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 		managedExternalDNS        = o.Shoot.ExternalDomain != nil && o.Shoot.ExternalDomain.Provider != gardenv1beta1.DNSUnmanaged
 		managedInternalDNS        = o.Garden.InternalDomain != nil && o.Garden.InternalDomain.Provider != gardenv1beta1.DNSUnmanaged
 		creationPhase             = operationType == gardencorev1alpha1.LastOperationTypeCreate
-		requireKube2IAMDeployment = creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource)
+		requireKube2IAMDeployment = o.Shoot.CloudProvider == gardenv1beta1.CloudProviderAWS && (creationPhase || controllerutils.HasTask(o.Shoot.Info.Annotations, common.ShootTaskDeployKube2IAMResource))
 
 		g                         = flow.NewGraph("Shoot cluster reconciliation")
 		syncClusterResourceToSeed = g.Add(flow.Task{
@@ -235,9 +236,11 @@ func (c *Controller) runReconcileShootFlow(o *operation.Operation, operationType
 			Fn:           flow.TaskFn(botanist.WaitUntilWorkerReady),
 			Dependencies: flow.NewTaskIDs(deployWorker),
 		})
+		// kube2iam is deprecated and is kept here only for backwards compatibility reasons because some end-users may depend
+		// on it. It will be removed very soon in the future.
 		_ = g.Add(flow.Task{
 			Name:         "Deploying Kube2IAM resources",
-			Fn:           flow.SimpleTaskFn(shootCloudBotanist.DeployKube2IAMResources).DoIf(requireKube2IAMDeployment).RetryUntilTimeout(defaultInterval, defaultTimeout),
+			Fn:           flow.SimpleTaskFn(func() error { return awsbotanist.DeployKube2IAMResources(o) }).DoIf(requireKube2IAMDeployment).RetryUntilTimeout(defaultInterval, defaultTimeout),
 			Dependencies: flow.NewTaskIDs(waitUntilInfrastructureReady),
 		})
 		_ = g.Add(flow.Task{
