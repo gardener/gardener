@@ -106,6 +106,13 @@ func (c *Controller) runDeleteShootFlow(o *operation.Operation) *gardencorev1alp
 		return gardencorev1alpha1helper.LastError(fmt.Sprintf("Failed to create a HybridBotanist (%s)", err.Error()))
 	}
 
+	// Unregister the Shoot as Seed cluster if it was annotated to be a seed and is in the garden namespace
+	if o.Shoot.Info.Namespace == common.GardenNamespace && o.ShootedSeed != nil {
+		if err := botanist.UnregisterAsSeed(); err != nil {
+			return gardencorev1alpha1helper.LastError(fmt.Sprintf("Could not unregister Shoot %q as Seed: %+v", o.Shoot.Info.Name, err))
+		}
+	}
+
 	// We check whether the kube-apiserver deployment exists in the shoot namespace. If it does not, then we assume
 	// that it has never been deployed successfully, or that we have deleted it in a previous run because we already
 	// cleaned up. We follow that no (more) resources can have been deployed in the shoot cluster, thus there is nothing
