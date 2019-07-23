@@ -19,5 +19,5 @@ spec:
     go test -mod=vendor ./test/integration/gardener/rbac
     --v -ginkgo.v -ginkgo.progress -ginkgo.noColor
     -kubeconfig=$TM_KUBECONFIG_PATH/gardener.config
-    -project-namespace=garden-it
+    -project-namespace=$PROJECT_NAMESPACE
   image: golang:1.12.7
