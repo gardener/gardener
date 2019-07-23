@@ -19,6 +19,13 @@ Their clients run all kinds of workloads on top of Gardener maintained
 Kubernetes clusters ranging from databases to Software as a Service
 applications.
 
+Cloud provider adopters
+
+- [Packet](https://packet.com) drove and sponsored integration of Gardener into its
+bare-metal cloud platform. Packet customers now are able to manage multiple Kubernetes
+clusters with ease everywhere that Packet is available: across regions, at the edge
+in telco networks, and on customer premises.
+
 Adopters in evaluation or pre-production phase
 
 - [Finanz Informatik Technologie Services GmbH]( https://f-i-ts.de/ )
