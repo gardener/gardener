@@ -33,6 +33,8 @@ uses Gardener to offer k8s as a service for customers in the financial
 industry in Germany. It is built on top of a "metal as a service"
 infrastructure implemented from scratch for k8s workloads in mind.
 The result is k8s on top of bare metal in minutes.
+- [PTC](https://www.ptc.com) uses Gardener to provide development environments
+and CI/CD systems internally.
 
 If you’re using Gardener and aren’t on this list, feel free to
 [submit a pull request](https://github.com/gardener/gardener/pulls)!
