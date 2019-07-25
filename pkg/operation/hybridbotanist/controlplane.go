@@ -262,7 +262,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                        b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
 			"checksum/secret-ca-front-proxy":            b.CheckSums[gardencorev1alpha1.SecretNameCAFrontProxy],
-			"checksum/secret-kube-apiserver":            b.CheckSums[common.KubeAPIServerDeploymentName],
+			"checksum/secret-kube-apiserver":            b.CheckSums[gardencorev1alpha1.DeploymentNameKubeAPIServer],
 			"checksum/secret-kube-aggregator":           b.CheckSums["kube-aggregator"],
 			"checksum/secret-kube-apiserver-kubelet":    b.CheckSums["kube-apiserver-kubelet"],
 			"checksum/secret-kube-apiserver-basic-auth": b.CheckSums["kube-apiserver-basic-auth"],
@@ -299,7 +299,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	} else {
 		deployment := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), deployment); err != nil && !apierrors.IsNotFound(err) {
+		if err := b.K8sSeedClient.Client().Get(context.TODO(), kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deployment); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}
 		replicas := deployment.Spec.Replicas
@@ -384,7 +384,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 	if b.Shoot.IsHibernated {
 		hpa := &autoscalingv2beta1.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.KubeAPIServerDeploymentName,
+				Name:      gardencorev1alpha1.DeploymentNameKubeAPIServer,
 				Namespace: b.Shoot.SeedNamespace,
 			},
 		}
@@ -393,7 +393,7 @@ func (b *HybridBotanist) DeployKubeAPIServer() error {
 		}
 	}
 
-	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeAPIServerDeploymentName), b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName, values, nil); err != nil {
+	if err := b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeAPIServer), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer, values, nil); err != nil {
 		return err
 	}
 
@@ -470,7 +470,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		"serviceNetwork":    b.Shoot.GetServiceNetwork(),
 		"podAnnotations": map[string]interface{}{
 			"checksum/secret-ca":                             b.CheckSums[gardencorev1alpha1.SecretNameCACluster],
-			"checksum/secret-kube-controller-manager":        b.CheckSums[common.KubeControllerManagerDeploymentName],
+			"checksum/secret-kube-controller-manager":        b.CheckSums[gardencorev1alpha1.DeploymentNameKubeControllerManager],
 			"checksum/secret-kube-controller-manager-server": b.CheckSums[common.KubeControllerManagerServerName],
 			"checksum/secret-service-account-key":            b.CheckSums["service-account-key"],
 		},
@@ -478,7 +478,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 	}
 
 	if b.Shoot.IsHibernated {
-		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName)
+		replicaCount, err := common.CurrentReplicaCount(b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager)
 		if err != nil {
 			return err
 		}
@@ -499,7 +499,7 @@ func (b *HybridBotanist) DeployKubeControllerManager() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeControllerManagerDeploymentName), b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName, values, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeControllerManager), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager, values, nil)
 }
 
 // DeployKubeScheduler deploys kube-scheduler deployment.
@@ -508,7 +508,7 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		"replicas":          b.Shoot.GetReplicas(1),
 		"kubernetesVersion": b.Shoot.Info.Spec.Kubernetes.Version,
 		"podAnnotations": map[string]interface{}{
-			"checksum/secret-kube-scheduler":        b.CheckSums[common.KubeSchedulerDeploymentName],
+			"checksum/secret-kube-scheduler":        b.CheckSums[gardencorev1alpha1.DeploymentNameKubeScheduler],
 			"checksum/secret-kube-scheduler-server": b.CheckSums[common.KubeSchedulerServerName],
 		},
 	}
@@ -532,5 +532,5 @@ func (b *HybridBotanist) DeployKubeScheduler() error {
 		return err
 	}
 
-	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, common.KubeSchedulerDeploymentName), b.Shoot.SeedNamespace, common.KubeSchedulerDeploymentName, values, nil)
+	return b.ApplyChartSeed(filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameKubeScheduler), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeScheduler, values, nil)
 }

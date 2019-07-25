@@ -46,6 +46,50 @@ const (
 	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
 	// the cluster-autoscaler pod.
 	DeploymentNameClusterAutoscaler = "cluster-autoscaler"
+	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
+	// the dependency-watchdog pod.
+	DeploymentNameDependencyWatchdog = "dependency-watchdog"
+	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
+	// the kube-apiserver pod.
+	DeploymentNameKubeAPIServer = "kube-apiserver"
+	// DeploymentNameClusterAutoscaler is a constant for the name of a Kubernetes deployment object that contains
+	// the kube-controller-manager pod.
+	DeploymentNameKubeControllerManager = "kube-controller-manager"
+
+	// DeploymentNameKubeScheduler is a constant for the name of a Kubernetes deployment object that contains
+	// the kube-scheduler pod.
+	DeploymentNameKubeScheduler = "kube-scheduler"
+	// DeploymentNameGardenerResourceManager is a constant for the name of a Kubernetes deployment object that contains
+	// the gardener-resource-manager pod.
+	DeploymentNameGardenerResourceManager = "gardener-resource-manager"
+	// DeploymentNameGrafanaOperators is a constant for the name of a Kubernetes deployment object that contains
+	// the grafana-operators pod.
+	DeploymentNameGrafanaOperators = "grafana-operators"
+	// DeploymentNameGrafanaUsers is a constant for the name of a Kubernetes deployment object that contains
+	// the grafana-users pod.
+	DeploymentNameGrafanaUsers = "grafana-users"
+	// DeploymentNameKubeStateMetricsShoot is a constant for the name of a Kubernetes deployment object that contains
+	// the kube-state-metrics pod.
+	DeploymentNameKubeStateMetricsShoot = "kube-state-metrics"
+	// DeploymentNameKubeStateMetricsSeed is a constant for the name of a Kubernetes deployment object that contains
+	// the kube-state-metrics-seed pod.
+	DeploymentNameKubeStateMetricsSeed = "kube-state-metrics-seed"
+	// DeploymentNameKibana is a constant for the name of a Kubernetes deployment object that contains
+	// the kibana-logging pod.
+	DeploymentNameKibana = "kibana-logging"
+
+	// StatefulSetNameETCDMain is a constant for the name of a Kubernetes stateful set object that contains
+	// the etcd-main pod.
+	StatefulSetNameETCDMain = "etcd-main"
+	// StatefulSetNameETCDEvents is a constant for the name of a Kubernetes stateful set object that contains
+	// the etcd-events pod.
+	StatefulSetNameETCDEvents = "etcd-events"
+	// StatefulSetNameElasticSearch is a constant for the name of a Kubernetes stateful set object that contains
+	// the elasticsearch-logging pod.
+	StatefulSetNameElasticSearch = "elasticsearch-logging"
+	// StatefulSetNamePrometheus is a constant for the name of a Kubernetes stateful set object that contains
+	// the prometheus pod.
+	StatefulSetNamePrometheus = "prometheus"
 
 	// GardenPurpose is a constant for the key in a label describing the purpose of the respective object.
 	GardenPurpose = "garden.sapcloud.io/purpose"

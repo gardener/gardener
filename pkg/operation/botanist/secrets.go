@@ -172,7 +172,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: common.KubeControllerManagerServerName,
 
-				CommonName:   common.KubeControllerManagerDeploymentName,
+				CommonName:   gardencorev1alpha1.DeploymentNameKubeControllerManager,
 				Organization: nil,
 				DNSNames:     kubeControllerManagerCertDNSNames,
 				IPAddresses:  nil,
@@ -227,7 +227,7 @@ func (b *Botanist) generateWantedSecrets(basicAuthAPIServer *secrets.BasicAuth, 
 			CertificateSecretConfig: &secrets.CertificateSecretConfig{
 				Name: common.KubeSchedulerServerName,
 
-				CommonName:   common.KubeSchedulerDeploymentName,
+				CommonName:   gardencorev1alpha1.DeploymentNameKubeScheduler,
 				Organization: nil,
 				DNSNames:     kubeSchedulerCertDNSNames,
 				IPAddresses:  nil,
@@ -983,10 +983,10 @@ func dnsNamesForService(name, namespace string) []string {
 
 func dnsNamesForEtcd(namespace string) []string {
 	names := []string{
-		fmt.Sprintf("%s-0", common.EtcdMainStatefulSetName),
-		fmt.Sprintf("%s-0", common.EtcdEventsStatefulSetName),
+		fmt.Sprintf("%s-0", gardencorev1alpha1.StatefulSetNameETCDMain),
+		fmt.Sprintf("%s-0", gardencorev1alpha1.StatefulSetNameETCDEvents),
 	}
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", common.EtcdMainStatefulSetName), namespace)...)
-	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", common.EtcdEventsStatefulSetName), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", gardencorev1alpha1.StatefulSetNameETCDMain), namespace)...)
+	names = append(names, dnsNamesForService(fmt.Sprintf("%s-client", gardencorev1alpha1.StatefulSetNameETCDEvents), namespace)...)
 	return names
 }

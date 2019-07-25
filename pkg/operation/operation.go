@@ -22,12 +22,7 @@ import (
 	"strings"
 	"time"
 
-	utilretry "github.com/gardener/gardener/pkg/utils/retry"
-
-	"github.com/gardener/gardener/pkg/utils/chart"
-
-	"github.com/gardener/gardener/pkg/operation/terraformer"
-
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 	extensionsv1alpha1 "github.com/gardener/gardener/pkg/apis/extensions/v1alpha1"
 	gardenv1beta1 "github.com/gardener/gardener/pkg/apis/garden/v1beta1"
 	"github.com/gardener/gardener/pkg/apis/garden/v1beta1/helper"
@@ -39,16 +34,18 @@ import (
 	"github.com/gardener/gardener/pkg/operation/garden"
 	"github.com/gardener/gardener/pkg/operation/seed"
 	shootpkg "github.com/gardener/gardener/pkg/operation/shoot"
+	"github.com/gardener/gardener/pkg/operation/terraformer"
 	"github.com/gardener/gardener/pkg/utils"
+	"github.com/gardener/gardener/pkg/utils/chart"
 	"github.com/gardener/gardener/pkg/utils/flow"
 	"github.com/gardener/gardener/pkg/utils/imagevector"
 	kutil "github.com/gardener/gardener/pkg/utils/kubernetes"
+	utilretry "github.com/gardener/gardener/pkg/utils/retry"
 	"github.com/gardener/gardener/pkg/utils/secrets"
 
 	prometheusapi "github.com/prometheus/client_golang/api"
 	prometheusclient "github.com/prometheus/client_golang/api/prometheus/v1"
 	"github.com/sirupsen/logrus"
-
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -215,7 +212,7 @@ func (o *Operation) InitializeShootClients() error {
 }
 
 func (o *Operation) controlPlaneHibernated() (bool, error) {
-	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+	replicaCount, err := common.CurrentReplicaCount(o.K8sSeedClient.Client(), o.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer)
 	if err != nil {
 		return false, err
 	}

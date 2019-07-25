@@ -140,7 +140,7 @@ func (b *Botanist) deleteNamespace(ctx context.Context, name string) error {
 func (b *Botanist) DeleteKubeAPIServer(ctx context.Context) error {
 	deploy := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.KubeAPIServerDeploymentName,
+			Name:      gardencorev1alpha1.DeploymentNameKubeAPIServer,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
@@ -481,7 +481,7 @@ func (b *Botanist) DeleteSeedMonitoring(ctx context.Context) error {
 
 	prometheusStatefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      common.PrometheusStatefulSetName,
+			Name:      gardencorev1alpha1.StatefulSetNamePrometheus,
 			Namespace: b.Shoot.SeedNamespace,
 		},
 	}
@@ -620,11 +620,11 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 		"replicas": b.Shoot.GetReplicas(1),
 	}
 
-	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, common.DependencyWatchdogDeploymentName)
+	dependencyWatchdog, err := b.InjectSeedSeedImages(dependencyWatchdogConfig, gardencorev1alpha1.DeploymentNameDependencyWatchdog)
 	if err != nil {
 		return nil
 	}
-	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, common.DependencyWatchdogDeploymentName), b.Shoot.SeedNamespace, common.DependencyWatchdogDeploymentName, nil, dependencyWatchdog)
+	return b.ChartApplierSeed.ApplyChart(ctx, filepath.Join(chartPathControlPlane, gardencorev1alpha1.DeploymentNameDependencyWatchdog), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameDependencyWatchdog, nil, dependencyWatchdog)
 }
 
 // WakeUpControlPlane scales the replicas to 1 for the following deployments which are needed in case of shoot deletion:
@@ -635,7 +635,7 @@ func (b *Botanist) DeployDependencyWatchdog(ctx context.Context) error {
 func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	client := b.K8sSeedClient.Client()
 
-	for _, statefulset := range []string{common.EtcdEventsStatefulSetName, common.EtcdMainStatefulSetName} {
+	for _, statefulset := range []string{gardencorev1alpha1.StatefulSetNameETCDEvents, gardencorev1alpha1.StatefulSetNameETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 1); err != nil {
 			return err
 		}
@@ -644,7 +644,7 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 		return err
 	}
 
-	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), 1); err != nil {
+	if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), 1); err != nil {
 		return err
 	}
 	if err := b.WaitUntilKubeAPIServerReady(ctx); err != nil {
@@ -652,8 +652,8 @@ func (b *Botanist) WakeUpControlPlane(ctx context.Context) error {
 	}
 
 	for _, deployment := range []string{
-		common.KubeControllerManagerDeploymentName,
-		common.GardenerResourceManagerDeploymentName,
+		gardencorev1alpha1.DeploymentNameKubeControllerManager,
+		gardencorev1alpha1.DeploymentNameGardenerResourceManager,
 	} {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 1); err != nil {
 			return err
@@ -679,9 +679,9 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 	}
 
 	deployments := []string{
-		common.GardenerResourceManagerDeploymentName,
-		common.KubeControllerManagerDeploymentName,
-		common.KubeAPIServerDeploymentName,
+		gardencorev1alpha1.DeploymentNameGardenerResourceManager,
+		gardencorev1alpha1.DeploymentNameKubeControllerManager,
+		gardencorev1alpha1.DeploymentNameKubeAPIServer,
 	}
 	for _, deployment := range deployments {
 		if err := kubernetes.ScaleDeployment(ctx, client, kutil.Key(b.Shoot.SeedNamespace, deployment), 0); err != nil && !apierrors.IsNotFound(err) {
@@ -689,7 +689,7 @@ func (b *Botanist) HibernateControlPlane(ctx context.Context) error {
 		}
 	}
 
-	for _, statefulset := range []string{common.EtcdEventsStatefulSetName, common.EtcdMainStatefulSetName} {
+	for _, statefulset := range []string{gardencorev1alpha1.StatefulSetNameETCDEvents, gardencorev1alpha1.StatefulSetNameETCDMain} {
 		if err := kubernetes.ScaleStatefulSet(ctx, client, kutil.Key(b.Shoot.SeedNamespace, statefulset), 0); err != nil && !apierrors.IsNotFound(err) {
 			return err
 		}

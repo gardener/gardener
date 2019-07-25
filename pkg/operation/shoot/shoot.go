@@ -316,7 +316,7 @@ func (s *Shoot) GetReplicas(wokenUp int) int {
 // internal or the external cluster domain should be used.
 func (s *Shoot) ComputeAPIServerURL(runsInSeed, useInternalClusterDomain bool) string {
 	if runsInSeed {
-		return common.KubeAPIServerDeploymentName
+		return gardencorev1alpha1.DeploymentNameKubeAPIServer
 	}
 
 	if dnsProvider := s.Info.Spec.DNS.Provider; dnsProvider != nil && *dnsProvider == gardenv1beta1.DNSUnmanaged {

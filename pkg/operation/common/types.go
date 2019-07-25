@@ -15,8 +15,9 @@
 package common
 
 import (
-	"fmt"
 	"path/filepath"
+
+	gardencorev1alpha1 "github.com/gardener/gardener/pkg/apis/core/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/util/sets"
 )
@@ -96,14 +97,8 @@ const (
 	// EtcdRoleMain is the constant defining the role for main etcd storing data about objects in Shoot.
 	EtcdRoleMain = "main"
 
-	// EtcdMainStatefulSetName is the constant defining the statefulset name for the main etcd.
-	EtcdMainStatefulSetName = "etcd-main"
-
 	// EtcdRoleEvents is the constant defining the role for etcd storing events in Shoot.
 	EtcdRoleEvents = "events"
-
-	// EtcdEventsStatefulSetName is the constant defining the statefulset name for the events etcd.
-	EtcdEventsStatefulSetName = "etcd-events"
 
 	// EtcdEncryptionSecretName is the name of the shoot-specific secret which contains
 	// that shoot's EncryptionConfiguration. The EncryptionConfiguration contains a key
@@ -224,14 +219,8 @@ const (
 	// appended.
 	InternalDomainKey = "internal"
 
-	// KubeAPIServerDeploymentName is the name of the kube-apiserver deployment.
-	KubeAPIServerDeploymentName = "kube-apiserver"
-
 	// AWSLBReadvertiserDeploymentName is the name for the aws-lb-readvertiser
 	AWSLBReadvertiserDeploymentName = "aws-lb-readvertiser"
-
-	// KubeControllerManagerDeploymentName is the name of the kube-controller-manager deployment.
-	KubeControllerManagerDeploymentName = "kube-controller-manager"
 
 	// KubeControllerManagerServerName is the name of the kube-controller-manager server.
 	KubeControllerManagerServerName = "kube-controller-manager-server"
@@ -239,14 +228,8 @@ const (
 	// MachineControllerManagerDeploymentName is the name of the machine-controller-manager deployment.
 	MachineControllerManagerDeploymentName = "machine-controller-manager"
 
-	// KubeSchedulerDeploymentName is the name of the kube-scheduler deployment.
-	KubeSchedulerDeploymentName = "kube-scheduler"
-
 	// KubeSchedulerServerName is the name of the kube-scheduler server.
 	KubeSchedulerServerName = "kube-scheduler-server"
-
-	// GardenerResourceManagerDeploymentName is the name of the gardener-resource-manager deployment.
-	GardenerResourceManagerDeploymentName = "gardener-resource-manager"
 
 	// CalicoKubeControllersDeploymentName is the name of calico-kube-controllers deployment.
 	CalicoKubeControllersDeploymentName = "calico-kube-controllers"
@@ -269,26 +252,8 @@ const (
 	// KubeProxyDaemonSetName is the name of the kube-proxy daemon set.
 	KubeProxyDaemonSetName = "kube-proxy"
 
-	// GrafanaOperatorsDeploymentName is the name of the grafana deployment.
-	GrafanaOperatorsDeploymentName = "grafana-operators"
-
-	// GrafanaUsersDeploymentName is the name of the grafana deployment for the user-facing grafana.
-	GrafanaUsersDeploymentName = "grafana-users"
-
-	// KubeStateMetricsShootDeploymentName is the name of the kube-state-metrics deployment.
-	KubeStateMetricsShootDeploymentName = "kube-state-metrics"
-
-	// KubeStateMetricsSeedDeploymentName is the name of the kube-state-metrics-shoot deployment.
-	KubeStateMetricsSeedDeploymentName = "kube-state-metrics-seed"
-
 	// NodeExporterDaemonSetName is the name of the node-exporter daemon set.
 	NodeExporterDaemonSetName = "node-exporter"
-
-	// ElasticSearchStatefulSetName is the name of the elasticsearch-logging stateful set.
-	ElasticSearchStatefulSetName = "elasticsearch-logging"
-
-	// KibanaDeploymentName is the name of the kibana-logging deployment.
-	KibanaDeploymentName = "kibana-logging"
 
 	// KibanaAdminIngressCredentialsSecretName is the name of the secret which holds admin credentials.
 	KibanaAdminIngressCredentialsSecretName = "logging-ingress-credentials"
@@ -308,9 +273,6 @@ const (
 
 	// NamespaceProject is they key of a label on namespace whose value holds the project uid.
 	NamespaceProject = "namespace.garden.sapcloud.io/project"
-
-	// PrometheusStatefulSetName is the name of the Prometheus stateful set.
-	PrometheusStatefulSetName = "prometheus"
 
 	// TerraformerConfigSuffix is the suffix used for the ConfigMap which stores the Terraform configuration and variables declaration.
 	TerraformerConfigSuffix = ".tf-config"
@@ -544,9 +506,6 @@ const (
 	// AlpineIptablesImageName is the name of the alpine image with pre-installed iptable rules
 	AlpineIptablesImageName = "alpine-iptables"
 
-	// DependencyWatchdogDeploymentName is the name of the dependency controller resources.
-	DependencyWatchdogDeploymentName = "dependency-watchdog"
-
 	// SeedSpecHash is a constant for a label on `ControllerInstallation`s (similar to `pod-template-hash` on `Pod`s).
 	SeedSpecHash = "seed-spec-hash"
 
@@ -570,27 +529,22 @@ var (
 	// TerraformerChartPath is the path where the seed-terraformer charts reside.
 	TerraformerChartPath = filepath.Join(ChartPath, "seed-terraformer", "charts")
 
-	// ETCDMainStatefulSetName is the name of the etcd-main stateful set.
-	ETCDMainStatefulSetName = fmt.Sprintf("etcd-%s", EtcdRoleMain)
-	// ETCDEventsStatefulSetName is the name of the etcd-events stateful set.
-	ETCDEventsStatefulSetName = fmt.Sprintf("etcd-%s", EtcdRoleEvents)
-
 	// RequiredControlPlaneDeployments is a set of the required shoot control plane deployments
 	// running in the seed.
 	RequiredControlPlaneDeployments = sets.NewString(
-		GardenerResourceManagerDeploymentName,
-		KubeAPIServerDeploymentName,
-		KubeControllerManagerDeploymentName,
-		KubeSchedulerDeploymentName,
+		gardencorev1alpha1.DeploymentNameGardenerResourceManager,
+		gardencorev1alpha1.DeploymentNameKubeAPIServer,
+		gardencorev1alpha1.DeploymentNameKubeControllerManager,
+		gardencorev1alpha1.DeploymentNameKubeScheduler,
+		gardencorev1alpha1.DeploymentNameDependencyWatchdog,
 		MachineControllerManagerDeploymentName,
-		DependencyWatchdogDeploymentName,
 	)
 
 	// RequiredControlPlaneStatefulSets is a set of the required shoot control plane stateful
 	// sets running in the seed.
 	RequiredControlPlaneStatefulSets = sets.NewString(
-		ETCDMainStatefulSetName,
-		ETCDEventsStatefulSetName,
+		gardencorev1alpha1.StatefulSetNameETCDMain,
+		gardencorev1alpha1.StatefulSetNameETCDEvents,
 	)
 
 	// RequiredSystemComponentDeployments is a set of the required system components.
@@ -610,10 +564,10 @@ var (
 
 	// RequiredMonitoringSeedDeployments is a set of the required seed monitoring deployments.
 	RequiredMonitoringSeedDeployments = sets.NewString(
-		GrafanaOperatorsDeploymentName,
-		GrafanaUsersDeploymentName,
-		KubeStateMetricsSeedDeploymentName,
-		KubeStateMetricsShootDeploymentName,
+		gardencorev1alpha1.DeploymentNameGrafanaOperators,
+		gardencorev1alpha1.DeploymentNameGrafanaUsers,
+		gardencorev1alpha1.DeploymentNameKubeStateMetricsSeed,
+		gardencorev1alpha1.DeploymentNameKubeStateMetricsShoot,
 	)
 
 	// RequiredMonitoringShootDaemonSets is a set of the required shoot monitoring daemon sets.
@@ -623,11 +577,11 @@ var (
 
 	// RequiredLoggingStatefulSets is a set of the required logging stateful sets.
 	RequiredLoggingStatefulSets = sets.NewString(
-		ElasticSearchStatefulSetName,
+		gardencorev1alpha1.StatefulSetNameElasticSearch,
 	)
 
 	// RequiredLoggingDeployments is a set of the required logging deployments.
 	RequiredLoggingDeployments = sets.NewString(
-		KibanaDeploymentName,
+		gardencorev1alpha1.DeploymentNameKibana,
 	)
 )

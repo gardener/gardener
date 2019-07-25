@@ -225,7 +225,7 @@ func computeRequiredControlPlaneDeployments(
 // computeRequiredMonitoringStatefulSets determine the required monitoring statefulsets
 // which should exist next to the control plane.
 func computeRequiredMonitoringStatefulSets(wantsAlertmanager bool) sets.String {
-	var requiredMonitoringStatefulSets = sets.NewString(common.PrometheusStatefulSetName)
+	var requiredMonitoringStatefulSets = sets.NewString(gardencorev1alpha1.StatefulSetNamePrometheus)
 	if wantsAlertmanager {
 		requiredMonitoringStatefulSets.Insert(common.AlertManagerStatefulSetName)
 	}

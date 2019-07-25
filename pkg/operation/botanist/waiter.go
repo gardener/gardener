@@ -43,7 +43,7 @@ func (b *Botanist) WaitUntilKubeAPIServerServiceIsReady(ctx context.Context) err
 	defer cancel()
 
 	return retry.Until(ctx, 5*time.Second, func(ctx context.Context) (done bool, err error) {
-		loadBalancerIngress, err := common.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName)
+		loadBalancerIngress, err := common.GetLoadBalancerIngress(ctx, b.K8sSeedClient.Client(), b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer)
 		if err != nil {
 			b.Logger.Info("Waiting until the kube-apiserver service is ready...")
 			// TODO(AC): This is a quite optimistic check / we should differentiate here
@@ -95,7 +95,7 @@ func (b *Botanist) WaitUntilKubeAPIServerReady(ctx context.Context) error {
 	return retry.UntilTimeout(ctx, 5*time.Second, 300*time.Second, func(ctx context.Context) (done bool, err error) {
 
 		deploy := &appsv1.Deployment{}
-		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.KubeAPIServerDeploymentName), deploy); err != nil {
+		if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeAPIServer), deploy); err != nil {
 			return retry.SevereError(err)
 		}
 		if deploy.Generation != deploy.Status.ObservedGeneration {
@@ -238,9 +238,9 @@ func (b *Botanist) WaitForControllersToBeActive(ctx context.Context) error {
 	)
 
 	// Check whether the kube-controller-manager deployment exists
-	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, common.KubeControllerManagerDeploymentName), &appsv1.Deployment{}); err == nil {
+	if err := b.K8sSeedClient.Client().Get(ctx, kutil.Key(b.Shoot.SeedNamespace, gardencorev1alpha1.DeploymentNameKubeControllerManager), &appsv1.Deployment{}); err == nil {
 		controllers = append(controllers, controllerInfo{
-			name: common.KubeControllerManagerDeploymentName,
+			name: gardencorev1alpha1.DeploymentNameKubeControllerManager,
 			labels: map[string]string{
 				"app":  "kubernetes",
 				"role": "controller-manager",
